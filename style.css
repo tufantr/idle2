@@ -42,10 +42,10 @@ body {
     overflow-y: auto; height: calc(100vh - 4rem); position: sticky; top: 2rem; padding: 1.5rem 1rem;
 }
 #sidebar h3 {
-    color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px; margin-top: 1rem; margin-bottom: 0.2rem;
+    color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px; margin-top: 1rem; margin-bottom: 0.2rem; flex-shrink: 0;
 }
 #sidebar .nav-btn {
-    text-align: left; padding: 0.6rem 1rem; font-size: 1rem; border: none; border-radius: 8px; background: transparent; transition: all 0.2s; box-shadow: none; color: var(--text-main); font-weight: 500; cursor: pointer;
+    text-align: left; padding: 0.6rem 1rem; font-size: 1rem; border: none; border-radius: 8px; background: transparent; transition: all 0.2s; box-shadow: none; color: var(--text-main); font-weight: 500; cursor: pointer; flex-shrink: 0;
 }
 #sidebar .nav-btn:hover { background: rgba(255,255,255,0.05); transform: translateX(4px); box-shadow: none; border-color: transparent;}
 #sidebar .nav-btn.active {
