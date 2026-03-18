@@ -384,88 +384,24 @@ function parseOfflineProgress() {
 
 // TUTORIAL PROGRESSION
 function updateTutorialUnlocks() {
-    let goalText = "";
-    const step = state.flags.tutorialStep;
-    
-    if (step === 0) {
-        if (state.combat.maxStage >= 3) {
-            state.flags.tutorialStep = 1;
-            state.unlocks.mining = true;
-            state.unlocks.shop = true;
-            document.getElementById('offline-modal-text').innerText = "Congratulations! You reached Stage 3!\n\nMINING & SHOP are now unlocked. Check the sidebar!";
-            document.getElementById('offline-modal').classList.add('active');
-        } else {
-            goalText = "🎯 Goal: Reach Stage 3 in Combat to unlock Mining!";
-        }
-    } else if (step === 1) {
-        if (state.skills.mining.level >= 3) {
-            state.flags.tutorialStep = 2;
-            state.unlocks.smithing = true;
-            state.unlocks.woodcutting = true;
-            document.getElementById('offline-modal-text').innerText = "Mining Level 3 reached!\n\nSMITHING & WOODCUTTING unlocked.\nNext target: Mine Iron and Smelt 1 Iron Bar in the Workshop.";
-            document.getElementById('offline-modal').classList.add('active');
-        } else {
-            goalText = "🎯 Goal: Reach Mining Level 3 to unlock Smithing & Woodcutting!";
-        }
-    } else if (step === 2) {
-        if (state.resources.iron_bar > 0) {
-            state.flags.tutorialStep = 3;
-            state.unlocks.crafting = true;
-            state.unlocks.hunting = true;
-            document.getElementById('offline-modal-text').innerText = "Iron Smelted!\n\nCRAFTING (Jewelcrafting) & HUNTING are now unlocked.\nCheck out Hunting and catch a Boar!";
-            document.getElementById('offline-modal').classList.add('active');
-        } else {
-            goalText = "🎯 Goal: Mine Iron and Coal, then Smelt 1 Iron Bar to unlock Crafting!";
-        }
-    } else if (step === 3) {
-        if (state.resources.raw_boar > 0) {
-            state.flags.tutorialStep = 4;
-            state.unlocks.cooking = true;
-            state.unlocks.alchemy = true;
-            document.getElementById('offline-modal-text').innerText = "Boar Hunted!\n\nYou have fully unlocked all core skills! COOKING & ALCHEMY are now available.\nGo craft legendary items and push to the highest Stages!";
-            document.getElementById('offline-modal').classList.add('active');
-        } else {
-            goalText = "🎯 Goal: Reach Hunting Lv 25 and Hunt 1 Boar to unlock Cooking!";
-        }
-    } else if (step === 4) {
-        if (state.combat.maxStage >= 10) {
-            state.flags.tutorialStep = 5;
-            state.unlocks.achievements = true;
-            document.getElementById('offline-modal-text').innerText = "Boss Defeated!\n\nACHIEVEMENTS are now unlocked.\nComplete feats to gain massive permanent multipliers!";
-            document.getElementById('offline-modal').classList.add('active');
-        } else {
-            goalText = "🎯 Goal: Defeat the Stage 10 Boss to unlock Achievements!";
-        }
-    } else {
-        goalText = "🎯 Goal: Push Combat stages, collect artifacts, and forge Legendary gear!";
-    }
+    // DEVELOPER OVERRIDE: Force unlock all systems immediately
+    const keys = ['mining', 'shop', 'achievements', 'smithing', 'woodcutting', 'crafting', 'hunting', 'cooking', 'alchemy'];
+    keys.forEach(k => state.unlocks[k] = true);
 
     const banner = document.getElementById('tutorial-banner');
-    if (banner) banner.innerText = goalText;
+    if (banner) banner.style.display = 'none';
 
     const applyUnlock = (key, isHeader = false) => {
         const el = document.getElementById(isHeader ? `nav-header-${key}` : `nav-${key}`);
-        if (el) {
-            if (state.unlocks[key] === true) el.style.display = '';
-            else el.style.display = 'none';
-        }
+        if (el) el.style.display = '';
     };
     
-    applyUnlock('mining'); applyUnlock('shop');
-    applyUnlock('achievements');
-    applyUnlock('smithing'); applyUnlock('woodcutting');
-    applyUnlock('crafting'); applyUnlock('hunting');
-    applyUnlock('cooking'); applyUnlock('alchemy');
-    
-    const hasNonCombat = state.unlocks.mining || state.unlocks.woodcutting || state.unlocks.hunting || state.unlocks.cooking || state.unlocks.alchemy;
-    const hasProcessing = state.unlocks.smithing || state.unlocks.crafting;
-    
-    applyUnlock('noncombat', !hasNonCombat);
+    keys.forEach(k => applyUnlock(k));
     
     const ncHeader = document.getElementById('nav-header-noncombat');
-    if (ncHeader) ncHeader.style.display = hasNonCombat ? '' : 'none';
+    if (ncHeader) ncHeader.style.display = '';
     const procHeader = document.getElementById('nav-header-processing');
-    if (procHeader) procHeader.style.display = hasProcessing ? '' : 'none';
+    if (procHeader) procHeader.style.display = '';
 }
 
 // FORMAT RESOURCE NAMES
