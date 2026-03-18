@@ -1126,7 +1126,7 @@ function generateProceduralEquipment(category, targetType, barId) {
     let lvl = Math.max(1, Math.floor(pwr / 5) + Math.floor(Math.random() * 3));
 
     return {
-        id: state.flags.nextItemId++,
+        id: state.idCounter++,
         name: `[${rarity.name}] ${material.name} ${TYPE_NAMES[targetType]} (Lv ${lvl})`,
         type: targetType,
         atk: Math.floor(baseAtk * rarity.mult),
@@ -1163,7 +1163,7 @@ function generateProceduralJewelry(type, barId, gemId) {
     let lvl = Math.max(1, Math.floor(baseVal / 20) + Math.floor(Math.random() * 2));
     
     return {
-        id: state.flags.nextItemId++,
+        id: state.idCounter++,
         type: type,
         name: `[${rarity.name}] ${gem.name} ${TYPE_NAMES[type]} (Lv ${lvl})`,
         atk: Math.floor(baseAtk * rarity.mult),
@@ -1182,6 +1182,14 @@ function changeCraftingGem(mat) { activeCraftingGem = mat; renderWorkshopUI(); }
 
 function smeltActiveBar() {
     const rc = SMELTING_RECIPES.find(r => r.id === activeSmeltingId);
+    let canProcess = true;
+    for(let [k,v] of Object.entries(rc.req)) { if((state.resources[k] || 0) < v) canProcess = false; }
+    
+    if(!canProcess) {
+        alert("Not enough materials to smelt " + rc.name);
+        return;
+    }
+
     state.action = {
         type: 'smelting',
         id: rc.id,
@@ -1196,6 +1204,11 @@ function smeltActiveBar() {
 
 function smithSpecificItem(type) {
     let cost = 5;
+    if ((state.resources[activeSmithingBar] || 0) < cost) {
+        alert(`Not enough ${formatResName(activeSmithingBar)}! (Need ${cost})`);
+        return;
+    }
+
     state.action = {
         type: 'smithing',
         id: type,
@@ -1211,6 +1224,11 @@ function smithSpecificItem(type) {
 function craftSpecificItem(type) {
     let barCost = 1;
     let gemCost = 1;
+    if ((state.resources[activeCraftingBar] || 0) < barCost || (state.resources[activeCraftingGem] || 0) < gemCost) {
+        alert(`Not enough materials! (Need 1x Bar and 1x Gem)`);
+        return;
+    }
+
     state.action = {
         type: 'crafting',
         id: type,
@@ -1515,64 +1533,71 @@ function updateUI() {
     const invContainer = document.getElementById('inventory-list');
     if (invContainer) {
         invContainer.innerHTML = '';
-        if (state.inventory.length === 0) {
-            invContainer.innerHTML = '<div class="empty-state">Inventory is empty.<br>Mine materials to craft items!</div>';
-        } else {
-            state.inventory.forEach(item => {
-                let sStats = '';
-                if(item.critChance) sStats += `<span style="color:#facc15" title="Crit Chance">+${(item.critChance*100).toFixed(1)}% CRIT </span>`;
-                if(item.critDmg) sStats += `<span style="color:#f87171" title="Crit DMG">+${item.critDmg}x DMG </span>`;
-                if(item.dodgeChance) sStats += `<span style="color:#60a5fa" title="Dodge">+${(item.dodgeChance*100).toFixed(1)}% EVA </span>`;
-                if(item.speedBonus) sStats += `<span style="color:#34d399" title="SpeedBonus">+${item.speedBonus} SPD</span>`;
-                
-                invContainer.innerHTML += `
-                    <div class="inv-item" style="border-color: ${item.color}40; background: linear-gradient(to right, ${item.color}10, transparent);">
-                        <div class="inv-header">
-                            <span class="item-name" style="color: ${item.color}">${item.name}</span>
-                            <span class="inv-type">${item.type}</span>
-                        </div>
-                        <div class="inv-stats-row">
-                            <div class="item-stats" style="margin: 0; gap: 0.5rem; flex-direction: column;">
-                                <div>
-                                    ${item.atk ? `<span class="item-atk">⚔️ ${item.atk}</span>` : ''}
-                                    ${item.def ? `<span class="item-def">🛡️ ${item.def}</span>` : ''}
-                                </div>
-                                <div style="font-size: 0.65rem;">${sStats}</div>
-                                ${!item.atk && !item.def && !sStats ? '<span style="color:var(--text-muted)">No combat metrics</span>' : ''}
-                            </div>
-                            <span class="inv-value">💰 ${item.value}</span>
-                        </div>
-                        <div class="inv-actions">
-                            <button class="equip-btn" style="background:${item.color}20; color:${item.color}; border-color:${item.color}50;" onclick="equipItem(${item.id})">Equip</button>
-                            <button class="sell-btn" onclick="sellItem(${item.id})">Sell</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-    }
-    
-    const matContainer = document.getElementById('inventory-materials-list');
-    if (matContainer) {
-        matContainer.innerHTML = '';
-        const skipKeys = ['token'];
-        let hasMats = false;
+        let hasAnyItem = false;
         
+        // Render Equipment Data
+        state.inventory.forEach(item => {
+            hasAnyItem = true;
+            let sStats = '';
+            if(item.critChance) sStats += `<span style="color:#facc15" title="Crit Chance">+${(item.critChance*100).toFixed(1)}% CRIT </span>`;
+            if(item.critDmg) sStats += `<span style="color:#f87171" title="Crit DMG">+${item.critDmg}x DMG </span>`;
+            if(item.dodgeChance) sStats += `<span style="color:#60a5fa" title="Dodge">+${(item.dodgeChance*100).toFixed(1)}% EVA </span>`;
+            if(item.speedBonus) sStats += `<span style="color:#34d399" title="SpeedBonus">+${item.speedBonus} SPD</span>`;
+            
+            invContainer.innerHTML += `
+                <div class="inv-item" style="border-color: ${item.color}40; background: linear-gradient(to right, ${item.color}10, transparent);">
+                    <div class="inv-header">
+                        <span class="item-name" style="color: ${item.color}">${item.name}</span>
+                        <span class="inv-type">${item.type}</span>
+                    </div>
+                    <div class="inv-stats-row">
+                        <div class="item-stats" style="margin: 0; gap: 0.5rem; flex-direction: column;">
+                            <div>
+                                ${item.atk ? `<span class="item-atk">⚔️ ${item.atk}</span>` : ''}
+                                ${item.def ? `<span class="item-def">🛡️ ${item.def}</span>` : ''}
+                            </div>
+                            <div style="font-size: 0.65rem;">${sStats}</div>
+                            ${!item.atk && !item.def && !sStats ? '<span style="color:var(--text-muted)">No combat metrics</span>' : ''}
+                        </div>
+                        <span class="inv-value">💰 ${item.value}</span>
+                    </div>
+                    <div class="inv-actions">
+                        <button class="equip-btn" style="background:${item.color}20; color:${item.color}; border-color:${item.color}50;" onclick="equipItem(${item.id})">Equip</button>
+                        <button class="sell-btn" onclick="sellItem(${item.id})">Sell</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Render Raw Materials / Consumables / Gold into the same list
+        const skipKeys = ['token'];
         for (const [res, qty] of Object.entries(state.resources)) {
             if (qty > 0 && !skipKeys.includes(res)) {
-                hasMats = true;
+                hasAnyItem = true;
                 const formattedName = res.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                matContainer.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:4px; font-size:0.85rem; border-left: 3px solid #3b82f6;">
-                        <span style="color:#e2e8f0">${formattedName}</span>
-                        <span style="color:#fbbf24; font-weight:bold; font-family:monospace;">${Math.floor(qty).toLocaleString()}</span>
+                
+                let resColor = '#e2e8f0';
+                if (res === 'gold') resColor = '#fbbf24';
+                else if (res.includes('wood')) resColor = '#22c55e';
+                else if (res.includes('potion')) resColor = '#a855f7';
+                else if (res.includes('bar')) resColor = '#cbd5e1';
+                
+                invContainer.innerHTML += `
+                    <div class="inv-item" style="border-color: ${resColor}40; background: linear-gradient(to right, ${resColor}10, transparent); display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 0.8rem;">
+                        <div style="display:flex; flex-direction:column;">
+                            <span class="item-name" style="color: ${resColor}; font-size: 1rem;">${formattedName}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Stackable Resource</span>
+                        </div>
+                        <div style="font-size: 1.1rem; font-family: monospace; font-weight: bold; color: #f8fafc;">
+                            x${Math.floor(qty).toLocaleString()}
+                        </div>
                     </div>
                 `;
             }
         }
         
-        if (!hasMats) {
-            matContainer.innerHTML = '<div class="empty-state" style="font-size:0.8rem;">No materials gathered yet.</div>';
+        if (!hasAnyItem) {
+            invContainer.innerHTML = '<div class="empty-state">Inventory is empty.<br>Start mining or hunting to collect items!</div>';
         }
     }
 }
