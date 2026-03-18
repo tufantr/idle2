@@ -258,7 +258,7 @@ async function saveGame() {
     if (!token) return;
     
     try {
-        await fetch('http://localhost:3000/api/save', {
+        await fetch('/api/save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -281,7 +281,7 @@ async function loadGame() {
     }
     
     try {
-        const response = await fetch('http://localhost:3000/api/load', {
+        const response = await fetch('/api/load', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -1535,7 +1535,7 @@ async function handleAuth(type) {
     }
     
     try {
-        const res = await fetch(`http://localhost:3000/api/${type}`, {
+        const res = await fetch(`/api/${type}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, password: pass })
