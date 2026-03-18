@@ -254,22 +254,7 @@ function grantXp(skillKey, amount) {
 
 async function saveGame() {
     state.flags.lastSaveTime = Date.now();
-    const token = localStorage.getItem('fantasy_jwt');
-    if (!token) return;
-    
-    try {
-        await fetch('/api/save', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ state: state })
-        });
-        console.log("Game state synchronized to Cloud.");
-    } catch (err) {
-        console.error("Cloud Error: Failed to synchronize game state.", err);
-    }
+    localStorage.setItem('fantasyIdleSaveLocal', JSON.stringify(state));
 }
 
 async function loadGame() {
@@ -290,27 +275,10 @@ async function loadGame() {
         console.error("JWT Decode failed", e);
     }
     
-    try {
-        const response = await fetch('/api/load', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            const modal = document.getElementById('auth-modal');
-            if(modal) modal.classList.add('active');
-            localStorage.removeItem('fantasy_jwt');
-            return;
-        }
-
-        const data = await response.json();
-        const saved = data.state;
-        const lastTime = data.lastSaved;
-        
-        if (saved) {
+    const localSaveStr = localStorage.getItem('fantasyIdleSaveLocal');
+    if (localSaveStr) {
+        try {
+            const saved = JSON.parse(localSaveStr);
             mergeState(state, saved);
             
             const reqSkills = ['mining','woodcutting','hunting','cooking','alchemy','smithing','crafting'];
@@ -322,22 +290,18 @@ async function loadGame() {
             }
             if (state.flags.prestigeCount === undefined) state.flags.prestigeCount = 0;
             
-            state.flags.lastSaveTime = lastTime || Date.now();
+            state.flags.lastSaveTime = saved.flags?.lastSaveTime || Date.now();
+        } catch (e) {
+            console.error("Local save corrupted", e);
         }
-        
-        const modal = document.getElementById('auth-modal');
-        if(modal) modal.classList.remove('active');
-        
-        parseOfflineProgress();
-        spawnEnemy();
-        updateUI();
-    } catch (err) {
-        console.error("Cloud Error", err);
-        const errEl = document.getElementById('auth-error');
-        if (errEl) errEl.innerText = "Network Error: Could not reach Server.";
-        const modal = document.getElementById('auth-modal');
-        if(modal) modal.classList.add('active');
     }
+    
+    const modal = document.getElementById('auth-modal');
+    if(modal) modal.classList.remove('active');
+    
+    parseOfflineProgress();
+    spawnEnemy();
+    updateUI();
 }
 
 function mergeState(base, added) {
@@ -600,8 +564,9 @@ function confirmPrestige() {
 function prestige() {
     const earnedTokens = calculatePrestigeTokens();
     if (earnedTokens <= 0 && state.combat.maxStage < 50) {
-        alert("You need to reach higher stages to earn prestige rewards!");
-        return;
+        if (!confirm("You haven't reached a high enough stage to earn Prestige Tokens or Skill Points. Are you sure you want to reset your run for 0 rewards?")) {
+            return;
+        }
     }
 
     if (state.combat.maxStage > state.combat.highestPrestigeStage) {
@@ -644,6 +609,66 @@ function changeActivePotion(val) {
     updateUI();
 }
 
+function playerClickAttack() {
+    if (!state.combat.isActive) return;
+    
+    if (!state.combat.combo) state.combat.combo = 0;
+    
+    let increment = 1.0 / (1 + (state.combat.combo / 40));
+    state.combat.combo += increment;
+    state.combat.lastComboTime = Date.now();
+    
+    const flash = document.getElementById('combat-impact-flash');
+    if (flash) {
+        flash.classList.remove('active');
+        void flash.offsetWidth;
+        flash.classList.add('active');
+    }
+    
+    executePlayerAttack(null, 0.5);
+    updateCombatUI();
+}
+
+function updateComboUI() {
+    const container = document.getElementById('combo-container');
+    const textEl = document.getElementById('combo-text');
+    const buffEl = document.getElementById('combo-buffs');
+    
+    if (!container || !state.combat.isActive) return;
+    
+    let combo = state.combat.combo || 0;
+    if (combo <= 0.1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    let comboInt = Math.floor(combo);
+    textEl.innerText = comboInt + 'x';
+    
+    let col = '#e2e8f0';
+    let buffs = '';
+    if (combo >= 30) {
+        col = '#a855f7';
+        buffs = '⚡ +10% Crit | 🩸 Lifesteal | ⚔️ Echo Strike';
+    } else if (combo >= 20) {
+        col = '#ef4444';
+        buffs = '⚡ +10% Crit | 🩸 15% Lifesteal';
+    } else if (combo >= 10) {
+        col = '#f97316';
+        buffs = '⚡ +10% Critical Chance';
+    } else if (combo >= 5) {
+        col = '#eab308';
+    }
+    
+    textEl.style.color = col;
+    buffEl.innerText = buffs;
+    
+    textEl.classList.remove('combo-pump');
+    void textEl.offsetWidth;
+    textEl.classList.add('combo-pump');
+}
+
 function processCombatBuffs() {
     if (state.combat.autoEatRule !== 'none') {
         const foodId = state.combat.autoEatRule;
@@ -683,17 +708,40 @@ function processCombatBuffs() {
     return activeBuff;
 }
 
-function executePlayerAttack(activeBuff) {
+function executePlayerAttack(activeBuff, manualMultiplier = 1) {
     if (activeBuff) state.combat.potionTimer--;
+    
+    let combo = state.combat.combo || 0;
+    let comboDmgMult = 1 + (combo * 0.05);
     
     let finalAtk = state.stats.atk;
     if (activeBuff === 'accuracy_potion') finalAtk = Math.floor(finalAtk * 1.2);
     
-    let isCrit = Math.random() < state.stats.critChance;
+    let finalCritChance = state.stats.critChance;
+    if (combo >= 10) finalCritChance += 0.10;
+    
+    let isCrit = Math.random() < finalCritChance;
     let dmg = Math.max(1, finalAtk);
     if (isCrit) dmg = Math.floor(dmg * state.stats.critDmg);
 
-    state.combat.enemy.hp -= dmg;
+    let totalDmg = Math.floor(dmg * comboDmgMult * manualMultiplier);
+    state.combat.enemy.hp -= totalDmg;
+
+    if (combo >= 20) {
+        let heal = Math.floor(totalDmg * 0.15);
+        state.combat.playerHp = Math.min(getPlayerMaxHp(), state.combat.playerHp + heal);
+    }
+    
+    if (combo >= 30 && manualMultiplier === 1) {
+        if (Math.random() < 0.20) {
+            setTimeout(() => {
+                if (state.combat.isActive && state.combat.enemy.hp > 0) {
+                    executePlayerAttack(null, 0.5);
+                    updateCombatUI();
+                }
+            }, 200);
+        }
+    }
     
     if (state.combat.enemy.hp <= 0) {
         state.combat.stage++;
@@ -864,6 +912,16 @@ setInterval(() => {
     }
     
     if (state.combat.isActive) {
+        // Combo Decay Logic
+        if (state.combat.combo > 0) {
+            let timeSinceClick = now - (state.combat.lastComboTime || now);
+            if (timeSinceClick > 1500) {
+                let decayRate = 0.05 + (state.combat.combo / 100);
+                state.combat.combo = Math.max(0, state.combat.combo - decayRate);
+                updateComboUI();
+            }
+        }
+        
         state.combat.playerAttackTimer += dt;
         state.combat.enemyAttackTimer += dt;
         
@@ -888,6 +946,11 @@ setInterval(() => {
 
         if (actionOccurred) {
             updateCombatUI();
+        }
+    } else {
+        if (state.combat.combo > 0) {
+            state.combat.combo = 0;
+            updateComboUI();
         }
     }
 
@@ -1382,6 +1445,8 @@ function updateCombatUI() {
             
             gearContainer.innerHTML = gearHtml;
         }
+        
+        updateComboUI();
     }
 }
 
@@ -1540,35 +1605,19 @@ function updateUI() {
 }
 
 async function handleAuth(type) {
-    const user = document.getElementById('auth-user').value;
-    const pass = document.getElementById('auth-pass').value;
+    let user = document.getElementById('auth-user').value;
     const errText = document.getElementById('auth-error');
     
-    if (!user || (!pass && pass !== '')) {
-        errText.innerText = 'Both fields required';
-        return;
-    }
+    if (!user) user = "LocalPlayer";
     
-    try {
-        const res = await fetch(`/api/${type}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, password: pass })
-        });
-        
-        const data = await res.json();
-        if (!res.ok) {
-            errText.innerText = data.error || 'Authentication Failed';
-        } else {
-            localStorage.setItem('fantasy_jwt', data.token);
-            errText.innerText = 'Success! Loading state...';
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-        }
-    } catch (e) {
-        errText.innerText = 'Server unreachable';
-    }
+    const payload = { username: user };
+    const mockToken = "mock." + btoa(JSON.stringify(payload)) + ".mock";
+    localStorage.setItem('fantasy_jwt', mockToken);
+    
+    if (errText) errText.innerText = 'Local Login Success! Loading...';
+    setTimeout(() => {
+        location.reload();
+    }, 500);
 }
 
 window.switchTab = switchTab;
@@ -1596,5 +1645,6 @@ window.buySkillPoint = buySkillPoint;
 window.wipeSave = wipeSave;
 window.handleAuth = handleAuth;
 window.logout = logout;
+window.playerClickAttack = playerClickAttack;
 
 loadGame();

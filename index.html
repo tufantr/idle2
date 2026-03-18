@@ -125,7 +125,13 @@
                             </div>
                         </div>
                         
-                        <div class="combat-arena">
+                        <div class="combo-meter-container" id="combo-container" style="display:none;">
+                            <div class="combo-text" id="combo-text">0x</div>
+                            <div style="font-size: 0.75rem; color: #cbd5e1; font-weight: bold; letter-spacing: 1px;" id="combo-label">COMBO</div>
+                            <div id="combo-buffs" style="font-size: 0.75rem; color: #fbbf24; margin-top: 0.3rem; min-height: 1.2rem;"></div>
+                        </div>
+                        
+                        <div class="combat-arena" id="combat-arena-view">
                             <div class="combat-entity player-side">
                                 <div class="entity-name">Hero (You)</div>
                                 <div class="hp-text"><span id="combat-player-hp">100 / 100</span> HP</div>
@@ -135,7 +141,8 @@
                             
                             <div class="combat-vs">VS</div>
                             
-                            <div class="combat-entity enemy-side">
+                            <div class="combat-entity enemy-side enemy-click-target" onclick="playerClickAttack()" style="border: 1px dashed rgba(239, 68, 68, 0.5);">
+                                <div class="impact-flash" id="combat-impact-flash"></div>
                                 <div class="entity-name" id="enemy-name">Monster Lv 1</div>
                                 <div class="hp-text"><span id="combat-enemy-hp">10 / 10</span> HP</div>
                                 <div class="combat-bar"><div id="combat-enemy-fill" class="combat-fill enemy-fill"></div></div>

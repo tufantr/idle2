@@ -235,3 +235,47 @@ button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.
 .st-text { color: #38bdf8; font-weight: 600; }
 .loss-text { color: #ef4444; }
 .keep-text { color: #34d399; }
+
+/* COMBO ENGINE */
+.combo-meter-container {
+    text-align: center;
+    width: 100%;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+    user-select: none;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.combo-text {
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    margin-bottom: 0.2rem;
+    transition: color 0.3s;
+}
+.combo-pump { animation: pump 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes pump { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.enemy-click-target {
+    cursor: crosshair;
+    transition: transform 0.1s, box-shadow 0.2s;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+}
+.enemy-click-target:hover { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+.enemy-click-target:active { transform: scale(0.95); box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
+.screen-shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+    40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+.impact-flash {
+    position: absolute; top:0; left:0; right:0; bottom:0;
+    background: white; opacity: 0; pointer-events: none; border-radius: 8px;
+}
+.impact-flash.active { animation: flashAnim 0.2s ease-out; }
+@keyframes flashAnim { 0% { opacity: 0.4; } 100% { opacity: 0; } }
