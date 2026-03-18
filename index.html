@@ -13,6 +13,11 @@
         <aside id="sidebar" class="glass-panel">
             <h2 style="font-size:1.4rem; padding-bottom: 1rem; border-bottom: 1px solid var(--glass-border); margin-bottom: 1rem; background: linear-gradient(to right, #c084fc, #818cf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Fantasy Idle</h2>
             
+            <div id="user-profile" style="display:none; padding-bottom: 1rem; border-bottom: 1px solid var(--glass-border); margin-bottom: 1rem; flex-direction: column; gap: 0.5rem; text-align: center;">
+                <span style="font-size: 0.85rem; color: #94a3b8;">Player: <span id="auth-username" style="color: #fbbf24; font-weight: bold;"></span></span>
+                <button class="nav-btn" onclick="logout()" style="padding: 4px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid #ef4444; margin: 0 auto; width: 60%;">Logout</button>
+            </div>
+
             <h3>MANAGEMENT</h3>
             <button id="nav-inventory" class="nav-btn" onclick="switchTab('inventory', this)">🎒 Inventory</button>
             <button id="nav-shop" class="nav-btn locked-tab" onclick="switchTab('shop', this)">🛒 Shop <span id="nav-shop-alert" style="color:#fbbf24; font-size:0.8em; margin-left: 5px;"></span></button>

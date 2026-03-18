@@ -279,6 +279,16 @@ async function loadGame() {
         if(modal) modal.classList.add('active');
         return;
     }
+
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const profileEl = document.getElementById('user-profile');
+        if(profileEl) profileEl.style.display = 'flex';
+        const userEl = document.getElementById('auth-username');
+        if(userEl) userEl.innerText = payload.username;
+    } catch(e) {
+        console.error("JWT Decode failed", e);
+    }
     
     try {
         const response = await fetch('/api/load', {
@@ -346,6 +356,11 @@ function wipeSave() {
         localStorage.removeItem('fantasyIdleSave');
         location.reload();
     }
+}
+
+function logout() {
+    localStorage.removeItem('fantasy_jwt');
+    location.reload();
 }
 
 function parseOfflineProgress() {
@@ -1580,5 +1595,6 @@ window.confirmPrestige = confirmPrestige;
 window.buySkillPoint = buySkillPoint;
 window.wipeSave = wipeSave;
 window.handleAuth = handleAuth;
+window.logout = logout;
 
 loadGame();
