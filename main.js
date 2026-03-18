@@ -803,16 +803,19 @@ setInterval(() => {
     // Actions Loop
     if (state.action.type) {
         const skillKey = state.action.type;
-        const node = SKILLS_DATA[skillKey].nodes.find(n => n.id === state.action.id);
+        let isWorkshop = ['smelting', 'smithing', 'crafting'].includes(skillKey);
         
-        if (node) {
+        const node = SKILLS_DATA[skillKey]?.nodes.find(n => n.id === state.action.id);
+        
+        if (node || isWorkshop) {
             const speedMult = 1 + (state.shop.upgrades.miningSpeed * 0.10) + (state.shop.skills.rogue * 0.05);
-            const actualTime = node.baseTime / speedMult;
+            const act = isWorkshop ? state.action : node;
+            const actualTime = (act.baseTime / speedMult) || 2000;
 
             let canProcess = true;
-            if (node.consumes) {
-                for (const [res, qty] of Object.entries(node.consumes)) {
-                    if (state.resources[res] < qty) {
+            if (act.consumes) {
+                for (const [res, qty] of Object.entries(act.consumes)) {
+                    if ((state.resources[res] || 0) < qty) {
                         canProcess = false;
                         break;
                     }
@@ -825,23 +828,41 @@ setInterval(() => {
                 if (state.action.progress >= actualTime) {
                     state.action.progress -= actualTime;
                     
-                    if (node.consumes) {
-                        for (const [res, qty] of Object.entries(node.consumes)) {
+                    if (act.consumes) {
+                        for (const [res, qty] of Object.entries(act.consumes)) {
                             state.resources[res] -= qty;
                         }
                     }
                     
-                    state.resources[node.produces] += node.amount;
-                    grantXp(skillKey, node.xp);
+                    if (isWorkshop) {
+                        if (skillKey === 'smelting') {
+                            state.resources[state.action.produces] += 1;
+                            grantXp('smithing', state.action.xp);
+                        } else if (skillKey === 'smithing') {
+                            const newItem = generateProceduralEquipment('smithing', state.action.id, state.action.barId);
+                            state.inventory.push(newItem);
+                            grantXp('smithing', state.action.xp);
+                        } else if (skillKey === 'crafting') {
+                            const newItem = generateProceduralJewelry(state.action.id, state.action.barId, state.action.gemId);
+                            state.inventory.push(newItem);
+                            grantXp('crafting', state.action.xp);
+                        }
+                        renderWorkshopUI();
+                    } else {
+                        state.resources[node.produces] += node.amount;
+                        grantXp(skillKey, node.xp);
+                        updateGenericSkillUI(skillKey);
+                    }
                     
                     renderResources(); 
-                    updateGenericSkillUI(skillKey);
                 } else {
-                    const fill = document.getElementById('progress-fill-' + node.id);
+                    const fillId = isWorkshop ? `progress-fill-${skillKey}-${state.action.id}` : `progress-fill-${node.id}`;
+                    const fill = document.getElementById(fillId);
                     if (fill) fill.style.width = (state.action.progress / actualTime * 100) + '%';
                 }
             } else {
-                const fill = document.getElementById('progress-fill-' + node.id);
+                const fillId = isWorkshop ? `progress-fill-${skillKey}-${state.action.id}` : `progress-fill-${node.id}`;
+                const fill = document.getElementById(fillId);
                 if (fill) fill.style.background = '#ef4444'; 
             }
         }
@@ -1161,42 +1182,46 @@ function changeCraftingGem(mat) { activeCraftingGem = mat; renderWorkshopUI(); }
 
 function smeltActiveBar() {
     const rc = SMELTING_RECIPES.find(r => r.id === activeSmeltingId);
-    let can = true;
-    for(let [k,v] of Object.entries(rc.req)) { if(state.resources[k] < v) can = false; }
-    
-    if(can) {
-        for(let [k,v] of Object.entries(rc.req)) state.resources[k] -= v;
-        state.resources[rc.gives] += 1;
-        updateUI();
-    } else {
-        alert("Not enough raw materials for "+rc.name);
-    }
+    state.action = {
+        type: 'smelting',
+        id: rc.id,
+        baseTime: 2000,
+        progress: 0,
+        consumes: rc.req,
+        produces: rc.gives,
+        xp: 15
+    };
+    renderWorkshopUI();
 }
 
 function smithSpecificItem(type) {
     let cost = 5;
-    if (state.resources[activeSmithingBar] >= cost) {
-        state.resources[activeSmithingBar] -= cost;
-        const newItem = generateProceduralEquipment('smithing', type, activeSmithingBar);
-        state.inventory.push(newItem);
-        updateUI();
-    } else {
-        alert(`Not enough ${formatResName(activeSmithingBar)}! (Need ${cost})`);
-    }
+    state.action = {
+        type: 'smithing',
+        id: type,
+        barId: activeSmithingBar,
+        baseTime: 4000,
+        progress: 0,
+        consumes: { [activeSmithingBar]: cost },
+        xp: 50
+    };
+    renderWorkshopUI();
 }
 
 function craftSpecificItem(type) {
     let barCost = 1;
     let gemCost = 1;
-    if (state.resources[activeCraftingBar] >= barCost && state.resources[activeCraftingGem] >= gemCost) {
-        state.resources[activeCraftingBar] -= barCost;
-        state.resources[activeCraftingGem] -= gemCost;
-        const newItem = generateProceduralJewelry(type, activeCraftingBar, activeCraftingGem);
-        state.inventory.push(newItem);
-        updateUI();
-    } else {
-        alert(`Not enough materials! (Need 1 Bar and 1 Gem)`);
-    }
+    state.action = {
+        type: 'crafting',
+        id: type,
+        barId: activeCraftingBar,
+        gemId: activeCraftingGem,
+        baseTime: 5000,
+        progress: 0,
+        consumes: { [activeCraftingBar]: barCost, [activeCraftingGem]: gemCost },
+        xp: 75
+    };
+    renderWorkshopUI();
 }
 
 function renderWorkshopUI() {
@@ -1212,13 +1237,17 @@ function renderWorkshopUI() {
             const has = state.resources[k] >= v;
             reqs.push(`<span style="color: ${has ? '#22c55e' : '#ef4444'}">${v}x ${formatResName(k)}</span>`);
         }
+        const isSmeltingThis = state.action.type === 'smelting' && state.action.id === activeSmeltingId;
+        const smeltProg = isSmeltingThis ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-fill-smelting-${activeSmeltingId}" style="width:0%; background:#ef4444;"></div></div>` : '';
+        
         smeltContainer.innerHTML = `
-            <div class="workshop-card" style="border-color: #ef444450;">
+            <div class="workshop-card ${isSmeltingThis ? 'active' : ''}" style="border-color: #ef444450;">
                 <div class="workshop-type" style="color:#f8fafc;">${rc.name}</div>
                 <div style="font-size:0.75rem; text-align:center; padding-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05);">${reqs.join(' + ')}</div>
                 <div class="workshop-actions" style="margin-top:0.5rem;">
-                    <button class="smith-btn" onclick="smeltActiveBar()" style="justify-content:center; background: rgba(239, 68, 68, 0.1);">Smelt 1 Bar</button>
+                    <button class="smith-btn" onclick="smeltActiveBar()" style="justify-content:center; background: rgba(239, 68, 68, 0.1);">${isSmeltingThis ? 'Smelting...' : 'Smelt 1 Bar'}</button>
                 </div>
+                ${smeltProg}
             </div>
         `;
     }
@@ -1231,15 +1260,19 @@ function renderWorkshopUI() {
     if (smithContainer) {
         smithContainer.innerHTML = '';
         SMITHING_TYPES.forEach(type => {
+            const isSmithingThis = state.action.type === 'smithing' && state.action.id === type && state.action.barId === activeSmithingBar;
+            const smithProg = isSmithingThis ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-fill-smithing-${type}" style="width:0%; background:#34d399;"></div></div>` : '';
+            
             smithContainer.innerHTML += `
-                <div class="workshop-card">
+                <div class="workshop-card ${isSmithingThis ? 'active' : ''}">
                     <div class="workshop-type">${type}</div>
                     <div class="workshop-actions">
                         <button class="smith-btn" onclick="smithSpecificItem('${type}')">
-                            <span>Smith</span>
+                            <span>${isSmithingThis ? 'Smithing...' : 'Smith'}</span>
                             <span style="color:var(--text-muted); font-size: 0.7rem;">5 ${formatResName(activeSmithingBar)}</span>
                         </button>
                     </div>
+                    ${smithProg}
                 </div>
             `;
         });
@@ -1253,15 +1286,19 @@ function renderWorkshopUI() {
     if (craftContainer) {
         craftContainer.innerHTML = '';
         CRAFTING_TYPES.forEach(type => {
+            const isCraftingThis = state.action.type === 'crafting' && state.action.id === type && state.action.barId === activeCraftingBar && state.action.gemId === activeCraftingGem;
+            const craftProg = isCraftingThis ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-fill-crafting-${type}" style="width:0%; background:#a855f7;"></div></div>` : '';
+
             craftContainer.innerHTML += `
-                <div class="workshop-card" style="border-color: rgba(232, 121, 249, 0.3);">
+                <div class="workshop-card ${isCraftingThis ? 'active' : ''}" style="border-color: rgba(232, 121, 249, 0.3);">
                     <div class="workshop-type" style="color: var(--gem-color);">${type}</div>
                     <div class="workshop-actions">
                         <button class="craft-btn" onclick="craftSpecificItem('${type}')">
-                            <span>Craft</span>
+                            <span>${isCraftingThis ? 'Crafting...' : 'Craft'}</span>
                             <span style="color:var(--text-muted); font-size: 0.7rem;">1 Bar + 1 Gem</span>
                         </button>
                     </div>
+                    ${craftProg}
                 </div>
             `;
         });
@@ -1518,7 +1555,7 @@ function updateUI() {
     const matContainer = document.getElementById('inventory-materials-list');
     if (matContainer) {
         matContainer.innerHTML = '';
-        const skipKeys = ['gold', 'token'];
+        const skipKeys = ['token'];
         let hasMats = false;
         
         for (const [res, qty] of Object.entries(state.resources)) {
