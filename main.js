@@ -847,7 +847,7 @@ setInterval(() => {
                             state.inventory.push(newItem);
                             grantXp('crafting', state.action.xp);
                         }
-                        renderWorkshopUI();
+                        updateUI();
                     } else {
                         state.resources[node.produces] += node.amount;
                         grantXp(skillKey, node.xp);
