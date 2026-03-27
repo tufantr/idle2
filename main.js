@@ -29,7 +29,9 @@ const state = {
         woodcutting: { level: 1, xp: 0, nextXp: 100 },
         hunting: { level: 1, xp: 0, nextXp: 100 },
         cooking: { level: 1, xp: 0, nextXp: 100 },
-        alchemy: { level: 1, xp: 0, nextXp: 100 }
+        alchemy: { level: 1, xp: 0, nextXp: 100 },
+        smithing: { level: 1, xp: 0, nextXp: 100 },
+        crafting: { level: 1, xp: 0, nextXp: 100 }
     },
     action: { type: null, id: null, progress: 0 },
     combat: {
@@ -52,7 +54,8 @@ const state = {
         smithing: false, woodcutting: false,
         crafting: false, hunting: false,
         cooking: false, alchemy: false,
-        achievements: false
+        achievements: false,
+        clan: false
     },
     flags: {
         lastSaveTime: Date.now(),
@@ -73,6 +76,14 @@ const state = {
             rogue: 0
         }
     },
+    activePlay: {
+        mining: { boostUntil: 0, bonus: 0, streak: 0, challenge: null },
+        woodcutting: { boostUntil: 0, bonus: 0, streak: 0, challenge: null },
+        hunting: { boostUntil: 0, bonus: 0, streak: 0, challenge: null },
+        cooking: { boostUntil: 0, bonus: 0, streak: 0, challenge: null },
+        alchemy: { boostUntil: 0, bonus: 0, streak: 0, challenge: null }
+    },
+    inventoryOrder: [],
     idCounter: 0
 };
 
@@ -204,8 +215,20 @@ let activeSmithingBar = 'copper_bar';
 let activeCraftingBar = 'silver_bar';
 let activeCraftingGem = 'amethyst';
 
+const NON_COMBAT_SKILLS = ['mining', 'woodcutting', 'hunting', 'cooking', 'alchemy'];
+const MINIGAME_CONFIG = {
+    mining: { icon: '⛏️', label: 'Ore Vein Pulse', desc: 'Tap while the pulse sweeps through the ore seam.', challengeType: 'timing', boostMs: 15000, baseBonus: 0.20, streakBonus: 0.05, maxBonus: 0.45, accent: '#34d399', actionText: 'Pulse the Vein' },
+    woodcutting: { icon: '🌳', label: 'Perfect Chop', desc: 'Catch the axe rhythm at the heartwood ring.', challengeType: 'timing', boostMs: 15000, baseBonus: 0.20, streakBonus: 0.05, maxBonus: 0.45, accent: '#22c55e', actionText: 'Catch the Rhythm' },
+    hunting: { icon: '🏹', label: 'Snap Shot', desc: 'Tap when the prey crosses the kill zone.', challengeType: 'moving-target', boostMs: 15000, baseBonus: 0.22, streakBonus: 0.05, maxBonus: 0.47, accent: '#f59e0b', actionText: 'Loose an Arrow' },
+    cooking: { icon: '🍳', label: 'Heat Ride', desc: 'Keep tapping the flame to ride the perfect sizzle band.', challengeType: 'heat', boostMs: 18000, baseBonus: 0.24, streakBonus: 0.05, maxBonus: 0.49, accent: '#fb923c', actionText: 'Ride the Heat' },
+    alchemy: { icon: '🧪', label: 'Catalyst Drag', desc: 'Drag the stabilizer into the glowing resonance channel.', challengeType: 'drag', boostMs: 18000, baseBonus: 0.24, streakBonus: 0.05, maxBonus: 0.49, accent: '#10b981', actionText: 'Stabilize the Mix' }
+};
+
 // NAVIGATION
 function switchTab(tabId, btnElement) {
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    if (!targetTab) return;
+
     const contents = document.getElementsByClassName('tab-content');
     for (let i = 0; i < contents.length; i++) {
         contents[i].classList.remove('active-tab');
@@ -214,29 +237,416 @@ function switchTab(tabId, btnElement) {
     for (let i = 0; i < btns.length; i++) {
         btns[i].classList.remove('active');
     }
-    
-    document.getElementById(`tab-${tabId}`).classList.add('active-tab');
+    targetTab.classList.add('active-tab');
     if (btnElement) btnElement.classList.add('active');
+
+    // Repaint tab content after switching so panels don't appear blank
+    // when the previous render happened before state/UI were fully ready.
+    updateUI();
+}
+
+function clearAction() {
+    state.action = { type: null, id: null, progress: 0 };
+}
+
+function isSameAction(nextAction) {
+    if (!state.action.type) return false;
+
+    const comparableKeys = ['type', 'id', 'barId', 'gemId', 'produces'];
+    return comparableKeys.every(key => state.action[key] === nextAction[key]);
+}
+
+function setOrToggleAction(nextAction) {
+    if (isSameAction(nextAction)) {
+        clearAction();
+    } else {
+        if (state.combat.isActive) {
+            state.combat.isActive = false;
+            state.combat.combo = 0;
+        }
+        state.action = { progress: 0, ...nextAction };
+    }
+    updateUI();
+}
+
+function getActivePlayState(skillKey) {
+    if (!state.activePlay) state.activePlay = {};
+    if (!state.activePlay[skillKey]) {
+        state.activePlay[skillKey] = { boostUntil: 0, bonus: 0, streak: 0, challenge: null };
+    }
+    return state.activePlay[skillKey];
+}
+
+function getNonCombatBoostMultiplier(skillKey) {
+    const playState = getActivePlayState(skillKey);
+    return playState.boostUntil > Date.now() ? 1 + playState.bonus : 1;
+}
+
+function clearExpiredChallenge(skillKey) {
+    const playState = getActivePlayState(skillKey);
+    if (playState.challenge && playState.challenge.expiresAt <= Date.now()) {
+        playState.challenge = null;
+        playState.streak = 0;
+    }
+}
+
+function getAnimatedChallengePosition(challenge) {
+    const elapsed = Date.now() - challenge.startedAt;
+    const cycle = challenge.cycleMs || 1200;
+    const raw = (elapsed % (cycle * 2)) / cycle;
+    return raw <= 1 ? raw : 2 - raw;
+}
+
+function buildMinigameChallenge(skillKey) {
+    const conf = MINIGAME_CONFIG[skillKey];
+    const now = Date.now();
+
+    if (conf.challengeType === 'timing') {
+        return {
+            type: 'timing',
+            zoneStart: Number((0.18 + Math.random() * 0.44).toFixed(2)),
+            zoneWidth: 0.16,
+            cycleMs: 900 + Math.floor(Math.random() * 500),
+            startedAt: now,
+            expiresAt: now + 10000
+        };
+    }
+
+    if (conf.challengeType === 'moving-target') {
+        return {
+            type: 'moving-target',
+            zoneStart: Number((0.38 + Math.random() * 0.18).toFixed(2)),
+            zoneWidth: 0.14,
+            cycleMs: 1000 + Math.floor(Math.random() * 500),
+            startedAt: now,
+            expiresAt: now + 10000
+        };
+    }
+
+    if (conf.challengeType === 'heat') {
+        return {
+            type: 'heat',
+            heat: 0.35,
+            targetStart: Number((0.42 + Math.random() * 0.12).toFixed(2)),
+            targetWidth: 0.18,
+            lastDecayAt: now,
+            expiresAt: now + 10000
+        };
+    }
+
+    return {
+        type: 'drag',
+        dragValue: 0.15 + Math.random() * 0.2,
+        targetStart: Number((0.48 + Math.random() * 0.16).toFixed(2)),
+        targetWidth: 0.16,
+        expiresAt: now + 10000
+    };
+}
+
+function startMinigame(skillKey) {
+    const playState = getActivePlayState(skillKey);
+    playState.challenge = buildMinigameChallenge(skillKey);
+    updateUI();
+}
+
+function rewardMinigame(skillKey) {
+    const conf = MINIGAME_CONFIG[skillKey];
+    const playState = getActivePlayState(skillKey);
+    playState.streak = Math.min(5, playState.streak + 1);
+    playState.bonus = Math.min(conf.maxBonus, conf.baseBonus + ((playState.streak - 1) * conf.streakBonus));
+    playState.boostUntil = Date.now() + conf.boostMs;
+    playState.challenge = null;
+    updateUI();
+}
+
+function failMinigame(skillKey) {
+    const playState = getActivePlayState(skillKey);
+    playState.challenge = null;
+    playState.streak = 0;
+    playState.bonus = 0;
+    playState.boostUntil = 0;
+    updateUI();
+}
+
+function resolveMinigame(skillKey, value) {
+    clearExpiredChallenge(skillKey);
+    const playState = getActivePlayState(skillKey);
+    const challenge = playState.challenge;
+    if (!challenge) return;
+
+    let success = false;
+
+    if (challenge.type === 'timing' || challenge.type === 'moving-target') {
+        const position = getAnimatedChallengePosition(challenge);
+        const zoneEnd = challenge.zoneStart + challenge.zoneWidth;
+        success = position >= challenge.zoneStart && position <= zoneEnd;
+    } else if (challenge.type === 'heat') {
+        const zoneEnd = challenge.targetStart + challenge.targetWidth;
+        success = challenge.heat >= challenge.targetStart && challenge.heat <= zoneEnd;
+    } else if (challenge.type === 'drag') {
+        const zoneEnd = challenge.targetStart + challenge.targetWidth;
+        success = challenge.dragValue >= challenge.targetStart && challenge.dragValue <= zoneEnd;
+    }
+
+    if (success) rewardMinigame(skillKey);
+    else failMinigame(skillKey);
+}
+
+function pumpHeat(skillKey) {
+    const challenge = getActivePlayState(skillKey).challenge;
+    if (!challenge || challenge.type !== 'heat') return;
+    challenge.heat = Math.min(1, challenge.heat + 0.12);
+    challenge.lastDecayAt = Date.now();
+    updateUI();
+}
+
+function setDragValue(skillKey, value) {
+    const challenge = getActivePlayState(skillKey).challenge;
+    if (!challenge || challenge.type !== 'drag') return;
+    challenge.dragValue = Number(value);
+    updateUI();
+}
+
+function getResourceColor(resourceId) {
+    if (resourceId === 'gold') return '#fbbf24';
+    if (resourceId.includes('wood')) return '#22c55e';
+    if (resourceId.includes('potion')) return '#a855f7';
+    if (resourceId.includes('leaf')) return '#10b981';
+    if (resourceId.includes('raw_') || resourceId.includes('cooked_')) return '#fb923c';
+    if (resourceId.includes('bar')) {
+        return BARS.find(bar => bar.id === resourceId)?.color || '#cbd5e1';
+    }
+    if (resourceId.includes('ore') || ['copper', 'iron', 'coal', 'mithril', 'adamant', 'runite'].includes(resourceId)) {
+        return '#94a3b8';
+    }
+    return GEMS.find(gem => gem.id === resourceId)?.color || '#e2e8f0';
+}
+
+function getResourceIcon(resourceId) {
+    if (resourceId === 'gold') return '🪙';
+    if (resourceId.includes('copper')) return resourceId.includes('bar') ? '🧱' : '🪨';
+    if (resourceId.includes('iron')) return resourceId.includes('bar') ? '🔩' : '⛓️';
+    if (resourceId === 'coal') return '⚫';
+    if (resourceId.includes('silver')) return '🥈';
+    if (resourceId.includes('gold_ore')) return '🥇';
+    if (resourceId.includes('mithril')) return '💠';
+    if (resourceId.includes('adamant')) return '🟩';
+    if (resourceId.includes('runite')) return '🔷';
+    if (resourceId === 'amethyst') return '🟣';
+    if (resourceId === 'topaz') return '🟨';
+    if (resourceId === 'sapphire') return '🔵';
+    if (resourceId === 'emerald') return '🟢';
+    if (resourceId === 'ruby') return '🔴';
+    if (resourceId === 'diamond') return '💎';
+    if (resourceId.includes('wood')) return '🪵';
+    if (resourceId.includes('raw_')) return '🥩';
+    if (resourceId.includes('cooked_')) return '🍖';
+    if (resourceId.includes('leaf')) return '🌿';
+    if (resourceId.includes('potion')) return '🧪';
+    return '📦';
+}
+
+function getEquipmentIcon(type) {
+    const icons = {
+        Weapon: '🗡️',
+        Shield: '🛡️',
+        Head: '⛑️',
+        Body: '🦺',
+        Legs: '👖',
+        Boots: '🥾',
+        Gloves: '🧤',
+        Ring: '💍',
+        Neck: '📿',
+        Ear: '✨'
+    };
+    return icons[type] || '🎒';
+}
+
+function getInventoryEntryImage(entry) {
+    if (entry.kind === 'equipment') return getEquipmentIcon(entry.item.type);
+    return getResourceIcon(entry.resourceId);
+}
+
+function getSkillActionIcon(skillKey, node) {
+    if (skillKey === 'smithing') return getEquipmentIcon(node.id || 'Weapon');
+    if (skillKey === 'crafting') return getEquipmentIcon(node.id || 'Ring');
+    return getResourceIcon(node.produces || node.gives || node.id);
+}
+
+function getResourceSellValue(resourceId) {
+    if (resourceId === 'gold') return 0;
+    if (resourceId.includes('bar')) return 12;
+    if (GEMS.some(gem => gem.id === resourceId)) return 18;
+    if (resourceId.includes('potion')) return 22;
+    if (resourceId.includes('cooked_')) return 8;
+    if (resourceId.includes('raw_')) return 4;
+    if (resourceId.includes('wood')) return 4;
+    if (resourceId.includes('leaf')) return 5;
+    if (resourceId.includes('ore') || ['copper', 'iron', 'coal', 'mithril', 'adamant', 'runite'].includes(resourceId)) return 6;
+    return 3;
+}
+
+function getInventoryEntries() {
+    const equipmentEntries = state.inventory.map(item => ({
+        key: `eq:${item.id}`,
+        kind: 'equipment',
+        item
+    }));
+
+    const resourceEntries = Object.entries(state.resources)
+        .filter(([resourceId, qty]) => qty > 0)
+        .map(([resourceId, qty]) => ({
+            key: `res:${resourceId}`,
+            kind: 'resource',
+            resourceId,
+            qty,
+            value: getResourceSellValue(resourceId),
+            color: getResourceColor(resourceId)
+        }));
+
+    const allEntries = [...equipmentEntries, ...resourceEntries];
+    const entryMap = new Map(allEntries.map(entry => [entry.key, entry]));
+    state.inventoryOrder = (state.inventoryOrder || []).filter(key => entryMap.has(key));
+
+    const ordered = [];
+    state.inventoryOrder.forEach(key => {
+        const entry = entryMap.get(key);
+        if (entry) {
+            ordered.push(entry);
+            entryMap.delete(key);
+        }
+    });
+
+    const remainder = [...entryMap.values()].sort((a, b) => a.key.localeCompare(b.key));
+    const finalEntries = [...ordered, ...remainder];
+    state.inventoryOrder = finalEntries.map(entry => entry.key);
+    return finalEntries;
+}
+
+function moveInventoryEntry(sourceKey, targetKey = null) {
+    const entries = getInventoryEntries();
+    const sourceIndex = entries.findIndex(entry => entry.key === sourceKey);
+    if (sourceIndex === -1) return;
+
+    const [moved] = entries.splice(sourceIndex, 1);
+    let insertIndex = entries.length;
+
+    if (targetKey) {
+        const targetIndex = entries.findIndex(entry => entry.key === targetKey);
+        if (targetIndex !== -1) insertIndex = targetIndex;
+    }
+
+    entries.splice(insertIndex, 0, moved);
+    state.inventoryOrder = entries.map(entry => entry.key);
+    updateUI();
+}
+
+function addItemToInventory(item) {
+    state.inventory.push(item);
+    state.inventoryOrder = state.inventoryOrder || [];
+    state.inventoryOrder.push(`eq:${item.id}`);
+}
+
+function canEquipToSlot(item, slot) {
+    if (!item) return false;
+    if (slot === item.type) return true;
+    if (item.type === 'Ring' && ['Ring1', 'Ring2'].includes(slot)) return true;
+    if (item.type === 'Ear' && ['Ear1', 'Ear2'].includes(slot)) return true;
+    return false;
+}
+
+function equipItemToSlot(id, requestedSlot = null) {
+    const itemIndex = state.inventory.findIndex(i => i.id === id);
+    if (itemIndex === -1) return;
+
+    const item = state.inventory[itemIndex];
+    let targetSlot = requestedSlot || item.type;
+
+    if (!requestedSlot) {
+        if (item.type === 'Ring') {
+            if (!state.equipped.Ring1) targetSlot = 'Ring1';
+            else if (!state.equipped.Ring2) targetSlot = 'Ring2';
+            else targetSlot = 'Ring1';
+        } else if (item.type === 'Ear') {
+            if (!state.equipped.Ear1) targetSlot = 'Ear1';
+            else if (!state.equipped.Ear2) targetSlot = 'Ear2';
+            else targetSlot = 'Ear1';
+        }
+    }
+
+    if (!canEquipToSlot(item, targetSlot)) return;
+
+    if (state.equipped[targetSlot]) {
+        state.inventory.push(state.equipped[targetSlot]);
+    }
+
+    state.equipped[targetSlot] = item;
+    state.inventory.splice(itemIndex, 1);
+    state.inventoryOrder = (state.inventoryOrder || []).filter(key => key !== `eq:${id}`);
+    updateUI();
+}
+
+function handleInventoryDragStart(event, entryKey) {
+    event.dataTransfer.setData('text/plain', entryKey);
+    event.dataTransfer.effectAllowed = 'move';
+}
+
+function allowInventoryDrop(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+}
+
+function handleInventoryDrop(event, targetKey = null) {
+    event.preventDefault();
+    const sourceKey = event.dataTransfer.getData('text/plain');
+    if (!sourceKey) return;
+
+    if (sourceKey.startsWith('equip:')) {
+        const slot = sourceKey.replace('equip:', '');
+        if (state.equipped[slot]) {
+            state.inventory.push(state.equipped[slot]);
+            state.equipped[slot] = null;
+            updateUI();
+        }
+        return;
+    }
+
+    moveInventoryEntry(sourceKey, targetKey);
+}
+
+function handleSlotDrop(event, slot) {
+    event.preventDefault();
+    const sourceKey = event.dataTransfer.getData('text/plain');
+    if (!sourceKey?.startsWith('eq:')) return;
+
+    const itemId = Number(sourceKey.replace('eq:', ''));
+    equipItemToSlot(itemId, slot);
+}
+
+function sellResource(resourceId, amount = 1) {
+    if (!state.resources[resourceId] || resourceId === 'gold') return;
+    const qty = Math.min(amount, Math.floor(state.resources[resourceId]));
+    state.resources[resourceId] -= qty;
+    state.resources.gold += getResourceSellValue(resourceId) * qty;
+    if (state.resources[resourceId] <= 0) state.resources[resourceId] = 0;
+    updateUI();
 }
 
 // ACTION LOGIC
 function startAction(skillKey, nodeId) {
     const node = SKILLS_DATA[skillKey].nodes.find(n => n.id === nodeId);
     if (!node || state.skills[skillKey].level < node.levelReq) return;
-    
-    if (state.action.type === skillKey && state.action.id === nodeId) {
-        state.action.type = null;
-        state.action.id = null;
-        state.action.progress = 0;
-    } else {
-        state.action.type = skillKey;
-        state.action.id = nodeId;
-        state.action.progress = 0;
-    }
-    updateUI();
+
+    setOrToggleAction({
+        type: skillKey,
+        id: nodeId
+    });
 }
 
 function grantXp(skillKey, amount) {
+    if (!state.skills[skillKey]) {
+        state.skills[skillKey] = { level: 1, xp: 0, nextXp: 100 };
+    }
     state.skills[skillKey].xp += amount;
     let leveledUp = false;
     while (state.skills[skillKey].xp >= state.skills[skillKey].nextXp) {
@@ -275,15 +685,14 @@ async function loadGame() {
         console.error("JWT Decode failed", e);
     }
     
+    const reqSkills = ['mining','woodcutting','hunting','cooking','alchemy','smithing','crafting'];
+
     const localSaveStr = localStorage.getItem('fantasyIdleSaveLocal');
     if (localSaveStr) {
         try {
             const saved = JSON.parse(localSaveStr);
             mergeState(state, saved);
-            
-            const reqSkills = ['mining','woodcutting','hunting','cooking','alchemy','smithing','crafting'];
-            reqSkills.forEach(sk => { if(!state.skills[sk]) state.skills[sk] = {level:1, xp:0, nextXp:100}; });
-            
+
             if (!state.unlocks.hasOwnProperty('achievements')) {
                 state.unlocks.achievements = false;
                 state.achievements = [];
@@ -295,6 +704,21 @@ async function loadGame() {
             console.error("Local save corrupted", e);
         }
     }
+
+    reqSkills.forEach(sk => {
+        if (!state.skills[sk]) {
+            state.skills[sk] = { level: 1, xp: 0, nextXp: 100 };
+        }
+    });
+
+    NON_COMBAT_SKILLS.forEach(skillKey => {
+        const playState = getActivePlayState(skillKey);
+        if (playState.boostUntil < Date.now()) {
+            playState.boostUntil = 0;
+            playState.bonus = 0;
+        }
+    });
+    if (!Array.isArray(state.inventoryOrder)) state.inventoryOrder = [];
     
     const modal = document.getElementById('auth-modal');
     if(modal) modal.classList.remove('active');
@@ -385,7 +809,7 @@ function parseOfflineProgress() {
 // TUTORIAL PROGRESSION
 function updateTutorialUnlocks() {
     // DEVELOPER OVERRIDE: Force unlock all systems immediately
-    const keys = ['mining', 'shop', 'achievements', 'smithing', 'woodcutting', 'crafting', 'hunting', 'cooking', 'alchemy'];
+    const keys = ['mining', 'shop', 'achievements', 'smithing', 'woodcutting', 'crafting', 'hunting', 'cooking', 'alchemy', 'clan'];
     keys.forEach(k => state.unlocks[k] = true);
 
     const banner = document.getElementById('tutorial-banner');
@@ -400,8 +824,6 @@ function updateTutorialUnlocks() {
     
     const ncHeader = document.getElementById('nav-header-noncombat');
     if (ncHeader) ncHeader.style.display = '';
-    const procHeader = document.getElementById('nav-header-processing');
-    if (procHeader) procHeader.style.display = '';
 }
 
 // FORMAT RESOURCE NAMES
@@ -432,6 +854,7 @@ function spawnEnemy() {
 
     state.combat.enemy = {
         name: isBoss ? `Boss Stage ${stage} - ${baseName}` : `${baseName} (Lv ${stage})`,
+        baseName,
         hp: isBoss ? hp * 5 : hp,
         maxHp: isBoss ? hp * 5 : hp,
         atk: isBoss ? atk * 2 : atk,
@@ -481,15 +904,18 @@ function openPrestigeModal() {
 
         document.getElementById('modal-sp-gain').innerText = `+${currentRunSp} Skill Points`;
         
-        let absoluteMax = Math.max(state.combat.highestPrestigeStage, state.combat.maxStage);
-        let targetAdvStart = Math.max(1, Math.floor(absoluteMax * 0.25));
-        document.getElementById('modal-advance-start').innerText = `Advance Start: Stage ${targetAdvStart}`;
+        document.getElementById('modal-advance-start').innerText = `Advance Start: Stage ${getPrestigeStartStage()}`;
     }
 }
 
 function closePrestigeModal() {
     const modal = document.getElementById('prestige-modal');
     if (modal) modal.classList.remove('active');
+}
+
+function getPrestigeStartStage() {
+    const absoluteMax = Math.max(state.combat.highestPrestigeStage, state.combat.maxStage);
+    return Math.max(1, Math.floor(absoluteMax * 0.10));
 }
 
 function confirmPrestige() {
@@ -516,8 +942,9 @@ function prestige() {
     }
     state.combat.skillPoints += currentRunSp;
     state.combat.tokens += earnedTokens;
+    state.flags.prestigeCount++;
     
-    let advStart = Math.max(1, Math.floor(state.combat.highestPrestigeStage * 0.25));
+    let advStart = getPrestigeStartStage();
     state.combat.stage = advStart;
     state.combat.maxStage = advStart;
     
@@ -529,10 +956,14 @@ function prestige() {
 
 function toggleCombat() {
     state.combat.isActive = !state.combat.isActive;
+    if (state.combat.isActive) {
+        clearAction();
+        state.combat.combo = 0;
+    }
     if (state.combat.isActive && state.combat.playerHp <= 0) {
         state.combat.playerHp = getPlayerMaxHp();
     }
-    updateCombatUI();
+    updateUI();
 }
 
 function changeAutoEat(val) {
@@ -545,7 +976,36 @@ function changeActivePotion(val) {
     updateUI();
 }
 
-function playerClickAttack() {
+function getEnemySprite(enemyName) {
+    if (enemyName.includes('Slime')) return '🟢';
+    if (enemyName.includes('Goblin')) return '👺';
+    if (enemyName.includes('Dire Wolf')) return '🐺';
+    if (enemyName.includes('Bandit')) return '🗡️';
+    if (enemyName.includes('Skeleton')) return '💀';
+    if (enemyName.includes('Orc')) return '👹';
+    if (enemyName.includes('Troll')) return '🪨';
+    if (enemyName.includes('Golem')) return '🗿';
+    if (enemyName.includes('Drake')) return '🐉';
+    if (enemyName.includes('Demon')) return '😈';
+    return '👾';
+}
+
+function spawnHitBurst(event, text = 'HIT!') {
+    const layer = document.getElementById('enemy-hit-layer');
+    const target = document.querySelector('.enemy-click-target');
+    if (!layer || !target || !event) return;
+
+    const rect = target.getBoundingClientRect();
+    const burst = document.createElement('div');
+    burst.className = 'enemy-hit-burst';
+    burst.style.left = `${event.clientX - rect.left}px`;
+    burst.style.top = `${event.clientY - rect.top}px`;
+    burst.textContent = text;
+    layer.appendChild(burst);
+    setTimeout(() => burst.remove(), 450);
+}
+
+function playerClickAttack(event) {
     if (!state.combat.isActive) return;
     
     if (!state.combat.combo) state.combat.combo = 0;
@@ -555,11 +1015,24 @@ function playerClickAttack() {
     state.combat.lastComboTime = Date.now();
     
     const flash = document.getElementById('combat-impact-flash');
+    const enemyTarget = document.querySelector('.enemy-click-target');
+    const enemySprite = document.getElementById('enemy-sprite');
     if (flash) {
         flash.classList.remove('active');
         void flash.offsetWidth;
         flash.classList.add('active');
     }
+    if (enemyTarget) {
+        enemyTarget.classList.remove('clicked');
+        void enemyTarget.offsetWidth;
+        enemyTarget.classList.add('clicked');
+    }
+    if (enemySprite) {
+        enemySprite.classList.remove('enemy-struck');
+        void enemySprite.offsetWidth;
+        enemySprite.classList.add('enemy-struck');
+    }
+    spawnHitBurst(event, state.combat.combo >= 10 ? 'CRACK!' : 'HIT!');
     
     executePlayerAttack(null, 0.5);
     updateCombatUI();
@@ -794,6 +1267,7 @@ function renderShopUI() {
 let lastTime = Date.now();
 let combatTimer = 0;
 let saveTimer = 0;
+let minigameRenderTimer = 0;
 
 setInterval(() => {
     const now = Date.now();
@@ -808,7 +1282,7 @@ setInterval(() => {
         const node = SKILLS_DATA[skillKey]?.nodes.find(n => n.id === state.action.id);
         
         if (node || isWorkshop) {
-            const speedMult = 1 + (state.shop.upgrades.miningSpeed * 0.10) + (state.shop.skills.rogue * 0.05);
+            const speedMult = (1 + (state.shop.upgrades.miningSpeed * 0.10) + (state.shop.skills.rogue * 0.05)) * (isWorkshop ? 1 : getNonCombatBoostMultiplier(skillKey));
             const act = isWorkshop ? state.action : node;
             const actualTime = (act.baseTime / speedMult) || 2000;
 
@@ -840,11 +1314,11 @@ setInterval(() => {
                             grantXp('smithing', state.action.xp);
                         } else if (skillKey === 'smithing') {
                             const newItem = generateProceduralEquipment('smithing', state.action.id, state.action.barId);
-                            state.inventory.push(newItem);
+                            addItemToInventory(newItem);
                             grantXp('smithing', state.action.xp);
                         } else if (skillKey === 'crafting') {
                             const newItem = generateProceduralJewelry(state.action.id, state.action.barId, state.action.gemId);
-                            state.inventory.push(newItem);
+                            addItemToInventory(newItem);
                             grantXp('crafting', state.action.xp);
                         }
                         updateUI();
@@ -917,6 +1391,18 @@ setInterval(() => {
         saveTimer -= 10000;
     }
 
+    minigameRenderTimer += dt;
+    if (minigameRenderTimer >= 250) {
+        renderMinigamePanels();
+        minigameRenderTimer = 0;
+    }
+
+    const cookingChallenge = getActivePlayState('cooking').challenge;
+    if (cookingChallenge && cookingChallenge.type === 'heat') {
+        const decay = dt * 0.00008;
+        cookingChallenge.heat = Math.max(0, cookingChallenge.heat - decay);
+    }
+
     updateTutorialUnlocks();
     checkAchievements();
     checkDailyReward();
@@ -930,6 +1416,7 @@ function updateGenericSkillUI(skillKey) {
     document.getElementById(`${skillKey}-xp-display`).innerText = `${state.skills[skillKey].xp} / ${state.skills[skillKey].nextXp} XP`;
     const xpPercent = (state.skills[skillKey].xp / state.skills[skillKey].nextXp) * 100;
     document.getElementById(`${skillKey}-xp-fill`).style.width = Math.min(100, xpPercent) + '%';
+    renderMinigamePanel(skillKey);
     renderActionNodes(skillKey);
 }
 
@@ -937,7 +1424,7 @@ function renderActionNodes(skillKey) {
     const container = document.getElementById(`${skillKey}-nodes`);
     if (!container) return;
     
-    const speedMult = 1 + (state.shop.upgrades.miningSpeed * 0.10) + (state.shop.skills.rogue * 0.05);
+    const speedMult = (1 + (state.shop.upgrades.miningSpeed * 0.10) + (state.shop.skills.rogue * 0.05)) * getNonCombatBoostMultiplier(skillKey);
     const conf = SKILLS_DATA[skillKey];
     let newHTML = '';
 
@@ -961,6 +1448,7 @@ function renderActionNodes(skillKey) {
 
         newHTML += `
             <div class="mining-card ${isActive ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}" onclick="${isUnlocked ? `startAction('${skillKey}', '${node.id}')` : ''}" style="${isActive ? `border-color: ${conf.color}; box-shadow: 0 0 15px ${conf.color}40; background: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, ${conf.color}20 100%);` : ''}">
+                <div class="skill-action-art" style="color:${conf.color}">${getSkillActionIcon(skillKey, node)}</div>
                 <div class="node-name" style="${!isUnlocked ? 'color: var(--text-muted);' : ''}">${node.name}</div>
                 ${!isUnlocked ? `<div style="font-size:0.8rem; font-weight:bold; color:#ef4444; margin-top:0.2rem;">Requires Lv. ${node.levelReq}</div>` : ''}
                 <div style="${!isUnlocked ? 'opacity: 0.6;' : ''}">
@@ -1005,6 +1493,138 @@ function renderResources() {
         html += `<div class="resource"><span style="color:${color}">${formatResName(res)}:</span> <span>${qty}</span></div>`;
     }
     banner.innerHTML = html;
+}
+
+function renderActiveNavState() {
+    const navButtons = document.querySelectorAll('#sidebar .nav-btn');
+    navButtons.forEach(btn => btn.classList.remove('action-active'));
+
+    if (!state.action.type) return;
+
+    const navKeyMap = {
+        smelting: 'smithing',
+        smithing: 'smithing',
+        crafting: 'crafting'
+    };
+
+    const navKey = navKeyMap[state.action.type] || state.action.type;
+    const activeNav = document.getElementById(`nav-${navKey}`);
+    if (activeNav) activeNav.classList.add('action-active');
+}
+
+function renderMinigamePanels() {
+    NON_COMBAT_SKILLS.forEach(renderMinigamePanel);
+}
+
+function renderMinigamePanel(skillKey) {
+    const container = document.getElementById(`${skillKey}-minigame`);
+    if (!container) return;
+
+    clearExpiredChallenge(skillKey);
+    const conf = MINIGAME_CONFIG[skillKey];
+    const playState = getActivePlayState(skillKey);
+    const boostRemaining = Math.max(0, playState.boostUntil - Date.now());
+    const boostSeconds = Math.ceil(boostRemaining / 1000);
+    const boostPct = Math.round(playState.bonus * 100);
+    const challenge = playState.challenge;
+
+    let challengeHtml = `
+        <button class="minigame-start-btn" onclick="startMinigame('${skillKey}')" style="border-color:${conf.accent}55; color:${conf.accent};">
+            ${conf.actionText}
+        </button>
+    `;
+
+    if (challenge) {
+        if (challenge.type === 'timing') {
+            const markerLeft = getAnimatedChallengePosition(challenge) * 100;
+            const zoneLeft = challenge.zoneStart * 100;
+            const zoneWidth = challenge.zoneWidth * 100;
+            challengeHtml = `
+                <div class="minigame-prompt">Tap when the pulse slides through the glowing seam.</div>
+                <div class="minigame-timing-track mining-lane">
+                    <div class="minigame-timing-zone" style="left:${zoneLeft}%; width:${zoneWidth}%; background:${conf.accent};"></div>
+                    <div class="minigame-timing-marker pulse-marker" style="left:${markerLeft}%; border-color:${conf.accent}; background:${conf.accent};"></div>
+                </div>
+                <div class="minigame-actions">
+                    <button class="minigame-action-btn" onclick="resolveMinigame('${skillKey}')">Tap Now</button>
+                    <button class="minigame-secondary-btn" onclick="failMinigame('${skillKey}')">Skip</button>
+                </div>
+            `;
+        } else if (challenge.type === 'moving-target') {
+            const targetLeft = getAnimatedChallengePosition(challenge) * 100;
+            const zoneLeft = challenge.zoneStart * 100;
+            const zoneWidth = challenge.zoneWidth * 100;
+            challengeHtml = `
+                <div class="minigame-prompt">Fire when the prey crosses the kill lane.</div>
+                <div class="minigame-timing-track hunting-lane">
+                    <div class="minigame-timing-zone" style="left:${zoneLeft}%; width:${zoneWidth}%; background:${conf.accent};"></div>
+                    <div class="minigame-hunt-target" style="left:${targetLeft}%;">🦊</div>
+                </div>
+                <div class="minigame-actions">
+                    <button class="minigame-action-btn" onclick="resolveMinigame('${skillKey}')">Loose Arrow</button>
+                    <button class="minigame-secondary-btn" onclick="failMinigame('${skillKey}')">Let It Go</button>
+                </div>
+            `;
+        } else if (challenge.type === 'heat') {
+            const zoneLeft = challenge.targetStart * 100;
+            const zoneWidth = challenge.targetWidth * 100;
+            const heatLeft = challenge.heat * 100;
+            challengeHtml = `
+                <div class="minigame-prompt">Keep the pan in the gold zone, then plate it.</div>
+                <div class="minigame-heat-track">
+                    <div class="minigame-timing-zone" style="left:${zoneLeft}%; width:${zoneWidth}%; background:${conf.accent};"></div>
+                    <div class="minigame-heat-fill" style="width:${heatLeft}%; background:${conf.accent};"></div>
+                    <div class="minigame-heat-spark" style="left:${heatLeft}%;"></div>
+                </div>
+                <div class="minigame-actions">
+                    <button class="minigame-action-btn" onclick="pumpHeat('${skillKey}')">Tap Heat</button>
+                    <button class="minigame-start-btn" onclick="resolveMinigame('${skillKey}')" style="border-color:${conf.accent}55; color:${conf.accent};">Plate It</button>
+                </div>
+            `;
+        } else if (challenge.type === 'drag') {
+            const zoneLeft = challenge.targetStart * 100;
+            const zoneWidth = challenge.targetWidth * 100;
+            const dragPct = challenge.dragValue * 100;
+            challengeHtml = `
+                <div class="minigame-prompt">Drag the stabilizer into resonance, then lock the brew.</div>
+                <div class="minigame-drag-shell">
+                    <div class="minigame-drag-zone" style="left:${zoneLeft}%; width:${zoneWidth}%; background:${conf.accent};"></div>
+                    <input type="range" min="0" max="1" step="0.01" value="${challenge.dragValue.toFixed(2)}" class="minigame-drag-slider" oninput="setDragValue('${skillKey}', this.value)">
+                    <div class="minigame-drag-readout">${dragPct.toFixed(0)}%</div>
+                </div>
+                <div class="minigame-actions">
+                    <button class="minigame-action-btn" onclick="resolveMinigame('${skillKey}')">Stabilize</button>
+                    <button class="minigame-secondary-btn" onclick="failMinigame('${skillKey}')">Vent</button>
+                </div>
+            `;
+        } else {
+            challengeHtml = `
+                <div class="minigame-choice-grid">
+                    <button class="minigame-choice-btn" onclick="startMinigame('${skillKey}')">Reset Challenge</button>
+                </div>
+            `;
+        }
+    }
+
+    container.innerHTML = `
+        <div class="minigame-panel" style="--minigame-accent:${conf.accent};">
+            <div class="minigame-header">
+                <div>
+                    <div class="minigame-title">${conf.icon} ${conf.label}</div>
+                    <div class="minigame-desc">${conf.desc}</div>
+                </div>
+                <div class="minigame-boost-pill ${boostRemaining > 0 ? 'live' : ''}">
+                    ${boostRemaining > 0 ? `+${boostPct}% Speed • ${boostSeconds}s` : 'No active boost'}
+                </div>
+            </div>
+            <div class="minigame-meta">
+                <span>Streak ${playState.streak}</span>
+                <span>Reward: ${Math.round(conf.baseBonus * 100)}%-${Math.round(conf.maxBonus * 100)}% speed</span>
+                ${challenge ? `<span>Expires in ${Math.max(1, Math.ceil((challenge.expiresAt - Date.now()) / 1000))}s</span>` : '<span>Tap in between collection cycles</span>'}
+            </div>
+            ${challengeHtml}
+        </div>
+    `;
 }
 
 // ACHIEVEMENTS & DAILY
@@ -1190,16 +1810,14 @@ function smeltActiveBar() {
         return;
     }
 
-    state.action = {
+    setOrToggleAction({
         type: 'smelting',
         id: rc.id,
         baseTime: 2000,
-        progress: 0,
         consumes: rc.req,
         produces: rc.gives,
         xp: 15
-    };
-    renderWorkshopUI();
+    });
 }
 
 function smithSpecificItem(type) {
@@ -1209,16 +1827,14 @@ function smithSpecificItem(type) {
         return;
     }
 
-    state.action = {
+    setOrToggleAction({
         type: 'smithing',
         id: type,
         barId: activeSmithingBar,
         baseTime: 4000,
-        progress: 0,
         consumes: { [activeSmithingBar]: cost },
         xp: 50
-    };
-    renderWorkshopUI();
+    });
 }
 
 function craftSpecificItem(type) {
@@ -1229,17 +1845,15 @@ function craftSpecificItem(type) {
         return;
     }
 
-    state.action = {
+    setOrToggleAction({
         type: 'crafting',
         id: type,
         barId: activeCraftingBar,
         gemId: activeCraftingGem,
         baseTime: 5000,
-        progress: 0,
         consumes: { [activeCraftingBar]: barCost, [activeCraftingGem]: gemCost },
         xp: 75
-    };
-    renderWorkshopUI();
+    });
 }
 
 function renderWorkshopUI() {
@@ -1260,6 +1874,7 @@ function renderWorkshopUI() {
         
         smeltContainer.innerHTML = `
             <div class="workshop-card ${isSmeltingThis ? 'active' : ''}" style="border-color: #ef444450;">
+                <div class="skill-action-art" style="color:#ef4444;">${getResourceIcon(rc.gives)}</div>
                 <div class="workshop-type" style="color:#f8fafc;">${rc.name}</div>
                 <div style="font-size:0.75rem; text-align:center; padding-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05);">${reqs.join(' + ')}</div>
                 <div class="workshop-actions" style="margin-top:0.5rem;">
@@ -1283,6 +1898,7 @@ function renderWorkshopUI() {
             
             smithContainer.innerHTML += `
                 <div class="workshop-card ${isSmithingThis ? 'active' : ''}">
+                    <div class="skill-action-art">${getEquipmentIcon(type)}</div>
                     <div class="workshop-type">${type}</div>
                     <div class="workshop-actions">
                         <button class="smith-btn" onclick="smithSpecificItem('${type}')">
@@ -1309,6 +1925,7 @@ function renderWorkshopUI() {
 
             craftContainer.innerHTML += `
                 <div class="workshop-card ${isCraftingThis ? 'active' : ''}" style="border-color: rgba(232, 121, 249, 0.3);">
+                    <div class="skill-action-art" style="color: var(--gem-color);">${getEquipmentIcon(type)}</div>
                     <div class="workshop-type" style="color: var(--gem-color);">${type}</div>
                     <div class="workshop-actions">
                         <button class="craft-btn" onclick="craftSpecificItem('${type}')">
@@ -1324,34 +1941,12 @@ function renderWorkshopUI() {
 }
 
 function equipItem(id) {
-    const itemIndex = state.inventory.findIndex(i => i.id === id);
-    if (itemIndex > -1) {
-        const item = state.inventory[itemIndex];
-        
-        let targetSlot = item.type;
-        if (item.type === 'Ring') {
-            if (!state.equipped.Ring1) targetSlot = 'Ring1';
-            else if (!state.equipped.Ring2) targetSlot = 'Ring2';
-            else targetSlot = 'Ring1';
-        } else if (item.type === 'Ear') {
-            if (!state.equipped.Ear1) targetSlot = 'Ear1';
-            else if (!state.equipped.Ear2) targetSlot = 'Ear2';
-            else targetSlot = 'Ear1';
-        }
-
-        if (state.equipped[targetSlot]) {
-            state.inventory.push(state.equipped[targetSlot]);
-        }
-        state.equipped[targetSlot] = item;
-        state.inventory.splice(itemIndex, 1);
-        
-        updateUI();
-    }
+    equipItemToSlot(id);
 }
 
 function unequipItem(slot) {
     if (state.equipped[slot]) {
-        state.inventory.push(state.equipped[slot]);
+        addItemToInventory(state.equipped[slot]);
         state.equipped[slot] = null;
         updateUI();
     }
@@ -1363,6 +1958,7 @@ function sellItem(id) {
         const item = state.inventory[itemIndex];
         state.resources.gold += item.value;
         state.inventory.splice(itemIndex, 1);
+        state.inventoryOrder = (state.inventoryOrder || []).filter(key => key !== `eq:${id}`);
         updateUI();
     }
 }
@@ -1374,6 +1970,11 @@ function updateCombatUI() {
         stEl.innerText = state.combat.stage;
         document.getElementById('prestige-tokens').innerText = state.combat.tokens;
         document.getElementById('enemy-name').innerText = state.combat.enemy.name;
+        const enemySprite = document.getElementById('enemy-sprite');
+        if (enemySprite) {
+            enemySprite.innerText = getEnemySprite(state.combat.enemy.baseName || state.combat.enemy.name);
+            enemySprite.classList.toggle('boss', state.combat.stage % 10 === 0);
+        }
         
         const pFill = Math.max(0, (state.combat.playerHp / playerMax) * 100);
         document.getElementById('stat-hp').innerText = `${Math.floor(state.combat.playerHp)} / ${playerMax}`;
@@ -1470,6 +2071,7 @@ function updateUI() {
     renderWorkshopUI();
     renderShopUI();
     renderAchievementsUI();
+    renderActiveNavState();
     updateCombatUI();
 
     const hpEl = document.getElementById('stat-hp');
@@ -1502,8 +2104,9 @@ function updateUI() {
                 if(item.speedBonus) sStats += `<span style="color:#34d399" title="SpeedBonus">+${item.speedBonus} SPD</span>`;
 
                 eqContainer.innerHTML += `
-                    <div class="slot equipped" style="border-color: ${item.color || '#fff'}; background: linear-gradient(135deg, ${item.color}15 0%, transparent 100%);">
+                    <div class="slot equipped" draggable="true" ondragstart="handleInventoryDragStart(event, 'equip:${slot}')" ondragover="allowInventoryDrop(event)" ondrop="handleSlotDrop(event, '${slot}')" style="border-color: ${item.color || '#fff'}; background: linear-gradient(135deg, ${item.color}15 0%, transparent 100%);">
                         <div class="slot-info">
+                            <div class="item-thumb" style="color:${item.color || '#e2e8f0'}">${getEquipmentIcon(item.type)}</div>
                             <span class="slot-name">${slot}</span>
                             <div class="item-details">
                                 <span class="item-name" style="color: ${item.color || '#e2e8f0'}">${item.name}</span>
@@ -1519,10 +2122,11 @@ function updateUI() {
                 `;
             } else {
                 eqContainer.innerHTML += `
-                    <div class="slot">
+                    <div class="slot drop-slot" ondragover="allowInventoryDrop(event)" ondrop="handleSlotDrop(event, '${slot}')">
                         <div class="slot-info">
+                            <div class="item-thumb empty-thumb">${getEquipmentIcon(slot.startsWith('Ring') ? 'Ring' : slot.startsWith('Ear') ? 'Ear' : slot)}</div>
                             <span class="slot-name">${slot}</span>
-                            <span class="item-name" style="color: var(--text-muted); font-style: italic; font-weight: normal;">Empty</span>
+                            <span class="item-name" style="color: var(--text-muted); font-style: italic; font-weight: normal;">Drop matching gear here</span>
                         </div>
                     </div>
                 `;
@@ -1534,70 +2138,78 @@ function updateUI() {
     if (invContainer) {
         invContainer.innerHTML = '';
         let hasAnyItem = false;
-        
-        // Render Equipment Data
-        state.inventory.forEach(item => {
+
+        getInventoryEntries().forEach(entry => {
             hasAnyItem = true;
-            let sStats = '';
-            if(item.critChance) sStats += `<span style="color:#facc15" title="Crit Chance">+${(item.critChance*100).toFixed(1)}% CRIT </span>`;
-            if(item.critDmg) sStats += `<span style="color:#f87171" title="Crit DMG">+${item.critDmg}x DMG </span>`;
-            if(item.dodgeChance) sStats += `<span style="color:#60a5fa" title="Dodge">+${(item.dodgeChance*100).toFixed(1)}% EVA </span>`;
-            if(item.speedBonus) sStats += `<span style="color:#34d399" title="SpeedBonus">+${item.speedBonus} SPD</span>`;
-            
-            invContainer.innerHTML += `
-                <div class="inv-item" style="border-color: ${item.color}40; background: linear-gradient(to right, ${item.color}10, transparent);">
-                    <div class="inv-header">
-                        <span class="item-name" style="color: ${item.color}">${item.name}</span>
-                        <span class="inv-type">${item.type}</span>
-                    </div>
-                    <div class="inv-stats-row">
-                        <div class="item-stats" style="margin: 0; gap: 0.5rem; flex-direction: column;">
-                            <div>
-                                ${item.atk ? `<span class="item-atk">⚔️ ${item.atk}</span>` : ''}
-                                ${item.def ? `<span class="item-def">🛡️ ${item.def}</span>` : ''}
-                            </div>
-                            <div style="font-size: 0.65rem;">${sStats}</div>
-                            ${!item.atk && !item.def && !sStats ? '<span style="color:var(--text-muted)">No combat metrics</span>' : ''}
-                        </div>
-                        <span class="inv-value">💰 ${item.value}</span>
-                    </div>
-                    <div class="inv-actions">
-                        <button class="equip-btn" style="background:${item.color}20; color:${item.color}; border-color:${item.color}50;" onclick="equipItem(${item.id})">Equip</button>
-                        <button class="sell-btn" onclick="sellItem(${item.id})">Sell</button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Render Raw Materials / Consumables / Gold into the same list
-        const skipKeys = ['token'];
-        for (const [res, qty] of Object.entries(state.resources)) {
-            if (qty > 0 && !skipKeys.includes(res)) {
-                hasAnyItem = true;
-                const formattedName = res.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                
-                let resColor = '#e2e8f0';
-                if (res === 'gold') resColor = '#fbbf24';
-                else if (res.includes('wood')) resColor = '#22c55e';
-                else if (res.includes('potion')) resColor = '#a855f7';
-                else if (res.includes('bar')) resColor = '#cbd5e1';
-                
+            const image = getInventoryEntryImage(entry);
+
+            if (entry.kind === 'equipment') {
+                const item = entry.item;
+                let sStats = '';
+                if(item.critChance) sStats += `<span style="color:#facc15" title="Crit Chance">+${(item.critChance*100).toFixed(1)}% CRIT </span>`;
+                if(item.critDmg) sStats += `<span style="color:#f87171" title="Crit DMG">+${item.critDmg}x DMG </span>`;
+                if(item.dodgeChance) sStats += `<span style="color:#60a5fa" title="Dodge">+${(item.dodgeChance*100).toFixed(1)}% EVA </span>`;
+                if(item.speedBonus) sStats += `<span style="color:#34d399" title="SpeedBonus">+${item.speedBonus} SPD</span>`;
+
                 invContainer.innerHTML += `
-                    <div class="inv-item" style="border-color: ${resColor}40; background: linear-gradient(to right, ${resColor}10, transparent); display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 0.8rem;">
-                        <div style="display:flex; flex-direction:column;">
-                            <span class="item-name" style="color: ${resColor}; font-size: 1rem;">${formattedName}</span>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">Stackable Resource</span>
+                    <div class="inv-item" draggable="true" ondragstart="handleInventoryDragStart(event, '${entry.key}')" ondragover="allowInventoryDrop(event)" ondrop="handleInventoryDrop(event, '${entry.key}')" style="border-color: ${item.color}40; background: linear-gradient(to right, ${item.color}10, transparent);">
+                        <div class="inv-header">
+                            <div class="inv-title-wrap">
+                                <div class="item-thumb" style="color:${item.color}">${image}</div>
+                                <div>
+                                    <span class="item-name" style="color: ${item.color}">${item.name}</span>
+                                    <div class="inv-type">${item.type}</div>
+                                </div>
+                            </div>
+                            <span class="inv-value">💰 ${item.value}</span>
                         </div>
-                        <div style="font-size: 1.1rem; font-family: monospace; font-weight: bold; color: #f8fafc;">
-                            x${Math.floor(qty).toLocaleString()}
+                        <div class="inv-stats-row">
+                            <div class="item-stats" style="margin: 0; gap: 0.5rem; flex-direction: column;">
+                                <div>
+                                    ${item.atk ? `<span class="item-atk">⚔️ ${item.atk}</span>` : ''}
+                                    ${item.def ? `<span class="item-def">🛡️ ${item.def}</span>` : ''}
+                                </div>
+                                <div style="font-size: 0.65rem;">${sStats}</div>
+                                ${!item.atk && !item.def && !sStats ? '<span style="color:var(--text-muted)">No combat metrics</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="inv-actions">
+                            <button class="equip-btn" style="background:${item.color}20; color:${item.color}; border-color:${item.color}50;" onclick="equipItem(${item.id})">Equip</button>
+                            <button class="sell-btn" onclick="sellItem(${item.id})">Sell</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const formattedName = formatResName(entry.resourceId);
+                invContainer.innerHTML += `
+                    <div class="inv-item resource-item" draggable="true" ondragstart="handleInventoryDragStart(event, '${entry.key}')" ondragover="allowInventoryDrop(event)" ondrop="handleInventoryDrop(event, '${entry.key}')" style="border-color: ${entry.color}40; background: linear-gradient(to right, ${entry.color}10, transparent);">
+                        <div class="inv-header">
+                            <div class="inv-title-wrap">
+                                <div class="item-thumb" style="color:${entry.color}">${image}</div>
+                                <div>
+                                    <span class="item-name" style="color: ${entry.color}">${formattedName}</span>
+                                    <div class="inv-type">Resource</div>
+                                </div>
+                            </div>
+                            <span class="inv-value">💰 ${entry.value}</span>
+                        </div>
+                        <div class="inv-stats-row resource-stats-row">
+                            <span style="color:var(--text-muted);">Stack Size</span>
+                            <span class="resource-qty">x${Math.floor(entry.qty).toLocaleString()}</span>
+                        </div>
+                        <div class="inv-actions">
+                            <button class="sell-btn" onclick="sellResource('${entry.resourceId}', 1)">Sell 1</button>
+                            <button class="sell-btn" onclick="sellResource('${entry.resourceId}', 10)">Sell 10</button>
                         </div>
                     </div>
                 `;
             }
-        }
+        });
         
         if (!hasAnyItem) {
-            invContainer.innerHTML = '<div class="empty-state">Inventory is empty.<br>Start mining or hunting to collect items!</div>';
+            invContainer.innerHTML = '<div class="empty-state" ondragover="allowInventoryDrop(event)" ondrop="handleInventoryDrop(event)">Inventory is empty.<br>Start mining or hunting to collect items!</div>';
+        } else {
+            invContainer.innerHTML += `<div class="inventory-dropzone" ondragover="allowInventoryDrop(event)" ondrop="handleInventoryDrop(event)">Drop here to move equipped gear back into inventory or reorder items.</div>`;
         }
     }
 }
@@ -1630,6 +2242,11 @@ window.craftSpecificItem = craftSpecificItem;
 window.equipItem = equipItem;
 window.unequipItem = unequipItem;
 window.sellItem = sellItem;
+window.sellResource = sellResource;
+window.handleInventoryDragStart = handleInventoryDragStart;
+window.allowInventoryDrop = allowInventoryDrop;
+window.handleInventoryDrop = handleInventoryDrop;
+window.handleSlotDrop = handleSlotDrop;
 window.prestige = prestige;
 window.toggleCombat = toggleCombat;
 window.changeAutoEat = changeAutoEat;
@@ -1640,6 +2257,11 @@ window.openPrestigeModal = openPrestigeModal;
 window.closePrestigeModal = closePrestigeModal;
 window.confirmPrestige = confirmPrestige;
 window.buySkillPoint = buySkillPoint;
+window.startMinigame = startMinigame;
+window.resolveMinigame = resolveMinigame;
+window.failMinigame = failMinigame;
+window.pumpHeat = pumpHeat;
+window.setDragValue = setDragValue;
 window.wipeSave = wipeSave;
 window.handleAuth = handleAuth;
 window.logout = logout;

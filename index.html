@@ -21,7 +21,7 @@
             <h3>MANAGEMENT</h3>
             <button id="nav-inventory" class="nav-btn" onclick="switchTab('inventory', this)">🎒 Inventory</button>
             <button id="nav-shop" class="nav-btn locked-tab" onclick="switchTab('shop', this)">🛒 Shop <span id="nav-shop-alert" style="color:#fbbf24; font-size:0.8em; margin-left: 5px;"></span></button>
-            <button id="nav-achievements" class="nav-btn locked-tab" onclick="switchTab('achievements', this)">🏆 Achievements <span id="nav-ach-alert" style="color:#fbbf24; font-size:0.8em; margin-left: 5px;"></span></button>
+            <button id="nav-clan" class="nav-btn locked-tab" onclick="switchTab('clan', this)">🛡️ Clan</button>
 
             <h3>COMBAT</h3>
             <button id="nav-combat" class="nav-btn active" onclick="switchTab('combat', this)">⚔️ Combat <span id="nav-combat-alert" style="color:#ef4444; font-size:0.8em; margin-left: 5px;"></span></button>
@@ -32,10 +32,11 @@
             <button id="nav-hunting" class="nav-btn locked-tab" onclick="switchTab('hunting', this)">🏹 Hunting</button>
             <button id="nav-cooking" class="nav-btn locked-tab" onclick="switchTab('cooking', this)">🍳 Cooking</button>
             <button id="nav-alchemy" class="nav-btn locked-tab" onclick="switchTab('alchemy', this)">🧪 Alchemy</button>
-
-            <h3 id="nav-header-processing" class="locked-tab">PROCESSING</h3>
             <button id="nav-smithing" class="nav-btn locked-tab" onclick="switchTab('smithing', this)">⚒️ Smithing</button>
             <button id="nav-crafting" class="nav-btn locked-tab" onclick="switchTab('crafting', this)">💍 Crafting</button>
+
+            <h3 style="margin-top:auto;">ARCHIVE</h3>
+            <button id="nav-achievements" class="nav-btn locked-tab" onclick="switchTab('achievements', this)">🏆 Achievements <span id="nav-ach-alert" style="color:#fbbf24; font-size:0.8em; margin-left: 5px;"></span></button>
         </aside>
 
         <div id="main-content">
@@ -58,7 +59,7 @@
             <main id="tab-container">
 
                 <!-- COMBAT -->
-                <div id="tab-combat" class="tab-content">
+                <div id="tab-combat" class="tab-content active-tab">
                     <section id="combat-panel" class="glass-panel" style="width: 100%; display: flex; flex-direction: column; gap: 1rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
                             <h2 style="margin:0; padding:0; border:none; font-size:1.5rem; text-shadow:0 0 10px rgba(99,102,241,0.5);">
@@ -130,6 +131,24 @@
                             <div style="font-size: 0.75rem; color: #cbd5e1; font-weight: bold; letter-spacing: 1px;" id="combo-label">COMBO</div>
                             <div id="combo-buffs" style="font-size: 0.75rem; color: #fbbf24; margin-top: 0.3rem; min-height: 1.2rem;"></div>
                         </div>
+
+                        <div class="glass-panel clan-combat-preview" style="padding:1rem;">
+                            <div class="panel-header" style="margin-bottom:0.75rem;">
+                                <h2>Clan Combat</h2>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Placeholder System</span>
+                            </div>
+                            <div class="clan-war-shell">
+                                <div class="clan-war-card">
+                                    <div class="clan-war-title">Clan War Raid</div>
+                                    <div class="clan-war-desc">A multi-boss push inspired by raid-style clan wars. Members chip away at giant enemies together, bank progress for the whole clan, and unlock shared rewards.</div>
+                                </div>
+                                <div class="clan-war-track">
+                                    <div class="clan-war-boss">🗿 Titan Gate</div>
+                                    <div class="clan-war-boss">🐉 Ember Drake</div>
+                                    <div class="clan-war-boss upcoming">👹 Warlord Core</div>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="combat-arena" id="combat-arena-view">
                             <div class="combat-entity player-side">
@@ -141,8 +160,10 @@
                             
                             <div class="combat-vs">VS</div>
                             
-                            <div class="combat-entity enemy-side enemy-click-target" onclick="playerClickAttack()" style="border: 1px dashed rgba(239, 68, 68, 0.5);">
+                            <div class="combat-entity enemy-side enemy-click-target" onclick="playerClickAttack(event)" style="border: 1px dashed rgba(239, 68, 68, 0.5);">
                                 <div class="impact-flash" id="combat-impact-flash"></div>
+                                <div class="enemy-hit-layer" id="enemy-hit-layer"></div>
+                                <div class="enemy-sprite" id="enemy-sprite">👹</div>
                                 <div class="entity-name" id="enemy-name">Monster Lv 1</div>
                                 <div class="hp-text"><span id="combat-enemy-hp">10 / 10</span> HP</div>
                                 <div class="combat-bar"><div id="combat-enemy-fill" class="combat-fill enemy-fill"></div></div>
@@ -166,7 +187,7 @@
 
                 <!-- SKILL TABS -->
                 <!-- MINING -->
-                <div id="tab-mining" class="tab-content active-tab">
+                <div id="tab-mining" class="tab-content">
                     <section class="glass-panel skill-panel">
                         <div class="panel-header">
                             <h2>Mining</h2>
@@ -176,6 +197,7 @@
                                 <span class="skill-xp" id="mining-xp-display">0 / 100 XP</span>
                             </div>
                         </div>
+                        <div id="mining-minigame"></div>
                         <div id="mining-nodes" class="node-grid"></div>
                     </section>
                 </div>
@@ -191,6 +213,7 @@
                                 <span class="skill-xp" id="woodcutting-xp-display">0 / 100 XP</span>
                             </div>
                         </div>
+                        <div id="woodcutting-minigame"></div>
                         <div id="woodcutting-nodes" class="node-grid"></div>
                     </section>
                 </div>
@@ -206,6 +229,7 @@
                                 <span class="skill-xp" id="hunting-xp-display">0 / 100 XP</span>
                             </div>
                         </div>
+                        <div id="hunting-minigame"></div>
                         <div id="hunting-nodes" class="node-grid"></div>
                     </section>
                 </div>
@@ -221,6 +245,7 @@
                                 <span class="skill-xp" id="cooking-xp-display">0 / 100 XP</span>
                             </div>
                         </div>
+                        <div id="cooking-minigame"></div>
                         <div id="cooking-nodes" class="node-grid"></div>
                     </section>
                 </div>
@@ -236,6 +261,7 @@
                                 <span class="skill-xp" id="alchemy-xp-display">0 / 100 XP</span>
                             </div>
                         </div>
+                        <div id="alchemy-minigame"></div>
                         <div id="alchemy-nodes" class="node-grid"></div>
                     </section>
                 </div>
@@ -290,6 +316,41 @@
                         <section id="inventory-panel" class="glass-panel" style="flex: 2; min-width: 250px;">
                             <h2>Master Inventory</h2>
                             <div id="inventory-list" style="display:flex; flex-direction:column; gap:0.5rem; max-height: 600px; overflow-y:auto; padding-right:10px;"></div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="tab-clan" class="tab-content">
+                    <div style="display:flex; flex-direction:column; gap:1rem;">
+                        <section class="glass-panel">
+                            <div class="panel-header">
+                                <h2>Clan Hall</h2>
+                                <span style="font-size:0.8rem; color:var(--text-muted);">Social systems placeholder</span>
+                            </div>
+                            <div class="clan-grid">
+                                <div class="clan-card">
+                                    <div class="clan-card-title">People Looking For A Clan</div>
+                                    <div class="clan-list-item"><span>⚔️ Mira, Lv 42</span><span>Wants active raid clan</span></div>
+                                    <div class="clan-list-item"><span>🧪 Kel, Lv 35</span><span>Focus: alchemy and support</span></div>
+                                    <div class="clan-list-item"><span>🏹 Ash, Lv 51</span><span>Daily player, wants progression</span></div>
+                                </div>
+                                <div class="clan-card">
+                                    <div class="clan-card-title">Clans Looking For People</div>
+                                    <div class="clan-list-item"><span>🛡️ Dawn Vanguard</span><span>23/30, raid push clan</span></div>
+                                    <div class="clan-list-item"><span>🔥 Ember Pact</span><span>18/30, casual daily clears</span></div>
+                                    <div class="clan-list-item"><span>🌙 Moonforge</span><span>27/30, crafting-focused guild</span></div>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="glass-panel">
+                            <div class="panel-header">
+                                <h2>Chat With Your Clan</h2>
+                            </div>
+                            <div class="clan-chat-box">
+                                <div class="clan-chat-line"><strong>[RaidLead]</strong> We push the Titan Gate after reset.</div>
+                                <div class="clan-chat-line"><strong>[Smith]</strong> I can feed bars to the crafters tonight.</div>
+                                <div class="clan-chat-line"><strong>[Scout]</strong> Two new applicants want a raid-focused clan.</div>
+                            </div>
                         </section>
                     </div>
                 </div>
