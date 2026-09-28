@@ -82,6 +82,12 @@ export class CloudClient {
             this.available = false;
             throw new Error('Cloud server unreachable — playing locally.');
         }
+        // A static host without the API answers with HTML (404/405/501), not JSON.
+        const isJson = (res.headers.get('content-type') || '').includes('application/json');
+        if (!isJson && res.status !== 401 && res.status !== 403) {
+            this.available = false;
+            throw new Error('Cloud saves are not available on this server — playing locally.');
+        }
         this.available = true;
         if (res.status === 401 || res.status === 403) {
             this.setToken(null);
