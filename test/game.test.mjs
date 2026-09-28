@@ -1,0 +1,249 @@
+// Core game tests. Run with: node --test test/
+// Each "regression" test pins a bug the audit verified in the original prototype.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { Game } from '../src/game.js';
+import { rng, seededRandom } from '../src/core/rng.js';
+import { xpForLevel, levelForXp } from '../src/core/xp.js';
+import { createDefaultState, migrateState } from '../src/core/state.js';
+import { generateEquipment, enemyForStage, tokensForStage, enemyDamage } from '../src/core/formulas.js';
+import { RESOURCES, sellValue } from '../src/data/resources.js';
+import { GOLD_SHOP } from '../src/data/perks.js';
+import { goldShopPrice } from '../src/systems/inventory.js';
+
+rng.setSource(seededRandom(1234));
+const T0 = 1_700_000_000_000;
+
+function run(game, ms, step = 100) {
+    let now = game.now;
+    const end = now + ms;
+    while (now < end) { now += step; game.tick(now); }
+    return now;
+}
+
+test('XP table matches the RuneScape/Melvor curve', () => {
+    assert.equal(xpForLevel(1), 0);
+    assert.equal(xpForLevel(2), 83);
+    assert.equal(xpForLevel(10), 1154);
+    assert.equal(xpForLevel(50), 101333);
+    assert.equal(xpForLevel(92), 6517253);
+    assert.equal(xpForLevel(99), 13034431);
+    for (const level of [1, 2, 10, 37, 98, 99]) assert.equal(levelForXp(xpForLevel(level)), level);
+    assert.equal(levelForXp(xpForLevel(50) - 1), 49);
+});
+
+test('regression: smithing creates an item and consumes bars (getRandomRarity used to throw)', () => {
+    const game = new Game(null, T0);
+    game.state.resources.copper_bar = 10;
+    assert.ok(game.startSmithing('Weapon', 'copper_bar'));
+    run(game, 3100);
+    assert.equal(game.state.inventory.length, 1);
+    assert.equal(game.state.resources.copper_bar, 7);
+    assert.ok(game.state.skills.smithing.xp > 0);
+    assert.ok(game.state.inventory[0].atk > 0);
+});
+
+test('regression: rarity is a bounded quality bonus — a legendary copper sword never beats a common runite one', () => {
+    let bestCopper = 0;
+    let worstRunite = Infinity;
+    for (let i = 0; i < 400; i++) {
+        bestCopper = Math.max(bestCopper, generateEquipment({ type: 'Weapon', tier: 1, power: RESOURCES.copper_bar.power, materialName: 'Copper' }, i).atk);
+        worstRunite = Math.min(worstRunite, generateEquipment({ type: 'Weapon', tier: 5, power: RESOURCES.runite_bar.power, materialName: 'Runite' }, i).atk);
+    }
+    assert.ok(bestCopper < worstRunite / 5, `copper ${bestCopper} vs runite ${worstRunite}`);
+});
+
+test('regression: offline progress with a workshop action does not throw and makes items', () => {
+    const game = new Game(null, T0);
+    game.state.resources.copper_bar = 30;
+    game.startSmithing('Boots', 'copper_bar');
+    const saved = JSON.parse(game.serialize(T0));
+    const later = T0 + 10 * 60 * 1000;
+    const g2 = new Game(saved, later);
+    const summary = g2.resumeFromSave(later);
+    assert.equal(summary.mode, 'skill');
+    assert.equal(summary.items, 30, 'one bar per pair of boots, 30 bars');
+    assert.equal(g2.state.resources.copper_bar, 0);
+    assert.match(summary.stalledReason || '', /ran out of materials/);
+});
+
+test('offline progress is capped (12h base) and consumes inputs', () => {
+    const game = new Game(null, T0);
+    game.startNodeAction('mining', 'copper_ore');
+    const saved = JSON.parse(game.serialize(T0));
+    const later = T0 + 30 * 24 * 3600 * 1000;
+    const g2 = new Game(saved, later);
+    const summary = g2.resumeFromSave(later);
+    assert.equal(summary.simulated, 12 * 3600 * 1000);
+    assert.ok(summary.capped);
+    assert.ok(g2.state.resources.copper_ore > 10000 && g2.state.resources.copper_ore < 15000);
+});
+
+test('achievements apply real bonuses through the modifier pipeline', () => {
+    const game = new Game(null, T0);
+    const before = game.derived.maxHp;
+    game.state.stats.kills = 10; // "First Blood": +5% max HP, plus the +1% global bonus
+    game.tick(T0 + 100);
+    assert.ok(game.state.achievements.first_blood);
+    assert.ok(game.derived.maxHp > before, `${game.derived.maxHp} > ${before}`);
+});
+
+test('combat: kills pay gold and combat XP and advance the stage', () => {
+    const game = new Game(null, T0);
+    game.state.resources.copper_bar = 3;
+    game.state.inventory.push(generateEquipment({ type: 'Weapon', tier: 1, power: 1, materialName: 'Copper' }, 999));
+    game.equipItem(999);
+    game.enterCombat();
+    run(game, 60_000);
+    assert.ok(game.state.stats.kills >= 3);
+    assert.ok(game.state.gold > 0);
+    assert.ok(game.state.skills.combat.xp > 0);
+    assert.ok(game.state.combat.maxStage > 1);
+});
+
+test('combat: death retreats to the start of the zone and stops combat', () => {
+    const game = new Game(null, T0);
+    game.state.combat.stage = 20;
+    game.state.combat.maxStage = 20;
+    game.enterCombat();
+    run(game, 120_000);
+    assert.equal(game.state.combat.active, false);
+    assert.equal(game.state.stats.deaths, 1);
+    assert.equal(game.state.combat.stage, 11);
+});
+
+test('defence is rating-based: equal DEF halves damage and mitigation caps at 90%', () => {
+    assert.equal(enemyDamage(100, 0), 100);
+    assert.equal(enemyDamage(100, 100), 50);
+    assert.equal(enemyDamage(100, 1e9), 10);
+    assert.equal(enemyDamage(3, 1e9), 1);
+});
+
+test('HP regenerates quickly out of combat and slowly in it', () => {
+    const game = new Game(null, T0);
+    game.state.combat.hp = 10;
+    run(game, 10_000);
+    assert.ok(game.state.combat.hp > 29, `rested hp ${game.state.combat.hp}`);
+});
+
+test('enemy HP roughly doubles per zone inside the authored stages', () => {
+    const ratio = enemyForStage(21).maxHp / enemyForStage(11).maxHp;
+    assert.ok(ratio > 1.9 && ratio < 2.2, `ratio ${ratio}`);
+    assert.ok(enemyForStage(10).boss && !enemyForStage(11).boss);
+});
+
+test('prestige converts the run into tokens and skill points, resetting only run-scoped progress', () => {
+    const game = new Game(null, T0);
+    game.state.combat.stage = 40;
+    game.state.combat.maxStage = 40;
+    game.state.combat.bestStage = 40;
+    game.state.gold = 5000;
+    game.state.camp.whetstone = 5;
+    game.state.skills.mining.xp = xpForLevel(30);
+    game.state.resources.iron_bar = 12;
+    const atkBefore = game.derived.atk;
+    const expected = tokensForStage(40, game.derived.tokenMult);
+    assert.ok(game.prestige());
+    assert.equal(game.state.prestige.tokens, expected);
+    assert.ok(game.state.prestige.skillPoints >= 2);
+    assert.equal(game.state.combat.stage, 4);
+    assert.equal(game.state.gold, 0);
+    assert.equal(game.state.camp.whetstone, 0);
+    assert.equal(levelForXp(game.state.skills.mining.xp), 30);
+    assert.equal(game.state.resources.iron_bar, 12);
+    assert.ok(game.derived.tokenPowerPct > 0);
+    assert.ok(atkBefore > 0);
+});
+
+test('prestige tokens grow with stage and are zero below stage 10', () => {
+    assert.equal(tokensForStage(9), 0);
+    let previous = 0;
+    for (const stage of [10, 20, 50, 100, 150]) {
+        const tokens = tokensForStage(stage);
+        assert.ok(tokens > previous);
+        previous = tokens;
+    }
+});
+
+test('gold shop has no buy-low/sell-high loop (the old Coal Wagon printed gold)', () => {
+    const game = new Game(null, T0);
+    for (const stage of [1, 25, 60, 100]) {
+        game.state.combat.bestStage = stage;
+        for (const entry of GOLD_SHOP) {
+            const resale = Object.entries(entry.gives).reduce((sum, [id, qty]) => sum + sellValue(id) * qty, 0);
+            assert.ok(goldShopPrice(game, entry) > resale, `${entry.id} at stage ${stage}`);
+        }
+    }
+});
+
+test('mini-games only start on an opportunity, and a win boosts skill speed', () => {
+    const game = new Game(null, T0);
+    game.startNodeAction('mining', 'copper_ore');
+    assert.equal(game.startMinigame('mining'), false, 'no opportunity yet');
+    const mg = game.state.minigame.mining;
+    run(game, 100_000);
+    assert.ok(mg.opportunityUntil > game.now, 'first opportunity appears within ~90s');
+    assert.ok(game.startMinigame('mining'));
+    mg.challenge.zoneStart = 0; // widen the target zone so the tap is guaranteed to land
+    mg.challenge.zoneWidth = 1;
+    const speedBefore = game.derived.skillSpeed.mining;
+    assert.ok(game.resolveMinigame('mining'));
+    assert.ok(game.derived.skillSpeed.mining > speedBefore);
+});
+
+test('daily crate is available on a fresh save and then waits 20 hours', () => {
+    const game = new Game(null, T0);
+    assert.ok(game.dailyReady());
+    const reward = game.claimDaily();
+    assert.ok(reward.gold > 0);
+    assert.equal(game.dailyReady(), false);
+    game.now = T0 + 20 * 3600 * 1000 + 1;
+    assert.ok(game.dailyReady());
+});
+
+test('unlocks follow the player instead of a forced script', () => {
+    const game = new Game(null, T0);
+    assert.ok(!game.state.unlocks.smithing);
+    game.startNodeAction('mining', 'copper_ore');
+    run(game, 16_000);
+    assert.ok(game.state.unlocks.smithing, 'mining a few ores unlocks smithing');
+});
+
+test('migration: an original prototype save keeps resources, levels, stage and tokens', () => {
+    const legacy = {
+        resources: { gold: 321, copper: 40, normal_wood: 5, iron_bar: 2 },
+        skills: { mining: { level: 15 }, woodcutting: { level: 3 } },
+        combat: { maxStage: 25, highestPrestigeStage: 31, tokens: 7, skillPoints: 1, stage: 20 },
+        shop: { skills: { knight: 2, warlord: 1, rogue: 0 } },
+        achievements: ['slayer1', 'miner1'],
+        flags: { lastSaveTime: T0 - 1000, prestigeCount: 3 },
+        action: { type: 'smithing', id: 'Weapon', barId: 'copper_bar' }
+    };
+    const state = migrateState(legacy, T0);
+    assert.equal(state.version, 2);
+    assert.equal(state.gold, 321);
+    assert.equal(state.resources.copper_ore, 40);
+    assert.equal(state.resources.normal_log, 5);
+    assert.equal(levelForXp(state.skills.mining.xp), 15);
+    assert.equal(state.combat.maxStage, 25);
+    assert.equal(state.combat.bestStage, 31);
+    assert.equal(state.prestige.tokens, 7);
+    assert.equal(state.perks.knight, 2);
+    assert.ok(state.achievements.slayer_1 && state.achievements.excavator);
+    assert.equal(state.action, null, 'the broken v1 workshop action is dropped');
+    // and the migrated state actually runs
+    const game = new Game(state, T0);
+    game.tick(T0 + 100);
+});
+
+test('state survives a serialize/load round trip', () => {
+    const game = new Game(null, T0);
+    game.state.gold = 77;
+    game.state.resources.coal = 9;
+    const copy = new Game(JSON.parse(game.serialize()), T0);
+    assert.equal(copy.state.gold, 77);
+    assert.equal(copy.state.resources.coal, 9);
+    assert.deepEqual(Object.keys(copy.state).sort(), Object.keys(createDefaultState(T0)).sort());
+});
