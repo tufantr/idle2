@@ -57,7 +57,7 @@ export const BALANCE = {
         boostMs: 90000,
         baseBonus: 0.35,
         streakBonus: 0.05,
-        maxBonus: 0.60
+        maxBonus: 0.55         // reached on a 5-win streak
     }
 };
 

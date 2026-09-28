@@ -41,14 +41,22 @@ else if (!localStorage.getItem('fantasyIdle.authSeen') && !game.state.stats.kill
 let lastSave = Date.now();
 let lastCloudSave = Date.now();
 
+let tickErrorShown = false;
 setInterval(() => {
     const now = Date.now();
-    const summary = game.tick(now);
-    if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)));
+    // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
+    try {
+        const summary = game.tick(now);
+        if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)));
+    } catch (err) {
+        console.error('Tick failed', err);
+        if (!tickErrorShown) { toast('Something went wrong in the game loop — details in the console.', 'error'); tickErrorShown = true; }
+        game.now = now;
+    }
     handleEvents(game.drainEvents());
     if (now - lastSave > AUTOSAVE_MS) save(now);
     if (cloud.loggedIn && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
-    if (now - ui.lastRender > RENDER_MS) render();
+    try { if (now - ui.lastRender > RENDER_MS) render(); } catch (err) { console.error('Render failed', err); }
 }, TICK_MS);
 
 function frame() { patchLive(game, ui); requestAnimationFrame(frame); }

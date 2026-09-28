@@ -46,6 +46,12 @@ test('loadLocal prefers the v2 save and falls back to migrating the prototype sa
     assert.equal(loadLocal().gold, 9);
 });
 
+test('a corrupted save is kept under a backup key instead of being overwritten', () => {
+    localStorage.setItem(LOCAL_KEY, '{not json');
+    assert.equal(loadLocal(42), null);
+    assert.equal(localStorage.getItem(`${LOCAL_KEY}.corrupt.42`), '{not json');
+});
+
 test('export strings round-trip and reject garbage and future versions', () => {
     const game = new Game(null, 1);
     game.state.gold = 4242;

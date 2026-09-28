@@ -16,17 +16,17 @@ function storage() {
 export function loadLocal(now = Date.now()) {
     const store = storage();
     if (!store) return null;
-    try {
-        const raw = store.getItem(LOCAL_KEY);
-        if (raw) return migrateState(JSON.parse(raw), now);
-    } catch (err) { console.error('Local save unreadable', err); }
-    try {
-        const legacy = store.getItem(LEGACY_KEY);
-        if (legacy) {
-            const state = migrateState(JSON.parse(legacy), now);
-            return state;
+    for (const key of [LOCAL_KEY, LEGACY_KEY]) {
+        const raw = store.getItem(key);
+        if (!raw) continue;
+        try {
+            return migrateState(JSON.parse(raw), now);
+        } catch (err) {
+            // Keep the unreadable save instead of letting the next autosave overwrite it.
+            console.error(`Save in ${key} is unreadable; kept a copy`, err);
+            try { store.setItem(`${key}.corrupt.${now}`, raw); } catch { /* storage full */ }
         }
-    } catch (err) { console.error('Legacy save unreadable', err); }
+    }
     return null;
 }
 
