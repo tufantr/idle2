@@ -1,0 +1,140 @@
+// The Game facade: owns the state, drives the tick, and exposes every player action.
+// It never touches the DOM, so tools/simulate.mjs and the tests drive it the same way the UI does.
+
+import { createDefaultState, migrateState } from './core/state.js';
+import { collectModifiers, deriveStats } from './core/modifiers.js';
+import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, stopAction, resolveAction } from './systems/skilling.js';
+import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, spawnEnemy } from './systems/combat.js';
+import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem } from './systems/inventory.js';
+import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
+import { checkAchievements, checkUnlocks } from './systems/progress.js';
+import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue } from './systems/minigame.js';
+import { applyOffline } from './systems/offline.js';
+import { claimDaily, dailyReady } from './systems/daily.js';
+import { buyCampUpgrade } from './systems/camp.js';
+
+const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
+const OFFLINE_GAP_MS = 60000;
+
+export class Game {
+    constructor(state = null, now = Date.now()) {
+        this.state = state ? migrateState(state, now) : createDefaultState(now);
+        this.now = now;
+        this.events = [];
+        this.dirty = true;
+        this.derived = null;
+        this.mods = null;
+        this.recompute();
+        if (!this.state.combat.enemy) spawnEnemy(this);
+    }
+
+    // ----- infrastructure -----
+    emit(event) { this.events.push(event); }
+    drainEvents() { const e = this.events; this.events = []; return e; }
+    markDirty() { this.dirty = true; }
+    recompute() {
+        this.state.meta.lastActiveAt = this.now;
+        this.mods = collectModifiers(this.state);
+        this.derived = deriveStats(this.state, this.mods);
+        if (this.state.combat.hp > this.derived.maxHp) this.state.combat.hp = this.derived.maxHp;
+        this.dirty = false;
+    }
+
+    /** Advance the simulation to `now`. Returns the offline summary if a long gap was replayed. */
+    tick(now) {
+        let offlineSummary = null;
+        let dt = now - this.now;
+        if (dt <= 0) return null;
+        if (dt > OFFLINE_GAP_MS) {
+            // Tab was suspended or the machine slept: replay as offline progress from the last active moment.
+            this.state.meta.savedAt = this.now;
+            this.now = now;
+            offlineSummary = applyOffline(this, now, { minMs: OFFLINE_GAP_MS });
+            dt = 0;
+        }
+        this.now = now;
+        this.state.meta.playtimeMs += Math.min(dt, MAX_TICK_MS);
+        if (this.dirty) this.recompute();
+        this.state.meta.lastActiveAt = now;
+
+        if (dt > 0) {
+            const step = Math.min(dt, MAX_TICK_MS);
+            const action = resolveAction(this.state);
+            if (action) {
+                tickAction(this, step);
+                tickMinigame(this, action.skill);
+                decayHeat(this, action.skill, step);
+            }
+            tickCombat(this, step);
+        }
+
+        if (this.dirty) this.recompute();
+        checkAchievements(this);
+        checkUnlocks(this);
+        if (this.dirty) this.recompute();
+        return offlineSummary;
+    }
+
+    /** Apply offline progress from the saved timestamp (call once after loading). */
+    resumeFromSave(now) {
+        this.now = now;
+        this.recompute();
+        const summary = applyOffline(this, now);
+        checkAchievements(this);
+        checkUnlocks(this);
+        if (this.dirty) this.recompute();
+        this.state.meta.savedAt = now;
+        return summary;
+    }
+
+    // ----- player actions (thin wrappers so the UI has one import) -----
+    // Each action recomputes derived stats immediately, so callers can read game.derived right after.
+    _act(fn) { const result = fn(); if (this.dirty) this.recompute(); return result; }
+
+    startNodeAction(skill, node) { return this._act(() => startNodeAction(this, skill, node)); }
+    startSmelting(recipe) { return this._act(() => startSmelting(this, recipe)); }
+    startSmithing(type, bar) { return this._act(() => startSmithing(this, type, bar)); }
+    startCrafting(type, bar, gem) { return this._act(() => startCrafting(this, type, bar, gem)); }
+    startToolCraft(tool, tier) { return this._act(() => startToolCraft(this, tool, tier)); }
+    stopAction() { return this._act(() => stopAction(this)); }
+    currentAction() { return resolveAction(this.state); }
+
+    enterCombat() { return this._act(() => enterCombat(this)); }
+    leaveCombat() { return this._act(() => leaveCombat(this)); }
+    toggleCombat() { return this._act(() => (this.state.combat.active ? leaveCombat(this) : enterCombat(this))); }
+    clickAttack() { return this._act(() => clickAttack(this)); }
+    setPotion(id) { return this._act(() => setPotion(this, id)); }
+    setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
+    setStage(stage) { return this._act(() => setStage(this, stage)); }
+    setFarmMode(on) { this.state.combat.farmMode = !!on; }
+
+    equipItem(id, slot) { return this._act(() => equipItem(this, id, slot)); }
+    unequipItem(slot) { return this._act(() => unequipItem(this, slot)); }
+    sellItem(id) { return this._act(() => sellItem(this, id)); }
+    sellAllItems(rarity) { return this._act(() => sellAllItems(this, rarity)); }
+    upgradeItem(id) { return this._act(() => upgradeItem(this, id)); }
+    sellResource(id, amount) { return this._act(() => sellResource(this, id, amount)); }
+    buyGoldShopItem(id) { return this._act(() => buyGoldShopItem(this, id)); }
+
+    buyCampUpgrade(id, count) { return this._act(() => buyCampUpgrade(this, id, count)); }
+
+    canPrestige() { return canPrestige(this.state); }
+    prestigePreview() { return prestigePreview(this); }
+    prestige() { return this._act(() => doPrestige(this)); }
+    buyPerk(id) { return this._act(() => buyPerk(this, id)); }
+
+    startMinigame(skill) { return this._act(() => startMinigame(this, skill)); }
+    resolveMinigame(skill) { return this._act(() => resolveMinigame(this, skill)); }
+    failMinigame(skill) { return this._act(() => failMinigame(this, skill)); }
+    pumpHeat(skill) { return pumpHeat(this, skill); }
+    setDragValue(skill, value) { return setDragValue(this, skill, value); }
+
+    dailyReady() { return dailyReady(this.state, this.now); }
+    claimDaily() { return this._act(() => claimDaily(this)); }
+
+    /** Serialisable snapshot for saving. */
+    serialize(now = this.now) {
+        this.state.meta.savedAt = now;
+        return JSON.stringify(this.state);
+    }
+}
