@@ -1,2 +1,14 @@
-server/node_modules/
-server/package-lock.json
+# Dependencies (api/node_modules is still tracked on purpose until a preview deploy
+# confirms Vercel installs from api/package.json — see docs/ROADMAP.md, Phase 0)
+node_modules/
+!api/node_modules/
+
+# Local databases and secrets
+*.db
+*.sqlite
+.env
+.env.*
+
+# OS / editor noise
+.DS_Store
+.vercel
