@@ -5,7 +5,7 @@
 import { SKILLS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, sellValue } from '../data/resources.js';
 import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
-import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL } from '../data/items.js';
+import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS } from '../data/items.js';
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
@@ -16,7 +16,7 @@ import { actionInterval, skillLevel } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE, enemyForStage } from '../core/formulas.js';
 import { canComplete, resolveAction, fuelLog } from '../systems/skilling.js';
 import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
-import { goldShopPrice, itemUpgradeCost, canWear } from '../systems/inventory.js';
+import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { advise } from '../systems/advisor.js';
 import { DAILY_MAX_BANKED } from '../systems/daily.js';
@@ -408,7 +408,7 @@ export function renderSmithing(game, ui) {
         <h3 class="section-title">2. Forge equipment
             <select class="material-select" onchange="FI.selectSmithMetal(this.value)">${METALS.map(m => `<option value="${m.bar}" ${m.bar === metal.bar ? 'selected' : ''}>${m.name} (lvl ${m.levelReq}) — ${fmt(state.resources[m.bar])} bars</option>`).join('')}</select>
         </h3>
-        <p class="muted small">Each piece unlocks a few levels after the metal (swords first, plate bodies last). Every forged item rolls a rarity with extra affixes; the metal decides the power band, so a lucky copper sword never beats an honest runite one.</p>
+        <p class="muted small">Each piece unlocks a few levels after the metal (swords first, plate bodies last). Forged items roll up to Rare quality — epic and legendary gear only drops in combat. The metal decides the power band, so a lucky copper sword never beats an honest runite one.</p>
         <div class="node-grid">${forgeCards}</div>
         <h3 class="section-title">3. Tools</h3>
         <div class="node-grid">${toolCards}</div>
@@ -472,21 +472,31 @@ function itemCard(game, item, { equippedSlot = null } = {}) {
     const wearable = canWear(state, item);
     const affixes = (item.affixes || []).map(a => `<span class="affix">${esc(describeAffix(a))}</span>`).join('');
     const stats = [item.atk ? `<span class="item-atk">⚔️ ${Math.round(item.atk * mult)}</span>` : '', item.def ? `<span class="item-def">🛡️ ${Math.round(item.def * mult)}</span>` : ''].filter(Boolean).join(' ');
+    const afford = c => state.resources.essence >= c.essence && state.gold >= c.gold;
     const upgradeBtn = up < MAX_UPGRADE
-        ? `<button class="mini-btn" onclick="FI.upgrade(${item.id})" ${state.resources.essence >= cost.essence && state.gold >= cost.gold ? '' : 'disabled'} title="+5% base stats per level">⬆ +${up + 1}: ${cost.essence} ✨ + ${fmt(cost.gold)} 🪙</button>`
+        ? `<button class="mini-btn" onclick="FI.upgrade(${item.id})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">⬆ +${up + 1}: ${cost.essence} ✨ + ${fmt(cost.gold)} 🪙</button>`
         : `<span class="muted small">Max upgrade</span>`;
-    return `<div class="inv-item" style="border-color:${item.color}55">
+    const reforge = itemReforgeCost(game, item);
+    const reforgeBtn = item.affixes?.length
+        ? `<button class="mini-btn" onclick="FI.reforge(${item.id})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (cost rises with each reforge)">🔁 ${reforge.essence} ✨ + ${fmt(reforge.gold)} 🪙</button>`
+        : '';
+    const salvage = salvagePreview(item);
+    const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([id, q]) => `~${q.toFixed(1)} ${RESOURCES[id].name}`)].filter(Boolean).join(', ') || 'nothing';
+    const upgradeBadge = !equippedSlot && wearable && isUpgrade(state, item) ? '<span class="badge-upgrade">▲ upgrade</span>' : '';
+    const source = item.source === 'drop' ? 'dropped' : item.source === 'unique' ? 'unique' : 'crafted';
+    return `<div class="inv-item ${item.locked ? 'locked-item' : ''}" style="border-color:${item.color}55">
         <div class="inv-header">
             <div class="inv-title-wrap"><div class="item-thumb" style="color:${item.color}">${item.icon}</div>
-                <div><span class="item-name" style="color:${item.color}">${esc(item.name)}${up ? ` +${up}` : ''}</span><div class="inv-type">${RARITIES.find(r => r.id === item.rarity)?.name || item.rarity} · ${item.type} · tier ${item.tier}</div></div></div>
-            <span class="inv-value">💰 ${fmt(itemSellValue(item))}</span>
+                <div><span class="item-name" style="color:${item.color}">${esc(item.name)}${up ? ` +${up}` : ''}</span> ${upgradeBadge}<div class="inv-type">${RARITIES.find(r => r.id === item.rarity)?.name || item.rarity} · ${item.type} · tier ${item.tier} · ${source}</div></div></div>
+            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${item.id})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
         </div>
         <div class="inv-stats-row"><div>${stats || '<span class="muted">no base stats</span>'}</div><div class="affixes">${affixes}</div></div>
         ${!wearable ? `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>` : ''}
         <div class="inv-actions">
             ${equippedSlot ? `<button class="mini-btn" onclick="FI.unequip('${equippedSlot}')">Unequip</button>` : `<button class="equip-btn" onclick="FI.equip(${item.id})" ${wearable ? '' : 'disabled'}>Equip</button>`}
             ${upgradeBtn}
-            ${equippedSlot ? '' : `<button class="sell-btn" onclick="FI.sellItem(${item.id})">Sell</button>`}
+            ${reforgeBtn}
+            ${equippedSlot ? '' : `<button class="mini-btn" onclick="FI.salvage(${item.id})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">♻️ Salvage</button><button class="sell-btn" onclick="FI.sellItem(${item.id})" ${item.locked ? 'disabled' : ''} title="Sell for ${fmt(itemSellValue(item))} gold">💰 ${fmt(itemSellValue(item))}</button>`}
         </div>
     </div>`;
 }
@@ -499,18 +509,30 @@ export function renderInventory(game, ui) {
         if (item) return itemCard(game, item, { equippedSlot: slot });
         return `<div class="slot drop-slot"><div class="slot-info"><div class="item-thumb empty-thumb">${TYPE_ICONS[type]}</div><span class="slot-name">${slot}</span><span class="muted small">empty</span></div></div>`;
     }).join('');
-    const items = [...state.inventory].sort((a, b) => (b.atk + b.def) - (a.atk + a.def));
+    const items = [...state.inventory].sort((a, b) => itemScore(b) - itemScore(a));
     const filter = ui.invFilter || 'all';
     const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'herb', 'potion', 'material'];
     const resources = Object.keys(RESOURCES).filter(id => state.resources[id] > 0 && (filter === 'all' || RESOURCES[id].category === filter));
+    const auto = state.settings.autoSalvage || 'off';
+    const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
     return `<div class="two-col">
         <section class="glass-panel">
             <div class="panel-header"><h2>🧍 Equipped</h2><span class="muted small">${fmt(game.derived.atk)} ATK · ${fmt(game.derived.def)} DEF</span></div>
             <div class="slot-list">${slots}</div>
         </section>
         <section class="glass-panel">
-            <div class="panel-header"><h2>🎒 Equipment (${items.length})</h2><button class="mini-btn" onclick="FI.sellAll('common')" ${items.some(i => i.rarity === 'common') ? '' : 'disabled'}>Sell all commons</button></div>
-            <div class="inv-list">${items.length ? items.map(i => itemCard(game, i)).join('') : '<div class="empty-state">No spare equipment. Forge some in Smithing.</div>'}</div>
+            <div class="panel-header"><h2>🎒 Bag (${items.length}/${bagSize()})</h2>
+                <div class="btn-row">
+                    <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>♻️ Salvage commons</button>
+                    <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>💰 Sell commons</button>
+                </div>
+            </div>
+            <label class="muted small auto-salvage">Auto-salvage drops up to
+                <select class="material-select" onchange="FI.setAutoSalvage(this.value)">${AUTO_SALVAGE_OPTIONS.map(o => `<option value="${o}" ${o === auto ? 'selected' : ''}>${o === 'off' ? 'off' : RARITIES.find(r => r.id === o).name}</option>`).join('')}</select>
+                <span>— never an upgrade, never locked items. When the bag is full the weakest item is salvaged.</span>
+            </label>
+            <div class="inv-list">${items.length ? items.map(i => itemCard(game, i)).join('') : '<div class="empty-state">No spare equipment. Forge some in Smithing, or fight: bosses drop gear half the time.</div>'}</div>
+            <p class="muted small">${state.stats.itemsDropped} items dropped · ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically)</p>
         </section>
     </div>
     <section class="glass-panel">
@@ -520,7 +542,7 @@ export function renderInventory(game, ui) {
         <div class="res-grid">${resources.length ? resources.map(id => `<div class="res-card" style="border-color:${res(id).color}44">
             <div class="res-head"><span class="res-icon" style="color:${res(id).color}">${res(id).icon}</span><div><div class="res-name">${esc(res(id).name)}</div><div class="muted small">${res(id).category}${res(id).heals ? ` · heals ${res(id).heals}` : ''}${res(id).desc ? ` · ${res(id).desc}` : ''}</div></div></div>
             <div class="res-qty">×${fmt(state.resources[id])}</div>
-            ${id === 'essence' ? '<div class="muted small">Upgrades gear</div>' : `<div class="res-actions"><span class="muted small">${sellValue(id)} 🪙 each</span><button class="mini-btn" onclick="FI.sellRes('${id}',1)">Sell 1</button><button class="mini-btn" onclick="FI.sellRes('${id}',10)">10</button><button class="mini-btn" onclick="FI.sellRes('${id}',1e9)">All</button></div>`}
+            ${id === 'essence' ? '<div class="muted small">Upgrades and reforges gear</div>' : `<div class="res-actions"><span class="muted small">${sellValue(id)} 🪙 each</span><button class="mini-btn" onclick="FI.sellRes('${id}',1)">Sell 1</button><button class="mini-btn" onclick="FI.sellRes('${id}',10)">10</button><button class="mini-btn" onclick="FI.sellRes('${id}',1e9)">All</button></div>`}
         </div>`).join('') : '<div class="empty-state">Nothing here yet. Mine, cut, hunt or fight to collect materials.</div>'}</div>
     </section>`;
 }

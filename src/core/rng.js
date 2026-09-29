@@ -19,6 +19,8 @@ export const rng = {
             roll -= entry.weight;
             if (roll < 0) return entry;
         }
+        // Floating-point leftovers: return the last entry that could actually be picked.
+        for (let i = entries.length - 1; i >= 0; i--) if (entries[i].weight > 0) return entries[i];
         return entries[entries.length - 1];
     }
 };

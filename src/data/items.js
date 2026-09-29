@@ -38,8 +38,9 @@ export const TYPE_ICONS = {
     Boots: '🥾', Gloves: '🧤', Ring: '💍', Neck: '📿', Ear: '✨'
 };
 
-// Rarity = quality multiplier on base stats + number of affixes. Weights are the base roll;
-// higher-tier zones and essence rerolls (roadmap) shift the odds later.
+// Rarity = quality multiplier on base stats + number of affixes. `weight` is the crafting roll,
+// which stops at Rare: epic and legendary quality only comes from combat (see DROP_RARITY_WEIGHTS).
+export const CRAFT_MAX_RARITY = 'rare';
 export const RARITIES = [
     { id: 'common',    name: 'Common',    quality: 1.00, affixes: 0, weight: 100, color: '#e2e8f0' },
     { id: 'uncommon',  name: 'Uncommon',  quality: 1.08, affixes: 1, weight: 40,  color: '#22c55e' },
@@ -76,3 +77,58 @@ export function upgradeCost(item, goldPerKill = 10) {
 
 /** Item level requirement to wear: combat level by material tier (1, 10, 25, 40, 60). */
 export const TIER_WEAR_LEVEL = { 1: 1, 2: 10, 3: 25, 4: 40, 5: 60, 6: 75, 7: 90 };
+
+// ---------- Drops ----------
+
+// Every gear tier. Tiers 6-7 cannot be smithed: they only drop in Skyreach and the Abyss
+// (Melvor's drop-only band above the craftable ceiling). Power keeps the x2.2 ladder.
+export const GEAR_TIERS = [
+    { tier: 1, name: 'Copper',     power: 1.0,  jewel: 'Amethyst' },
+    { tier: 2, name: 'Iron',       power: 2.2,  jewel: 'Topaz' },
+    { tier: 3, name: 'Mithril',    power: 4.8,  jewel: 'Sapphire' },
+    { tier: 4, name: 'Adamant',    power: 10.6, jewel: 'Emerald' },
+    { tier: 5, name: 'Runite',     power: 23.4, jewel: 'Ruby' },
+    { tier: 6, name: 'Dragonbone', power: 51,   jewel: 'Diamond', dropOnly: true },
+    { tier: 7, name: 'Abyssal',    power: 112,  jewel: 'Voidstone', dropOnly: true }
+];
+export const MAX_GEAR_TIER = GEAR_TIERS.length;
+
+// Chance that a kill drops a piece of gear, and how its tier relates to the zone's tier.
+export const GEAR_DROP_CHANCE = { regular: 0.01, boss: 0.5 };
+export const DROP_TIER_OFFSETS = [ { offset: -1, weight: 60 }, { offset: 0, weight: 35 }, { offset: 1, weight: 5 } ];
+export const DROP_TYPE_WEIGHTS = [
+    { type: 'Weapon', weight: 12 }, { type: 'Shield', weight: 10 }, { type: 'Head', weight: 10 }, { type: 'Body', weight: 10 },
+    { type: 'Legs', weight: 10 }, { type: 'Boots', weight: 10 }, { type: 'Gloves', weight: 10 },
+    { type: 'Ring', weight: 10 }, { type: 'Neck', weight: 8 }, { type: 'Ear', weight: 10 }
+];
+// Rarity weights for drops (common → legendary). Epic and legendary also scale with the zone tier.
+export const DROP_RARITY_WEIGHTS = {
+    regular: [50, 35, 12, 2.5, 0.5],
+    boss:    [20, 40, 28, 9, 3]
+};
+export const DROP_HIGH_RARITY_PER_TIER = 0.15; // epic/legendary weight x(1 + 0.15 x (zone tier - 1))
+
+// ---------- Bag, salvage, reforge ----------
+
+export const BAG_SIZE = 40;
+export const AUTO_SALVAGE_OPTIONS = ['off', 'common', 'uncommon', 'rare'];
+
+/** Half of the essence spent upgrading an item comes back when it is salvaged. */
+export function upgradeEssenceRefund(item) {
+    const upgrade = item.upgrade || 0;
+    return Math.floor(0.5 * (item.tier || 1) * upgrade * (upgrade + 1));
+}
+
+/** Essence from salvaging a dropped item: grows with tier and rarity, plus the upgrade refund. */
+export function salvageEssence(item) {
+    const rarityIndex = Math.max(0, RARITIES.findIndex(r => r.id === item.rarity));
+    return Math.ceil((item.tier || 1) * (1 + rarityIndex) * 0.8) + upgradeEssenceRefund(item);
+}
+// Crafted items give back part of their materials instead (so smithing can't farm essence).
+export const SALVAGE_MATERIAL_RETURN = 0.4;
+
+export const MAX_REFORGE_MULT = 10;
+export function reforgeCost(item, goldPerKill = 10) {
+    const times = Math.min(MAX_REFORGE_MULT, 1 + (item.reforges || 0));
+    return { essence: 3 * (item.tier || 1) * times, gold: Math.ceil(10 * goldPerKill) };
+}

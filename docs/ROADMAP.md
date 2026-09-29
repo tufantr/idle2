@@ -18,7 +18,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 0 — Stop the bleeding | ✅ Done |
 | 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | ✅ Done |
-| 3 — Loot and endgame depth | ⬜ Not started |
+| 3 — Loot and endgame depth | 🟡 Loot done; endgame in progress |
 | 4 — Skill breadth | ⬜ Not started |
 | 5 — Social layer | ⬜ Not started (backend groundwork done) |
 
@@ -97,17 +97,18 @@ over 10 min); a new save reveals a second tab within 3 min and first gear within
 simulator forges its first sword within the first few minutes); export → import round-trips (tests
 for both formats). Still open: an active/idle ratio check once the simulator can play mini-games.
 
-## Phase 3 — Loot and endgame depth ⬜
+## Phase 3 — Loot and endgame depth 🟡
 
 Give combat its own rewards beyond gold and materials, and give the late game goals besides stages.
 Depends on Phase 2's versioned saves (items gain new fields).
 
-- [ ] **Gear drops**: trash ≈ 99% materials / ≤ 1% gear, elites 25–50%, bosses guaranteed; base from
-      the zone tier ±1; rarity weights shift upward with zone tier. Crafted gear then caps at Rare
-      (the research's "crafting sets the base, combat supplies quality") — M
-- [ ] **Salvage** every item into materials (the top material only from combat); **affix reroll**
-      with escalating, capped cost; **item lock** — M
-- [ ] **Bag cap (20–40) with auto-salvage overflow** and a drop filter (rarity, tier, affix) — S
+- [x] **Gear drops**: 1% of regular kills, 50% of bosses; tier = zone tier −1 (60%) / same (35%) /
+      +1 (5%); rarity weights better than crafting and rising with zone tier. Two **drop-only tiers**
+      above runite: Dragonbone (Skyreach) and Abyssal (the Abyss). Crafted gear caps at Rare
+- [x] **Salvage**: dropped gear → essence (tier × rarity), crafted gear → ~40% of its bars; half of
+      upgrade essence refunded. **Reforge** rerolls affixes (cost ×1…×10). **Item lock**
+- [x] **Bag of 40** with auto-salvage overflow (the weakest unlocked item goes, never an upgrade) and
+      an auto-salvage rarity filter for drops
 - [ ] **Dungeons**: authored monster lists with a guaranteed chest, no food swap inside, progress
       reset on leave, 100/500-clear milestones; one per zone tier to start — M
 - [ ] **Titan**: one cooldown-gated boss (60 min) — shares code with the future clan boss — S

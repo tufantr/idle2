@@ -2,7 +2,7 @@
 // change a constant here and re-run the simulator to see the pacing move.
 
 import { AUTHORED_STAGES, zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS } from '../data/items.js';
+import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER } from '../data/items.js';
 import { rng } from './rng.js';
 
 export const BALANCE = {
@@ -146,9 +146,17 @@ export function skillPointsForStages(bestStage, claimedStage) {
 
 // ---------- Equipment generation ----------
 
-function rollRarity(qualityBonus = 0) {
-    // qualityBonus shifts weight from common toward the higher tiers (Master Smith etc.).
-    const entries = RARITIES.map((r, i) => ({ ...r, weight: i === 0 ? r.weight * Math.max(0.2, 1 - qualityBonus * 4) : r.weight * (1 + qualityBonus * 4) }));
+/**
+ * Roll a rarity. `weights` (common..legendary) overrides the crafting weights; `maxRarity` caps the
+ * result; `qualityBonus` (Master Smith etc.) shifts weight from common toward the rest.
+ */
+export function rollRarity({ qualityBonus = 0, weights = null, maxRarity = null } = {}) {
+    const maxIndex = maxRarity ? RARITIES.findIndex(r => r.id === maxRarity) : RARITIES.length - 1;
+    const entries = RARITIES.map((r, i) => {
+        let weight = weights ? weights[i] : r.weight;
+        weight *= i === 0 ? Math.max(0.2, 1 - qualityBonus * 4) : 1 + qualityBonus * 4;
+        return { ...r, weight: i > maxIndex ? 0 : weight };
+    });
     return rng.weighted(entries);
 }
 
@@ -167,10 +175,11 @@ function rollAffixes(count, tier) {
 
 /**
  * Create an equipment item.
- * @param {object} opts { type, tier, power, materialName, gemName?, qualityBonus?, source }
+ * @param {object} opts { type, tier, power, materialName, gemName?, qualityBonus?, rarityWeights?,
+ *                        maxRarity?, rarity?, source, materials? }
  */
 export function generateEquipment(opts, nextId) {
-    const rarity = rollRarity(opts.qualityBonus || 0);
+    const rarity = opts.rarity || rollRarity({ qualityBonus: opts.qualityBonus || 0, weights: opts.rarityWeights, maxRarity: opts.maxRarity });
     const slot = SLOT_STATS[opts.type];
     const variance = rng.float(0.95, 1.05);
     const base = STAT_UNIT * opts.power * rarity.quality * variance;
@@ -189,9 +198,37 @@ export function generateEquipment(opts, nextId) {
         atk, def,
         affixes: rollAffixes(rarity.affixes, opts.tier),
         upgrade: 0,
+        reforges: 0,
+        locked: false,
         value,
-        source: opts.source || 'crafted'
+        source: opts.source || 'crafted',
+        materials: opts.materials || null
     };
+}
+
+/** Gear dropped by a monster in a zone of `zoneTier`: tier usually one below the zone, rarer than crafted. */
+export function generateDrop(zoneTier, boss, nextId) {
+    const tier = Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
+    const gearTier = GEAR_TIERS[tier - 1];
+    const type = rng.weighted(DROP_TYPE_WEIGHTS).type;
+    const jewel = CRAFTING_TYPES.includes(type);
+    const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (zoneTier - 1);
+    const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));
+    return generateEquipment({
+        type, tier,
+        power: jewel ? gearTier.power * 0.8 : gearTier.power,
+        materialName: jewel ? null : gearTier.name,
+        gemName: jewel ? gearTier.jewel : null,
+        rarityWeights: weights,
+        source: 'drop'
+    }, nextId);
+}
+
+/** New affixes for an item (same count as its rarity). */
+export function rerollAffixes(item) {
+    const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[0];
+    item.affixes = rollAffixes(rarity.affixes, item.tier || 1);
+    return item;
 }
 
 /** Sell value including upgrade investment. */

@@ -5,7 +5,7 @@ import { createDefaultState, migrateState } from './core/state.js';
 import { collectModifiers, deriveStats, isFocused } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, stopAction, resolveAction } from './systems/skilling.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, spawnEnemy } from './systems/combat.js';
-import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem } from './systems/inventory.js';
+import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks } from './systems/progress.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue } from './systems/minigame.js';
@@ -131,6 +131,11 @@ export class Game {
     upgradeItem(id) { return this._act(() => upgradeItem(this, id)); }
     sellResource(id, amount) { return this._act(() => sellResource(this, id, amount)); }
     buyGoldShopItem(id) { return this._act(() => buyGoldShopItem(this, id)); }
+    salvageItem(id) { return this._act(() => salvageItem(this, id)); }
+    salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
+    reforgeItem(id) { return this._act(() => reforgeItem(this, id)); }
+    toggleLock(id) { return this._act(() => toggleLock(this, id)); }
+    setAutoSalvage(rarity) { return this._act(() => setAutoSalvage(this, rarity)); }
 
     buyCampUpgrade(id, count) { return this._act(() => buyCampUpgrade(this, id, count)); }
 

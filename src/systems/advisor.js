@@ -3,22 +3,17 @@
 
 import { SKILLS } from '../data/skills.js';
 import { METALS, SMELTING_RECIPES, TOOLS, smithLevelReq } from '../data/workshop.js';
-import { TYPE_SLOTS, TYPE_NAMES, SMITHING_BAR_COST, UPGRADE_STEP } from '../data/items.js';
+import { TYPE_SLOTS, TYPE_NAMES, SMITHING_BAR_COST } from '../data/items.js';
 import { orderedByTier, RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { nextGoals, isUnlocked } from '../data/unlocks.js';
 import { skillLevel } from '../core/modifiers.js';
 import { tokensForStage } from '../core/formulas.js';
-import { canWear } from './inventory.js';
+import { canWear, itemScore } from './inventory.js';
 import { dailyReady } from './daily.js';
 
 const FORGE_PRIORITY = ['Weapon', 'Body', 'Shield', 'Legs', 'Head', 'Gloves', 'Boots'];
 const SETBACK_WINDOW_MS = 10 * 60 * 1000;
-
-export function itemScore(item) {
-    if (!item) return -1;
-    return ((item.atk || 0) + (item.def || 0)) * (1 + UPGRADE_STEP * (item.upgrade || 0)) + 5 * (item.affixes?.length || 0);
-}
 
 /** The weakest equipped slot an item could go into (empty slots first). */
 function weakestSlotFor(state, type) {

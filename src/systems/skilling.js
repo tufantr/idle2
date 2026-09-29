@@ -3,7 +3,7 @@
 
 import { SKILLS, skillNode } from '../data/skills.js';
 import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
-import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES } from '../data/items.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY } from '../data/items.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { GEM_DROP_TABLE } from '../data/zones.js';
 import { actionInterval, skillLevel } from '../core/modifiers.js';
@@ -11,6 +11,7 @@ import { generateEquipment } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat } from './progress.js';
 import { leaveCombat } from './combat.js';
+import { addItem } from './inventory.js';
 
 const GEM_FIND_CHANCE = 0.02;
 
@@ -187,8 +188,8 @@ export function completeAction(game, def, { offline = false } = {}) {
         }
         if (!offline && amount === 2) game.emit({ type: 'doubleDrop', resource: def.output });
     } else if (def.kind === 'smith' || def.kind === 'craft') {
-        const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, source: 'crafted' }, state.idCounter++);
-        state.inventory.push(item);
+        const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, maxRarity: CRAFT_MAX_RARITY, materials: def.consumes, source: 'crafted' }, state.idCounter++);
+        addItem(game, item);
         bumpStat(game, 'itemsCrafted');
         game.emit({ type: 'itemCrafted', item });
         if (!offline || item.rarity !== 'common') log(game, `${item.icon} Made ${item.rarity === 'common' ? '' : item.rarity + ' '}${item.name}`, 'craft');

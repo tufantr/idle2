@@ -119,6 +119,7 @@ function handleEvents(events) {
             case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
             case 'unlock': toast(`🔓 ${TABS.find(t => t.id === ev.id)?.name || ev.id} unlocked!`, 'unlock'); break;
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
+            case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.icon} ${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft'); break;
             case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
             case 'death': toast(`💀 Defeated at stage ${ev.stage} — retreating`, 'death'); break;
             case 'bossTimeout': toast(`⏳ The boss held out — regrouping for a minute`, 'death'); break;
@@ -275,6 +276,11 @@ window.FI = {
     sellItem(id) { game.sellItem(id); render(); },
     sellAll(rarity) { game.sellAllItems(rarity); render(); },
     upgrade(id) { game.upgradeItem(id); render(); },
+    reforge(id) { game.reforgeItem(id); render(); },
+    salvage(id) { const g = game.salvageItem(id); if (g) toast(`♻️ +${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info'); render(); },
+    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`♻️ Salvaged ${r.count} items (+${r.essence} essence)`, 'info'); render(); },
+    toggleLock(id) { game.toggleLock(id); render(); },
+    setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },
     invFilter(cat) { ui.invFilter = cat; render(); },
     buyShop(id) { game.buyGoldShopItem(id); render(); },

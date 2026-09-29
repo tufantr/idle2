@@ -1,6 +1,8 @@
 // Auto-battler: player and enemy attack on their own timers; food, potions, loot, death, clicks.
 
-import { enemyForStage, enemyDamage, goldForKill, combatXpForKill, BALANCE } from '../core/formulas.js';
+import { enemyForStage, enemyDamage, goldForKill, combatXpForKill, generateDrop, BALANCE } from '../core/formulas.js';
+import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
+import { addItem } from './inventory.js';
 import { zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE } from '../data/zones.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { rng } from '../core/rng.js';
@@ -171,6 +173,18 @@ function rollLoot(game, enemy) {
     if (enemy.boss) essence = rng.int(r.bossEssence[0], r.bossEssence[1]) * Math.max(1, Math.round(zone.tier / 2));
     else if (rng.chance(r.essenceDropChance * d.dropMult)) essence = rng.int(1, 2);
     if (essence) { state.resources.essence += essence; bumpStat(game, 'essenceFound', essence); drops.push({ id: 'essence', qty: essence }); }
+
+    // Gear: rare from regular monsters, a coin flip from bosses; tier follows the zone.
+    const gearChance = (enemy.boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
+    if (rng.chance(gearChance)) {
+        const item = generateDrop(zone.tier, enemy.boss, state.idCounter++);
+        const result = addItem(game, item);
+        bumpStat(game, 'itemsDropped');
+        drops.push({ item, kept: result.kept });
+        const rank = RARITIES.findIndex(r => r.id === item.rarity);
+        if (result.kept && rank >= 2) log(game, `${item.icon} ${RARITIES[rank].name} ${item.name} dropped!`, 'loot');
+        if (result.kept) game.emit({ type: 'itemDropped', item });
+    }
     return drops;
 }
 
@@ -190,8 +204,8 @@ export function onEnemyDeath(game) {
     const drops = rollLoot(game, enemy);
 
     game.emit({ type: 'kill', enemy, gold, xp, drops });
-    if (enemy.boss || drops.some(dr => dr.id === 'essence' || RESOURCES[dr.id].category === 'gem')) {
-        const dropText = drops.map(dr => `${dr.qty}× ${RESOURCES[dr.id].name}`).join(', ');
+    if (enemy.boss || drops.some(dr => dr.id === 'essence' || RESOURCES[dr.id]?.category === 'gem')) {
+        const dropText = drops.map(dr => (dr.item ? dr.item.name : `${dr.qty}× ${RESOURCES[dr.id].name}`)).join(', ');
         log(game, `${enemy.icon} ${enemy.name} defeated${dropText ? ` — ${dropText}` : ''}`, 'combat');
     }
 
