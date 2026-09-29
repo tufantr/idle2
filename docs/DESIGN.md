@@ -421,6 +421,33 @@ plots ready to harvest, and why work stopped early.
   prefers more play time, and asks the player if the save timestamps disagree with that. On a static
   host without the API, sign-in says cloud saves are unavailable instead of failing.
 - **Server secret:** `JWT_SECRET` must be set in production; the old hard-coded fallback is gone.
+- **Time away is measured on the server's clock** for cloud saves: `/api/load` returns the time of the
+  last upload and the server's current time, and the client replays exactly that gap, so changing the
+  device clock doesn't buy offline progress.
+- **Plausibility flags:** each upload is compared with the previous one (play time growing faster than
+  real time, XP beyond any possible rate, best stage or tokens going down). Nothing is rejected — the
+  save belongs to the player — but flagged accounts are left out of leaderboards for 30 days.
+
+### 3.18 Clans and leaderboards
+
+`api/index.js` (routes), `api/store.js` (all SQL), `src/core/power.js` (the numbers). Everything is
+asynchronous and **every number another player sees is computed on the server from the stored save**
+with the game's own stat code; the client never submits damage or scores.
+
+- **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
+  member takes over if the owner leaves, and the last one out closes the clan.
+- **The weekly clan boss** (ISO weeks, UTC). Its health is set when the week's boss first appears:
+  12 × the members' combined attack. Every member has **three attacks a day** (enforced by a unique
+  per-player-per-day slot, so parallel requests or switching clans don't add more); an attack uploads
+  the save and deals what that hero does in 60 seconds (`expectedDps × 60`, no dice, Focus, potions or
+  timed boosts). Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
+  when the boss falls, 50 essence and a diamond for the last hit, and when the week ends 50 essence for
+  taking part plus 100 / 60 / 30 essence and a diamond for the top three. Claiming twice pays once.
+- **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
+  level, Titans or dungeon clears, all time or this week (from each player's first save of the week).
+- **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open.
+  A Discord invite link appears if `DISCORD_INVITE` (`src/data/social.js`) is set — there is no in-game
+  chat.
 
 ## 4. The modifier pipeline
 
@@ -594,8 +621,9 @@ disagreed, the implementation follows the simulator:
     stage" like the gold shop: gold resets on prestige and a new run earns far below best-stage rates,
     so best-stage pricing made permanent purchases nearly impossible to save for (and made farming
     depend on combat progress). Fixed prices also gate the later obstacles by progress naturally.
-15. **Not yet built:** mastery, server-side offline time, upload plausibility checks, clans — all on
-    the roadmap.
+15. **Clan boss damage is a formula, not a replayed fight:** the server multiplies the hero's expected
+    DPS by 60 seconds. It is deterministic and cheap, and nobody can reroll it.
+16. **Not yet built:** mastery (optional) and the events template.
 
 ## 7. What was cut from the concept
 
@@ -622,15 +650,18 @@ index.html            page shell (sidebar, header, tab, toasts, modals)
 style.css             styles (original theme + v2 layout, mobile tab strip, reduced motion)
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
 src/game.js           Game facade: state + tick + every player action (no DOM)
-src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export)
+src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export,
+                      cloud client) · power (server-side numbers)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
                       · progress (XP, pets, log)
 src/ui/               render.js (HTML per tab) · format.js (numbers, time)
-api/                  Express API for Vercel (register, login, save, load) on Vercel Postgres
-test/                 node:test suites (game, loot, endgame, skills, saves, API)
+api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
+                      rewards, leaderboards) · store.js (every query) · database.js (the connection)
+test/                 node:test suites (game, loot, endgame, skills, saves, API; the API suite runs on an
+                      in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table)
 docs/                 DESIGN.md (this) · ROADMAP.md · reports/ · research_notes/
 ```

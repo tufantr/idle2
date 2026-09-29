@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "The game code is ES modules; this lets Node (the API, the tools) load them without guessing."
+}

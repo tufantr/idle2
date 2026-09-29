@@ -1,8 +1,10 @@
 # Fantasy Idle
 
-A browser idle RPG in the spirit of Melvor Idle: train gathering and production skills, forge your
-own gear, fight through ten zones and an endless Abyss, and prestige for permanent power. Plain
-JavaScript (ES modules, no build step), with an optional Express + Vercel Postgres API for cloud saves.
+A browser idle RPG in the spirit of Melvor Idle: train twelve skills, forge your own gear, fight
+through ten zones and an endless Abyss, clear dungeons, face the hourly Titan, build an agility course,
+and prestige for permanent power. Optional accounts add cloud saves, clans with a weekly shared boss,
+and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
+Postgres API.
 
 **Docs:** [Game design](docs/DESIGN.md) · [Roadmap](docs/ROADMAP.md) ·
 [Research report](docs/reports/Fantasy%20Idle%20game%20design%20research.md) · [Research notes](docs/research_notes/)
@@ -20,36 +22,61 @@ Then open the printed URL. Add `?dev=1` to unlock every tab and mini-game immedi
 API the game runs as a guest with a local save, and the login dialog says cloud saves aren't
 available on that server.
 
-## Cloud saves (optional)
+## The API (cloud saves, clans, leaderboards)
 
 `api/index.js` is an Express app deployed as a Vercel serverless function (`vercel.json` routes
 `/api/*` to it). It needs:
 
-- `POSTGRES_URL` (and the other `@vercel/postgres` variables) — the `users` table is created on boot
+- `POSTGRES_URL` (and the other `@vercel/postgres` variables) — tables are created on the first request
 - `JWT_SECRET` — **required in production**; the API refuses to sign tokens without it
 
-Endpoints: `POST /api/register`, `POST /api/login`, `POST /api/save`, `GET /api/load`.
+The API imports the game's own stat code (`src/core/power.js`, ES modules — `src/package.json` marks
+them as such) so that clan damage and leaderboard numbers are computed on the server from the stored
+save. It needs Node 20.19+ or 22+.
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days) |
+| `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected |
+| `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
+| `GET /api/clan`, `POST /api/clan/attack` | your clan, its weekly boss and board; attack (3 a day, damage computed on the server) |
+| `GET /api/rewards`, `POST /api/rewards/claim` | clan rewards, claimed once |
+| `POST /api/leaderboard/consent`, `GET /api/leaderboard` | opt in or out; boards by best stage, total level, Titans or dungeon clears |
 
 ## Tests and balance tools
 
-Node 22+, no install needed for the game tests (the API tests use the packages in `api/node_modules`):
+Node 22+, no install needed (the API tests use the packages in `api/node_modules`):
 
 ```bash
-node --test test/*.test.mjs test/*.test.cjs   # 28 tests: game logic, saves, API, regressions
+node --test test/*.test.mjs test/*.test.cjs   # game logic, loot, endgame, skills, saves, API
 node tools/pacing.mjs                           # hours of training to reach each skill level
 node tools/simulate.mjs --hours=150 --seed=1    # plays the whole game headlessly, prints milestones
 ```
+
+The API tests use an in-memory store by default. To run the same tests against a real Postgres
+(checks the SQL in `api/store.js`), install `pg` somewhere on `NODE_PATH` and point them at a
+throwaway database — the tests drop and recreate the tables:
+
+```bash
+API_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/idle_test NODE_PATH=/path/to/node_modules \
+  node --test test/api.test.cjs
+```
+
+Simulator options: `--no-dungeons`, `--no-titan`, `--farm-ladder` (farm instead of dungeons),
+`--farm-ladder=push` (keep fighting at the wall), `--verbose`, `--snapshot=H`.
 
 ## Project layout
 
 ```
 index.html, style.css   page shell and styles
 src/game.js             Game class: state, tick and every player action (no DOM)
-src/core/               XP curve, formulas, modifier pipeline, state/migration, saves
-src/data/               content tables: resources, skills, workshop, items, zones, perks, achievements
-src/systems/            skilling, combat, inventory, prestige, camp, mini-games, offline, daily
+src/core/               XP curve, formulas, modifier pipeline, state/migration, saves, server-side power
+src/data/               content tables: resources, skills, workshop, items, zones, dungeons, pets,
+                        farming, agility, camp, perks, achievements, unlocks, social settings
+src/systems/            skilling, combat, dungeons & Titan, inventory, farming, agility, prestige,
+                        camp, mini-games, offline, daily, advisor, rewards
 src/ui/                 rendering and formatting
-api/                    Express API for Vercel
+api/                    Express API for Vercel: routes, data layer, connection
 test/, tools/           tests, simulator, pacing table
 docs/                   design, roadmap, research
 ```

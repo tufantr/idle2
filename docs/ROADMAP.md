@@ -20,9 +20,9 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 2 — Retention scaffolding | ✅ Done |
 | 3 — Loot and endgame depth | ✅ Done (mastery, optional, not built) |
 | 4 — Skill breadth | ✅ Done |
-| 5 — Social layer | ⬜ Not started (backend groundwork done) |
+| 5 — Social layer | 🟡 Clans, boards, server time and flags done; events open |
 
-Before any of this ships, three owner decisions are open — see [Decisions for the owner](#decisions-for-the-owner).
+Before this ships, a few things need the owner (a deployment setting, a history clean-up) — see [Decisions for the owner](#decisions-for-the-owner).
 
 ---
 
@@ -166,26 +166,33 @@ Farming progresses while another action runs (plots are timestamps); gold sinks 
 income while the agility course is being built (the first ~50–90 simulated hours). After that, late
 Abyss income dwarfs every bounded sink and most gold resets with the run — see DESIGN §5.3.
 
-## Phase 5 — Social layer ⬜
+## Phase 5 — Social layer 🟡
 
 Last on purpose: the most successful solo-developer idle games (Melvor, Idle Champions) stayed
 single-player, and the failures in the research all came from social features that outran their
-backend. Everything here must be asynchronous. **Blocked on the owner decisions below.**
+backend. Everything here is asynchronous. Owner decisions taken (see below): the game stays free with
+nothing for sale, so the Vercel Hobby plan fits; players' numbers are computed on the server only.
 
 - [x] Groundwork: real accounts, bcrypt, expiring JWTs, cloud save with a conflict prompt
-- [ ] **Server-side offline time**: the server stamps `receivedAt` on each save; offline gains use it
-      instead of the client clock — S
-- [ ] **Plausibility checks** on upload (monotonic progress, XP-per-hour ceilings) — flag, don't reject — S
-- [ ] **Clan MVP** (M): clans with looking-for flags; one weekly shared-HP boss, 3 attempts per member
-      per day, **damage computed on the server** from the stored save (the client never submits a
-      number); rewards for participation, top 3, the kill and the last hit; clan-only weekly board;
-      polling only while the Clan tab is open (≥ 60 s); a Discord widget instead of in-game chat
+- [x] **Server-side offline time**: `/api/load` returns the server's clock and the time of the last
+      upload; the client replays that gap instead of trusting its own clock
+- [x] **Plausibility checks** on upload (play time vs real time, an XP ceiling, best stage and tokens
+      never falling) — flag, don't reject; flagged accounts are left out of leaderboards for 30 days
+- [x] **Clan MVP**: clans of up to 20 with looking-for lines; a weekly shared-HP boss sized from the
+      members' power; 3 attacks per member per day (a unique per-day slot in the database), **damage
+      computed on the server** from the stored save; rewards for participation, top 3, the kill and the
+      last hit, claimed once; clan-only weekly board; polling only while the Clan tab is open (≥ 60 s);
+      an optional Discord link instead of in-game chat
+- [x] **Opt-in leaderboards** on server-computed metrics only (best stage, total level, Titans,
+      dungeon clears; all time or this week), with a consent line and one-click opt-out
+- [x] Data layer in one module (`api/store.js`); API tests run on an in-memory store by default and on
+      a real Postgres with `API_TEST_DATABASE_URL` (checked against PostgreSQL 16)
 - [ ] **Events template** (M once, S per event): start/end window, modifiers, capped daily drops,
       milestone rewards, an event shop
-- [ ] **Opt-in weekly leaderboards** on server-computed metrics only, with a consent flow — S–M
 
-**Exit:** no client-submitted damage numbers; under 100k function invocations a month at 100 daily
-players (Vercel Hobby budget); privacy consent before the first board.
+**Exit:** no client-submitted damage numbers (met: attacks ignore anything the client sends); under
+100k function invocations a month at 100 daily players (the Clan tab polls once a minute only while
+open, saves go up once a minute); privacy consent before the first board (met).
 
 ## Deferred on purpose
 
@@ -200,9 +207,10 @@ real-time chat; synchronous party content; gacha pets; any purchasable power.
    without it (the old code silently used a public hard-coded secret). Accounts created with the old
    API keep working — passwords are unchanged, players just log in again, and an old cloud save is
    migrated on load like a local one.
-2. **Monetization and hosting.** Vercel's Hobby plan is for non-commercial use. Decide before Phase 5
-   whether the game stays free, becomes paid (Melvor's model), or uses cosmetics — the research found
-   pay-for-power plus social features to be the combination that forces a server-authoritative rewrite.
+2. **Monetization and hosting — decided:** the game stays free with nothing for sale, which fits
+   Vercel's Hobby plan (non-commercial). If that changes, the research's warning stands: pay-for-power
+   plus social features is the combination that forces a server-authoritative rewrite. Clans and
+   leaderboards also need `POSTGRES_URL` (Vercel Postgres) — tables are created on the first request.
 3. **`api/node_modules` is still committed** (1,099 files). `.gitignore` keeps it tracked until a
    preview deployment confirms Vercel installs dependencies from `api/package.json`; then remove it
    with `git rm -r --cached api/node_modules`.

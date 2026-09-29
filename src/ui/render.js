@@ -28,6 +28,7 @@ import { AGILITY_SLOTS, obstacleById, MAX_OBSTACLE_LEVEL } from '../data/agility
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
+import { DISCORD_INVITE } from '../data/social.js';
 import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
@@ -902,14 +903,83 @@ function renderBackups() {
     </div>`).join('')}</div>`;
 }
 
-export function renderClan() {
-    return `<section class="glass-panel">
-        <div class="panel-header"><h2>🛡️ Clans</h2><span class="muted small">Planned</span></div>
-        <p class="muted">Clans are on the roadmap: an asynchronous clan boss that every member chips away at over the week, a clan-only leaderboard, and a Discord widget for chat. Nothing here is live yet — see <code>docs/ROADMAP.md</code>.</p>
-    </section>`;
+export function renderClan(game, ui, cloud) {
+    const social = ui.social || {};
+    const intro = `<p class="muted small">Clans are asynchronous: each week the clan fights one shared boss. Every member gets three attacks a day, and an attack deals what <b>your saved hero</b> would deal in 60 seconds — the server works it out from your cloud save, so the game uploads first. Rewards (essence and diamonds) go to everyone who fought, the top three, the whole clan when the boss falls, and the last hit.</p>`;
+    if (!cloud?.loggedIn) {
+        return `<section class="glass-panel"><div class="panel-header"><h2>🛡️ Clans</h2></div>${intro}
+            <div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register to join a clan</button></div></section>`;
+    }
+    if (cloud.available === false) {
+        return `<section class="glass-panel"><div class="panel-header"><h2>🛡️ Clans</h2></div>${intro}<p class="warn">The clan server isn't reachable from here — clans need the game's API (the Vercel deployment).</p></section>`;
+    }
+    const status = social.error ? `<p class="warn small">${esc(social.error)}</p>` : social.loading && !social.loaded ? '<p class="muted small">Loading…</p>' : '';
+    const rewards = (social.rewards || []).length
+        ? `<div class="info-strip lit">🎁 ${social.rewards.length} clan reward${social.rewards.length > 1 ? 's' : ''} waiting: ${social.rewards.map(r => esc(r.text || r.kind)).join(' · ')}
+            <div class="btn-row"><button class="prestige-btn" onclick="FI.claimRewards()">Claim</button></div></div>`
+        : '';
+    const discord = DISCORD_INVITE ? `<a class="mini-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">💬 Clan chat on Discord</a>` : '';
+    let body = '';
+    if (!social.clan) {
+        const rows = (social.clans || []).map(c => `<tr><td><b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+            <td>${c.members}/${social.maxMembers || 20}</td><td><button class="mini-btn" onclick="FI.joinClan(${c.id})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
+        body = `<div class="two-col">
+            <section class="glass-panel"><div class="panel-header"><h2>🔎 Find a clan</h2></div>
+                <div class="btn-row"><input id="clan-search" class="text-input" placeholder="Name or tag" value="${esc(social.search || '')}" aria-label="Search clans">
+                <button class="mini-btn" onclick="FI.searchClans(document.getElementById('clan-search').value)">Search</button></div>
+                ${rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Clan</th><th>Members</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted small">No clans found — start one.</p>'}
+            </section>
+            <section class="glass-panel"><div class="panel-header"><h2>🏳️ Start a clan</h2></div>
+                <label class="small">Name <input id="clan-name" class="text-input" maxlength="32" placeholder="Iron Wolves"></label>
+                <label class="small">Tag <input id="clan-tag" class="text-input" maxlength="5" placeholder="IWF"></label>
+                <label class="small">Description <input id="clan-desc" class="text-input" maxlength="200" placeholder="Casual, EU evenings"></label>
+                <label class="small">Looking for <input id="clan-looking" class="text-input" maxlength="100" placeholder="Anyone past stage 50"></label>
+                <div class="btn-row"><button class="prestige-btn" onclick="FI.createClan()">Create clan</button></div>
+            </section>
+        </div>`;
+    } else {
+        const c = social.clan;
+        const boss = social.boss;
+        const pct = boss ? Math.max(0, boss.hp / Math.max(1, boss.maxHp) * 100) : 0;
+        const board = (social.board || []).map((r, i) => `<tr class="${r.you ? 'you-row' : ''}"><td>${i + 1}</td><td>${esc(r.username)}</td><td>${fmt(r.damage)}</td><td>${r.attacks}</td></tr>`).join('');
+        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? '👑 ' : ''}${esc(m.username)}</td><td>${m.bestStage}</td><td>${m.totalLevel}</td><td>${fmt(m.attackDamage)}</td></tr>`).join('');
+        body = `<section class="glass-panel">
+            <div class="panel-header"><div><h2>🛡️ ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
+                <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
+            ${boss ? `<div class="clan-boss">
+                <div><b>🐉 This week's boss</b> <span class="muted small">(${esc(boss.week)} · ${boss.killed ? `defeated${boss.lastHit ? ` — last hit by ${esc(boss.lastHit)}` : ''}` : `ends in ${duration(boss.endsInMs)}`})</span></div>
+                <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
+                <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
+                <div class="btn-row"><button class="prestige-btn" onclick="FI.clanAttack()" ${social.attacksLeft > 0 && !boss.killed && !social.attacking ? '' : 'disabled'}>⚔️ Attack (${social.attacksLeft}/${social.attacksPerDay} left today)</button>
+                    <span class="muted small">Your hero hits for about ${fmt((social.members || []).find(m => m.you)?.attackDamage || 0)} per attack.</span></div>
+            </div>` : ''}
+            <div class="two-col">
+                <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Member</th><th>Damage</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
+                <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th>Per attack</th></tr></thead><tbody>${members}</tbody></table></div></div>
+            </div>
+        </section>`;
+    }
+    return `<section class="glass-panel"><div class="panel-header"><h2>🛡️ Clans</h2><button class="mini-btn" onclick="FI.refreshSocial()">↻ Refresh</button></div>${intro}${status}${rewards}</section>
+        ${body}
+        ${renderLeaderboard(social)}`;
 }
 
-// ---------- modals ----------
+const BOARD_METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans', dungeonClears: 'Dungeon clears' };
+
+function renderLeaderboard(social) {
+    const board = social.leaderboard;
+    const consent = social.optIn
+        ? `<p class="small">You are listed by your username with numbers the server works out from your cloud save. <button class="mini-btn" onclick="FI.setLeaderboardConsent(false)">Leave the leaderboards</button></p>`
+        : `<p class="small">Leaderboards are opt-in. Joining lists your <b>username</b> with your best stage, total level, Titans and dungeon clears — worked out on the server from your cloud save, never from numbers the game sends. You can leave at any time. <button class="prestige-btn" onclick="FI.setLeaderboardConsent(true)">Join the leaderboards</button></p>`;
+    const rows = board ? board.entries.map(e => `<tr class="${e.you ? 'you-row' : ''}"><td>${e.rank}</td><td>${esc(e.username)}</td><td>${fmt(e.value)}</td></tr>`).join('') : '';
+    return `<section class="glass-panel">
+        <div class="panel-header"><h2>🏅 Leaderboards</h2>
+            <div class="btn-row">${Object.entries(BOARD_METRICS).map(([id, label]) => `<button class="mini-btn ${social.metric === id ? 'active' : ''}" onclick="FI.boardMetric('${id}')">${label}</button>`).join('')}
+            <button class="mini-btn ${social.period === 'week' ? 'active' : ''}" onclick="FI.boardPeriod('${social.period === 'week' ? 'all' : 'week'}')">${social.period === 'week' ? 'This week' : 'All time'}</button></div></div>
+        ${consent}
+        ${board ? (rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Player</th><th>${esc(board.label)}${board.period === 'week' ? ' (this week)' : ''}</th></tr></thead><tbody>${rows}</tbody></table></div>${board.me && board.me.rank > 50 ? `<p class="small">You: #${board.me.rank} (${fmt(board.me.value)})</p>` : ''}` : '<p class="muted small">Nobody on this board yet.</p>') : ''}
+    </section>`;
+}
 
 export function renderPrestigeModal(game) {
     const p = game.prestigePreview();
@@ -1013,7 +1083,7 @@ export function renderTab(game, ui, cloud) {
         case 'farming': return renderFarming(game, ui);
         case 'agility': return renderAgility(game, ui);
         case 'settings': return renderSettings(game, ui, cloud);
-        case 'clan': return renderClan();
+        case 'clan': return renderClan(game, ui, cloud);
         default: return NON_COMBAT_SKILLS.includes(ui.tab) ? renderSkill(game, ui, ui.tab) : renderCombat(game, ui);
     }
 }

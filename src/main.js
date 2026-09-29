@@ -11,6 +11,7 @@ import { isUnlocked } from './data/unlocks.js';
 import { fmt } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
 import { RESOURCES } from './data/resources.js';
+import { CLAN_POLL_MS } from './data/social.js';
 
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
@@ -29,7 +30,9 @@ const ui = {
     lastRender: 0,
     renderedRevision: -1,
     modalOpen: false,
-    modalQueue: []
+    modalQueue: [],
+    // Clan tab data, fetched only while that tab is open (at most once a minute).
+    social: { clan: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false, fetchedAt: 0, loading: false, loaded: false, error: '' }
 };
 
 const cloud = new CloudClient('/api');
@@ -66,6 +69,7 @@ setInterval(() => {
     if (now - lastSave > AUTOSAVE_MS) save(now);
     if (now - lastBackup > BACKUP_INTERVAL_MS) { lastBackup = now; rotateBackup(game.serialize(now), now); }
     if (cloud.loggedIn && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
+    if (ui.tab === 'clan' && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
     if ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS) {
         try { render(); } catch (err) { console.error('Render failed', err); }
@@ -210,6 +214,49 @@ async function cloudSave(announce = true) {
     }
 }
 
+// ---------- clans, rewards, leaderboards ----------
+
+async function refreshSocial() {
+    if (!cloud.loggedIn) return;
+    const social = ui.social;
+    social.loading = true;
+    social.fetchedAt = Date.now();
+    try {
+        const [mine, rewards, board] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period)]);
+        social.clan = mine.clan;
+        Object.assign(social, { members: mine.members || [], boss: mine.boss || null, board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, maxMembers: mine.maxMembers || 20 });
+        social.rewards = rewards.rewards || [];
+        social.leaderboard = board;
+        social.optIn = !!board.me || social.optIn;
+        if (!social.clan) {
+            const list = await cloud.clans(social.search);
+            social.clans = list.clans || [];
+            social.maxMembers = list.maxMembers || 20;
+        }
+        social.error = '';
+        social.loaded = true;
+    } catch (err) {
+        social.error = err.message;
+    } finally {
+        social.loading = false;
+        render();
+    }
+}
+
+async function socialAction(fn, success) {
+    // Leave any clan form field, so the refreshed view isn't held back by the typing guard in render().
+    if (document.activeElement && document.getElementById('tab').contains(document.activeElement)) document.activeElement.blur();
+    try {
+        const result = await fn();
+        if (success) toast(typeof success === 'function' ? success(result) : success, 'info');
+        await refreshSocial();
+        return result;
+    } catch (err) {
+        toast(err.message, 'error');
+        return null;
+    }
+}
+
 let pendingConflict = null;
 async function syncFromCloud() {
     try {
@@ -240,7 +287,37 @@ function adoptState(stateObject) {
 // ---------- public facade for inline handlers ----------
 
 window.FI = {
-    switchTab(id) { ui.tab = id; localStorage.setItem('fantasyIdle.tab', id); render(); },
+    switchTab(id) {
+        ui.tab = id;
+        localStorage.setItem('fantasyIdle.tab', id);
+        if (id === 'clan' && cloud.loggedIn && Date.now() - ui.social.fetchedAt > 5000) refreshSocial();
+        render();
+    },
+    refreshSocial() { refreshSocial(); },
+    searchClans(q) { ui.social.search = String(q || '').slice(0, 32); document.activeElement?.blur(); refreshSocial(); },
+    createClan() {
+        const val = id => document.getElementById(id)?.value || '';
+        socialAction(() => cloud.createClan({ name: val('clan-name'), tag: val('clan-tag'), description: val('clan-desc'), lookingFor: val('clan-looking') }), 'Clan created');
+    },
+    joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
+    leaveClan() { if (confirm('Leave your clan? Your damage this week stays on its board.')) socialAction(() => cloud.leaveClan(), 'You left the clan'); },
+    async clanAttack() {
+        ui.social.attacking = true;
+        render();
+        await cloudSave(false); // the server attacks with the stored save, so upload the hero first
+        await socialAction(() => cloud.clanAttack(), r => `⚔️ Hit the clan boss for ${fmt(r.damage)}${r.killed ? ' — and brought it down!' : ''}`);
+        ui.social.attacking = false;
+        render();
+    },
+    async claimRewards() {
+        const ids = ui.social.rewards.map(r => r.id);
+        const result = await socialAction(() => cloud.claimRewards(ids));
+        for (const reward of result?.rewards || []) toast(`🎁 ${game.applyReward(reward)}`, 'achievement');
+        if (result?.rewards?.length) { save(Date.now()); cloudSave(false); }
+    },
+    boardMetric(metric) { ui.social.metric = metric; refreshSocial(); },
+    boardPeriod(period) { ui.social.period = period; refreshSocial(); },
+    setLeaderboardConsent(on) { socialAction(() => cloud.setLeaderboardConsent(on).then(r => { ui.social.optIn = r.optIn; return r; }), on ? 'You joined the leaderboards' : 'You left the leaderboards'); },
     startNode(skill, node) { game.startNodeAction(skill, node); render(); },
     stopAction() { game.stopAction(); render(); },
     smelt(id) { game.startSmelting(id); render(); },

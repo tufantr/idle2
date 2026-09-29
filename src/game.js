@@ -15,6 +15,7 @@ import { buyCampUpgrade } from './systems/camp.js';
 import { enterDungeon, returnToStages, setDungeonRepeat, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
 import { plant, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
+import { applyReward } from './systems/social.js';
 
 const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
 const OFFLINE_GAP_MS = 60000;
@@ -148,6 +149,7 @@ export class Game {
     harvestAll(opts) { return this._act(() => harvestAll(this, opts)); }
     buildObstacle(id) { return this._act(() => buildObstacle(this, id)); }
     upgradeObstacle(slot) { return this._act(() => upgradeObstacle(this, slot)); }
+    applyReward(reward) { return this._act(() => applyReward(this, reward)); }
 
     enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
     leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }

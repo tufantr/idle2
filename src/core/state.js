@@ -64,6 +64,7 @@ export function createDefaultState(now = Date.now()) {
             itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
+            clanRewards: 0, clanLastHits: 0,
             actionsBySkill: {}
         },
         minigame: {},

@@ -19,7 +19,7 @@ export const UNLOCKS = [
     { id: 'dungeons',     hint: 'Reach Stage 20 to find the first dungeon',          requires: s => s.combat.bestStage >= 20 },
     { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411 },
     { id: 'agility',      hint: 'Reach Stage 30 to unlock Agility',                 requires: s => s.combat.bestStage >= 30 },
-    { id: 'clan',         hint: 'Clans are planned — see the roadmap',              requires: () => false, comingSoon: true }
+    { id: 'clan',         hint: 'Reach Stage 20 to join a clan',                     requires: s => s.combat.bestStage >= 20 }
 ];
 
 // Held counts let migrated prototype saves (which have no action stats) unlock straight away.

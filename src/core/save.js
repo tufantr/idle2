@@ -198,15 +198,37 @@ export class CloudClient {
 
     logout() { this.setToken(null); }
 
-    /** Returns { state, lastSaved } (state may be null for a fresh account). */
+    /**
+     * Returns { state, lastSaved } (state may be null for a fresh account). Time away is measured on
+     * the server's clock: the save's timestamp is moved so that now − savedAt equals the time the
+     * server saw pass since the upload, whatever this device's clock says.
+     */
     async pull(now = Date.now()) {
         const data = await this.request('/load');
-        return { state: data.state ? migrateState(data.state, now) : null, lastSaved: data.lastSaved || 0 };
+        const state = data.state ? migrateState(data.state, now) : null;
+        if (state && data.lastSaved > 0 && data.serverNow > 0) {
+            const away = Math.max(0, data.serverNow - data.lastSaved);
+            state.meta.savedAt = now - away;
+            state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
+        }
+        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn };
     }
 
     async push(stateObject) {
         return this.request('/save', { method: 'POST', body: { state: stateObject } });
     }
+
+    // ----- social (clans, rewards, leaderboards) -----
+    clans(search = '') { return this.request(`/clans?search=${encodeURIComponent(search)}`); }
+    createClan(fields) { return this.request('/clans', { method: 'POST', body: fields }); }
+    joinClan(clanId) { return this.request('/clans/join', { method: 'POST', body: { clanId } }); }
+    leaveClan() { return this.request('/clans/leave', { method: 'POST', body: {} }); }
+    myClan() { return this.request('/clan'); }
+    clanAttack() { return this.request('/clan/attack', { method: 'POST', body: {} }); }
+    rewards() { return this.request('/rewards'); }
+    claimRewards(ids) { return this.request('/rewards/claim', { method: 'POST', body: { ids } }); }
+    leaderboard(metric, period) { return this.request(`/leaderboard?metric=${encodeURIComponent(metric)}&period=${encodeURIComponent(period)}`); }
+    setLeaderboardConsent(optIn) { return this.request('/leaderboard/consent', { method: 'POST', body: { optIn } }); }
 }
 
 function decodeUsername(token) {
