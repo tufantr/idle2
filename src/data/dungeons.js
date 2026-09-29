@@ -7,8 +7,8 @@
 //
 // Placement: each dungeon sits about where a typical player reaches its unique's gear tier by
 // crafting (see tools/simulate.mjs), so a unique rewards farming a little early instead of
-// skipping tiers. `stage` is the first monster's stage-equivalent; `chestTier` is the zone tier
-// there, which sets the chest's gear, essence and gem.
+// skipping tiers. `stage` is the first monster's stage-equivalent; `chestTier` is the gear tier of
+// the chest (the zone's gearTier there); essence and gems follow the zone's richness tier.
 
 export const DUNGEON_BOSS_TIME_MS = 60000;
 export const ELITE_HP_MULT = 1.4;
@@ -21,21 +21,21 @@ export const DIRECT_UNIQUE_CHANCE = 0.002;  // a chest can also hold the unique 
 // chest is the whole bonus: tuned so farming a dungeon earns about twice the gear and a little more
 // of everything else than farming the same stages would, plus the fragment. A strong hero clears a
 // run in well under a minute, so a chest must never be a jackpot.
-export const CHEST_GEAR_CHANCE = 0.06;      // boss-quality gear of the chest tier
-export const CHEST_ESSENCE_PER_TIER = 1.5;
+export const CHEST_GEAR_CHANCE = 0.04;      // boss-quality gear of the chest tier
+export const CHEST_ESSENCE_PER_TIER = 0.5;   // x the zone's richness tier
 export const CHEST_MATERIAL_ROLLS = 3;      // picks from the zone's loot table
 export const CHEST_GEM_CHANCE = 0.5;        // a gem of the chest tier
 
 // Per-dungeon milestones: permanent bonuses at clear counts.
 export const DUNGEON_MILESTONES = [
-    { clears: 10,  desc: '+3% ATK and DEF',           mods: { atkMult: 0.03, defMult: 0.03 } },
-    { clears: 50,  desc: '+5% gold and drop chance',  mods: { goldMult: 0.05, dropMult: 0.05 } },
-    { clears: 100, desc: '+5% max HP',                mods: { hpMult: 0.05 } }
+    { clears: 25,  desc: '+2% ATK and DEF',           mods: { atkMult: 0.02, defMult: 0.02 } },
+    { clears: 100, desc: '+3% gold and drop chance',  mods: { goldMult: 0.03, dropMult: 0.03 } },
+    { clears: 250, desc: '+3% max HP',                mods: { hpMult: 0.03 } }
 ];
 
 export const DUNGEONS = [
     {
-        id: 'goblin_warren', name: 'Goblin Warren', icon: '🕳️', unlockStage: 20, stage: 25, chestTier: 3,
+        id: 'goblin_warren', name: 'Goblin Warren', icon: '🕳️', unlockStage: 20, stage: 25, chestTier: 2,
         monsters: [
             { name: 'Goblin Sneak', icon: '👺' }, { name: 'Goblin Brute', icon: '👹' }, { name: 'Goblin Archer', icon: '🏹' },
             { name: 'Goblin Shaman', icon: '🧙' }, { name: 'Goblin Brute', icon: '👹' }, { name: 'Goblin Guard', icon: '🛡️' }
@@ -44,7 +44,7 @@ export const DUNGEONS = [
         unique: 'goblin_crown'
     },
     {
-        id: 'crystal_depths', name: 'Crystal Depths', icon: '💎', unlockStage: 50, stage: 55, chestTier: 4,
+        id: 'crystal_depths', name: 'Crystal Depths', icon: '💎', unlockStage: 50, stage: 55, chestTier: 3,
         monsters: [
             { name: 'Shard Bat', icon: '🦇' }, { name: 'Crystal Crawler', icon: '🦂' }, { name: 'Gem Golem', icon: '🗿' },
             { name: 'Prism Wisp', icon: '💫' }, { name: 'Shard Bat', icon: '🦇' }, { name: 'Crystal Knight', icon: '⚔️' },
@@ -54,7 +54,7 @@ export const DUNGEONS = [
         unique: 'crystal_heart'
     },
     {
-        id: 'orc_stronghold', name: 'Orc Stronghold', icon: '🏰', unlockStage: 80, stage: 85, chestTier: 6,
+        id: 'orc_stronghold', name: 'Orc Stronghold', icon: '🏰', unlockStage: 80, stage: 85, chestTier: 4,
         monsters: [
             { name: 'Orc Grunt', icon: '👹' }, { name: 'Orc Archer', icon: '🏹' }, { name: 'Warg Rider', icon: '🐺' },
             { name: 'Orc Grunt', icon: '👹' }, { name: 'Orc Shaman', icon: '🧙' }, { name: 'Troll Bruiser', icon: '🧌' },
@@ -64,7 +64,7 @@ export const DUNGEONS = [
         unique: 'warlord_cleaver'
     },
     {
-        id: 'dragons_lair', name: "Dragon's Lair", icon: '🌋', unlockStage: 110, stage: 115, chestTier: 7,
+        id: 'dragons_lair', name: "Dragon's Lair", icon: '🌋', unlockStage: 120, stage: 125, chestTier: 6,
         monsters: [
             { name: 'Drake Whelp', icon: '🦎' }, { name: 'Kobold Zealot', icon: '🗡️' }, { name: 'Fire Drake', icon: '🐉' },
             { name: 'Wyvern', icon: '🐲' }, { name: 'Drake Whelp', icon: '🦎' }, { name: 'Dragonkin Mage', icon: '🧙' },

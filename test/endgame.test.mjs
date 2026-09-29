@@ -8,6 +8,7 @@ import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_COOLDOWN_MS
 import { GEAR_TIERS } from '../src/data/items.js';
 import { BALANCE, enemyForStage, goldForKill } from '../src/core/formulas.js';
 import { killPayout, onEnemyDeath, spawnEnemy } from '../src/systems/combat.js';
+import { describeOffline } from '../src/systems/offline.js';
 import { PETS, petChance, PET_BASE } from '../src/data/pets.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { rollPet } from '../src/systems/progress.js';
@@ -166,7 +167,7 @@ test('dungeon clear milestones are permanent bonuses', () => {
     game.state.dungeons[warren.id].clears = DUNGEON_MILESTONES[0].clears;
     const after = collectModifiers(game.state);
     assert.ok(Math.abs(after.atkMult - before.atkMult - DUNGEON_MILESTONES[0].mods.atkMult) < 1e-9);
-    game.state.dungeons[warren.id].clears = 100;
+    game.state.dungeons[warren.id].clears = DUNGEON_MILESTONES[DUNGEON_MILESTONES.length - 1].clears;
     const all = collectModifiers(game.state);
     assert.ok(all.goldMult > after.goldMult && all.hpMult > after.hpMult);
 });
@@ -296,4 +297,20 @@ test('a boss pays its bonus the first time it falls in a run; farming it afterwa
     assert.ok(goldForKill(boss, game.derived.goldMult) > 2.5 * byHealth);
     assert.equal(c.stage, 11, 'and moves you on');
     assert.ok(enemyForStage(10).boss);
+});
+
+test('a dungeon run on repeat continues offline and the summary reports the clears', () => {
+    const game = newGame({ bestStage: 40, tokens: 20000 });
+    game.enterDungeon(warren.id);
+    const json = game.serialize(T0);
+    const later = T0 + 2 * 3600 * 1000;
+    const back = new Game(JSON.parse(json), later);
+    const summary = back.resumeFromSave(later);
+    assert.equal(summary.mode, 'combat');
+    const run = summary.dungeonClears.find(d => d.id === warren.id);
+    assert.ok(run && run.clears > 20, `clears offline: ${run?.clears}`);
+    assert.equal(back.state.combat.mode, 'dungeon', 'still in the run');
+    const text = describeOffline(summary).join('\n');
+    assert.match(text, /Goblin Warren clears \(\+\d+ fragments\)/);
+    assert.doesNotMatch(text, /items made/);
 });

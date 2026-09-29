@@ -80,8 +80,8 @@ export const TIER_WEAR_LEVEL = { 1: 1, 2: 10, 3: 25, 4: 40, 5: 60, 6: 75, 7: 90 
 
 // ---------- Drops ----------
 
-// Every gear tier. Tiers 6-7 cannot be smithed: they only drop in Skyreach and the Abyss
-// (Melvor's drop-only band above the craftable ceiling). Power keeps the x2.2 ladder.
+// Every gear tier. Tiers 6-7 cannot be smithed: they only drop deep in the Abyss and from the
+// last dungeon (Melvor's drop-only band above the craftable ceiling). Power keeps the x2.2 ladder.
 export const GEAR_TIERS = [
     { tier: 1, name: 'Copper',     power: 1.0,  jewel: 'Amethyst' },
     { tier: 2, name: 'Iron',       power: 2.2,  jewel: 'Topaz' },
@@ -93,7 +93,9 @@ export const GEAR_TIERS = [
 ];
 export const MAX_GEAR_TIER = GEAR_TIERS.length;
 
-// Chance that a kill drops a piece of gear, and how its tier relates to the zone's tier.
+// Chance that a kill drops a piece of gear, and how its tier relates to the zone's gear tier.
+// Regular kills are a treat (an AFK fighter sees a few an hour, most of them salvage); a boss's
+// first fall in a run is a coin flip.
 export const GEAR_DROP_CHANCE = { regular: 0.002, boss: 0.5 };
 export const DROP_TIER_OFFSETS = [ { offset: -1, weight: 60 }, { offset: 0, weight: 35 }, { offset: 1, weight: 5 } ];
 export const DROP_TYPE_WEIGHTS = [

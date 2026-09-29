@@ -8,6 +8,7 @@ import { generateDrop, generateEquipment } from '../src/core/formulas.js';
 import { BAG_SIZE, CRAFT_MAX_RARITY, RARITIES } from '../src/data/items.js';
 import { addItem, itemScore } from '../src/systems/inventory.js';
 import { xpForLevel } from '../src/core/xp.js';
+import { zoneForStage } from '../src/data/zones.js';
 
 rng.setSource(seededRandom(99));
 const T0 = 1_700_000_000_000;
@@ -129,4 +130,17 @@ test('bosses really drop gear in play, and drops reach the bag', () => {
     assert.ok(game.state.stats.bossKills >= 3, `boss kills ${game.state.stats.bossKills}`);
     assert.ok(game.state.stats.itemsDropped >= 1, `drops ${game.state.stats.itemsDropped}`);
     assert.ok(game.state.inventory.some(i => i.source === 'drop'));
+});
+
+test('zone gear tiers follow the crafting timeline: never falling, drop-only tiers only deep in the Abyss', () => {
+    let last = 0;
+    for (let stage = 1; stage <= 200; stage++) {
+        const zone = zoneForStage(stage);
+        assert.ok(zone.gearTier >= last, `gear tier falls at stage ${stage}`);
+        last = zone.gearTier;
+        if (zone.gearTier >= 6) assert.ok(zone.depth >= 3, `drop-only tier at stage ${stage}`);
+    }
+    assert.equal(zoneForStage(100).gearTier, 4);
+    assert.equal(zoneForStage(125).gearTier, 6);
+    assert.equal(zoneForStage(145).gearTier, 7);
 });

@@ -18,7 +18,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 0 — Stop the bleeding | ✅ Done |
 | 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | ✅ Done |
-| 3 — Loot and endgame depth | 🟡 Loot, dungeons, uniques, Titan and pets done; mastery and drop-tier alignment open |
+| 3 — Loot and endgame depth | 🟡 Loot, dungeons, uniques, Titan and pets done; mastery and a late-game pass open |
 | 4 — Skill breadth | ⬜ Not started |
 | 5 — Social layer | ⬜ Not started (backend groundwork done) |
 
@@ -66,7 +66,9 @@ tests and the balance simulator.
 
 **Exit:** simulator shows Lv 20 ≤ 15 min, Lv 50 in 2–4 h; first prestige within ~2 h with ≥ 4
 tokens; a tier-N common beats a tier-(N−1) legendary (test); at least half of deaths on non-boss
-stages averaged over 3 seeds. *Current: all met except Lv 20 (10–20 min) — see DESIGN §5.*
+stages averaged over 3 seeds. *Current: met except Lv 20 (10–20 min) and the death split: with the
+boss timer, bosses became the DPS check and 6–74% of deaths (by seed) land on regular stages — see
+DESIGN §5.3.*
 
 ## Phase 2 — Retention scaffolding ✅
 
@@ -102,10 +104,13 @@ for both formats). Still open: an active/idle ratio check once the simulator can
 Give combat its own rewards beyond gold and materials, and give the late game goals besides stages.
 Depends on Phase 2's versioned saves (items gain new fields).
 
-- [x] **Gear drops**: rare from regular kills, 50% from a boss's first fall in a run; tier = zone
-      tier −1 (60%) / same (35%) / +1 (5%); rarity weights better than crafting and rising with zone
-      tier. Two **drop-only tiers** above runite: Dragonbone (Skyreach) and Abyssal (the Abyss).
+- [x] **Gear drops**: 0.2% of regular kills, 50% of a boss's first fall in a run; tier = the zone's
+      gear tier −1 (60%) / same (35%) / +1 (5%); rarity weights better than crafting and rising with
+      tier. Two **drop-only tiers** above runite: Dragonbone (Abyss depth 3+) and Abyssal (depth 5+).
       Crafted gear caps at Rare
+- [x] **Gear tiers follow the crafting spine**: each zone has a `gearTier` set from when a typical
+      player first gets there (prestige outruns smithing), so drops are a tier ahead at most; checked
+      with three play styles in the simulator (skiller, AFK pusher, dungeon user)
 - [x] **Boss payouts by health**: a boss pays its bonus (gold ×3, XP ×5, loot table) only when
       beating it moves you on; farming a beaten boss pays like the regular monsters its health is
       worth, so parking on a boss is never the best farm
@@ -115,9 +120,9 @@ Depends on Phase 2's versioned saves (items gain new fields).
       an auto-salvage rarity filter for drops
 - [x] **Dungeons** (four): authored elites + a boss with a 60 s timer, gear locked inside, the run
       lost on death/leave/timeout, auto-repeat; the chest holds a fragment, essence, materials, often
-      a gem and sometimes boss-quality gear; permanent milestones at 10/50/100 clears. Placed where a
-      typical player reaches each unique's tier, and tuned with the simulator to ~1.2× the progress of
-      spending the same time fighting on the ladder
+      a gem and sometimes boss-quality gear; permanent milestones at 25/100/250 clears. Placed where a
+      typical player reaches each unique's tier, and tuned with the simulator to ~1.5× the progress of
+      spending the same time pushing the ladder
 - [x] **Uniques** with fixed affixes, assembled from 50 fragments (1 per clear, 3% chance of 3) or a
       0.2% chest drop; a notch above crafted power of their tier, never a tier skip
 - [x] **Titan**: an hourly 60-second damage race; each Titan defeated is permanent +2% ATK and HP and
@@ -126,12 +131,14 @@ Depends on Phase 2's versioned saves (items gain new fields).
       +3% to that skill (combat: ATK and DEF), kept through prestige; a Collection page lists pets
       and uniques
 - [ ] **Mastery** per node (Melvor model: doubling, preservation, interval) — M, optional
-- [ ] **Drop tiers vs the crafting spine**: with enough combat time drops still out-gear crafting
-      (Dragonbone by ~10 h for a combat-heavy player vs ~60 h for a skiller); align zone loot tiers
-      with the crafting timeline — part of the next balance pass
+- [ ] **Late-game pass**: the simulator's sensible player plateaus at stage 130–140 because it keeps
+      farming a tier-4 dungeon; the Abyss and the Dragon's Lair need tuning together with Phase 4's
+      sinks — S
 
-**Exit:** simulator shows drops as treats rather than the gear spine for every play style, 0.1–0.5%
-capstones, a unique in about an hour of at-level dungeon farming; no drop is ever silently discarded.
+**Exit:** simulator shows drops as treats rather than the gear spine for every play style (met: an
+AFK pusher's weapon reaches tier 4 at 14–37 h vs 11–12 h for a skiller); 0.2% capstones (met: a
+unique outright per 500 clears, or 50 fragments in about an hour of at-level farming); no drop is
+ever silently discarded (met: overflow and filters salvage).
 
 ## Phase 4 — Skill breadth ⬜
 

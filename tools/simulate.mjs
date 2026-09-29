@@ -21,7 +21,8 @@ import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
 import { itemUpgradeCost } from '../src/systems/inventory.js';
 import { resolveAction } from '../src/systems/skilling.js';
 import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_BOSS_TIME_MS } from '../src/data/dungeons.js';
-import { dungeonPreview, dungeonUnlocked } from '../src/systems/dungeon.js';
+import { dungeonPreview, dungeonUnlocked, fightPreview } from '../src/systems/dungeon.js';
+import { enemyForStage } from '../src/core/formulas.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
 const HOURS = Number(args.hours || 100);
@@ -30,7 +31,10 @@ const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
 const NO_DUNGEONS = !!args['no-dungeons'];
-const FARM_LADDER = !!args['farm-ladder']; // control: farm the stage ladder instead of running dungeons
+// Controls for dungeon balance: spend the dungeon half hours on the ladder instead.
+//   --farm-ladder       farm the highest comfortable stage of the run (farm mode)
+//   --farm-ladder=push  keep pushing at the wall (an AFK player who leaves combat running)
+const FARM_LADDER = args['farm-ladder'] ? (args['farm-ladder'] === 'push' ? 'push' : 'farm') : null;
 const NO_TITAN = !!args['no-titan'];
 
 rng.setSource(seededRandom(SEED));
@@ -255,11 +259,25 @@ function dungeonTask() {
     };
 }
 
-// Control for dungeon balance: spend the same half hour fighting on the ladder (an AFK player who
-// leaves combat running at their wall), so the comparison isolates what dungeons add.
+// Control for dungeon balance: spend the same half hour farming the highest stage of this run the
+// hero clears comfortably (same readiness rule as dungeonTask), so the comparison isolates what
+// dungeons add over plain farming.
 function ladderFarmTask() {
+    if (FARM_LADDER === 'push') {
+        const end = now + 30 * 60000;
+        return { kind: 'farm', stage: null, why: `keep fighting at stage ${S.combat.stage}`, until: () => now >= end };
+    }
+    let target = 1;
+    for (let st = S.combat.maxStage; st >= 1; st--) {
+        if (st % 10 === 0) continue; // boss stages are not farm spots
+        const f = fightPreview(game.derived, enemyForStage(st));
+        if (f.killSeconds <= 0.5 * f.surviveSeconds) { target = st; break; }
+    }
     const end = now + 30 * 60000;
-    return { kind: 'farm', why: `keep fighting at stage ${S.combat.stage}`, until: () => now >= end };
+    return {
+        kind: 'farm', stage: target, why: `farm stage ${target}`,
+        until: () => { if (now >= end || !S.combat.active) { game.setFarmMode(false); return true; } return false; }
+    };
 }
 
 let lastStallWasDungeon = false;
@@ -337,7 +355,11 @@ function apply(task) {
     else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
     else if (task.kind === 'tool') ok = game.startToolCraft(task.tool, task.tier);
     else if (task.kind === 'dungeon') { game.setDungeonRepeat(true); ok = game.enterDungeon(task.id); if (ok) lastStageGainAt = now; }
-    else if (task.kind === 'farm') { game.enterCombat(); lastStageGainAt = now; }
+    else if (task.kind === 'farm') {
+        game.enterCombat();
+        if (task.stage) { game.setStage(task.stage); game.setFarmMode(true); }
+        lastStageGainAt = now;
+    }
     if ((task.kind === 'dungeon' || task.kind === 'farm') && ok) return task;
     if (task.kind === 'combat' || !ok) {
         if (!ok && VERBOSE) console.log(`  [${fmtH(now)}] could not start: ${task.why}`);
@@ -392,7 +414,7 @@ while (now < totalMs) {
     if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
 
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
-    if (task.kind === 'farm' && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
+    if (task.kind === 'farm' && !task.stage && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
     if (task.kind === 'farm' && now % 60000 < STEP) buyCamp();
     // The Titan: a sensible player tries it whenever it is awake (it only costs a minute).
     if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages') {

@@ -213,7 +213,7 @@ export function generateEquipment(opts, nextId) {
     };
 }
 
-/** Gear dropped by a monster in a zone of `zoneTier`: tier usually one below the zone, rarer than crafted. */
+/** Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): usually one tier below, rarer than crafted. */
 export function generateDrop(zoneTier, boss, nextId) {
     const tier = Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
     const gearTier = GEAR_TIERS[tier - 1];

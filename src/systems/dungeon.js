@@ -170,18 +170,18 @@ function completeDungeon(game, d) {
     const fragments = rng.chance(0.03) ? 3 : 1;
     record.fragments += fragments;
     parts.push(`${fragments} fragment${fragments > 1 ? 's' : ''}`);
-    const essence = Math.round(CHEST_ESSENCE_PER_TIER * d.chestTier);
+    const zone = zoneForStage(d.stage);
+    const essence = Math.round(CHEST_ESSENCE_PER_TIER * zone.tier);
     state.resources.essence += essence;
     bumpStat(game, 'essenceFound', essence);
     parts.push(`${essence} essence`);
-    const zone = zoneForStage(d.stage);
     const materials = {};
     for (let i = 0; i < CHEST_MATERIAL_ROLLS; i++) {
         const pick = rng.weighted(zone.loot);
         materials[pick.id] = (materials[pick.id] || 0) + 1 + Math.floor(zone.tier / 3);
     }
     if (rng.chance(CHEST_GEM_CHANCE * dropMult)) {
-        const gem = [...GEM_DROP_TABLE].reverse().find(g => g.tier <= d.chestTier) || GEM_DROP_TABLE[0];
+        const gem = [...GEM_DROP_TABLE].reverse().find(g => g.tier <= zone.tier) || GEM_DROP_TABLE[0];
         materials[gem.id] = (materials[gem.id] || 0) + 1;
         bumpStat(game, 'gemsFound');
     }

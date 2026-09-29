@@ -7,6 +7,8 @@ import { actionInterval } from '../core/modifiers.js';
 import { RESOURCES } from '../data/resources.js';
 import { SKILLS } from '../data/skills.js';
 import { levelForXp } from '../core/xp.js';
+import { DUNGEONS } from '../data/dungeons.js';
+import { PETS } from '../data/pets.js';
 
 export const OFFLINE_MIN_MS = 60 * 1000;
 
@@ -18,7 +20,12 @@ function snapshot(state) {
         stage: state.combat.stage,
         kills: state.stats.kills,
         items: state.inventory.length,
-        deaths: state.stats.deaths
+        salvaged: (state.stats.itemsSalvaged || 0) + (state.stats.itemsAutoSalvaged || 0),
+        deaths: state.stats.deaths,
+        dungeons: Object.fromEntries(DUNGEONS.map(d => [d.id, { ...state.dungeons[d.id] }])),
+        pets: { ...state.pets },
+        uniques: state.stats.uniquesFound || 0,
+        combatMode: state.combat.mode
     };
 }
 
@@ -39,7 +46,13 @@ function diff(before, state) {
         stages: state.combat.stage - before.stage,
         kills: state.stats.kills - before.kills,
         items: state.inventory.length - before.items,
-        died: state.stats.deaths > before.deaths
+        salvaged: (state.stats.itemsSalvaged || 0) + (state.stats.itemsAutoSalvaged || 0) - before.salvaged,
+        died: state.stats.deaths > before.deaths,
+        dungeonClears: DUNGEONS.map(d => ({ id: d.id, name: d.name, clears: state.dungeons[d.id].clears - before.dungeons[d.id].clears, fragments: state.dungeons[d.id].fragments - before.dungeons[d.id].fragments }))
+            .filter(d => d.clears > 0),
+        pets: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => `${p.icon} ${p.name}`),
+        uniques: (state.stats.uniquesFound || 0) - before.uniques,
+        startedInDungeon: before.combatMode === 'dungeon'
     };
 }
 
@@ -89,7 +102,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             if (game.dirty) game.recompute(); // level-ups and potion charges take effect mid-replay
         }
         game.now = savedNow;
-        if (!state.combat.active) stalledReason = 'you were defeated and retreated';
+        if (!state.combat.active) stalledReason = state.stats.deaths > before.deaths ? 'you were defeated' : 'combat stopped';
     }
     game.silent = wasSilent;
 
@@ -106,7 +119,13 @@ export function describeOffline(summary) {
     lines.push(`You were away for ${hours ? `${hours}h ${mins % 60}m` : `${mins}m`}${summary.capped ? ' (offline progress is capped — Endurance perks extend it)' : ''}.`);
     if (summary.mode === 'rest') lines.push('Your hero rested at camp. Start a skill or enter combat before leaving to keep progressing.');
     if (summary.mode === 'skill') lines.push(summary.stalledReason ? `Work stopped early: ${summary.stalledReason}.` : 'Your hero kept working the whole time.');
-    if (summary.mode === 'combat') lines.push(`${summary.kills} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stages gained` : ''}${summary.died ? ' — then you were defeated and retreated' : ''}.`);
+    if (summary.mode === 'combat') {
+        const fell = summary.died ? (summary.startedInDungeon ? ' — then a dungeon run failed and you left the fight' : ' — then you were defeated and retreated') : '';
+        lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stages gained` : ''}${fell}.`);
+        for (const d of summary.dungeonClears || []) lines.push(`${d.clears.toLocaleString()} ${d.name} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)`);
+    }
+    for (const pet of summary.pets || []) lines.push(`🐾 A pet found you: ${pet}!`);
+    if (summary.uniques > 0) lines.push(`🌟 ${summary.uniques} unique item${summary.uniques > 1 ? 's' : ''} found!`);
     for (const [id, delta] of Object.entries(summary.resources)) {
         if (delta > 0) lines.push(`+${delta.toLocaleString()} ${RESOURCES[id]?.name || id}`);
     }
@@ -114,7 +133,8 @@ export function describeOffline(summary) {
         if (delta < 0) lines.push(`−${(-delta).toLocaleString()} ${RESOURCES[id]?.name || id} used`);
     }
     if (summary.gold > 0) lines.push(`+${summary.gold.toLocaleString()} gold`);
-    if (summary.items > 0) lines.push(`+${summary.items} items made`);
+    if (summary.items > 0) lines.push(`+${summary.items} ${summary.mode === 'combat' ? 'items found' : 'items made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}`);
+    else if (summary.salvaged > 0) lines.push(`${summary.salvaged} items salvaged for essence and bars`);
     for (const [id, s] of Object.entries(summary.skills)) {
         lines.push(`+${s.xp.toLocaleString()} ${SKILLS[id]?.name || id} XP${s.to > s.from ? ` (level ${s.from} → ${s.to})` : ''}`);
     }

@@ -13,7 +13,8 @@ import { UNLOCKS, isUnlocked, nextGoals } from '../data/unlocks.js';
 import { zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel } from '../core/modifiers.js';
-import { describeAffix, itemSellValue, tokensForStage, BALANCE, enemyForStage } from '../core/formulas.js';
+import { describeAffix, itemSellValue, tokensForStage, BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
+import { killPayout } from '../systems/combat.js';
 import { canComplete, resolveAction, fuelLog } from '../systems/skilling.js';
 import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
@@ -160,7 +161,7 @@ export function renderCombat(game, ui) {
            <div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`
         : c.mode === 'titan'
             ? `<h2>🗿 Titan challenge <span class="muted">level ${titanLevel(state)}</span></h2><div class="muted small">Deal as much damage as you can before the timer runs out — clicking helps.</div>`
-            : `<h2>${boss ? '👑 Boss — ' : ''}${esc(zone.name)} <span class="muted">tier ${zone.tier}</span></h2>
+            : `<h2>${boss ? '👑 Boss — ' : ''}${esc(zone.name)} <span class="muted" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">loot tier ${zone.gearTier}</span></h2>
                <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b>${c.regroupLeft > 0 ? ` · <span class="regroup-pill" id="regroup-text">⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s</span>` : ''}</div>`;
     const nav = c.mode !== 'stages'
         ? `<div class="stage-nav"><button class="mini-btn danger" onclick="FI.toggleCombat()">${c.mode === 'dungeon' ? 'Abandon run' : 'Give up'}</button></div>`
@@ -197,7 +198,7 @@ export function renderCombat(game, ui) {
                 <div class="hp-text"><span id="enemy-hp-text">${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}</span> HP</div>
                 <div id="enemy-hp-bar">${hpBar(enemy.hp, enemy.maxHp, 'enemy-fill')}</div>
                 ${enemy.boss ? `<div class="boss-timer" title="Bosses must fall within ${(enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000} seconds of fighting"><div id="boss-timer-fill" class="boss-timer-fill" style="width:${Math.max(0, c.bossTimeLeft / (enemy.timeLimit || BALANCE.combat.bossTimeMs) * 100)}%"></div><span id="boss-timer-text">⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s</span></div>` : ''}
-                <div class="entity-stats muted small">⚔️ ${fmt(enemy.atk)} · hits every ${seconds(enemy.interval)} · 💰 ~${fmt(Math.round(enemy.maxHp * BALANCE.rewards.goldPerHp * (enemy.boss ? BALANCE.rewards.bossGoldMult : 1) * d.goldMult))}</div>
+                <div class="entity-stats muted small">⚔️ ${fmt(enemy.atk)} · hits every ${seconds(enemy.interval)} · 💰 ~${fmt(goldForKill(killPayout(state, enemy).full ? enemy : { ...enemy, boss: false }, d.goldMult))}</div>
             </div>
         </div>
 
@@ -665,7 +666,7 @@ export function renderDungeons(game) {
         const preview = dungeonPreview(game.derived, d);
         const limit = DUNGEON_BOSS_TIME_MS / 1000;
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
-            <div class="dungeon-head"><span class="dungeon-icon">${d.icon}</span><div><b>${esc(d.name)}</b><div class="muted small">${d.monsters.length} elites + ${esc(d.boss.name)} · like stage ${d.stage}–${d.stage + d.monsters.length} · chest tier ${d.chestTier}</div></div></div>
+            <div class="dungeon-head"><span class="dungeon-icon">${d.icon}</span><div><b>${esc(d.name)}</b><div class="muted small">${d.monsters.length} elites + ${esc(d.boss.name)} · like stage ${d.stage}–${d.stage + d.monsters.length} · chest loot tier ${d.chestTier}</div></div></div>
             ${open ? `<div class="small">Clears: <b>${record.clears}</b>${next ? ` · next milestone at ${next.clears}: ${next.desc}` : ' · all milestones earned'}</div>
                 ${done.length ? `<div class="muted small">Earned: ${done.join('; ')}</div>` : ''}
                 <div class="small">Fragments: <b>${record.fragments}/${FRAGMENTS_PER_UNIQUE}</b> toward <span style="color:#f97316">${esc(unique.name)}</span></div>

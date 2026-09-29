@@ -200,7 +200,7 @@ function rollLoot(game, enemy, payout) {
         // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone.
         const gearChance = (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
         if (rng.chance(gearChance)) {
-            const item = generateDrop(zone.tier, boss, state.idCounter++);
+            const item = generateDrop(zone.gearTier, boss, state.idCounter++);
             const result = addItem(game, item);
             bumpStat(game, 'itemsDropped');
             drops.push({ item, kept: result.kept });
