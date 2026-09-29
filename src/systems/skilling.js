@@ -8,6 +8,7 @@ import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { GEM_DROP_TABLE } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
 import { courseDef } from './agility.js';
+import { eventProgress } from './events.js';
 import { generateEquipment } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
@@ -232,6 +233,7 @@ export function completeAction(game, def, { offline = false } = {}) {
 
     grantXp(game, skill, def.xp * derived.xpMult);
     rollPet(game, skill, def.interval);
+    eventProgress(game, 1);
     game.emit({ type: 'actionComplete', skill });
     return true;
 }

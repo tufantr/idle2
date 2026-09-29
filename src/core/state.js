@@ -53,6 +53,7 @@ export function createDefaultState(now = Date.now()) {
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
         agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
+        events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [] },
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0 },
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
@@ -70,7 +71,7 @@ export function createDefaultState(now = Date.now()) {
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
         log: [],
-        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, cloudSync: true, autoSalvage: 'common' },
+        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, cloudSync: true, autoSalvage: 'common', forceEvent: null },
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -218,6 +219,9 @@ function normalise(data, now) {
     const built = AGILITY_SLOTS.map((slot, i) => (slot.obstacles.some(o => o.id === savedCourse[i]) ? savedCourse[i] : null));
     state.agility = { built, levels: built.map((id, i) => (id ? Math.max(1, Math.min(MAX_OBSTACLE_LEVEL, Math.floor(Number(savedLevels[i]) || 1))) : 0)) };
     if (!state.titan || typeof state.titan !== 'object') state.titan = { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 };
+    const ev = state.events;
+    for (const key of ['tokens', 'earnedToday', 'progress', 'instanceEarned']) ev[key] = Math.max(0, Math.floor(Number(ev[key]) || 0));
+    if (!Array.isArray(ev.milestones)) ev.milestones = [];
     if (!state.pets || typeof state.pets !== 'object') state.pets = {};
     state.titan.kills = Math.max(0, Math.floor(Number(state.titan.kills) || 0));
     if (!Number.isFinite(Number(state.titan.readyAt))) state.titan.readyAt = 0;

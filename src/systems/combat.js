@@ -9,6 +9,7 @@ import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan } from './dungeon.js';
 import { COMBAT_PET_SECONDS } from '../data/pets.js';
+import { eventProgress } from './events.js';
 
 /** Spawn the next enemy for the current mode: the stage ladder, a dungeon run, or the Titan. */
 export function spawnEnemy(game) {
@@ -235,6 +236,7 @@ export function onEnemyDeath(game) {
         log(game, `${enemy.icon} ${enemy.name} defeated${dropText ? ` — ${dropText}` : ''}`, 'combat');
     }
     rollPet(game, 'combat', COMBAT_PET_SECONDS * 1000);
+    eventProgress(game, 1);
 
     if (c.mode === 'dungeon') { onDungeonKill(game); game.markDirty(); return; }
     if (c.mode === 'titan') { endTitan(game, true); game.markDirty(); return; }

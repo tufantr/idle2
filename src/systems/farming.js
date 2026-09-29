@@ -6,6 +6,7 @@ import { RESOURCES } from '../data/resources.js';
 import { skillLevel } from '../core/modifiers.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
+import { eventProgress } from './events.js';
 
 export function plotUnlocked(state, index) {
     return index < FARMING_PLOTS.length && skillLevel(state, 'farming') >= FARMING_PLOTS[index];
@@ -59,6 +60,7 @@ export function harvest(game, index) {
     plot.readyAt = 0;
     grantXp(game, 'farming', crop.xp * amount * d.xpMult);
     rollPet(game, 'farming', crop.growMs);
+    eventProgress(game, 5);
     log(game, `${crop.icon} Harvested ${amount}× ${RESOURCES[crop.produces].name}.`, 'loot');
     game.emit({ type: 'harvest', crop: crop.id, amount });
     game.markDirty();

@@ -16,6 +16,7 @@ import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS } from '../data/dungeons.js';
 import { obstacleById } from '../data/agility.js';
+import { eventStatus } from '../systems/events.js';
 import { levelForXp } from './xp.js';
 
 export const BASE = {
@@ -170,6 +171,11 @@ export function collectModifiers(state) {
     // The bonfire.
     if (bonfireLit(state, now)) mods.xpMult += bonfireBonus(skillLevel(state, 'firemaking'));
 
+    // A running weekend event.
+    const ev = eventStatus(state, now);
+    mods.event = ev.active ? ev.event.id : null;
+    if (ev.active) addMods(mods, ev.event.mods);
+
     // Focus (idle bonus). Not farming: plots are planted with a click, so focus could never apply.
     mods.focused = isFocused(state, now);
     if (mods.focused) {
@@ -224,7 +230,8 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),
         campMult: camp,
         focused: !!mods.focused,
-        bonfire: bonfireLit(state)
+        bonfire: bonfireLit(state),
+        event: mods.event || null
     };
 }
 

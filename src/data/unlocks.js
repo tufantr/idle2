@@ -17,6 +17,7 @@ export const UNLOCKS = [
     { id: 'prestige',     hint: 'Reach Stage 10 to unlock Prestige',                requires: s => s.combat.maxStage >= 10 },
     { id: 'achievements', hint: 'Reach Stage 10 to unlock Achievements',            requires: s => s.combat.maxStage >= 10 },
     { id: 'dungeons',     hint: 'Reach Stage 20 to find the first dungeon',          requires: s => s.combat.bestStage >= 20 },
+    { id: 'events',       hint: 'Reach the Stage 10 boss to join weekend events',    requires: s => s.combat.maxStage >= 10 || s.combat.bestStage >= 10 },
     { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411 },
     { id: 'agility',      hint: 'Reach Stage 30 to unlock Agility',                 requires: s => s.combat.bestStage >= 30 },
     { id: 'clan',         hint: 'Reach Stage 20 to join a clan',                     requires: s => s.combat.bestStage >= 20 }

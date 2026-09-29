@@ -449,11 +449,33 @@ with the game's own stat code; the client never submits damage or scores.
   A Discord invite link appears if `DISCORD_INVITE` (`src/data/social.js`) is set — there is no in-game
   chat.
 
+### 3.19 Weekend events
+
+`src/data/events.js` (content), `src/systems/events.js` (logic). A template for timed content that
+needs no server: the schedule is the UTC calendar, so events run offline too.
+
+- **When:** every weekend, Friday 00:00 to Monday 00:00 UTC. Four events rotate week by week:
+  **Harvest Festival** (+25% farming yield, +15% cooking and fishing speed), **Titan's Fury** (+20%
+  combat XP and gold, +10% drop chance), **Miner's Rush** (+20% gathering speed, +10% XP in every
+  skill) and **Guild Fair** (+20% smithing, crafting and firemaking speed, +5% crafted quality). The
+  bonuses go through the modifier pipeline like any other source. None of them touch combat stats, so
+  clan damage is the same during an event.
+- **Festival Tokens:** every 20 skill actions or kills earn one (a harvest counts as 5), up to 60 a
+  day (UTC), so a weekend pays at most 180 and nobody has to grind past a normal session. Tokens keep
+  between events.
+- **Milestones** per event, paid automatically: 50 tokens → 100 essence, 100 → 200 essence and a
+  diamond, 150 → 300 essence and two diamonds.
+- **The event shop** (open only while an event runs): 60 essence for 20 tokens, a diamond for 40,
+  100 bait for 10, ten of each herb for 15, ten runite bars for 60.
+- **Adding an event** is one entry in `EVENTS` (id, name, icon, colour, description, `mods`). For
+  testing, `?dev=1&event=<id>` runs one immediately; it is never kept in the save.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
 level, perks, achievements, pets, dungeon milestones, Titans defeated, agility obstacles (× their
-level), potions, tools, mini-game boosts, the bonfire and Focus — into one object; `deriveStats` turns it into the numbers combat and skilling use.
+level), potions, tools, mini-game boosts, the bonfire, a running weekend event and Focus — into one
+object; `deriveStats` turns it into the numbers combat and skilling use.
 Rules:
 
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
@@ -623,7 +645,10 @@ disagreed, the implementation follows the simulator:
     depend on combat progress). Fixed prices also gate the later obstacles by progress naturally.
 15. **Clan boss damage is a formula, not a replayed fight:** the server multiplies the hero's expected
     DPS by 60 seconds. It is deterministic and cheap, and nobody can reroll it.
-16. **Not yet built:** mastery (optional) and the events template.
+16. **Events use the calendar, not the server:** a fixed weekend window in UTC with a daily token cap,
+    so they work offline and cost no requests. A player can move their clock to reach one early;
+    that only buys tokens for essence and diamonds, which don't show on any leaderboard.
+17. **Not yet built:** mastery (optional).
 
 ## 7. What was cut from the concept
 
@@ -654,13 +679,14 @@ src/core/             xp · rng · state (defaults, migration) · modifiers · f
                       cloud client) · power (server-side numbers)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
+                      · events (weekend events, milestones, shop) · social (clan settings)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
-                      · progress (XP, pets, log)
+                      · events · social (clan rewards) · progress (XP, pets, log)
 src/ui/               render.js (HTML per tab) · format.js (numbers, time)
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
-test/                 node:test suites (game, loot, endgame, skills, saves, API; the API suite runs on an
+test/                 node:test suites (game, loot, endgame, skills, events, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table)
 docs/                 DESIGN.md (this) · ROADMAP.md · reports/ · research_notes/

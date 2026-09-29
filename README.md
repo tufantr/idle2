@@ -2,8 +2,8 @@
 
 A browser idle RPG in the spirit of Melvor Idle: train twelve skills, forge your own gear, fight
 through ten zones and an endless Abyss, clear dungeons, face the hourly Titan, build an agility course,
-and prestige for permanent power. Optional accounts add cloud saves, clans with a weekly shared boss,
-and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
+and prestige for permanent power. Weekend events bring bonuses, Festival Tokens and an event shop.
+Optional accounts add cloud saves, clans with a weekly shared boss, and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
 Postgres API.
 
 **Docs:** [Game design](docs/DESIGN.md) · [Roadmap](docs/ROADMAP.md) ·
@@ -18,9 +18,10 @@ won't work):
 npx serve .            # or: python3 -m http.server 8000
 ```
 
-Then open the printed URL. Add `?dev=1` to unlock every tab and mini-game immediately. Without the
-API the game runs as a guest with a local save, and the login dialog says cloud saves aren't
-available on that server.
+Then open the printed URL. Add `?dev=1` to unlock every tab and mini-game immediately, and
+`?dev=1&event=guild_fair` (or `harvest_festival`, `titans_fury`, `miners_rush`) to run a weekend event
+now. Without the API the game runs as a guest with a local save, and the login dialog says cloud
+saves aren't available on that server.
 
 ## The API (cloud saves, clans, leaderboards)
 
@@ -48,7 +49,7 @@ save. It needs Node 20.19+ or 22+.
 Node 22+, no install needed (the API tests use the packages in `api/node_modules`):
 
 ```bash
-node --test test/*.test.mjs test/*.test.cjs   # game logic, loot, endgame, skills, saves, API
+node --test test/*.test.mjs test/*.test.cjs   # game logic, loot, endgame, skills, events, saves, API
 node tools/pacing.mjs                           # hours of training to reach each skill level
 node tools/simulate.mjs --hours=150 --seed=1    # plays the whole game headlessly, prints milestones
 ```
@@ -72,9 +73,9 @@ index.html, style.css   page shell and styles
 src/game.js             Game class: state, tick and every player action (no DOM)
 src/core/               XP curve, formulas, modifier pipeline, state/migration, saves, server-side power
 src/data/               content tables: resources, skills, workshop, items, zones, dungeons, pets,
-                        farming, agility, camp, perks, achievements, unlocks, social settings
+                        farming, agility, camp, perks, achievements, unlocks, events, social settings
 src/systems/            skilling, combat, dungeons & Titan, inventory, farming, agility, prestige,
-                        camp, mini-games, offline, daily, advisor, rewards
+                        camp, mini-games, offline, daily, advisor, events, clan rewards
 src/ui/                 rendering and formatting
 api/                    Express API for Vercel: routes, data layer, connection
 test/, tools/           tests, simulator, pacing table

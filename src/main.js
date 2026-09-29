@@ -38,8 +38,14 @@ const ui = {
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
 const loaded = loadLocal(Date.now());
-let game = new Game(loaded, Date.now());
-if (params.has('dev')) game.state.settings.devUnlockAll = true;
+let game = withDevFlags(new Game(loaded, Date.now()));
+
+// ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
+function withDevFlags(g) {
+    if (params.has('dev')) g.state.settings.devUnlockAll = true;
+    g.state.settings.forceEvent = (params.has('dev') && params.get('event')) || null;
+    return g;
+}
 
 // ---------- boot ----------
 
@@ -137,6 +143,7 @@ function handleEvents(events) {
             case 'pet': toast(`🐾 ${ev.pet.icon} ${ev.pet.name} joined you! ${ev.pet.desc}`, 'achievement'); break;
             case 'unique': toast(`🌟 Unique: ${ev.item.name}!`, 'achievement'); break;
             case 'obstacleBuilt': toast(`${ev.obstacle.icon} ${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement'); break;
+            case 'eventMilestone': toast(`${ev.event.icon} ${ev.event.name}: ${ev.milestone.desc}!`, 'achievement'); break;
             case 'kill':
                 if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss');
                 if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`);
@@ -277,7 +284,7 @@ async function syncFromCloud() {
 }
 
 function adoptState(stateObject) {
-    game = new Game(stateObject, Date.now());
+    game = withDevFlags(new Game(stateObject, Date.now()));
     const summary = game.resumeFromSave(Date.now());
     if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
     save(Date.now());
@@ -359,6 +366,7 @@ window.FI = {
     challengeTitan() { if (game.challengeTitan()) window.FI.switchTab('combat'); else render(); },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
+    buyEventItem(id) { if (game.buyEventItem(id)) toast('🎉 Bought!', 'info'); render(); },
     harvest(plot) { game.harvest(plot); render(); },
     harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`🌾 Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info'); render(); },
     buildObstacle(id) { game.buildObstacle(id); render(); },
@@ -432,7 +440,7 @@ window.FI = {
         writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
         clearLocal();
         localStorage.removeItem('fantasyIdle.tab');
-        game = new Game(null, Date.now());
+        game = withDevFlags(new Game(null, Date.now()));
         save(Date.now());
         render();
         toast('Save wiped. Fresh start!', 'info');

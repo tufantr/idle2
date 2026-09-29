@@ -16,6 +16,7 @@ import { enterDungeon, returnToStages, setDungeonRepeat, assembleUnique, challen
 import { plant, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
+import { eventStatus, buyEventItem } from './systems/events.js';
 
 const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
 const OFFLINE_GAP_MS = 60000;
@@ -73,7 +74,7 @@ export class Game {
         }
         this.now = now;
         this.state.meta.playtimeMs += Math.min(dt, MAX_TICK_MS);
-        if (this.dirty || isFocused(this.state, now) !== this.derived.focused || bonfireLit(this.state, now) !== this.derived.bonfire) this.recompute();
+        if (this.dirty || isFocused(this.state, now) !== this.derived.focused || bonfireLit(this.state, now) !== this.derived.bonfire || this.eventId(now) !== this.derived.event) this.recompute();
         this.state.meta.lastActiveAt = now;
         accrueDaily(this.state, now);
 
@@ -150,6 +151,9 @@ export class Game {
     buildObstacle(id) { return this._act(() => buildObstacle(this, id)); }
     upgradeObstacle(slot) { return this._act(() => upgradeObstacle(this, slot)); }
     applyReward(reward) { return this._act(() => applyReward(this, reward)); }
+    eventId(now = this.now) { const s = eventStatus(this.state, now); return s.active ? s.event.id : null; }
+    eventStatus() { return eventStatus(this.state, this.now); }
+    buyEventItem(id) { return this._act(() => buyEventItem(this, id)); }
 
     enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
     leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }

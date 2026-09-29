@@ -29,6 +29,8 @@ import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { DISCORD_INVITE } from '../data/social.js';
+import { EVENTS, EVENT_DAILY_CAP, EVENT_ACTIONS_PER_TOKEN, EVENT_MILESTONES, EVENT_SHOP } from '../data/events.js';
+import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
@@ -51,6 +53,7 @@ export const TABS = [
     { id: 'inventory', name: 'Inventory', icon: '🎒', group: 'MANAGEMENT' },
     { id: 'shop', name: 'Shop & Prestige', icon: '🔮', group: 'MANAGEMENT' },
     { id: 'achievements', name: 'Achievements', icon: '🏆', group: 'MANAGEMENT' },
+    { id: 'events', name: 'Events', icon: '🎉', group: 'MANAGEMENT' },
     { id: 'settings', name: 'Settings', icon: '⚙️', group: 'MANAGEMENT' },
     { id: 'clan', name: 'Clan', icon: '🛡️', group: 'SOCIAL' }
 ];
@@ -111,6 +114,10 @@ export function renderHeader(game, ui, cloud) {
     const bonfirePill = bonfireLit(state, game.now)
         ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">🔥 Bonfire +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
         : '';
+    const ev = eventStatus(state, game.now);
+    const eventPill = ev.active && isUnlocked(state, 'events')
+        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.desc)}">${ev.event.icon} ${esc(ev.event.name)} · ${duration(ev.endsAt - game.now)} left</button>`
+        : '';
     const focusPill = game.derived.focused
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">🧘 Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
@@ -126,7 +133,7 @@ export function renderHeader(game, ui, cloud) {
             <div class="chips">${chips.join('')}</div>
             <div class="header-right">${daily}${user}</div>
         </div>
-        <div class="header-row second">${status}${focusPill}${bonfirePill}${goal}</div>
+        <div class="header-row second">${status}${focusPill}${bonfirePill}${eventPill}${goal}</div>
         <div class="stats-row">
             <span title="Attack">⚔️ ATK <b>${fmt(d.atk)}</b></span>
             <span title="Defence">🛡️ DEF <b>${fmt(d.def)}</b></span>
@@ -681,6 +688,35 @@ export function renderAchievements(game) {
     </section>`;
 }
 
+// ---------- events ----------
+
+export function renderEvents(game) {
+    const state = game.state;
+    const status = eventStatus(state, game.now);
+    const ev = state.events;
+    const e = status.event;
+    const sameInstance = status.active && ev.instance === status.instance;
+    const earned = sameInstance ? ev.instanceEarned : 0;
+    const today = ev.day === new Date(game.now).toISOString().slice(0, 10) ? ev.earnedToday : 0;
+    const milestones = EVENT_MILESTONES.map(m => {
+        const done = sameInstance && ev.milestones.includes(m.tokens);
+        return `<div class="ach-item ${done ? 'done' : ''}"><div><div class="ach-name">${done ? '✅' : '🎯'} ${m.tokens} tokens this event</div></div><div class="ach-reward">${esc(m.desc)}</div></div>`;
+    }).join('');
+    const shop = EVENT_SHOP.map(item => `<div class="event-shop-item"><div><b>${esc(item.name)}</b><div class="muted small">${esc(item.desc)}</div></div>
+        <button class="gold-btn" onclick="FI.buyEventItem('${item.id}')" ${status.active && ev.tokens >= item.cost ? '' : 'disabled'}>🎟️ ${item.cost}</button></div>`).join('');
+    const rotation = EVENTS.map(x => `<span class="${x.id === e.id ? 'b' : 'muted'}">${x.icon} ${esc(x.name)}</span>`).join(' → ');
+    return `<section class="glass-panel event-panel" style="--accent:${e.color}">
+        <div class="panel-header"><div><h2>${e.icon} ${esc(e.name)}</h2><div class="muted small">${status.active ? `Running now — ends in ${duration(status.endsAt - game.now)}` : `Next event — starts in ${duration(status.startsAt - game.now)}`}</div></div>
+            <div class="chip tokens"><span>Festival tokens</span><b>${fmt(ev.tokens)}</b></div></div>
+        <p>${esc(e.desc)}</p>
+        <p class="muted small">Every weekend (Friday to Monday, UTC) one event runs, in turn: ${rotation}. While it runs, every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token (a harvest counts ${5}), up to ${EVENT_DAILY_CAP} a day${status.active ? ` — ${today}/${EVENT_DAILY_CAP} today` : ''}. Tokens keep between events; the shop opens while one runs.</p>
+    </section>
+    <div class="two-col">
+        <section class="glass-panel"><div class="panel-header"><h2>🎯 Milestones</h2><span class="muted small">${earned} earned this event</span></div><div class="ach-list">${milestones}</div></section>
+        <section class="glass-panel"><div class="panel-header"><h2>🛍️ Event shop</h2><span class="muted small">${status.active ? 'Open' : 'Opens with the next event'}</span></div><div class="event-shop">${shop}</div></section>
+    </div>`;
+}
+
 // ---------- farming ----------
 
 export function renderFarming(game, ui) {
@@ -1081,6 +1117,7 @@ export function renderTab(game, ui, cloud) {
         case 'achievements': return renderAchievements(game) + renderCollection(game);
         case 'dungeons': return renderDungeons(game);
         case 'farming': return renderFarming(game, ui);
+        case 'events': return renderEvents(game);
         case 'agility': return renderAgility(game, ui);
         case 'settings': return renderSettings(game, ui, cloud);
         case 'clan': return renderClan(game, ui, cloud);

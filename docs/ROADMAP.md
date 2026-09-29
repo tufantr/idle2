@@ -20,7 +20,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 2 — Retention scaffolding | ✅ Done |
 | 3 — Loot and endgame depth | ✅ Done (mastery, optional, not built) |
 | 4 — Skill breadth | ✅ Done |
-| 5 — Social layer | 🟡 Clans, boards, server time and flags done; events open |
+| 5 — Social layer | ✅ Done |
 
 Before this ships, a few things need the owner (a deployment setting, a history clean-up) — see [Decisions for the owner](#decisions-for-the-owner).
 
@@ -166,7 +166,7 @@ Farming progresses while another action runs (plots are timestamps); gold sinks 
 income while the agility course is being built (the first ~50–90 simulated hours). After that, late
 Abyss income dwarfs every bounded sink and most gold resets with the run — see DESIGN §5.3.
 
-## Phase 5 — Social layer 🟡
+## Phase 5 — Social layer ✅
 
 Last on purpose: the most successful solo-developer idle games (Melvor, Idle Champions) stayed
 single-player, and the failures in the research all came from social features that outran their
@@ -187,12 +187,14 @@ nothing for sale, so the Vercel Hobby plan fits; players' numbers are computed o
       dungeon clears; all time or this week), with a consent line and one-click opt-out
 - [x] Data layer in one module (`api/store.js`); API tests run on an in-memory store by default and on
       a real Postgres with `API_TEST_DATABASE_URL` (checked against PostgreSQL 16)
-- [ ] **Events template** (M once, S per event): start/end window, modifiers, capped daily drops,
-      milestone rewards, an event shop
+- [x] **Events template** (M once, S per event): four weekend events in rotation (Friday–Monday
+      UTC, from the calendar, so no server and no requests), modifiers through the pipeline, Festival
+      Tokens capped at 60 a day, milestones at 50 / 100 / 150, an event shop; a new event is one data
+      entry, and `?dev=1&event=<id>` runs one for testing
 
-**Exit:** no client-submitted damage numbers (met: attacks ignore anything the client sends); under
+**Exit (met):** no client-submitted damage numbers (attacks ignore anything the client sends); under
 100k function invocations a month at 100 daily players (the Clan tab polls once a minute only while
-open, saves go up once a minute); privacy consent before the first board (met).
+open, saves go up once a minute, events need no requests); privacy consent before the first board.
 
 ## Deferred on purpose
 
