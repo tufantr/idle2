@@ -9,6 +9,8 @@ import { GEM_DROP_TABLE } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
 import { courseDef } from './agility.js';
 import { eventProgress } from './events.js';
+import { masteryFor, addMasteryXp } from './mastery.js';
+import { forgeKey, jewelKey } from '../data/mastery.js';
 import { generateEquipment } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
@@ -18,21 +20,31 @@ import { addItem } from './inventory.js';
 const GEM_FIND_CHANCE = 0.02;
 export const BAIT_EXTRA_CHANCE = 0.5;   // each catch uses one bait, if you have any, for this chance of a second fish
 
-/** Resolve the current action into a full definition, or null if the action is invalid. */
+/**
+ * Resolve the current action into a full definition, or null if the action is invalid. Repeatable
+ * actions carry their mastery: { key, level, speed, double, preserve }.
+ */
 export function resolveAction(state, action = state.action) {
+    const def = resolveBase(state, action);
+    if (!def || !def.masteryKey) return def;
+    def.mastery = masteryFor(state, def.skill, def.masteryKey, def);
+    return def;
+}
+
+function resolveBase(state, action) {
     if (!action) return null;
     switch (action.kind) {
         case 'node': {
             const node = skillNode(action.skill, action.id);
             if (!node) return null;
-            return { ...node, kind: 'node', skill: action.skill, label: node.name, output: node.produces };
+            return { ...node, kind: 'node', skill: action.skill, label: node.name, output: node.produces, masteryKey: node.id };
         }
         case 'agility':
             return courseDef(state);
         case 'smelt': {
             const recipe = SMELTING_RECIPES.find(r => r.id === action.id);
             if (!recipe) return null;
-            return { ...recipe, kind: 'smelt', skill: 'smithing', label: `Smelt ${recipe.name}`, output: recipe.produces };
+            return { ...recipe, kind: 'smelt', skill: 'smithing', label: `Smelt ${recipe.name}`, output: recipe.produces, masteryKey: recipe.id };
         }
         case 'smith': {
             const metal = METALS.find(m => m.bar === action.bar);
@@ -41,7 +53,8 @@ export function resolveAction(state, action = state.action) {
             return {
                 kind: 'smith', skill: 'smithing', id: `${action.bar}:${action.type}`, label: `Forge ${metal.name} ${TYPE_NAMES[action.type]}`,
                 levelReq: smithLevelReq(metal, action.type), interval: SMITH_INTERVAL, xp: metal.xpPerBar * cost,
-                consumes: { [action.bar]: cost }, item: { type: action.type, tier: metal.tier, power: RESOURCES[action.bar].power, materialName: metal.name }
+                consumes: { [action.bar]: cost }, item: { type: action.type, tier: metal.tier, power: RESOURCES[action.bar].power, materialName: metal.name },
+                masteryKey: forgeKey(action.bar)
             };
         }
         case 'craft': {
@@ -54,7 +67,8 @@ export function resolveAction(state, action = state.action) {
                 kind: 'craft', skill: 'crafting', id: `${action.bar}:${action.gem}:${action.type}`, label: `Craft ${gem.name} ${TYPE_NAMES[action.type]}`,
                 levelReq: Math.min(99, Math.max(jewelBar.levelReq, gemTier.levelReq) + (CRAFT_SLOT_OFFSET[action.type] || 0)), interval: CRAFT_INTERVAL, xp: gemTier.xp,
                 consumes: { [action.bar]: 1, [action.gem]: 1 },
-                item: { type: action.type, tier: gem.tier, power: (bar.power + gem.power) / 2, materialName: jewelBar.name, gemName: gem.name }
+                item: { type: action.type, tier: gem.tier, power: (bar.power + gem.power) / 2, materialName: jewelBar.name, gemName: gem.name },
+                masteryKey: jewelKey(action.gem)
             };
         }
         case 'tool': {
@@ -149,12 +163,17 @@ export function stopAction(game) {
     game.markDirty();
 }
 
+/** Time (ms) one completion of a resolved action takes, with every speed bonus and its mastery. */
+export function intervalFor(def, derived) {
+    return actionInterval(def.interval, derived, def.skill, def.mastery?.speed || 0);
+}
+
 /** Advance the current action by dt ms; may complete several times if dt is large. Returns completions. */
 export function tickAction(game, dt) {
     const state = game.state;
     const def = resolveAction(state);
     if (!def) { if (state.action) stopAction(game); return 0; }
-    const interval = actionInterval(def.interval, game.derived, def.skill);
+    const interval = intervalFor(def, game.derived);
     const check = canComplete(state, def);
     if (!check.ok) {
         state.action.stalled = true;
@@ -179,16 +198,23 @@ export function completeAction(game, def, { offline = false } = {}) {
     const check = canComplete(state, def);
     if (!check.ok) { if (state.action) state.action.stalled = true; return false; }
 
-    for (const [id, qty] of Object.entries(def.consumes || {})) state.resources[id] -= qty;
-    if (def.fuel) state.resources[fuelLog(state)] -= def.fuel;
+    // Mastery can keep the ingredients (and the fuel) for this action.
+    const mastery = def.mastery;
+    if (mastery?.preserve > 0 && rng.chance(mastery.preserve)) {
+        bumpStat(game, 'ingredientsSaved');
+    } else {
+        for (const [id, qty] of Object.entries(def.consumes || {})) state.resources[id] -= qty;
+        if (def.fuel) state.resources[fuelLog(state)] -= def.fuel;
+    }
 
     const derived = game.derived;
     const skill = def.skill;
+    const doubleChance = (derived.doubleChance[skill] || 0) + (mastery?.double || 0);
     state.stats.actionsBySkill[skill] = (state.stats.actionsBySkill[skill] || 0) + 1;
 
     if (def.bonfireLog) {
         // Firemaking: a lucky burn (the tinderbox's "double") counts twice, for XP and for the bonfire.
-        const times = rng.chance(derived.doubleChance[skill] || 0) ? 2 : 1;
+        const times = rng.chance(doubleChance) ? 2 : 1;
         const addMs = BASE.bonfireSecondsPerLogTier * 1000 * RESOURCES[def.bonfireLog].tier * times;
         const now = game.now;
         state.bonfire.until = Math.min(now + BASE.bonfireMaxMs, Math.max(state.bonfire.until || 0, now) + addMs);
@@ -200,7 +226,7 @@ export function completeAction(game, def, { offline = false } = {}) {
         bumpStat(game, 'courseRuns');
     } else if (def.kind === 'node' || def.kind === 'smelt') {
         let amount = 1;
-        if (rng.chance(derived.doubleChance[skill] || 0)) amount = 2;
+        if (rng.chance(doubleChance)) amount = 2;
         if (skill === 'fishing' && state.resources.fishing_bait > 0) {
             state.resources.fishing_bait -= 1;
             bumpStat(game, 'baitUsed');
@@ -232,6 +258,7 @@ export function completeAction(game, def, { offline = false } = {}) {
     }
 
     grantXp(game, skill, def.xp * derived.xpMult);
+    if (mastery) addMasteryXp(game, skill, mastery.key, def.interval / 1000);
     rollPet(game, skill, def.interval);
     eventProgress(game, 1);
     game.emit({ type: 'actionComplete', skill });

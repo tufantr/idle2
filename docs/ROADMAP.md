@@ -18,7 +18,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 0 — Stop the bleeding | ✅ Done |
 | 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | ✅ Done |
-| 3 — Loot and endgame depth | ✅ Done (mastery, optional, not built) |
+| 3 — Loot and endgame depth | ✅ Done |
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ✅ Done |
 
@@ -130,7 +130,12 @@ Depends on Phase 2's versioned saves (items gain new fields).
 - [x] **Pets**: Melvor's formula (`interval_s × level / 25,000,000` per action), one per skill,
       +3% to that skill (combat: ATK and DEF), kept through prestige; a Collection page lists pets
       and uniques
-- [ ] **Mastery** per node (Melvor model: doubling, preservation, interval) — M, optional
+- [x] **Mastery** per action (Melvor's model without the pool): 77 actions level 1–99 by doing them
+      (99 after ~50 h on one action); each level adds speed, double chance and a chance to keep the
+      ingredients; three achievements reward total mastery; kept through prestige, replayed offline
+- [x] Fix (found by the mastery pass): a spare unique arrived locked, and a bag full of locked spares
+      salvaged every new drop on arrival, upgrades included. Spares now arrive unlocked, and the best
+      upgrade for each slot is never auto-salvaged (the bag overflows instead)
 - [x] **Late-game pass**: the simulator's player now reaches stage 180–200 in 150 h, farms the
       Dragon's Lair (Dragonheart Plate at 18–55 h) and finds Abyssal gear; the plateau was the bot's
       policy (forging pieces weaker than it wore, farming outgrown dungeons, a fixed prestige

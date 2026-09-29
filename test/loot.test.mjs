@@ -87,6 +87,19 @@ test('a full bag salvages its weakest item and keeps upgrades', () => {
     assert.ok(!game.state.inventory.some(i => i.id === weakest.id), 'the weakest item was salvaged');
 });
 
+test('a bag full of locked items overflows rather than salvage an upgrade', () => {
+    const game = new Game(null, T0);
+    game.state.settings.autoSalvage = 'off';
+    game.state.equipped.Boots = generateEquipment({ type: 'Boots', tier: 3, power: 4.8, materialName: 'Mithril', source: 'crafted' }, 4200);
+    for (let i = 0; i < BAG_SIZE; i++) { const b = copperBoots(4000 + i); b.locked = true; game.state.inventory.push(b); }
+    const strong = generateEquipment({ type: 'Weapon', tier: 5, power: 23.4, materialName: 'Runite', source: 'drop' }, 4100);
+    assert.equal(addItem(game, strong).kept, true);
+    assert.equal(game.state.inventory.length, BAG_SIZE + 1, 'the upgrade waits in an overfull bag');
+    const junk = addItem(game, copperBoots(4101));
+    assert.equal(junk.kept, false, 'junk still goes');
+    assert.equal(game.state.inventory.length, BAG_SIZE + 1);
+});
+
 test('auto-salvage takes junk drops but never an upgrade', () => {
     const game = new Game(null, T0);
     game.state.settings.autoSalvage = 'common';

@@ -1,9 +1,9 @@
 // Offline progress: replay the active action (or combat) for the time away, up to the cap.
 // Uses the same code paths as online play so food, materials and deaths behave identically.
 
-import { resolveAction, completeAction, canComplete } from './skilling.js';
+import { resolveAction, completeAction, canComplete, intervalFor } from './skilling.js';
 import { tickCombat } from './combat.js';
-import { actionInterval } from '../core/modifiers.js';
+import { masteryLevel } from './mastery.js';
 import { RESOURCES } from '../data/resources.js';
 import { SKILLS } from '../data/skills.js';
 import { levelForXp } from '../core/xp.js';
@@ -73,10 +73,10 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     const wasSilent = game.silent;
     game.silent = true;
 
-    const def = resolveAction(state);
+    let def = resolveAction(state);
     if (def) {
         mode = 'skill';
-        const interval = actionInterval(def.interval, game.derived, def.skill);
+        let interval = intervalFor(def, game.derived);
         let remaining = simulated;
         let guard = 0;
         while (remaining >= interval && guard++ < 200000) {
@@ -84,6 +84,8 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             if (!completeAction(game, def, { offline: true })) break;
             remaining -= interval;
             if (!state.action) break; // one-off actions (tools)
+            // A mastery level-up makes the action faster and luckier from the next completion on.
+            if (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level) { def = resolveAction(state); interval = intervalFor(def, game.derived); }
         }
         if (state.action) state.action.progress = 0;
     } else if (state.combat.active) {

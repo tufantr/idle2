@@ -137,7 +137,7 @@ test('switching activities fails the current run cleanly; the Titan fight blocks
     assert.equal(game.state.combat.mode, 'titan');
 });
 
-test('twenty fragments assemble the unique; uniques are legendary, locked and cannot be reforged', () => {
+test('fragments assemble the unique; uniques are legendary, locked and cannot be reforged; spares are unlocked', () => {
     const game = newGame({ bestStage: 20 });
     const record = game.state.dungeons[warren.id];
     record.fragments = FRAGMENTS_PER_UNIQUE - 1;
@@ -159,6 +159,15 @@ test('twenty fragments assemble the unique; uniques are legendary, locked and ca
     game.state.gold = 1e9;
     assert.equal(game.reforgeItem(item.id), false);
     assert.deepEqual(item.affixes.map(a => a.stat), UNIQUES[warren.unique].affixes.map(a => a.stat));
+
+    // A second copy is a spare: unlocked, so the bag rules can salvage it for essence.
+    record.fragments = FRAGMENTS_PER_UNIQUE;
+    const spare = game.assembleUnique(warren.id);
+    assert.equal(spare.locked, false);
+    assert.equal(item.locked, true, 'the first copy stays protected');
+    const essence = game.state.resources.essence;
+    assert.ok(game.salvageItem(spare.id));
+    assert.ok(game.state.resources.essence > essence);
 });
 
 test('dungeon clear milestones are permanent bonuses', () => {

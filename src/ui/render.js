@@ -15,13 +15,15 @@ import { levelProgress, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
-import { canComplete, resolveAction, fuelLog } from '../systems/skilling.js';
+import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
+import { masteryProgress, skillMastery } from '../systems/mastery.js';
+import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
 import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { advise } from '../systems/advisor.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
-import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview } from '../systems/dungeon.js';
+import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
 import { PETS, PET_BASE } from '../data/pets.js';
 import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, obstacleById, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
@@ -303,15 +305,40 @@ export function renderAdvisor(game) {
 function xpHeader(game, skillId, extra = '') {
     const skill = SKILLS[skillId];
     const lp = levelProgress(game.state.skills[skillId].xp);
+    let mastery = '';
+    if (MASTERY_SKILLS.includes(skillId)) {
+        const m = skillMastery(game.state, skillId);
+        mastery = `<span class="mastery-total" title="Mastery levels gained across this skill's ${m.actions} actions (${m.maxed} at ${MASTERY_MAX_LEVEL}). Every action levels its own mastery as you do it.">Mastery ${fmt(m.levels)} / ${fmt(m.max)}</span>`;
+    }
     return `<div class="panel-header">
         <div><h2>${skill.icon} ${skill.name}</h2><div class="muted small">${esc(skill.desc)}</div></div>
         <div class="skill-info">
-            ${extra}
+            ${extra}${mastery}
             <span class="skill-level" style="color:${skill.color}; background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
             <div class="xp-bar-container"><div class="xp-bar-fill" style="width:${(lp.fraction * 100).toFixed(1)}%; background:${skill.color}"></div></div>
             <span class="skill-xp">${lp.level >= MAX_LEVEL ? fmt(game.state.skills[skillId].xp) + ' XP' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}</span>
         </div>
     </div>`;
+}
+
+/** One action's mastery: its level, a thin bar, and (on hover) what it gives. */
+function masteryRow(state, skillId, mastery, label = 'Mastery') {
+    if (!mastery) return '';
+    const p = masteryProgress(state, skillId, mastery.key);
+    const maxed = p.level >= MASTERY_MAX_LEVEL;
+    const gives = [`+${pct(mastery.speed, 1)} speed`];
+    if (mastery.double) gives.push(`+${pct(mastery.double, 1)} double chance`);
+    if (mastery.preserve) gives.push(`${pct(mastery.preserve, 1)} chance to keep the ingredients`);
+    const title = `${label} ${p.level}: ${p.level > 1 ? gives.join(', ') : 'no bonus yet — every level adds a little'}. `
+        + (maxed ? 'Mastered!' : `Next level after ${duration((p.xpNeeded - p.xpInto) * 1000)} more practice (at base speed).`);
+    return `<div class="mastery-row" title="${esc(title)}"><span class="mastery-lvl ${maxed ? 'max' : ''}">${esc(label)} ${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div></div>`;
+}
+
+/** The chance line for an action's stats: doubling (skill + mastery) and keeping ingredients. */
+function luckStats(d, def) {
+    const dbl = (def.kind === 'smith' || def.kind === 'craft') ? 0 : (d.doubleChance[def.skill] || 0) + (def.mastery?.double || 0);
+    const keep = def.mastery?.preserve || 0;
+    return `${dbl ? `<span>🎲 ${pct(dbl)} double</span>` : ''}${keep ? `<span title="Chance to keep the ingredients">♻️ ${pct(keep)} kept</span>` : ''}`;
 }
 
 /** What a tool tier does, in words (the "double" means something different per skill). */
@@ -371,8 +398,8 @@ export function renderSkill(game, ui, skillId) {
         }
         const unlocked = level >= node.levelReq;
         const active = action?.kind === 'node' && action.skill === skillId && action.id === node.id;
-        const interval = actionInterval(node.interval, d, skillId);
-        const def = { ...node, skill: skillId };
+        const def = resolveAction(state, { kind: 'node', skill: skillId, id: node.id });
+        const interval = intervalFor(def, d);
         const check = canComplete(state, def);
         let inputs = '';
         if (node.consumes) inputs += Object.entries(node.consumes).map(([id, q]) => `<span class="${state.resources[id] >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id])})</i></span>`).join(' ');
@@ -386,7 +413,8 @@ export function renderSkill(game, ui, skillId) {
             <div class="node-name">${esc(node.name)}</div>
             ${unlocked ? '' : `<div class="req">Requires level ${node.levelReq}</div>`}
             <div class="node-io muted small">${inputs ? `Needs: ${inputs}<br>` : ''}Gives: ${gives}</div>
-            ${unlocked ? `<div class="node-stats"><span>✨ ${Math.round(node.xp * d.xpMult)} XP</span><span>⏱️ ${seconds(interval)}</span>${d.doubleChance[skillId] ? `<span>🎲 ${pct(d.doubleChance[skillId])} double</span>` : ''}</div>
+            ${unlocked ? `<div class="node-stats"><span>✨ ${Math.round(node.xp * d.xpMult)} XP</span><span>⏱️ ${seconds(interval)}</span>${luckStats(d, def)}</div>
+            ${masteryRow(state, skillId, def.mastery)}
             <div class="action-progress-container"><div class="action-progress-fill" id="progress-${skillId}-${node.id}" style="width:${active ? Math.min(100, action.progress / interval * 100) : 0}%; background:${active && !check.ok ? '#ef4444' : skill.color}"></div></div>` : ''}
         </div>`;
     }
@@ -446,7 +474,7 @@ export function renderMinigame(game, skillId) {
 
 // ---------- smithing & crafting ----------
 
-function recipeCard({ title, icon, color, inputs, output, xp, interval, active, stalled, onclick, disabled, reqText, footer = '' }, state) {
+function recipeCard({ title, icon, color, inputs, output, xp, interval, active, stalled, onclick, disabled, reqText, footer = '', luck = '', mastery = '' }, state) {
     const cardId = `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     const inputHtml = inputs.map(([id, q]) => `<span class="${(state.resources[id] || 0) >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id] || 0)})</i></span>`).join(' ');
     return `<div id="${cardId}" class="node-card ${active ? 'active' : ''} ${disabled ? 'locked' : ''} ${active && stalled ? 'stalled' : ''}" ${disabled ? 'aria-disabled="true"' : `onclick="${onclick}" role="button" tabindex="0" aria-pressed="${!!active}"`} style="--accent:${color}">
@@ -454,7 +482,8 @@ function recipeCard({ title, icon, color, inputs, output, xp, interval, active, 
         <div class="node-name">${esc(title)}</div>
         ${reqText ? `<div class="req">${esc(reqText)}</div>` : ''}
         <div class="node-io muted small">Needs: ${inputHtml}${output ? `<br>Gives: ${output}` : ''}</div>
-        <div class="node-stats"><span>✨ ${xp} XP</span><span>⏱️ ${seconds(interval)}</span></div>
+        <div class="node-stats"><span>✨ ${xp} XP</span><span>⏱️ ${seconds(interval)}</span>${disabled ? '' : luck}</div>
+        ${disabled ? '' : mastery}
         <div class="action-progress-container"><div class="action-progress-fill" style="width:${active ? '0' : '0'}%; background:${color}" data-progress="1"></div></div>
         ${footer}
     </div>`;
@@ -467,19 +496,19 @@ export function renderSmithing(game, ui) {
     const action = state.action;
     const def = resolveAction(state);
     const metal = METALS.find(m => m.bar === ui.smithMetal) || METALS[0];
-    const smeltCards = SMELTING_RECIPES.map(r => recipeCard({
+    const smeltCards = SMELTING_RECIPES.map(r => { const def = resolveAction(state, { kind: 'smelt', id: r.id }); return recipeCard({
         title: r.name, icon: res(r.produces).icon, color: res(r.produces).color,
         inputs: Object.entries(r.consumes), output: resTag(r.produces, null) + ` <i>(${fmt(state.resources[r.produces])})</i>`,
-        xp: Math.round(r.xp * d.xpMult), interval: actionInterval(r.interval, d, 'smithing'),
+        xp: Math.round(r.xp * d.xpMult), interval: intervalFor(def, d), luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
         active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
         onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: level < r.levelReq ? `Requires level ${r.levelReq}` : ''
-    }, state)).join('');
+    }, state); }).join('');
     const forgeCards = SMITHING_TYPES.map(type => {
         const recipe = resolveAction(state, { kind: 'smith', type, bar: metal.bar });
         return recipeCard({
             title: `${metal.name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(metal.bar).color,
             inputs: Object.entries(recipe.consumes), output: `equipment (tier ${metal.tier})`,
-            xp: Math.round(recipe.xp * d.xpMult), interval: actionInterval(recipe.interval, d, 'smithing'),
+            xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
             onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: level < recipe.levelReq ? `Requires level ${recipe.levelReq}` : ''
         }, state);
@@ -493,6 +522,7 @@ export function renderSmithing(game, ui) {
             <select class="material-select" onchange="FI.selectSmithMetal(this.value)">${METALS.map(m => `<option value="${m.bar}" ${m.bar === metal.bar ? 'selected' : ''}>${m.name} (lvl ${m.levelReq}) — ${fmt(state.resources[m.bar])} bars</option>`).join('')}</select>
         </h3>
         <p class="muted small">Each piece unlocks a few levels after the metal (swords first, plate bodies last). Forged items roll up to Rare quality — epic and legendary gear only drops in combat. The metal decides the power band, so a lucky copper sword never beats an honest runite one.</p>
+        ${masteryRow(state, 'smithing', resolveAction(state, { kind: 'smith', type: SMITHING_TYPES[0], bar: metal.bar }).mastery, `${metal.name} forging mastery`)}
         <div class="node-grid">${forgeCards}</div>
         <h3 class="section-title">3. Tools</h3>
         <div class="node-grid">${toolCards}</div>
@@ -528,7 +558,7 @@ export function renderCrafting(game, ui) {
         return recipeCard({
             title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(gem.gem).color,
             inputs: Object.entries(recipe.consumes), output: `jewellery (tier ${res(gem.gem).tier})`,
-            xp: Math.round(recipe.xp * d.xpMult), interval: actionInterval(recipe.interval, d, 'crafting'),
+            xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
             active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
             onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: level < recipe.levelReq ? `Requires level ${recipe.levelReq}` : ''
         }, state);
@@ -540,6 +570,7 @@ export function renderCrafting(game, ui) {
             <select class="material-select" onchange="FI.selectCraftGem(this.value)">${GEM_TIERS.map(g => `<option value="${g.gem}" ${g.gem === gem.gem ? 'selected' : ''}>${res(g.gem).name} (lvl ${g.levelReq}) — ${fmt(state.resources[g.gem])}</option>`).join('')}</select>
         </h3>
         <p class="muted small">Gems turn up while mining (2% per ore) and drop from monsters. Jewellery gives a little ATK and DEF and is the best source of affixes.</p>
+        ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gem.gem }).mastery, `${res(gem.gem).name} jewellery mastery`)}
         <div class="node-grid">${cards}</div>
         <h3 class="section-title">Bows</h3>
         <div class="node-grid">${renderToolCard(game, 'bow')}${renderToolCard(game, 'rod')}</div>
@@ -859,7 +890,7 @@ export function renderDungeons(game) {
                 <div class="small ${readinessClass(preview.bossFight.killSeconds, limit, preview.bossFight.surviveSeconds)}" title="Estimate without food, regen, lifesteal or combo">Boss: ~${fmtSeconds(preview.bossFight.killSeconds)} to kill (limit ${limit} s) · you last ~${fmtSeconds(preview.bossFight.surviveSeconds)}</div>
                 <div class="btn-row">
                     ${here ? '<button class="mini-btn danger" onclick="FI.toggleCombat()">Abandon run</button>' : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
-                    <button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${record.fragments >= FRAGMENTS_PER_UNIQUE ? '' : 'disabled'}>Assemble unique</button>
+                    <button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${record.fragments >= FRAGMENTS_PER_UNIQUE ? '' : 'disabled'} ${ownsUnique(state, d.unique) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique) ? 'Assemble a spare' : 'Assemble unique'}</button>
                 </div>`
                 : `<div class="req">Opens at stage ${d.unlockStage}</div>`}
         </div>`;
@@ -1091,7 +1122,7 @@ export function patchLive(game, ui) {
     }
     set2('hdr-hp', fmt(state.combat.hp));
     if (action && state.action) {
-        const interval = actionInterval(action.interval, d, action.skill);
+        const interval = intervalFor(action, d);
         const fillId = action.kind === 'node' ? `progress-${action.skill}-${action.id}` : action.kind === 'agility' ? 'progress-agility-course' : null;
         const el = fillId ? document.getElementById(fillId) : document.querySelector('.node-card.active .action-progress-fill');
         if (el) el.style.width = `${Math.min(100, state.action.progress / interval * 100)}%`;

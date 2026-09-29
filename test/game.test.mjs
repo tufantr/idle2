@@ -15,6 +15,8 @@ import { generateEquipment, enemyForStage, tokensForStage, enemyDamage } from '.
 import { RESOURCES, sellValue } from '../src/data/resources.js';
 import { GOLD_SHOP } from '../src/data/perks.js';
 import { goldShopPrice } from '../src/systems/inventory.js';
+import { masteryBonus } from '../src/systems/mastery.js';
+import { MASTERY_XP_DIVISOR } from '../src/data/mastery.js';
 
 rng.setSource(seededRandom(1234));
 const T0 = 1_700_000_000_000;
@@ -72,21 +74,30 @@ test('regression: offline progress with a workshop action does not throw and mak
     assert.match(summary.stalledReason || '', /ran out of materials/);
 });
 
-test('offline progress is capped (12h base) and consumes inputs', () => {
+test('offline progress is capped (12h base) and speeds up with mastery as it goes', () => {
     const game = new Game(null, T0);
     game.startNodeAction('mining', 'copper_ore');
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 30 * 24 * 3600 * 1000;
     const g2 = new Game(saved, later);
-    // Every action yields exactly one ore without tools; the player was away, so focus (+15%) applies.
-    // (Achievements earned during the replay only take effect afterwards, so read the speed first.)
+    // The player was away, so focus (+15%) applies. Achievements earned during the replay only take
+    // effect afterwards, so read the speed first.
     assert.ok(g2.derived.focused);
-    const interval = actionInterval(3000, g2.derived, 'mining');
+    const derived = g2.derived;
     const summary = g2.resumeFromSave(later);
     assert.equal(summary.simulated, 12 * 3600 * 1000);
     assert.ok(summary.capped);
-    const expected = Math.floor(summary.simulated / interval);
-    assert.ok(Math.abs(g2.state.resources.copper_ore - expected) <= 1, `${g2.state.resources.copper_ore} vs ${expected}`);
+    // Replay the timeline by hand: each ore takes the interval of the mastery level it starts at.
+    let t = 0, actions = 0, practice = 0;
+    for (;;) {
+        const interval = actionInterval(3000, derived, 'mining', masteryBonus(levelForXp(practice * MASTERY_XP_DIVISOR)).speed);
+        if (t + interval > summary.simulated) break;
+        t += interval; actions++; practice += 3;
+    }
+    assert.ok(Math.abs(g2.state.stats.actionsBySkill.mining - actions) <= 1, `${g2.state.stats.actionsBySkill.mining} vs ${actions}`);
+    assert.ok(actions > Math.floor(summary.simulated / actionInterval(3000, derived, 'mining')), 'mastery made it faster');
+    const ore = g2.state.resources.copper_ore;
+    assert.ok(ore > actions * 1.1 && ore < actions * 1.3, `mastery doubles some ore: ${ore} from ${actions}`);
 });
 
 test('achievements apply real bonuses through the modifier pipeline', () => {
@@ -328,9 +339,13 @@ test('offline replay gives the same result as playing online for the same time',
     run(online, 10 * 60_000, 100);
     const offline = new Game(saved, T0 + 10 * 60_000);
     offline.resumeFromSave(T0 + 10 * 60_000);
-    assert.ok(Math.abs(online.state.resources.copper_ore - offline.state.resources.copper_ore) <= 1,
-        `online ${online.state.resources.copper_ore} vs offline ${offline.state.resources.copper_ore}`);
+    // Actions, XP and mastery are deterministic; the ore count differs only by lucky doubles.
+    const [a, b] = [online, offline].map(g => g.state.stats.actionsBySkill.mining);
+    assert.ok(Math.abs(a - b) <= 1, `online ${a} vs offline ${b} actions`);
     assert.ok(Math.abs(online.state.skills.mining.xp - offline.state.skills.mining.xp) <= 8);
+    assert.ok(Math.abs(online.state.mastery.mining.copper_ore - offline.state.mastery.mining.copper_ore) <= 3);
+    assert.ok(Math.abs(online.state.resources.copper_ore - offline.state.resources.copper_ore) <= 0.1 * a,
+        `online ${online.state.resources.copper_ore} vs offline ${offline.state.resources.copper_ore} ore`);
 });
 
 test('a 12 h offline combat replay is silent and fast', () => {

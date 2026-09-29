@@ -325,8 +325,10 @@ function stallTask() {
     if (!needTraining) return null;
     if (!lastStallWasDungeon && FARM_LADDER) { lastStallWasDungeon = true; needTraining = false; return ladderFarmTask(); }
     if (!lastStallWasDungeon && !NO_DUNGEONS) {
-        const t = dungeonTask();
-        if (t) { lastStallWasDungeon = true; needTraining = false; return t; }
+        // No dungeon worth farming (none cleared comfortably, or all outgrown): keep fighting at the
+        // wall for a while instead, where the late gear drops come from.
+        const t = dungeonTask() || { kind: 'farm', stage: null, why: `keep fighting at stage ${S.combat.stage}`, until: (end => () => now >= end)(now + 30 * 60000) };
+        lastStallWasDungeon = true; needTraining = false; return t;
     }
     lastStallWasDungeon = false;
     return trainWeakest();
@@ -442,10 +444,19 @@ function trainWeakest() {
     return train(pick, 45);
 }
 
+// Gems come from rocks of about their tier, so look for them in the richest rock whose gems we can
+// already use (the best rock only turns up gems a low crafting level can't work).
+function mineForGems(minutes) {
+    const usable = Math.max(...GEM_TIERS.filter(g => lvl('crafting') >= g.levelReq).map(g => RESOURCES[g.gem].tier));
+    const node = [...SKILLS.mining.nodes].reverse().find(n => lvl('mining') >= n.levelReq && RESOURCES[n.produces].tier <= usable) || SKILLS.mining.nodes[0];
+    const end = now + minutes * 60000;
+    return { kind: 'node', skill: 'mining', node: node.id, until: () => now >= end, why: `mine ${node.name} for gems` };
+}
+
 function craftTraining() {
     const bar = JEWEL_BARS.find(b => lvl('crafting') >= b.levelReq && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === b.bar).levelReq);
     const gemTier = [...GEM_TIERS].reverse().find(g => lvl('crafting') >= g.levelReq && S.resources[g.gem] >= 5);
-    if (!bar || !gemTier) return train('mining', 30);
+    if (!bar || !gemTier) return mineForGems(30);
     const t = obtain(bar.bar, 5);
     if (t) return t;
     return { kind: 'craft', type: 'Ring', bar: bar.bar, gem: gemTier.gem, why: `train crafting (${gemTier.gem} rings)` };

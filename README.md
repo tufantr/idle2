@@ -1,9 +1,10 @@
 # Fantasy Idle
 
-A browser idle RPG in the spirit of Melvor Idle: train twelve skills, forge your own gear, fight
-through ten zones and an endless Abyss, clear dungeons, face the hourly Titan, build an agility course,
-and prestige for permanent power. Weekend events bring bonuses, Festival Tokens and an event shop.
-Optional accounts add cloud saves, clans with a weekly shared boss, and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
+A browser idle RPG in the spirit of Melvor Idle: train twelve skills and master every action in them,
+forge your own gear, fight through ten zones and an endless Abyss, clear dungeons, face the hourly
+Titan, build an agility course, and prestige for permanent power. Weekend events bring bonuses,
+Festival Tokens and an event shop. Optional accounts add cloud saves, clans with a weekly shared boss,
+and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
 Postgres API.
 
 **Docs:** [Game design](docs/DESIGN.md) · [Roadmap](docs/ROADMAP.md) ·
@@ -49,7 +50,7 @@ save. It needs Node 20.19+ or 22+.
 Node 22+, no install needed (the API tests use the packages in `api/node_modules`):
 
 ```bash
-node --test test/*.test.mjs test/*.test.cjs   # game logic, loot, endgame, skills, events, saves, API
+node --test test/*.test.mjs test/*.test.cjs   # game logic, loot, endgame, skills, mastery, events, saves, API
 node tools/pacing.mjs                           # hours of training to reach each skill level
 node tools/simulate.mjs --hours=150 --seed=1    # plays the whole game headlessly, prints milestones
 ```
@@ -73,9 +74,10 @@ index.html, style.css   page shell and styles
 src/game.js             Game class: state, tick and every player action (no DOM)
 src/core/               XP curve, formulas, modifier pipeline, state/migration, saves, server-side power
 src/data/               content tables: resources, skills, workshop, items, zones, dungeons, pets,
-                        farming, agility, camp, perks, achievements, unlocks, events, social settings
+                        farming, agility, camp, perks, achievements, unlocks, events, mastery,
+                        social settings
 src/systems/            skilling, combat, dungeons & Titan, inventory, farming, agility, prestige,
-                        camp, mini-games, offline, daily, advisor, events, clan rewards
+                        camp, mini-games, offline, daily, advisor, events, mastery, clan rewards
 src/ui/                 rendering and formatting
 api/                    Express API for Vercel: routes, data layer, connection
 test/, tools/           tests, simulator, pacing table

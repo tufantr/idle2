@@ -5,12 +5,13 @@ import { RESOURCES } from '../data/resources.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
 import { EQUIP_SLOTS } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
-import { xpForLevel } from './xp.js';
+import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS } from '../data/dungeons.js';
 import { TOOLS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
+import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions } from '../data/mastery.js';
 
 export const SAVE_VERSION = 3;
 
@@ -24,6 +25,7 @@ export function createDefaultState(now = Date.now()) {
         equipped: {},
         tools: {},
         skills: {},
+        mastery: {},           // skill -> action key -> mastery XP (seconds of practice)
         action: null,
         combat: {
             active: false,
@@ -66,6 +68,7 @@ export function createDefaultState(now = Date.now()) {
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
+            masteryLevels: 0, masteryBest: 1, masteries99: 0, ingredientsSaved: 0,
             actionsBySkill: {}
         },
         minigame: {},
@@ -78,6 +81,7 @@ export function createDefaultState(now = Date.now()) {
     for (const slot of EQUIP_SLOTS) state.equipped[slot] = null;
     for (const id of SKILL_IDS) state.skills[id] = { xp: 0 };
     for (const id of SKILL_IDS) state.stats.actionsBySkill[id] = 0;
+    for (const id of MASTERY_SKILLS) state.mastery[id] = {};
     for (const perk of PERKS) state.perks[perk.id] = 0;
     for (const d of DUNGEONS) state.dungeons[d.id] = { clears: 0, fragments: 0 };
     for (const toolId of Object.keys(TOOLS)) state.tools[toolId] = 0;
@@ -176,6 +180,23 @@ function normalise(data, now) {
         if (!state.skills[id] || !Number.isFinite(Number(state.skills[id].xp))) state.skills[id] = { xp: 0 };
         state.skills[id].xp = Math.max(0, Number(state.skills[id].xp));
     }
+    // Mastery: keep known actions only, and make the mastery stats match it.
+    const savedMastery = state.mastery && typeof state.mastery === 'object' ? state.mastery : {};
+    state.mastery = {};
+    let masteryLevels = 0, masteryBest = 1, masteries99 = 0;
+    for (const skillId of MASTERY_SKILLS) {
+        state.mastery[skillId] = {};
+        for (const a of masteryActions(skillId)) {
+            const v = Number(savedMastery[skillId]?.[a.key]);
+            if (!(Number.isFinite(v) && v > 0)) continue;
+            state.mastery[skillId][a.key] = v;
+            const level = levelForXp(v * MASTERY_XP_DIVISOR);
+            masteryLevels += level - 1;
+            masteryBest = Math.max(masteryBest, level);
+            if (level >= MASTERY_MAX_LEVEL) masteries99++;
+        }
+    }
+    Object.assign(state.stats, { masteryLevels, masteryBest, masteries99 });
     if (!Array.isArray(state.inventory)) state.inventory = [];
     if (!Array.isArray(state.log)) state.log = [];
     state.gold = Math.max(0, Number(state.gold) || 0);

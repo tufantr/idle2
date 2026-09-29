@@ -144,6 +144,7 @@ function handleEvents(events) {
             case 'unique': toast(`🌟 Unique: ${ev.item.name}!`, 'achievement'); break;
             case 'obstacleBuilt': toast(`${ev.obstacle.icon} ${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement'); break;
             case 'eventMilestone': toast(`${ev.event.icon} ${ev.event.name}: ${ev.milestone.desc}!`, 'achievement'); break;
+            case 'masteryLevel': if ([50, 75, 99].some(m => ev.from < m && ev.level >= m)) toast(`${SKILLS[ev.skill].icon} ${ev.name}: mastery ${ev.level}!`, ev.level >= 99 ? 'achievement' : 'level'); break;
             case 'kill':
                 if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss');
                 if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`);

@@ -235,9 +235,9 @@ export function deriveStats(state, mods = collectModifiers(state)) {
     };
 }
 
-/** Effective interval (ms) for an action of a skill. */
-export function actionInterval(baseInterval, derived, skillId) {
-    const speed = derived.skillSpeed[skillId] || 0;
+/** Effective interval (ms) for an action of a skill; `extraSpeed` is the action's own (mastery). */
+export function actionInterval(baseInterval, derived, skillId, extraSpeed = 0) {
+    const speed = (derived.skillSpeed[skillId] || 0) + extraSpeed;
     return Math.max(250, Math.round(baseInterval / (1 + speed)));
 }
 

@@ -39,6 +39,18 @@ export function isUpgrade(state, item) {
     return slots.some(slot => itemScore(item) > itemScore(state.equipped[slot]));
 }
 
+/** Bag items worth equipping: the best of their type in the bag (one per slot) that beat what is worn. */
+function neededInBag(state) {
+    const needed = new Set();
+    const byType = {};
+    for (const item of state.inventory) (byType[item.type] ||= []).push(item);
+    for (const [type, items] of Object.entries(byType)) {
+        const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
+        for (const item of best) if (isUpgrade(state, item)) needed.add(item);
+    }
+    return needed;
+}
+
 export function bagSize() {
     return BAG_SIZE;
 }
@@ -48,7 +60,8 @@ export function bagSize() {
 /**
  * Put a new item in the bag. Drops at or below the auto-salvage rarity are salvaged straight away
  * unless they would be an upgrade. If the bag is full, the weakest unlocked item — possibly the new
- * one — is salvaged, so nothing is ever silently thrown away. Returns { kept, salvaged }.
+ * one — is salvaged (never the best upgrade for a slot), so nothing is ever silently thrown away.
+ * Returns { kept, salvaged }.
  */
 export function addItem(game, item) {
     const state = game.state;
@@ -60,10 +73,12 @@ export function addItem(game, item) {
     state.inventory.push(item);
     if (state.inventory.length <= bagSize()) return { kept: true, salvaged: null };
 
-    const candidates = state.inventory.filter(i => !i.locked && !isUpgrade(state, i));
-    const pool = candidates.length ? candidates : state.inventory.filter(i => !i.locked);
-    if (!pool.length) return { kept: true, salvaged: null }; // everything is locked: allow the overflow
-    const worst = pool.reduce((a, b) => (itemScore(b) < itemScore(a) ? b : a));
+    // Any unlocked item can go except the ones worth equipping. If nothing can (the bag is all locked
+    // items and upgrades), allow the overflow: an upgrade is never salvaged behind your back.
+    const needed = neededInBag(state);
+    const candidates = state.inventory.filter(i => !i.locked && !needed.has(i));
+    if (!candidates.length) return { kept: true, salvaged: null };
+    const worst = candidates.reduce((a, b) => (itemScore(b) < itemScore(a) ? b : a));
     state.inventory.splice(state.inventory.indexOf(worst), 1);
     const gained = salvageObject(game, worst, { auto: true });
     return { kept: worst !== item, salvaged: worst, gained };

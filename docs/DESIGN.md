@@ -99,7 +99,8 @@ let offline progress run overnight.
 
 - **Interval model:** `interval = max(250 ms, base / (1 + Σ speed bonuses))` (`actionInterval`
   in `src/core/modifiers.js`). Speed bonuses add within the skill: tools, the Forager perk,
-  achievements, pets, mini-game boosts and Focus.
+  achievements, pets, agility obstacles, weekend events, mini-game boosts and Focus, plus the
+  action's own mastery (§3.20).
 - **Gems:** every mining action has a 2% chance to also yield a gem of roughly the rock's tier.
 
 ### 3.2 Resources and dependencies
@@ -180,9 +181,11 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 - **Salvage:** dropped gear → essence (`ceil(0.8 × tier × (rarity rank + 1))`), crafted gear → ~40% of
   its bars back (whole bars, fair on average). Either way, half of the essence spent upgrading the
   item comes back.
-- **Bag and lock:** 40 rolled items. Overflow auto-salvages the weakest unlocked item that isn't an
-  upgrade; an auto-salvage filter (off / common / uncommon / rare) salvages low drops on arrival
-  unless they are upgrades. Locked items are never sold or salvaged. Nothing is ever silently deleted.
+- **Bag and lock:** 40 rolled items. Overflow auto-salvages the weakest unlocked item, but never the
+  best upgrade for a slot — if nothing else can go, the bag overflows instead (a bag full of locked
+  items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /
+  common / uncommon / rare) salvages low drops on arrival unless they are upgrades. Locked items are
+  never sold or salvaged. Nothing is ever silently deleted.
 
 ### 3.6 Combat
 
@@ -276,8 +279,8 @@ the Abyss repeats with a depth counter and steeper growth.
 `src/systems/prestige.js`, `src/data/perks.js`.
 
 - **Available** from stage 10. Resets: stage (restart at 10% of your all-time best), gold, camp.
-  Keeps: skills, gear, tools, materials, essence, achievements, tokens, perks, pets, dungeon clears
-  and fragments, Titans defeated, the agility course and farming plots.
+  Keeps: skills and mastery, gear, tools, materials, essence, achievements, tokens, perks, pets,
+  dungeon clears and fragments, Titans defeated, the agility course and farming plots.
 - **Tokens** = `floor(((best stage this run − 5) / 5)^1.5)`: 1 at stage 10, 27 at 50, 82 at 100,
   156 at 150. Tokens are **held, never spent**; each is a permanent +0.5% ATK and DEF and +0.25% HP,
   in its own multiplicative layer. The Eternity achievement adds +10% tokens.
@@ -337,8 +340,9 @@ health. Dying, leaving or running out of time loses the run; clearing it opens a
   A strong hero clears a run in well under a minute, so a chest is never a jackpot.
 - **Uniques:** 50 fragments assemble the dungeon's unique; a chest holds it outright 0.2% of the time.
   Uniques are Legendary with fixed affixes (the Crown: +15% gold find, +4% crit, +5% HP) and 10% more
-  base power than their tier — the best piece of that tier, not a tier skip. They start locked and
-  cannot be reforged.
+  base power than their tier — the best piece of that tier, not a tier skip. The first copy starts
+  locked; a spare (assembled or found again) arrives unlocked, to salvage for essence. Uniques cannot
+  be reforged.
 - **Clear milestones** per dungeon, permanent: 25 clears +2% ATK and DEF, 100 clears +3% gold and drop
   chance, 250 clears +3% max HP.
 - **Readiness:** the Dungeons tab estimates the boss fight (time to kill vs the timer, and how long you
@@ -363,10 +367,10 @@ pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievemen
 
 ### 3.14 Achievements, unlocks and the daily crate
 
-- **Achievements** (`src/data/achievements.js`): 29, each with a named reward applied through the
+- **Achievements** (`src/data/achievements.js`): 32, each with a named reward applied through the
   pipeline **plus** +1% ATK, DEF and skill speed per achievement (Antimatter Dimensions / Cookie
-  Clicker "milk" pattern). Dungeon clears, Titans, pets, uniques, the new skills and a finished agility
-  course have their own. A test checks that every bonus in the data is well-formed (the Forager perk
+  Clicker "milk" pattern). Dungeon clears, Titans, pets, uniques, the new skills, a finished agility
+  course and mastery (500 and 2,500 levels, a first 99) have their own. A test checks that every bonus in the data is well-formed (the Forager perk
   once had a malformed bonus and did nothing).
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true —
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
@@ -470,12 +474,38 @@ needs no server: the schedule is the UTC calendar, so events run offline too.
 - **Adding an event** is one entry in `EVENTS` (id, name, icon, colour, description, `mods`). For
   testing, `?dev=1&event=<id>` runs one immediately; it is never kept in the save.
 
+### 3.20 Mastery
+
+`src/data/mastery.js` (rules and numbers), `src/systems/mastery.js`. Melvor's mastery without the
+pool: every repeatable action has its own level from 1 to 99, earned by doing it.
+
+- **Which actions:** every gathering, cooking, firemaking and alchemy node, every smelting recipe, and
+  one mastery per metal for forging and per gem for jewellery (all pieces of that metal or gem share
+  it) — 77 in all. Tools, the agility course and farming have none.
+- **Mastery XP** per action = the action's base time in seconds, so an hour on anything is worth the
+  same; faster actions (tools, boosts) master faster. Levels use the skill XP table ÷ 72: level 25
+  after about two minutes, 50 after ~25 minutes, 75 after ~5 hours, 90 after ~21 hours and 99 after
+  ~50 hours on one action at base speed. Players reach 99 in a skill long before its best action is
+  mastered, so mastery is the long tail after 99.
+- **What each level gives** (above level 1, linear, so every level counts): +0.1% speed on that
+  action (+9.8% at 99); +0.25% chance to double its output (+24.5%) when it produces resources —
+  gathering, cooking, alchemy, smelting, and a log burning twice in Firemaking; +0.2% chance to keep
+  the ingredients and fuel (+19.6%) when it has any, forging and jewellery included. These add to the
+  skill's own speed and double chance.
+- **Skill-wide:** the skill header shows the mastery levels gained out of the maximum. Three
+  achievements reward the total: Well Practised (500 levels: +5% speed in every skill), Polymath
+  (2,500: +5% double chance in every skill) and Grandmaster (a first 99: +5% XP).
+- **Kept through prestige**, replayed offline (the replay speeds up as levels come), and on each save
+  load unknown actions are dropped and the mastery stats are rebuilt from the levels.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
 level, perks, achievements, pets, dungeon milestones, Titans defeated, agility obstacles (× their
 level), potions, tools, mini-game boosts, the bonfire, a running weekend event and Focus — into one
-object; `deriveStats` turns it into the numbers combat and skilling use.
+object; `deriveStats` turns it into the numbers combat and skilling use. Mastery is the one bonus
+that belongs to a single action rather than a skill: `resolveAction` attaches it to the action, and
+`intervalFor` and `completeAction` add it on top of the skill's numbers.
 Rules:
 
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
@@ -518,60 +548,74 @@ it is limited by how fast you can cut the logs it burns.
 `node tools/simulate.mjs --hours=150 --seed=N` plays the game through the same `Game` API as the UI,
 with a "sensible player" policy: gear up (forging a piece only if it beats what it wears), keep food
 stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
-comfortably (while its chests or unique still help) and training whatever gates the next metal tier;
-challenge the Titan whenever it wakes; tend the farm; build and upgrade the agility course (training
-agility up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
-it holds (15% early, ~2% at 7,000 tokens). Three seeds, 150 hours each:
+comfortably (while its chests or unique still help — otherwise it keeps fighting at the wall for half
+an hour) and training whatever gates the next metal tier; challenge the Titan whenever it wakes; tend
+the farm; build and upgrade the agility course (training agility up to a quarter of the time);
+prestige when a run stalls and adds a fair share of the tokens it holds (15% early, ~2% at 7,000
+tokens). Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|
-| First prestige | 0.8 h (stage 37, +16 tokens) | 0.8 h (stage 37, +16) | 1.3 h (stage 50, +27) |
-| Stage 50 / 100 / 120 | 1.1 / 5.0 / 7.9 h | 1.1 / 6.0 / 8.2 h | 0.9 / 6.0 / 7.7 h |
-| Stage 150 · best at 150 h | 31.6 h · 179 | 15.1 h · 190 | 53.1 h · 200 (at 140 h) |
-| Weapon tier 3 / 4 / 5 / 6 | 3.1 / 4.8 / 14.3 / 31.4 h | 6.6 / 7.6 / 11.5 / 15.6 h | 4.2 / 7.6 / 14.1 / 71.8 h |
-| Crown / Heart / Cleaver / Plate | 1.7 / 4.0 / 6.9 / 35.6 h | 1.7 / 4.2 / 7.6 / 18.2 h | 1.9 / 4.0 / 7.5 / 54.8 h |
-| Titans defeated by 12 h · by 150 h | 10 · 15 | 9 · 17 | 10 · 17 |
-| Agility obstacles 1 / 4 / 6 | 1.4 / 21.5 / 92.1 h | 1.4 / 15.8 / 54.8 h | 1.7 / 23.4 / 71.4 h |
-| Mining 50 / 75 | 14.0 / 31.5 h | 13.6 / — | 15.3 / 30.3 h |
-| Smithing 50 / 75 | 15.9 / 56.8 h | 13.9 / 31.8 h | 15.5 / 65.3 h |
-| Farming 50 / 75 · Agility 50 / 75 | 10.3 / 32.3 · 37.1 / 97.2 h | 10.3 / 34.3 · 20.0 / 77.5 h | 9.8 / 30.7 · 36.8 / 104.9 h |
-| Combat 99 | 46.6 h | 34.5 h | 72.9 h |
-| Prestiges in 150 h | 124 | 132 | 146 |
-| Deaths on non-boss stages | 69% | 19% | 34% |
+| First prestige | 1.9 h (stage 50, +27 tokens) | 1.1 h (stage 48, +25) | 1.8 h (stage 57, +33) |
+| Stage 50 / 100 / 120 | 1.2 / 6.1 / 9.5 h | 1.8 / 6.6 / 8.0 h | 1.0 / 6.7 / 13.3 h |
+| Stage 150 / 200 | 16.6 / 69.1 h | 15.6 / 84.5 h | 23.4 / 76.3 h |
+| Weapon tier 4 / 5 / 6 / 7 | 6.7 / 11.0 / 14.2 / 24.2 h | 7.4 / 11.4 / 18.4 / 43.6 h | 12.4 / 23.1 / 26.7 / 28.2 h |
+| Crown / Heart / Cleaver / Plate | 1.9 / 4.3 / 7.5 / 20.3 h | 2.4 / 4.1 / 7.2 / 18.4 h | 1.8 / 4.8 / 12.4 / 25.9 h |
+| Titans defeated by 12 h · by 150 h | 10 · 18 | 9 · 18 | 8 · 18 |
+| Agility obstacles 1 / 4 / 6 | 6.3 / 19.8 / 44.3 h | 2.2 / 17.3 / 34.3 h | 2.3 / 17.8 / 52.8 h |
+| Mining 50 / 75 | 17.6 / 139.5 h | 14.0 / — | 11.4 / 143.8 h |
+| Smithing 50 / 75 | 17.2 / 35.3 h | 13.7 / 29.6 h | 16.8 / 41.8 h |
+| Farming 50 / 75 · Agility 50 / 75 | 9.5 / 30.9 · 25.2 / 53.6 h | 10.1 / 30.3 · 23.1 / 60.3 h | 8.9 / 29.3 · 29.6 / 60.5 h |
+| Combat 99 | 35.1 h | 37.0 h | 28.1 h |
+| Prestiges in 150 h | 145 | 143 | 143 |
+| Deaths on non-boss stages | 19% | 14% | 10% |
+
+All three seeds stop at the stage 200 boss and spend the rest of the 150 hours there. Mining lags
+because Abyss drops outpace forging after about 11 hours, so the bot stops needing ore.
+
+These runs include mastery. The same seeds with mastery switched off reach stage 150 at 29–77 h and
+peak at 190–198: mastery helps a little, well inside the spread between seeds. Two fixes came out of
+the mastery pass: a spare unique used to arrive locked, and once a bag filled with locked spares,
+every new drop was salvaged on arrival, upgrades included (the bot sat on a tier 4 weapon for 150 h).
+And the bot used to hunt gems in the richest rock, which only gives gems its crafting level can't use.
 
 **Play styles.** The same simulator with other policies, to check that no style dominates
-(`--no-dungeons --no-titan` = a skiller who only fights to push; `--farm-ladder=push` = an AFK player
-who keeps fighting at the wall instead of running dungeons; `--farm-ladder` = farm the highest
-comfortable stage instead):
+(`--no-dungeons --no-titan` = a skiller who only fights to push; `--no-dungeons` = the same with the
+Titan; `--farm-ladder=push` = an AFK player who keeps fighting at the wall instead of running dungeons;
+`--farm-ladder` = farm the highest comfortable stage instead):
 
-| Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Weapon tier 4 / 5 |
-|---|---|---|---|---|
-| Skiller | 10.8–12.5 h | 145 h or later | — | 11–12 h / 88 h |
-| AFK pusher | 8.5–9.2 h | 13.3–14.5 h | 76–85 h | 14–37 h / 19–32 h |
-| Ladder farmer | 12.3–20.5 h | 26–31 h | — | 9–20 h |
-| Sensible (dungeons + Titan) | 5.0–6.2 h | 7.9–9.0 h | — (plateau 130–140) | 4.3–7.6 h / 8–11 h |
+| Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Stage 200 | Weapon tier 5+ |
+|---|---|---|---|---|---|
+| Skiller | 12.8–20.6 h | 80–104 h | — (best 120) | — | 43–72 h |
+| Skiller with the Titan | 7.9–10.4 h | 22–43 h | 113–141 h | — (best 150) | — |
+| Ladder farmer | 14–65 h | 19–88 h | 67–95 h, or never | — (best 137–180) | 35–101 h |
+| AFK pusher | 7.3–10.1 h | 9.5–14.2 h | 17–21 h | 72–74 h | 9–17 h |
+| Sensible (dungeons + Titan) | 6.1–6.7 h | 8.0–13.3 h | 15.6–23.4 h | 69–85 h | 11–23 h |
 
-Dungeons were tuned to about 1.5× the progress of spending the same time pushing the ladder (they
-are the active choice when a run stalls); the Titan alone brings a skiller's stage 100 forward by one
-to four hours (6.8–11.2 h instead of 10.8–12.5 h). Farming a comfortable stage is weaker than pushing
-— the first fall of each boss is worth the risk.
+Dungeons and the Titan put the sensible player ahead through stage 120 (dungeons were tuned to about
+1.5× the progress of pushing for the same time). Past stage 150 the Abyss's gear drops are the
+progression, so steady pushing does as well: both reach stage 200 in 70–85 h. The Titan alone moves a
+skiller's stage 100 forward by 3–10 hours. Farming a comfortable stage is weaker than pushing, because
+each boss's first fall is worth the risk.
 
 ### 5.3 Known risks
 
 - **The Abyss is a crawl on purpose.** Tokens grow polynomially with the stage and enemies ~8.5% per
   stage, so past ~150 each prestige at the wall adds only a few percent of power and the ladder moves
-  ~10 stages per 20–40 hours (stage 180–200 at 150 h). By then the goals are skills to 99, pets,
-  obstacle upgrades, Abyssal gear and the Paragon perk. A player who stops prestiging stops moving —
-  the simulator did exactly that until its prestige rule scaled with the tokens it holds.
-- **Late-game gold is mostly lost to prestige.** Sinks take over 90% of income while the agility
-  course is being built (the first ~50–90 h); after that income dwarfs the bounded sinks and 60–90%
-  of gold is still in hand when a run resets. That is what run currency does; the Essence Cache
-  (Shop) is the open-ended place for it, and the prestige screen says so.
-- **Drop-only tiers arrive with combat time.** The AFK pusher finds Dragonbone at ~37 h and Abyssal at
-  57–99 h, before a skiller forges runite (~88 h). That is the combat route's reward, but watch it.
-- **Bosses are the walls.** Since the 30-second boss timer, bosses are DPS checks and most deaths
-  happen on boss stages for two seeds out of three (the Phase 1 target was at least half on regular
-  stages). A boss that outlasts the timer is not a death, so the timer already absorbs most of the
+  ~10 stages per 10–20 hours. Every simulated player that gets there stops at the stage 200 boss
+  (reached at 69–85 h) for the rest of the 150 hours. By then the goals are skills to 99, mastery,
+  pets, obstacle upgrades, Abyssal gear and the Paragon perk. A player who stops prestiging stops
+  moving — the simulator did exactly that until its prestige rule scaled with the tokens it holds.
+- **Late-game gold piles up.** Sinks keep pace while the agility course is being built (finished at
+  34–53 h in the simulator); after that income dwarfs the bounded sinks, and over 150 hours only
+  13–18% of all gold earned is spent — much of the rest resets with the run. That is what run
+  currency does; the Essence Cache (Shop) is the open-ended place for it, and the prestige screen
+  says so.
+- **Drop-only tiers arrive with combat time.** The AFK pusher wears Dragonbone (tier 6) at 17–29 h
+  and Abyssal (tier 7) at 34–50 h, before a skiller forges runite (43–72 h). That is the combat
+  route's reward, but watch it.
+- **Bosses are the walls.** Since the 30-second boss timer, bosses are DPS checks and 80–90% of
+  deaths happen on boss stages (the Phase 1 target was at least half on regular stages). A boss that outlasts the timer is not a death, so the timer already absorbs most of the
   boss walls; if regular stages should bite more, raise `atkGrowth` rather than boss HP.
 - **Level 99 is fast** relative to Melvor (see §5.1).
 - **The simulator's player is simple.** It never uses mini-games, clicks or potions, buys perks in a
@@ -591,6 +635,8 @@ to four hours (6.8–11.2 h instead of 10.8–12.5 h). Farming a comfortable sta
 | Pet rarity | `PET_BASE` | `src/data/pets.js` |
 | Farming | crop `growMs`, `yield`, `xp`, `seedGold`; `FARMING_PLOTS` | `src/data/farming.js` |
 | Agility | slot `costGold`, `materials`, obstacle `mods`; `MAX_OBSTACLE_LEVEL` | `src/data/agility.js` |
+| Mastery | `MASTERY_XP_DIVISOR` (how slow), `MASTERY_PER_LEVEL` (what each level gives) | `src/data/mastery.js` |
+| Weekend events | `EVENTS` (bonuses), `EVENT_DAILY_CAP`, `EVENT_MILESTONES`, `EVENT_SHOP` | `src/data/events.js` |
 | The bonfire | `BASE.bonfire*` | `src/core/modifiers.js` |
 | More/less gold | `BALANCE.rewards.goldPerHp`; camp `growth`, `max` | `formulas.js`, `src/data/camp.js` |
 | Stronger prestige | `BALANCE.prestige.token*`; `BASE.tokenAtk` | `formulas.js`, `src/core/modifiers.js` |
@@ -648,7 +694,10 @@ disagreed, the implementation follows the simulator:
 16. **Events use the calendar, not the server:** a fixed weekend window in UTC with a daily token cap,
     so they work offline and cost no requests. A player can move their clock to reach one early;
     that only buys tokens for essence and diamonds, which don't show on any leaderboard.
-17. **Not yet built:** mastery (optional).
+17. **Mastery without the pool.** Melvor gives each skill its own mastery table (rock HP, cook success,
+    potion tiers) and a mastery pool with checkpoints. Here every action gets the same three linear
+    bonuses and the skill-wide reward is three achievements: one rule to learn, and the numbers stay
+    small enough not to disturb the pacing in §5.
 
 ## 7. What was cut from the concept
 
@@ -679,14 +728,14 @@ src/core/             xp · rng · state (defaults, migration) · modifiers · f
                       cloud client) · power (server-side numbers)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
-                      · events (weekend events, milestones, shop) · social (clan settings)
+                      · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
-                      · events · social (clan rewards) · progress (XP, pets, log)
+                      · events · mastery · social (clan rewards) · progress (XP, pets, log)
 src/ui/               render.js (HTML per tab) · format.js (numbers, time)
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
-test/                 node:test suites (game, loot, endgame, skills, events, saves, API; the API suite runs on an
+test/                 node:test suites (game, loot, endgame, skills, mastery, events, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table)
 docs/                 DESIGN.md (this) · ROADMAP.md · reports/ · research_notes/

@@ -1117,3 +1117,12 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .event-shop { display: flex; flex-direction: column; gap: 0.5rem; }
 .event-shop-item { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 10px; background: rgba(255,255,255,0.03); }
 .b { font-weight: 700; }
+
+/* Mastery */
+.mastery-row { display: flex; align-items: center; gap: 0.45rem; width: 100%; font-size: 0.72rem; color: var(--text-muted); }
+.mastery-row + .node-grid { margin-top: 0.6rem; }
+.mastery-lvl { white-space: nowrap; font-weight: 700; color: #c4b5fd; }
+.mastery-lvl.max { color: #facc15; }
+.mastery-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.45); overflow: hidden; }
+.mastery-bar > div { height: 100%; background: linear-gradient(90deg, #8b5cf6, #c4b5fd); }
+.mastery-total { font-size: 0.75rem; font-weight: 700; color: #c4b5fd; background: rgba(139,92,246,0.12); padding: 0.2rem 0.55rem; border-radius: 12px; white-space: nowrap; }

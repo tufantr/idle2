@@ -120,6 +120,11 @@ export function setDungeonRepeat(game, on) {
     game.state.combat.autoRepeat = !!on;
 }
 
+/** True if a copy of this unique is worn or in the bag. */
+export function ownsUnique(state, uniqueId) {
+    return [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === uniqueId);
+}
+
 function grantUnique(game, uniqueId) {
     const state = game.state;
     const u = UNIQUES[uniqueId];
@@ -129,10 +134,13 @@ function grantUnique(game, uniqueId) {
     item.uniqueId = u.id;
     item.color = '#f97316';
     item.affixes = u.affixes.map(a => ({ id: a.stat, name: a.name, stat: a.stat, value: a.value, format: 'pct' }));
-    item.locked = true; // uniques start protected
+    // The first copy starts protected. A spare stays unlocked, so a full bag can salvage it for essence
+    // instead of filling up with locked duplicates.
+    const spare = ownsUnique(state, u.id);
+    item.locked = !spare;
     addItem(game, item);
     bumpStat(game, 'uniquesFound');
-    log(game, `🌟 Unique item: ${u.name}!`, 'loot');
+    log(game, spare ? `🌟 Another ${u.name} — a spare, unlocked so it can be salvaged for essence.` : `🌟 Unique item: ${u.name}!`, 'loot');
     game.emit({ type: 'unique', item });
     return item;
 }
