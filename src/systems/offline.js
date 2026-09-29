@@ -74,8 +74,10 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     game.silent = true;
 
     let def = resolveAction(state);
+    let mastery = null;
     if (def) {
         mode = 'skill';
+        if (def.mastery) mastery = { name: def.label, from: def.mastery.level };
         let interval = intervalFor(def, game.derived);
         let remaining = simulated;
         let guard = 0;
@@ -88,6 +90,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             if (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level) { def = resolveAction(state); interval = intervalFor(def, game.derived); }
         }
         if (state.action) state.action.progress = 0;
+        if (mastery) mastery.to = masteryLevel(state, def.skill, def.mastery.key);
     } else if (state.combat.active) {
         mode = 'combat';
         // Replay in 1 s steps: tickCombat resolves every attack inside a step in time order, so bigger
@@ -109,6 +112,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     game.silent = wasSilent;
 
     const summary = { elapsed, simulated, capped: elapsed > cap, mode, stalledReason, ...diff(before, state) };
+    if (mastery && mastery.to > mastery.from) summary.mastery = mastery;
     summary.plotsReady = (state.farming?.plots || []).filter(p => p.crop && now >= p.readyAt).length;
     game.emit({ type: 'offline', summary });
     return summary;
@@ -142,5 +146,6 @@ export function describeOffline(summary) {
     for (const [id, s] of Object.entries(summary.skills)) {
         lines.push(`+${s.xp.toLocaleString()} ${SKILLS[id]?.name || id} XP${s.to > s.from ? ` (level ${s.from} → ${s.to})` : ''}`);
     }
+    if (summary.mastery) lines.push(`${summary.mastery.name} mastery ${summary.mastery.from} → ${summary.mastery.to}`);
     return lines;
 }
