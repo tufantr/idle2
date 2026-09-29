@@ -541,7 +541,9 @@ Rules:
 Targets from the research: Lv 20 ≤ 15 min (close: 10–20 min), Lv 50 in 2–4 h (met), Lv 99 in
 150–400 h (**faster** for most skills: 72–129 h — raise node XP less steeply if 99 should take
 longer). The full smithing pipeline, Farming and Agility are on target; Firemaking is quick because
-it is limited by how fast you can cut the logs it burns.
+it is limited by how fast you can cut the logs it burns. The table leaves out mastery, which makes an
+action up to ~10% faster the longer it is trained (§3.20): with it, the late levels come a few
+percent sooner.
 
 ### 5.2 Whole-game simulation
 
