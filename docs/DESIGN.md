@@ -258,13 +258,15 @@ the Abyss repeats with a depth counter and steeper growth.
 
 - **Sources:** combat kills (dominant), the Titan, selling materials and items, daily crates.
 - **Sinks:** camp upgrades, gear upgrades and reforges (with essence), supplies, farming seeds, and
-  agility obstacles and their upgrades — the long-term sink. In the simulator 93–95% of all gold
-  earned is spent (79–96% in the second half of an 80-hour run), mostly on gear upgrades and agility.
+  agility obstacles and their upgrades — the long-term sink. In the simulator over 90% of gold is spent
+  while the course is being built (the first ~50–90 hours), mostly on gear upgrades and agility; see
+  §5.3 for the late game.
 - **Camp** (`src/data/camp.js`) — the run-scoped power layer, bought with gold and **reset on
   prestige**: Whetstone +5% ATK, Armour Rack +5% DEF, Hearth +4% HP per level, multiplicative, max
   25 levels each (×3.39 / ×3.39 / ×2.67 when maxed), cost `base × 1.30^level` (60 / 60 / 50 base).
   It turns each new run into a climb and gives gold a job.
-- **Supplies** (gold shop): coal, logs, herbs, rabbits and bait priced in "kills at your best stage"
+- **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 80
+  kills — the open-ended late-game sink) priced in "kills at your best stage"
   (25–40 kills), so the price scales with income and can never be resold at a profit (the
   prototype's Coal Wagon printed +350 gold per purchase).
 - **Gold resets on prestige.** It is run currency, like Clicker Heroes' gold.
@@ -282,7 +284,8 @@ the Abyss repeats with a depth counter and steeper growth.
 - **Skill points:** 1 per prestige, plus 1 for every 25 stages of all-time best (each threshold pays
   once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
   (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
-  and food healing), Fortune (+5% gold and drop chance).
+  and food healing), Fortune (+5% gold and drop chance), and Paragon (+1% ATK, DEF and HP, 200 levels)
+  so skill points always have a use once the others are full.
 - **Why polynomial tokens:** see §6.1 — an exponential token formula ran away in the simulator.
 
 ### 3.10 Fishing, Firemaking, Farming and Agility
@@ -464,22 +467,28 @@ it is limited by how fast you can cut the logs it burns.
 ### 5.2 Whole-game simulation
 
 `node tools/simulate.mjs --hours=150 --seed=N` plays the game through the same `Game` API as the UI,
-with a "sensible player" policy: gear up, keep food stocked, fight until stalled; when stalled,
-alternate between farming the deepest dungeon it clears comfortably (30 minutes) and training
-whatever gates the next metal tier; challenge the Titan whenever it wakes; prestige when a run
-stalls. Three seeds, 150 hours each:
+with a "sensible player" policy: gear up (forging a piece only if it beats what it wears), keep food
+stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
+comfortably (while its chests or unique still help) and training whatever gates the next metal tier;
+challenge the Titan whenever it wakes; tend the farm; build and upgrade the agility course (training
+agility up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
+it holds (15% early, ~2% at 7,000 tokens). Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|
-| First prestige | 1.2 h (stage 51, +27 tokens) | 0.8 h (stage 37, +16) | 0.8 h (stage 37, +16) |
-| Stage 50 / 100 / 120 | 0.8 / 6.2 / 8.5 h | 1.1 / 5.7 / 9.0 h | 1.1 / 5.0 / 7.9 h |
-| Weapon tier 2 / 3 / 4 / 5 | 0.4 / 2.5 / 7.6 / 7.9 h | 0.6 / 1.9 / 4.3 / 10.5 h | 0.6 / 3.1 / 5.6 / — |
-| Crown / Heart / Cleaver (uniques) | 1.9 / 3.5 / 7.5 h | 1.7 / 3.2 / 6.5 h | 1.7 / 4.0 / 6.2 h |
-| Titans defeated by 12 h | 10 | 9 | 9 |
-| Mining 50 / 75 | 18.7 / 84.3 h | 17.4 / 85.8 h | 16.6 / 81.6 h |
-| Smithing 50 · Combat 99 | 19.4 h · 22.0 h | 19.5 h · 23.4 h | 20.0 h · 21.8 h |
-| Best stage at 150 h | 140 | 130 | 138 |
-| Deaths on non-boss stages | 6% | 10% | 74% |
+| First prestige | 0.8 h (stage 37, +16 tokens) | 0.8 h (stage 37, +16) | 1.3 h (stage 50, +27) |
+| Stage 50 / 100 / 120 | 1.1 / 5.0 / 7.9 h | 1.1 / 6.0 / 8.2 h | 0.9 / 6.0 / 7.7 h |
+| Stage 150 · best at 150 h | 31.6 h · 179 | 15.1 h · 190 | 53.1 h · 200 (at 140 h) |
+| Weapon tier 3 / 4 / 5 / 6 | 3.1 / 4.8 / 14.3 / 31.4 h | 6.6 / 7.6 / 11.5 / 15.6 h | 4.2 / 7.6 / 14.1 / 71.8 h |
+| Crown / Heart / Cleaver / Plate | 1.7 / 4.0 / 6.9 / 35.6 h | 1.7 / 4.2 / 7.6 / 18.2 h | 1.9 / 4.0 / 7.5 / 54.8 h |
+| Titans defeated by 12 h · by 150 h | 10 · 15 | 9 · 17 | 10 · 17 |
+| Agility obstacles 1 / 4 / 6 | 1.4 / 21.5 / 92.1 h | 1.4 / 15.8 / 54.8 h | 1.7 / 23.4 / 71.4 h |
+| Mining 50 / 75 | 14.0 / 31.5 h | 13.6 / — | 15.3 / 30.3 h |
+| Smithing 50 / 75 | 15.9 / 56.8 h | 13.9 / 31.8 h | 15.5 / 65.3 h |
+| Farming 50 / 75 · Agility 50 / 75 | 10.3 / 32.3 · 37.1 / 97.2 h | 10.3 / 34.3 · 20.0 / 77.5 h | 9.8 / 30.7 · 36.8 / 104.9 h |
+| Combat 99 | 46.6 h | 34.5 h | 72.9 h |
+| Prestiges in 150 h | 124 | 132 | 146 |
+| Deaths on non-boss stages | 69% | 19% | 34% |
 
 **Play styles.** The same simulator with other policies, to check that no style dominates
 (`--no-dungeons --no-titan` = a skiller who only fights to push; `--farm-ladder=push` = an AFK player
@@ -500,10 +509,15 @@ to four hours (6.8–11.2 h instead of 10.8–12.5 h). Farming a comfortable sta
 
 ### 5.3 Known risks
 
-- **The late game is policy-limited in the simulator.** After ~10 h the sensible bot keeps farming
-  the Orc Stronghold (tier-4 chests) instead of pushing the Abyss, and never finds the Dragon's Lair
-  "comfortable", so it plateaus at 130–140 while the AFK pusher reaches 150 at ~80 h. Real players will
-  switch; the Abyss and the last dungeon need their own pass once Phase 4 adds late-game sinks.
+- **The Abyss is a crawl on purpose.** Tokens grow polynomially with the stage and enemies ~8.5% per
+  stage, so past ~150 each prestige at the wall adds only a few percent of power and the ladder moves
+  ~10 stages per 20–40 hours (stage 180–200 at 150 h). By then the goals are skills to 99, pets,
+  obstacle upgrades, Abyssal gear and the Paragon perk. A player who stops prestiging stops moving —
+  the simulator did exactly that until its prestige rule scaled with the tokens it holds.
+- **Late-game gold is mostly lost to prestige.** Sinks take over 90% of income while the agility
+  course is being built (the first ~50–90 h); after that income dwarfs the bounded sinks and 60–90%
+  of gold is still in hand when a run resets. That is what run currency does; the Essence Cache
+  (Shop) is the open-ended place for it, and the prestige screen says so.
 - **Drop-only tiers arrive with combat time.** The AFK pusher finds Dragonbone at ~37 h and Abyssal at
   57–99 h, before a skiller forges runite (~88 h). That is the combat route's reward, but watch it.
 - **Bosses are the walls.** Since the 30-second boss timer, bosses are DPS checks and most deaths

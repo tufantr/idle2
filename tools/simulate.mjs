@@ -15,10 +15,12 @@ import { METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq }
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS } from '../src/data/items.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { skillLevel } from '../src/core/modifiers.js';
-import { PERKS } from '../src/data/perks.js';
+import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
 import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
-import { itemUpgradeCost } from '../src/systems/inventory.js';
+import { itemUpgradeCost, itemScore, goldShopPrice } from '../src/systems/inventory.js';
+import { generateEquipment } from '../src/core/formulas.js';
+import { RARITIES } from '../src/data/items.js';
 import { resolveAction } from '../src/systems/skilling.js';
 import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_BOSS_TIME_MS } from '../src/data/dungeons.js';
 import { dungeonPreview, dungeonUnlocked, fightPreview } from '../src/systems/dungeon.js';
@@ -160,15 +162,27 @@ function train(skillId, minutes = 20) {
     return { kind: 'node', skill: skillId, node: node.id, until: () => now >= end, why: `train ${skillId} (${node.name})` };
 }
 
+// A forged piece's expected score (common quality), to compare with what is worn: an upgraded or
+// rare piece of a lower metal can beat a fresh common one, and forging it anyway loops forever.
+function forgedScore(metal, type) {
+    const probe = generateEquipment({ type, tier: metal.tier, power: RESOURCES[metal.bar].power, materialName: metal.name, rarity: RARITIES[0] }, -1);
+    return itemScore(probe);
+}
+const forgeAttempts = {};
 function gearTask() {
     for (const type of ARMOUR_PRIORITY) {
         // The best metal this piece can be forged in at the current smithing level.
         const metal = [...METALS].reverse().find(m => lvl('smithing') >= smithLevelReq(m, type));
         if (!metal || equippedTier(type) >= metal.tier) continue;
+        const worn = Math.min(...TYPE_SLOTS[type].map(slot => itemScore(S.equipped[slot])));
+        if (worn >= forgedScore(metal, type)) continue;
+        const key = `${metal.bar}:${type}`;
+        if ((forgeAttempts[key] || 0) >= 5) continue; // it keeps rolling worse than what we wear; move on
         const cost = SMITHING_BAR_COST[type];
         const t = obtain(metal.bar, cost);
         if (t) return t;
         const made = S.stats.itemsCrafted;
+        forgeAttempts[key] = (forgeAttempts[key] || 0) + 1;
         return { kind: 'smith', type, bar: metal.bar, until: () => S.stats.itemsCrafted > made, why: `forge ${metal.name} ${type}` };
     }
     return null;
@@ -221,11 +235,17 @@ function jewelTask() {
 }
 
 function spendPoints() {
-    const order = ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance'];
+    const order = ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'];
     let guard = 0;
     while (S.prestige.skillPoints > 0 && guard++ < 100) {
         const perk = order.map(id => PERKS.find(p => p.id === id)).find(p => S.perks[p.id] < p.max);
         if (!perk || !game.buyPerk(perk.id)) break;
+    }
+    // Spare gold buys essence (after the camp, and never the gold saved for the next obstacle).
+    const reserve = nextSlot() >= 0 ? obstacleCost(S, nextSlot()).gold : 0;
+    for (let guard = 0; guard < 50 && S.resources.essence < 3000; guard++) {
+        const price = goldShopPrice(game, GOLD_SHOP.find(i => i.id === 'buy_essence'));
+        if (S.gold - price < reserve + 20 * price || !game.buyGoldShopItem('buy_essence')) break;
     }
     // Essence into the weapon, then body.
     for (const slot of ['Weapon', 'Body', 'Shield']) {
@@ -266,6 +286,10 @@ function dungeonTask() {
     });
     const pick = ready[ready.length - 1];
     if (!pick) return null;
+    // Only worth it while the dungeon still pays: its unique isn't assembled yet, or its chests can
+    // still hold gear at least as good as the weapon we wear.
+    const hasUnique = [...S.inventory, ...Object.values(S.equipped)].some(i => i && i.uniqueId === pick.unique);
+    if (hasUnique && pick.chestTier < (S.equipped.Weapon?.tier || 0)) return null;
     const end = now + 30 * 60000;
     return {
         kind: 'dungeon', id: pick.id, why: `run ${pick.name}`,
@@ -296,6 +320,7 @@ function ladderFarmTask() {
 }
 
 let lastStallWasDungeon = false;
+let agilityMs = 0; // time spent training agility for the next slot
 function stallTask() {
     if (!needTraining) return null;
     if (!lastStallWasDungeon && FARM_LADDER) { lastStallWasDungeon = true; needTraining = false; return ladderFarmTask(); }
@@ -346,13 +371,25 @@ function buildObstacles() {
 // When the next obstacle's gold is within reach: train agility for its slot, then gather materials.
 function agilityTask() {
     const slot = nextSlot();
-    if (slot < 0) return null;
+    if (slot < 0) {
+        // Course complete: train agility when an upgrade we can afford is waiting on the level.
+        if (!S.unlocks.agility || agilityMs > 0.25 * now) return null;
+        const waiting = S.agility.built.map((id, i) => (id ? upgradeInfo(S, i) : null)).filter(Boolean)
+            .find(info => S.gold >= info.gold && lvl('agility') < info.levelReq);
+        if (!waiting) return null;
+        const start = now;
+        const end = now + 30 * 60000;
+        return { kind: 'agility', why: `train agility toward ${waiting.levelReq}`, until: () => { if (now >= end || lvl('agility') >= waiting.levelReq) { agilityMs += now - start; return true; } return false; } };
+    }
     const cost = obstacleCost(S, slot);
     if (S.gold < cost.gold * 0.5) return null;
     const target = AGILITY_SLOTS[slot].levelReq;
     if (lvl('agility') < target) {
-        if (!S.agility.built.some(Boolean)) return null;
-        return { kind: 'agility', why: `train agility to ${target}`, until: () => lvl('agility') >= target };
+        // A real player interleaves: at most a quarter of the time on the course, half an hour at a go.
+        if (!S.agility.built.some(Boolean) || agilityMs > 0.25 * now) return null;
+        const start = now;
+        const end = now + 30 * 60000;
+        return { kind: 'agility', why: `train agility toward ${target}`, until: () => { if (now >= end || lvl('agility') >= target) { agilityMs += now - start; return true; } return false; } };
     }
     for (const [id, qty] of Object.entries(cost.materials)) {
         if (RESOURCES[id].category === 'gem') continue; // gems come from mining luck; wait for them
@@ -370,7 +407,10 @@ function decide() {
     // Prestige when the run's tokens are a meaningful addition.
     if (game.canPrestige() && now - lastStageGainAt > 20 * 60000) {
         const p = game.prestigePreview();
-        if (p.tokens >= Math.max(2, 0.15 * S.prestige.tokens)) {
+        // Worth it when the run adds a decent share of what we hold; the share asked for shrinks as
+        // tokens pile up (15% early, ~2% at 7,000), since a late run can only add a few percent.
+        const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
+        if (p.tokens >= Math.max(2, share * S.prestige.tokens)) {
             runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
             game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
         }
@@ -520,6 +560,10 @@ const spentRatio = (e, sp) => (e > 0 ? `${Math.round(100 * sp / e)}%` : 'n/a');
 const lostToPrestige = S.stats.goldEarned - S.stats.goldSpent - S.gold;
 console.log(`Gold spent by sink: ${Object.entries(spentOn).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${spentRatio(S.stats.goldEarned, v)}`).join(', ')}; left at prestige ${spentRatio(S.stats.goldEarned, lostToPrestige)}.`);
 console.log(`Gold sinks: ${spentRatio(S.stats.goldEarned, S.stats.goldSpent)} of all gold earned was spent; second half: ${steady ? spentRatio(S.stats.goldEarned - steady.earned, S.stats.goldSpent - steady.spent) : 'n/a'}. Agility: ${S.agility.built.filter(Boolean).length}/6 obstacles, level ${lvl('agility')}. Farming level ${lvl('farming')}, ${S.stats.cropsHarvested} crops.`);
+if (VERBOSE) for (const d of DUNGEONS) {
+    const p = dungeonPreview(game.derived, d);
+    console.log(`  ${d.name}: boss ${p.bossFight.killSeconds.toFixed(1)} s to kill / ${p.bossFight.surviveSeconds.toFixed(1)} s to survive; last elite ${p.eliteFight.killSeconds.toFixed(1)} / ${p.eliteFight.surviveSeconds.toFixed(1)} s`);
+}
 console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}`);
 console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.equipped[s].upgrade ? '+' + S.equipped[s].upgrade : ''}` : null).filter(Boolean).join(', ')}`);
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);

@@ -18,7 +18,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 0 — Stop the bleeding | ✅ Done |
 | 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | ✅ Done |
-| 3 — Loot and endgame depth | 🟡 Loot, dungeons, uniques, Titan and pets done; mastery and a late-game pass open |
+| 3 — Loot and endgame depth | ✅ Done (mastery, optional, not built) |
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ⬜ Not started (backend groundwork done) |
 
@@ -99,7 +99,7 @@ over 10 min); a new save reveals a second tab within 3 min and first gear within
 simulator forges its first sword within the first few minutes); export → import round-trips (tests
 for both formats). Still open: an active/idle ratio check once the simulator can play mini-games.
 
-## Phase 3 — Loot and endgame depth 🟡
+## Phase 3 — Loot and endgame depth ✅
 
 Give combat its own rewards beyond gold and materials, and give the late game goals besides stages.
 Depends on Phase 2's versioned saves (items gain new fields).
@@ -131,9 +131,11 @@ Depends on Phase 2's versioned saves (items gain new fields).
       +3% to that skill (combat: ATK and DEF), kept through prestige; a Collection page lists pets
       and uniques
 - [ ] **Mastery** per node (Melvor model: doubling, preservation, interval) — M, optional
-- [ ] **Late-game pass**: the simulator's sensible player plateaus at stage 130–140 because it keeps
-      farming a tier-4 dungeon; the Abyss and the Dragon's Lair need tuning together with Phase 4's
-      sinks — S
+- [x] **Late-game pass**: the simulator's player now reaches stage 180–200 in 150 h, farms the
+      Dragon's Lair (Dragonheart Plate at 18–55 h) and finds Abyssal gear; the plateau was the bot's
+      policy (forging pieces weaker than it wore, farming outgrown dungeons, a fixed prestige
+      threshold). Added the Essence Cache (open-ended gold sink) and the Paragon perk (open-ended
+      skill-point sink); the prestige screen lists what survives and says to spend gold first
 
 **Exit:** simulator shows drops as treats rather than the gear spine for every play style (met: an
 AFK pusher's weapon reaches tier 4 at 14–37 h vs 11–12 h for a skiller); 0.2% capstones (met: a
@@ -160,8 +162,9 @@ Phase 3 (dungeons and drops create the demand these skills feed).
       the data is well-formed
 
 **Exit (met):** every resource id has at least one consumer (`test/skills.test.mjs` scans the data);
-Farming progresses while another action runs (plots are timestamps); gold sinks absorb 93–95% of all
-income in the simulator and 79–96% of the second half of an 80-hour run.
+Farming progresses while another action runs (plots are timestamps); gold sinks absorb over 90% of
+income while the agility course is being built (the first ~50–90 simulated hours). After that, late
+Abyss income dwarfs every bounded sink and most gold resets with the run — see DESIGN §5.3.
 
 ## Phase 5 — Social layer ⬜
 

@@ -13,7 +13,9 @@ export const PERKS = [
     { id: 'scholar',   name: 'Scholar',   icon: '📖', desc: '+3% XP from all skills',               max: 15, mods: { xpMult: 0.03 } },
     { id: 'endurance', name: 'Endurance', icon: '🌙', desc: '+2 hours of offline progress',         max: 6,  mods: { offlineHours: 2 } },
     { id: 'gourmet',   name: 'Gourmet',   icon: '🍖', desc: '+5% auto-eat threshold, +5% food healing', max: 6, mods: { autoEatThreshold: 0.05, foodMult: 0.05 } },
-    { id: 'fortune',   name: 'Fortune',   icon: '🍀', desc: '+5% gold and drop chance from combat', max: 10, mods: { goldMult: 0.05, dropMult: 0.05 } }
+    { id: 'fortune',   name: 'Fortune',   icon: '🍀', desc: '+5% gold and drop chance from combat', max: 10, mods: { goldMult: 0.05, dropMult: 0.05 } },
+    // For the long tail: every skill point has somewhere to go once the other perks are full.
+    { id: 'paragon',   name: 'Paragon',   icon: '👑', desc: '+1% ATK, DEF and Max HP per level',    max: 200, mods: { atkMult: 0.01, defMult: 0.01, hpMult: 0.01 } }
 ];
 
 export function perkById(id) {
@@ -27,5 +29,7 @@ export const GOLD_SHOP = [
     { id: 'buy_logs',    name: 'Firewood Bundle',  desc: '25 logs for the kitchen.',       gives: { normal_log: 25 },  costKills: 25 },
     { id: 'buy_guam',    name: 'Herb Pouch',       desc: '10 guam leaves.',                gives: { guam_leaf: 10 },   costKills: 30 },
     { id: 'buy_rabbit',  name: 'Hunter\'s Cache',  desc: '10 raw rabbits.',                gives: { raw_rabbit: 10 },  costKills: 25 },
-    { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 fishing bait.',               gives: { fishing_bait: 25 }, costKills: 30 }
+    { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 fishing bait.',               gives: { fishing_bait: 25 }, costKills: 30 },
+    // The open-ended sink: essence at about the rate combat drops it, for upgrades and reforges.
+    { id: 'buy_essence', name: 'Essence Cache',    desc: '10 monster essence for upgrades and reforges.', gives: { essence: 10 }, costKills: 80 }
 ];

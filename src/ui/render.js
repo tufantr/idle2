@@ -917,8 +917,9 @@ export function renderPrestigeModal(game) {
     return `<div class="modal-content">
         <div class="modal-header">✨ Prestige</div>
         <div class="modal-body">
-            <div class="prestige-box"><h4>You keep</h4><span>All skills and levels · all equipment, upgrades and tools · all materials, essence and potions · achievements, perks and tokens</span></div>
-            <div class="prestige-box"><h4>You lose</h4><span>Stage progress (restart at stage ${p.startStage}) · ${fmt(state.gold)} gold · camp upgrades (${Object.values(state.camp).reduce((a, b) => a + b, 0)} levels)</span></div>
+            <div class="prestige-box"><h4>You keep</h4><span>All skills and levels · all equipment, upgrades and tools · all materials, essence and potions · achievements, perks and tokens · pets, uniques, dungeon clears, Titans · the agility course and farm</span></div>
+            <div class="prestige-box"><h4>You lose</h4><span>Stage progress (restart at stage ${p.startStage}) · ${fmt(state.gold)} gold · camp upgrades (${Object.values(state.camp).reduce((a, b) => a + b, 0)} levels)</span>
+                ${state.gold > 0 ? `<div class="muted small">Gold is run currency: spend it first — agility obstacles and upgrades, seeds, gear upgrades, or an Essence Cache in the Shop.</div>` : ''}</div>
             <div class="prestige-box highlight"><h4>You gain</h4><span class="prestige-reward">+${p.tokens} tokens</span> <span class="muted">(→ ${fmt(p.tokensAfter)} total, +${Math.round(p.tokensAfter * 0.5)}% ATK/DEF)</span><br><span class="sp-text">+${p.skillPoints} skill points</span></div>
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmPrestige()">Prestige now</button></div>
