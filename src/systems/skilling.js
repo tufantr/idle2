@@ -200,5 +200,6 @@ export function completeAction(game, def, { offline = false } = {}) {
     }
 
     grantXp(game, skill, def.xp * derived.xpMult);
+    game.emit({ type: 'actionComplete', skill });
     return true;
 }

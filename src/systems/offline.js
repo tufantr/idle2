@@ -56,6 +56,9 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     const before = snapshot(state);
     let mode = 'rest';
     let stalledReason = null;
+    // Replay silently: hours of per-hit events would only be thrown away; the summary reports instead.
+    const wasSilent = game.silent;
+    game.silent = true;
 
     const def = resolveAction(state);
     if (def) {
@@ -72,19 +75,23 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
         if (state.action) state.action.progress = 0;
     } else if (state.combat.active) {
         mode = 'combat';
-        // Replay in 100 ms steps; combat stops on its own if the player dies.
-        const step = 100;
+        // Replay in 1 s steps: tickCombat resolves every attack inside a step in time order, so bigger
+        // steps give the same fight with a tenth of the work. Combat stops on its own if the player dies.
+        const step = 1000;
         let remaining = simulated;
         const savedNow = game.now;
         game.now = now - simulated;
         while (remaining > 0 && state.combat.active) {
-            tickCombat(game, step);
-            remaining -= step;
-            game.now += step;
+            const dt = Math.min(step, remaining);
+            tickCombat(game, dt);
+            remaining -= dt;
+            game.now += dt;
+            if (game.dirty) game.recompute(); // level-ups and potion charges take effect mid-replay
         }
         game.now = savedNow;
         if (!state.combat.active) stalledReason = 'you were defeated and retreated';
     }
+    game.silent = wasSilent;
 
     const summary = { elapsed, simulated, capped: elapsed > cap, mode, stalledReason, ...diff(before, state) };
     game.emit({ type: 'offline', summary });

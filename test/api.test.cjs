@@ -66,7 +66,7 @@ test('register, login, save and load round-trip', async () => {
 
     assert.equal((await post('/save', { state: { gold: 1 } }, token)).status, 400, 'save without version rejected');
     assert.equal((await post('/save', { state: { version: 99 } }, token)).status, 400, 'future version rejected');
-    const save = await post('/save', { state: { version: 2, gold: 1234 } }, token);
+    const save = await post('/save', { state: { version: 3, gold: 1234 } }, token);
     assert.equal(save.status, 200);
 
     const load = await fetch(base + '/load', { headers: { Authorization: `Bearer ${token}` } });

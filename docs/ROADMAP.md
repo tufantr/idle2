@@ -17,7 +17,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 |---|---|
 | 0 — Stop the bleeding | ✅ Done |
 | 1 — Core rewrite + simulator | ✅ Done |
-| 2 — Retention scaffolding | 🟡 About half done |
+| 2 — Retention scaffolding | ✅ Done |
 | 3 — Loot and endgame depth | ⬜ Not started |
 | 4 — Skill breadth | ⬜ Not started |
 | 5 — Social layer | ⬜ Not started (backend groundwork done) |
@@ -68,7 +68,7 @@ tests and the balance simulator.
 tokens; a tier-N common beats a tier-(N−1) legendary (test); at least half of deaths on non-boss
 stages averaged over 3 seeds. *Current: all met except Lv 20 (10–20 min) — see DESIGN §5.*
 
-## Phase 2 — Retention scaffolding 🟡
+## Phase 2 — Retention scaffolding ✅
 
 What a returning player touches first: offline, onboarding, saves, the daily loop, UI comfort.
 
@@ -79,19 +79,23 @@ What a returning player touches first: offline, onboarding, saves, the daily loo
 - [x] Versioned save, prototype-save migration, export/import string
 - [x] Mini-games as timed opportunities
 - [x] Number formatting (K/M/B), toasts instead of `alert()`, reduced-motion option, mobile tab strip
-- [ ] **Idle "focus" bonus**: +15% skill speed after 60 s without input, also applied offline — S
-- [ ] **Bankable daily crate**: ripens at 20 h, holds up to 3, pays ~30 min of current income — S
-- [ ] **Rolling save backups** (1 min / 5 min / 20 min / 1 h) and compressed export strings — S
-- [ ] **Queued modals** so a toast or a second modal never replaces the offline report — S
-- [ ] **Advisor panel**: re-openable list of next goals with a highlighted next action — M
-- [ ] **Per-tab rendering on change** instead of a 250 ms full re-render; keyboard navigation and
-      screen-reader labels — M
-- [ ] **Offline replay batching**: whole-action batches for very long combat replays (current 100 ms
-      steps can take a few seconds for 24 h on slow phones) — S
+- [x] **Idle "focus" bonus**: +15% skill and attack speed after 60 s without input, also offline
+- [x] **Bankable daily crates**: one ripens every 20 h, up to 3 wait; gold, essence, materials, a gem
+      (save format v3 with a migration from v2)
+- [x] **Save backups**: three rotating slots every 10 min, plus on load, before prestige and before a
+      hard reset or import; restorable from Settings. **Compressed exports** (`FI3:`, deflate)
+- [x] **Queued modals** (the offline report is never hidden by the login prompt); Escape closes
+- [x] **Advisor panel** ("Next steps" on the combat tab): daily crate, skill points, better gear in the
+      bag, the next piece to forge, food, camp, tools, prestige timing, what gates the next metal
+- [x] **Render on change** (revision counter; at most every 150 ms, at least every 1 s); keyboard
+      activation of cards, focus kept across re-renders, ARIA labels, visible focus rings
+- [x] **Offline replay** in 1 s combat steps, silent (no per-hit events); a 12 h replay runs in well
+      under a second
 
-**Exit:** offline and online give the same results for the same action and duration (add a test);
-a new save reveals a second tab within 3 min and first gear within 10 min; export → import
-round-trips (test exists); active/idle ratio ≤ 2× in the simulator once it can play mini-games.
+**Exit:** offline and online give the same results for the same action and duration (test: ±1 ore
+over 10 min); a new save reveals a second tab within 3 min and first gear within 10 min (the
+simulator forges its first sword within the first few minutes); export → import round-trips (tests
+for both formats). Still open: an active/idle ratio check once the simulator can play mini-games.
 
 ## Phase 3 — Loot and endgame depth ⬜
 

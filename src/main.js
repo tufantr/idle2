@@ -1,7 +1,10 @@
 // Browser bootstrap: load the save, run the loop, render, and expose window.FI for the HTML handlers.
 
 import { Game } from './game.js';
-import { loadLocal, saveLocal, clearLocal, exportString, importString, CloudClient, chooseSave, LOCAL_KEY } from './core/save.js';
+import {
+    loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
+    writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
+} from './core/save.js';
 import { describeOffline } from './systems/offline.js';
 import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, TABS } from './ui/render.js';
 import { isUnlocked } from './data/unlocks.js';
@@ -10,7 +13,8 @@ import { SKILLS } from './data/skills.js';
 import { RESOURCES } from './data/resources.js';
 
 const TICK_MS = 100;
-const RENDER_MS = 250;
+const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
+const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
 const AUTOSAVE_MS = 15000;
 const CLOUD_SAVE_MS = 60000;
 
@@ -21,24 +25,29 @@ const ui = {
     craftGem: 'amethyst',
     invFilter: 'all',
     cloudStatus: '',
-    modal: null,
+    saveIo: '',          // contents of the export/import box, kept across re-renders
     lastRender: 0,
-    navDirty: true
+    renderedRevision: -1,
+    modalOpen: false,
+    modalQueue: []
 };
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
-let game = new Game(loadLocal(Date.now()), Date.now());
+const loaded = loadLocal(Date.now());
+let game = new Game(loaded, Date.now());
 if (params.has('dev')) game.state.settings.devUnlockAll = true;
 
 // ---------- boot ----------
 
+if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
 const offlineSummary = game.resumeFromSave(Date.now());
-if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderOfflineModal(describeOffline(offlineSummary)));
+if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderOfflineModal(describeOffline(offlineSummary)), 'offline');
 if (cloud.loggedIn) syncFromCloud();
-else if (!localStorage.getItem('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderAuthModal()); localStorage.setItem('fantasyIdle.authSeen', '1'); }
+else if (!localStorage.getItem('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderAuthModal(), 'auth'); localStorage.setItem('fantasyIdle.authSeen', '1'); }
 
 let lastSave = Date.now();
+let lastBackup = Date.now();
 let lastCloudSave = Date.now();
 
 let tickErrorShown = false;
@@ -47,7 +56,7 @@ setInterval(() => {
     // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
     try {
         const summary = game.tick(now);
-        if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)));
+        if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
     } catch (err) {
         console.error('Tick failed', err);
         if (!tickErrorShown) { toast('Something went wrong in the game loop — details in the console.', 'error'); tickErrorShown = true; }
@@ -55,28 +64,51 @@ setInterval(() => {
     }
     handleEvents(game.drainEvents());
     if (now - lastSave > AUTOSAVE_MS) save(now);
+    if (now - lastBackup > BACKUP_INTERVAL_MS) { lastBackup = now; rotateBackup(game.serialize(now), now); }
     if (cloud.loggedIn && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
-    try { if (now - ui.lastRender > RENDER_MS) render(); } catch (err) { console.error('Render failed', err); }
+    const changed = game.revision !== ui.renderedRevision;
+    if ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS) {
+        try { render(); } catch (err) { console.error('Render failed', err); }
+    }
 }, TICK_MS);
 
 function frame() { patchLive(game, ui); requestAnimationFrame(frame); }
 requestAnimationFrame(frame);
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(Date.now()); });
+window.addEventListener('pagehide', () => save(Date.now()));
 window.addEventListener('beforeunload', () => save(Date.now()));
+
+// Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone.
+let lastInputNote = 0;
+const noteInput = () => { const now = Date.now(); if (now - lastInputNote > 1000 || game.derived.focused) { lastInputNote = now; game.noteInput(now); } };
+document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
+document.addEventListener('keydown', event => {
+    noteInput();
+    // Keyboard access for the clickable cards (role="button").
+    const target = event.target;
+    if ((event.key === 'Enter' || event.key === ' ') && target?.getAttribute?.('role') === 'button') {
+        event.preventDefault();
+        target.click();
+    }
+    if (event.key === 'Escape' && ui.modalOpen) closeModal();
+}, { capture: true });
 
 // ---------- rendering ----------
 
 function render() {
     ui.lastRender = Date.now();
+    ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
-    const nav = document.getElementById('nav');
-    nav.innerHTML = renderNav(game, ui);
+    document.getElementById('nav').innerHTML = renderNav(game, ui);
     document.getElementById('header').innerHTML = renderHeader(game, ui, cloud);
     const focus = document.activeElement;
-    const interacting = focus && ['SELECT', 'INPUT', 'TEXTAREA'].includes(focus.tagName) && document.getElementById('tab').contains(focus);
+    const tab = document.getElementById('tab');
+    const interacting = focus && ['SELECT', 'INPUT', 'TEXTAREA'].includes(focus.tagName) && tab.contains(focus);
     if (interacting) return; // don't yank an open dropdown or a drag out of the user's hands
-    document.getElementById('tab').innerHTML = renderTab(game, ui, cloud);
+    const focusedId = focus && tab.contains(focus) ? focus.id : null;
+    tab.innerHTML = renderTab(game, ui, cloud);
+    if (focusedId) document.getElementById(focusedId)?.focus();
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
 }
 
@@ -85,27 +117,30 @@ function handleEvents(events) {
         switch (ev.type) {
             case 'levelUp': toast(`${SKILLS[ev.skill].icon} ${SKILLS[ev.skill].name} level ${ev.level}!`, 'level'); break;
             case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
-            case 'unlock': toast(`🔓 ${TABS.find(t => t.id === ev.id)?.name || ev.id} unlocked!`, 'unlock'); ui.navDirty = true; break;
+            case 'unlock': toast(`🔓 ${TABS.find(t => t.id === ev.id)?.name || ev.id} unlocked!`, 'unlock'); break;
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
-            case 'toolMade': toast(`🛠️ New tool made!`, 'craft'); break;
+            case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
             case 'death': toast(`💀 Defeated at stage ${ev.stage} — retreating`, 'death'); break;
+            case 'bossTimeout': toast(`⏳ The boss held out — regrouping for a minute`, 'death'); break;
             case 'prestige': toast(`✨ Prestige! +${ev.tokens} tokens, +${ev.skillPoints} SP`, 'prestige'); save(Date.now()); break;
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`${SKILLS[ev.skill].icon} A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame'); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
-            case 'kill': if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss'); if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`); break;
-            case 'hit': if (ui.tab === 'combat' && ev.manual) { /* handled in clickAttack */ } break;
+            case 'kill':
+                if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss');
+                if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`);
+                break;
             default: break;
         }
     }
 }
 
-const toastArea = () => document.getElementById('toast-area');
 function toast(text, kind = 'info') {
-    const area = toastArea();
+    const area = document.getElementById('toast-area');
     if (!area) return;
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
+    el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
     el.textContent = text;
     area.appendChild(el);
     while (area.children.length > 5) area.removeChild(area.firstChild);
@@ -125,12 +160,28 @@ function floatText(text) {
     setTimeout(() => el.remove(), 900);
 }
 
-function openModal(html) {
-    const root = document.getElementById('modal-root');
-    root.innerHTML = `<div class="modal-overlay active">${html}</div>`;
-    ui.modal = true;
+// Modals queue up instead of replacing each other, so a login prompt can't hide the offline report.
+// A key de-duplicates (a second offline report replaces the queued one).
+function openModal(html, key = 'modal') {
+    if (ui.modalOpen) {
+        ui.modalQueue = ui.modalQueue.filter(m => m.key !== key);
+        ui.modalQueue.push({ html, key });
+        return;
+    }
+    showModal(html, key);
 }
-function closeModal() { document.getElementById('modal-root').innerHTML = ''; ui.modal = null; }
+function showModal(html, key) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
+    ui.modalOpen = key;
+    root.querySelector('input, button.btn-confirm, button')?.focus();
+}
+function closeModal() {
+    document.getElementById('modal-root').innerHTML = '';
+    ui.modalOpen = false;
+    const next = ui.modalQueue.shift();
+    if (next) showModal(next.html, next.key);
+}
 
 // ---------- persistence ----------
 
@@ -159,7 +210,7 @@ async function syncFromCloud() {
         const local = game.state;
         const choice = chooseSave(local.stats.kills || local.meta.playtimeMs > 60000 ? local : null, remote);
         if (choice.pick === 'cloud' && remote) {
-            if (choice.conflict) { pendingConflict = { local: JSON.parse(game.serialize()), remote }; openModal(renderConflictModal(local, remote)); return; }
+            if (choice.conflict) { pendingConflict = { remote }; openModal(renderConflictModal(local, remote), 'conflict'); return; }
             adoptState(remote);
             toast('☁️ Cloud save loaded', 'info');
         } else {
@@ -174,7 +225,7 @@ async function syncFromCloud() {
 function adoptState(stateObject) {
     game = new Game(stateObject, Date.now());
     const summary = game.resumeFromSave(Date.now());
-    if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)));
+    if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
     save(Date.now());
     render();
 }
@@ -202,7 +253,7 @@ window.FI = {
         if (sprite) { sprite.classList.remove('enemy-struck'); void sprite.offsetWidth; sprite.classList.add('enemy-struck'); }
         const layer = document.getElementById('enemy-hit-layer');
         const target = event?.currentTarget;
-        if (layer && target && event) {
+        if (layer && target && event && event.clientX !== undefined) {
             const rect = target.getBoundingClientRect();
             const burst = document.createElement('div');
             burst.className = 'enemy-hit-burst';
@@ -229,8 +280,13 @@ window.FI = {
     buyShop(id) { game.buyGoldShopItem(id); render(); },
     buyPerk(id) { game.buyPerk(id); render(); },
 
-    openPrestige() { if (game.canPrestige()) openModal(renderPrestigeModal(game)); },
-    confirmPrestige() { closeModal(); game.prestige(); render(); },
+    openPrestige() { if (game.canPrestige()) openModal(renderPrestigeModal(game), 'prestige'); },
+    confirmPrestige() {
+        writeBackup(game.serialize(Date.now()), 'prestige', `Before prestige ${game.state.prestige.count + 1}`);
+        closeModal();
+        game.prestige();
+        render();
+    },
     closeModal() { closeModal(); },
 
     startMinigame(skill) { game.startMinigame(skill); render(); },
@@ -238,25 +294,42 @@ window.FI = {
     failMinigame(skill) { game.failMinigame(skill); render(); },
     pumpHeat(skill) { game.pumpHeat(skill); },
     setDragValue(skill, value) { game.setDragValue(skill, value); },
-    claimDaily() { const r = game.claimDaily(); if (r) toast(`📦 +${fmt(r.gold)} gold and materials!`, 'daily'); render(); },
+    claimDaily() { const r = game.claimDaily(); if (r) toast(`📦 +${fmt(r.gold)} gold, +${r.essence} essence and materials!`, 'daily'); render(); },
+    advisorGo(tab, action) {
+        if (action === 'claimDaily') return window.FI.claimDaily();
+        if (tab) window.FI.switchTab(tab);
+    },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
-    exportSave() {
-        const text = exportString(game.serialize(Date.now()));
+    async exportSave() {
+        const text = await exportStringCompressed(game.serialize(Date.now()));
+        ui.saveIo = text;
         const box = document.getElementById('save-io');
         if (box) box.value = text;
         navigator.clipboard?.writeText(text).then(() => toast('Save string copied to clipboard', 'info')).catch(() => toast('Save string placed in the box below', 'info'));
     },
-    importSavePrompt() {
-        const box = document.getElementById('save-io');
+    setSaveIo(value) { ui.saveIo = value; },
+    async importSavePrompt() {
         try {
-            const state = importString(box?.value || '');
+            const state = await importStringAsync(ui.saveIo || document.getElementById('save-io')?.value || '');
+            writeBackup(game.serialize(Date.now()), 'reset', 'Before import');
+            ui.saveIo = '';
             adoptState(state);
             toast('Save imported', 'info');
         } catch (err) { toast(err.message, 'error'); }
     },
+    restoreBackup(slot) {
+        if (!confirm('Restore this backup? Your current progress will be replaced (a backup of it is kept).')) return;
+        try {
+            const state = restoreBackup(slot, Date.now());
+            writeBackup(game.serialize(Date.now()), slot === 'reset' ? 'auto0' : 'reset', 'Before restoring a backup');
+            adoptState(state);
+            toast('Backup restored', 'info');
+        } catch (err) { toast(err.message, 'error'); }
+    },
     hardReset() {
-        if (!confirm('Wipe your save completely? This cannot be undone.')) return;
+        if (!confirm('Wipe your save completely? A single backup is kept in Settings in case you change your mind.')) return;
+        writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
         clearLocal();
         localStorage.removeItem('fantasyIdle.tab');
         game = new Game(null, Date.now());
@@ -265,7 +338,7 @@ window.FI = {
         toast('Save wiped. Fresh start!', 'info');
     },
 
-    openAuth() { openModal(renderAuthModal()); },
+    openAuth() { openModal(renderAuthModal(), 'auth'); },
     async auth(kind) {
         const user = document.getElementById('auth-user')?.value.trim();
         const pass = document.getElementById('auth-pass')?.value;

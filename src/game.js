@@ -2,7 +2,7 @@
 // It never touches the DOM, so tools/simulate.mjs and the tests drive it the same way the UI does.
 
 import { createDefaultState, migrateState } from './core/state.js';
-import { collectModifiers, deriveStats } from './core/modifiers.js';
+import { collectModifiers, deriveStats, isFocused } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, stopAction, resolveAction } from './systems/skilling.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem } from './systems/inventory.js';
@@ -10,17 +10,21 @@ import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/pre
 import { checkAchievements, checkUnlocks } from './systems/progress.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue } from './systems/minigame.js';
 import { applyOffline } from './systems/offline.js';
-import { claimDaily, dailyReady } from './systems/daily.js';
+import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
 
 const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
 const OFFLINE_GAP_MS = 60000;
+// Events that happen many times a second in combat; they don't warrant re-rendering a tab.
+const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge']);
 
 export class Game {
     constructor(state = null, now = Date.now()) {
         this.state = state ? migrateState(state, now) : createDefaultState(now);
         this.now = now;
         this.events = [];
+        this.revision = 0;     // bumps whenever something visible changes; the UI re-renders on change
+        this.silent = false;   // offline replay runs silently and reports a summary instead
         this.dirty = true;
         this.derived = null;
         this.mods = null;
@@ -29,9 +33,19 @@ export class Game {
     }
 
     // ----- infrastructure -----
-    emit(event) { this.events.push(event); }
+    emit(event) {
+        if (this.silent) return;
+        this.events.push(event);
+        if (!QUIET_EVENTS.has(event.type)) this.revision++;
+    }
     drainEvents() { const e = this.events; this.events = []; return e; }
-    markDirty() { this.dirty = true; }
+    markDirty() { this.dirty = true; this.revision++; }
+
+    /** Any click or key press: ends focus (the idle bonus) until the player leaves the game alone again. */
+    noteInput(now = Date.now()) {
+        this.state.meta.lastInputAt = now;
+        if (this.derived?.focused) { this.now = Math.max(this.now, now); this.recompute(); this.revision++; }
+    }
     recompute() {
         this.state.meta.lastActiveAt = this.now;
         this.mods = collectModifiers(this.state);
@@ -49,13 +63,15 @@ export class Game {
             // Tab was suspended or the machine slept: replay as offline progress from the last active moment.
             this.state.meta.savedAt = this.now;
             this.now = now;
+            this.recompute();
             offlineSummary = applyOffline(this, now, { minMs: OFFLINE_GAP_MS });
             dt = 0;
         }
         this.now = now;
         this.state.meta.playtimeMs += Math.min(dt, MAX_TICK_MS);
-        if (this.dirty) this.recompute();
+        if (this.dirty || isFocused(this.state, now) !== this.derived.focused) this.recompute();
         this.state.meta.lastActiveAt = now;
+        accrueDaily(this.state, now);
 
         if (dt > 0) {
             const step = Math.min(dt, MAX_TICK_MS);

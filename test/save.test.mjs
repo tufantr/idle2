@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, exportString, importString, CloudClient, chooseSave, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, exportString, importString, exportStringCompressed, importStringAsync, rotateBackup, writeBackup, listBackups, restoreBackup, CloudClient, chooseSave, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -71,4 +71,35 @@ test('cloud conflict choice uses playtime first and flags disagreement', () => {
     assert.deepEqual(chooseSave(a, b), { pick: 'cloud', conflict: true });
     assert.deepEqual(chooseSave(null, b), { pick: 'cloud', conflict: false });
     assert.deepEqual(chooseSave(a, null), { pick: 'local', conflict: false });
+});
+
+test('compressed export strings round-trip and are smaller', async () => {
+    const game = new Game(null, 1);
+    game.state.gold = 999;
+    const json = game.serialize();
+    const text = await exportStringCompressed(json);
+    assert.ok(text.startsWith('FI3:'));
+    assert.ok(text.length < exportString(json).length / 2, `${text.length} vs ${exportString(json).length}`);
+    assert.equal((await importStringAsync(text)).gold, 999);
+    assert.equal((await importStringAsync(exportString(json))).gold, 999, 'old FI2 strings still import');
+});
+
+test('backups rotate through three slots and can be restored', () => {
+    for (let i = 1; i <= 5; i++) {
+        const game = new Game(null, 1);
+        game.state.gold = i;
+        rotateBackup(game.serialize(), i * 1000);
+    }
+    const autos = listBackups().filter(b => b.slot.startsWith('auto'));
+    assert.equal(autos.length, 3);
+    assert.deepEqual(autos.map(b => JSON.parse(b.json).gold), [5, 4, 3], 'newest first, oldest overwritten');
+    assert.equal(restoreBackup(autos[0].slot).gold, 5);
+});
+
+test('hard reset clears backups except the one written just before it', () => {
+    const game = new Game(null, 1);
+    rotateBackup(game.serialize(), 10);
+    writeBackup(game.serialize(), 'reset', 'Before hard reset', 20);
+    clearLocal();
+    assert.deepEqual(listBackups().map(b => b.slot), ['reset']);
 });

@@ -18,6 +18,10 @@ import { canComplete, resolveAction, fuelLog } from '../systems/skilling.js';
 import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
 import { goldShopPrice, itemUpgradeCost, canWear } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
+import { advise } from '../systems/advisor.js';
+import { DAILY_MAX_BANKED } from '../systems/daily.js';
+import { listBackups } from '../core/save.js';
+import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 
 export const TABS = [
@@ -84,9 +88,14 @@ export function renderHeader(game, ui, cloud) {
         `<div class="chip sp" title="Skill points: spend in the Shop"><span>SP</span><b>${state.prestige.skillPoints}</b></div>`,
         `<div class="chip essence" title="Monster essence: upgrades equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>`
     ];
-    const daily = game.dailyReady()
-        ? `<button class="daily-btn ready" onclick="FI.claimDaily()">📦 Daily crate ready!</button>`
-        : `<button class="daily-btn" disabled>📦 Next crate in ${duration(state.daily.lastClaim + 20 * 3600000 - game.now)}</button>`;
+    const banked = state.daily.banked;
+    const nextCrate = banked >= DAILY_MAX_BANKED ? 'bank full' : `next in ${duration(state.daily.nextAt - game.now)}`;
+    const daily = banked > 0
+        ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="Crates ripen every 20 h; up to ${DAILY_MAX_BANKED} wait for you">📦 Claim daily crate${banked > 1 ? ` (${banked})` : ''} <span class="muted small">${nextCrate}</span></button>`
+        : `<button class="daily-btn" disabled>📦 Next crate in ${duration(state.daily.nextAt - game.now)}</button>`;
+    const focusPill = game.derived.focused
+        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">🧘 Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
+        : '';
     const status = action
         ? `<span class="status-pill working">${SKILLS[action.skill]?.icon || '⚙️'} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</span>`
         : state.combat.active
@@ -99,7 +108,7 @@ export function renderHeader(game, ui, cloud) {
             <div class="chips">${chips.join('')}</div>
             <div class="header-right">${daily}${user}</div>
         </div>
-        <div class="header-row second">${status}${goal}</div>
+        <div class="header-row second">${status}${focusPill}${goal}</div>
         <div class="stats-row">
             <span title="Attack">⚔️ ATK <b>${fmt(d.atk)}</b></span>
             <span title="Defence">🛡️ DEF <b>${fmt(d.def)}</b></span>
@@ -134,6 +143,7 @@ export function renderCombat(game, ui) {
     const comboBuffs = comboStacks >= 30 ? '⚡ +10% crit · 🩸 15% lifesteal · ⚔️ echo strikes' : comboStacks >= 20 ? '⚡ +10% crit · 🩸 15% lifesteal' : comboStacks >= 10 ? '⚡ +10% crit' : '';
 
     return `
+    ${renderAdvisor(game)}
     <section class="glass-panel combat-panel">
         <div class="panel-header">
             <div>
@@ -141,10 +151,10 @@ export function renderCombat(game, ui) {
                 <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b>${c.regroupLeft > 0 ? ` · <span class="regroup-pill" id="regroup-text">⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s</span>` : ''}</div>
             </div>
             <div class="stage-nav">
-                <button class="mini-btn" onclick="FI.stageNav(-10)" ${c.stage <= 1 ? 'disabled' : ''}>«</button>
-                <button class="mini-btn" onclick="FI.stageNav(-1)" ${c.stage <= 1 ? 'disabled' : ''}>‹</button>
-                <button class="mini-btn" onclick="FI.stageNav(1)" ${c.stage >= c.maxStage ? 'disabled' : ''}>›</button>
-                <button class="mini-btn" onclick="FI.stageNav(10)" ${c.stage >= c.maxStage ? 'disabled' : ''}>»</button>
+                <button class="mini-btn" aria-label="Back 10 stages" onclick="FI.stageNav(-10)" ${c.stage <= 1 ? 'disabled' : ''}>«</button>
+                <button class="mini-btn" aria-label="Back 1 stage" onclick="FI.stageNav(-1)" ${c.stage <= 1 ? 'disabled' : ''}>‹</button>
+                <button class="mini-btn" aria-label="Forward 1 stage" onclick="FI.stageNav(1)" ${c.stage >= c.maxStage ? 'disabled' : ''}>›</button>
+                <button class="mini-btn" aria-label="Forward 10 stages" onclick="FI.stageNav(10)" ${c.stage >= c.maxStage ? 'disabled' : ''}>»</button>
                 <label class="toggle" title="Stay on this stage instead of advancing (loot farming)"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Farm this stage</label>
             </div>
         </div>
@@ -158,7 +168,7 @@ export function renderCombat(game, ui) {
                 <div class="attack-timer"><div id="player-atk-fill" class="attack-fill"></div></div>
             </div>
             <div class="combat-vs">VS</div>
-            <div class="combat-entity enemy-side enemy-click-target" onclick="FI.clickAttack(event)" title="Click to strike (half damage, builds combo)">
+            <div class="combat-entity enemy-side enemy-click-target" onclick="FI.clickAttack(event)" role="button" tabindex="0" aria-label="Strike the enemy (half damage, builds combo)" title="Click to strike (half damage, builds combo)">
                 <div class="impact-flash" id="combat-impact-flash"></div>
                 <div class="enemy-hit-layer" id="enemy-hit-layer"></div>
                 <div class="enemy-sprite ${boss ? 'boss' : ''}" id="enemy-sprite">${enemy.icon}</div>
@@ -230,6 +240,22 @@ export function renderCombat(game, ui) {
     </section>`;
 }
 
+// ---------- advisor ----------
+
+export function renderAdvisor(game) {
+    const tips = advise(game, 4);
+    if (!tips.length) return '';
+    const items = tips.map(t => {
+        const go = t.tab || t.action;
+        return `<button class="advisor-item" ${go ? `onclick="FI.advisorGo(${t.tab ? `'${t.tab}'` : 'null'}, ${t.action ? `'${t.action}'` : 'null'})"` : 'disabled'}>
+            <span class="advisor-icon" aria-hidden="true">${t.icon}</span><span class="advisor-text">${esc(t.text)}</span>${go ? '<span class="advisor-go" aria-hidden="true">→</span>' : ''}</button>`;
+    }).join('');
+    return `<section class="glass-panel advisor" aria-label="Next steps">
+        <div class="panel-header"><h2>🧭 Next steps</h2><span class="muted small">Suggestions update as you play</span></div>
+        <div class="advisor-list">${items}</div>
+    </section>`;
+}
+
 // ---------- skills ----------
 
 function xpHeader(game, skillId, extra = '') {
@@ -272,7 +298,7 @@ export function renderSkill(game, ui, skillId) {
         if (node.consumes) inputs += Object.entries(node.consumes).map(([id, q]) => `<span class="${state.resources[id] >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id])})</i></span>`).join(' ');
         if (node.fuel) { const log = fuelLog(state); inputs += ` <span class="${log ? 'ok' : 'missing'}">🪵 1 log${log ? ` (${esc(res(log).name)})` : ' (none!)'}</span>`; }
         const out = res(node.produces);
-        cards += `<div class="node-card ${active ? 'active' : ''} ${unlocked ? '' : 'locked'} ${active && action.stalled ? 'stalled' : ''}" ${unlocked ? `onclick="FI.startNode('${skillId}','${node.id}')"` : ''} style="--accent:${skill.color}">
+        cards += `<div id="node-${skillId}-${node.id}" class="node-card ${active ? 'active' : ''} ${unlocked ? '' : 'locked'} ${active && action.stalled ? 'stalled' : ''}" ${unlocked ? `onclick="FI.startNode('${skillId}','${node.id}')" role="button" tabindex="0" aria-pressed="${active}"` : 'aria-disabled="true"'} style="--accent:${skill.color}">
             <div class="skill-action-art" style="color:${out.color}">${out.icon}</div>
             <div class="node-name">${esc(node.name)}</div>
             ${unlocked ? '' : `<div class="req">Requires level ${node.levelReq}</div>`}
@@ -337,8 +363,9 @@ export function renderMinigame(game, skillId) {
 // ---------- smithing & crafting ----------
 
 function recipeCard({ title, icon, color, inputs, output, xp, interval, active, stalled, onclick, disabled, reqText, footer = '' }, state) {
+    const cardId = `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     const inputHtml = inputs.map(([id, q]) => `<span class="${(state.resources[id] || 0) >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id] || 0)})</i></span>`).join(' ');
-    return `<div class="node-card ${active ? 'active' : ''} ${disabled ? 'locked' : ''} ${active && stalled ? 'stalled' : ''}" ${disabled ? '' : `onclick="${onclick}"`} style="--accent:${color}">
+    return `<div id="${cardId}" class="node-card ${active ? 'active' : ''} ${disabled ? 'locked' : ''} ${active && stalled ? 'stalled' : ''}" ${disabled ? 'aria-disabled="true"' : `onclick="${onclick}" role="button" tabindex="0" aria-pressed="${!!active}"`} style="--accent:${color}">
         <div class="skill-action-art" style="color:${color}">${icon}</div>
         <div class="node-name">${esc(title)}</div>
         ${reqText ? `<div class="req">${esc(reqText)}</div>` : ''}
@@ -570,8 +597,9 @@ export function renderSettings(game, ui, cloud) {
         <section class="glass-panel">
             <div class="panel-header"><h2>💾 Save file</h2><span class="muted small">Played ${played}</span></div>
             <div class="btn-row"><button class="mini-btn" onclick="FI.exportSave()">Copy export string</button><button class="mini-btn" onclick="FI.importSavePrompt()">Import string</button></div>
-            <textarea id="save-io" class="save-io" placeholder="Paste a save string here, then press Import." rows="3"></textarea>
+            <textarea id="save-io" class="save-io" placeholder="Paste a save string here, then press Import." rows="3" oninput="FI.setSaveIo(this.value)">${esc(ui.saveIo || '')}</textarea>
             <div class="btn-row"><button class="mini-btn danger" onclick="FI.hardReset()">Hard reset (wipe save)</button></div>
+            ${renderBackups()}
         </section>
     </div>
     <section class="glass-panel">
@@ -580,6 +608,15 @@ export function renderSettings(game, ui, cloud) {
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" ${state.settings.devUnlockAll ? 'checked' : ''}> Developer mode: unlock every tab and mini-game</label>
         <p class="muted small">Version ${state.version} save · ${state.stats.kills} kills · ${state.stats.deaths} deaths · ${state.stats.itemsCrafted} items made · ${state.stats.prestiges} prestiges.</p>
     </section>`;
+}
+
+function renderBackups() {
+    const backups = listBackups();
+    if (!backups.length) return '<p class="muted small">Backups appear here every 10 minutes, on load and before each prestige.</p>';
+    return `<h3 class="section-title">Backups</h3><div class="backup-list">${backups.map(b => `<div class="backup-row">
+        <div><b>${esc(b.label || b.slot)}</b><div class="muted small">${new Date(b.at).toLocaleString()} · best stage ${b.summary?.bestStage ?? '?'} · ${duration(b.summary?.playtimeMs || 0)} played</div></div>
+        <button class="mini-btn" onclick="FI.restoreBackup('${b.slot}')">Restore</button>
+    </div>`).join('')}</div>`;
 }
 
 export function renderClan() {

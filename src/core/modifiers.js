@@ -31,8 +31,19 @@ export const BASE = {
     baseOfflineHours: 12,
     baseAutoEatThreshold: 0.5,
     basePotionCharges: 15,
+    // Focus: after a minute without input the hero settles in (Clicker Heroes' idle ancients).
+    // It also applies to offline progress, so idle play is never strictly worse than clicking.
+    focusAfterMs: 60000,
+    focusSkillSpeed: 0.15,
+    focusAttackSpeed: 0.15,
     caps: { critChance: 0.75, dodge: 0.6, lifesteal: 0.3, attackSpeed: 1.0 }
 };
+
+/** True once the player has left the game alone for `focusAfterMs`. */
+export function isFocused(state, now = state.meta.lastActiveAt || Date.now()) {
+    const lastInput = state.meta.lastInputAt ?? now;
+    return now - lastInput >= BASE.focusAfterMs;
+}
 
 const POTION_EFFECTS = {
     accuracy_potion: { atkMult: 0.20 },
@@ -124,6 +135,13 @@ export function collectModifiers(state) {
         if (mg && mg.boostUntil > now) mods.skillSpeed[id] += mg.bonus;
     }
 
+    // Focus (idle bonus).
+    mods.focused = isFocused(state, now);
+    if (mods.focused) {
+        for (const id of Object.keys(mods.skillSpeed)) mods.skillSpeed[id] += BASE.focusSkillSpeed;
+        mods.attackSpeed += BASE.focusAttackSpeed;
+    }
+
     return mods;
 }
 
@@ -168,7 +186,8 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         skillSpeed: mods.skillSpeed,
         doubleChance: mods.doubleChance,
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),
-        campMult: camp
+        campMult: camp,
+        focused: !!mods.focused
     };
 }
 

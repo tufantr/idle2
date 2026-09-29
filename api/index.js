@@ -14,7 +14,7 @@ const TOKEN_TTL = '30d';
 const USERNAME_RE = /^[A-Za-z0-9_-]{3,24}$/;
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72; // bcrypt only uses the first 72 bytes
-const MAX_SAVE_VERSION = 2;
+const MAX_SAVE_VERSION = 3;
 
 function requireSecret(res) {
     if (JWT_SECRET) return true;

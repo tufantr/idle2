@@ -7,7 +7,10 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel, levelForXp } from '../src/core/xp.js';
-import { createDefaultState, migrateState } from '../src/core/state.js';
+import { createDefaultState, migrateState, SAVE_VERSION } from '../src/core/state.js';
+import { actionInterval } from '../src/core/modifiers.js';
+import { advise } from '../src/systems/advisor.js';
+import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../src/systems/daily.js';
 import { generateEquipment, enemyForStage, tokensForStage, enemyDamage } from '../src/core/formulas.js';
 import { RESOURCES, sellValue } from '../src/data/resources.js';
 import { GOLD_SHOP } from '../src/data/perks.js';
@@ -75,10 +78,15 @@ test('offline progress is capped (12h base) and consumes inputs', () => {
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 30 * 24 * 3600 * 1000;
     const g2 = new Game(saved, later);
+    // Every action yields exactly one ore without tools; the player was away, so focus (+15%) applies.
+    // (Achievements earned during the replay only take effect afterwards, so read the speed first.)
+    assert.ok(g2.derived.focused);
+    const interval = actionInterval(3000, g2.derived, 'mining');
     const summary = g2.resumeFromSave(later);
     assert.equal(summary.simulated, 12 * 3600 * 1000);
     assert.ok(summary.capped);
-    assert.ok(g2.state.resources.copper_ore > 10000 && g2.state.resources.copper_ore < 15000);
+    const expected = Math.floor(summary.simulated / interval);
+    assert.ok(Math.abs(g2.state.resources.copper_ore - expected) <= 1, `${g2.state.resources.copper_ore} vs ${expected}`);
 });
 
 test('achievements apply real bonuses through the modifier pipeline', () => {
@@ -249,7 +257,7 @@ test('migration: an original prototype save keeps resources, levels, stage and t
         action: { type: 'smithing', id: 'Weapon', barId: 'copper_bar' }
     };
     const state = migrateState(legacy, T0);
-    assert.equal(state.version, 2);
+    assert.equal(state.version, SAVE_VERSION);
     assert.equal(state.gold, 321);
     assert.equal(state.resources.copper_ore, 40);
     assert.equal(state.resources.normal_log, 5);
@@ -273,4 +281,86 @@ test('state survives a serialize/load round trip', () => {
     assert.equal(copy.state.gold, 77);
     assert.equal(copy.state.resources.coal, 9);
     assert.deepEqual(Object.keys(copy.state).sort(), Object.keys(createDefaultState(T0)).sort());
+});
+
+test('focus: a minute without input adds skill and attack speed; input ends it', () => {
+    const game = new Game(null, T0);
+    game.startNodeAction('mining', 'copper_ore');
+    const base = game.derived.skillSpeed.mining;
+    run(game, 61_000);
+    assert.ok(game.derived.focused);
+    assert.ok(Math.abs(game.derived.skillSpeed.mining - base - 0.15) < 1e-9);
+    game.noteInput(game.now);
+    assert.equal(game.derived.focused, false);
+    assert.ok(Math.abs(game.derived.skillSpeed.mining - base) < 1e-9);
+});
+
+test('daily crates ripen every 20 h and bank up to three', () => {
+    const game = new Game(null, T0);
+    assert.equal(game.state.daily.banked, 1);
+    assert.ok(game.claimDaily());
+    assert.equal(game.dailyReady(), false);
+    game.now = T0 + DAILY_INTERVAL_MS + 1;
+    assert.ok(game.dailyReady());
+    game.now = T0 + 10 * DAILY_INTERVAL_MS;
+    assert.ok(game.dailyReady());
+    assert.equal(game.state.daily.banked, DAILY_MAX_BANKED);
+    for (let i = 0; i < DAILY_MAX_BANKED; i++) assert.ok(game.claimDaily());
+    assert.equal(game.claimDaily(), null);
+});
+
+test('migration v2 -> v3 turns the old daily timestamp into banked crates', () => {
+    const v2 = { ...createDefaultState(T0), version: 2, daily: { lastClaim: T0 - 30 * 3600 * 1000 } };
+    delete v2.daily.banked;
+    const state = migrateState(v2, T0);
+    assert.equal(state.version, SAVE_VERSION);
+    assert.equal(state.daily.banked, 1);
+    const fresh = migrateState({ ...createDefaultState(T0), version: 2, daily: { lastClaim: T0 - 1000 } }, T0);
+    assert.equal(fresh.daily.banked, 0);
+});
+
+test('offline replay gives the same result as playing online for the same time', () => {
+    const online = new Game(null, T0);
+    online.state.meta.lastInputAt = T0 - 3600_000; // idle in both runs, so focus applies to both
+    online.startNodeAction('mining', 'copper_ore');
+    const saved = JSON.parse(online.serialize(T0));
+    run(online, 10 * 60_000, 100);
+    const offline = new Game(saved, T0 + 10 * 60_000);
+    offline.resumeFromSave(T0 + 10 * 60_000);
+    assert.ok(Math.abs(online.state.resources.copper_ore - offline.state.resources.copper_ore) <= 1,
+        `online ${online.state.resources.copper_ore} vs offline ${offline.state.resources.copper_ore}`);
+    assert.ok(Math.abs(online.state.skills.mining.xp - offline.state.skills.mining.xp) <= 8);
+});
+
+test('a 12 h offline combat replay is silent and fast', () => {
+    const game = new Game(null, T0);
+    game.state.inventory.push(generateEquipment({ type: 'Weapon', tier: 3, power: 4.8, materialName: 'Mithril' }, 900));
+    game.state.skills.combat.xp = xpForLevel(30);
+    game.equipItem(900);
+    game.state.resources.cooked_boar = 5000;
+    game.setFarmMode(true); // stay on stage 1 so the fight lasts the whole 12 hours
+    game.enterCombat();
+    const saved = JSON.parse(game.serialize(T0));
+    const later = T0 + 12 * 3600 * 1000;
+    const g2 = new Game(saved, later);
+    const started = Date.now();
+    const summary = g2.resumeFromSave(later);
+    assert.ok(Date.now() - started < 5000, `replay took ${Date.now() - started} ms`);
+    assert.equal(summary.mode, 'combat');
+    assert.equal(summary.died, false);
+    assert.ok(summary.kills > 20000, `kills ${summary.kills}`);
+    const leaked = g2.events.filter(e => ['hit', 'enemyHit', 'kill', 'levelUp', 'actionComplete'].includes(e.type));
+    assert.equal(leaked.length, 0, 'per-hit and per-kill events stay out of a silent replay');
+});
+
+test('the advisor points a new player at the next step', () => {
+    const game = new Game(null, T0);
+    const tips = advise(game).map(t => t.text).join(' | ');
+    assert.match(tips, /daily crate/);
+    assert.match(tips, /Mine 5 ore/);
+    game.state.unlocks.smithing = true;
+    game.state.resources.copper_bar = 3;
+    assert.match(advise(game).map(t => t.text).join(' | '), /Forge a Copper Sword/);
+    game.state.inventory.push(generateEquipment({ type: 'Weapon', tier: 1, power: 1, materialName: 'Copper' }, 77));
+    assert.match(advise(game).map(t => t.text).join(' | '), /Equip Copper Sword/);
 });

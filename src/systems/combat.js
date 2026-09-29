@@ -209,6 +209,7 @@ export function onPlayerDeath(game) {
     const state = game.state;
     const c = state.combat;
     bumpStat(game, 'deaths');
+    c.lastSetbackAt = game.now;
     // Retreat to the start of the current zone: bosses are meant to be prepared for, not crawled past.
     const zoneStart = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
     const retreatTo = Math.max(1, Math.min(zoneStart, c.stage - BALANCE.combat.retreatStages));
@@ -226,6 +227,7 @@ export function onPlayerDeath(game) {
 export function onBossTimeout(game) {
     const c = game.state.combat;
     bumpStat(game, 'bossEscapes');
+    c.lastSetbackAt = game.now;
     const back = Math.max(1, c.stage - 1);
     log(game, `⏳ ${c.enemy.name} held out for ${BALANCE.combat.bossTimeMs / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
     game.emit({ type: 'bossTimeout', stage: c.stage });

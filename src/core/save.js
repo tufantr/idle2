@@ -6,7 +6,12 @@ import { migrateState, SAVE_VERSION } from './state.js';
 export const LOCAL_KEY = 'fantasyIdle.save.v2';
 export const LEGACY_KEY = 'fantasyIdleSaveLocal';
 export const TOKEN_KEY = 'fantasyIdle.jwt';
-export const EXPORT_PREFIX = 'FI2:';
+export const EXPORT_PREFIX = 'FI2:';          // base64 JSON
+export const COMPRESSED_PREFIX = 'FI3:';      // base64 deflate(JSON)
+export const BACKUP_PREFIX = 'fantasyIdle.backup.';
+// Three rotating snapshots taken every 10 minutes, plus one taken on load and one before each prestige.
+export const AUTO_BACKUP_SLOTS = ['auto0', 'auto1', 'auto2'];
+export const BACKUP_INTERVAL_MS = 10 * 60 * 1000;
 
 function storage() {
     try { return globalThis.localStorage || null; } catch { return null; }
@@ -41,23 +46,95 @@ export function clearLocal() {
     if (!store) return;
     store.removeItem(LOCAL_KEY);
     store.removeItem(LEGACY_KEY);
+    // Every backup goes except the one written just before a hard reset, so a reset can be undone.
+    for (const slot of [...AUTO_BACKUP_SLOTS, 'load', 'prestige']) store.removeItem(BACKUP_PREFIX + slot);
+}
+
+// ---------- backups ----------
+
+/** A short description of a save for the backup list. */
+function describeState(state) {
+    return { bestStage: state.combat?.bestStage || 1, playtimeMs: state.meta?.playtimeMs || 0, prestiges: state.prestige?.count || 0 };
+}
+
+export function writeBackup(json, slot, label, now = Date.now()) {
+    const store = storage();
+    if (!store) return false;
+    try {
+        const summary = describeState(JSON.parse(json));
+        store.setItem(BACKUP_PREFIX + slot, JSON.stringify({ at: now, label, summary, json }));
+        return true;
+    } catch (err) { console.error('Backup failed', err); return false; }
+}
+
+export function readBackup(slot) {
+    const store = storage();
+    try { return JSON.parse(store?.getItem(BACKUP_PREFIX + slot) || 'null'); } catch { return null; }
+}
+
+/** Write into the oldest of the rotating slots. */
+export function rotateBackup(json, now = Date.now()) {
+    const oldest = AUTO_BACKUP_SLOTS.map(slot => ({ slot, at: readBackup(slot)?.at || 0 })).sort((a, b) => a.at - b.at)[0];
+    return writeBackup(json, oldest.slot, 'Automatic', now);
+}
+
+export function listBackups() {
+    return [...AUTO_BACKUP_SLOTS, 'load', 'prestige', 'reset']
+        .map(slot => ({ slot, ...readBackup(slot) }))
+        .filter(b => b.at)
+        .sort((a, b) => b.at - a.at);
+}
+
+export function restoreBackup(slot, now = Date.now()) {
+    const backup = readBackup(slot);
+    if (!backup) throw new Error('That backup no longer exists.');
+    return migrateState(JSON.parse(backup.json), now);
+}
+
+// ---------- export / import ----------
+
+function toBase64(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(binary);
+}
+function fromBase64(text) {
+    const binary = atob(text);
+    return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 
 export function exportString(json) {
-    const bytes = new TextEncoder().encode(json);
-    let binary = '';
-    for (const b of bytes) binary += String.fromCharCode(b);
-    return EXPORT_PREFIX + btoa(binary);
+    return EXPORT_PREFIX + toBase64(new TextEncoder().encode(json));
+}
+
+/** Compressed export (deflate). Falls back to the plain format where CompressionStream is missing. */
+export async function exportStringCompressed(json) {
+    if (typeof CompressionStream === 'undefined') return exportString(json);
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('deflate'));
+    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    return COMPRESSED_PREFIX + toBase64(bytes);
+}
+
+function checkVersion(parsed, now) {
+    if (parsed.version > SAVE_VERSION) throw new Error('This save comes from a newer version of the game.');
+    return migrateState(parsed, now);
 }
 
 export function importString(text, now = Date.now()) {
     const trimmed = String(text || '').trim();
     if (!trimmed.startsWith(EXPORT_PREFIX)) throw new Error('Not a Fantasy Idle save string.');
-    const binary = atob(trimmed.slice(EXPORT_PREFIX.length));
-    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-    const parsed = JSON.parse(new TextDecoder().decode(bytes));
-    if (parsed.version > SAVE_VERSION) throw new Error('This save comes from a newer version of the game.');
-    return migrateState(parsed, now);
+    const parsed = JSON.parse(new TextDecoder().decode(fromBase64(trimmed.slice(EXPORT_PREFIX.length))));
+    return checkVersion(parsed, now);
+}
+
+/** Accepts both the plain (FI2:) and compressed (FI3:) formats. */
+export async function importStringAsync(text, now = Date.now()) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed.startsWith(COMPRESSED_PREFIX)) return importString(trimmed, now);
+    if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot read compressed saves.');
+    const stream = new Blob([fromBase64(trimmed.slice(COMPRESSED_PREFIX.length))]).stream().pipeThrough(new DecompressionStream('deflate'));
+    const parsed = JSON.parse(await new Response(stream).text());
+    return checkVersion(parsed, now);
 }
 
 // ---------- cloud ----------
