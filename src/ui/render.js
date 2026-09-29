@@ -3,7 +3,7 @@
 // are patched every frame. Nothing in here mutates game state — handlers call window.FI.
 
 import { SKILLS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
-import { RESOURCES, orderedByTier, sellValue } from '../data/resources.js';
+import { RESOURCES, orderedByTier, foodsByHealing, sellValue } from '../data/resources.js';
 import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS } from '../data/items.js';
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
@@ -12,7 +12,7 @@ import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js'
 import { UNLOCKS, isUnlocked, nextGoals } from '../data/unlocks.js';
 import { zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
-import { actionInterval, skillLevel } from '../core/modifiers.js';
+import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
 import { canComplete, resolveAction, fuelLog } from '../systems/skilling.js';
@@ -23,6 +23,11 @@ import { advise } from '../systems/advisor.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
 import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview } from '../systems/dungeon.js';
 import { PETS, PET_BASE } from '../data/pets.js';
+import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
+import { AGILITY_SLOTS, obstacleById, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
+import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
+import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
+import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
@@ -33,11 +38,15 @@ export const TABS = [
     { id: 'dungeons', name: 'Dungeons', icon: '🏰', group: 'COMBAT' },
     { id: 'mining', name: 'Mining', icon: '⛏️', group: 'SKILLS', skill: 'mining' },
     { id: 'woodcutting', name: 'Woodcutting', icon: '🌳', group: 'SKILLS', skill: 'woodcutting' },
+    { id: 'fishing', name: 'Fishing', icon: '🎣', group: 'SKILLS', skill: 'fishing' },
     { id: 'hunting', name: 'Hunting', icon: '🏹', group: 'SKILLS', skill: 'hunting' },
     { id: 'cooking', name: 'Cooking', icon: '🍳', group: 'SKILLS', skill: 'cooking' },
+    { id: 'firemaking', name: 'Firemaking', icon: '🔥', group: 'SKILLS', skill: 'firemaking' },
     { id: 'alchemy', name: 'Alchemy', icon: '🧪', group: 'SKILLS', skill: 'alchemy' },
+    { id: 'farming', name: 'Farming', icon: '🌾', group: 'SKILLS', skill: 'farming' },
     { id: 'smithing', name: 'Smithing', icon: '⚒️', group: 'SKILLS', skill: 'smithing' },
     { id: 'crafting', name: 'Crafting', icon: '💍', group: 'SKILLS', skill: 'crafting' },
+    { id: 'agility', name: 'Agility', icon: '🤸', group: 'SKILLS', skill: 'agility' },
     { id: 'inventory', name: 'Inventory', icon: '🎒', group: 'MANAGEMENT' },
     { id: 'shop', name: 'Shop & Prestige', icon: '🔮', group: 'MANAGEMENT' },
     { id: 'achievements', name: 'Achievements', icon: '🏆', group: 'MANAGEMENT' },
@@ -98,6 +107,9 @@ export function renderHeader(game, ui, cloud) {
     const daily = banked > 0
         ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="Crates ripen every 20 h; up to ${DAILY_MAX_BANKED} wait for you">📦 Claim daily crate${banked > 1 ? ` (${banked})` : ''} <span class="muted small">${nextCrate}</span></button>`
         : `<button class="daily-btn" disabled>📦 Next crate in ${duration(state.daily.nextAt - game.now)}</button>`;
+    const bonfirePill = bonfireLit(state, game.now)
+        ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">🔥 Bonfire +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
+        : '';
     const focusPill = game.derived.focused
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">🧘 Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
@@ -113,7 +125,7 @@ export function renderHeader(game, ui, cloud) {
             <div class="chips">${chips.join('')}</div>
             <div class="header-right">${daily}${user}</div>
         </div>
-        <div class="header-row second">${status}${focusPill}${goal}</div>
+        <div class="header-row second">${status}${focusPill}${bonfirePill}${goal}</div>
         <div class="stats-row">
             <span title="Attack">⚔️ ATK <b>${fmt(d.atk)}</b></span>
             <span title="Defence">🛡️ DEF <b>${fmt(d.def)}</b></span>
@@ -147,7 +159,7 @@ export function renderCombat(game, ui) {
     const enemy = c.enemy || enemyForStage(c.stage);
     const zone = zoneForStage(c.stage);
     const boss = isBossStage(c.stage);
-    const foods = orderedByTier('food').filter(f => state.resources[f.id] > 0);
+    const foods = foodsByHealing().filter(f => state.resources[f.id] > 0);
     const potions = orderedByTier('potion');
     const preview = game.prestigePreview();
     const canPrestige = isUnlocked(state, 'prestige') && preview.allowed;
@@ -208,7 +220,7 @@ export function renderCombat(game, ui) {
                 <select class="material-select" onchange="FI.setAutoEat(this.value)">
                     <option value="auto" ${c.autoEat === 'auto' ? 'selected' : ''}>Auto (best fit)</option>
                     <option value="none" ${c.autoEat === 'none' ? 'selected' : ''}>None</option>
-                    ${orderedByTier('food').map(f => `<option value="${f.id}" ${c.autoEat === f.id ? 'selected' : ''}>${esc(f.name)} (+${Math.round(f.heals * d.foodMult)} HP) × ${fmt(state.resources[f.id])}</option>`).join('')}
+                    ${foodsByHealing().map(f => `<option value="${f.id}" ${c.autoEat === f.id ? 'selected' : ''}>${esc(f.name)} (+${Math.round(f.heals * d.foodMult)} HP) × ${fmt(state.resources[f.id])}</option>`).join('')}
                 </select>
                 <span class="muted small">Food: ${foods.length ? foods.map(f => `${f.icon}${fmt(state.resources[f.id])}`).join(' ') : 'none — cook some!'}</span>
             </label>
@@ -294,13 +306,45 @@ function xpHeader(game, skillId, extra = '') {
     </div>`;
 }
 
+/** What a tool tier does, in words (the "double" means something different per skill). */
+function toolEffect(toolId, tier) {
+    const tool = TOOLS[toolId];
+    const speed = Math.round(TOOL_SPEED_PER_TIER * tier * 100);
+    const dbl = Math.round(TOOL_DOUBLE_PER_TIER * tier * 100);
+    if (toolId === 'hoe') return `+${speed}% crop growth speed, +${dbl}% chance of a double harvest`;
+    if (toolId === 'tinderbox') return `+${speed}% firemaking speed, +${dbl}% chance a log burns twice`;
+    return `−${speed}% ${SKILLS[tool.skill].name} time, +${dbl}% double yield`;
+}
+
 function toolBadge(game, skillId) {
     const skill = SKILLS[skillId];
     if (!skill.tool) return '';
     const tool = TOOLS[skill.tool];
     const tier = game.state.tools[skill.tool] || 0;
     const def = tool.tiers.find(t => t.tier === tier);
-    return `<span class="tool-badge" title="${tier ? `−${Math.round(TOOL_SPEED_PER_TIER * tier * 100)}% time, +${Math.round(TOOL_DOUBLE_PER_TIER * tier * 100)}% double yield` : `Make a ${tool.name.toLowerCase()} in ${tool.madeBy}`}">${tool.icon} ${def ? esc(def.name) : `No ${tool.name.toLowerCase()}`}</span>`;
+    return `<span class="tool-badge" title="${tier ? toolEffect(skill.tool, tier) : `Make a ${tool.name.toLowerCase()} in ${tool.madeBy}`}">${tool.icon} ${def ? esc(def.name) : `No ${tool.name.toLowerCase()}`}</span>`;
+}
+
+/** Cooking lists three kinds of dish; group the cards so each line reads as a ladder. */
+function nodeGroup(skillId, node) {
+    if (skillId !== 'cooking') return null;
+    const input = Object.keys(node.consumes || {})[0];
+    if (RESOURCES[input]?.category === 'crop') return 'From the farm';
+    if (SKILLS.fishing.nodes.some(n => n.produces === input)) return 'Fish';
+    return 'Meat';
+}
+
+function skillExtras(game, skillId) {
+    const state = game.state;
+    if (skillId === 'fishing') {
+        return `<div class="info-strip">🪱 <b>${fmt(state.resources.fishing_bait)}</b> bait — each catch uses one, if you have any, for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish. Bait drops in the Fever Marsh, Drowned Ruins and Frozen Wastes, or buy a tin in the Shop.</div>`;
+    }
+    if (skillId === 'firemaking') {
+        const lit = bonfireLit(state, game.now);
+        const bonus = Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100);
+        return `<div class="info-strip ${lit ? 'lit' : ''}">🔥 ${lit ? `The bonfire burns for <b>${duration(state.bonfire.until - game.now)}</b>: <b>+${bonus}% XP</b> in every skill, combat included.` : `The bonfire is out. Burning logs lights it: <b>+${bonus}% XP</b> in every skill while it burns.`} Each log adds ${BASE.bonfireSecondsPerLogTier} s × its tier, up to ${BASE.bonfireMaxMs / 3600000} hour; the bonus grows with your Firemaking level.</div>`;
+    }
+    return '';
 }
 
 export function renderSkill(game, ui, skillId) {
@@ -310,7 +354,13 @@ export function renderSkill(game, ui, skillId) {
     const d = game.derived;
     const action = state.action;
     let cards = '';
+    let group = null;
     for (const node of skill.nodes) {
+        const nodeGroupName = nodeGroup(skillId, node);
+        if (nodeGroupName && nodeGroupName !== group) {
+            group = nodeGroupName;
+            cards += `<h3 class="section-title grid-span">${esc(group)}</h3>`;
+        }
         const unlocked = level >= node.levelReq;
         const active = action?.kind === 'node' && action.skill === skillId && action.id === node.id;
         const interval = actionInterval(node.interval, d, skillId);
@@ -319,18 +369,22 @@ export function renderSkill(game, ui, skillId) {
         let inputs = '';
         if (node.consumes) inputs += Object.entries(node.consumes).map(([id, q]) => `<span class="${state.resources[id] >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id])})</i></span>`).join(' ');
         if (node.fuel) { const log = fuelLog(state); inputs += ` <span class="${log ? 'ok' : 'missing'}">🪵 1 log${log ? ` (${esc(res(log).name)})` : ' (none!)'}</span>`; }
-        const out = res(node.produces);
+        const out = res(node.produces || node.bonfireLog);
+        const gives = node.produces
+            ? `${resTag(node.produces)} <i>(${fmt(state.resources[node.produces])})</i>${skillId === 'mining' ? ' · 2% gem' : ''}`
+            : `🔥 +${BASE.bonfireSecondsPerLogTier * res(node.bonfireLog).tier} s of bonfire`;
         cards += `<div id="node-${skillId}-${node.id}" class="node-card ${active ? 'active' : ''} ${unlocked ? '' : 'locked'} ${active && action.stalled ? 'stalled' : ''}" ${unlocked ? `onclick="FI.startNode('${skillId}','${node.id}')" role="button" tabindex="0" aria-pressed="${active}"` : 'aria-disabled="true"'} style="--accent:${skill.color}">
             <div class="skill-action-art" style="color:${out.color}">${out.icon}</div>
             <div class="node-name">${esc(node.name)}</div>
             ${unlocked ? '' : `<div class="req">Requires level ${node.levelReq}</div>`}
-            <div class="node-io muted small">${inputs ? `Needs: ${inputs}<br>` : ''}Gives: ${resTag(node.produces)} <i>(${fmt(state.resources[node.produces])})</i>${skillId === 'mining' ? ' · 2% gem' : ''}</div>
+            <div class="node-io muted small">${inputs ? `Needs: ${inputs}<br>` : ''}Gives: ${gives}</div>
             ${unlocked ? `<div class="node-stats"><span>✨ ${Math.round(node.xp * d.xpMult)} XP</span><span>⏱️ ${seconds(interval)}</span>${d.doubleChance[skillId] ? `<span>🎲 ${pct(d.doubleChance[skillId])} double</span>` : ''}</div>
             <div class="action-progress-container"><div class="action-progress-fill" id="progress-${skillId}-${node.id}" style="width:${active ? Math.min(100, action.progress / interval * 100) : 0}%; background:${active && !check.ok ? '#ef4444' : skill.color}"></div></div>` : ''}
         </div>`;
     }
     return `<section class="glass-panel skill-panel">
         ${xpHeader(game, skillId, toolBadge(game, skillId))}
+        ${skillExtras(game, skillId)}
         ${NON_COMBAT_SKILLS.includes(skillId) ? renderMinigame(game, skillId) : ''}
         <div class="node-grid">${cards}</div>
     </section>`;
@@ -422,7 +476,7 @@ export function renderSmithing(game, ui) {
             onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: level < recipe.levelReq ? `Requires level ${recipe.levelReq}` : ''
         }, state);
     }).join('');
-    const toolCards = ['pickaxe', 'axe'].map(toolId => renderToolCard(game, toolId)).join('');
+    const toolCards = ['pickaxe', 'axe', 'tinderbox', 'hoe'].map(toolId => renderToolCard(game, toolId)).join('');
     return `<section class="glass-panel skill-panel">
         ${xpHeader(game, 'smithing')}
         <h3 class="section-title">1. Smelt ore into bars</h3>
@@ -447,7 +501,7 @@ function renderToolCard(game, toolId) {
     const level = skillLevel(state, tool.madeBy);
     return recipeCard({
         title: next.name, icon: tool.icon, color: '#facc15', inputs: Object.entries(next.consumes),
-        output: `−${Math.round(TOOL_SPEED_PER_TIER * next.tier * 100)}% ${SKILLS[tool.skill].name} time, +${Math.round(TOOL_DOUBLE_PER_TIER * next.tier * 100)}% double yield`,
+        output: toolEffect(toolId, next.tier),
         xp: Math.round(next.xp * d.xpMult), interval: actionInterval(4000, d, tool.madeBy),
         active: state.action?.kind === 'tool' && state.action.tool === toolId, stalled: state.action?.stalled,
         onclick: `FI.makeTool('${toolId}', ${next.tier})`, disabled: level < next.levelReq, reqText: level < next.levelReq ? `Requires ${SKILLS[tool.madeBy].name} ${next.levelReq}` : `Owned: ${owned ? esc(tool.tiers.find(t => t.tier === owned).name) : 'none'}`
@@ -480,7 +534,7 @@ export function renderCrafting(game, ui) {
         <p class="muted small">Gems turn up while mining (2% per ore) and drop from monsters. Jewellery gives a little ATK and DEF and is the best source of affixes.</p>
         <div class="node-grid">${cards}</div>
         <h3 class="section-title">Bows</h3>
-        <div class="node-grid">${renderToolCard(game, 'bow')}</div>
+        <div class="node-grid">${renderToolCard(game, 'bow')}${renderToolCard(game, 'rod')}</div>
     </section>`;
 }
 
@@ -623,6 +677,101 @@ export function renderAchievements(game) {
             const ok = !!state.achievements[a.id];
             return `<div class="ach-item ${ok ? 'done' : ''}"><div><div class="ach-name">${ok ? '✅' : '🔒'} ${esc(a.name)}</div><div class="muted small">${esc(a.desc)}</div></div><div class="ach-reward">${esc(a.reward)}</div></div>`;
         }).join('')}</div>
+    </section>`;
+}
+
+// ---------- farming ----------
+
+export function renderFarming(game, ui) {
+    const state = game.state;
+    const d = game.derived;
+    const level = skillLevel(state, 'farming');
+    const ready = state.farming.plots.filter(p => plotReady(p, game.now)).length;
+    const choices = CROPS.filter(c => c.levelReq <= level);
+    const lastCrop = ui.lastCrop && cropById(ui.lastCrop) && cropById(ui.lastCrop).levelReq <= level ? ui.lastCrop : choices[choices.length - 1]?.id;
+    const plots = state.farming.plots.map((plot, i) => {
+        if (!plotUnlocked(state, i)) {
+            return `<div class="plot-card locked"><div class="plot-art">🔒</div><div class="node-name">Plot ${i + 1}</div><div class="req">Opens at Farming ${FARMING_PLOTS[i]}</div></div>`;
+        }
+        if (!plot.crop) {
+            return `<div class="plot-card empty"><div class="plot-art">🟫</div><div class="node-name">Plot ${i + 1} — empty</div>
+                <label class="small">Plant <select class="material-select" id="plot-crop-${i}" aria-label="Crop for plot ${i + 1}">
+                    ${choices.map(c => `<option value="${c.id}" ${c.id === lastCrop ? 'selected' : ''}>${c.icon} ${esc(c.name)} — ${fmt(seedCost(state, c))} gold</option>`).join('')}
+                </select></label>
+                <button class="prestige-btn" onclick="FI.plant(${i}, document.getElementById('plot-crop-${i}').value)">Plant</button></div>`;
+        }
+        const crop = cropById(plot.crop);
+        const total = Math.max(1, plot.readyAt - plot.plantedAt);
+        const done = plotReady(plot, game.now);
+        const pctDone = done ? 100 : Math.min(100, (game.now - plot.plantedAt) / total * 100);
+        return `<div class="plot-card ${done ? 'ready' : 'growing'}"><div class="plot-art">${done ? crop.icon : '🌱'}</div>
+            <div class="node-name">Plot ${i + 1} — ${esc(crop.name)}</div>
+            <div class="muted small">${done ? 'Ready to harvest' : `Ready in ${duration(plot.readyAt - game.now)}`}</div>
+            <div class="action-progress-container"><div class="action-progress-fill" style="width:${pctDone}%; background:${SKILLS.farming.color}"></div></div>
+            ${done ? `<button class="prestige-btn" onclick="FI.harvest(${i})">Harvest</button>` : ''}</div>`;
+    }).join('');
+    const rows = CROPS.map(c => {
+        const unlocked = level >= c.levelReq;
+        const avg = (c.yield[0] + c.yield[1]) / 2 * d.farmYield;
+        return `<tr class="${unlocked ? '' : 'locked-row'}"><td>${c.icon} ${esc(c.name)}</td><td>${c.levelReq}</td><td>${duration(growTime(d, c))}</td>
+            <td>${c.yield[0]}–${c.yield[1]}× ${esc(res(c.produces).name)}</td><td>${fmt(Math.round(c.xp * avg * d.xpMult))}</td><td>${fmt(seedCost(state, c))}</td></tr>`;
+    }).join('');
+    return `<section class="glass-panel skill-panel">
+        ${xpHeader(game, 'farming', toolBadge(game, 'farming'))}
+        <div class="info-strip">🌾 Plots grow on the clock — while you mine, fight or sleep. Seeds are bought when you plant.
+            Herbs go to Alchemy; potatoes, cabbages, pumpkins and starfruit to Cooking.</div>
+        <div class="btn-row"><button class="prestige-btn" onclick="FI.harvestAll()" ${ready ? '' : 'disabled'}>Harvest ${ready || ''} ready & replant</button></div>
+        <div class="plot-grid">${plots}</div>
+        <h3 class="section-title">Crops</h3>
+        <div class="table-wrap"><table class="data-table">
+            <thead><tr><th>Crop</th><th>Level</th><th>Grows in</th><th>Harvest</th><th>XP / harvest</th><th>Seeds (gold)</th></tr></thead>
+            <tbody>${rows}</tbody></table></div>
+    </section>`;
+}
+
+// ---------- agility ----------
+
+export function renderAgility(game, ui) {
+    const state = game.state;
+    const d = game.derived;
+    const level = skillLevel(state, 'agility');
+    const course = courseDef(state);
+    const running = state.action?.kind === 'agility';
+    const interval = course ? actionInterval(course.interval, d, 'agility') : 0;
+    const slots = AGILITY_SLOTS.map((slot, i) => {
+        const built = state.agility.built[i];
+        const open = level >= slot.levelReq;
+        const cost = obstacleCost(state, i);
+        const haveMaterials = Object.entries(cost.materials).every(([id, q]) => (state.resources[id] || 0) >= q);
+        const affordable = state.gold >= cost.gold && haveMaterials;
+        const lvl = obstacleLevel(state, i);
+        const up = upgradeInfo(state, i);
+        const options = slot.obstacles.map(o => {
+            const here = built === o.id;
+            const upBtn = here && up
+                ? `<button class="mini-btn" onclick="FI.upgradeObstacle(${i})" ${level >= up.levelReq && state.gold >= up.gold ? '' : 'disabled'} title="${level >= up.levelReq ? `Level ${up.toLevel}: ${fmt(up.gold)} gold` : `Needs Agility ${up.levelReq}`}">⬆ Lv ${up.toLevel}: ${fmt(up.gold)}${level >= up.levelReq ? '' : ` (Agility ${up.levelReq})`}</button>`
+                : '';
+            return `<div class="obstacle ${here ? 'built' : ''}">
+                <div><b>${o.icon} ${esc(o.name)}${here ? ` <span class="muted">Lv ${lvl}/${MAX_OBSTACLE_LEVEL}</span>` : ''}</b><div class="small">${esc(o.desc)}${here && lvl > 1 ? ` ×${lvl}` : ''}</div><div class="muted small">${seconds(o.interval)} · ${here ? Math.round(o.xp * (1 + 0.25 * (lvl - 1))) : o.xp} XP per run</div></div>
+                ${here ? (upBtn || '<span class="status-pill working">Max</span>') : `<button class="mini-btn" onclick="FI.buildObstacle('${o.id}')" ${open && affordable ? '' : 'disabled'}>${built ? 'Replace' : 'Build'}</button>`}
+            </div>`;
+        }).join('');
+        return `<div class="agility-slot ${open ? '' : 'locked'}">
+            <div class="slot-head"><b>Obstacle ${i + 1}</b> <span class="muted small">${open ? `cost: ${fmt(cost.gold)} gold + ${Object.entries(cost.materials).map(([id, q]) => `<span class="${(state.resources[id] || 0) >= q ? 'ok' : 'missing'}">${q}× ${esc(res(id).name)}</span>`).join(', ')}` : `opens at Agility ${slot.levelReq}`}</span></div>
+            ${options}
+        </div>`;
+    }).join('');
+    const builtList = state.agility.built.filter(Boolean).map(id => obstacleById(id));
+    return `<section class="glass-panel skill-panel">
+        ${xpHeader(game, 'agility')}
+        <div class="info-strip">🤸 Every obstacle you build is a <b>permanent</b> bonus that survives prestige, and can be upgraded to level ${MAX_OBSTACLE_LEVEL} (its bonus counts once per level). Replacing one tears the old one down without a refund.
+            ${builtList.length ? `Now: ${builtList.map(o => `${o.icon} ${esc(o.desc)}`).join(' · ')}` : 'Build the first obstacle, then run the course to train.'}</div>
+        <div class="course-run ${running ? 'active' : ''}">
+            <div><b>${course ? esc(course.label) : 'No course yet'}</b>${course ? `<div class="muted small">${seconds(interval)} per run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div>` : ''}</div>
+            ${course ? `<button class="prestige-btn" onclick="FI.runCourse()">${running ? 'Stop' : 'Run the course'}</button>` : ''}
+            ${running ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-agility-course" style="width:${Math.min(100, state.action.progress / interval * 100)}%; background:${SKILLS.agility.color}"></div></div>` : ''}
+        </div>
+        <div class="agility-grid">${slots}</div>
     </section>`;
 }
 
@@ -836,7 +985,7 @@ export function patchLive(game, ui) {
     set2('hdr-hp', fmt(state.combat.hp));
     if (action && state.action) {
         const interval = actionInterval(action.interval, d, action.skill);
-        const fillId = action.kind === 'node' ? `progress-${action.skill}-${action.id}` : null;
+        const fillId = action.kind === 'node' ? `progress-${action.skill}-${action.id}` : action.kind === 'agility' ? 'progress-agility-course' : null;
         const el = fillId ? document.getElementById(fillId) : document.querySelector('.node-card.active .action-progress-fill');
         if (el) el.style.width = `${Math.min(100, state.action.progress / interval * 100)}%`;
     }
@@ -860,6 +1009,8 @@ export function renderTab(game, ui, cloud) {
         case 'shop': return renderShop(game, ui);
         case 'achievements': return renderAchievements(game) + renderCollection(game);
         case 'dungeons': return renderDungeons(game);
+        case 'farming': return renderFarming(game, ui);
+        case 'agility': return renderAgility(game, ui);
         case 'settings': return renderSettings(game, ui, cloud);
         case 'clan': return renderClan();
         default: return NON_COMBAT_SKILLS.includes(ui.tab) ? renderSkill(game, ui, ui.tab) : renderCombat(game, ui);

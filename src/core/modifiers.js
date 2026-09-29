@@ -9,12 +9,13 @@
 import { EQUIP_SLOTS, UPGRADE_STEP } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
-import { NON_COMBAT_SKILLS, WORKSHOP_SKILLS } from '../data/skills.js';
+import { NON_COMBAT_SKILLS, SPEED_SKILLS } from '../data/skills.js';
 import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS } from '../data/dungeons.js';
+import { obstacleById } from '../data/agility.js';
 import { levelForXp } from './xp.js';
 
 export const BASE = {
@@ -38,8 +39,22 @@ export const BASE = {
     focusAfterMs: 60000,
     focusSkillSpeed: 0.15,
     focusAttackSpeed: 0.15,
+    // Bonfire: every log burnt adds time; while it burns, all skills (combat too) earn more XP.
+    bonfireXp: 0.05,            // at firemaking level 1 ...
+    bonfireXpAt99: 0.10,        // ... rising to this at 99
+    bonfireSecondsPerLogTier: 15,
+    bonfireMaxMs: 60 * 60 * 1000,
     caps: { critChance: 0.75, dodge: 0.6, lifesteal: 0.3, attackSpeed: 1.0 }
 };
+
+/** XP bonus of a burning bonfire at this firemaking level. */
+export function bonfireBonus(level) {
+    return BASE.bonfireXp + (BASE.bonfireXpAt99 - BASE.bonfireXp) * Math.min(99, Math.max(1, level)) / 99;
+}
+
+export function bonfireLit(state, now = state.meta.lastActiveAt || Date.now()) {
+    return (state.bonfire?.until || 0) > now;
+}
 
 /** True once the player has left the game alone for `focusAfterMs`. */
 export function isFocused(state, now = state.meta.lastActiveAt || Date.now()) {
@@ -57,7 +72,7 @@ const POTION_EFFECTS = {
 function emptyMods() {
     const skillSpeed = {};
     const doubleChance = {};
-    for (const id of [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS]) { skillSpeed[id] = 0; doubleChance[id] = 0; }
+    for (const id of SPEED_SKILLS) { skillSpeed[id] = 0; doubleChance[id] = 0; }
     return {
         gearAtk: 0, gearDef: 0,
         atkMult: 0, defMult: 0, hpMult: 0,
@@ -65,7 +80,7 @@ function emptyMods() {
         goldMult: 0, dropMult: 0, combatXpMult: 0, xpMult: 0,
         skillSpeed, doubleChance,
         foodMult: 0, autoEatThreshold: 0, potionCharges: 0, offlineHours: 0,
-        boostDuration: 0, craftQuality: 0, tokenMult: 0
+        boostDuration: 0, craftQuality: 0, tokenMult: 0, farmYield: 0
     };
 }
 
@@ -116,7 +131,7 @@ export function collectModifiers(state) {
     if (unlockedCount) {
         mods.atkMult += ACHIEVEMENT_GLOBAL_BONUS * unlockedCount;
         mods.defMult += ACHIEVEMENT_GLOBAL_BONUS * unlockedCount;
-        for (const id of NON_COMBAT_SKILLS) mods.skillSpeed[id] += ACHIEVEMENT_GLOBAL_BONUS * unlockedCount;
+        for (const id of SPEED_SKILLS) mods.skillSpeed[id] += ACHIEVEMENT_GLOBAL_BONUS * unlockedCount;
     }
 
     // Pets (permanent, one per skill).
@@ -128,6 +143,11 @@ export function collectModifiers(state) {
         for (const m of DUNGEON_MILESTONES) if (clears >= m.clears) addMods(mods, m.mods);
     }
     addMods(mods, TITAN_BONUS, state.titan?.kills || 0);
+
+    // Agility obstacles (permanent, one per course slot); an upgraded obstacle counts once per level.
+    (state.agility?.built || []).forEach((id, slot) => {
+        if (id) addMods(mods, obstacleById(id)?.mods, Math.max(1, state.agility.levels?.[slot] || 1));
+    });
 
     // Active potion (only while it has charges).
     if (state.combat.potion !== 'none' && state.combat.potionCharges > 0) addMods(mods, POTION_EFFECTS[state.combat.potion]);
@@ -147,10 +167,13 @@ export function collectModifiers(state) {
         if (mg && mg.boostUntil > now) mods.skillSpeed[id] += mg.bonus;
     }
 
-    // Focus (idle bonus).
+    // The bonfire.
+    if (bonfireLit(state, now)) mods.xpMult += bonfireBonus(skillLevel(state, 'firemaking'));
+
+    // Focus (idle bonus). Not farming: plots are planted with a click, so focus could never apply.
     mods.focused = isFocused(state, now);
     if (mods.focused) {
-        for (const id of Object.keys(mods.skillSpeed)) mods.skillSpeed[id] += BASE.focusSkillSpeed;
+        for (const id of Object.keys(mods.skillSpeed)) if (id !== 'farming') mods.skillSpeed[id] += BASE.focusSkillSpeed;
         mods.attackSpeed += BASE.focusAttackSpeed;
     }
 
@@ -195,11 +218,13 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         boostDurationMult: 1 + mods.boostDuration,
         craftQuality: mods.craftQuality,
         tokenMult: 1 + mods.tokenMult,
+        farmYield: 1 + mods.farmYield,
         skillSpeed: mods.skillSpeed,
         doubleChance: mods.doubleChance,
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),
         campMult: camp,
-        focused: !!mods.focused
+        focused: !!mods.focused,
+        bonfire: bonfireLit(state)
     };
 }
 

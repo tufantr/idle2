@@ -40,6 +40,11 @@ flowchart LR
     Mining -->|ore, coal| Smelting
     Mining -->|gems 2%| Crafting
     Woodcutting -->|logs| Cooking
+    Woodcutting -->|logs| Firemaking
+    Firemaking -->|bonfire: +XP to all| Skills["Every skill"]
+    Fishing -->|raw fish| Cooking
+    Farming -->|herbs| Alchemy
+    Farming -->|crops| Cooking
     Woodcutting -->|log handles| Tools
     Woodcutting -->|logs| Bows
     Hunting -->|raw meat| Cooking
@@ -55,6 +60,8 @@ flowchart LR
     Combat -->|zone materials, gems| Mining & Woodcutting & Hunting
     Combat -->|gear drops| Salvage["Salvage: essence, bars"]
     Combat -->|gold| Camp["Camp, supplies, upgrades"]
+    Combat -->|bait| Fishing
+    Combat -->|gold, materials| Agility["Agility course: permanent bonuses"]
     Combat -->|essence| Upgrades["Upgrades, reforges"]
     Combat -->|best stage| Prestige
     Combat --> Dungeons["Dungeons: chests, fragments, uniques"]
@@ -76,9 +83,10 @@ let offline progress run overnight.
 - **Curve:** the Old School RuneScape / Melvor table, `XP(L) = floor(¼ · Σ_{l=1}^{L-1} floor(l + 300·2^(l/7)))`,
   cap 99 (`src/core/xp.js`). Level 92 is the halfway point to 99 (13,034,431 XP). The prototype's
   `nextXp × 1.5` put mining 50 at 322 years of play; this puts it at ~2.5 hours.
-- **Skills:** Mining, Woodcutting, Hunting (gathering); Cooking, Alchemy (production); Smithing,
-  Crafting (workshop); Combat (earned by fighting). Every skill's level matters — smithing and
-  crafting levels gate recipes, combat level gates wearing gear.
+- **Skills (12):** Mining, Woodcutting, Fishing, Hunting (gathering); Cooking, Firemaking, Alchemy
+  (production); Farming (parallel, on the clock); Agility (a course you build); Smithing, Crafting
+  (workshop); Combat (earned by fighting). Every skill's level matters — workshop levels gate recipes,
+  farming levels open plots, agility levels open course slots, combat level gates wearing gear.
 - **Nodes** (`src/data/skills.js`): XP per action grows ~15× across a skill while intervals grow
   only 1.4–2×, so XP/hour roughly doubles every 15 levels. Example (mining):
 
@@ -96,29 +104,34 @@ let offline progress run overnight.
 
 ### 3.2 Resources and dependencies
 
-`src/data/resources.js` defines 50 resources. Who consumes what:
+`src/data/resources.js` defines 73 resources, and a test checks that every one has a consumer. Who
+consumes what:
 
 | Resource | Made by | Consumed by |
 |---|---|---|
 | Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite) |
 | Bars | Smelting, salvaging crafted gear | Forging (1–5 per piece), tools, bows, jewellery (silver/gold only) |
 | Gems | Mining (2%), zone drops, chests | Jewellery |
-| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, tool handles, bows, Defense potion (oak) |
+| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows and rods, agility obstacles, Defense potion (oak) |
 | Raw meat | Hunting, zone drops | Cooking; Evasion potion (raw fox) |
-| Food | Cooking | Combat auto-eat; Health potion (roast boar) |
-| Herbs | Alchemy foraging, zone drops | Potions |
+| Raw fish | Fishing, zone drops | Cooking |
+| Crops | Farming | Cooking (one potato, or two of the others, per dish) |
+| Food | Cooking (meat, fish, farm dishes) | Combat auto-eat (smallest dish that fills the gap); Health potion (roast boar) |
+| Herbs | Alchemy foraging, Farming, zone drops | Potions |
+| Fishing bait | Zone drops (Marsh, Ruins, Frozen Wastes), the Shop | Fishing: one per catch, 50% chance of a second fish |
 | Potions | Alchemy | Combat buffs (15 charges each) |
 | Essence | Combat, salvaging drops, dungeon chests, the Titan, daily crates | Gear upgrades and reforges |
 
 Sell prices: `base[category] × 1.6^(tier−1)` with bases ore 3, bar 8, gem 25, log 2, raw 3, food 6,
-herb 4, potion 30. Selling is a bootstrap; combat gold is the real economy (§3.8).
+herb 4, crop 3, potion 30. Selling is a bootstrap; combat gold is the real economy (§3.8).
 
 ### 3.3 Tools
 
-Crafted, not bought (`src/data/workshop.js`): pickaxes and axes are forged in Smithing (2 bars + a
-log handle), bows are made in Crafting (3 logs + a bar). Each tier gives **+5% speed and +5%
-double-yield chance** to its skill (tier 5 pickaxe: +25% speed, 25% doubles). Tools are the main
-reason a gathering player visits the workshop and a smithing player visits the woods.
+Crafted, not bought (`src/data/workshop.js`): pickaxes, axes, tinderboxes and hoes are forged in
+Smithing; bows and fishing rods are made in Crafting. Each tier gives **+5% speed and +5% "double"
+chance** to its skill (tier 5 pickaxe: +25% speed, 25% doubles). For the tinderbox the double is a log
+that burns twice (XP and bonfire time); for the hoe, speed is crop growth and the double is a double
+harvest. Tools are the main reason a gathering player visits the workshop and a smith visits the woods.
 
 ### 3.4 Workshop
 
@@ -244,12 +257,14 @@ the Abyss repeats with a depth counter and steeper growth.
 ### 3.8 Economy: gold, camp and supplies
 
 - **Sources:** combat kills (dominant), the Titan, selling materials and items, daily crates.
-- **Sinks:** camp upgrades, gear upgrades and reforges (with essence), supplies.
+- **Sinks:** camp upgrades, gear upgrades and reforges (with essence), supplies, farming seeds, and
+  agility obstacles and their upgrades — the long-term sink. In the simulator 93–95% of all gold
+  earned is spent (79–96% in the second half of an 80-hour run), mostly on gear upgrades and agility.
 - **Camp** (`src/data/camp.js`) — the run-scoped power layer, bought with gold and **reset on
   prestige**: Whetstone +5% ATK, Armour Rack +5% DEF, Hearth +4% HP per level, multiplicative, max
   25 levels each (×3.39 / ×3.39 / ×2.67 when maxed), cost `base × 1.30^level` (60 / 60 / 50 base).
   It turns each new run into a climb and gives gold a job.
-- **Supplies** (gold shop): coal, logs, herbs and rabbits priced in "kills at your best stage"
+- **Supplies** (gold shop): coal, logs, herbs, rabbits and bait priced in "kills at your best stage"
   (25–40 kills), so the price scales with income and can never be resold at a profit (the
   prototype's Coal Wagon printed +350 gold per purchase).
 - **Gold resets on prestige.** It is run currency, like Clicker Heroes' gold.
@@ -260,7 +275,7 @@ the Abyss repeats with a depth counter and steeper growth.
 
 - **Available** from stage 10. Resets: stage (restart at 10% of your all-time best), gold, camp.
   Keeps: skills, gear, tools, materials, essence, achievements, tokens, perks, pets, dungeon clears
-  and fragments, Titans defeated.
+  and fragments, Titans defeated, the agility course and farming plots.
 - **Tokens** = `floor(((best stage this run − 5) / 5)^1.5)`: 1 at stage 10, 27 at 50, 82 at 100,
   156 at 150. Tokens are **held, never spent**; each is a permanent +0.5% ATK and DEF and +0.25% HP,
   in its own multiplicative layer. The Eternity achievement adds +10% tokens.
@@ -270,7 +285,33 @@ the Abyss repeats with a depth counter and steeper growth.
   and food healing), Fortune (+5% gold and drop chance).
 - **Why polynomial tokens:** see §6.1 — an exponential token formula ran away in the simulator.
 
-### 3.10 Dungeons and unique items
+### 3.10 Fishing, Firemaking, Farming and Agility
+
+- **Fishing** (`src/data/skills.js`): seven spots from Shrimp Shallows (1) to Leviathan Deep (90),
+  paced like Hunting. Fish cook into the best food per level (~10% more healing than meat). Each catch
+  uses one **bait** if you have any, for a 50% chance of a second fish; bait drops in the wetter zones
+  and the Shop sells tins. Rods (Crafting) are its tool.
+- **Firemaking:** burns logs for XP (the log sink) and feeds the **bonfire**: each log adds 15 s × its
+  tier, up to an hour, on the wall clock. While it burns every skill — combat included — earns +5% XP,
+  rising to +10% at Firemaking 99. Tinderboxes (Smithing) are its tool.
+- **Farming** (`src/data/farming.js`, `src/systems/farming.js`) — the first **parallel** skill: up to
+  six plots (opening at levels 1, 1, 15, 30, 50, 70) grow on the wall clock while any other action runs
+  and while the game is closed. Planting is a click and buys the seed at a flat price (25 gold for
+  potatoes to 4,000 for starfruit); harvesting pays the crop and XP per unit. Eight crops: four herbs
+  for Alchemy and potatoes, cabbages, pumpkins and starfruit for four new dishes. Harvest XP per
+  plot-hour roughly doubles every ~15 levels. "Harvest ready & replant" replants the same crops.
+  Hoes (Smithing) speed growth and can double a harvest.
+- **Agility** (`src/data/agility.js`, `src/systems/agility.js`): a course of six slots (opening at
+  levels 1, 10, 25, 40, 55, 70), each holding one of three obstacles. Building costs a fixed amount of
+  gold — 20k, 200k, 1.5M, 10M, 60M, 300M, about an hour of one run's income where the slot opens — plus
+  logs and bars (the last slot also 5 diamonds). Every obstacle is a **permanent bonus that survives
+  prestige** (gathering or production speed, ATK/DEF/HP, gold, drops, crit, offline hours, workshop
+  speed, farming yield, XP, attack speed, dodge, all-skill speed). Obstacles upgrade to **level 5**:
+  each level adds the bonus again, costs the slot's price × 2^level and needs 7 more agility levels.
+  Running the course is an action that takes as long as its obstacles together and pays their XP
+  (+25% per obstacle level). Replacing an obstacle has no refund.
+
+### 3.11 Dungeons and unique items
 
 `src/data/dungeons.js`, `src/systems/dungeon.js`. A dungeon is an authored gauntlet: elite
 monsters (×1.4 HP, ×1.15 ATK) and a boss (×1.5 on top of the boss multipliers) with a **60-second
@@ -300,7 +341,7 @@ health. Dying, leaving or running out of time loses the run; clearing it opens a
 - **Readiness:** the Dungeons tab estimates the boss fight (time to kill vs the timer, and how long you
   last without food), coloured green / amber / red.
 
-### 3.11 The Titan
+### 3.12 The Titan
 
 Once an hour (from stage 20) you may challenge the Titan: a **60-second damage race** at full health
 against a boss with ten times a boss's health. Titan level L fights like stage `10 × (L + 1)` (level 1:
@@ -308,23 +349,27 @@ against a boss with ten times a boss's health. Titan level L fights like stage `
 `8 × L` essence, 30 kills of gold at your best stage and two gems; the next Titan is stronger. A loss
 pays essence for the share of health you took off. A Titan fight never survives a reload.
 
-### 3.12 Pets and the collection
+### 3.13 Pets and the collection
 
-`src/data/pets.js`. One pet per skill (combat included), found at random while training and kept
-forever. Melvor's formula: the chance per action is `action seconds × skill level / 25,000,000`, so the
+`src/data/pets.js`. One pet per skill (twelve, combat included), found at random while training and
+kept forever. Melvor's formula: the chance per action is `action seconds × skill level / 25,000,000`, so the
 expected wait is about `25,000,000 / level` seconds of training (~70 h at level 99) whatever the
-action's speed; combat rolls once per kill as a 4-second action. Each pet gives +3% speed to its skill
-(Fang, the combat pet: +3% ATK and DEF). The Achievements tab lists pets and uniques as a collection.
+action's speed; combat rolls once per kill as a 4-second action and farming once per harvest as an
+action as long as the crop's growing time. Each pet gives +3% speed to its skill (Fang, the combat
+pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievements tab lists pets and uniques as a collection.
 
-### 3.13 Achievements, unlocks and the daily crate
+### 3.14 Achievements, unlocks and the daily crate
 
-- **Achievements** (`src/data/achievements.js`): 24, each with a named reward applied through the
+- **Achievements** (`src/data/achievements.js`): 29, each with a named reward applied through the
   pipeline **plus** +1% ATK, DEF and skill speed per achievement (Antimatter Dimensions / Cookie
-  Clicker "milk" pattern). Dungeon clears, Titans, pets and uniques have their own.
+  Clicker "milk" pattern). Dungeon clears, Titans, pets, uniques, the new skills and a finished agility
+  course have their own. A test checks that every bonus in the data is well-formed (the Forager perk
+  once had a malformed bonus and did nothing).
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true —
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
-  first hunt, Alchemy / Shop / Prestige / Achievements at stage 10, Dungeons at stage 20, Crafting at
-  mining 20 or the first gem. The header shows the next goal. Settings has a developer switch (and
+  first hunt, Fishing after 5 dishes, Firemaking after 20 logs, Alchemy / Shop / Prestige /
+  Achievements at stage 10, Dungeons at stage 20, Agility at stage 30, Farming after 10 Alchemy actions
+  or Cooking 15, Crafting at mining 20 or the first gem. The header shows the next goal. Settings has a developer switch (and
   `?dev=1`) that unlocks all.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for
   you**, so a missed day costs nothing; no streaks. A crate holds 40 kills of gold at your best stage,
@@ -332,9 +377,10 @@ action's speed; combat rolls once per kill as a 4-second action. Each pet gives 
 - **Next steps** (`src/systems/advisor.js`): up to four suggestions from the state, most urgent
   first — a ready crate, a waking Titan, a unique ready to assemble, unspent skill points, an upgrade
   in the bag, the next piece to forge, food, an affordable camp upgrade, the next tool, a prestige
-  worth taking, the skill gating the next metal, a newly opened dungeon, the next unlock.
+  worth taking, the skill gating the next metal, a newly opened dungeon, ready or empty farming plots,
+  an affordable agility obstacle, the next unlock.
 
-### 3.14 Active play: mini-games and Focus
+### 3.15 Active play: mini-games and Focus
 
 - **Mini-games** (`src/systems/minigame.js`) are **opportunities**, not a job: while you train a
   gathering or production skill, a first chance appears after 45–90 seconds and then one every 3–6
@@ -345,16 +391,18 @@ action's speed; combat rolls once per kill as a 4-second action. Each pet gives 
   settles in — +15% skill speed and +15% attack speed until the next input. It also applies to offline
   progress, so leaving the game alone is never strictly worse than clicking.
 
-### 3.15 Offline progress
+### 3.16 Offline progress
 
 `src/systems/offline.js`. On load (and when a tab wakes after a minute or more) the game replays the
 time away with **the same code as online play**, silently: skill actions complete one by one
 (consuming inputs, stopping when they run out), workshop actions forge real items, and combat —
 including a dungeon run on repeat — is replayed in 1-second steps with food, potions, the boss timer
-and death. Capped at **12 hours** (+2 h per Endurance perk, up to 24 h). Absences under a minute are
-ignored. The "Welcome back" summary lists gains, materials used, levels, and why work stopped early.
+and death. Farming plots and the bonfire run on timestamps, so they need no replay. Capped at
+**12 hours** (+2 h per Endurance perk, up to 24 h, +1 h from the Zipline). Absences under a minute
+are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
+plots ready to harvest, and why work stopped early.
 
-### 3.16 Saves, cloud and the API
+### 3.17 Saves, cloud and the API
 
 - **Local save** (`src/core/save.js`): `localStorage['fantasyIdle.save.v2']`, versioned
   (`state.version = 3`), autosaved every 15 s and when the tab is hidden or closed. Prototype saves
@@ -374,8 +422,8 @@ ignored. The "Welcome back" summary lists gains, materials used, levels, and why
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
-level, perks, achievements, pets, dungeon milestones, Titans defeated, potions, tools, mini-game
-boosts and Focus — into one object; `deriveStats` turns it into the numbers combat and skilling use.
+level, perks, achievements, pets, dungeon milestones, Titans defeated, agility obstacles (× their
+level), potions, tools, mini-game boosts, the bonfire and Focus — into one object; `deriveStats` turns it into the numbers combat and skilling use.
 Rules:
 
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
@@ -397,15 +445,21 @@ Rules:
 | Mining | 7m | 17m | 42m | 2.6h | 17h | 54h | 123h |
 | Mining + tools | 7m | 16m | 39m | 2.3h | 14h | 44h | 99h |
 | Woodcutting | 6m | 18m | 43m | 2.9h | 18h | 57h | 129h |
+| Fishing | 6m | 19m | 45m | 3.0h | 20h | 62h | 121h |
+| Fishing + tools | 6m | 18m | 41m | 2.7h | 16h | 49h | 94h |
 | Hunting | 6m | 20m | 47m | 3.2h | 21h | 65h | 126h |
-| Cooking | 3m | 10m | 24m | 1.8h | 12h | 38h | 74h |
+| Cooking | 3m | 10m | 22m | 1.7h | 11h | 37h | 72h |
+| Firemaking | 2m | 8m | 18m | 1.3h | 8.4h | 26h | 58h |
 | Alchemy (foraging only) | 7m | 20m | 43m | 3.2h | 23h | 93h | 224h |
 | Smithing (smelting only) | 4m | 10m | 24m | 1.8h | 14h | 48h | 109h |
 | Smithing (mine → smelt → forge) | 4m | 15m | 43m | 4.6h | 34h | 119h | 275h |
+| Farming (every plot, harvested on time) | 31m | 1.4h | 2.9h | 9.4h | 39h | 125h | 286h |
+| Agility (a full course at each level) | 6m | 18m | 44m | 3.7h | 25h | 89h | 208h |
 
 Targets from the research: Lv 20 ≤ 15 min (close: 10–20 min), Lv 50 in 2–4 h (met), Lv 99 in
-150–400 h (**faster** for most skills: 74–129 h — raise node XP less steeply if 99 should take
-longer). The full smithing pipeline, which also has to mine its ore, is on target.
+150–400 h (**faster** for most skills: 72–129 h — raise node XP less steeply if 99 should take
+longer). The full smithing pipeline, Farming and Agility are on target; Firemaking is quick because
+it is limited by how fast you can cut the logs it burns.
 
 ### 5.2 Whole-game simulation
 
@@ -472,6 +526,9 @@ to four hours (6.8–11.2 h instead of 10.8–12.5 h). Farming a comfortable sta
 | Dungeon rewards | `CHEST_*`, `FRAGMENTS_PER_UNIQUE`, `DUNGEON_MILESTONES`, placement | `src/data/dungeons.js` |
 | The Titan | `TITAN_*` | `src/data/dungeons.js` |
 | Pet rarity | `PET_BASE` | `src/data/pets.js` |
+| Farming | crop `growMs`, `yield`, `xp`, `seedGold`; `FARMING_PLOTS` | `src/data/farming.js` |
+| Agility | slot `costGold`, `materials`, obstacle `mods`; `MAX_OBSTACLE_LEVEL` | `src/data/agility.js` |
+| The bonfire | `BASE.bonfire*` | `src/core/modifiers.js` |
 | More/less gold | `BALANCE.rewards.goldPerHp`; camp `growth`, `max` | `formulas.js`, `src/data/camp.js` |
 | Stronger prestige | `BALANCE.prestige.token*`; `BASE.tokenAtk` | `formulas.js`, `src/core/modifiers.js` |
 | Offline length | `BASE.baseOfflineHours`; Endurance perk | `modifiers.js`, `src/data/perks.js` |
@@ -519,8 +576,12 @@ disagreed, the implementation follows the simulator:
     has something to give.
 13. **Mini-game numbers:** +35–55% for 90 s every 3–6 min (report: +50–100% for 60–120 s every
     3–8 min), plus the idle Focus bonus so that active play stays optional.
-14. **Not yet built:** mastery, server-side offline time, upload plausibility checks, Phase 4 skills,
-    clans — all on the roadmap.
+14. **Seeds cost a flat price** and **agility obstacles fixed gold amounts**, not "kills at your best
+    stage" like the gold shop: gold resets on prestige and a new run earns far below best-stage rates,
+    so best-stage pricing made permanent purchases nearly impossible to save for (and made farming
+    depend on combat progress). Fixed prices also gate the later obstacles by progress naturally.
+15. **Not yet built:** mastery, server-side offline time, upload plausibility checks, clans — all on
+    the roadmap.
 
 ## 7. What was cut from the concept
 
@@ -549,12 +610,13 @@ src/main.js           browser bootstrap: loop, render-on-change, saves, backups,
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
-                      · dungeons (dungeons, uniques, the Titan) · pets
+                      · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
-                      · prestige · camp · minigame · offline · daily · advisor · progress (XP, pets, log)
+                      · farming · agility · prestige · camp · minigame · offline · daily · advisor
+                      · progress (XP, pets, log)
 src/ui/               render.js (HTML per tab) · format.js (numbers, time)
 api/                  Express API for Vercel (register, login, save, load) on Vercel Postgres
-test/                 node:test suites (game, loot, endgame, saves, API)
+test/                 node:test suites (game, loot, endgame, skills, saves, API)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table)
 docs/                 DESIGN.md (this) · ROADMAP.md · reports/ · research_notes/
 ```

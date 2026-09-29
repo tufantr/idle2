@@ -12,7 +12,9 @@ export const MINIGAME_CONFIG = {
     woodcutting: { icon: '🌳', label: 'Perfect Chop',   desc: 'Catch the axe rhythm at the heartwood ring.',     type: 'timing', accent: '#22c55e', actionText: 'Catch the Rhythm' },
     hunting:     { icon: '🏹', label: 'Snap Shot',      desc: 'Fire when the prey crosses the kill zone.',       type: 'moving-target', accent: '#f59e0b', actionText: 'Loose an Arrow' },
     cooking:     { icon: '🍳', label: 'Heat Ride',      desc: 'Tap the flame to keep the pan in the perfect band.', type: 'heat', accent: '#fb923c', actionText: 'Ride the Heat' },
-    alchemy:     { icon: '🧪', label: 'Catalyst Drag',  desc: 'Drag the stabiliser into the glowing channel.',   type: 'drag', accent: '#10b981', actionText: 'Stabilise the Mix' }
+    alchemy:     { icon: '🧪', label: 'Catalyst Drag',  desc: 'Drag the stabiliser into the glowing channel.',   type: 'drag', accent: '#10b981', actionText: 'Stabilise the Mix' },
+    fishing:     { icon: '🎣', label: 'Strike!',        desc: 'Strike when the float dips into the ring.',       type: 'moving-target', accent: '#38bdf8', actionText: 'Strike' },
+    firemaking:  { icon: '🔥', label: 'Stoke the Fire', desc: 'Tap to keep the flame in the perfect band.',      type: 'heat', accent: '#f97316', actionText: 'Stoke' }
 };
 
 function scheduleNext(mg, now) {

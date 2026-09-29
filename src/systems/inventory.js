@@ -220,6 +220,7 @@ export function upgradeItem(game, id) {
     }
     state.resources.essence -= cost.essence;
     state.gold -= cost.gold;
+    bumpStat(game, 'goldSpent', cost.gold);
     item.upgrade = (item.upgrade || 0) + 1;
     game.emit({ type: 'upgrade', item });
     game.markDirty();
@@ -244,6 +245,7 @@ export function reforgeItem(game, id) {
     }
     state.resources.essence -= cost.essence;
     state.gold -= cost.gold;
+    bumpStat(game, 'goldSpent', cost.gold);
     rerollAffixes(item);
     item.reforges = (item.reforges || 0) + 1;
     bumpStat(game, 'reforges');
@@ -292,6 +294,7 @@ export function buyGoldShopItem(game, id) {
     const price = goldShopPrice(game, entry);
     if (state.gold < price) { game.emit({ type: 'error', text: 'Not enough gold.' }); return false; }
     state.gold -= price;
+    bumpStat(game, 'goldSpent', price);
     for (const [res, qty] of Object.entries(entry.gives)) state.resources[res] += qty;
     game.markDirty();
     return true;

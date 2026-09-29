@@ -22,6 +22,9 @@ import { itemUpgradeCost } from '../src/systems/inventory.js';
 import { resolveAction } from '../src/systems/skilling.js';
 import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_BOSS_TIME_MS } from '../src/data/dungeons.js';
 import { dungeonPreview, dungeonUnlocked, fightPreview } from '../src/systems/dungeon.js';
+import { AGILITY_SLOTS } from '../src/data/agility.js';
+import { canBuild, obstacleCost, upgradeInfo } from '../src/systems/agility.js';
+import { plotUnlocked, plotReady, bestCrop, seedCost } from '../src/systems/farming.js';
 import { enemyForStage } from '../src/core/formulas.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
@@ -41,6 +44,13 @@ rng.setSource(seededRandom(SEED));
 let now = 0;
 const game = new Game(null, now);
 const S = game.state;
+
+// Where the gold goes: wrap every gold sink and record the gold it removed.
+const spentOn = {};
+for (const [method, label] of [['buyCampUpgrade', 'camp'], ['upgradeItem', 'upgrades'], ['reforgeItem', 'reforges'], ['buyGoldShopItem', 'supplies'], ['plant', 'seeds'], ['harvestAll', 'seeds'], ['buildObstacle', 'agility']]) {
+    const original = game[method].bind(game);
+    game[method] = (...a) => { const before = S.gold; const r = original(...a); spentOn[label] = (spentOn[label] || 0) + Math.max(0, before - S.gold); return r; };
+}
 const H = ms => (ms / 3600000);
 const lvl = id => levelForXp(S.skills[id].xp);
 const fmtH = ms => `${H(ms).toFixed(1)}h`;
@@ -178,7 +188,12 @@ function toolTask() {
 
 function foodTask() {
     if (!S.unlocks.hunting) return null;
-    const best = [...orderedByTier('food')].reverse().find(f => { const n = nodeFor('cooking', f.id); return n && lvl('cooking') >= n.levelReq && lvl('hunting') >= nodeFor('hunting', Object.keys(n.consumes)[0]).levelReq; });
+    // The bot cooks hunted meat (fish and farm dishes are left to real players).
+    const best = [...orderedByTier('food')].reverse().find(f => {
+        const n = nodeFor('cooking', f.id);
+        const hunt = n && nodeFor('hunting', Object.keys(n.consumes)[0]);
+        return hunt && lvl('cooking') >= n.levelReq && lvl('hunting') >= hunt.levelReq;
+    });
     if (!best) return null;
     const stock = orderedByTier('food').reduce((sum, f) => sum + (S.resources[f.id] || 0) * f.heals, 0);
     const target = 60 * best.heals;
@@ -298,9 +313,60 @@ function combatTask() {
     return { kind: 'combat', why: `fight at stage ${S.combat.stage}`, until: () => !S.combat.active || now - lastStageGainAt > 15 * 60000 };
 }
 
+// Farming: harvest what is ready and keep every open plot planted with the best crop we can afford.
+function tendFarm() {
+    if (!S.unlocks.farming) return;
+    S.farming.plots.forEach((plot, i) => {
+        if (plotReady(plot, now)) game.harvest(i);
+        if (!plot.crop && plotUnlocked(S, i)) {
+            const crop = bestCrop(S, c => seedCost(S, c) <= S.gold * 0.2);
+            if (crop) game.plant(i, crop.id);
+        }
+    });
+}
+
+// Agility: the bot's pick per slot (combat first), built as soon as gold and materials allow; spare
+// gold then upgrades the cheapest obstacle, keeping enough back for the next build.
+const AGILITY_PICKS = ['rope_swing', 'cargo_net', 'pipe_crawl', 'hurdles', 'waterfall', 'sky_bridge'];
+function nextSlot() {
+    return S.unlocks.agility ? S.agility.built.findIndex(b => !b) : -1;
+}
+function buildObstacles() {
+    const slot = nextSlot();
+    if (slot >= 0 && canBuild(S, AGILITY_PICKS[slot]).ok && game.buildObstacle(AGILITY_PICKS[slot])) milestone('obstacle', slot + 1);
+    const reserve = nextSlot() >= 0 ? obstacleCost(S, nextSlot()).gold : 0;
+    for (let guard = 0; guard < 10; guard++) {
+        const pick = S.agility.built.map((id, i) => ({ i, info: id ? upgradeInfo(S, i) : null }))
+            .filter(o => o.info && lvl('agility') >= o.info.levelReq)
+            .sort((a, b) => a.info.gold - b.info.gold)[0];
+        if (!pick || S.gold - pick.info.gold < reserve || !game.upgradeObstacle(pick.i)) break;
+        milestone('obstacle upgrades', S.stats.obstacleUpgrades);
+    }
+}
+// When the next obstacle's gold is within reach: train agility for its slot, then gather materials.
+function agilityTask() {
+    const slot = nextSlot();
+    if (slot < 0) return null;
+    const cost = obstacleCost(S, slot);
+    if (S.gold < cost.gold * 0.5) return null;
+    const target = AGILITY_SLOTS[slot].levelReq;
+    if (lvl('agility') < target) {
+        if (!S.agility.built.some(Boolean)) return null;
+        return { kind: 'agility', why: `train agility to ${target}`, until: () => lvl('agility') >= target };
+    }
+    for (const [id, qty] of Object.entries(cost.materials)) {
+        if (RESOURCES[id].category === 'gem') continue; // gems come from mining luck; wait for them
+        const t = obtain(id, qty);
+        if (t) return t;
+    }
+    return null;
+}
+
 function decide() {
     equipBest();
     spendPoints();
+    tendFarm();
+    buildObstacles();
     // Prestige when the run's tokens are a meaningful addition.
     if (game.canPrestige() && now - lastStageGainAt > 20 * 60000) {
         const p = game.prestigePreview();
@@ -310,7 +376,7 @@ function decide() {
         }
     }
     for (const d of DUNGEONS) if (S.dungeons[d.id].fragments >= FRAGMENTS_PER_UNIQUE && game.assembleUnique(d.id)) milestone('unique', d.unique);
-    return gearTask() || toolTask() || foodTask() || jewelTask() || stallTask() || combatTask();
+    return gearTask() || agilityTask() || toolTask() || foodTask() || jewelTask() || stallTask() || combatTask();
 }
 
 // After combat stalls (no stage gain), work toward the next gear tier: the skill gating the next
@@ -327,11 +393,12 @@ function trainWeakest() {
         if (lvl('mining') < oreNode.levelReq && lastTrainedSkill !== 'mining') { lastTrainedSkill = 'mining'; return train('mining', 60); }
         if (lvl('smithing') < nextMetal.levelReq && lastTrainedSkill !== 'smithing') { lastTrainedSkill = 'smithing'; return train('smithing', 60); }
     }
-    const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting'].filter(id => S.unlocks[id] || ['mining', 'smithing'].includes(id));
+    const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)));
     candidates.sort((a, b) => lvl(a) - lvl(b));
     const pick = candidates.find(c => c !== lastTrainedSkill) || candidates[0];
     lastTrainedSkill = pick;
     if (pick === 'crafting') return craftTraining();
+    if (pick === 'agility') { const end = now + 45 * 60000; return { kind: 'agility', why: 'run the agility course', until: () => now >= end }; }
     return train(pick, 45);
 }
 
@@ -354,6 +421,7 @@ function apply(task) {
     else if (task.kind === 'smith') ok = game.startSmithing(task.type, task.bar);
     else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
     else if (task.kind === 'tool') ok = game.startToolCraft(task.tool, task.tier);
+    else if (task.kind === 'agility') ok = game.startAgility();
     else if (task.kind === 'dungeon') { game.setDungeonRepeat(true); ok = game.enterDungeon(task.id); if (ok) lastStageGainAt = now; }
     else if (task.kind === 'farm') {
         game.enterCombat();
@@ -398,6 +466,7 @@ const totalMs = HOURS * 3600000;
 const t0 = Date.now();
 
 const deathStages = { boss: 0, regular: 0 };
+let steady = null; // gold earned/spent at the halfway mark, for the steady-state sink ratio
 let dungeonFails = 0;
 let titanTries = 0;
 while (now < totalMs) {
@@ -413,6 +482,8 @@ while (now < totalMs) {
     if (task.kind === 'combat' && !S.combat.active && S.combat.hp <= game.derived.maxHp * 0.5) needTraining = true;
     if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
 
+    if (now % (5 * 60000) < STEP) { tendFarm(); buildObstacles(); }
+    if (now >= totalMs / 2 && !steady) steady = { earned: S.stats.goldEarned, spent: S.stats.goldSpent };
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
     if (task.kind === 'farm' && !task.stage && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
     if (task.kind === 'farm' && now % 60000 < STEP) buyCamp();
@@ -429,7 +500,7 @@ while (now < totalMs) {
     }
     for (const m of STAGE_MARKS) if (S.combat.bestStage >= m) milestone('stage', m);
     if (S.equipped.Weapon) milestone('weapon tier', S.equipped.Weapon.tier);
-    for (const id of ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'combat']) for (const m of LEVEL_MARKS) if (lvl(id) >= m) milestone(`${id} lv`, m);
+    for (const id of ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'combat', 'farming', 'agility']) for (const m of LEVEL_MARKS) if (lvl(id) >= m) milestone(`${id} lv`, m);
     if (H(now) - lastSnapshot >= SNAPSHOT_HOURS) {
         lastSnapshot = H(now);
         console.log(`t=${fmtH(now).padStart(7)} | stage ${String(S.combat.stage).padStart(4)} best ${String(S.combat.bestStage).padStart(4)} | tokens ${String(S.prestige.tokens).padStart(6)} (P${S.prestige.count}) camp ${S.camp.whetstone}/${S.camp.armory}/${S.camp.hearth} | atk ${String(game.derived.atk).padStart(6)} def ${String(game.derived.def).padStart(6)} hp ${String(game.derived.maxHp).padStart(6)} | ` +
@@ -445,6 +516,10 @@ for (const [key, list] of Object.entries(byKey)) console.log(`  ${key.padEnd(16)
 console.log(`\nRuns: ${runLog.map(r => `#${r.run} ${r.hours.toFixed(1)}h→stage ${r.reached} (+${r.tokens})`).join('; ') || 'none'}`);
 console.log(`Deaths: ${deathStages.boss} on boss stages, ${deathStages.regular} on regular stages (${Math.round(100 * deathStages.regular / Math.max(1, deathStages.boss + deathStages.regular))}% of walls are not bosses)`);
 console.log(`Dungeons: ${DUNGEONS.map(d => `${d.name} ${S.dungeons[d.id].clears} clears/${S.dungeons[d.id].fragments} frags`).join('; ')}; ${dungeonFails} failed runs. Titan: ${S.titan.kills} kills in ${titanTries} tries. Pets: ${Object.keys(S.pets).join(', ') || 'none'}`);
+const spentRatio = (e, sp) => (e > 0 ? `${Math.round(100 * sp / e)}%` : 'n/a');
+const lostToPrestige = S.stats.goldEarned - S.stats.goldSpent - S.gold;
+console.log(`Gold spent by sink: ${Object.entries(spentOn).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${spentRatio(S.stats.goldEarned, v)}`).join(', ')}; left at prestige ${spentRatio(S.stats.goldEarned, lostToPrestige)}.`);
+console.log(`Gold sinks: ${spentRatio(S.stats.goldEarned, S.stats.goldSpent)} of all gold earned was spent; second half: ${steady ? spentRatio(S.stats.goldEarned - steady.earned, S.stats.goldSpent - steady.spent) : 'n/a'}. Agility: ${S.agility.built.filter(Boolean).length}/6 obstacles, level ${lvl('agility')}. Farming level ${lvl('farming')}, ${S.stats.cropsHarvested} crops.`);
 console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}`);
 console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.equipped[s].upgrade ? '+' + S.equipped[s].upgrade : ''}` : null).filter(Boolean).join(', ')}`);
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);

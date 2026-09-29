@@ -132,6 +132,7 @@ function handleEvents(events) {
             case 'titan': toast(ev.won ? `🗿 Titan defeated! Permanent +2% ATK and HP` : `🗿 The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death'); break;
             case 'pet': toast(`🐾 ${ev.pet.icon} ${ev.pet.name} joined you! ${ev.pet.desc}`, 'achievement'); break;
             case 'unique': toast(`🌟 Unique: ${ev.item.name}!`, 'achievement'); break;
+            case 'obstacleBuilt': toast(`${ev.obstacle.icon} ${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement'); break;
             case 'kill':
                 if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss');
                 if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`);
@@ -279,6 +280,13 @@ window.FI = {
     setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
     assembleUnique(id) { const item = game.assembleUnique(id); if (item) toast(`🌟 ${item.name} assembled!`, 'achievement'); render(); },
     challengeTitan() { if (game.challengeTitan()) window.FI.switchTab('combat'); else render(); },
+
+    plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
+    harvest(plot) { game.harvest(plot); render(); },
+    harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`🌾 Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info'); render(); },
+    buildObstacle(id) { game.buildObstacle(id); render(); },
+    upgradeObstacle(slot) { game.upgradeObstacle(slot); render(); },
+    runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
 
     equip(id) { game.equipItem(id); render(); },
     unequip(slot) { game.unequipItem(slot); render(); },

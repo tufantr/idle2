@@ -13,6 +13,9 @@ import { canWear, itemScore } from './inventory.js';
 import { dailyReady } from './daily.js';
 import { titanReady, dungeonUnlocked } from './dungeon.js';
 import { DUNGEONS, FRAGMENTS_PER_UNIQUE, UNIQUES } from '../data/dungeons.js';
+import { AGILITY_SLOTS } from '../data/agility.js';
+import { plotReady, plotUnlocked } from './farming.js';
+import { canBuild } from './agility.js';
 
 const FORGE_PRIORITY = ['Weapon', 'Body', 'Shield', 'Legs', 'Head', 'Gloves', 'Boots'];
 const SETBACK_WINDOW_MS = 10 * 60 * 1000;
@@ -83,6 +86,17 @@ export function advise(game, limit = 4) {
         if ((state.dungeons[d.id]?.fragments || 0) >= FRAGMENTS_PER_UNIQUE) { add('🌟', `Assemble ${UNIQUES[d.unique].name} from your fragments`, 'dungeons'); break; }
     }
     if (state.prestige.skillPoints > 0) add('🌟', `Spend ${state.prestige.skillPoints} skill point${state.prestige.skillPoints > 1 ? 's' : ''} on perks`, 'shop');
+
+    if (isUnlocked(state, 'farming')) {
+        const ready = state.farming.plots.filter(p => plotReady(p, game.now)).length;
+        const empty = state.farming.plots.filter((p, i) => !p.crop && plotUnlocked(state, i)).length;
+        if (ready) add('🌾', `${ready} farming plot${ready > 1 ? 's are' : ' is'} ready to harvest`, 'farming');
+        else if (empty) add('🌱', `Plant your ${empty} empty plot${empty > 1 ? 's' : ''} — they grow while you do anything else`, 'farming');
+    }
+    if (isUnlocked(state, 'agility')) {
+        const affordable = AGILITY_SLOTS.flatMap((slot, i) => (state.agility.built[i] ? [] : slot.obstacles)).find(o => canBuild(state, o.id).ok);
+        if (affordable) add(affordable.icon, `Build the ${affordable.name} — ${affordable.desc}, permanently`, 'agility');
+    }
 
     const upgrade = findUpgrade(state);
     if (upgrade) add('🎒', `Equip ${upgrade.item.name} — it beats what you're wearing`, 'inventory');

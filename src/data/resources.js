@@ -55,6 +55,32 @@ export const RESOURCES = {
     cooked_drake:  R('cooked_drake',  'Roast Drake',   'food', 6, '🍖', '#f59e0b', { heals: 650 }),
     cooked_dragon: R('cooked_dragon', 'Roast Dragon',  'food', 7, '🍖', '#f59e0b', { heals: 1000 }),
 
+    // Raw fish (fishing) and cooked fish: a little more healing than meat of the same level.
+    raw_shrimp:    R('raw_shrimp',    'Raw Shrimp',    'raw', 1, '🦐', '#fda4af'),
+    raw_trout:     R('raw_trout',     'Raw Trout',     'raw', 2, '🐟', '#93c5fd'),
+    raw_salmon:    R('raw_salmon',    'Raw Salmon',    'raw', 3, '🐟', '#fb7185'),
+    raw_lobster:   R('raw_lobster',   'Raw Lobster',   'raw', 4, '🦞', '#ef4444'),
+    raw_swordfish: R('raw_swordfish', 'Raw Swordfish', 'raw', 5, '🐡', '#60a5fa'),
+    raw_shark:     R('raw_shark',     'Raw Shark',     'raw', 6, '🦈', '#94a3b8'),
+    raw_leviathan: R('raw_leviathan', 'Raw Leviathan', 'raw', 7, '🐋', '#6366f1'),
+    cooked_shrimp:    R('cooked_shrimp',    'Grilled Shrimp',  'food', 1, '🍤', '#fb923c', { heals: 45 }),
+    cooked_trout:     R('cooked_trout',     'Grilled Trout',   'food', 2, '🍣', '#fb923c', { heals: 90 }),
+    cooked_salmon:    R('cooked_salmon',    'Grilled Salmon',  'food', 3, '🍣', '#fb923c', { heals: 165 }),
+    cooked_lobster:   R('cooked_lobster',   'Boiled Lobster',  'food', 4, '🦞', '#fb923c', { heals: 285 }),
+    cooked_swordfish: R('cooked_swordfish', 'Swordfish Steak', 'food', 5, '🍱', '#fb923c', { heals: 460 }),
+    cooked_shark:     R('cooked_shark',     'Shark Fillet',    'food', 6, '🍱', '#fb923c', { heals: 715 }),
+    cooked_leviathan: R('cooked_leviathan', 'Leviathan Feast', 'food', 7, '🍲', '#fb923c', { heals: 1100 }),
+
+    // Crops (farming) and the dishes they make. Dishes take two crops (one potato).
+    potato:    R('potato',    'Potato',    'crop', 1, '🥔', '#d6a55f'),
+    cabbage:   R('cabbage',   'Cabbage',   'crop', 2, '🥬', '#4ade80'),
+    pumpkin:   R('pumpkin',   'Pumpkin',   'crop', 4, '🎃', '#f97316'),
+    starfruit: R('starfruit', 'Starfruit', 'crop', 5, '⭐', '#facc15'),
+    baked_potato:   R('baked_potato',   'Baked Potato',   'food', 1, '🥔', '#f59e0b', { heals: 55 }),
+    cabbage_soup:   R('cabbage_soup',   'Cabbage Soup',   'food', 3, '🥣', '#f59e0b', { heals: 170 }),
+    pumpkin_pie:    R('pumpkin_pie',    'Pumpkin Pie',    'food', 4, '🥧', '#f59e0b', { heals: 330 }),
+    starfruit_tart: R('starfruit_tart', 'Starfruit Tart', 'food', 5, '🥮', '#f59e0b', { heals: 600 }),
+
     // Herbs (alchemy foraging) and potions (alchemy brewing). Potions hold `charges` combat actions.
     guam_leaf:        R('guam_leaf',        'Guam Leaf',        'herb', 1, '🌿', '#10b981'),
     marrentill_leaf:  R('marrentill_leaf',  'Marrentill Root',  'herb', 2, '🌿', '#10b981'),
@@ -65,8 +91,10 @@ export const RESOURCES = {
     evasion_potion:  R('evasion_potion',  'Evasion Potion',  'potion', 3, '🧪', '#34d399', { effect: 'dodge', desc: '+15% Dodge' }),
     health_potion:   R('health_potion',   'Health Potion',   'potion', 4, '🧪', '#f472b6', { effect: 'hp',    desc: '+25% Max HP' }),
 
-    // Combat-only material: fuels equipment upgrades. The one thing crafting cannot make.
-    essence: R('essence', 'Monster Essence', 'material', 1, '✨', '#c084fc')
+    // Combat-only materials. Essence fuels equipment upgrades — the one thing crafting cannot make.
+    // Bait drops in the wetter zones: each catch uses one, if you have it, for a likely second fish.
+    essence: R('essence', 'Monster Essence', 'material', 1, '✨', '#c084fc'),
+    fishing_bait: R('fishing_bait', 'Fishing Bait', 'material', 1, '🪱', '#fca5a5')
 };
 
 export const RESOURCE_IDS = Object.keys(RESOURCES);
@@ -81,7 +109,7 @@ export function resourcesOfCategory(category) {
 
 // Vendor prices per unit. Combat gold (see formulas.js) is meant to dwarf these
 // by the mid game, so selling raw materials is a bootstrap, not the economy.
-const SELL_BASE = { ore: 3, bar: 8, gem: 25, log: 2, raw: 3, food: 6, herb: 4, potion: 30, material: 0 };
+const SELL_BASE = { ore: 3, bar: 8, gem: 25, log: 2, raw: 3, food: 6, herb: 4, crop: 3, potion: 30, material: 0 };
 export function sellValue(id) {
     const res = RESOURCES[id];
     if (!res) return 0;
@@ -92,4 +120,9 @@ export function sellValue(id) {
 /** Resources of a category ordered by tier (used for "best food" style pickers). */
 export function orderedByTier(category) {
     return resourcesOfCategory(category).sort((a, b) => a.tier - b.tier);
+}
+
+/** Every food, smallest heal first (auto-eat picks the smallest that fills the gap). */
+export function foodsByHealing() {
+    return resourcesOfCategory('food').sort((a, b) => a.heals - b.heals);
 }

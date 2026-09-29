@@ -8,6 +8,9 @@ import { PERKS } from '../data/perks.js';
 import { xpForLevel } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS } from '../data/dungeons.js';
+import { TOOLS } from '../data/workshop.js';
+import { FARMING_PLOTS, cropById } from '../data/farming.js';
+import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 
 export const SAVE_VERSION = 3;
 
@@ -19,7 +22,7 @@ export function createDefaultState(now = Date.now()) {
         resources: {},
         inventory: [],
         equipped: {},
-        tools: { pickaxe: 0, axe: 0, bow: 0 },
+        tools: {},
         skills: {},
         action: null,
         combat: {
@@ -47,6 +50,9 @@ export function createDefaultState(now = Date.now()) {
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
         pets: {},
+        bonfire: { until: 0 },             // wall-clock time the bonfire burns out
+        farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
+        agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0 },
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
@@ -57,6 +63,7 @@ export function createDefaultState(now = Date.now()) {
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
             itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
+            fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             actionsBySkill: {}
         },
         minigame: {},
@@ -71,6 +78,10 @@ export function createDefaultState(now = Date.now()) {
     for (const id of SKILL_IDS) state.stats.actionsBySkill[id] = 0;
     for (const perk of PERKS) state.perks[perk.id] = 0;
     for (const d of DUNGEONS) state.dungeons[d.id] = { clears: 0, fragments: 0 };
+    for (const toolId of Object.keys(TOOLS)) state.tools[toolId] = 0;
+    state.farming.plots = FARMING_PLOTS.map(() => ({ crop: null, plantedAt: 0, readyAt: 0 }));
+    state.agility.built = AGILITY_SLOTS.map(() => null);
+    state.agility.levels = AGILITY_SLOTS.map(() => 0);
     for (const id of NON_COMBAT_SKILLS) state.minigame[id] = { boostUntil: 0, bonus: 0, streak: 0, challenge: null, nextOpportunityAt: 0, opportunityUntil: 0 };
     return state;
 }
@@ -188,6 +199,23 @@ function normalise(data, now) {
         record.clears = Math.max(0, Math.floor(Number(record.clears) || 0));
         record.fragments = Math.max(0, Math.floor(Number(record.fragments) || 0));
     }
+    for (const [toolId, tool] of Object.entries(TOOLS)) {
+        state.tools[toolId] = Math.max(0, Math.min(tool.tiers.length, Math.floor(Number(state.tools[toolId]) || 0)));
+    }
+    if (!state.bonfire || !Number.isFinite(Number(state.bonfire.until))) state.bonfire = { until: 0 };
+    // Arrays merge as a whole, so rebuild plots and the course slot by slot from whatever was saved.
+    const savedPlots = Array.isArray(state.farming?.plots) ? state.farming.plots : [];
+    state.farming = {
+        plots: FARMING_PLOTS.map((_, i) => {
+            const plot = savedPlots[i];
+            if (!plot || !cropById(plot.crop)) return { crop: null, plantedAt: 0, readyAt: 0 };
+            return { crop: plot.crop, plantedAt: Number(plot.plantedAt) || 0, readyAt: Number(plot.readyAt) || 0 };
+        })
+    };
+    const savedCourse = Array.isArray(state.agility?.built) ? state.agility.built : [];
+    const savedLevels = Array.isArray(state.agility?.levels) ? state.agility.levels : [];
+    const built = AGILITY_SLOTS.map((slot, i) => (slot.obstacles.some(o => o.id === savedCourse[i]) ? savedCourse[i] : null));
+    state.agility = { built, levels: built.map((id, i) => (id ? Math.max(1, Math.min(MAX_OBSTACLE_LEVEL, Math.floor(Number(savedLevels[i]) || 1))) : 0)) };
     if (!state.titan || typeof state.titan !== 'object') state.titan = { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 };
     if (!state.pets || typeof state.pets !== 'object') state.pets = {};
     state.titan.kills = Math.max(0, Math.floor(Number(state.titan.kills) || 0));

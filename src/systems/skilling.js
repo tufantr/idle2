@@ -6,7 +6,8 @@ import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL,
 import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY } from '../data/items.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { GEM_DROP_TABLE } from '../data/zones.js';
-import { actionInterval, skillLevel } from '../core/modifiers.js';
+import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
+import { courseDef } from './agility.js';
 import { generateEquipment } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
@@ -14,6 +15,7 @@ import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
 
 const GEM_FIND_CHANCE = 0.02;
+export const BAIT_EXTRA_CHANCE = 0.5;   // each catch uses one bait, if you have any, for this chance of a second fish
 
 /** Resolve the current action into a full definition, or null if the action is invalid. */
 export function resolveAction(state, action = state.action) {
@@ -24,6 +26,8 @@ export function resolveAction(state, action = state.action) {
             if (!node) return null;
             return { ...node, kind: 'node', skill: action.skill, label: node.name, output: node.produces };
         }
+        case 'agility':
+            return courseDef(state);
         case 'smelt': {
             const recipe = SMELTING_RECIPES.find(r => r.id === action.id);
             if (!recipe) return null;
@@ -129,6 +133,14 @@ export function startToolCraft(game, toolId, tier) {
     return def ? setAction(game, action, def) : false;
 }
 
+/** Run the agility course (needs at least one obstacle built). */
+export function startAgility(game) {
+    const action = { kind: 'agility' };
+    const def = resolveAction(game.state, action);
+    if (!def) { game.emit({ type: 'error', text: 'Build an obstacle first.' }); return false; }
+    return setAction(game, action, def);
+}
+
 export function stopAction(game) {
     if (!game.state.action) return;
     game.state.action = null;
@@ -173,10 +185,28 @@ export function completeAction(game, def, { offline = false } = {}) {
     const skill = def.skill;
     state.stats.actionsBySkill[skill] = (state.stats.actionsBySkill[skill] || 0) + 1;
 
-    if (def.kind === 'node' || def.kind === 'smelt') {
+    if (def.bonfireLog) {
+        // Firemaking: a lucky burn (the tinderbox's "double") counts twice, for XP and for the bonfire.
+        const times = rng.chance(derived.doubleChance[skill] || 0) ? 2 : 1;
+        const addMs = BASE.bonfireSecondsPerLogTier * 1000 * RESOURCES[def.bonfireLog].tier * times;
+        const now = game.now;
+        state.bonfire.until = Math.min(now + BASE.bonfireMaxMs, Math.max(state.bonfire.until || 0, now) + addMs);
+        bumpStat(game, 'logsBurnt');
+        if (times === 2) grantXp(game, skill, def.xp * derived.xpMult);
+        if (!offline && times === 2) game.emit({ type: 'doubleDrop', resource: def.bonfireLog });
+        game.markDirty();
+    } else if (def.kind === 'agility') {
+        bumpStat(game, 'courseRuns');
+    } else if (def.kind === 'node' || def.kind === 'smelt') {
         let amount = 1;
         if (rng.chance(derived.doubleChance[skill] || 0)) amount = 2;
+        if (skill === 'fishing' && state.resources.fishing_bait > 0) {
+            state.resources.fishing_bait -= 1;
+            bumpStat(game, 'baitUsed');
+            if (rng.chance(BAIT_EXTRA_CHANCE)) amount += 1;
+        }
         state.resources[def.output] += amount;
+        if (skill === 'fishing') bumpStat(game, 'fishCaught', amount);
         if (def.kind === 'smelt') bumpStat(game, 'barsSmelted', amount);
         if (skill === 'mining' && rng.chance(GEM_FIND_CHANCE)) {
             const rockTier = RESOURCES[def.output].tier;

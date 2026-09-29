@@ -107,6 +107,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     game.silent = wasSilent;
 
     const summary = { elapsed, simulated, capped: elapsed > cap, mode, stalledReason, ...diff(before, state) };
+    summary.plotsReady = (state.farming?.plots || []).filter(p => p.crop && now >= p.readyAt).length;
     game.emit({ type: 'offline', summary });
     return summary;
 }
@@ -124,6 +125,7 @@ export function describeOffline(summary) {
         lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stages gained` : ''}${fell}.`);
         for (const d of summary.dungeonClears || []) lines.push(`${d.clears.toLocaleString()} ${d.name} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)`);
     }
+    if (summary.plotsReady) lines.push(`🌾 ${summary.plotsReady} farming plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest.`);
     for (const pet of summary.pets || []) lines.push(`🐾 A pet found you: ${pet}!`);
     if (summary.uniques > 0) lines.push(`🌟 ${summary.uniques} unique item${summary.uniques > 1 ? 's' : ''} found!`);
     for (const [id, delta] of Object.entries(summary.resources)) {

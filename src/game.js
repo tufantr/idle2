@@ -2,8 +2,8 @@
 // It never touches the DOM, so tools/simulate.mjs and the tests drive it the same way the UI does.
 
 import { createDefaultState, migrateState } from './core/state.js';
-import { collectModifiers, deriveStats, isFocused } from './core/modifiers.js';
-import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, stopAction, resolveAction } from './systems/skilling.js';
+import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
+import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
@@ -13,6 +13,8 @@ import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
 import { enterDungeon, returnToStages, setDungeonRepeat, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
+import { plant, harvest, harvestAll } from './systems/farming.js';
+import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 
 const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
 const OFFLINE_GAP_MS = 60000;
@@ -70,7 +72,7 @@ export class Game {
         }
         this.now = now;
         this.state.meta.playtimeMs += Math.min(dt, MAX_TICK_MS);
-        if (this.dirty || isFocused(this.state, now) !== this.derived.focused) this.recompute();
+        if (this.dirty || isFocused(this.state, now) !== this.derived.focused || bonfireLit(this.state, now) !== this.derived.bonfire) this.recompute();
         this.state.meta.lastActiveAt = now;
         accrueDaily(this.state, now);
 
@@ -113,6 +115,7 @@ export class Game {
     startSmithing(type, bar) { return this._act(() => startSmithing(this, type, bar)); }
     startCrafting(type, bar, gem) { return this._act(() => startCrafting(this, type, bar, gem)); }
     startToolCraft(tool, tier) { return this._act(() => startToolCraft(this, tool, tier)); }
+    startAgility() { return this._act(() => startAgility(this)); }
     stopAction() { return this._act(() => stopAction(this)); }
     currentAction() { return resolveAction(this.state); }
 
@@ -139,6 +142,12 @@ export class Game {
     setAutoSalvage(rarity) { return this._act(() => setAutoSalvage(this, rarity)); }
 
     buyCampUpgrade(id, count) { return this._act(() => buyCampUpgrade(this, id, count)); }
+
+    plant(plot, crop) { return this._act(() => plant(this, plot, crop)); }
+    harvest(plot) { return this._act(() => harvest(this, plot)); }
+    harvestAll(opts) { return this._act(() => harvestAll(this, opts)); }
+    buildObstacle(id) { return this._act(() => buildObstacle(this, id)); }
+    upgradeObstacle(slot) { return this._act(() => upgradeObstacle(this, slot)); }
 
     enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
     leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }

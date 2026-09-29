@@ -16,6 +16,7 @@ export function buyCampUpgrade(game, id, count = 1) {
         const cost = campCost(upgrade, level);
         if (state.gold < cost) break;
         state.gold -= cost;
+        state.stats.goldSpent = (state.stats.goldSpent || 0) + cost;
         state.camp[id] = level + 1;
         bought++;
     }

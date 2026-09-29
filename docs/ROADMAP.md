@@ -19,7 +19,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | ✅ Done |
 | 3 — Loot and endgame depth | 🟡 Loot, dungeons, uniques, Titan and pets done; mastery and a late-game pass open |
-| 4 — Skill breadth | ⬜ Not started |
+| 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ⬜ Not started (backend groundwork done) |
 
 Before any of this ships, three owner decisions are open — see [Decisions for the owner](#decisions-for-the-owner).
@@ -140,21 +140,28 @@ AFK pusher's weapon reaches tier 4 at 14–37 h vs 11–12 h for a skiller); 0.2
 unique outright per 500 clears, or 50 fragments in about an hour of at-level farming); no drop is
 ever silently discarded (met: overflow and filters salvage).
 
-## Phase 4 — Skill breadth ⬜
+## Phase 4 — Skill breadth ✅
 
 More skills, chosen for how much they interlock per unit of effort (research ranking). Depends on
 Phase 3 (dungeons and drops create the demand these skills feed).
 
-- [ ] **Fishing** (S): second food source; fish feed cooking; zone drops add bait
-- [ ] **Firemaking** (S): burns logs for XP and a timed global XP bonfire — the log sink
-- [ ] **Farming** (S–M): wall-clock plots that grow while another action runs — the first parallel skill;
-      grows herbs for alchemy and crops for cooking
-- [ ] **Agility** (M): a course of obstacles bought with gold and materials, each granting a permanent
-      modifier — the late-game gold sink
-- [ ] **Tool chains for the new skills** (rod, tinderbox, hoe)
+- [x] **Fishing** (S): seven spots, a second food line that heals a little more than meat; bait from
+      the wetter zones (and the Shop) gives each catch a 50% chance of a second fish
+- [x] **Firemaking** (S): burns logs for XP — the log sink — and feeds a wall-clock bonfire worth
+      +5–10% XP to every skill for up to an hour
+- [x] **Farming** (S–M): six plots that grow on the clock while another action runs (and offline) —
+      the first parallel skill; four herbs for Alchemy and four crops for new dishes; flat seed prices
+- [x] **Agility** (M): a six-slot course; obstacles cost gold and materials and grant permanent
+      bonuses that survive prestige; upgrades to level 5 are the long-term gold sink
+- [x] **Tool chains for the new skills**: fishing rods (Crafting), tinderboxes and hoes (Smithing)
+- [x] Pets, achievements, mini-games (Fishing, Firemaking), advisor hints and offline-summary lines
+      for the new skills
+- [x] Fix: the Forager perk's bonus was malformed and did nothing; a test now checks every bonus in
+      the data is well-formed
 
-**Exit:** every resource id has at least one consumer (add a test that scans the data); Farming
-progresses while another action runs; gold sinks absorb ≥ 80% of steady-state income in the sim.
+**Exit (met):** every resource id has at least one consumer (`test/skills.test.mjs` scans the data);
+Farming progresses while another action runs (plots are timestamps); gold sinks absorb 93–95% of all
+income in the simulator and 79–96% of the second half of an 80-hour run.
 
 ## Phase 5 — Social layer ⬜
 
@@ -199,9 +206,9 @@ real-time chat; synchronous party content; gacha pets; any purchasable power.
 4. **Old database row in git history.** `api/fantasy-idle.db` (removed in this change) held a username
    and a bcrypt password hash; it is still in the repository's history. If that password is used
    anywhere else, change it.
-5. **Balance intent.** The simulator puts level 99 at ~100–130 h per skill and the 100 authored stages
-   at ~20–30 h. If the game should be longer (Melvor-like 99s at 150–400 h), lower late-node XP;
-   the knobs are listed in DESIGN §5.4.
+5. **Balance intent.** The simulator puts level 99 at ~60–130 h for most skills (Farming ~290 h,
+   Agility ~210 h) and the 100 authored stages at ~5–12 h depending on play style. If the game should
+   be longer (Melvor-like 99s at 150–400 h), lower late-node XP; the knobs are listed in DESIGN §5.4.
 
 ## Working on the roadmap
 

@@ -4,7 +4,7 @@ import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKil
 import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
 import { addItem } from './inventory.js';
 import { zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE } from '../data/zones.js';
-import { RESOURCES, orderedByTier } from '../data/resources.js';
+import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan } from './dungeon.js';
@@ -61,7 +61,7 @@ function chooseFood(state, missing, foodMult) {
     if (rule !== 'auto') return state.resources[rule] > 0 ? rule : null;
     // 'auto': the smallest food that covers what is missing, else the biggest we have.
     let best = null;
-    for (const res of orderedByTier('food')) {
+    for (const res of foodsByHealing()) {
         if (!(state.resources[res.id] > 0)) continue;
         best = res.id;
         if (res.heals * foodMult >= missing) return res.id;

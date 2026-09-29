@@ -2,11 +2,15 @@
 // Intervals are milliseconds at level 1 with no tool; XP is per completed action.
 // XP per hour roughly doubles every ~15 levels through new nodes and tools (see docs/DESIGN.md §3.2).
 
-export const SKILL_IDS = ['mining', 'woodcutting', 'hunting', 'cooking', 'alchemy', 'smithing', 'crafting', 'combat'];
-export const GATHERING_SKILLS = ['mining', 'woodcutting', 'hunting'];
-export const PRODUCTION_SKILLS = ['cooking', 'alchemy'];
+export const SKILL_IDS = ['mining', 'woodcutting', 'fishing', 'hunting', 'cooking', 'firemaking', 'alchemy', 'farming', 'agility', 'smithing', 'crafting', 'combat'];
+export const GATHERING_SKILLS = ['mining', 'woodcutting', 'fishing', 'hunting'];
+export const PRODUCTION_SKILLS = ['cooking', 'firemaking', 'alchemy'];
 export const WORKSHOP_SKILLS = ['smithing', 'crafting'];
+// Skills with a mini-game and the Forager perk: gathering and production.
 export const NON_COMBAT_SKILLS = [...GATHERING_SKILLS, ...PRODUCTION_SKILLS];
+// Every skill with a speed modifier. Farming's "speed" is how fast plots grow (set when planting),
+// agility's is how fast you run the course.
+export const SPEED_SKILLS = [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS, 'farming', 'agility'];
 
 export const SKILLS = {
     mining: {
@@ -35,6 +39,19 @@ export const SKILLS = {
             { id: 'magic_log',  name: 'Magic Tree',  levelReq: 75, interval: 4200, xp: 125, produces: 'magic_log' }
         ]
     },
+    fishing: {
+        id: 'fishing', name: 'Fishing', icon: '🎣', color: '#38bdf8', tool: 'rod',
+        desc: 'Fish for the kitchen — they cook into the best food per level. Bait from combat makes a second catch likely.',
+        nodes: [
+            { id: 'raw_shrimp',     name: 'Shrimp Shallows', levelReq: 1,  interval: 3600, xp: 11,  produces: 'raw_shrimp' },
+            { id: 'raw_trout',      name: 'Trout Stream',    levelReq: 15, interval: 3600, xp: 21,  produces: 'raw_trout' },
+            { id: 'raw_salmon',     name: 'Salmon Run',      levelReq: 30, interval: 3800, xp: 34,  produces: 'raw_salmon' },
+            { id: 'raw_lobster',    name: 'Lobster Pots',    levelReq: 45, interval: 4000, xp: 55,  produces: 'raw_lobster' },
+            { id: 'raw_swordfish',  name: 'Swordfish Banks', levelReq: 60, interval: 4400, xp: 86,  produces: 'raw_swordfish' },
+            { id: 'raw_shark',      name: 'Shark Waters',    levelReq: 75, interval: 4800, xp: 130, produces: 'raw_shark' },
+            { id: 'raw_leviathan',  name: 'Leviathan Deep',  levelReq: 90, interval: 5500, xp: 200, produces: 'raw_leviathan' }
+        ]
+    },
     hunting: {
         id: 'hunting', name: 'Hunting', icon: '🏹', color: '#f59e0b', tool: 'bow',
         desc: 'Raw meat for the kitchen. Better bows mean faster kills.',
@@ -58,7 +75,30 @@ export const SKILLS = {
             { id: 'cooked_deer',   name: 'Roast Venison', levelReq: 45, interval: 3000, xp: 68,  produces: 'cooked_deer',   consumes: { raw_deer: 1 },   fuel: 1 },
             { id: 'cooked_bear',   name: 'Roast Bear',    levelReq: 60, interval: 3300, xp: 105, produces: 'cooked_bear',   consumes: { raw_bear: 1 },   fuel: 1 },
             { id: 'cooked_drake',  name: 'Roast Drake',   levelReq: 75, interval: 3600, xp: 160, produces: 'cooked_drake',  consumes: { raw_drake: 1 },  fuel: 1 },
-            { id: 'cooked_dragon', name: 'Roast Dragon',  levelReq: 90, interval: 4000, xp: 240, produces: 'cooked_dragon', consumes: { raw_dragon: 1 }, fuel: 1 }
+            { id: 'cooked_dragon', name: 'Roast Dragon',  levelReq: 90, interval: 4000, xp: 240, produces: 'cooked_dragon', consumes: { raw_dragon: 1 }, fuel: 1 },
+            { id: 'cooked_shrimp',    name: 'Grilled Shrimp',    levelReq: 1,  interval: 2500, xp: 14,  produces: 'cooked_shrimp',    consumes: { raw_shrimp: 1 },    fuel: 1 },
+            { id: 'cooked_trout',     name: 'Grilled Trout',     levelReq: 15, interval: 2500, xp: 25,  produces: 'cooked_trout',     consumes: { raw_trout: 1 },     fuel: 1 },
+            { id: 'cooked_salmon',    name: 'Grilled Salmon',    levelReq: 30, interval: 2800, xp: 40,  produces: 'cooked_salmon',    consumes: { raw_salmon: 1 },    fuel: 1 },
+            { id: 'cooked_lobster',   name: 'Boiled Lobster',    levelReq: 45, interval: 3000, xp: 65,  produces: 'cooked_lobster',   consumes: { raw_lobster: 1 },   fuel: 1 },
+            { id: 'cooked_swordfish', name: 'Swordfish Steak',   levelReq: 60, interval: 3300, xp: 100, produces: 'cooked_swordfish', consumes: { raw_swordfish: 1 }, fuel: 1 },
+            { id: 'cooked_shark',     name: 'Shark Fillet',      levelReq: 75, interval: 3600, xp: 155, produces: 'cooked_shark',     consumes: { raw_shark: 1 },     fuel: 1 },
+            { id: 'cooked_leviathan', name: 'Leviathan Feast',   levelReq: 90, interval: 4000, xp: 235, produces: 'cooked_leviathan', consumes: { raw_leviathan: 1 }, fuel: 1 },
+            { id: 'baked_potato',     name: 'Baked Potato',      levelReq: 5,  interval: 2200, xp: 12,  produces: 'baked_potato',     consumes: { potato: 1 },        fuel: 1 },
+            { id: 'cabbage_soup',     name: 'Cabbage Soup',      levelReq: 25, interval: 2600, xp: 38,  produces: 'cabbage_soup',     consumes: { cabbage: 2 },       fuel: 1 },
+            { id: 'pumpkin_pie',      name: 'Pumpkin Pie',       levelReq: 50, interval: 3000, xp: 80,  produces: 'pumpkin_pie',      consumes: { pumpkin: 2 },       fuel: 1 },
+            { id: 'starfruit_tart',   name: 'Starfruit Tart',    levelReq: 70, interval: 3400, xp: 140, produces: 'starfruit_tart',   consumes: { starfruit: 2 },     fuel: 1 }
+        ]
+    },
+    firemaking: {
+        id: 'firemaking', name: 'Firemaking', icon: '🔥', color: '#f97316', tool: 'tinderbox',
+        desc: 'Burn logs for XP. Every log feeds the bonfire, which gives XP to every skill while it burns.',
+        nodes: [
+            { id: 'burn_normal_log', name: 'Burn Logs',        levelReq: 1,  interval: 2000, xp: 16,  consumes: { normal_log: 1 }, bonfireLog: 'normal_log' },
+            { id: 'burn_oak_log',    name: 'Burn Oak Logs',    levelReq: 15, interval: 2000, xp: 28,  consumes: { oak_log: 1 },    bonfireLog: 'oak_log' },
+            { id: 'burn_willow_log', name: 'Burn Willow Logs', levelReq: 30, interval: 2200, xp: 46,  consumes: { willow_log: 1 }, bonfireLog: 'willow_log' },
+            { id: 'burn_maple_log',  name: 'Burn Maple Logs',  levelReq: 45, interval: 2400, xp: 76,  consumes: { maple_log: 1 },  bonfireLog: 'maple_log' },
+            { id: 'burn_yew_log',    name: 'Burn Yew Logs',    levelReq: 60, interval: 2600, xp: 120, consumes: { yew_log: 1 },    bonfireLog: 'yew_log' },
+            { id: 'burn_magic_log',  name: 'Burn Magic Logs',  levelReq: 75, interval: 2800, xp: 185, consumes: { magic_log: 1 },  bonfireLog: 'magic_log' }
         ]
     },
     alchemy: {
@@ -75,6 +115,16 @@ export const SKILLS = {
             { id: 'health_potion',    name: 'Health Potion',      levelReq: 60, interval: 3000, xp: 150, produces: 'health_potion',   consumes: { harralander_leaf: 1, cooked_boar: 1 } }
         ]
     },
+    farming: {
+        id: 'farming', name: 'Farming', icon: '🌾', color: '#84cc16', tool: 'hoe',
+        desc: 'Plots grow on the clock while you do something else. Herbs for alchemy, crops for the kitchen.',
+        nodes: [] // crops live in data/farming.js
+    },
+    agility: {
+        id: 'agility', name: 'Agility', icon: '🤸', color: '#e11d48',
+        desc: 'Build an obstacle course: every obstacle is a permanent bonus. Run the course to train.',
+        nodes: [] // obstacles live in data/agility.js
+    },
     smithing: {
         id: 'smithing', name: 'Smithing', icon: '⚒️', color: '#f8fafc',
         desc: 'Smelt ore into bars, then forge bars into armour, weapons and tools.',
@@ -82,7 +132,7 @@ export const SKILLS = {
     },
     crafting: {
         id: 'crafting', name: 'Crafting', icon: '💍', color: '#e879f9',
-        desc: 'Jewellery from precious bars and gems; bows from logs.',
+        desc: 'Jewellery from precious bars and gems; bows and fishing rods from logs.',
         nodes: []
     },
     combat: {
