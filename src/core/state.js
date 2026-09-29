@@ -35,7 +35,8 @@ export function createDefaultState(now = Date.now()) {
             combo: 0,
             lastComboAt: 0,
             farmMode: false,
-            autoRetreat: true
+            bossTimeLeft: 0,   // ms of fighting left before the current boss escapes
+            regroupLeft: 0     // ms left farming the previous stage after a boss escaped
         },
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0 },
         camp: { whetstone: 0, armory: 0, hearth: 0 },
@@ -43,7 +44,7 @@ export function createDefaultState(now = Date.now()) {
         achievements: {},
         unlocks: {},
         stats: {
-            kills: 0, bossKills: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
+            kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
             actionsBySkill: {}
         },

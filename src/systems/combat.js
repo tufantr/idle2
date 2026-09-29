@@ -7,10 +7,11 @@ import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat } from './progress.js';
 
 export function spawnEnemy(game) {
-    const state = game.state;
-    state.combat.enemy = enemyForStage(state.combat.stage);
-    state.combat.playerTimer = 0;
-    state.combat.enemyTimer = 0;
+    const c = game.state.combat;
+    c.enemy = enemyForStage(c.stage);
+    c.playerTimer = 0;
+    c.enemyTimer = 0;
+    c.bossTimeLeft = c.enemy.boss ? BALANCE.combat.bossTimeMs : 0;
 }
 
 export function enterCombat(game) {
@@ -194,7 +195,7 @@ export function onEnemyDeath(game) {
         log(game, `${enemy.icon} ${enemy.name} defeated${dropText ? ` — ${dropText}` : ''}`, 'combat');
     }
 
-    if (!c.farmMode) {
+    if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
         if (c.stage > c.maxStage) c.maxStage = c.stage;
         if (c.stage > c.bestStage) c.bestStage = c.stage;
@@ -217,6 +218,19 @@ export function onPlayerDeath(game) {
     c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
     c.combo = 0;
     c.active = false;
+    spawnEnemy(game);
+    game.markDirty();
+}
+
+/** The boss outlasted its timer: step back one stage and farm there for a minute before retrying. */
+export function onBossTimeout(game) {
+    const c = game.state.combat;
+    bumpStat(game, 'bossEscapes');
+    const back = Math.max(1, c.stage - 1);
+    log(game, `⏳ ${c.enemy.name} held out for ${BALANCE.combat.bossTimeMs / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
+    game.emit({ type: 'bossTimeout', stage: c.stage });
+    c.stage = back;
+    c.regroupLeft = BALANCE.combat.regroupMs;
     spawnEnemy(game);
     game.markDirty();
 }
@@ -252,11 +266,13 @@ export function tickCombat(game, dt) {
     if (c.combo > 0 && game.now - (c.lastComboAt || 0) > BALANCE.combat.comboDecayAfterMs) {
         c.combo = Math.max(0, c.combo - (0.05 + c.combo / 100) * (dt / 50));
     }
+    if (c.regroupLeft > 0) c.regroupLeft = Math.max(0, c.regroupLeft - dt);
 
+    const bossAtStart = c.enemy.boss ? c.enemy : null;
     c.playerTimer += dt;
     c.enemyTimer += dt;
     let guard = 0;
-    while (c.active && guard++ < 200) {
+    while (c.active && guard++ < 400) {
         const pReady = c.playerTimer >= d.attackInterval;
         const eReady = c.enemyTimer >= c.enemy.interval;
         if (!pReady && !eReady) break;
@@ -272,5 +288,11 @@ export function tickCombat(game, dt) {
             tryEat(game);
             enemyAttack(game);
         }
+    }
+
+    // Boss timer counts fighting time only, so it behaves the same offline and online.
+    if (bossAtStart && c.active && c.enemy === bossAtStart) {
+        c.bossTimeLeft -= dt;
+        if (c.bossTimeLeft <= 0) onBossTimeout(game);
     }
 }

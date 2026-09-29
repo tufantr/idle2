@@ -58,13 +58,13 @@ test('regression: rarity is a bounded quality bonus — a legendary copper sword
 test('regression: offline progress with a workshop action does not throw and makes items', () => {
     const game = new Game(null, T0);
     game.state.resources.copper_bar = 30;
-    game.startSmithing('Boots', 'copper_bar');
+    assert.ok(game.startSmithing('Weapon', 'copper_bar'));
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 10 * 60 * 1000;
     const g2 = new Game(saved, later);
     const summary = g2.resumeFromSave(later);
     assert.equal(summary.mode, 'skill');
-    assert.equal(summary.items, 30, 'one bar per pair of boots, 30 bars');
+    assert.equal(summary.items, 10, 'three bars per sword, 30 bars');
     assert.equal(g2.state.resources.copper_bar, 0);
     assert.match(summary.stalledReason || '', /ran out of materials/);
 });
@@ -183,8 +183,9 @@ test('mini-games only start on an opportunity, and a win boosts skill speed', ()
     game.startNodeAction('mining', 'copper_ore');
     assert.equal(game.startMinigame('mining'), false, 'no opportunity yet');
     const mg = game.state.minigame.mining;
-    run(game, 100_000);
-    assert.ok(mg.opportunityUntil > game.now, 'first opportunity appears within ~90s');
+    let now = game.now;
+    while (!(mg.opportunityUntil > now) && now < T0 + 120_000) { now += 100; game.tick(now); }
+    assert.ok(mg.opportunityUntil > now, 'first opportunity appears within 90 s of training');
     assert.ok(game.startMinigame('mining'));
     mg.challenge.zoneStart = 0; // widen the target zone so the tap is guaranteed to land
     mg.challenge.zoneWidth = 1;
@@ -201,6 +202,32 @@ test('daily crate is available on a fresh save and then waits 20 hours', () => {
     assert.equal(game.dailyReady(), false);
     game.now = T0 + 20 * 3600 * 1000 + 1;
     assert.ok(game.dailyReady());
+});
+
+test('smithing unlocks armour piece by piece', () => {
+    const game = new Game(null, T0);
+    game.state.resources.copper_bar = 10;
+    assert.ok(game.startSmithing('Weapon', 'copper_bar'), 'swords at level 1');
+    game.stopAction();
+    assert.equal(game.startSmithing('Body', 'copper_bar'), false, 'plate bodies need level 10');
+    game.state.skills.smithing.xp = xpForLevel(10);
+    assert.ok(game.startSmithing('Body', 'copper_bar'));
+});
+
+test('a boss that survives 30 s of fighting escapes; the player regroups one stage back', () => {
+    const game = new Game(null, T0);
+    game.state.combat.stage = 10;
+    game.state.combat.maxStage = 10;
+    // Unarmed, the player cannot kill the stage-10 boss within 30 s; plenty of food keeps them alive.
+    game.state.resources.cooked_dragon = 500;
+    game.setStage(10);
+    game.enterCombat();
+    run(game, 31_000);
+    assert.equal(game.state.stats.bossEscapes, 1);
+    assert.equal(game.state.combat.stage, 9);
+    assert.ok(game.state.combat.regroupLeft > 0);
+    run(game, 61_000);
+    assert.equal(game.state.combat.regroupLeft, 0, 'the regroup window ends');
 });
 
 test('unlocks follow the player instead of a forced script', () => {

@@ -11,14 +11,15 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
-import { METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS } from '../src/data/workshop.js';
-import { SMITHING_BAR_COST, TYPE_SLOTS, EQUIP_SLOTS } from '../src/data/items.js';
+import { METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq } from '../src/data/workshop.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS } from '../src/data/items.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
 import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
 import { itemUpgradeCost } from '../src/systems/inventory.js';
+import { resolveAction } from '../src/systems/skilling.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
 const HOURS = Number(args.hours || 100);
@@ -114,7 +115,12 @@ function obtain(id, qty) {
 function train(skillId, minutes = 20) {
     const end = now + minutes * 60000;
     if (skillId === 'smithing') {
-        // Smelt the best bar we can source ore for.
+        // Forge the most bar-efficient piece if bars are on hand, otherwise smelt the best bar we can source ore for.
+        const metal = [...METALS].reverse().find(m => lvl('smithing') >= m.levelReq && S.resources[m.bar] >= 5);
+        if (metal) {
+            const piece = SMITHING_TYPES.filter(t => lvl('smithing') >= smithLevelReq(metal, t)).sort((a, b) => SMITHING_BAR_COST[b] - SMITHING_BAR_COST[a])[0];
+            return { kind: 'smith', type: piece, bar: metal.bar, until: () => now >= end || S.resources[metal.bar] < SMITHING_BAR_COST[piece], why: `train smithing (forge ${metal.name} ${piece})` };
+        }
         for (const recipe of [...SMELTING_RECIPES].reverse()) {
             if (lvl('smithing') < recipe.levelReq) continue;
             const ins = Object.entries(recipe.consumes);
@@ -136,13 +142,15 @@ function train(skillId, minutes = 20) {
 }
 
 function gearTask() {
-    const metal = bestMetal();
     for (const type of ARMOUR_PRIORITY) {
-        if (equippedTier(type) >= metal.tier) continue;
+        // The best metal this piece can be forged in at the current smithing level.
+        const metal = [...METALS].reverse().find(m => lvl('smithing') >= smithLevelReq(m, type));
+        if (!metal || equippedTier(type) >= metal.tier) continue;
         const cost = SMITHING_BAR_COST[type];
         const t = obtain(metal.bar, cost);
         if (t) return t;
-        return { kind: 'smith', type, bar: metal.bar, why: `forge ${metal.name} ${type}` };
+        const made = S.stats.itemsCrafted;
+        return { kind: 'smith', type, bar: metal.bar, until: () => S.stats.itemsCrafted > made, why: `forge ${metal.name} ${type}` };
     }
     return null;
 }
@@ -178,9 +186,12 @@ function jewelTask() {
     const gemRes = RESOURCES[gemTier.gem];
     for (const type of ['Neck', 'Ring', 'Ear']) {
         if (equippedTier(type) >= gemRes.tier) continue;
+        const recipe = resolveAction(S, { kind: 'craft', type, bar: bar.bar, gem: gemTier.gem });
+        if (lvl('crafting') < recipe.levelReq) continue;
         const t = obtain(bar.bar, 1);
         if (t) return t;
-        return { kind: 'craft', type, bar: bar.bar, gem: gemTier.gem, why: `craft ${gemRes.name} ${type}` };
+        const made = S.stats.itemsCrafted;
+        return { kind: 'craft', type, bar: bar.bar, gem: gemTier.gem, until: () => S.stats.itemsCrafted > made, why: `craft ${gemRes.name} ${type}` };
     }
     return null;
 }
@@ -271,19 +282,29 @@ function craftTraining() {
     return { kind: 'craft', type: 'Ring', bar: bar.bar, gem: gemTier.gem, why: `train crafting (${gemTier.gem} rings)` };
 }
 
+// Starts a task; returns the task actually running. Anything that fails to start (level too low,
+// a recipe the policy got wrong) falls back to combat, so the bot can never spin on a dead task.
 function apply(task) {
-    if (task.kind === 'node') game.startNodeAction(task.skill, task.node);
-    else if (task.kind === 'smelt') game.startSmelting(task.recipe);
-    else if (task.kind === 'smith') game.startSmithing(task.type, task.bar);
-    else if (task.kind === 'craft') game.startCrafting(task.type, task.bar, task.gem);
-    else if (task.kind === 'tool') game.startToolCraft(task.tool, task.tier);
-    else if (task.kind === 'combat') { lastStageGainAt = now; game.enterCombat(); }
+    if (S.action && task.kind !== 'combat') game.stopAction();
+    let ok = true;
+    if (task.kind === 'node') ok = game.startNodeAction(task.skill, task.node);
+    else if (task.kind === 'smelt') ok = game.startSmelting(task.recipe);
+    else if (task.kind === 'smith') ok = game.startSmithing(task.type, task.bar);
+    else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
+    else if (task.kind === 'tool') ok = game.startToolCraft(task.tool, task.tier);
+    if (task.kind === 'combat' || !ok) {
+        if (!ok && VERBOSE) console.log(`  [${fmtH(now)}] could not start: ${task.why}`);
+        lastStageGainAt = now;
+        game.enterCombat();
+        return ok ? task : combatTask();
+    }
+    return task;
 }
 
 function taskDone(task) {
-    if (task.kind === 'smith' || task.kind === 'craft' || task.kind === 'tool') return !S.action;
+    if (task.kind !== 'combat' && (!S.action || S.action.stalled)) return true;
     if (task.until) return task.until();
-    return !S.action;
+    return false;
 }
 
 // ---------- milestones ----------
@@ -300,8 +321,7 @@ const STAGE_MARKS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200];
 const LEVEL_MARKS = [25, 50, 75, 99];
 
 // ---------- main loop ----------
-let task = decide();
-apply(task);
+let task = apply(decide());
 let lastDecision = now;
 let lastSnapshot = 0;
 let lastMaxStage = S.combat.maxStage;
@@ -319,8 +339,7 @@ while (now < totalMs) {
 
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
     if (taskDone(task) || now - lastDecision > 10 * 60000) {
-        task = decide();
-        apply(task);
+        task = apply(decide());
         lastDecision = now;
         if (VERBOSE && now % (3600000) < STEP * 2) console.log(`  [${fmtH(now)}] -> ${task.why}`);
     }

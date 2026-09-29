@@ -138,7 +138,7 @@ export function renderCombat(game, ui) {
         <div class="panel-header">
             <div>
                 <h2>${boss ? '👑 Boss — ' : ''}${esc(zone.name)} <span class="muted">tier ${zone.tier}</span></h2>
-                <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b></div>
+                <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b>${c.regroupLeft > 0 ? ` · <span class="regroup-pill" id="regroup-text">⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s</span>` : ''}</div>
             </div>
             <div class="stage-nav">
                 <button class="mini-btn" onclick="FI.stageNav(-10)" ${c.stage <= 1 ? 'disabled' : ''}>«</button>
@@ -165,6 +165,7 @@ export function renderCombat(game, ui) {
                 <div class="entity-name" id="enemy-name">${esc(enemy.name)}</div>
                 <div class="hp-text"><span id="enemy-hp-text">${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}</span> HP</div>
                 <div id="enemy-hp-bar">${hpBar(enemy.hp, enemy.maxHp, 'enemy-fill')}</div>
+                ${enemy.boss ? `<div class="boss-timer" title="Bosses must fall within ${BALANCE.combat.bossTimeMs / 1000} seconds of fighting"><div id="boss-timer-fill" class="boss-timer-fill" style="width:${Math.max(0, c.bossTimeLeft / BALANCE.combat.bossTimeMs * 100)}%"></div><span id="boss-timer-text">⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s</span></div>` : ''}
                 <div class="entity-stats muted small">⚔️ ${fmt(enemy.atk)} · hits every ${seconds(enemy.interval)} · 💰 ~${fmt(Math.round(enemy.maxHp * BALANCE.rewards.goldPerHp * (enemy.boss ? BALANCE.rewards.bossGoldMult : 1) * d.goldMult))}</div>
             </div>
         </div>
@@ -363,13 +364,13 @@ export function renderSmithing(game, ui) {
         onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: level < r.levelReq ? `Requires level ${r.levelReq}` : ''
     }, state)).join('');
     const forgeCards = SMITHING_TYPES.map(type => {
-        const cost = SMITHING_BAR_COST[type];
+        const recipe = resolveAction(state, { kind: 'smith', type, bar: metal.bar });
         return recipeCard({
             title: `${metal.name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(metal.bar).color,
-            inputs: [[metal.bar, cost]], output: `equipment (tier ${metal.tier})`,
-            xp: Math.round(metal.xpPerBar * cost * d.xpMult), interval: actionInterval(3000, d, 'smithing'),
+            inputs: Object.entries(recipe.consumes), output: `equipment (tier ${metal.tier})`,
+            xp: Math.round(recipe.xp * d.xpMult), interval: actionInterval(recipe.interval, d, 'smithing'),
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
-            onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < metal.levelReq, reqText: level < metal.levelReq ? `Requires level ${metal.levelReq}` : ''
+            onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: level < recipe.levelReq ? `Requires level ${recipe.levelReq}` : ''
         }, state);
     }).join('');
     const toolCards = ['pickaxe', 'axe'].map(toolId => renderToolCard(game, toolId)).join('');
@@ -380,7 +381,7 @@ export function renderSmithing(game, ui) {
         <h3 class="section-title">2. Forge equipment
             <select class="material-select" onchange="FI.selectSmithMetal(this.value)">${METALS.map(m => `<option value="${m.bar}" ${m.bar === metal.bar ? 'selected' : ''}>${m.name} (lvl ${m.levelReq}) — ${fmt(state.resources[m.bar])} bars</option>`).join('')}</select>
         </h3>
-        <p class="muted small">Every forged item rolls a rarity: Common ×1.00 up to Legendary ×1.40 with extra affixes. Tier decides the power band, so a lucky copper sword never beats an honest runite one.</p>
+        <p class="muted small">Each piece unlocks a few levels after the metal (swords first, plate bodies last). Every forged item rolls a rarity with extra affixes; the metal decides the power band, so a lucky copper sword never beats an honest runite one.</p>
         <div class="node-grid">${forgeCards}</div>
         <h3 class="section-title">3. Tools</h3>
         <div class="node-grid">${toolCards}</div>
@@ -411,14 +412,16 @@ export function renderCrafting(game, ui) {
     const action = state.action;
     const bar = JEWEL_BARS.find(b => b.bar === ui.craftBar) || JEWEL_BARS[0];
     const gem = GEM_TIERS.find(g => g.gem === ui.craftGem) || GEM_TIERS[0];
-    const req = Math.max(bar.levelReq, gem.levelReq);
-    const cards = CRAFTING_TYPES.map(type => recipeCard({
-        title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(gem.gem).color,
-        inputs: [[bar.bar, 1], [gem.gem, 1]], output: `jewellery (tier ${res(gem.gem).tier})`,
-        xp: Math.round(gem.xp * d.xpMult), interval: actionInterval(3000, d, 'crafting'),
-        active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
-        onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < req, reqText: level < req ? `Requires level ${req}` : ''
-    }, state)).join('');
+    const cards = CRAFTING_TYPES.map(type => {
+        const recipe = resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gem.gem });
+        return recipeCard({
+            title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(gem.gem).color,
+            inputs: Object.entries(recipe.consumes), output: `jewellery (tier ${res(gem.gem).tier})`,
+            xp: Math.round(recipe.xp * d.xpMult), interval: actionInterval(recipe.interval, d, 'crafting'),
+            active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
+            onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: level < recipe.levelReq ? `Requires level ${recipe.levelReq}` : ''
+        }, state);
+    }).join('');
     return `<section class="glass-panel skill-panel">
         ${xpHeader(game, 'crafting')}
         <h3 class="section-title">Jewellery
@@ -655,6 +658,9 @@ export function patchLive(game, ui) {
         const combo = Math.floor(c.combo || 0);
         const cc = document.getElementById('combo-container'); if (cc) cc.style.display = combo > 0 ? '' : 'none';
         set('combo-text', `${combo}×`);
+        const bt = document.getElementById('boss-timer-fill');
+        if (bt && e?.boss) { bt.style.width = `${Math.max(0, c.bossTimeLeft / BALANCE.combat.bossTimeMs * 100)}%`; set('boss-timer-text', `⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`); }
+        if (c.regroupLeft > 0) set('regroup-text', `⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s`);
     }
     set2('hdr-hp', fmt(state.combat.hp));
     if (action && state.action) {

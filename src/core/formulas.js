@@ -49,7 +49,9 @@ export const BALANCE = {
         comboMax: 30,
         comboDecayAfterMs: 1500,
         deathHpFraction: 0.5,
-        retreatStages: 1
+        retreatStages: 1,
+        bossTimeMs: 30000,      // a boss must fall within 30 s of fighting (Clicker Heroes / Tap Titans rule)
+        regroupMs: 60000        // after a boss escapes: farm the previous stage for a minute, then retry
     },
     minigame: {
         opportunityEveryMs: [180000, 360000], // a chance appears every 3-6 minutes of active skilling

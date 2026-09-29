@@ -16,7 +16,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | Phase | Status |
 |---|---|
 | 0 — Stop the bleeding | ✅ Done |
-| 1 — Core rewrite + simulator | ✅ Mostly done (3 items left) |
+| 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | 🟡 About half done |
 | 3 — Loot and endgame depth | ⬜ Not started |
 | 4 — Skill breadth | ⬜ Not started |
@@ -45,7 +45,7 @@ Fix every defect that destroyed progress or data. All items are pinned by regres
 **Exit (met):** an item is produced from bars; logout preserves the save; hard reset wipes;
 workshop offline loads; a failing tick no longer stops saving.
 
-## Phase 1 — Core rewrite + simulator ✅ (mostly)
+## Phase 1 — Core rewrite + simulator ✅
 
 Rebuild the game as pure functions over data tables so the same code drives the UI, offline replay,
 tests and the balance simulator.
@@ -57,11 +57,12 @@ tests and the balance simulator.
 - [x] Quality-plus-affix rarity; essence upgrades; crafted tools
 - [x] Prestige with held tokens and perks; camp upgrades as the run-scoped gold sink
 - [x] Headless simulator (`tools/simulate.mjs`) and pacing table (`tools/pacing.mjs`)
-- [ ] **Boss timer** (30 s; fail → drop back to farm), per the research — S
-- [ ] **Smithing level offsets per slot** (e.g. Body needs +18 levels over the metal's base) so
-      smithing unlocks something at most levels — S
-- [ ] **Tune the smithing bottleneck** (adamant arrives ~50 h after mithril in the sim) and decide
-      whether level 99 should take longer than the current ~100–130 h — S, simulator work
+- [x] **Boss timer**: a boss must fall within 30 s of fighting, or you regroup one stage back for
+      60 s and the game retries automatically (works offline too)
+- [x] **Smithing level offsets per piece** (Weapon +0 … Body +9; Ring +0 … Amulet +4) so each metal
+      unlocks piece by piece
+- [x] **Smithing pacing**: forging XP ×1.5, coal 1/2/2/3; coal from mining 15. `tools/pacing.mjs` now
+      has a mine → smelt → forge row: smithing 50 in 4.6 h, 75 in 34 h, 99 in 275 h
 
 **Exit:** simulator shows Lv 20 ≤ 15 min, Lv 50 in 2–4 h; first prestige within ~2 h with ≥ 4
 tokens; a tier-N common beats a tier-(N−1) legendary (test); at least half of deaths on non-boss

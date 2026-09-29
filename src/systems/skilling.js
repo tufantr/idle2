@@ -2,7 +2,7 @@
 // The same `completeAction` runs online (from the tick loop) and offline (in a loop).
 
 import { SKILLS, skillNode } from '../data/skills.js';
-import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL } from '../data/workshop.js';
+import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES } from '../data/items.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { GEM_DROP_TABLE } from '../data/zones.js';
@@ -34,7 +34,7 @@ export function resolveAction(state, action = state.action) {
             const cost = SMITHING_BAR_COST[action.type];
             return {
                 kind: 'smith', skill: 'smithing', id: `${action.bar}:${action.type}`, label: `Forge ${metal.name} ${TYPE_NAMES[action.type]}`,
-                levelReq: metal.levelReq, interval: SMITH_INTERVAL, xp: metal.xpPerBar * cost,
+                levelReq: smithLevelReq(metal, action.type), interval: SMITH_INTERVAL, xp: metal.xpPerBar * cost,
                 consumes: { [action.bar]: cost }, item: { type: action.type, tier: metal.tier, power: RESOURCES[action.bar].power, materialName: metal.name }
             };
         }
@@ -46,7 +46,7 @@ export function resolveAction(state, action = state.action) {
             const bar = RESOURCES[action.bar];
             return {
                 kind: 'craft', skill: 'crafting', id: `${action.bar}:${action.gem}:${action.type}`, label: `Craft ${gem.name} ${TYPE_NAMES[action.type]}`,
-                levelReq: Math.max(jewelBar.levelReq, gemTier.levelReq), interval: CRAFT_INTERVAL, xp: gemTier.xp,
+                levelReq: Math.min(99, Math.max(jewelBar.levelReq, gemTier.levelReq) + (CRAFT_SLOT_OFFSET[action.type] || 0)), interval: CRAFT_INTERVAL, xp: gemTier.xp,
                 consumes: { [action.bar]: 1, [action.gem]: 1 },
                 item: { type: action.type, tier: gem.tier, power: (bar.power + gem.power) / 2, materialName: jewelBar.name, gemName: gem.name }
             };

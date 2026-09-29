@@ -15,7 +15,7 @@ export const SKILLS = {
         nodes: [
             { id: 'copper_ore',  name: 'Copper Vein',      levelReq: 1,  interval: 3000, xp: 8,   produces: 'copper_ore' },
             { id: 'iron_ore',    name: 'Iron Vein',        levelReq: 10, interval: 3000, xp: 14,  produces: 'iron_ore' },
-            { id: 'coal',        name: 'Coal Seam',        levelReq: 20, interval: 3000, xp: 22,  produces: 'coal' },
+            { id: 'coal',        name: 'Coal Seam',        levelReq: 15, interval: 3000, xp: 18,  produces: 'coal' },
             { id: 'silver_ore',  name: 'Silver Vein',      levelReq: 30, interval: 3200, xp: 32,  produces: 'silver_ore' },
             { id: 'mithril_ore', name: 'Mithril Deposit',  levelReq: 40, interval: 3400, xp: 48,  produces: 'mithril_ore' },
             { id: 'gold_ore',    name: 'Gold Vein',        levelReq: 50, interval: 3600, xp: 65,  produces: 'gold_ore' },

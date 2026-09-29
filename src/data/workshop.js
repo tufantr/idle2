@@ -4,22 +4,35 @@
 export const SMELTING_RECIPES = [
     { id: 'copper_bar',  name: 'Copper Bar',  levelReq: 1,  interval: 2000, xp: 10,  consumes: { copper_ore: 1 },                 produces: 'copper_bar' },
     { id: 'iron_bar',    name: 'Iron Bar',    levelReq: 10, interval: 2000, xp: 18,  consumes: { iron_ore: 1, coal: 1 },          produces: 'iron_bar' },
+    // coal is mined from level 15 (see data/skills.js), so iron gear follows copper within the first hour
     { id: 'silver_bar',  name: 'Silver Bar',  levelReq: 20, interval: 2000, xp: 22,  consumes: { silver_ore: 1 },                 produces: 'silver_bar' },
     { id: 'mithril_bar', name: 'Mithril Bar', levelReq: 35, interval: 2200, xp: 35,  consumes: { mithril_ore: 1, coal: 2 },       produces: 'mithril_bar' },
     { id: 'gold_bar',    name: 'Gold Bar',    levelReq: 45, interval: 2200, xp: 45,  consumes: { gold_ore: 1 },                   produces: 'gold_bar' },
-    { id: 'adamant_bar', name: 'Adamant Bar', levelReq: 55, interval: 2400, xp: 60,  consumes: { adamant_ore: 1, coal: 3 },       produces: 'adamant_bar' },
-    { id: 'runite_bar',  name: 'Runite Bar',  levelReq: 75, interval: 2600, xp: 90,  consumes: { runite_ore: 1, coal: 4 },        produces: 'runite_bar' }
+    { id: 'adamant_bar', name: 'Adamant Bar', levelReq: 55, interval: 2400, xp: 60,  consumes: { adamant_ore: 1, coal: 2 },       produces: 'adamant_bar' },
+    { id: 'runite_bar',  name: 'Runite Bar',  levelReq: 75, interval: 2600, xp: 90,  consumes: { runite_ore: 1, coal: 3 },        produces: 'runite_bar' }
 ];
 
 // Armour/weapon metals in ladder order. Smithing level to forge each tier; XP per bar used.
+// XP per bar was raised 1.5x after tools/pacing.mjs showed a self-sufficient smith (mine -> smelt -> forge)
+// needed ~48 h for level 75; it is now ~34 h, with 99 at ~275 h.
 export const METALS = [
-    { bar: 'copper_bar',  name: 'Copper',  tier: 1, levelReq: 1,  xpPerBar: 12 },
-    { bar: 'iron_bar',    name: 'Iron',    tier: 2, levelReq: 10, xpPerBar: 20 },
-    { bar: 'mithril_bar', name: 'Mithril', tier: 3, levelReq: 35, xpPerBar: 38 },
-    { bar: 'adamant_bar', name: 'Adamant', tier: 4, levelReq: 55, xpPerBar: 60 },
-    { bar: 'runite_bar',  name: 'Runite',  tier: 5, levelReq: 75, xpPerBar: 90 }
+    { bar: 'copper_bar',  name: 'Copper',  tier: 1, levelReq: 1,  xpPerBar: 18 },
+    { bar: 'iron_bar',    name: 'Iron',    tier: 2, levelReq: 10, xpPerBar: 30 },
+    { bar: 'mithril_bar', name: 'Mithril', tier: 3, levelReq: 35, xpPerBar: 57 },
+    { bar: 'adamant_bar', name: 'Adamant', tier: 4, levelReq: 55, xpPerBar: 90 },
+    { bar: 'runite_bar',  name: 'Runite',  tier: 5, levelReq: 75, xpPerBar: 135 }
 ];
 export const SMITH_INTERVAL = 3000;
+
+// Extra smithing levels per armour type on top of the metal's level (OSRS-style "tier base + slot
+// offset"), so each metal unlocks piece by piece and smithing gives something new most levels.
+export const SMITH_SLOT_OFFSET = { Weapon: 0, Boots: 1, Gloves: 2, Head: 3, Shield: 5, Legs: 7, Body: 9 };
+// Same idea for jewellery: rings first, amulets last.
+export const CRAFT_SLOT_OFFSET = { Ring: 0, Ear: 2, Neck: 4 };
+
+export function smithLevelReq(metal, type) {
+    return Math.min(99, metal.levelReq + (SMITH_SLOT_OFFSET[type] || 0));
+}
 
 // Jewellery: precious bar + gem. Crafting level gate comes from the gem; gold bars need level 30.
 export const JEWEL_BARS = [
