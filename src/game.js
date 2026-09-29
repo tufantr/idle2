@@ -12,6 +12,7 @@ import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, d
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
+import { enterDungeon, returnToStages, setDungeonRepeat, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
 
 const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
 const OFFLINE_GAP_MS = 60000;
@@ -138,6 +139,13 @@ export class Game {
     setAutoSalvage(rarity) { return this._act(() => setAutoSalvage(this, rarity)); }
 
     buyCampUpgrade(id, count) { return this._act(() => buyCampUpgrade(this, id, count)); }
+
+    enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
+    leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }
+    setDungeonRepeat(on) { return setDungeonRepeat(this, on); }
+    assembleUnique(id) { return this._act(() => assembleUnique(this, id)); }
+    titanReady() { return titanReady(this.state, this.now); }
+    challengeTitan() { return this._act(() => challengeTitan(this)); }
 
     canPrestige() { return canPrestige(this.state); }
     prestigePreview() { return prestigePreview(this); }

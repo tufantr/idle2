@@ -4,6 +4,8 @@ import { SKILLS } from '../data/skills.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { evaluateUnlocks } from '../data/unlocks.js';
 import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
+import { petForSkill, petChance } from '../data/pets.js';
+import { rng } from '../core/rng.js';
 
 const LOG_LIMIT = 60;
 
@@ -65,4 +67,18 @@ export function checkUnlocks(game) {
 
 export function bumpStat(game, key, amount = 1) {
     game.state.stats[key] = (game.state.stats[key] || 0) + amount;
+}
+
+/** Roll for the skill's pet after an action (Melvor's formula; see data/pets.js). */
+export function rollPet(game, skill, actionMs) {
+    const pet = petForSkill(skill);
+    if (!pet || game.state.pets[pet.id]) return null;
+    const level = levelForXp(game.state.skills[skill]?.xp || 0);
+    if (!rng.chance(petChance(actionMs, level))) return null;
+    game.state.pets[pet.id] = true;
+    bumpStat(game, 'petsFound');
+    log(game, `🐾 A pet found you: ${pet.icon} ${pet.name} (${pet.desc}).`, 'achievement');
+    game.emit({ type: 'pet', pet });
+    game.markDirty();
+    return pet;
 }

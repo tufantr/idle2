@@ -65,9 +65,8 @@ export const BALANCE = {
 
 // ---------- Enemies ----------
 
-export function enemyForStage(stage) {
-    const zone = zoneForStage(stage);
-    const boss = isBossStage(stage);
+/** HP, ATK and attack interval of a regular (non-boss) enemy at `stage`. Dungeons and the Titan build on it. */
+export function enemyBaseStats(stage) {
     const e = BALANCE.enemy;
     let hp;
     let atk;
@@ -79,6 +78,14 @@ export function enemyForStage(stage) {
         hp = e.baseHp * Math.pow(e.hpGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssHpGrowth, extra);
         atk = e.baseAtk * Math.pow(e.atkGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssAtkGrowth, extra);
     }
+    return { hp, atk, interval: Math.max(e.minInterval, e.baseInterval - e.intervalPerStage * Math.min(stage, 120)) };
+}
+
+export function enemyForStage(stage) {
+    const zone = zoneForStage(stage);
+    const boss = isBossStage(stage);
+    const e = BALANCE.enemy;
+    let { hp, atk, interval } = enemyBaseStats(stage);
     if (boss) { hp *= e.bossHpMult; atk *= e.bossAtkMult; }
     const name = boss ? zone.boss : zone.monsters[(stage - 1) % zone.monsters.length];
     return {
@@ -92,7 +99,7 @@ export function enemyForStage(stage) {
         hp: Math.floor(hp),
         maxHp: Math.floor(hp),
         atk: Math.floor(atk),
-        interval: Math.max(e.minInterval, e.baseInterval - e.intervalPerStage * Math.min(stage, 120))
+        interval
     };
 }
 

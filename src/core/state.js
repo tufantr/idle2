@@ -7,6 +7,7 @@ import { EQUIP_SLOTS } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
 import { xpForLevel } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
+import { DUNGEONS } from '../data/dungeons.js';
 
 export const SAVE_VERSION = 3;
 
@@ -38,8 +39,14 @@ export function createDefaultState(now = Date.now()) {
             farmMode: false,
             bossTimeLeft: 0,   // ms of fighting left before the current boss escapes
             regroupLeft: 0,    // ms left farming the previous stage after a boss escaped
-            lastSetbackAt: 0   // last death or boss escape (the advisor uses it)
+            lastSetbackAt: 0,  // last death or boss escape (the advisor uses it)
+            mode: 'stages',    // 'stages' | 'dungeon' | 'titan'
+            dungeon: null,     // { id, index } while in a dungeon run
+            autoRepeat: true   // start the dungeon again after each clear
         },
+        dungeons: {},          // id -> { clears, fragments }
+        titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
+        pets: {},
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0 },
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
@@ -49,6 +56,7 @@ export function createDefaultState(now = Date.now()) {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
             itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0,
+            dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
             actionsBySkill: {}
         },
         minigame: {},
@@ -62,6 +70,7 @@ export function createDefaultState(now = Date.now()) {
     for (const id of SKILL_IDS) state.skills[id] = { xp: 0 };
     for (const id of SKILL_IDS) state.stats.actionsBySkill[id] = 0;
     for (const perk of PERKS) state.perks[perk.id] = 0;
+    for (const d of DUNGEONS) state.dungeons[d.id] = { clears: 0, fragments: 0 };
     for (const id of NON_COMBAT_SKILLS) state.minigame[id] = { boostUntil: 0, bonus: 0, streak: 0, challenge: null, nextOpportunityAt: 0, opportunityUntil: 0 };
     return state;
 }
@@ -163,6 +172,26 @@ function normalise(data, now) {
     state.combat.maxStage = Math.max(state.combat.stage, Math.floor(Number(state.combat.maxStage) || 1));
     state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
     state.combat.combo = 0;
+    // A titan fight never survives a reload; a dungeon run does (if it still makes sense).
+    const run = state.combat.dungeon;
+    const runDungeon = run ? DUNGEONS.find(d => d.id === run.id) : null;
+    if (state.combat.mode !== 'dungeon' || !runDungeon) {
+        state.combat.mode = 'stages';
+        state.combat.dungeon = null;
+    } else {
+        run.index = Math.max(0, Math.min(runDungeon.monsters.length, Math.floor(Number(run.index) || 0)));
+    }
+    if (!state.dungeons || typeof state.dungeons !== 'object') state.dungeons = {};
+    for (const d of DUNGEONS) {
+        if (!state.dungeons[d.id] || typeof state.dungeons[d.id] !== 'object') state.dungeons[d.id] = { clears: 0, fragments: 0 };
+        const record = state.dungeons[d.id];
+        record.clears = Math.max(0, Math.floor(Number(record.clears) || 0));
+        record.fragments = Math.max(0, Math.floor(Number(record.fragments) || 0));
+    }
+    if (!state.titan || typeof state.titan !== 'object') state.titan = { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 };
+    if (!state.pets || typeof state.pets !== 'object') state.pets = {};
+    state.titan.kills = Math.max(0, Math.floor(Number(state.titan.kills) || 0));
+    if (!Number.isFinite(Number(state.titan.readyAt))) state.titan.readyAt = 0;
     state.daily.banked = Math.max(0, Math.min(DAILY_MAX_BANKED, Math.floor(Number(state.daily.banked) || 0)));
     if (!Number.isFinite(Number(state.daily.nextAt))) state.daily.nextAt = now + DAILY_INTERVAL_MS;
     for (const perk of PERKS) state.perks[perk.id] = Math.min(perk.max, Math.max(0, Math.floor(Number(state.perks[perk.id]) || 0)));

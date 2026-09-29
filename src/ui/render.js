@@ -19,6 +19,9 @@ import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/mi
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { advise } from '../systems/advisor.js';
+import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
+import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview } from '../systems/dungeon.js';
+import { PETS, PET_BASE } from '../data/pets.js';
 import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
@@ -26,6 +29,7 @@ import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 
 export const TABS = [
     { id: 'combat', name: 'Combat', icon: '⚔️', group: 'COMBAT' },
+    { id: 'dungeons', name: 'Dungeons', icon: '🏰', group: 'COMBAT' },
     { id: 'mining', name: 'Mining', icon: '⛏️', group: 'SKILLS', skill: 'mining' },
     { id: 'woodcutting', name: 'Woodcutting', icon: '🌳', group: 'SKILLS', skill: 'woodcutting' },
     { id: 'hunting', name: 'Hunting', icon: '🏹', group: 'SKILLS', skill: 'hunting' },
@@ -99,7 +103,7 @@ export function renderHeader(game, ui, cloud) {
     const status = action
         ? `<span class="status-pill working">${SKILLS[action.skill]?.icon || '⚙️'} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</span>`
         : state.combat.active
-            ? `<span class="status-pill fighting">⚔️ Fighting — ${esc(zoneForStage(state.combat.stage).name)} stage ${state.combat.stage}</span>`
+            ? `<span class="status-pill fighting">⚔️ Fighting — ${esc(fightingWhere(state))}</span>`
             : `<span class="status-pill idle">💤 Idle — start a skill or enter combat</span>`;
     const goal = goals.length ? `<span class="goal-pill">🎯 ${esc(goals[0].hint)}</span>` : '';
     const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>` : `<span class="cloud-pill local" title="Local save only">💾 guest</span>`;
@@ -122,6 +126,14 @@ export function renderHeader(game, ui, cloud) {
 
 // ---------- combat ----------
 
+function fightingWhere(state) {
+    const c = state.combat;
+    if (c.mode === 'titan') return c.enemy?.name || 'the Titan';
+    const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
+    if (run) return `${run.name} ${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}`;
+    return `${zoneForStage(c.stage).name} stage ${c.stage}`;
+}
+
 function hpBar(current, max, cls) {
     const w = Math.max(0, Math.min(100, (current / Math.max(1, max)) * 100));
     return `<div class="combat-bar"><div class="combat-fill ${cls}" style="width:${w}%"></div></div>`;
@@ -142,21 +154,30 @@ export function renderCombat(game, ui) {
     const comboStacks = Math.floor(c.combo || 0);
     const comboBuffs = comboStacks >= 30 ? '⚡ +10% crit · 🩸 15% lifesteal · ⚔️ echo strikes' : comboStacks >= 20 ? '⚡ +10% crit · 🩸 15% lifesteal' : comboStacks >= 10 ? '⚡ +10% crit' : '';
 
+    const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
+    const title = run
+        ? `<h2>${run.icon} ${esc(run.name)} <span class="muted">${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}</span></h2>
+           <div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`
+        : c.mode === 'titan'
+            ? `<h2>🗿 Titan challenge <span class="muted">level ${titanLevel(state)}</span></h2><div class="muted small">Deal as much damage as you can before the timer runs out — clicking helps.</div>`
+            : `<h2>${boss ? '👑 Boss — ' : ''}${esc(zone.name)} <span class="muted">tier ${zone.tier}</span></h2>
+               <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b>${c.regroupLeft > 0 ? ` · <span class="regroup-pill" id="regroup-text">⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s</span>` : ''}</div>`;
+    const nav = c.mode !== 'stages'
+        ? `<div class="stage-nav"><button class="mini-btn danger" onclick="FI.toggleCombat()">${c.mode === 'dungeon' ? 'Abandon run' : 'Give up'}</button></div>`
+        : null;
+
     return `
     ${renderAdvisor(game)}
     <section class="glass-panel combat-panel">
         <div class="panel-header">
-            <div>
-                <h2>${boss ? '👑 Boss — ' : ''}${esc(zone.name)} <span class="muted">tier ${zone.tier}</span></h2>
-                <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b>${c.regroupLeft > 0 ? ` · <span class="regroup-pill" id="regroup-text">⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s</span>` : ''}</div>
-            </div>
-            <div class="stage-nav">
+            <div>${title}</div>
+            ${nav || `<div class="stage-nav">
                 <button class="mini-btn" aria-label="Back 10 stages" onclick="FI.stageNav(-10)" ${c.stage <= 1 ? 'disabled' : ''}>«</button>
                 <button class="mini-btn" aria-label="Back 1 stage" onclick="FI.stageNav(-1)" ${c.stage <= 1 ? 'disabled' : ''}>‹</button>
                 <button class="mini-btn" aria-label="Forward 1 stage" onclick="FI.stageNav(1)" ${c.stage >= c.maxStage ? 'disabled' : ''}>›</button>
                 <button class="mini-btn" aria-label="Forward 10 stages" onclick="FI.stageNav(10)" ${c.stage >= c.maxStage ? 'disabled' : ''}>»</button>
                 <label class="toggle" title="Stay on this stage instead of advancing (loot farming)"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Farm this stage</label>
-            </div>
+            </div>`}
         </div>
 
         <div class="combat-arena">
@@ -171,11 +192,11 @@ export function renderCombat(game, ui) {
             <div class="combat-entity enemy-side enemy-click-target" onclick="FI.clickAttack(event)" role="button" tabindex="0" aria-label="Strike the enemy (half damage, builds combo)" title="Click to strike (half damage, builds combo)">
                 <div class="impact-flash" id="combat-impact-flash"></div>
                 <div class="enemy-hit-layer" id="enemy-hit-layer"></div>
-                <div class="enemy-sprite ${boss ? 'boss' : ''}" id="enemy-sprite">${enemy.icon}</div>
+                <div class="enemy-sprite ${enemy.boss ? 'boss' : ''}" id="enemy-sprite">${enemy.icon}</div>
                 <div class="entity-name" id="enemy-name">${esc(enemy.name)}</div>
                 <div class="hp-text"><span id="enemy-hp-text">${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}</span> HP</div>
                 <div id="enemy-hp-bar">${hpBar(enemy.hp, enemy.maxHp, 'enemy-fill')}</div>
-                ${enemy.boss ? `<div class="boss-timer" title="Bosses must fall within ${BALANCE.combat.bossTimeMs / 1000} seconds of fighting"><div id="boss-timer-fill" class="boss-timer-fill" style="width:${Math.max(0, c.bossTimeLeft / BALANCE.combat.bossTimeMs * 100)}%"></div><span id="boss-timer-text">⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s</span></div>` : ''}
+                ${enemy.boss ? `<div class="boss-timer" title="Bosses must fall within ${(enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000} seconds of fighting"><div id="boss-timer-fill" class="boss-timer-fill" style="width:${Math.max(0, c.bossTimeLeft / (enemy.timeLimit || BALANCE.combat.bossTimeMs) * 100)}%"></div><span id="boss-timer-text">⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s</span></div>` : ''}
                 <div class="entity-stats muted small">⚔️ ${fmt(enemy.atk)} · hits every ${seconds(enemy.interval)} · 💰 ~${fmt(Math.round(enemy.maxHp * BALANCE.rewards.goldPerHp * (enemy.boss ? BALANCE.rewards.bossGoldMult : 1) * d.goldMult))}</div>
             </div>
         </div>
@@ -477,7 +498,7 @@ function itemCard(game, item, { equippedSlot = null } = {}) {
         ? `<button class="mini-btn" onclick="FI.upgrade(${item.id})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">⬆ +${up + 1}: ${cost.essence} ✨ + ${fmt(cost.gold)} 🪙</button>`
         : `<span class="muted small">Max upgrade</span>`;
     const reforge = itemReforgeCost(game, item);
-    const reforgeBtn = item.affixes?.length
+    const reforgeBtn = item.affixes?.length && !item.uniqueId
         ? `<button class="mini-btn" onclick="FI.reforge(${item.id})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (cost rises with each reforge)">🔁 ${reforge.essence} ✨ + ${fmt(reforge.gold)} 🪙</button>`
         : '';
     const salvage = salvagePreview(item);
@@ -604,6 +625,96 @@ export function renderAchievements(game) {
     </section>`;
 }
 
+// ---------- dungeons & titan ----------
+
+/** Colour a fight estimate: green if you win comfortably, amber if it's close, red if not. */
+function readinessClass(killSeconds, limitSeconds, surviveSeconds) {
+    const need = Math.min(limitSeconds, surviveSeconds);
+    if (killSeconds <= need * 0.7) return 'ready-good';
+    if (killSeconds <= need) return 'ready-close';
+    return 'ready-bad';
+}
+
+function fmtSeconds(value) {
+    if (!Number.isFinite(value) || value > 3600) return 'forever';
+    return value < 10 ? `${value.toFixed(1)} s` : `${Math.round(value)} s`;
+}
+
+export function renderDungeons(game) {
+    const state = game.state;
+    const c = state.combat;
+    const tl = titanLevel(state);
+    const titanFight = fightPreview(game.derived, titanEnemy(state));
+    const titanPct = Math.min(1, (TITAN_TIME_MS / 1000) / titanFight.killSeconds);
+    const titanCard = !titanUnlocked(state)
+        ? `<p class="muted small">Reach stage ${TITAN_UNLOCK_STAGE} to wake the first Titan.</p>`
+        : `<div class="titan-row">
+            <div><b>Titan level ${tl}</b> · ${state.titan.kills} defeated (now +${Math.round(TITAN_BONUS.atkMult * 100 * state.titan.kills)}% ATK and HP)${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
+                <div class="small ${readinessClass(titanFight.killSeconds, TITAN_TIME_MS / 1000, titanFight.surviveSeconds)}">Estimate: you would deal ~${Math.round(titanPct * 100)}% of its health in ${TITAN_TIME_MS / 1000} s${titanFight.surviveSeconds < TITAN_TIME_MS / 1000 ? `, but it would kill you in ~${Math.round(titanFight.surviveSeconds)} s without food` : ''}.</div></div>
+            ${c.mode === 'titan' ? '<span class="status-pill fighting">Fighting now</span>'
+                : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">🗿 Challenge (${TITAN_TIME_MS / 1000} s)</button>`
+                : `<button class="mini-btn" disabled>Rests for ${duration(state.titan.readyAt - game.now)}</button>`}
+        </div>`;
+    const cards = DUNGEONS.map(d => {
+        const record = state.dungeons[d.id];
+        const open = dungeonUnlocked(state, d);
+        const here = c.mode === 'dungeon' && c.dungeon?.id === d.id;
+        const next = DUNGEON_MILESTONES.find(m => record.clears < m.clears);
+        const done = DUNGEON_MILESTONES.filter(m => record.clears >= m.clears).map(m => m.desc);
+        const unique = UNIQUES[d.unique];
+        const preview = dungeonPreview(game.derived, d);
+        const limit = DUNGEON_BOSS_TIME_MS / 1000;
+        return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
+            <div class="dungeon-head"><span class="dungeon-icon">${d.icon}</span><div><b>${esc(d.name)}</b><div class="muted small">${d.monsters.length} elites + ${esc(d.boss.name)} · like stage ${d.stage}–${d.stage + d.monsters.length} · chest tier ${d.chestTier}</div></div></div>
+            ${open ? `<div class="small">Clears: <b>${record.clears}</b>${next ? ` · next milestone at ${next.clears}: ${next.desc}` : ' · all milestones earned'}</div>
+                ${done.length ? `<div class="muted small">Earned: ${done.join('; ')}</div>` : ''}
+                <div class="small">Fragments: <b>${record.fragments}/${FRAGMENTS_PER_UNIQUE}</b> toward <span style="color:#f97316">${esc(unique.name)}</span></div>
+                <div class="small ${readinessClass(preview.bossFight.killSeconds, limit, preview.bossFight.surviveSeconds)}" title="Estimate without food, regen, lifesteal or combo">Boss: ~${fmtSeconds(preview.bossFight.killSeconds)} to kill (limit ${limit} s) · you last ~${fmtSeconds(preview.bossFight.surviveSeconds)}</div>
+                <div class="btn-row">
+                    ${here ? '<button class="mini-btn danger" onclick="FI.toggleCombat()">Abandon run</button>' : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
+                    <button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${record.fragments >= FRAGMENTS_PER_UNIQUE ? '' : 'disabled'}>Assemble unique</button>
+                </div>`
+                : `<div class="req">Opens at stage ${d.unlockStage}</div>`}
+        </div>`;
+    }).join('');
+    return `<section class="glass-panel">
+        <div class="panel-header"><h2>🗿 The Titan</h2><span class="muted small">Once an hour: a ${TITAN_TIME_MS / 1000}-second damage race. Each Titan defeated is gone for good and leaves +2% ATK and HP.</span></div>
+        ${titanCard}
+    </section>
+    <section class="glass-panel">
+        <div class="panel-header"><h2>🏰 Dungeons</h2>
+            <label class="toggle"><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>
+        </div>
+        <p class="muted small">Elite monsters and a boss with a ${DUNGEON_BOSS_TIME_MS / 1000} s timer, fought with the gear you walk in with (it's locked inside). Dying, leaving or running out of time loses the run. Every clear opens a chest: a fragment of the dungeon's unique item, essence and materials, often a gem and sometimes a piece of boss-quality gear. Clear counts unlock permanent bonuses.</p>
+        <div class="dungeon-grid">${cards}</div>
+    </section>`;
+}
+
+function renderCollection(game) {
+    const state = game.state;
+    const pets = PETS.map(p => {
+        const found = !!state.pets[p.id];
+        const level = Math.max(1, skillLevel(state, p.skill));
+        const hours = Math.round(PET_BASE / level / 3600);
+        const hint = `~${fmt(hours)} h of ${p.skill} at level ${level} on average; the chance grows with your level (~${Math.round(PET_BASE / 99 / 3600)} h at 99)`;
+        return `<div class="pet-card ${found ? 'found' : ''}" title="${found ? esc(p.desc) : esc(hint)}">
+            <span class="pet-icon">${found ? p.icon : '❔'}</span><div><b>${found ? esc(p.name) : 'Unknown pet'}</b><div class="muted small">${esc(p.skill)} · ${found ? esc(p.desc) : `~${fmt(hours)} h at Lv ${level}`}</div></div></div>`;
+    }).join('');
+    const uniques = DUNGEONS.map(d => {
+        const u = UNIQUES[d.unique];
+        const owned = [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === u.id);
+        return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${owned ? '🌟' : '❔'}</span><div><b style="color:#f97316">${esc(u.name)}</b><div class="muted small">${d.name} · ${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}</div></div></div>`;
+    }).join('');
+    return `<section class="glass-panel">
+        <div class="panel-header"><h2>🐾 Pets</h2><span class="muted small">${PETS.filter(p => state.pets[p.id]).length}/${PETS.length} · rare finds while training, kept forever</span></div>
+        <div class="pet-grid">${pets}</div>
+    </section>
+    <section class="glass-panel">
+        <div class="panel-header"><h2>🌟 Unique items</h2><span class="muted small">Assembled from dungeon fragments, or found in a chest</span></div>
+        <div class="pet-grid">${uniques}</div>
+    </section>`;
+}
+
 // ---------- settings / clan ----------
 
 export function renderSettings(game, ui, cloud) {
@@ -718,7 +829,7 @@ export function patchLive(game, ui) {
         const cc = document.getElementById('combo-container'); if (cc) cc.style.display = combo > 0 ? '' : 'none';
         set('combo-text', `${combo}×`);
         const bt = document.getElementById('boss-timer-fill');
-        if (bt && e?.boss) { bt.style.width = `${Math.max(0, c.bossTimeLeft / BALANCE.combat.bossTimeMs * 100)}%`; set('boss-timer-text', `⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`); }
+        if (bt && e?.boss) { bt.style.width = `${Math.max(0, c.bossTimeLeft / (e.timeLimit || BALANCE.combat.bossTimeMs) * 100)}%`; set('boss-timer-text', `⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`); }
         if (c.regroupLeft > 0) set('regroup-text', `⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s`);
     }
     set2('hdr-hp', fmt(state.combat.hp));
@@ -746,7 +857,8 @@ export function renderTab(game, ui, cloud) {
         case 'crafting': return renderCrafting(game, ui);
         case 'inventory': return renderInventory(game, ui);
         case 'shop': return renderShop(game, ui);
-        case 'achievements': return renderAchievements(game);
+        case 'achievements': return renderAchievements(game) + renderCollection(game);
+        case 'dungeons': return renderDungeons(game);
         case 'settings': return renderSettings(game, ui, cloud);
         case 'clan': return renderClan();
         default: return NON_COMBAT_SKILLS.includes(ui.tab) ? renderSkill(game, ui, ui.tab) : renderCombat(game, ui);

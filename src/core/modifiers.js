@@ -13,6 +13,8 @@ import { NON_COMBAT_SKILLS, WORKSHOP_SKILLS } from '../data/skills.js';
 import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
+import { PETS } from '../data/pets.js';
+import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS } from '../data/dungeons.js';
 import { levelForXp } from './xp.js';
 
 export const BASE = {
@@ -116,6 +118,16 @@ export function collectModifiers(state) {
         mods.defMult += ACHIEVEMENT_GLOBAL_BONUS * unlockedCount;
         for (const id of NON_COMBAT_SKILLS) mods.skillSpeed[id] += ACHIEVEMENT_GLOBAL_BONUS * unlockedCount;
     }
+
+    // Pets (permanent, one per skill).
+    for (const pet of PETS) if (state.pets?.[pet.id]) addMods(mods, pet.mods);
+
+    // Dungeon clear milestones and Titans defeated (permanent).
+    for (const d of DUNGEONS) {
+        const clears = state.dungeons?.[d.id]?.clears || 0;
+        for (const m of DUNGEON_MILESTONES) if (clears >= m.clears) addMods(mods, m.mods);
+    }
+    addMods(mods, TITAN_BONUS, state.titan?.kills || 0);
 
     // Active potion (only while it has charges).
     if (state.combat.potion !== 'none' && state.combat.potionCharges > 0) addMods(mods, POTION_EFFECTS[state.combat.potion]);

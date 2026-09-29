@@ -1057,3 +1057,25 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .badge-upgrade { font-size: 0.65rem; font-weight: 800; color: #4ade80; border: 1px solid rgba(74,222,128,0.4); border-radius: 6px; padding: 0 0.3rem; }
 .auto-salvage { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; }
 .inv-actions { flex-wrap: wrap; }
+
+/* dungeons, titan, collection */
+.dungeon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.8rem; }
+.dungeon-card { padding: 0.9rem; border-radius: 14px; background: rgba(0,0,0,0.22); border: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 0.45rem; }
+.dungeon-card.locked { opacity: 0.55; }
+.dungeon-card.active { border-color: rgba(239,68,68,0.6); box-shadow: 0 0 18px rgba(239,68,68,0.2); }
+.dungeon-head { display: flex; gap: 0.6rem; align-items: center; }
+.dungeon-icon { font-size: 1.8rem; }
+.titan-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
+.pet-card { display: flex; gap: 0.6rem; align-items: center; padding: 0.6rem 0.8rem; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); opacity: 0.7; }
+.pet-card.found { opacity: 1; border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.06); }
+.pet-icon { font-size: 1.6rem; }
+
+.ready-good { color: #4ade80; }
+.ready-close { color: #fbbf24; }
+.ready-bad { color: #f87171; }
+
+@media (max-width: 700px) {
+    #toast-area { left: 0.75rem; right: 0.75rem; bottom: 0.75rem; align-items: stretch; }
+    #toast-area .toast:nth-last-child(n+4) { display: none; } /* only the three newest on small screens */
+}

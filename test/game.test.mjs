@@ -322,6 +322,7 @@ test('migration v2 -> v3 turns the old daily timestamp into banked crates', () =
 test('offline replay gives the same result as playing online for the same time', () => {
     const online = new Game(null, T0);
     online.state.meta.lastInputAt = T0 - 3600_000; // idle in both runs, so focus applies to both
+    online.state.pets.pebble = true;                 // no pet roll mid-run to make the two runs diverge
     online.startNodeAction('mining', 'copper_ore');
     const saved = JSON.parse(online.serialize(T0));
     run(online, 10 * 60_000, 100);

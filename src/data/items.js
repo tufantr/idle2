@@ -94,7 +94,7 @@ export const GEAR_TIERS = [
 export const MAX_GEAR_TIER = GEAR_TIERS.length;
 
 // Chance that a kill drops a piece of gear, and how its tier relates to the zone's tier.
-export const GEAR_DROP_CHANCE = { regular: 0.01, boss: 0.5 };
+export const GEAR_DROP_CHANCE = { regular: 0.002, boss: 0.5 };
 export const DROP_TIER_OFFSETS = [ { offset: -1, weight: 60 }, { offset: 0, weight: 35 }, { offset: 1, weight: 5 } ];
 export const DROP_TYPE_WEIGHTS = [
     { type: 'Weapon', weight: 12 }, { type: 'Shield', weight: 10 }, { type: 'Head', weight: 10 }, { type: 'Body', weight: 10 },

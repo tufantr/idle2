@@ -127,8 +127,15 @@ export function salvageAll(game, maxRarity = 'common') {
 // ---------- equip ----------
 
 /** Equip an inventory item into a slot (auto-picks an empty matching slot if none given). */
+function gearLocked(game) {
+    const c = game.state.combat;
+    if (c.active && c.mode === 'dungeon') { game.emit({ type: 'error', text: 'Gear is locked inside a dungeon.' }); return true; }
+    return false;
+}
+
 export function equipItem(game, id, requestedSlot = null) {
     const state = game.state;
+    if (gearLocked(game)) return false;
     const found = findItem(state, id);
     if (!found) return false;
     const { item, index } = found;
@@ -153,6 +160,7 @@ export function equipItem(game, id, requestedSlot = null) {
 
 export function unequipItem(game, slot) {
     const state = game.state;
+    if (gearLocked(game)) return false;
     const item = state.equipped[slot];
     if (!item) return false;
     state.equipped[slot] = null;
@@ -228,6 +236,7 @@ export function reforgeItem(game, id) {
     const item = findAnywhere(state, id);
     if (!item) return false;
     if (!item.affixes?.length) { game.emit({ type: 'error', text: 'Common items have no affixes to reforge.' }); return false; }
+    if (item.uniqueId) { game.emit({ type: 'error', text: 'Unique items have fixed bonuses and cannot be reforged.' }); return false; }
     const cost = itemReforgeCost(game, item);
     if (state.resources.essence < cost.essence || state.gold < cost.gold) {
         game.emit({ type: 'error', text: `Reforging needs ${cost.essence} essence and ${cost.gold} gold.` });

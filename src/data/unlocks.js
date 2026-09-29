@@ -9,11 +9,12 @@ export const UNLOCKS = [
     { id: 'woodcutting',  hint: 'Smelt your first bar to unlock Woodcutting',       requires: s => s.stats.barsSmelted >= 1 },
     { id: 'hunting',      hint: 'Reach Stage 5 to unlock Hunting',                  requires: s => s.combat.maxStage >= 5 },
     { id: 'cooking',      hint: 'Hunt your first animal to unlock Cooking',         requires: s => s.stats.actionsBySkill.hunting >= 1 },
-    { id: 'alchemy',      hint: 'Defeat the Stage 10 boss to unlock Alchemy',       requires: s => s.combat.maxStage >= 10 },
+    { id: 'alchemy',      hint: 'Reach the Stage 10 boss to unlock Alchemy',        requires: s => s.combat.maxStage >= 10 },
     { id: 'crafting',     hint: 'Reach Mining 20 or find a gem to unlock Crafting', requires: s => s.skills.mining.xp >= 4470 || (s.stats.gemsFound || 0) >= 1 || heldGems(s) >= 1 },
-    { id: 'shop',         hint: 'Defeat the Stage 10 boss to unlock the Shop',      requires: s => s.combat.maxStage >= 10 },
+    { id: 'shop',         hint: 'Reach the Stage 10 boss to unlock the Shop',       requires: s => s.combat.maxStage >= 10 },
     { id: 'prestige',     hint: 'Reach Stage 10 to unlock Prestige',                requires: s => s.combat.maxStage >= 10 },
     { id: 'achievements', hint: 'Reach Stage 10 to unlock Achievements',            requires: s => s.combat.maxStage >= 10 },
+    { id: 'dungeons',     hint: 'Reach Stage 20 to find the first dungeon',          requires: s => s.combat.bestStage >= 20 },
     { id: 'clan',         hint: 'Clans are planned — see the roadmap',              requires: () => false, comingSoon: true }
 ];
 

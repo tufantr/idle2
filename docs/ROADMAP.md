@@ -18,7 +18,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 0 — Stop the bleeding | ✅ Done |
 | 1 — Core rewrite + simulator | ✅ Done |
 | 2 — Retention scaffolding | ✅ Done |
-| 3 — Loot and endgame depth | 🟡 Loot done; endgame in progress |
+| 3 — Loot and endgame depth | 🟡 Loot, dungeons, uniques, Titan and pets done; mastery and drop-tier alignment open |
 | 4 — Skill breadth | ⬜ Not started |
 | 5 — Social layer | ⬜ Not started (backend groundwork done) |
 
@@ -102,23 +102,36 @@ for both formats). Still open: an active/idle ratio check once the simulator can
 Give combat its own rewards beyond gold and materials, and give the late game goals besides stages.
 Depends on Phase 2's versioned saves (items gain new fields).
 
-- [x] **Gear drops**: 1% of regular kills, 50% of bosses; tier = zone tier −1 (60%) / same (35%) /
-      +1 (5%); rarity weights better than crafting and rising with zone tier. Two **drop-only tiers**
-      above runite: Dragonbone (Skyreach) and Abyssal (the Abyss). Crafted gear caps at Rare
+- [x] **Gear drops**: rare from regular kills, 50% from a boss's first fall in a run; tier = zone
+      tier −1 (60%) / same (35%) / +1 (5%); rarity weights better than crafting and rising with zone
+      tier. Two **drop-only tiers** above runite: Dragonbone (Skyreach) and Abyssal (the Abyss).
+      Crafted gear caps at Rare
+- [x] **Boss payouts by health**: a boss pays its bonus (gold ×3, XP ×5, loot table) only when
+      beating it moves you on; farming a beaten boss pays like the regular monsters its health is
+      worth, so parking on a boss is never the best farm
 - [x] **Salvage**: dropped gear → essence (tier × rarity), crafted gear → ~40% of its bars; half of
       upgrade essence refunded. **Reforge** rerolls affixes (cost ×1…×10). **Item lock**
 - [x] **Bag of 40** with auto-salvage overflow (the weakest unlocked item goes, never an upgrade) and
       an auto-salvage rarity filter for drops
-- [ ] **Dungeons**: authored monster lists with a guaranteed chest, no food swap inside, progress
-      reset on leave, 100/500-clear milestones; one per zone tier to start — M
-- [ ] **Titan**: one cooldown-gated boss (60 min) — shares code with the future clan boss — S
-- [ ] **Fragments** for capstone uniques (10 → item) as visible pity — S
-- [ ] **Pets**: Melvor's formula (`interval_s × level / 25,000,000` per action), +1–3% to that skill,
-      kept through prestige — S
+- [x] **Dungeons** (four): authored elites + a boss with a 60 s timer, gear locked inside, the run
+      lost on death/leave/timeout, auto-repeat; the chest holds a fragment, essence, materials, often
+      a gem and sometimes boss-quality gear; permanent milestones at 10/50/100 clears. Placed where a
+      typical player reaches each unique's tier, and tuned with the simulator to ~1.2× the progress of
+      spending the same time fighting on the ladder
+- [x] **Uniques** with fixed affixes, assembled from 50 fragments (1 per clear, 3% chance of 3) or a
+      0.2% chest drop; a notch above crafted power of their tier, never a tier skip
+- [x] **Titan**: an hourly 60-second damage race; each Titan defeated is permanent +2% ATK and HP and
+      the next is stronger; a loss pays essence for the damage dealt
+- [x] **Pets**: Melvor's formula (`interval_s × level / 25,000,000` per action), one per skill,
+      +3% to that skill (combat: ATK and DEF), kept through prestige; a Collection page lists pets
+      and uniques
 - [ ] **Mastery** per node (Melvor model: doubling, preservation, interval) — M, optional
+- [ ] **Drop tiers vs the crafting spine**: with enough combat time drops still out-gear crafting
+      (Dragonbone by ~10 h for a combat-heavy player vs ~60 h for a skiller); align zone loot tiers
+      with the crafting timeline — part of the next balance pass
 
-**Exit:** simulator shows ~3% gear per kill on tier-appropriate enemies, 0.1–0.5% capstones, a full
-set in ~100–200 boss clears; no drop is ever silently discarded.
+**Exit:** simulator shows drops as treats rather than the gear spine for every play style, 0.1–0.5%
+capstones, a unique in about an hour of at-level dungeon farming; no drop is ever silently discarded.
 
 ## Phase 4 — Skill breadth ⬜
 

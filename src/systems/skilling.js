@@ -9,7 +9,7 @@ import { GEM_DROP_TABLE } from '../data/zones.js';
 import { actionInterval, skillLevel } from '../core/modifiers.js';
 import { generateEquipment } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
-import { grantXp, log, bumpStat } from './progress.js';
+import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
 
@@ -201,6 +201,7 @@ export function completeAction(game, def, { offline = false } = {}) {
     }
 
     grantXp(game, skill, def.xp * derived.xpMult);
+    rollPet(game, skill, def.interval);
     game.emit({ type: 'actionComplete', skill });
     return true;
 }

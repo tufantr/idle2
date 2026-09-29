@@ -26,6 +26,10 @@ export const ACHIEVEMENTS = [
     { id: 'artisan',      name: 'Artisan',           desc: 'Forge or craft 100 items',        req: stat('itemsCrafted', 100),   reward: '+5% workshop speed',      mods: { skillSpeed: { smithing: 0.05, crafting: 0.05 } } },
     { id: 'sharpshooter', name: 'Sharpshooter',      desc: 'Win 50 skill mini-games',         req: stat('minigameWins', 50),    reward: 'Mini-game boosts last 20% longer', mods: { boostDuration: 0.20 } },
     { id: 'legend',       name: 'Living Legend',     desc: 'Equip a Legendary item',          req: stat('legendariesEquipped', 1), reward: '+5% Crit Chance',      mods: { critChance: 0.05 } },
+    { id: 'delver',       name: 'Dungeon Delver',    desc: 'Clear 10 dungeons',               req: stat('dungeonClears', 10),   reward: '+5% gold from combat',    mods: { goldMult: 0.05 } },
+    { id: 'titan_slayer', name: 'Titan Slayer',      desc: 'Defeat a Titan',                  req: stat('titanKills', 1),       reward: '+5% ATK',                 mods: { atkMult: 0.05 } },
+    { id: 'pet_friend',   name: 'Best Friends',      desc: 'Find a pet',                      req: stat('petsFound', 1),        reward: '+5% XP from all skills',  mods: { xpMult: 0.05 } },
+    { id: 'collector',    name: 'Collector',         desc: 'Obtain a unique item',            req: stat('uniquesFound', 1),     reward: '+5% drop chance',         mods: { dropMult: 0.05 } },
     { id: 'completionist',name: 'Completionist',     desc: 'Reach level 99 in any skill',     req: stat('skills99', 1),         reward: '+10% XP from all skills', mods: { xpMult: 0.10 } }
 ];
 

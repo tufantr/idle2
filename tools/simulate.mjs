@@ -20,6 +20,8 @@ import { MAX_UPGRADE } from '../src/data/items.js';
 import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
 import { itemUpgradeCost } from '../src/systems/inventory.js';
 import { resolveAction } from '../src/systems/skilling.js';
+import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_BOSS_TIME_MS } from '../src/data/dungeons.js';
+import { dungeonPreview, dungeonUnlocked } from '../src/systems/dungeon.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
 const HOURS = Number(args.hours || 100);
@@ -27,6 +29,9 @@ const SEED = Number(args.seed || 1);
 const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
+const NO_DUNGEONS = !!args['no-dungeons'];
+const FARM_LADDER = !!args['farm-ladder']; // control: farm the stage ladder instead of running dungeons
+const NO_TITAN = !!args['no-titan'];
 
 rng.setSource(seededRandom(SEED));
 let now = 0;
@@ -231,6 +236,44 @@ function buyCamp() {
     }
 }
 
+// Dungeons: when the stage push stalls, farm the deepest dungeon the hero clears comfortably
+// for half an hour (chests, fragments, clear milestones), then go back to the ladder.
+function dungeonTask() {
+    const limit = DUNGEON_BOSS_TIME_MS / 1000;
+    const ready = DUNGEONS.filter(d => dungeonUnlocked(S, d)).filter(d => {
+        const p = dungeonPreview(game.derived, d);
+        return p.bossFight.killSeconds <= 0.7 * Math.min(limit, p.bossFight.surviveSeconds)
+            && p.eliteFight.killSeconds <= 0.5 * p.eliteFight.surviveSeconds;
+    });
+    const pick = ready[ready.length - 1];
+    if (!pick) return null;
+    const end = now + 30 * 60000;
+    return {
+        kind: 'dungeon', id: pick.id, why: `run ${pick.name}`,
+        // When time is up, stop repeating and let the current run finish.
+        until: () => { if (now >= end) game.setDungeonRepeat(false); return S.combat.mode !== 'dungeon'; }
+    };
+}
+
+// Control for dungeon balance: spend the same half hour fighting on the ladder (an AFK player who
+// leaves combat running at their wall), so the comparison isolates what dungeons add.
+function ladderFarmTask() {
+    const end = now + 30 * 60000;
+    return { kind: 'farm', why: `keep fighting at stage ${S.combat.stage}`, until: () => now >= end };
+}
+
+let lastStallWasDungeon = false;
+function stallTask() {
+    if (!needTraining) return null;
+    if (!lastStallWasDungeon && FARM_LADDER) { lastStallWasDungeon = true; needTraining = false; return ladderFarmTask(); }
+    if (!lastStallWasDungeon && !NO_DUNGEONS) {
+        const t = dungeonTask();
+        if (t) { lastStallWasDungeon = true; needTraining = false; return t; }
+    }
+    lastStallWasDungeon = false;
+    return trainWeakest();
+}
+
 let lastStageGainAt = 0;
 let lastTrainedSkill = null;
 function combatTask() {
@@ -248,7 +291,8 @@ function decide() {
             game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
         }
     }
-    return gearTask() || toolTask() || foodTask() || jewelTask() || trainWeakest() || combatTask();
+    for (const d of DUNGEONS) if (S.dungeons[d.id].fragments >= FRAGMENTS_PER_UNIQUE && game.assembleUnique(d.id)) milestone('unique', d.unique);
+    return gearTask() || toolTask() || foodTask() || jewelTask() || stallTask() || combatTask();
 }
 
 // After combat stalls (no stage gain), work toward the next gear tier: the skill gating the next
@@ -292,6 +336,9 @@ function apply(task) {
     else if (task.kind === 'smith') ok = game.startSmithing(task.type, task.bar);
     else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
     else if (task.kind === 'tool') ok = game.startToolCraft(task.tool, task.tier);
+    else if (task.kind === 'dungeon') { game.setDungeonRepeat(true); ok = game.enterDungeon(task.id); if (ok) lastStageGainAt = now; }
+    else if (task.kind === 'farm') { game.enterCombat(); lastStageGainAt = now; }
+    if ((task.kind === 'dungeon' || task.kind === 'farm') && ok) return task;
     if (task.kind === 'combat' || !ok) {
         if (!ok && VERBOSE) console.log(`  [${fmtH(now)}] could not start: ${task.why}`);
         lastStageGainAt = now;
@@ -302,7 +349,7 @@ function apply(task) {
 }
 
 function taskDone(task) {
-    if (task.kind !== 'combat' && (!S.action || S.action.stalled)) return true;
+    if (!['combat', 'dungeon', 'farm'].includes(task.kind) && (!S.action || S.action.stalled)) return true;
     if (task.until) return task.until();
     return false;
 }
@@ -329,19 +376,34 @@ const totalMs = HOURS * 3600000;
 const t0 = Date.now();
 
 const deathStages = { boss: 0, regular: 0 };
+let dungeonFails = 0;
+let titanTries = 0;
 while (now < totalMs) {
     now += STEP;
     game.tick(now);
-    for (const ev of game.drainEvents()) if (ev.type === 'death') deathStages[ev.stage % 10 === 0 ? 'boss' : 'regular']++;
+    for (const ev of game.drainEvents()) {
+        if (ev.type === 'death' && ev.mode === 'stages') deathStages[ev.stage % 10 === 0 ? 'boss' : 'regular']++;
+        if (ev.type === 'dungeonClear') { milestone(`${ev.dungeon} clears`, 1); if (ev.clears === 10 || ev.clears === 50) milestone(`${ev.dungeon} clears`, ev.clears); }
+        if (ev.type === 'dungeonFail') dungeonFails++;
+        if (ev.type === 'titan') { titanTries++; if (ev.won) milestone('titan kill', S.titan.kills); }
+    }
     if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
     if (task.kind === 'combat' && !S.combat.active && S.combat.hp <= game.derived.maxHp * 0.5) needTraining = true;
     if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
 
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
-    if (taskDone(task) || now - lastDecision > 10 * 60000) {
+    if (task.kind === 'farm' && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
+    if (task.kind === 'farm' && now % 60000 < STEP) buyCamp();
+    // The Titan: a sensible player tries it whenever it is awake (it only costs a minute).
+    if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages') {
+        game.challengeTitan();
+        if (task.kind !== 'combat') task = combatTask();
+    }
+    if (S.combat.mode === 'titan') continue;
+    if (taskDone(task) || (task.kind !== 'dungeon' && task.kind !== 'farm' && now - lastDecision > 10 * 60000)) {
         task = apply(decide());
         lastDecision = now;
-        if (VERBOSE && now % (3600000) < STEP * 2) console.log(`  [${fmtH(now)}] -> ${task.why}`);
+        if (VERBOSE) console.log(`  [${fmtH(now)}] -> ${task.why}`);
     }
     for (const m of STAGE_MARKS) if (S.combat.bestStage >= m) milestone('stage', m);
     if (S.equipped.Weapon) milestone('weapon tier', S.equipped.Weapon.tier);
@@ -360,6 +422,7 @@ for (const m of milestones) (byKey[m.key] ||= []).push(`${m.value}@${fmtH(m.at)}
 for (const [key, list] of Object.entries(byKey)) console.log(`  ${key.padEnd(16)} ${list.join('  ')}`);
 console.log(`\nRuns: ${runLog.map(r => `#${r.run} ${r.hours.toFixed(1)}h→stage ${r.reached} (+${r.tokens})`).join('; ') || 'none'}`);
 console.log(`Deaths: ${deathStages.boss} on boss stages, ${deathStages.regular} on regular stages (${Math.round(100 * deathStages.regular / Math.max(1, deathStages.boss + deathStages.regular))}% of walls are not bosses)`);
+console.log(`Dungeons: ${DUNGEONS.map(d => `${d.name} ${S.dungeons[d.id].clears} clears/${S.dungeons[d.id].fragments} frags`).join('; ')}; ${dungeonFails} failed runs. Titan: ${S.titan.kills} kills in ${titanTries} tries. Pets: ${Object.keys(S.pets).join(', ') || 'none'}`);
 console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}`);
 console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.equipped[s].upgrade ? '+' + S.equipped[s].upgrade : ''}` : null).filter(Boolean).join(', ')}`);
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);

@@ -11,6 +11,8 @@ import { skillLevel } from '../core/modifiers.js';
 import { tokensForStage } from '../core/formulas.js';
 import { canWear, itemScore } from './inventory.js';
 import { dailyReady } from './daily.js';
+import { titanReady, dungeonUnlocked } from './dungeon.js';
+import { DUNGEONS, FRAGMENTS_PER_UNIQUE, UNIQUES } from '../data/dungeons.js';
 
 const FORGE_PRIORITY = ['Weapon', 'Body', 'Shield', 'Legs', 'Head', 'Gloves', 'Boots'];
 const SETBACK_WINDOW_MS = 10 * 60 * 1000;
@@ -76,6 +78,10 @@ export function advise(game, limit = 4) {
     const add = (icon, text, tab = null, action = null) => out.push({ icon, text, tab, action });
 
     if (dailyReady(state, game.now)) add('📦', `Claim your daily crate (${state.daily.banked} waiting)`, null, 'claimDaily');
+    if (titanReady(state, game.now) && state.combat.mode === 'stages') add('🗿', 'The Titan is awake — challenge it for a permanent bonus', 'dungeons');
+    for (const d of DUNGEONS) {
+        if ((state.dungeons[d.id]?.fragments || 0) >= FRAGMENTS_PER_UNIQUE) { add('🌟', `Assemble ${UNIQUES[d.unique].name} from your fragments`, 'dungeons'); break; }
+    }
     if (state.prestige.skillPoints > 0) add('🌟', `Spend ${state.prestige.skillPoints} skill point${state.prestige.skillPoints > 1 ? 's' : ''} on perks`, 'shop');
 
     const upgrade = findUpgrade(state);
@@ -113,6 +119,9 @@ export function advise(game, limit = 4) {
         const hint = nextMetalHint(state);
         if (hint) add('🧱', hint, 'smithing');
     }
+
+    const newDungeon = DUNGEONS.find(d => dungeonUnlocked(state, d) && !(state.dungeons[d.id]?.clears));
+    if (newDungeon && state.combat.mode === 'stages') add(newDungeon.icon, `${newDungeon.name} is open — clear it for a chest and a unique fragment`, 'dungeons');
 
     for (const goal of nextGoals(state, 1)) add('🎯', goal.hint);
 

@@ -117,7 +117,7 @@ function handleEvents(events) {
         switch (ev.type) {
             case 'levelUp': toast(`${SKILLS[ev.skill].icon} ${SKILLS[ev.skill].name} level ${ev.level}!`, 'level'); break;
             case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
-            case 'unlock': toast(`🔓 ${TABS.find(t => t.id === ev.id)?.name || ev.id} unlocked!`, 'unlock'); break;
+            case 'unlock': toast(`🔓 ${TABS.find(t => t.id === ev.id)?.name || ev.id.charAt(0).toUpperCase() + ev.id.slice(1)} unlocked!`, 'unlock'); break;
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.icon} ${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft'); break;
             case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
@@ -127,6 +127,11 @@ function handleEvents(events) {
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`${SKILLS[ev.skill].icon} A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame'); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
+            case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`🎁 Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss'); break;
+            case 'dungeonFail': toast('🕳️ The dungeon run failed', 'death'); break;
+            case 'titan': toast(ev.won ? `🗿 Titan defeated! Permanent +2% ATK and HP` : `🗿 The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death'); break;
+            case 'pet': toast(`🐾 ${ev.pet.icon} ${ev.pet.name} joined you! ${ev.pet.desc}`, 'achievement'); break;
+            case 'unique': toast(`🌟 Unique: ${ev.item.name}!`, 'achievement'); break;
             case 'kill':
                 if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss');
                 if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`);
@@ -270,6 +275,10 @@ window.FI = {
     stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { game.buyCampUpgrade(id, count); render(); },
+    enterDungeon(id) { if (game.enterDungeon(id)) window.FI.switchTab('combat'); else render(); },
+    setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
+    assembleUnique(id) { const item = game.assembleUnique(id); if (item) toast(`🌟 ${item.name} assembled!`, 'achievement'); render(); },
+    challengeTitan() { if (game.challengeTitan()) window.FI.switchTab('combat'); else render(); },
 
     equip(id) { game.equipItem(id); render(); },
     unequip(slot) { game.unequipItem(slot); render(); },

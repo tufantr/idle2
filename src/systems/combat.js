@@ -1,42 +1,53 @@
 // Auto-battler: player and enemy attack on their own timers; food, potions, loot, death, clicks.
 
-import { enemyForStage, enemyDamage, goldForKill, combatXpForKill, generateDrop, BALANCE } from '../core/formulas.js';
+import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, BALANCE } from '../core/formulas.js';
 import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
 import { addItem } from './inventory.js';
 import { zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE } from '../data/zones.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { rng } from '../core/rng.js';
-import { grantXp, log, bumpStat } from './progress.js';
+import { grantXp, log, bumpStat, rollPet } from './progress.js';
+import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan } from './dungeon.js';
+import { COMBAT_PET_SECONDS } from '../data/pets.js';
 
+/** Spawn the next enemy for the current mode: the stage ladder, a dungeon run, or the Titan. */
 export function spawnEnemy(game) {
-    const c = game.state.combat;
-    c.enemy = enemyForStage(c.stage);
+    const state = game.state;
+    const c = state.combat;
+    if (c.mode === 'dungeon' && c.dungeon) c.enemy = dungeonEnemy(c.dungeon);
+    else if (c.mode === 'titan') c.enemy = titanEnemy(state);
+    else { c.mode = 'stages'; c.enemy = enemyForStage(c.stage); }
     c.playerTimer = 0;
     c.enemyTimer = 0;
-    c.bossTimeLeft = c.enemy.boss ? BALANCE.combat.bossTimeMs : 0;
+    c.bossTimeLeft = c.enemy.boss ? (c.enemy.timeLimit || BALANCE.combat.bossTimeMs) : 0;
 }
 
 export function enterCombat(game) {
     const state = game.state;
-    if (state.combat.active) return;
+    const c = state.combat;
+    if (c.active) return;
     if (state.action) { state.action = null; game.emit({ type: 'actionStop' }); }
-    state.combat.active = true;
-    state.combat.combo = 0;
-    if (state.combat.hp <= 0) state.combat.hp = game.derived.maxHp;
-    if (!state.combat.enemy || state.combat.enemy.stage !== state.combat.stage) spawnEnemy(game);
+    c.active = true;
+    c.combo = 0;
+    if (c.hp <= 0) c.hp = game.derived.maxHp;
+    if (!c.enemy || (c.mode === 'stages' && c.enemy.stage !== c.stage)) spawnEnemy(game);
     game.markDirty();
 }
 
+/** Stop fighting. Leaving mid-dungeon abandons the run; leaving the Titan ends the attempt. */
 export function leaveCombat(game) {
-    const state = game.state;
-    if (!state.combat.active) return;
-    state.combat.active = false;
-    state.combat.combo = 0;
+    const c = game.state.combat;
+    if (!c.active) return;
+    if (c.mode === 'dungeon') failDungeon(game, 'you left');
+    else if (c.mode === 'titan') endTitan(game, false);
+    c.active = false;
+    c.combo = 0;
     game.markDirty();
 }
 
 export function setStage(game, stage) {
     const state = game.state;
+    if (state.combat.mode !== 'stages') return;
     const target = Math.max(1, Math.min(state.combat.maxStage, Math.floor(stage)));
     if (target === state.combat.stage) return;
     state.combat.stage = target;
@@ -149,41 +160,54 @@ export function enemyAttack(game) {
     return dmg;
 }
 
-function rollLoot(game, enemy) {
+/**
+ * How a kill pays out. A boss pays its full bonus (gold x3, XP x5, its loot table) when beating it
+ * moves you on — the first time it falls in a run — and the Titan always does. A boss you farm after
+ * beating it, or a dungeon boss (whose reward is the chest), pays like the regular monsters its
+ * health is worth, so parking on a boss is never the best way to farm.
+ */
+export function killPayout(state, enemy) {
+    const c = state.combat;
+    const full = !!enemy.boss && (!!enemy.titan || (c.mode === 'stages' && !c.farmMode && enemy.stage === c.maxStage));
+    const rolls = enemy.boss && !full ? Math.max(1, Math.round(enemy.maxHp / Math.max(1, enemyBaseStats(enemy.stage).hp))) : 1;
+    return { full, rolls };
+}
+
+function rollLoot(game, enemy, payout) {
     const state = game.state;
     const d = game.derived;
     const r = BALANCE.rewards;
     const zone = zoneForStage(enemy.stage);
+    const boss = payout.full;
     const drops = [];
-    const material = () => {
-        const pick = rng.weighted(zone.loot);
-        const qty = 1 + Math.floor(zone.tier / 3);
-        state.resources[pick.id] += qty;
-        drops.push({ id: pick.id, qty });
+    const add = (id, qty) => {
+        state.resources[id] += qty;
+        const entry = drops.find(dr => dr.id === id);
+        if (entry) entry.qty += qty; else drops.push({ id, qty });
     };
-    if (enemy.boss || rng.chance(r.materialDropChance * d.dropMult)) material();
-    if (rng.chance(r.gemDropChance * d.dropMult * (enemy.boss ? 10 : 1))) {
-        const candidates = GEM_DROP_TABLE.filter(g => Math.abs(g.tier - zone.tier) <= 1).map(g => ({ ...g, weight: g.tier <= zone.tier ? 3 : 1 }));
-        const gem = rng.weighted(candidates);
-        state.resources[gem.id] += 1;
-        bumpStat(game, 'gemsFound');
-        drops.push({ id: gem.id, qty: 1 });
-    }
-    let essence = 0;
-    if (enemy.boss) essence = rng.int(r.bossEssence[0], r.bossEssence[1]) * Math.max(1, Math.round(zone.tier / 2));
-    else if (rng.chance(r.essenceDropChance * d.dropMult)) essence = rng.int(1, 2);
-    if (essence) { state.resources.essence += essence; bumpStat(game, 'essenceFound', essence); drops.push({ id: 'essence', qty: essence }); }
+    for (let roll = 0; roll < payout.rolls; roll++) {
+        if (boss || rng.chance(r.materialDropChance * d.dropMult)) add(rng.weighted(zone.loot).id, 1 + Math.floor(zone.tier / 3));
+        if (rng.chance(r.gemDropChance * d.dropMult * (boss ? 10 : 1))) {
+            const candidates = GEM_DROP_TABLE.filter(g => Math.abs(g.tier - zone.tier) <= 1).map(g => ({ ...g, weight: g.tier <= zone.tier ? 3 : 1 }));
+            add(rng.weighted(candidates).id, 1);
+            bumpStat(game, 'gemsFound');
+        }
+        let essence = 0;
+        if (boss) essence = rng.int(r.bossEssence[0], r.bossEssence[1]) * Math.max(1, Math.round(zone.tier / 2));
+        else if (rng.chance(r.essenceDropChance * d.dropMult)) essence = rng.int(1, 2);
+        if (essence) { add('essence', essence); bumpStat(game, 'essenceFound', essence); }
 
-    // Gear: rare from regular monsters, a coin flip from bosses; tier follows the zone.
-    const gearChance = (enemy.boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
-    if (rng.chance(gearChance)) {
-        const item = generateDrop(zone.tier, enemy.boss, state.idCounter++);
-        const result = addItem(game, item);
-        bumpStat(game, 'itemsDropped');
-        drops.push({ item, kept: result.kept });
-        const rank = RARITIES.findIndex(r => r.id === item.rarity);
-        if (result.kept && rank >= 2) log(game, `${item.icon} ${RARITIES[rank].name} ${item.name} dropped!`, 'loot');
-        if (result.kept) game.emit({ type: 'itemDropped', item });
+        // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone.
+        const gearChance = (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
+        if (rng.chance(gearChance)) {
+            const item = generateDrop(zone.tier, boss, state.idCounter++);
+            const result = addItem(game, item);
+            bumpStat(game, 'itemsDropped');
+            drops.push({ item, kept: result.kept });
+            const rank = RARITIES.findIndex(rr => rr.id === item.rarity);
+            if (result.kept && rank >= 2) log(game, `${item.icon} ${RARITIES[rank].name} ${item.name} dropped!`, 'loot');
+            if (result.kept) game.emit({ type: 'itemDropped', item });
+        }
     }
     return drops;
 }
@@ -194,21 +218,26 @@ export function onEnemyDeath(game) {
     const d = game.derived;
     const enemy = c.enemy;
 
-    const gold = goldForKill(enemy, d.goldMult);
-    const xp = combatXpForKill(enemy, d.combatXpMult);
+    const payout = killPayout(state, enemy);
+    const paidAs = payout.full ? enemy : { ...enemy, boss: false };
+    const gold = goldForKill(paidAs, d.goldMult);
+    const xp = combatXpForKill(paidAs, d.combatXpMult) * payout.rolls;
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'kills');
     if (enemy.boss) bumpStat(game, 'bossKills');
     grantXp(game, 'combat', xp);
-    const drops = rollLoot(game, enemy);
+    const drops = rollLoot(game, enemy, payout);
 
     game.emit({ type: 'kill', enemy, gold, xp, drops });
-    if (enemy.boss || drops.some(dr => dr.id === 'essence' || RESOURCES[dr.id]?.category === 'gem')) {
+    if ((enemy.boss && !enemy.titan) || drops.some(dr => dr.id === 'essence' || RESOURCES[dr.id]?.category === 'gem')) {
         const dropText = drops.map(dr => (dr.item ? dr.item.name : `${dr.qty}× ${RESOURCES[dr.id].name}`)).join(', ');
         log(game, `${enemy.icon} ${enemy.name} defeated${dropText ? ` — ${dropText}` : ''}`, 'combat');
     }
+    rollPet(game, 'combat', COMBAT_PET_SECONDS * 1000);
 
+    if (c.mode === 'dungeon') { onDungeonKill(game); game.markDirty(); return; }
+    if (c.mode === 'titan') { endTitan(game, true); game.markDirty(); return; }
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
         if (c.stage > c.maxStage) c.maxStage = c.stage;
@@ -224,11 +253,22 @@ export function onPlayerDeath(game) {
     const c = state.combat;
     bumpStat(game, 'deaths');
     c.lastSetbackAt = game.now;
+    const mode = c.mode;
+    if (mode !== 'stages') {
+        if (mode === 'dungeon') failDungeon(game, 'you were defeated');
+        else endTitan(game, false);
+        game.emit({ type: 'death', stage: c.stage, mode });
+        c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
+        c.combo = 0;
+        c.active = false;
+        game.markDirty();
+        return;
+    }
     // Retreat to the start of the current zone: bosses are meant to be prepared for, not crawled past.
     const zoneStart = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
     const retreatTo = Math.max(1, Math.min(zoneStart, c.stage - BALANCE.combat.retreatStages));
     log(game, `💀 You were defeated at stage ${c.stage}. Retreated to stage ${retreatTo}.`, 'death');
-    game.emit({ type: 'death', stage: c.stage });
+    game.emit({ type: 'death', stage: c.stage, mode });
     c.stage = retreatTo;
     c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
     c.combo = 0;
@@ -240,6 +280,8 @@ export function onPlayerDeath(game) {
 /** The boss outlasted its timer: step back one stage and farm there for a minute before retrying. */
 export function onBossTimeout(game) {
     const c = game.state.combat;
+    if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`); return; }
+    if (c.mode === 'titan') { endTitan(game, false); return; }
     bumpStat(game, 'bossEscapes');
     c.lastSetbackAt = game.now;
     const back = Math.max(1, c.stage - 1);
