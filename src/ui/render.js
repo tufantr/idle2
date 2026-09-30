@@ -10,11 +10,10 @@ import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
 import { UNLOCKS, isUnlocked, nextGoals } from '../data/unlocks.js';
-import { zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
+import { zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
-import { describeAffix, itemSellValue, tokensForStage, BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
-import { killPayout } from '../systems/combat.js';
+import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
@@ -157,75 +156,43 @@ function fightingWhere(state) {
     return `${zoneForStage(c.stage).name} stage ${c.stage}`;
 }
 
-function hpBar(current, max, cls) {
-    const w = Math.max(0, Math.min(100, (current / Math.max(1, max)) * 100));
-    return `<div class="combat-bar"><div class="combat-fill ${cls}" style="width:${w}%"></div></div>`;
-}
-
 export function renderCombat(game, ui) {
     const state = game.state;
     const c = state.combat;
     const d = game.derived;
-    const enemy = c.enemy || enemyForStage(c.stage);
     const zone = zoneForStage(c.stage);
-    const boss = isBossStage(c.stage);
     const foods = foodsByHealing().filter(f => state.resources[f.id] > 0);
     const potions = orderedByTier('potion');
     const preview = game.prestigePreview();
     const canPrestige = isUnlocked(state, 'prestige') && preview.allowed;
     const recentLog = [...state.log].reverse().filter(l => ['combat', 'death', 'loot', 'prestige'].includes(l.type)).slice(0, 8);
-    const comboStacks = Math.floor(c.combo || 0);
-    const comboBuffs = comboStacks >= 30 ? '⚡ +10% crit · 🩸 15% lifesteal · ⚔️ echo strikes' : comboStacks >= 20 ? '⚡ +10% crit · 🩸 15% lifesteal' : comboStacks >= 10 ? '⚡ +10% crit' : '';
 
+    // The battle scene above the tab (src/ui/scene.js) shows the fight; this panel holds the orders.
     const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
-    const title = run
-        ? `<h2>${run.icon} ${esc(run.name)} <span class="muted">${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}</span></h2>
-           <div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`
+    const leave = c.mode === 'dungeon' ? '🏳️ Abandon run' : c.mode === 'titan' ? '🏳️ Give up' : '🏳️ Leave combat';
+    const where = run
+        ? `Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run`
         : c.mode === 'titan'
-            ? `<h2>🗿 Titan challenge <span class="muted">level ${titanLevel(state)}</span></h2><div class="muted small">Deal as much damage as you can before the timer runs out — clicking helps.</div>`
-            : `<h2>${boss ? '👑 Boss — ' : ''}${esc(zone.name)} <span class="muted" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">loot tier ${zone.gearTier}</span></h2>
-               <div class="muted small">Stage <b>${c.stage}</b> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b>${c.regroupLeft > 0 ? ` · <span class="regroup-pill" id="regroup-text">⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s</span>` : ''}</div>`;
-    const nav = c.mode !== 'stages'
-        ? `<div class="stage-nav"><button class="mini-btn danger" onclick="FI.toggleCombat()">${c.mode === 'dungeon' ? 'Abandon run' : 'Give up'}</button></div>`
-        : null;
-
-    return `
-    ${renderAdvisor(game)}
-    <section class="glass-panel combat-panel">
-        <div class="panel-header">
-            <div>${title}</div>
-            ${nav || `<div class="stage-nav">
+            ? 'Deal as much damage as you can before the timer runs out. Clicking the Titan helps.'
+            : `<span title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">Loot tier <b>${zone.gearTier}</b></span> · best this run <b>${c.maxStage}</b> · all-time <b>${c.bestStage}</b> · click a stone on the path to go back`;
+    const nav = c.mode === 'stages'
+        ? `<div class="stage-nav">
                 <button class="mini-btn" aria-label="Back 10 stages" onclick="FI.stageNav(-10)" ${c.stage <= 1 ? 'disabled' : ''}>«</button>
                 <button class="mini-btn" aria-label="Back 1 stage" onclick="FI.stageNav(-1)" ${c.stage <= 1 ? 'disabled' : ''}>‹</button>
                 <button class="mini-btn" aria-label="Forward 1 stage" onclick="FI.stageNav(1)" ${c.stage >= c.maxStage ? 'disabled' : ''}>›</button>
                 <button class="mini-btn" aria-label="Forward 10 stages" onclick="FI.stageNav(10)" ${c.stage >= c.maxStage ? 'disabled' : ''}>»</button>
                 <label class="toggle" title="Stay on this stage instead of advancing (loot farming)"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Farm this stage</label>
-            </div>`}
-        </div>
+            </div>`
+        : '';
 
-        <div class="combat-arena">
-            <div class="combat-entity player-side">
-                <div class="entity-name">🧑‍🚀 You <span class="muted small">Combat Lv ${d.combatLevel}</span></div>
-                <div class="hp-text"><span id="player-hp-text">${fmt(c.hp)} / ${fmt(d.maxHp)}</span> HP</div>
-                <div id="player-hp-bar">${hpBar(c.hp, d.maxHp, 'player-fill')}</div>
-                <div class="entity-stats muted small">⚔️ ${fmt(d.atk)} · 🛡️ ${fmt(d.def)} · hits every ${seconds(d.attackInterval)}</div>
-                <div class="attack-timer"><div id="player-atk-fill" class="attack-fill"></div></div>
-            </div>
-            <div class="combat-vs">VS</div>
-            <div class="combat-entity enemy-side enemy-click-target" onclick="FI.clickAttack(event)" role="button" tabindex="0" aria-label="Strike the enemy (half damage, builds combo)" title="Click to strike (half damage, builds combo)">
-                <div class="impact-flash" id="combat-impact-flash"></div>
-                <div class="enemy-hit-layer" id="enemy-hit-layer"></div>
-                <div class="enemy-sprite ${enemy.boss ? 'boss' : ''}" id="enemy-sprite">${enemy.icon}</div>
-                <div class="entity-name" id="enemy-name">${esc(enemy.name)}</div>
-                <div class="hp-text"><span id="enemy-hp-text">${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}</span> HP</div>
-                <div id="enemy-hp-bar">${hpBar(enemy.hp, enemy.maxHp, 'enemy-fill')}</div>
-                ${enemy.boss ? `<div class="boss-timer" title="Bosses must fall within ${(enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000} seconds of fighting"><div id="boss-timer-fill" class="boss-timer-fill" style="width:${Math.max(0, c.bossTimeLeft / (enemy.timeLimit || BALANCE.combat.bossTimeMs) * 100)}%"></div><span id="boss-timer-text">⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s</span></div>` : ''}
-                <div class="entity-stats muted small">⚔️ ${fmt(enemy.atk)} · hits every ${seconds(enemy.interval)} · 💰 ~${fmt(goldForKill(killPayout(state, enemy).full ? enemy : { ...enemy, boss: false }, d.goldMult))}</div>
-            </div>
+    return `
+    <section class="glass-panel combat-panel">
+        <div class="combat-deck">
+            <button class="prestige-btn big" onclick="FI.toggleCombat()">${c.active ? leave : '⚔️ Enter combat'}</button>
+            ${nav}
         </div>
-
+        <div class="muted small">${where}</div>
         <div class="combat-controls">
-            <button class="prestige-btn big" onclick="FI.toggleCombat()">${c.active ? '🏳️ Leave combat' : '⚔️ Enter combat'}</button>
             <label>Auto-eat <span class="muted small">(below ${pct(d.autoEatThreshold)} HP)</span>
                 <select class="material-select" onchange="FI.setAutoEat(this.value)">
                     <option value="auto" ${c.autoEat === 'auto' ? 'selected' : ''}>Auto (best fit)</option>
@@ -242,13 +209,8 @@ export function renderCombat(game, ui) {
                 <span class="muted small">${c.potion !== 'none' ? (c.potionCharges > 0 ? `Active — ${c.potionCharges} charges left` : (state.resources[c.potion] > 0 ? 'Will drink on next attack' : 'Out of potions')) : ''}</span>
             </label>
         </div>
-
-        <div class="combo-meter-container" id="combo-container" style="${comboStacks > 0 ? '' : 'display:none'}">
-            <div class="combo-text" id="combo-text">${comboStacks}×</div>
-            <div class="combo-label">COMBO</div>
-            <div id="combo-buffs" class="combo-buffs">${comboBuffs}</div>
-        </div>
     </section>
+    ${renderAdvisor(game)}
 
     <div class="two-col">
         <section class="glass-panel">
@@ -1117,22 +1079,6 @@ export function patchLive(game, ui) {
     const state = game.state;
     const d = game.derived;
     const action = resolveAction(state);
-    if (ui.tab === 'combat') {
-        const c = state.combat;
-        const e = c.enemy;
-        const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-        set('player-hp-text', `${fmt(c.hp)} / ${fmt(d.maxHp)}`);
-        if (e) set('enemy-hp-text', `${fmt(Math.max(0, e.hp))} / ${fmt(e.maxHp)}`);
-        const pf = document.querySelector('#player-hp-bar .combat-fill'); if (pf) pf.style.width = `${Math.max(0, Math.min(100, c.hp / d.maxHp * 100))}%`;
-        const ef = document.querySelector('#enemy-hp-bar .combat-fill'); if (ef && e) ef.style.width = `${Math.max(0, Math.min(100, e.hp / e.maxHp * 100))}%`;
-        const af = document.getElementById('player-atk-fill'); if (af) af.style.width = c.active ? `${Math.min(100, c.playerTimer / d.attackInterval * 100)}%` : '0%';
-        const combo = Math.floor(c.combo || 0);
-        const cc = document.getElementById('combo-container'); if (cc) cc.style.display = combo > 0 ? '' : 'none';
-        set('combo-text', `${combo}×`);
-        const bt = document.getElementById('boss-timer-fill');
-        if (bt && e?.boss) { bt.style.width = `${Math.max(0, c.bossTimeLeft / (e.timeLimit || BALANCE.combat.bossTimeMs) * 100)}%`; set('boss-timer-text', `⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`); }
-        if (c.regroupLeft > 0) set('regroup-text', `⛺ Regrouping — boss retry in ${Math.ceil(c.regroupLeft / 1000)}s`);
-    }
     set2('hdr-hp', fmt(state.combat.hp));
     if (action && state.action) {
         const interval = intervalFor(action, d);

@@ -21,8 +21,9 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 3 — Loot and endgame depth | ✅ Done |
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ✅ Done |
+| 6 — Game feel | 🚧 In progress |
 
-All six phases are built, including the optional mastery, and a four-part code review (combat,
+The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
 ones, with regression tests. What is left is content and the owner's
 decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
@@ -211,6 +212,28 @@ nothing for sale, so the Vercel Hobby plan fits; players' numbers are computed o
 **Exit (met):** no client-submitted damage numbers (attacks ignore anything the client sends); under
 100k function invocations a month at 100 daily players (the Clan tab polls once a minute only while
 open, saves go up once a minute, events need no requests); privacy consent before the first board.
+
+## Phase 6 — Game feel 🚧
+
+Playtesting feedback: the systems work, but the screens read like a spreadsheet, not a game. This
+phase is presentation only (no balance changes): show the fight, celebrate rewards, and give the game
+one visual identity (dark fantasy: carved serif lettering, stone and bronze, gold accents).
+
+- [x] **Battle scene** (`src/ui/scene.js`): a painted stage above the Combat tab with its own backdrop
+      per place (ten zones, the Abyss, dungeon halls, the Titan), the knight against the monster,
+      health bars with a damage trail, lunges and knockback, damage and crit numbers, coins that fly
+      to the gold counter, loot beams for rare and better drops, boss entrances and victory or defeat
+      banners, the combo meter, a campfire while resting, and a stage path whose cleared stones are
+      buttons. Built once and driven by game events, so tab re-renders never cut an animation short;
+      honours reduced motion and caps effects per frame for background-tab catch-up
+- [ ] **Reward moments**: level-up and unlock ceremonies, a gold counter that rolls up, the daily
+      crate opened like a chest, pet and unique reveals
+- [ ] **Dark fantasy theme** across every tab
+- [ ] **RPG screens**: an equipment paperdoll, a grid inventory with tooltips, a world map for stages
+- [ ] **Quest board** for the advisor's goals, and a phone layout with the scene and a hotbar on top
+
+**Exit:** a new player sees the fight within one click; no layout shift when bosses or banners
+appear; every tab passes the overflow and console check at 390 px and 1350 px.
 
 ## Deferred on purpose
 

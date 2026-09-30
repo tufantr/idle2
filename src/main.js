@@ -7,10 +7,10 @@ import {
 } from './core/save.js';
 import { describeOffline } from './systems/offline.js';
 import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, TABS } from './ui/render.js';
+import { createScene } from './ui/scene.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
-import { RESOURCES } from './data/resources.js';
 import { CLAN_POLL_MS } from './data/social.js';
 
 const TICK_MS = 100;
@@ -59,6 +59,13 @@ let game = withDevFlags(new Game(loaded, Date.now()));
 // cloud sync compares the cloud copy with this instead (or the local save would always look newer).
 let bootSavedAt = loaded ? loaded.meta.savedAt : null;
 
+// The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
+const scene = createScene(document.getElementById('scene'), {
+    strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
+    toggle: () => window.FI.toggleCombat(),
+    stage: n => { game.setStage(n); render(); }
+});
+
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
     if (params.has('dev')) g.state.settings.devUnlockAll = true;
@@ -78,13 +85,18 @@ let lastSave = Date.now();
 let lastBackup = Date.now();
 let lastCloudSave = Date.now();
 
+/** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
+function advance(now) {
+    const summary = game.tick(now);
+    if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
+}
+
 let tickErrorShown = false;
 setInterval(() => {
     const now = Date.now();
     // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
     try {
-        const summary = game.tick(now);
-        if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
+        advance(now);
     } catch (err) {
         console.error('Tick failed', err);
         if (!tickErrorShown) { toast('Something went wrong in the game loop — details in the console.', 'error'); tickErrorShown = true; }
@@ -102,7 +114,11 @@ setInterval(() => {
     }
 }, TICK_MS);
 
-function frame() { patchLive(game, ui); requestAnimationFrame(frame); }
+function frame() {
+    patchLive(game, ui);
+    scene.frame(game);
+    requestAnimationFrame(frame);
+}
 requestAnimationFrame(frame);
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(Date.now()); });
@@ -120,7 +136,14 @@ document.addEventListener('change', event => {
 
 // Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone.
 let lastInputNote = 0;
-const noteInput = () => { const now = Date.now(); if (now - lastInputNote > 1000 || game.derived.focused) { lastInputNote = now; game.noteInput(now); } };
+const noteInput = () => {
+    const now = Date.now();
+    if (now - lastInputNote > 1000 || game.derived.focused) {
+        lastInputNote = now;
+        advance(now); // the first click after a long absence still gets its welcome-back report
+        game.noteInput(now);
+    }
+};
 document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
 document.addEventListener('keydown', event => {
     noteInput();
@@ -173,10 +196,13 @@ function render() {
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
+    scene.sync(game, ui);
 }
 
 function handleEvents(events) {
+    const onCombat = ui.tab === 'combat'; // the battle scene shows these itself
     for (const ev of events) {
+        scene.event(ev, game);
         switch (ev.type) {
             case 'levelUp': toast(`${SKILLS[ev.skill].icon} ${SKILLS[ev.skill].name} level ${ev.level}!`, 'level'); break;
             case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
@@ -184,8 +210,8 @@ function handleEvents(events) {
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.icon} ${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft'); break;
             case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
-            case 'death': toast(`💀 Defeated at stage ${ev.stage} — retreating`, 'death'); break;
-            case 'bossTimeout': toast(`⏳ The boss held out — regrouping for a minute`, 'death'); break;
+            case 'death': if (!onCombat) toast(`💀 Defeated at stage ${ev.stage} — retreating`, 'death'); break;
+            case 'bossTimeout': if (!onCombat) toast(`⏳ The boss held out — regrouping for a minute`, 'death'); break;
             case 'prestige': toast(`✨ Prestige! +${ev.tokens} tokens, +${ev.skillPoints} SP`, 'prestige'); save(Date.now()); break;
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`${SKILLS[ev.skill].icon} A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame'); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
@@ -198,10 +224,7 @@ function handleEvents(events) {
             case 'obstacleBuilt': toast(`${ev.obstacle.icon} ${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement'); break;
             case 'eventMilestone': toast(`${ev.event.icon} ${ev.event.name}: ${ev.milestone.desc}!`, 'achievement'); break;
             case 'masteryLevel': if ([50, 75, 99].some(m => ev.from < m && ev.level >= m)) toast(`${SKILLS[ev.skill].icon} ${ev.name}: mastery ${ev.level}!`, ev.level >= 99 ? 'achievement' : 'level'); break;
-            case 'kill':
-                if (ev.enemy.boss) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss');
-                if (ui.tab === 'combat') for (const drop of ev.drops) floatText(`+${drop.qty} ${RESOURCES[drop.id]?.icon || ''}`);
-                break;
+            case 'kill': if (ev.enemy.boss && !onCombat) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss'); break;
             default: break;
         }
     }
@@ -218,18 +241,6 @@ function toast(text, kind = 'info') {
     while (area.children.length > 5) area.removeChild(area.firstChild);
     setTimeout(() => el.classList.add('fade'), 3200);
     setTimeout(() => el.remove(), 3800);
-}
-
-function floatText(text) {
-    const layer = document.getElementById('enemy-hit-layer');
-    if (!layer) return;
-    const el = document.createElement('div');
-    el.className = 'enemy-hit-burst drop';
-    el.style.left = `${30 + Math.random() * 40}%`;
-    el.style.top = `${40 + Math.random() * 30}%`;
-    el.textContent = text;
-    layer.appendChild(el);
-    setTimeout(() => el.remove(), 900);
 }
 
 // Modals queue up instead of replacing each other, so a login prompt can't hide the offline report.
@@ -411,25 +422,6 @@ window.FI = {
     selectCraftGem(gem) { ui.craftGem = gem; render(); },
 
     toggleCombat() { game.toggleCombat(); render(); },
-    clickAttack(event) {
-        if (!game.clickAttack()) return;
-        const flash = document.getElementById('combat-impact-flash');
-        if (flash) { flash.classList.remove('active'); void flash.offsetWidth; flash.classList.add('active'); }
-        const sprite = document.getElementById('enemy-sprite');
-        if (sprite) { sprite.classList.remove('enemy-struck'); void sprite.offsetWidth; sprite.classList.add('enemy-struck'); }
-        const layer = document.getElementById('enemy-hit-layer');
-        const target = event?.currentTarget;
-        if (layer && target && event && event.clientX !== undefined) {
-            const rect = target.getBoundingClientRect();
-            const burst = document.createElement('div');
-            burst.className = 'enemy-hit-burst';
-            burst.style.left = `${event.clientX - rect.left}px`;
-            burst.style.top = `${event.clientY - rect.top}px`;
-            burst.textContent = game.state.combat.combo >= 10 ? 'CRACK!' : 'HIT!';
-            layer.appendChild(burst);
-            setTimeout(() => burst.remove(), 450);
-        }
-    },
     setAutoEat(rule) { game.setAutoEat(rule); },
     setPotion(id) { game.setPotion(id); render(); },
     stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },

@@ -525,6 +525,28 @@ pool: every repeatable action has its own level from 1 to 99, earned by doing it
 - **Kept through prestige**, replayed offline (the replay speeds up as levels come), and on each save
   load unknown actions are dropped and the mastery stats are rebuilt from the levels.
 
+### 3.21 Presentation: the battle scene
+
+The Combat tab opens on a stage (`src/ui/scene.js`) rather than a table of numbers. The rules it
+keeps:
+
+- **Read-only.** It reads the state and the tick's events (`hit`, `enemyHit`, `dodge`, `kill`,
+  `itemDropped`, `death`, `bossTimeout`, `levelUp`, `titan`, `dungeonClear`, `prestige`); the player's
+  clicks go back through the same `Game` actions as every button (strike, enter or leave, go to a stage).
+- **Built once.** The tab re-renders several times a second; the scene is a separate element that
+  only updates text, widths and classes, so an animation is never cut short by a re-render.
+- **Two layers of motion.** Idle loops (breathing, bobbing, particles) are CSS on inner elements;
+  one-shot moves (lunge, knockback, entrances, the fall) are Web Animations on the outer one, ranked
+  so a monster's entrance isn't interrupted by the first hit.
+- **Bounded.** At most 8 effects per frame and 14 coins in flight, nothing while the tab is hidden, and
+  no floating effects under reduced motion (the setting or the system preference).
+- **Clicks on the real clock.** A strike first runs the game up to the current time, so the
+  auto-clicker guard (120 ms) measures real time rather than the last 100 ms tick; the first input
+  after a long absence gets its welcome-back report the same way.
+- **Places.** Each zone has a palette and two silhouette layers (hills, pines, stalactites, reeds,
+  peaks, drowned columns, the volcano, ice, cloud spires, void crystals); dungeons are torch-lit halls
+  (the Crystal Depths use the caves, the Dragon's Lair the volcano) and the Titan looms behind its fight.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -751,7 +773,7 @@ disagreed, the implementation follows the simulator:
 
 ```
 index.html            page shell (sidebar, header, tab, toasts, modals)
-style.css             styles (original theme + v2 layout, mobile tab strip, reduced motion)
+style.css             styles (original theme + v2 layout, mobile tab strip, reduced motion, the battle scene)
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export,
@@ -762,7 +784,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
-src/ui/               render.js (HTML per tab) · format.js (numbers, time)
+src/ui/               render.js (HTML per tab) · scene.js (the battle scene above the Combat tab) · format.js
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, saves, API; the API suite runs on an
