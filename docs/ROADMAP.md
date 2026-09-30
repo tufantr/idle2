@@ -232,7 +232,11 @@ one visual identity (dark fantasy: carved serif lettering, stone and bronze, gol
       mastery 99 and event milestones; one card at a time, merged by key, skipped while the tab is
       hidden. The daily crate shakes, bursts open and hands out its loot one line at a time, with a
       button for the next banked crate. The gold counter rolls up to a new total
-- [ ] **Dark fantasy theme** across every tab
+- [x] **Dark fantasy theme** across every tab: night stone panels with bronze hairlines and gilded
+      corner brackets, carved headings (Cinzel), parchment text; bronze for the primary action, gilded
+      buttons for spending gold, arcane purple for prestige and perks, war red for going into battle;
+      a coin for each currency; skill actions as medallions. About 280 lines of dead prototype CSS
+      went with it, and the phone header now fits the purse on one row
 - [ ] **RPG screens**: an equipment paperdoll, a grid inventory with tooltips, a world map for stages
 - [ ] **Quest board** for the advisor's goals, and a phone layout with the scene and a hotbar on top
 

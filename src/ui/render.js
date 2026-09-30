@@ -189,7 +189,7 @@ export function renderCombat(game, ui) {
     return `
     <section class="glass-panel combat-panel">
         <div class="combat-deck">
-            <button class="prestige-btn big" onclick="FI.toggleCombat()">${c.active ? leave : '⚔️ Enter combat'}</button>
+            <button class="${c.active ? 'big' : 'prestige-btn war big'}" onclick="FI.toggleCombat()">${c.active ? leave : '⚔️ Enter combat'}</button>
             ${nav}
         </div>
         <div class="muted small">${where}</div>
@@ -235,7 +235,7 @@ export function renderCombat(game, ui) {
             <div class="panel-header"><h2>✨ Prestige</h2><span class="muted small">${canPrestige ? `+${preview.tokens} tokens if you prestige now` : c.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to unlock` : `A run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes: ready in ${duration(preview.waitMs)}`}</span></div>
             <p class="muted small">Convert this run's best stage (${c.maxStage}) into permanent tokens (+0.5% ATK/DEF each) and skill points. Gold, camp and stage reset; everything else stays. Next run starts at stage ${preview.startStage}.</p>
             <div class="prestige-row">
-                <button class="prestige-btn" onclick="FI.openPrestige()" ${canPrestige ? '' : 'disabled'}>Prestige now</button>
+                <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${canPrestige ? '' : 'disabled'}>Prestige now</button>
                 <span class="muted small">Reach stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} for ${preview.nextZoneTokens} tokens</span>
             </div>
         </section>
@@ -655,7 +655,7 @@ export function renderShop(game, ui) {
                 <div><b>${preview.startStage}</b><span>next run starts at stage</span></div>
             </div>
             <p class="muted small">Tokens are never spent — each one is a permanent +0.5% ATK and DEF (+0.25% HP). Skill points buy the perks on the right. Prestige resets your stage, gold and camp; skills, gear and materials stay.</p>
-            <button class="prestige-btn" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : `Reach stage ${BALANCE.prestige.minStage} to prestige`}</button>
+            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>
         <section class="glass-panel">
             <div class="panel-header"><h2>🌟 Perks</h2><span class="muted small">${state.prestige.skillPoints} SP available · +1 per prestige, +1 per 25 stages of your record</span></div>

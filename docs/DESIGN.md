@@ -780,7 +780,8 @@ disagreed, the implementation follows the simulator:
 
 ```
 index.html            page shell (sidebar, header, tab, toasts, modals)
-style.css             styles (original theme + v2 layout, mobile tab strip, reduced motion, the battle scene)
+style.css             styles: theme tokens and components (dark fantasy), the battle scene, reward moments,
+                      phone layout, reduced motion
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export,
