@@ -23,7 +23,8 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 5 — Social layer | ✅ Done |
 
 All six phases are built, including the optional mastery, and a four-part code review (combat,
-skilling, saves and API, UI) has been worked through: 30 confirmed bugs fixed, with regression tests. What is left is content and the owner's
+skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
+ones, with regression tests. What is left is content and the owner's
 decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
