@@ -223,6 +223,7 @@ export class CloudClient {
     createClan(fields) { return this.request('/clans', { method: 'POST', body: fields }); }
     joinClan(clanId) { return this.request('/clans/join', { method: 'POST', body: { clanId } }); }
     leaveClan() { return this.request('/clans/leave', { method: 'POST', body: {} }); }
+    kickMember(username) { return this.request('/clan/kick', { method: 'POST', body: { username } }); }
     myClan() { return this.request('/clan'); }
     clanAttack() { return this.request('/clan/attack', { method: 'POST', body: {} }); }
     rewards() { return this.request('/rewards'); }

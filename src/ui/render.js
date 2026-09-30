@@ -972,6 +972,7 @@ function renderBackups() {
 
 export function renderClan(game, ui, cloud) {
     const social = ui.social || {};
+    const form = social.form || { name: '', tag: '', description: '', lookingFor: '', search: '' };
     const intro = `<p class="muted small">Clans are asynchronous: each week the clan fights one shared boss. Every member gets three attacks a day, and an attack deals what <b>your saved hero</b> would deal in 60 seconds — the server works it out from your cloud save, so the game uploads first. Rewards (essence and diamonds) go to everyone who fought, the top three, the whole clan when the boss falls, and the last hit.</p>`;
     if (!cloud?.loggedIn) {
         return `<section class="glass-panel"><div class="panel-header"><h2>🛡️ Clans</h2></div>${intro}
@@ -988,19 +989,19 @@ export function renderClan(game, ui, cloud) {
     const discord = DISCORD_INVITE ? `<a class="mini-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">💬 Clan chat on Discord</a>` : '';
     let body = '';
     if (!social.clan) {
-        const rows = (social.clans || []).map(c => `<tr><td><b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
-            <td>${c.members}/${social.maxMembers || 20}</td><td><button class="mini-btn" onclick="FI.joinClan(${c.id})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
+        const rows = (social.clans || []).map(c => `<tr><td class="wrap"><b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+            <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel"><div class="panel-header"><h2>🔎 Find a clan</h2></div>
-                <div class="btn-row"><input id="clan-search" class="text-input" placeholder="Name or tag" value="${esc(social.search || '')}" aria-label="Search clans">
-                <button class="mini-btn" onclick="FI.searchClans(document.getElementById('clan-search').value)">Search</button></div>
+                <div class="btn-row"><input id="clan-search" class="text-input" placeholder="Name or tag" value="${esc(form.search)}" oninput="FI.clanForm('search', this.value)" onkeydown="if (event.key === 'Enter') FI.searchClans()" aria-label="Search clans">
+                <button class="mini-btn" onclick="FI.searchClans()">Search</button></div>
                 ${rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Clan</th><th>Members</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted small">No clans found — start one.</p>'}
             </section>
             <section class="glass-panel"><div class="panel-header"><h2>🏳️ Start a clan</h2></div>
-                <label class="small">Name <input id="clan-name" class="text-input" maxlength="32" placeholder="Iron Wolves"></label>
-                <label class="small">Tag <input id="clan-tag" class="text-input" maxlength="5" placeholder="IWF"></label>
-                <label class="small">Description <input id="clan-desc" class="text-input" maxlength="200" placeholder="Casual, EU evenings"></label>
-                <label class="small">Looking for <input id="clan-looking" class="text-input" maxlength="100" placeholder="Anyone past stage 50"></label>
+                <label class="small">Name <input id="clan-name" class="text-input" maxlength="32" placeholder="Iron Wolves" value="${esc(form.name)}" oninput="FI.clanForm('name', this.value)"></label>
+                <label class="small">Tag <input id="clan-tag" class="text-input" maxlength="5" placeholder="IWF" value="${esc(form.tag)}" oninput="FI.clanForm('tag', this.value)"></label>
+                <label class="small">Description <input id="clan-desc" class="text-input" maxlength="200" placeholder="Casual, EU evenings" value="${esc(form.description)}" oninput="FI.clanForm('description', this.value)"></label>
+                <label class="small">Looking for <input id="clan-looking" class="text-input" maxlength="100" placeholder="Anyone past stage 50" value="${esc(form.lookingFor)}" oninput="FI.clanForm('lookingFor', this.value)"></label>
                 <div class="btn-row"><button class="prestige-btn" onclick="FI.createClan()">Create clan</button></div>
             </section>
         </div>`;
@@ -1008,8 +1009,9 @@ export function renderClan(game, ui, cloud) {
         const c = social.clan;
         const boss = social.boss;
         const pct = boss ? Math.max(0, boss.hp / Math.max(1, boss.maxHp) * 100) : 0;
-        const board = (social.board || []).map((r, i) => `<tr class="${r.you ? 'you-row' : ''}"><td>${i + 1}</td><td>${esc(r.username)}</td><td>${fmt(r.damage)}</td><td>${r.attacks}</td></tr>`).join('');
-        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? '👑 ' : ''}${esc(m.username)}</td><td>${m.bestStage}</td><td>${m.totalLevel}</td><td>${fmt(m.attackDamage)}</td></tr>`).join('');
+        const board = (social.board || []).map((r, i) => `<tr class="${r.you ? 'you-row' : ''}"><td>${i + 1}</td><td>${esc(r.username)}</td><td>${fmt(Number(r.damage) || 0)}</td><td>${Number(r.attacks) || 0}</td></tr>`).join('');
+        const canKick = !!c.isOwner;
+        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? '👑 ' : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${fmt(Number(m.attackDamage) || 0)}</td></tr>`).join('');
         body = `<section class="glass-panel">
             <div class="panel-header"><div><h2>🛡️ ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>

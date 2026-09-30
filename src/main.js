@@ -39,9 +39,17 @@ const ui = {
     renderedRevision: -1,
     modalOpen: false,
     modalQueue: [],
-    // Clan tab data, fetched only while that tab is open (at most once a minute).
-    social: { clan: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false, fetchedAt: 0, loading: false, loaded: false, error: '' }
+    // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
+    social: freshSocial()
 };
+
+function freshSocial() {
+    return {
+        clan: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false,
+        fetchedAt: 0, loading: false, loaded: false, error: '', seq: 0,
+        form: { name: '', tag: '', description: '', lookingFor: '', search: '' } // typed values survive re-renders and errors
+    };
+}
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
@@ -88,7 +96,8 @@ setInterval(() => {
     if (cloud.loggedIn && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
     if (ui.tab === 'clan' && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
-    if ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS) {
+    const pressing = pointer.down && now - pointer.downAt < 1000;
+    if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
         try { render(); } catch (err) { console.error('Render failed', err); }
     }
 }, TICK_MS);
@@ -100,12 +109,22 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) save(
 window.addEventListener('pagehide', () => save(Date.now()));
 window.addEventListener('beforeunload', () => save(Date.now()));
 
+// A press in progress: re-rendering now would replace the button under the pointer and lose the click.
+const pointer = { down: false, downAt: 0, keyAt: 0 };
+document.addEventListener('pointerdown', () => { pointer.down = true; pointer.downAt = Date.now(); }, { capture: true, passive: true });
+for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
+// A choice made in a dropdown or checkbox is done: let the tab refresh right away.
+document.addEventListener('change', event => {
+    if (event.target?.matches?.('select, input[type="checkbox"], input[type="radio"]')) { event.target.blur(); render(); }
+});
+
 // Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone.
 let lastInputNote = 0;
 const noteInput = () => { const now = Date.now(); if (now - lastInputNote > 1000 || game.derived.focused) { lastInputNote = now; game.noteInput(now); } };
 document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
 document.addEventListener('keydown', event => {
     noteInput();
+    pointer.keyAt = Date.now();
     // Keyboard access for the clickable cards (role="button").
     const target = event.target;
     if ((event.key === 'Enter' || event.key === ' ') && target?.getAttribute?.('role') === 'button') {
@@ -117,19 +136,42 @@ document.addEventListener('keydown', event => {
 
 // ---------- rendering ----------
 
+/** Replace an element's HTML only when it changed (keeps focus, hover and scroll where nothing moved). */
+function setHtml(el, html) {
+    if (el.__html === html) return;
+    el.innerHTML = html;
+    el.__html = html;
+}
+
+/** Is the player in the middle of typing, dragging or choosing inside the tab? Then leave it alone. */
+function isInteracting(focus, tab) {
+    if (!focus || !tab.contains(focus)) return false;
+    if (focus.tagName === 'TEXTAREA') return true;
+    if (focus.tagName === 'INPUT') return focus.type === 'range' ? pointer.down : !['checkbox', 'radio', 'button', 'submit'].includes(focus.type);
+    if (focus.tagName === 'SELECT') return Date.now() - Math.max(pointer.downAt, pointer.keyAt) < 5000; // an open dropdown
+    return false;
+}
+
+/** A way to find the same control after a re-render: its id, or its (unique) click handler. */
+function focusFinder(el) {
+    if (!el || el === document.body) return null;
+    if (el.id) return () => document.getElementById(el.id);
+    const handler = el.getAttribute?.('onclick');
+    if (handler) return () => [...document.querySelectorAll('[onclick]')].find(e => e.getAttribute('onclick') === handler);
+    return null;
+}
+
 function render() {
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
-    document.getElementById('nav').innerHTML = renderNav(game, ui);
-    document.getElementById('header').innerHTML = renderHeader(game, ui, cloud);
     const focus = document.activeElement;
+    const findAgain = focusFinder(focus);
     const tab = document.getElementById('tab');
-    const interacting = focus && ['SELECT', 'INPUT', 'TEXTAREA'].includes(focus.tagName) && tab.contains(focus);
-    if (interacting) return; // don't yank an open dropdown or a drag out of the user's hands
-    const focusedId = focus && tab.contains(focus) ? focus.id : null;
-    tab.innerHTML = renderTab(game, ui, cloud);
-    if (focusedId) document.getElementById(focusedId)?.focus();
+    setHtml(document.getElementById('nav'), renderNav(game, ui));
+    setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
+    if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
+    if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
 }
 
@@ -244,27 +286,30 @@ async function cloudSave(announce = true) {
 async function refreshSocial() {
     if (!cloud.loggedIn) return;
     const social = ui.social;
+    const seq = ++social.seq;
+    const current = () => seq === social.seq && social === ui.social; // a newer refresh, or another account, took over
     social.loading = true;
     social.fetchedAt = Date.now();
     try {
         const [mine, rewards, board] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period)]);
+        if (!current()) return;
         social.clan = mine.clan;
         Object.assign(social, { members: mine.members || [], boss: mine.boss || null, board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, maxMembers: mine.maxMembers || 20 });
         social.rewards = rewards.rewards || [];
         social.leaderboard = board;
-        social.optIn = !!board.me || social.optIn;
+        social.optIn = !!board.optIn;
         if (!social.clan) {
             const list = await cloud.clans(social.search);
+            if (!current()) return;
             social.clans = list.clans || [];
             social.maxMembers = list.maxMembers || 20;
         }
         social.error = '';
         social.loaded = true;
     } catch (err) {
-        social.error = err.message;
+        if (current()) social.error = err.message;
     } finally {
-        social.loading = false;
-        render();
+        if (current()) { social.loading = false; render(); }
     }
 }
 
@@ -325,10 +370,16 @@ window.FI = {
         render();
     },
     refreshSocial() { refreshSocial(); },
-    searchClans(q) { ui.social.search = String(q || '').slice(0, 32); document.activeElement?.blur(); refreshSocial(); },
-    createClan() {
-        const val = id => document.getElementById(id)?.value || '';
-        socialAction(() => cloud.createClan({ name: val('clan-name'), tag: val('clan-tag'), description: val('clan-desc'), lookingFor: val('clan-looking') }), 'Clan created');
+    clanForm(field, value) { if (field in ui.social.form) ui.social.form[field] = String(value || '').slice(0, 200); },
+    searchClans() { ui.social.search = ui.social.form.search.slice(0, 32); document.activeElement?.blur(); refreshSocial(); },
+    async createClan() {
+        const { name, tag, description, lookingFor } = ui.social.form;
+        const made = await socialAction(() => cloud.createClan({ name, tag, description, lookingFor }), 'Clan created');
+        if (made) ui.social.form = { ...ui.social.form, name: '', tag: '', description: '', lookingFor: '' };
+    },
+    kickMember(username) {
+        askConfirm('Remove this member?', `${username} leaves the clan. Their damage this week stays on the board.`, 'Remove',
+            () => socialAction(() => cloud.kickMember(username), `Removed ${username}`));
     },
     joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
     leaveClan() { askConfirm('Leave your clan?', 'Your damage this week stays on its board.', 'Leave clan', () => socialAction(() => cloud.leaveClan(), 'You left the clan')); },
@@ -486,13 +537,14 @@ window.FI = {
         if (!user || !pass) { if (err) err.textContent = 'Username and password are required.'; return; }
         try {
             if (kind === 'login') await cloud.login(user, pass); else await cloud.register(user, pass);
+            ui.social = freshSocial(); // nothing from the previous account carries over
             closeModal();
             toast(`☁️ Signed in as ${cloud.username}`, 'info');
             await syncFromCloud();
             render();
         } catch (e) { if (err) err.textContent = e.message; }
     },
-    logout() { cloud.logout(); ui.cloudStatus = ''; toast('Logged out — playing locally', 'info'); render(); },
+    logout() { cloud.logout(); ui.cloudStatus = ''; ui.social = freshSocial(); toast('Logged out — playing locally', 'info'); render(); },
     cloudSaveNow() { cloudSave(true); },
     resolveConflict(pick) {
         closeModal();

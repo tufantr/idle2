@@ -440,7 +440,7 @@ app.get('/api/leaderboard', authenticateToken, route('leaderboard', async (req, 
     }
     const mine = rows.entries.findIndex(e => e.userId === req.user.id);
     res.json({
-        metric, label: METRICS[metric], period, week,
+        metric, label: METRICS[metric], period, week, optIn: !!(await store.getSave(req.user.id))?.optIn,
         entries: rows.entries.slice(0, 50).map((e, i) => ({ rank: i + 1, username: e.username, value: e.value, you: e.userId === req.user.id })),
         me: mine >= 0 ? { rank: mine + 1, value: rows.entries[mine].value } : null
     });
