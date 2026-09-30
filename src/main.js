@@ -6,7 +6,7 @@ import {
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
 import { describeOffline } from './systems/offline.js';
-import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { isUnlocked } from './data/unlocks.js';
@@ -35,6 +35,8 @@ const ui = {
     craftBar: 'silver_bar',
     craftGem: 'amethyst',
     invFilter: 'all',
+    invSelected: null,   // the item on the table in the inventory (an item id)
+    invPreview: null,    // the item under the pointer, shown instead while hovered
     cloudStatus: '',
     saveIo: '',          // contents of the export/import box, kept across re-renders
     lastRender: 0,
@@ -480,6 +482,7 @@ window.FI = {
     setAutoEat(rule) { game.setAutoEat(rule); },
     setPotion(id) { game.setPotion(id); render(); },
     stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },
+    goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { game.buyCampUpgrade(id, count); render(); },
     enterDungeon(id) { if (game.enterDungeon(id)) window.FI.switchTab('combat'); else render(); },
@@ -507,6 +510,17 @@ window.FI = {
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },
     invFilter(cat) { ui.invFilter = cat; render(); },
+    selectItem(id) { ui.invSelected = id === null || ui.invSelected === id ? null : id; ui.invPreview = null; render(); },
+    /** Hovering a tile shows it on the table without a full re-render; leaving shows the picked item again. */
+    previewItem(id) {
+        if (window.matchMedia?.('(hover: none)').matches) return; // touch screens pick with a tap
+        ui.invPreview = id;
+        const panel = document.getElementById('item-detail');
+        if (!panel) return;
+        const shown = id ?? ui.invSelected;
+        panel.innerHTML = renderItemDetail(game, shown);
+        panel.classList.toggle('has-item', panel.querySelector('.detail') !== null);
+    },
     buyShop(id) { game.buyGoldShopItem(id); render(); },
     buyPerk(id) { game.buyPerk(id); render(); },
 

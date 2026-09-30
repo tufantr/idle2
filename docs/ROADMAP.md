@@ -237,8 +237,14 @@ one visual identity (dark fantasy: carved serif lettering, stone and bronze, gol
       buttons for spending gold, arcane purple for prestige and perks, war red for going into battle;
       a coin for each currency; skill actions as medallions. About 280 lines of dead prototype CSS
       went with it, and the phone header now fits the purse on one row
-- [ ] **RPG screens**: an equipment paperdoll, a grid inventory with tooltips, a world map for stages
-- [ ] **Quest board** for the advisor's goals, and a phone layout with the scene and a hotbar on top
+- [x] **RPG screens**: the Inventory is an armory. The hero stands among his twelve slots (armour on
+      one side, jewellery on the other, weapon and shield below). The bag is a grid of tiles with
+      rarity frames, upgrade levels, locks and a ▲ on anything better than what is worn. The item on
+      the table (picked, or just hovered on a desktop) shows its stats, affixes, how it compares with
+      the piece it would replace, and every action; on a phone it slides up as a sheet. A **world
+      map** of the ten zones sits in the combat orders: a zone reached this run is a click away
+- [x] **Quest board**: the advisor's suggestions pinned up as parchment notes
+- [ ] A phone hotbar: enter combat, the crate and the current skill one thumb away
 
 **Exit:** a new player sees the fight within one click; no layout shift when bosses or banners
 appear; every tab passes the overflow and console check at 390 px and 1350 px.

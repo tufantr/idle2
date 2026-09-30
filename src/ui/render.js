@@ -10,7 +10,7 @@ import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
 import { UNLOCKS, isUnlocked, nextGoals } from '../data/unlocks.js';
-import { zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
+import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
@@ -36,6 +36,7 @@ import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
+import { heroSvg } from './scene.js';
 
 export const TABS = [
     { id: 'combat', name: 'Combat', icon: '⚔️', group: 'COMBAT' },
@@ -193,6 +194,7 @@ export function renderCombat(game, ui) {
             ${nav}
         </div>
         <div class="muted small">${where}</div>
+        ${c.mode === 'stages' ? renderWorldMap(state) : ''}
         <div class="combat-controls">
             <label>Auto-eat <span class="muted small">(below ${pct(d.autoEatThreshold)} HP)</span>
                 <select class="material-select" onchange="FI.setAutoEat(this.value)">
@@ -247,6 +249,33 @@ export function renderCombat(game, ui) {
     </section>`;
 }
 
+// The world map: the ten zones as a road of medallions. A zone reached this run is a button that
+// takes you to its first stage (the Abyss: to the deepest depth reached).
+const ZONE_EMBLEMS = { meadow: '🌼', forest: '🌲', caves: '💎', marsh: '🐸', highland: '⛰️', ruins: '🏛️', volcano: '🌋', frost: '❄️', skyreach: '☁️', abyss: '🌀' };
+
+function renderWorldMap(state) {
+    const c = state.combat;
+    const here = Math.floor((c.stage - 1) / STAGES_PER_ZONE);
+    const abyssIndex = ZONES.length - 1;
+    const nodes = ZONES.map((zone, i) => {
+        const first = i * STAGES_PER_ZONE + 1;
+        const last = first + STAGES_PER_ZONE - 1;
+        const abyss = i === abyssIndex;
+        const current = abyss ? here >= i : here === i;
+        const open = first <= c.maxStage;
+        const cleared = !abyss && c.maxStage > last;
+        const target = abyss ? Math.floor((c.maxStage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1 : first;
+        const range = abyss && here > i ? `depth ${here - i}` : abyss ? `${first}+` : `${first}–${last}`;
+        const state_ = current ? 'here' : cleared ? 'done' : open ? 'open' : 'locked';
+        const label = `${zone.name}, stages ${range}${current ? ', you are here' : open ? '' : ', not reached this run'}`;
+        const face = `<span class="zone-emblem" aria-hidden="true">${open ? ZONE_EMBLEMS[zone.id] || '⚔️' : '🔒'}</span><span class="zone-name">${esc(zone.name)}</span><span class="zone-range">${range}</span>`;
+        return `<li class="zone-node ${state_}">${open && !(current && !abyss) && target !== c.stage
+            ? `<button onclick="FI.goZone(${target})" aria-label="Travel to ${esc(label)}">${face}</button>`
+            : `<div aria-label="${esc(label)}">${face}</div>`}</li>`;
+    });
+    return `<ol class="world-map" aria-label="World map">${nodes.join('')}</ol>`;
+}
+
 // ---------- advisor ----------
 
 export function renderAdvisor(game) {
@@ -257,8 +286,8 @@ export function renderAdvisor(game) {
         return `<button class="advisor-item" ${go ? `onclick="FI.advisorGo(${t.tab ? `'${t.tab}'` : 'null'}, ${t.action ? `'${t.action}'` : 'null'})"` : 'disabled'}>
             <span class="advisor-icon" aria-hidden="true">${t.icon}</span><span class="advisor-text">${esc(t.text)}</span>${go ? '<span class="advisor-go" aria-hidden="true">→</span>' : ''}</button>`;
     }).join('');
-    return `<section class="glass-panel advisor" aria-label="Next steps">
-        <div class="panel-header"><h2>🧭 Next steps</h2><span class="muted small">Suggestions update as you play</span></div>
+    return `<section class="glass-panel advisor" aria-label="Quest board">
+        <div class="panel-header"><h2>📜 Quest board</h2><span class="muted small">What to do next; the notes change as you play</span></div>
         <div class="advisor-list">${items}</div>
     </section>`;
 }
@@ -542,74 +571,140 @@ export function renderCrafting(game, ui) {
 
 // ---------- inventory ----------
 
-function itemCard(game, item, { equippedSlot = null } = {}) {
+// The inventory is an armory: the hero with a slot for each piece of gear, the bag as a grid of tiles,
+// and the item on the table (the one picked, or hovered) with everything that can be done with it.
+const SLOT_LABELS = { Ring1: 'Ring', Ring2: 'Ring', Ear1: 'Earring', Ear2: 'Earring' };
+const DOLL_LEFT = ['Head', 'Neck', 'Body', 'Legs', 'Boots'];
+const DOLL_RIGHT = ['Gloves', 'Ring1', 'Ring2', 'Ear1', 'Ear2'];
+const DOLL_HANDS = ['Weapon', 'Shield'];
+
+/** An item anywhere: worn (with its slot) or in the bag. */
+function findItem(state, id) {
+    if (id === null || id === undefined) return null;
+    for (const slot of EQUIP_SLOTS) if (state.equipped[slot]?.id === id) return { item: state.equipped[slot], slot };
+    const item = state.inventory.find(i => i.id === id);
+    return item ? { item, slot: null } : null;
+}
+
+function itemTile(state, item, { slot = null, selected = false } = {}) {
+    const id = Number(item.id);
+    const up = item.upgrade || 0;
+    const rarity = RARITIES.find(r => r.id === item.rarity);
+    const wearable = canWear(state, item);
+    const better = !slot && wearable && isUpgrade(state, item);
+    const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
+    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}"><span class="tile-icon">${esc(item.icon)}</span>${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? '<i class="tile-lock" aria-hidden="true">🔒</i>' : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
+}
+
+function dollSlot(state, slot, selectedId) {
+    const item = state.equipped[slot];
+    const label = SLOT_LABELS[slot] || slot;
+    const tile = item
+        ? itemTile(state, item, { slot, selected: item.id === selectedId })
+        : `<div class="tile empty" title="${label}: empty"><span class="tile-icon">${TYPE_ICONS[slot.replace(/\d$/, '')]}</span></div>`;
+    return `<div class="doll-slot">${tile}<span class="doll-label">${label}</span></div>`;
+}
+
+/** The item on the table: stats, affixes, how it compares with what is worn, and what can be done with it. */
+export function renderItemDetail(game, id) {
     const state = game.state;
-    const cost = itemUpgradeCost(game, item);
+    const found = findItem(state, id);
+    if (!found) {
+        return `<div class="detail-empty"><span class="detail-empty-icon" aria-hidden="true">🗝️</span>
+            <p>Pick a piece of gear, from your bag or off your hero, to look at it here.</p>
+            <p class="muted small">▲ beats what you wear · 🔒 never sold or salvaged · +N is its upgrade level</p></div>`;
+    }
+    const { item, slot } = found;
+    const itemId = Number(item.id);
     const up = item.upgrade || 0;
     const mult = 1 + UPGRADE_STEP * up;
+    const rarity = RARITIES.find(r => r.id === item.rarity);
     const wearable = canWear(state, item);
-    const affixes = (item.affixes || []).map(a => `<span class="affix">${esc(describeAffix(a))}</span>`).join('');
-    const stats = [item.atk ? `<span class="item-atk">⚔️ ${Math.round(item.atk * mult)}</span>` : '', item.def ? `<span class="item-def">🛡️ ${Math.round(item.def * mult)}</span>` : ''].filter(Boolean).join(' ');
     const afford = c => state.resources.essence >= c.essence && state.gold >= c.gold;
+    const atk = Math.round((item.atk || 0) * mult);
+    const def = Math.round((item.def || 0) * mult);
+    const cost = itemUpgradeCost(game, item);
     const upgradeBtn = up < MAX_UPGRADE
-        ? `<button class="mini-btn" onclick="FI.upgrade(${Number(item.id)})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">⬆ +${up + 1}: ${cost.essence} ✨ + ${fmt(cost.gold)} 🪙</button>`
-        : `<span class="muted small">Max upgrade</span>`;
+        ? `<button class="mini-btn" onclick="FI.upgrade(${itemId})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">⬆ Upgrade to +${up + 1}: ${cost.essence} ✨ ${fmt(cost.gold)} 🪙</button>`
+        : '<span class="muted small">Fully upgraded</span>';
     const reforge = itemReforgeCost(game, item);
     const reforgeBtn = item.affixes?.length && !item.uniqueId
-        ? `<button class="mini-btn" onclick="FI.reforge(${Number(item.id)})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (cost rises with each reforge)">🔁 ${reforge.essence} ✨ + ${fmt(reforge.gold)} 🪙</button>`
+        ? `<button class="mini-btn" onclick="FI.reforge(${itemId})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (the cost rises with each reforge)">🔁 Reforge: ${reforge.essence} ✨ ${fmt(reforge.gold)} 🪙</button>`
         : '';
     const salvage = salvagePreview(item);
-    const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([id, q]) => `~${q.toFixed(1)} ${RESOURCES[id].name}`)].filter(Boolean).join(', ') || 'nothing';
-    const upgradeBadge = !equippedSlot && wearable && isUpgrade(state, item) ? '<span class="badge-upgrade">▲ upgrade</span>' : '';
+    const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([mid, q]) => `~${q.toFixed(1)} ${RESOURCES[mid].name}`)].filter(Boolean).join(', ') || 'nothing';
     const source = item.source === 'drop' ? 'dropped' : item.source === 'unique' ? 'unique' : 'crafted';
-    return `<div class="inv-item ${item.locked ? 'locked-item' : ''}" style="border-color:${esc(item.color)}55">
-        <div class="inv-header">
-            <div class="inv-title-wrap"><div class="item-thumb" style="color:${esc(item.color)}">${esc(item.icon)}</div>
-                <div><span class="item-name" style="color:${esc(item.color)}">${esc(item.name)}${up ? ` +${up}` : ''}</span> ${upgradeBadge}<div class="inv-type">${esc(RARITIES.find(r => r.id === item.rarity)?.name || item.rarity)} · ${esc(item.type)} · tier ${Number(item.tier)}${item.depth ? ` · depth ${Number(item.depth)}` : ''} · ${source}</div></div></div>
-            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${Number(item.id)})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
+    let compare = '';
+    if (!slot) {
+        const worn = (TYPE_SLOTS[item.type] || []).map(sl => state.equipped[sl]).sort((a, b) => itemScore(a) - itemScore(b))[0];
+        const wornMult = worn ? 1 + UPGRADE_STEP * (worn.upgrade || 0) : 0;
+        const delta = (value, icon) => value ? `<span class="${value > 0 ? 'up' : 'down'}">${icon} ${value > 0 ? '+' : '−'}${fmt(Math.abs(value))}</span>` : '';
+        const deltas = delta(atk - Math.round((worn?.atk || 0) * wornMult), '⚔️') + delta(def - Math.round((worn?.def || 0) * wornMult), '🛡️');
+        compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${worn.upgrade ? ` +${worn.upgrade}` : ''}` : 'That slot is empty'}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
+    }
+    return `<div class="detail" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}">
+        <button class="detail-close" onclick="FI.selectItem(null)" aria-label="Close">✕</button>
+        <div class="detail-head">
+            <div class="detail-art">${esc(item.icon)}</div>
+            <div class="detail-title">
+                <div class="detail-name">${esc(item.name)}${up ? ` +${up}` : ''}</div>
+                <div class="detail-sub">${esc(rarity?.name || item.rarity)} ${esc(TYPE_NAMES[item.type] || item.type)} · tier ${Number(item.tier)}${item.depth ? ` · depth ${Number(item.depth)}` : ''} · ${source}${slot ? ' · worn' : ''}</div>
+            </div>
+            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
         </div>
-        <div class="inv-stats-row"><div>${stats || '<span class="muted">no base stats</span>'}</div><div class="affixes">${affixes}</div></div>
-        ${!wearable ? `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>` : ''}
-        <div class="inv-actions">
-            ${equippedSlot ? `<button class="mini-btn" onclick="FI.unequip('${equippedSlot}')">Unequip</button>` : `<button class="equip-btn" onclick="FI.equip(${Number(item.id)})" ${wearable ? '' : 'disabled'}>Equip</button>`}
-            ${upgradeBtn}
-            ${reforgeBtn}
-            ${equippedSlot ? '' : `<button class="mini-btn" onclick="FI.salvage(${Number(item.id)})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">♻️ Salvage</button><button class="sell-btn" onclick="FI.sellItem(${Number(item.id)})" ${item.locked ? 'disabled' : ''} title="Sell for ${fmt(itemSellValue(item))} gold">💰 ${fmt(itemSellValue(item))}</button>`}
+        <div class="detail-stats">${atk ? `<span class="item-atk">⚔️ ${fmt(atk)} ATK</span>` : ''}${def ? `<span class="item-def">🛡️ ${fmt(def)} DEF</span>` : ''}${atk || def ? '' : '<span class="muted">No base stats</span>'}</div>
+        ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}</li>`).join('')}</ul>` : ''}
+        ${compare}
+        ${wearable ? '' : `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>`}
+        <div class="detail-actions">
+            ${slot ? `<button class="mini-btn" onclick="FI.unequip('${slot}')">Take off</button>` : `<button class="prestige-btn" onclick="FI.equip(${itemId})" ${wearable ? '' : 'disabled'}>Equip</button>`}
+            ${upgradeBtn}${reforgeBtn}
+            ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">♻️ Salvage</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>💰 Sell for ${fmt(itemSellValue(item))}</button>`}
         </div>
     </div>`;
 }
 
 export function renderInventory(game, ui) {
     const state = game.state;
-    const slots = EQUIP_SLOTS.map(slot => {
-        const item = state.equipped[slot];
-        const type = slot.replace(/\d$/, '');
-        if (item) return itemCard(game, item, { equippedSlot: slot });
-        return `<div class="slot drop-slot"><div class="slot-info"><div class="item-thumb empty-thumb">${TYPE_ICONS[type]}</div><span class="slot-name">${slot}</span><span class="muted small">empty</span></div></div>`;
-    }).join('');
+    const d = game.derived;
+    const selectedId = findItem(state, ui.invSelected) ? ui.invSelected : null;
+    const shownId = findItem(state, ui.invPreview) ? ui.invPreview : selectedId;
     const items = [...state.inventory].sort((a, b) => itemScore(b) - itemScore(a));
+    const size = bagSize();
+    const bag = items.map(i => itemTile(state, i, { selected: i.id === selectedId })).join('')
+        + Array.from({ length: Math.max(0, size - items.length) }, () => '<div class="tile empty" aria-hidden="true"></div>').join('');
     const filter = ui.invFilter || 'all';
     const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'herb', 'potion', 'material'];
     const resources = Object.keys(RESOURCES).filter(id => state.resources[id] > 0 && (filter === 'all' || RESOURCES[id].category === filter));
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
-    return `<div class="two-col">
-        <section class="glass-panel">
-            <div class="panel-header"><h2>🧍 Equipped</h2><span class="muted small">${fmt(game.derived.atk)} ATK · ${fmt(game.derived.def)} DEF</span></div>
-            <div class="slot-list">${slots}</div>
+    const weapon = state.equipped.Weapon;
+    const blade = weapon ? RARITIES.find(r => r.id === weapon.rarity) : null;
+    return `<div class="armory">
+        <section class="glass-panel doll-panel">
+            <div class="panel-header"><h2>🧍 Your hero</h2><span class="muted small">Combat level ${d.combatLevel}</span></div>
+            <div class="doll">
+                <div class="doll-col">${DOLL_LEFT.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
+                <div class="doll-figure${weapon ? ' armed' : ''}${state.equipped.Shield ? ' shielded' : ''}" style="--blade:${blade && blade.id !== 'common' ? blade.color : '#20242c'}">${heroSvg('doll')}</div>
+                <div class="doll-col">${DOLL_RIGHT.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
+                <div class="doll-hands">${DOLL_HANDS.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
+            </div>
+            <div class="doll-stats"><span>⚔️ <b>${fmt(d.atk)}</b> ATK</span><span>🛡️ <b>${fmt(d.def)}</b> DEF</span><span>❤️ <b>${fmt(d.maxHp)}</b> HP</span><span>🎯 <b>${pct(d.critChance, 1)}</b> crit</span></div>
         </section>
-        <section class="glass-panel">
-            <div class="panel-header"><h2>🎒 Bag (${items.length}/${bagSize()})</h2>
+        <section class="glass-panel detail-panel${shownId !== null ? ' has-item' : ''}" id="item-detail" aria-live="polite">${renderItemDetail(game, shownId)}</section>
+        <section class="glass-panel bag-panel">
+            <div class="panel-header"><h2>🎒 Bag <span class="muted">${items.length}/${size}</span></h2>
                 <div class="btn-row">
                     <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>♻️ Salvage commons</button>
                     <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>💰 Sell commons</button>
                 </div>
             </div>
+            <div class="bag-grid">${bag}</div>
+            ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Forge some in Smithing, or fight: bosses drop gear half the time.</p>'}
             <label class="muted small auto-salvage">Auto-salvage drops up to
                 <select class="material-select" onchange="FI.setAutoSalvage(this.value)">${AUTO_SALVAGE_OPTIONS.map(o => `<option value="${o}" ${o === auto ? 'selected' : ''}>${o === 'off' ? 'off' : RARITIES.find(r => r.id === o).name}</option>`).join('')}</select>
                 <span>— never an upgrade, never locked items. When the bag is full the weakest item is salvaged.</span>
             </label>
-            <div class="inv-list">${items.length ? items.map(i => itemCard(game, i)).join('') : '<div class="empty-state">No spare equipment. Forge some in Smithing, or fight: bosses drop gear half the time.</div>'}</div>
             <p class="muted small">${state.stats.itemsDropped} items dropped · ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically)</p>
         </section>
     </div>
