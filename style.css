@@ -1,4 +1,5 @@
 :root {
+    color-scheme: dark;
     --bg-color: #0b0f19;
     --glass-bg: rgba(19, 24, 44, 0.74);
     --glass-border: rgba(255, 255, 255, 0.1);
@@ -19,7 +20,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 1rem;
     background-color: var(--bg-color);
     background-image: 
         radial-gradient(ellipse at 15% 50%, rgba(99, 102, 241, 0.18), transparent 42%),
@@ -1005,7 +1007,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
 
 @media (max-width: 900px) {
-    body { padding: 0.75rem; }
+    body { padding: 0.75rem 1rem; }
     .two-col { grid-template-columns: 1fr; }
     .prestige-stats { grid-template-columns: 1fr; }
     .combat-controls { flex-direction: column; align-items: stretch; }
@@ -1013,7 +1015,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 
 /* v2 mobile: the sidebar becomes a horizontal, scrollable tab strip */
 @media (max-width: 900px) {
-    #sidebar { flex-direction: column; height: auto; position: sticky; top: 0; z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
+    #sidebar { flex-direction: column; height: auto; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
     .brand { font-size: 1rem; padding-bottom: 0.3rem; margin-bottom: 0.3rem; }
     #nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 0.35rem; padding-bottom: 0.2rem; scrollbar-width: thin; }
     #nav h3 { display: none; }

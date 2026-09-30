@@ -6,7 +6,7 @@ import {
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
 import { describeOffline } from './systems/offline.js';
-import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, TABS } from './ui/render.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
@@ -19,8 +19,16 @@ const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
 const AUTOSAVE_MS = 15000;
 const CLOUD_SAVE_MS = 60000;
 
+// Browser storage can be blocked (private windows, the game embedded in another page). These are
+// conveniences, so failures are ignored; the save itself goes through core/save.js, which checks too.
+const prefs = {
+    get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); } catch { /* not remembered */ } },
+    remove(key) { try { localStorage.removeItem(key); } catch { /* nothing to forget */ } }
+};
+
 const ui = {
-    tab: localStorage.getItem('fantasyIdle.tab') || 'combat',
+    tab: prefs.get('fantasyIdle.tab') || 'combat',
     smithMetal: 'copper_bar',
     craftBar: 'silver_bar',
     craftGem: 'amethyst',
@@ -53,7 +61,7 @@ if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On loa
 const offlineSummary = game.resumeFromSave(Date.now());
 if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderOfflineModal(describeOffline(offlineSummary)), 'offline');
 if (cloud.loggedIn) syncFromCloud();
-else if (!localStorage.getItem('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderAuthModal(), 'auth'); localStorage.setItem('fantasyIdle.authSeen', '1'); }
+else if (!prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderAuthModal(), 'auth'); prefs.set('fantasyIdle.authSeen', '1'); }
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -195,6 +203,12 @@ function showModal(html, key) {
     ui.modalOpen = key;
     root.querySelector('input, button.btn-confirm, button')?.focus();
 }
+let pendingConfirm = null;
+/** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
+function askConfirm(title, text, confirmLabel, onYes) {
+    pendingConfirm = onYes;
+    openModal(renderConfirmModal(title, text, confirmLabel), 'confirm');
+}
 function closeModal() {
     document.getElementById('modal-root').innerHTML = '';
     ui.modalOpen = false;
@@ -297,7 +311,7 @@ function adoptState(stateObject) {
 window.FI = {
     switchTab(id) {
         ui.tab = id;
-        localStorage.setItem('fantasyIdle.tab', id);
+        prefs.set('fantasyIdle.tab', id);
         if (id === 'clan' && cloud.loggedIn && Date.now() - ui.social.fetchedAt > 5000) refreshSocial();
         render();
     },
@@ -308,7 +322,7 @@ window.FI = {
         socialAction(() => cloud.createClan({ name: val('clan-name'), tag: val('clan-tag'), description: val('clan-desc'), lookingFor: val('clan-looking') }), 'Clan created');
     },
     joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
-    leaveClan() { if (confirm('Leave your clan? Your damage this week stays on its board.')) socialAction(() => cloud.leaveClan(), 'You left the clan'); },
+    leaveClan() { askConfirm('Leave your clan?', 'Your damage this week stays on its board.', 'Leave clan', () => socialAction(() => cloud.leaveClan(), 'You left the clan')); },
     async clanAttack() {
         ui.social.attacking = true;
         render();
@@ -428,23 +442,31 @@ window.FI = {
         } catch (err) { toast(err.message, 'error'); }
     },
     restoreBackup(slot) {
-        if (!confirm('Restore this backup? Your current progress will be replaced (a backup of it is kept).')) return;
-        try {
-            const state = restoreBackup(slot, Date.now());
-            writeBackup(game.serialize(Date.now()), slot === 'reset' ? 'auto0' : 'reset', 'Before restoring a backup');
-            adoptState(state);
-            toast('Backup restored', 'info');
-        } catch (err) { toast(err.message, 'error'); }
+        askConfirm('Restore this backup?', 'Your current progress will be replaced. A backup of it is kept.', 'Restore backup', () => {
+            try {
+                const state = restoreBackup(slot, Date.now());
+                writeBackup(game.serialize(Date.now()), slot === 'reset' ? 'auto0' : 'reset', 'Before restoring a backup');
+                adoptState(state);
+                toast('Backup restored', 'info');
+            } catch (err) { toast(err.message, 'error'); }
+        });
     },
     hardReset() {
-        if (!confirm('Wipe your save completely? A single backup is kept in Settings in case you change your mind.')) return;
-        writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
-        clearLocal();
-        localStorage.removeItem('fantasyIdle.tab');
-        game = withDevFlags(new Game(null, Date.now()));
-        save(Date.now());
-        render();
-        toast('Save wiped. Fresh start!', 'info');
+        askConfirm('Wipe your save?', 'The game starts over from the beginning. One backup is kept in Settings in case you change your mind.', 'Wipe save', () => {
+            writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
+            clearLocal();
+            prefs.remove('fantasyIdle.tab');
+            game = withDevFlags(new Game(null, Date.now()));
+            save(Date.now());
+            render();
+            toast('Save wiped. Fresh start!', 'info');
+        });
+    },
+    confirmYes() {
+        const onYes = pendingConfirm;
+        pendingConfirm = null;
+        closeModal();
+        onYes?.();
     },
 
     openAuth() { openModal(renderAuthModal(), 'auth'); },

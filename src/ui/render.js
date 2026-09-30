@@ -1063,6 +1063,15 @@ export function renderPrestigeModal(game) {
     </div>`;
 }
 
+/** An in-page yes/no; confirm() is blocked when the game runs inside another page. */
+export function renderConfirmModal(title, text, confirmLabel) {
+    return `<div class="modal-content">
+        <div class="modal-header">${esc(title)}</div>
+        <div class="modal-body"><p>${esc(text)}</p></div>
+        <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmYes()">${esc(confirmLabel)}</button></div>
+    </div>`;
+}
+
 export function renderOfflineModal(lines) {
     return `<div class="modal-content">
         <div class="modal-header">🌙 Welcome back</div>
