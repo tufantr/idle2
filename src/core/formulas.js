@@ -43,6 +43,13 @@ export const BALANCE = {
         spPerPrestige: 1,
         spStageStep: 25         // +1 SP for every 25 stages of all-time best, claimed once
     },
+    // Deep in the Abyss drops keep pace with the monsters: past `dropScalingFrom`, every depth makes
+    // dropped gear `dropGrowth` times stronger (an item level). Monsters grow ~2.26x per depth, so the
+    // climb slows but never stops (tools/simulate.mjs: stage ~285 at 150 h, ~330 at 300 h).
+    abyss: {
+        dropScalingFrom: 5,
+        dropGrowth: 1.8
+    },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
         regenResting: 0.02,     // fraction of max HP per second out of combat (full in under a minute)
@@ -220,22 +227,34 @@ export function generateEquipment(opts, nextId) {
     };
 }
 
-/** Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): usually one tier below, rarer than crafted. */
-export function generateDrop(zoneTier, boss, nextId) {
+/** How much stronger gear dropped at this Abyss depth is than its tier's base (1 above ground). */
+export function abyssDropMult(depth = 0) {
+    const a = BALANCE.abyss;
+    return depth > a.dropScalingFrom ? Math.pow(a.dropGrowth, depth - a.dropScalingFrom) : 1;
+}
+
+/**
+ * Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): usually one
+ * tier below, rarer than crafted. `depth` (the Abyss depth) scales its power past depth 5.
+ */
+export function generateDrop(zoneTier, boss, nextId, depth = 0) {
     const tier = Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
     const gearTier = GEAR_TIERS[tier - 1];
     const type = rng.weighted(DROP_TYPE_WEIGHTS).type;
     const jewel = CRAFTING_TYPES.includes(type);
     const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (zoneTier - 1);
     const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));
-    return generateEquipment({
+    const mult = abyssDropMult(depth);
+    const item = generateEquipment({
         type, tier,
-        power: jewel ? gearTier.power * JEWEL_POWER : gearTier.power,
+        power: (jewel ? gearTier.power * JEWEL_POWER : gearTier.power) * mult,
         materialName: jewel ? null : gearTier.name,
         gemName: jewel ? gearTier.jewel : null,
         rarityWeights: weights,
         source: 'drop'
     }, nextId);
+    if (mult > 1) item.depth = depth;
+    return item;
 }
 
 /** New affixes for an item (same count as its rarity). */

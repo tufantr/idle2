@@ -236,6 +236,10 @@ the Abyss repeats with a depth counter and steeper growth.
   the crafting timeline instead of the zone number: each zone drops about the tier a typical player
   crafts when they first get there, and a drop one tier up is the lucky case. The drop-only tiers
   live in the Abyss: Dragonbone from depth 3 (stage 121), Abyssal from depth 5 (stage 141).
+- **Deeper Abyss drops keep pace.** Past depth 5 there is no new tier, so every further depth makes
+  dropped gear **×1.8** stronger (an item level; the card shows "depth N"). Monsters grow ×2.26 per
+  depth (×1.085 per stage), so gear alone never quite keeps up and the climb slows as it goes, but
+  it never stops: without this, every simulated player stalled for good at the stage 200 boss.
 
 | Stage | Zone | Enemy | HP | ATK | Gold (first fall) | Combat XP | Loot tier | Tokens if best |
 |---|---|---|---|---|---|---|---|---|
@@ -581,67 +585,66 @@ tokens). Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|
-| First prestige | 1.9 h (stage 50, +27 tokens) | 1.1 h (stage 48, +25) | 1.8 h (stage 57, +33) |
-| Stage 50 / 100 / 120 | 1.2 / 6.1 / 9.5 h | 1.8 / 6.6 / 8.0 h | 1.0 / 6.7 / 13.3 h |
-| Stage 150 / 200 | 16.6 / 69.1 h | 15.6 / 84.5 h | 23.4 / 76.3 h |
-| Weapon tier 4 / 5 / 6 / 7 | 6.7 / 11.0 / 14.2 / 24.2 h | 7.4 / 11.4 / 18.4 / 43.6 h | 12.4 / 23.1 / 26.7 / 28.2 h |
-| Crown / Heart / Cleaver / Plate | 1.9 / 4.3 / 7.5 / 20.3 h | 2.4 / 4.1 / 7.2 / 18.4 h | 1.8 / 4.8 / 12.4 / 25.9 h |
-| Titans defeated by 12 h · by 150 h | 10 · 18 | 9 · 18 | 8 · 18 |
-| Agility obstacles 1 / 4 / 6 | 6.3 / 19.8 / 44.3 h | 2.2 / 17.3 / 34.3 h | 2.3 / 17.8 / 52.8 h |
-| Mining 50 / 75 | 17.6 / 139.5 h | 14.0 / — | 11.4 / 143.8 h |
-| Smithing 50 / 75 | 17.2 / 35.3 h | 13.7 / 29.6 h | 16.8 / 41.8 h |
-| Farming 50 / 75 · Agility 50 / 75 | 9.5 / 30.9 · 25.2 / 53.6 h | 10.1 / 30.3 · 23.1 / 60.3 h | 8.9 / 29.3 · 29.6 / 60.5 h |
-| Combat 99 | 35.1 h | 37.0 h | 28.1 h |
-| Prestiges in 150 h | 145 | 143 | 143 |
-| Deaths on non-boss stages | 19% | 14% | 10% |
+| First prestige | 1.2 h (stage 40, +18 tokens) | 1.6 h (stage 49, +26) | 1.2 h (stage 46, +23) |
+| Stage 50 / 100 / 120 | 1.6 / 5.6 / 7.8 h | 1.8 / 5.9 / 7.3 h | 1.5 / 5.4 / 7.7 h |
+| Stage 150 / 200 · best at 150 h | 19.9 / 43.5 h · 264 | 16.1 / 39.3 h · 234 | 16.4 / 46.8 h · 238 |
+| Weapon tier 4 / 5 / 6 / 7 | 6.9 / — / 19.1 / 22.9 h | 7.3 / 12.2 / 15.8 / 16.4 h | 5.3 / 12.3 / 16.3 / 18.3 h |
+| Crown / Heart / Cleaver / Plate | 2.2 / 3.9 / 6.8 / 19.7 h | 2.4 / 4.0 / 7.3 / 17.2 h | 2.2 / 3.8 / 6.2 / 18.2 h |
+| Titans defeated by 12 h · by 150 h | 9 · 22 | 10 · 20 | 9 · 20 |
+| Agility obstacles 1 / 4 / 6 | 1.9 / 18.3 / 42.5 h | 2.1 / 19.0 / 40.8 h | 1.8 / 17.7 / 41.3 h |
+| Mining 50 · Smithing 50 / 75 | 15.8 · 13.9 / 35.1 h | 15.6 · 14.2 / 32.2 h | 14.3 · 14.6 / 31.8 h |
+| Farming 50 / 75 · Agility 50 / 75 | 9.6 / 30.9 · 23.2 / 48.8 h | 10.0 / 32.3 · 21.0 / 44.8 h | 10.1 / 31.1 · 21.8 / 48.9 h |
+| Combat 99 | 20.7 h | 33.0 h | 32.0 h |
+| Prestiges in 150 h | 250 | 193 | 198 |
+| Deaths on non-boss stages | 44% | 58% | 34% |
 
-All three seeds stop at the stage 200 boss and spend the rest of the 150 hours there. Mining lags
-because Abyss drops outpace forging after about 11 hours, so the bot stops needing ore.
+Past stage 200 the climb continues: roughly 5–10 stages every 10 hours, with the odd 20-hour
+plateau at a boss. Two 300-hour runs end at stages 327 and 321. Mining stops at about 50 because
+Abyss drops outpace forging from about 16 hours on, so the bot stops needing ore.
 
-These runs include mastery. The same seeds with mastery switched off reach stage 150 at 29–77 h and
-peak at 190–198: mastery helps a little, well inside the spread between seeds. Two fixes came out of
-the mastery pass: a spare unique used to arrive locked, and once a bag filled with locked spares,
-every new drop was salvaged on arrival, upgrades included (the bot sat on a tier 4 weapon for 150 h).
-And the bot used to hunt gems in the richest rock, which only gives gems its crafting level can't use.
+These runs include every fix from the code review (prestige needs a 10-minute run; kills keep the
+rest of a time step; prices follow regular monsters) and the Abyss drop scaling. Earlier fixes found
+by the mastery pass: a spare unique used to arrive locked, and a bag full of locked spares salvaged
+every new drop on arrival; the bot also hunted gems in rocks whose gems it couldn't use.
 
 **Play styles.** The same simulator with other policies, to check that no style dominates
 (`--no-dungeons --no-titan` = a skiller who only fights to push; `--no-dungeons` = the same with the
 Titan; `--farm-ladder=push` = an AFK player who keeps fighting at the wall instead of running dungeons;
 `--farm-ladder` = farm the highest comfortable stage instead):
 
-| Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Stage 200 | Weapon tier 5+ |
-|---|---|---|---|---|---|
-| Skiller | 12.8–20.6 h | 80–104 h | — (best 120) | — | 43–72 h |
-| Skiller with the Titan | 7.9–10.4 h | 22–43 h | 113–141 h | — (best 150) | — |
-| Ladder farmer | 14–65 h | 19–88 h | 67–95 h, or never | — (best 137–180) | 35–101 h |
-| AFK pusher | 7.3–10.1 h | 9.5–14.2 h | 17–21 h | 72–74 h | 9–17 h |
-| Sensible (dungeons + Titan) | 6.1–6.7 h | 8.0–13.3 h | 15.6–23.4 h | 69–85 h | 11–23 h |
+| Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Stage 200 | Best at 150 h | Weapon tier 5+ |
+|---|---|---|---|---|---|---|
+| Skiller | 12.8–20.4 h | 49–126 h | — | — | 120–130 | 35–47 h |
+| Skiller with the Titan | 8.9–9.9 h | 27–41 h | 106 h, or never | — | 140–150 | 27–51 h |
+| Ladder farmer | 10.5–14.7 h | 22–37 h | 73–76 h, or never | — | 130–170 | 34–58 h |
+| AFK pusher | 6.2–9.2 h | 12.3–13.9 h | 20–23 h | 49 h | 271–285 | 14–20 h |
+| Sensible (dungeons + Titan) | 5.4–5.9 h | 7.3–7.8 h | 16–20 h | 39–47 h | 234–264 | 12–19 h |
 
-Dungeons and the Titan put the sensible player ahead through stage 120 (dungeons were tuned to about
-1.5× the progress of pushing for the same time). Past stage 150 the Abyss's gear drops are the
-progression, so steady pushing does as well: both reach stage 200 in 70–85 h. The Titan alone moves a
-skiller's stage 100 forward by 3–10 hours. Farming a comfortable stage is weaker than pushing, because
-each boss's first fall is worth the risk.
+Dungeons and the Titan put the sensible player ahead through stage 200 (dungeons were tuned to about
+1.5× the progress of pushing for the same time). Past that, steady pushing does better, because the
+deep Abyss drops are the late-game gear and the sensible bot still splits its time with outgrown
+dungeons and skilling. The Titan alone moves a skiller's stage 100 forward by 3–10 hours. Farming a
+comfortable stage is weaker than pushing, because each boss's first fall is worth the risk.
 
 ### 5.3 Known risks
 
-- **The Abyss is a crawl on purpose.** Tokens grow polynomially with the stage and enemies ~8.5% per
-  stage, so past ~150 each prestige at the wall adds only a few percent of power and the ladder moves
-  ~10 stages per 10–20 hours. Every simulated player that gets there stops at the stage 200 boss
-  (reached at 69–85 h) for the rest of the 150 hours. By then the goals are skills to 99, mastery,
-  pets, obstacle upgrades, Abyssal gear and the Paragon perk. A player who stops prestiging stops
-  moving — the simulator did exactly that until its prestige rule scaled with the tokens it holds.
+- **The Abyss is a slow climb on purpose.** Tokens grow polynomially and monsters ×2.26 per depth,
+  so late power comes mostly from deeper drops (×1.8 per depth). The climb slows as it goes: stage
+  ~200 at 40–47 h, 234–264 at 150 h, 321–327 at 300 h. `BALANCE.abyss.dropGrowth` sets the pace: at
+  2.0 the seeds spread from 250 to 334 at 150 h, and at 2.2 it runs away (390–470). A player who
+  stops prestiging stops moving; the simulator prestiges after an hour stuck at the wall.
 - **Late-game gold piles up.** Sinks keep pace while the agility course is being built (finished at
-  34–53 h in the simulator); after that income dwarfs the bounded sinks, and over 150 hours only
-  13–18% of all gold earned is spent — much of the rest resets with the run. That is what run
+  about 41–43 h in the simulator); after that income dwarfs the bounded sinks, and over 150 hours only
+  6–16% of all gold earned is spent. Most of the rest resets with the run. That is what run
   currency does; the Essence Cache (Shop) is the open-ended place for it, and the prestige screen
   says so.
-- **Drop-only tiers arrive with combat time.** The AFK pusher wears Dragonbone (tier 6) at 17–29 h
-  and Abyssal (tier 7) at 34–50 h, before a skiller forges runite (43–72 h). That is the combat
+- **Drop-only tiers arrive with combat time.** The AFK pusher wears Dragonbone (tier 6) at 14–25 h
+  and Abyssal (tier 7) at 28–33 h, before a skiller forges runite (35–47 h). That is the combat
   route's reward, but watch it.
-- **Bosses are the walls.** Since the 30-second boss timer, bosses are DPS checks and 80–90% of
-  deaths happen on boss stages (the Phase 1 target was at least half on regular stages). A boss that outlasts the timer is not a death, so the timer already absorbs most of the
-  boss walls; if regular stages should bite more, raise `atkGrowth` rather than boss HP.
+- **Bosses and regular stages share the walls.** Bosses are the DPS checks (a 30-second timer, and a
+  boss that outlasts it is not a death), while regular stages test survival: 34–58% of the sensible
+  player's deaths happen on regular stages, close to the Phase 1 target of half. In the deep Abyss the
+  pusher dies more on regular stages (44–66%), as monsters' attack outgrows its defence.
 - **Level 99 is fast** relative to Melvor (see §5.1).
 - **The simulator's player is simple.** It never uses mini-games, clicks or potions, buys perks in a
   fixed order, and only enters dungeons it clears comfortably. Treat its numbers as a floor for an
@@ -661,6 +664,8 @@ each boss's first fall is worth the risk.
 | Farming | crop `growMs`, `yield`, `xp`, `seedGold`; `FARMING_PLOTS` | `src/data/farming.js` |
 | Agility | slot `costGold`, `materials`, obstacle `mods`; `MAX_OBSTACLE_LEVEL` | `src/data/agility.js` |
 | Mastery | `MASTERY_XP_DIVISOR` (how slow), `MASTERY_PER_LEVEL` (what each level gives) | `src/data/mastery.js` |
+| The deep Abyss | `BALANCE.abyss.dropGrowth` (drop power per depth), `dropScalingFrom` | `src/core/formulas.js` |
+| Prestige pacing | `BALANCE.prestige.minRunMs`, `fullRunFraction` | `src/core/formulas.js` |
 | Weekend events | `EVENTS` (bonuses), `EVENT_DAILY_CAP`, `EVENT_MILESTONES`, `EVENT_SHOP` | `src/data/events.js` |
 | The bonfire | `BASE.bonfire*` | `src/core/modifiers.js` |
 | More/less gold | `BALANCE.rewards.goldPerHp`; camp `growth`, `max` | `formulas.js`, `src/data/camp.js` |

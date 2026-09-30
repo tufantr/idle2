@@ -412,7 +412,9 @@ function decide() {
         // Worth it when the run adds a decent share of what we hold; the share asked for shrinks as
         // tokens pile up (15% early, ~2% at 7,000), since a late run can only add a few percent.
         const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
-        if (p.tokens >= Math.max(2, share * S.prestige.tokens)) {
+        // A player stuck at the wall for an hour prestiges anyway: it is the only progress left.
+        const longStall = now - lastStageGainAt > 60 * 60000;
+        if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) {
             runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
             game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
         }

@@ -324,3 +324,21 @@ test('a dungeon run on repeat continues offline and the summary reports the clea
     assert.match(text, /Goblin Warren clears \(\+\d+ fragments\)/);
     assert.doesNotMatch(text, /items made/);
 });
+
+test('deep in the Abyss, drops keep getting stronger with depth', async () => {
+    const { abyssDropMult, generateDrop, BALANCE } = await import('../src/core/formulas.js');
+    const { itemScore } = await import('../src/systems/inventory.js');
+    const from = BALANCE.abyss.dropScalingFrom;
+    assert.equal(abyssDropMult(0), 1);
+    assert.equal(abyssDropMult(from), 1);
+    assert.ok(Math.abs(abyssDropMult(from + 3) - BALANCE.abyss.dropGrowth ** 3) < 1e-9);
+    // Same luck, deeper depth: a stronger item that remembers where it came from.
+    rng.setSource(seededRandom(11));
+    const shallow = generateDrop(7, true, 1, from);
+    rng.setSource(seededRandom(11));
+    const deep = generateDrop(7, true, 2, from + 4);
+    assert.equal(shallow.depth, undefined);
+    assert.equal(deep.depth, from + 4);
+    assert.equal(deep.type, shallow.type);
+    assert.ok(itemScore(deep) > 5 * itemScore(shallow), `${itemScore(deep)} vs ${itemScore(shallow)}`);
+});

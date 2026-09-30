@@ -22,7 +22,8 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ✅ Done |
 
-All six phases are built, including the optional mastery. What is left is content and the owner's
+All six phases are built, including the optional mastery, and a four-part code review (combat,
+skilling, saves and API, UI) has been worked through: 30 confirmed bugs fixed, with regression tests. What is left is content and the owner's
 decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
@@ -138,6 +139,9 @@ Depends on Phase 2's versioned saves (items gain new fields).
 - [x] **Mastery** per action (Melvor's model without the pool): 77 actions level 1–99 by doing them
       (99 after ~50 h on one action); each level adds speed, double chance and a chance to keep the
       ingredients; three achievements reward total mastery; kept through prestige, replayed offline
+- [x] **The stage 200 wall**: every simulated player stopped at the stage 200 boss once gear stopped
+      improving (Abyssal at depth 5). Deep-Abyss drops now scale ×1.8 per depth, so the climb slows
+      but never stops (stage 234–264 at 150 h, 321–327 at 300 h)
 - [x] Fix (found by the mastery pass): a spare unique arrived locked, and a bag full of locked spares
       salvaged every new drop on arrival, upgrades included. Spares now arrive unlocked, and the best
       upgrade for each slot is never auto-salvaged (the bag overflows instead)
