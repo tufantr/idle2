@@ -21,11 +21,12 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 3 — Loot and endgame depth | ✅ Done |
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ✅ Done |
-| 6 — Game feel | 🚧 In progress |
+| 6 — Game feel | ✅ Done |
 
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
-ones, with regression tests. What is left is content and the owner's
+ones, with regression tests. Phase 6 then gave it the look and feel of a game: a battle scene,
+reward moments, a dark fantasy theme, an armory, a world map and a phone hotbar. What is left is content and the owner's
 decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
@@ -213,7 +214,7 @@ nothing for sale, so the Vercel Hobby plan fits; players' numbers are computed o
 100k function invocations a month at 100 daily players (the Clan tab polls once a minute only while
 open, saves go up once a minute, events need no requests); privacy consent before the first board.
 
-## Phase 6 — Game feel 🚧
+## Phase 6 — Game feel ✅
 
 Playtesting feedback: the systems work, but the screens read like a spreadsheet, not a game. This
 phase is presentation only (no balance changes): show the fight, celebrate rewards, and give the game
@@ -244,7 +245,11 @@ one visual identity (dark fantasy: carved serif lettering, stone and bronze, gol
       the piece it would replace, and every action; on a phone it slides up as a sheet. A **world
       map** of the ten zones sits in the combat orders: a zone reached this run is a click away
 - [x] **Quest board**: the advisor's suggestions pinned up as parchment notes
-- [ ] A phone hotbar: enter combat, the crate and the current skill one thumb away
+- [x] **Work you can see** (`src/ui/actionfx.js`): every finished action pops what it made off the
+      card that made it (+2 🪨 in gold for a double, gems, crafted gear in its rarity color) with its
+      XP, and the card's medallion takes the hit
+- [x] **A phone hotbar**: the fight, the current work, the armory (▲ when an upgrade waits) and the
+      daily crate, one thumb away
 
 **Exit:** a new player sees the fight within one click; no layout shift when bosses or banners
 appear; every tab passes the overflow and console check at 390 px and 1350 px.

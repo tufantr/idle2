@@ -96,6 +96,28 @@ export function renderNav(game, ui) {
     return html;
 }
 
+// ---------- phone hotbar ----------
+
+/** Four thumb-sized shortcuts along the bottom of a phone: the fight, the current work, the armory, the crate. */
+export function renderHotbar(game, ui) {
+    const state = game.state;
+    const action = resolveAction(state);
+    const fighting = state.combat.active;
+    const banked = state.daily.banked;
+    const upgrade = state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
+    const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
+        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge" aria-label="${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}">${badge}</b>` : ''}</button>`;
+    const work = action && SKILLS[action.skill]
+        ? button(SKILLS[action.skill].icon, esc(SKILLS[action.skill].name), `FI.switchTab('${action.skill}')`, { active: ui.tab === action.skill, live: true })
+        : button('💤', 'Idle', "FI.switchTab('mining')", { active: false });
+    return [
+        button('⚔️', fighting ? 'Fighting' : 'Battle', "FI.switchTab('combat')", { active: ui.tab === 'combat', live: fighting }),
+        work,
+        button('🎒', 'Armory', "FI.switchTab('inventory')", { active: ui.tab === 'inventory', badge: upgrade ? '▲' : '' }),
+        button('📦', banked > 0 ? 'Crate' : duration(state.daily.nextAt - game.now), 'FI.claimDaily()', { badge: banked > 0 ? String(banked) : '', disabled: banked < 1 })
+    ].join('');
+}
+
 // ---------- header ----------
 
 export function renderHeader(game, ui, cloud) {

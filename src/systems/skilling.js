@@ -209,6 +209,7 @@ export function completeAction(game, def, { offline = false } = {}) {
     const derived = game.derived;
     const skill = def.skill;
     const doubleChance = (derived.doubleChance[skill] || 0) + (mastery?.double || 0);
+    let made = null; // what came out, for the screen (src/ui/actionfx.js)
     state.stats.actionsBySkill[skill] = (state.stats.actionsBySkill[skill] || 0) + 1;
 
     if (def.bonfireLog) {
@@ -220,6 +221,7 @@ export function completeAction(game, def, { offline = false } = {}) {
         bumpStat(game, 'logsBurnt');
         if (times === 2) grantXp(game, skill, def.xp * derived.xpMult);
         if (!offline && times === 2) game.emit({ type: 'doubleDrop', resource: def.bonfireLog });
+        made = { burnt: def.bonfireLog, qty: times };
         game.markDirty();
     } else if (def.kind === 'agility') {
         bumpStat(game, 'courseRuns');
@@ -232,6 +234,7 @@ export function completeAction(game, def, { offline = false } = {}) {
             if (rng.chance(BAIT_EXTRA_CHANCE)) amount += 1;
         }
         state.resources[def.output] += amount;
+        made = { id: def.output, qty: amount };
         if (skill === 'fishing') bumpStat(game, 'fishCaught', amount);
         if (def.kind === 'smelt') bumpStat(game, 'barsSmelted', amount);
         if (skill === 'mining' && rng.chance(GEM_FIND_CHANCE)) {
@@ -239,6 +242,7 @@ export function completeAction(game, def, { offline = false } = {}) {
             const candidates = GEM_DROP_TABLE.filter(g => Math.abs(g.tier - rockTier) <= 1).map(g => ({ ...g, weight: g.tier <= rockTier ? 3 : 1 }));
             const gem = rng.weighted(candidates);
             state.resources[gem.id] += 1;
+            made.gem = gem.id;
             bumpStat(game, 'gemsFound');
             if (!offline) log(game, `💎 Found a ${RESOURCES[gem.id].name} while mining!`, 'loot');
         }
@@ -247,6 +251,7 @@ export function completeAction(game, def, { offline = false } = {}) {
         const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, maxRarity: CRAFT_MAX_RARITY, materials: def.consumes, source: 'crafted' }, state.idCounter++);
         addItem(game, item);
         bumpStat(game, 'itemsCrafted');
+        made = { item };
         game.emit({ type: 'itemCrafted', item });
         if (!offline || item.rarity !== 'common') log(game, `${item.icon} Made ${item.rarity === 'common' ? '' : item.rarity + ' '}${item.name}`, 'craft');
     } else if (def.kind === 'tool') {
@@ -260,6 +265,6 @@ export function completeAction(game, def, { offline = false } = {}) {
     if (mastery) addMasteryXp(game, skill, mastery.key, def.interval / 1000);
     rollPet(game, skill, def.interval);
     eventProgress(game, 1);
-    game.emit({ type: 'actionComplete', skill });
+    game.emit({ type: 'actionComplete', skill, made, xp: def.xp * derived.xpMult });
     return true;
 }

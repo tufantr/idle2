@@ -6,9 +6,10 @@ import {
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
 import { describeOffline } from './systems/offline.js';
-import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
+import { createActionFx } from './ui/actionfx.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
@@ -82,8 +83,13 @@ const scene = createScene(document.getElementById('scene'), {
     stage: n => { game.setStage(n); render(); }
 });
 
-// Celebrations for the big moments (src/ui/rewards.js), in their own layer above the page.
-const rewards = createRewards(document.body.appendChild(Object.assign(document.createElement('div'), { id: 'celebrate' })));
+// Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
+// skill cards (src/ui/actionfx.js), and the phone hotbar.
+const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
+const rewards = createRewards(layer('div', 'celebrate'));
+const actionFx = createActionFx(layer('div', 'work-fx'));
+const hotbar = layer('nav', 'hotbar');
+hotbar.setAttribute('aria-label', 'Shortcuts');
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
@@ -230,6 +236,7 @@ function render() {
     const tab = document.getElementById('tab');
     setHtml(document.getElementById('nav'), renderNav(game, ui));
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
+    setHtml(hotbar, renderHotbar(game, ui));
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
@@ -242,6 +249,7 @@ function handleEvents(events) {
     for (const ev of events) {
         scene.event(ev, game);
         switch (ev.type) {
+            case 'actionComplete': actionFx.actionComplete(ev, ui.tab); break;
             case 'levelUp': {
                 const card = levelCelebration(ev);
                 if (card) rewards.celebrate(card);

@@ -792,8 +792,9 @@ src/data/             resources · skills · workshop · items · zones · camp 
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
-src/ui/               render.js (HTML per tab) · scene.js (the battle scene above the Combat tab) · rewards.js
-                      (celebrations, the daily crate) · format.js
+src/ui/               render.js (HTML per tab, the armory, the world map, the phone hotbar) · scene.js (the
+                      battle scene above the Combat tab) · rewards.js (celebrations, the daily crate) ·
+                      actionfx.js (what each finished action makes, popping off its card) · format.js
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, saves, API; the API suite runs on an
