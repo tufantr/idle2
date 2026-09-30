@@ -414,7 +414,10 @@ plots ready to harvest, and why work stopped early.
 - **Local save** (`src/core/save.js`): `localStorage['fantasyIdle.save.v2']`, versioned
   (`state.version = 3`), autosaved every 15 s and when the tab is hidden or closed. Prototype saves
   (`fantasyIdleSaveLocal`) are migrated on first load; v2 saves gain the banked daily crate.
-  Broken records (an unknown dungeon, a missing Titan or pet record) load as defaults.
+  Broken records (an unknown dungeon, a missing Titan or pet record) load as defaults. Loading also
+  takes each value only if it has the default's type, drops keys the game doesn't know (including
+  `__proto__`, which could otherwise reach every object on the page or the server), and rebuilds
+  every item from the game's own tables. A shared save string can't inject markup or break the save.
 - **Backups:** three rotating automatic backups (every 10 minutes) plus one on load, one before each
   prestige and one before a hard reset, restorable from Settings.
 - **Export/import:** `FI3:` compressed text (or `FI2:` base64 JSON); saves from a newer version are
@@ -422,15 +425,21 @@ plots ready to harvest, and why work stopped early.
 - **Cloud (optional):** the game works as a guest. Signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
   version-checked saves. The client uploads every 60 s. When a local and a cloud save disagree it
-  prefers more play time, and asks the player if the save timestamps disagree with that. On a static
-  host without the API, sign-in says cloud saves are unavailable instead of failing.
-- **Server secret:** `JWT_SECRET` must be set in production; the old hard-coded fallback is gone.
+  prefers more play time, and asks the player if the save times disagree with that (compared from
+  before offline progress) or if the saves come from two different games. Nothing is uploaded while
+  the question is open. On a static host without the API, sign-in says cloud saves are unavailable
+  instead of failing.
+- **Server secret:** `JWT_SECRET` must be set outside local development (`NODE_ENV=development`);
+  tokens are HS256 only.
 - **Time away is measured on the server's clock** for cloud saves: `/api/load` returns the time of the
   last upload and the server's current time, and the client replays exactly that gap, so changing the
   device clock doesn't buy offline progress.
-- **Plausibility flags:** each upload is compared with the previous one (play time growing faster than
-  real time, XP beyond any possible rate, best stage or tokens going down). Nothing is rejected — the
-  save belongs to the player — but flagged accounts are left out of leaderboards for 30 days.
+- **Plausibility flags:** every ranked number (best stage, Titans, dungeon clears, total XP, tokens)
+  may grow only as fast as play could in the real time since the previous upload, and none may pass
+  a ceiling no save reaches (checked on the first upload too). Going back, as when restoring a
+  backup, is not flagged. Nothing is rejected (the save belongs to the player), but flagged accounts
+  are left out of leaderboards and of clan boss sizing for 30 days. A determined cheat can still
+  fake a save that grows plausibly; that is the limit of a client-side game.
 
 ### 3.18 Clans and leaderboards
 
@@ -439,16 +448,21 @@ asynchronous and **every number another player sees is computed on the server fr
 with the game's own stat code; the client never submits damage or scores.
 
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
-  member takes over if the owner leaves, and the last one out closes the clan.
+  member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
+  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
 - **The weekly clan boss** (ISO weeks, UTC). Its health is set when the week's boss first appears:
-  12 × the members' combined attack. Every member has **three attacks a day** (enforced by a unique
+  12 × the combined attack of members who aren't flagged, capped so no save can overflow it. Every
+  member has **three attacks a day** (enforced by a unique
   per-player-per-day slot, so parallel requests or switching clans don't add more); an attack uploads
   the save and deals what that hero does in 60 seconds (`expectedDps × 60`, no dice, Focus, potions or
   timed boosts). Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
   when the boss falls, 50 essence and a diamond for the last hit, and when the week ends 50 essence for
-  taking part plus 100 / 60 / 30 essence and a diamond for the top three. Claiming twice pays once.
+  taking part plus 100 / 60 / 30 essence and a diamond for the top three. Claiming twice pays once; a
+  week is settled by whichever request claims it first, and weekly, kill and last-hit rewards are paid
+  once per player per week even for someone who fought for several clans.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
   level, Titans or dungeon clears, all time or this week (from each player's first save of the week).
+  The numbers are computed once per upload and stored, so a board is one query.
 - **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open.
   A Discord invite link appears if `DISCORD_INVITE` (`src/data/social.js`) is set — there is no in-game
   chat.

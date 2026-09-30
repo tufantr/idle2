@@ -1,11 +1,11 @@
 // In-memory implementation of api/store.js for the API tests. Same functions, same return shapes,
 // and the same unique-constraint errors (code 23505) as Postgres, so routes can be tested without a
-// database. tools/api-postgres-check.cjs runs the real SQL against a real Postgres.
+// database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
     const db = { users: [], clans: [], members: [], bosses: [], attacks: [], rewards: [], snapshots: [] };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0 };
-    const unique = () => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; return err; };
+    const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
     const store = {
         db,
@@ -13,7 +13,7 @@ function createMemoryStore() {
 
         async createUser(username, hash) {
             if (db.users.some(u => u.username === username)) throw unique();
-            const row = { id: ++seq.users, username, password_hash: hash, game_state: null, last_saved: 0, flags: '[]', optIn: false };
+            const row = { id: ++seq.users, username, password_hash: hash, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null };
             db.users.push(row);
             return row.id;
         },
@@ -23,18 +23,21 @@ function createMemoryStore() {
         },
         async getSave(userId) {
             const u = db.users.find(x => x.id === userId);
-            return u ? { state: u.game_state, lastSaved: u.last_saved, flags: u.flags, optIn: u.optIn } : null;
+            return u ? { state: u.game_state, lastSaved: u.last_saved, flags: u.flags, optIn: u.optIn, metrics: u.metrics } : null;
         },
-        async putSave(userId, stateJson, savedAt, flagsJson) {
+        async putSave(userId, stateJson, savedAt, flagsJson, metricsJson) {
             const u = db.users.find(x => x.id === userId);
-            if (u) Object.assign(u, { game_state: stateJson, last_saved: savedAt, flags: flagsJson });
+            if (u) Object.assign(u, { game_state: stateJson, last_saved: savedAt, flags: flagsJson, metrics: metricsJson });
         },
         async setOptIn(userId, optIn) {
             const u = db.users.find(x => x.id === userId);
             if (u) u.optIn = !!optIn;
         },
-        async optedInSaves() {
-            return db.users.filter(u => u.optIn && u.game_state).map(u => ({ userId: u.id, username: u.username, state: u.game_state, flags: u.flags }));
+        async leaderboardRows(week) {
+            return db.users.filter(u => u.optIn && u.metrics).map(u => ({
+                userId: u.id, username: u.username, flags: u.flags, metrics: u.metrics,
+                weekMetrics: db.snapshots.find(sn => sn.userId === u.id && sn.week === week)?.metrics || null
+            }));
         },
 
         async getSnapshot(userId, week) {
@@ -75,9 +78,14 @@ function createMemoryStore() {
             const m = db.members.find(x => x.userId === userId);
             return m ? { clanId: m.clanId, joinedAt: m.joinedAt } : null;
         },
-        async addMember(clanId, userId, now) {
-            if (db.members.some(m => m.userId === userId)) throw unique();
-            db.members.push({ userId, clanId, joinedAt: now });
+        async addMember(clanId, userId, now, maxMembers) {
+            if (db.members.some(m => m.userId === userId)) throw unique('clan_members_pkey');
+            const taken = new Set(db.members.filter(m => m.clanId === clanId).map(m => m.slot));
+            if (taken.size >= maxMembers) return false;
+            let slot = 1;
+            while (taken.has(slot)) slot++;
+            db.members.push({ userId, clanId, joinedAt: now, slot });
+            return true;
         },
         async removeMember(userId) {
             db.members = db.members.filter(m => m.userId !== userId);
@@ -87,7 +95,7 @@ function createMemoryStore() {
                 .sort((a, b) => a.joinedAt - b.joinedAt || a.userId - b.userId)
                 .map(m => {
                     const u = db.users.find(x => x.id === m.userId);
-                    return { userId: u.id, username: u.username, state: u.game_state, flags: u.flags, joinedAt: m.joinedAt };
+                    return { userId: u.id, username: u.username, metrics: u.metrics, flags: u.flags, joinedAt: m.joinedAt };
                 });
         },
 
@@ -117,13 +125,18 @@ function createMemoryStore() {
         async unsettledBosses(clanId, beforeWeek) {
             return db.bosses.filter(b => b.clanId === clanId && b.week < beforeWeek && !b.settled).map(b => ({ ...b }));
         },
-        async markSettled(clanId, week) {
-            const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
-            if (b) b.settled = true;
+        async claimSettlement(clanId, week) {
+            const b = db.bosses.find(x => x.clanId === clanId && x.week === week && !x.settled);
+            if (!b) return false;
+            b.settled = true;
+            return true;
         },
         async recordAttack({ clanId, userId, week, day, slot, damage, now }) {
             if (db.attacks.some(a => a.userId === userId && a.day === day && a.slot === slot)) throw unique();
             db.attacks.push({ id: ++seq.attacks, clanId, userId, week, day, slot, damage, at: now });
+        },
+        async deleteAttack(userId, day, slot) {
+            db.attacks = db.attacks.filter(a => !(a.userId === userId && a.day === day && a.slot === slot));
         },
         async attacksToday(userId, day) {
             return db.attacks.filter(a => a.userId === userId && a.day === day).length;
@@ -139,8 +152,9 @@ function createMemoryStore() {
             return [...byUser.values()].sort((a, b) => b.damage - a.damage);
         },
 
-        async addReward(userId, kind, payloadJson, now) {
-            db.rewards.push({ id: ++seq.rewards, userId, kind, payload: payloadJson, createdAt: now, claimedAt: 0 });
+        async addReward(userId, kind, payloadJson, now, dedupe = null) {
+            if (dedupe && db.rewards.some(r => r.dedupe === dedupe)) return;
+            db.rewards.push({ id: ++seq.rewards, userId, kind, payload: payloadJson, createdAt: now, claimedAt: 0, dedupe });
         },
         async unclaimedRewards(userId) {
             return db.rewards.filter(r => r.userId === userId && !r.claimedAt).map(r => ({ id: r.id, kind: r.kind, payload: r.payload, createdAt: r.createdAt }));

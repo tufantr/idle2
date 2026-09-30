@@ -589,29 +589,29 @@ function itemCard(game, item, { equippedSlot = null } = {}) {
     const stats = [item.atk ? `<span class="item-atk">⚔️ ${Math.round(item.atk * mult)}</span>` : '', item.def ? `<span class="item-def">🛡️ ${Math.round(item.def * mult)}</span>` : ''].filter(Boolean).join(' ');
     const afford = c => state.resources.essence >= c.essence && state.gold >= c.gold;
     const upgradeBtn = up < MAX_UPGRADE
-        ? `<button class="mini-btn" onclick="FI.upgrade(${item.id})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">⬆ +${up + 1}: ${cost.essence} ✨ + ${fmt(cost.gold)} 🪙</button>`
+        ? `<button class="mini-btn" onclick="FI.upgrade(${Number(item.id)})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">⬆ +${up + 1}: ${cost.essence} ✨ + ${fmt(cost.gold)} 🪙</button>`
         : `<span class="muted small">Max upgrade</span>`;
     const reforge = itemReforgeCost(game, item);
     const reforgeBtn = item.affixes?.length && !item.uniqueId
-        ? `<button class="mini-btn" onclick="FI.reforge(${item.id})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (cost rises with each reforge)">🔁 ${reforge.essence} ✨ + ${fmt(reforge.gold)} 🪙</button>`
+        ? `<button class="mini-btn" onclick="FI.reforge(${Number(item.id)})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (cost rises with each reforge)">🔁 ${reforge.essence} ✨ + ${fmt(reforge.gold)} 🪙</button>`
         : '';
     const salvage = salvagePreview(item);
     const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([id, q]) => `~${q.toFixed(1)} ${RESOURCES[id].name}`)].filter(Boolean).join(', ') || 'nothing';
     const upgradeBadge = !equippedSlot && wearable && isUpgrade(state, item) ? '<span class="badge-upgrade">▲ upgrade</span>' : '';
     const source = item.source === 'drop' ? 'dropped' : item.source === 'unique' ? 'unique' : 'crafted';
-    return `<div class="inv-item ${item.locked ? 'locked-item' : ''}" style="border-color:${item.color}55">
+    return `<div class="inv-item ${item.locked ? 'locked-item' : ''}" style="border-color:${esc(item.color)}55">
         <div class="inv-header">
-            <div class="inv-title-wrap"><div class="item-thumb" style="color:${item.color}">${item.icon}</div>
-                <div><span class="item-name" style="color:${item.color}">${esc(item.name)}${up ? ` +${up}` : ''}</span> ${upgradeBadge}<div class="inv-type">${RARITIES.find(r => r.id === item.rarity)?.name || item.rarity} · ${item.type} · tier ${item.tier} · ${source}</div></div></div>
-            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${item.id})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
+            <div class="inv-title-wrap"><div class="item-thumb" style="color:${esc(item.color)}">${esc(item.icon)}</div>
+                <div><span class="item-name" style="color:${esc(item.color)}">${esc(item.name)}${up ? ` +${up}` : ''}</span> ${upgradeBadge}<div class="inv-type">${esc(RARITIES.find(r => r.id === item.rarity)?.name || item.rarity)} · ${esc(item.type)} · tier ${Number(item.tier)}${item.depth ? ` · depth ${Number(item.depth)}` : ''} · ${source}</div></div></div>
+            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${Number(item.id)})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
         </div>
         <div class="inv-stats-row"><div>${stats || '<span class="muted">no base stats</span>'}</div><div class="affixes">${affixes}</div></div>
         ${!wearable ? `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>` : ''}
         <div class="inv-actions">
-            ${equippedSlot ? `<button class="mini-btn" onclick="FI.unequip('${equippedSlot}')">Unequip</button>` : `<button class="equip-btn" onclick="FI.equip(${item.id})" ${wearable ? '' : 'disabled'}>Equip</button>`}
+            ${equippedSlot ? `<button class="mini-btn" onclick="FI.unequip('${equippedSlot}')">Unequip</button>` : `<button class="equip-btn" onclick="FI.equip(${Number(item.id)})" ${wearable ? '' : 'disabled'}>Equip</button>`}
             ${upgradeBtn}
             ${reforgeBtn}
-            ${equippedSlot ? '' : `<button class="mini-btn" onclick="FI.salvage(${item.id})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">♻️ Salvage</button><button class="sell-btn" onclick="FI.sellItem(${item.id})" ${item.locked ? 'disabled' : ''} title="Sell for ${fmt(itemSellValue(item))} gold">💰 ${fmt(itemSellValue(item))}</button>`}
+            ${equippedSlot ? '' : `<button class="mini-btn" onclick="FI.salvage(${Number(item.id)})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">♻️ Salvage</button><button class="sell-btn" onclick="FI.sellItem(${Number(item.id)})" ${item.locked ? 'disabled' : ''} title="Sell for ${fmt(itemSellValue(item))} gold">💰 ${fmt(itemSellValue(item))}</button>`}
         </div>
     </div>`;
 }
@@ -1094,14 +1094,15 @@ export function renderAuthModal(message = '') {
     </div>`;
 }
 
-export function renderConflictModal(local, cloud) {
+export function renderConflictModal(local, cloud, suggested = null) {
     const line = s => `${duration(s.meta.playtimeMs)} played · best stage ${s.combat.bestStage} · saved ${new Date(s.meta.savedAt).toLocaleString()}`;
+    const more = side => (suggested === side ? ' <span class="keep-text">· more progress</span>' : '');
     return `<div class="modal-content">
         <div class="modal-header">⚠️ Two saves found</div>
         <div class="modal-body">
-            <div class="prestige-box"><h4>This device</h4><span>${line(local)}</span></div>
-            <div class="prestige-box"><h4>Cloud</h4><span>${line(cloud)}</span></div>
-            <p class="muted small">Pick the one to keep. The other will be overwritten on the next cloud save.</p>
+            <div class="prestige-box"><h4>This device${more('local')}</h4><span>${line(local)}</span></div>
+            <div class="prestige-box"><h4>Cloud${more('cloud')}</h4><span>${line(cloud)}</span></div>
+            <p class="muted small">Pick the one to keep. The other is replaced; nothing is uploaded until you choose.</p>
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.resolveConflict('local')">Keep this device</button><button class="modal-btn btn-confirm" onclick="FI.resolveConflict('cloud')">Use cloud save</button></div>
     </div>`;

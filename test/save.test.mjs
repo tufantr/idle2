@@ -71,6 +71,12 @@ test('cloud conflict choice uses playtime first and flags disagreement', () => {
     assert.deepEqual(chooseSave(a, b), { pick: 'cloud', conflict: true });
     assert.deepEqual(chooseSave(null, b), { pick: 'cloud', conflict: false });
     assert.deepEqual(chooseSave(a, null), { pick: 'local', conflict: false });
+    // More progress but older is a conflict whichever side has it.
+    b.meta.savedAt = 200; a.meta.playtimeMs = 30;
+    assert.deepEqual(chooseSave(a, b), { pick: 'local', conflict: true });
+    // Two different games are never merged silently.
+    const other = createDefaultState(2); other.meta.playtimeMs = 5; other.meta.savedAt = 50;
+    assert.deepEqual(chooseSave(a, other), { pick: 'local', conflict: true });
 });
 
 test('compressed export strings round-trip and are smaller', async () => {

@@ -3,11 +3,11 @@
 
 import { RESOURCES } from '../data/resources.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
-import { EQUIP_SLOTS } from '../data/items.js';
+import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
-import { DUNGEONS } from '../data/dungeons.js';
+import { DUNGEONS, UNIQUES } from '../data/dungeons.js';
 import { TOOLS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
@@ -68,7 +68,7 @@ export function createDefaultState(now = Date.now()) {
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
-            masteryLevels: 0, masteryBest: 1, masteries99: 0, ingredientsSaved: 0,
+            masteryLevels: 0, masteryBest: 1, masteries99: 0, ingredientsSaved: 0, campLevels: 0,
             actionsBySkill: {}
         },
         minigame: {},
@@ -107,8 +107,10 @@ export function migrateState(raw, now = Date.now()) {
 // v2 -> v3: the daily reward became a bank of up to three crates.
 function migrateV2(data, now) {
     const last = Number(data.daily?.lastClaim) || 0;
+    // v2 held at most one waiting crate: carry that one over, and start the clock for the next now.
+    const waiting = last && now - last >= DAILY_INTERVAL_MS;
     const daily = last
-        ? { banked: now - last >= DAILY_INTERVAL_MS ? 1 : 0, nextAt: last + DAILY_INTERVAL_MS, claimed: 0 }
+        ? { banked: waiting ? 1 : 0, nextAt: waiting ? now + DAILY_INTERVAL_MS : last + DAILY_INTERVAL_MS, claimed: 0 }
         : { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 };
     // The player left at savedAt, so offline progress on this first v3 load counts as idle (focus).
     const meta = { ...(data.meta || {}), lastInputAt: data.meta?.savedAt ?? now };
@@ -167,11 +169,59 @@ function migrateV1(old, now) {
     return state;
 }
 
+const RARITY_BY_ID = Object.fromEntries(RARITIES.map(r => [r.id, r]));
+const UNIQUE_COLOR = '#f97316';
+// Every stat an item's affix may name: the random affixes and the uniques' fixed ones.
+const AFFIX_STATS = new Set([...AFFIXES.map(a => a.stat), ...Object.values(UNIQUES).flatMap(u => u.affixes.map(a => a.stat))]);
+const finite = (v, fallback = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+const intIn = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.floor(finite(v, fallback))));
+
+/**
+ * A piece of gear from a save, rebuilt from what the game knows: its type, tier, rarity, colour and
+ * icon come from the tables, numbers must be numbers, and anything else is dropped. Returns null
+ * for something that isn't an item. `ids` keeps ids unique (the UI finds items by id).
+ */
+function sanitizeItem(raw, ids, nextId) {
+    if (!isPlainObject(raw) || !Object.hasOwn(TYPE_SLOTS, raw.type)) return null;
+    let id = raw.id;
+    if (!Number.isSafeInteger(id) || id <= 0 || ids.has(id)) id = nextId();
+    ids.add(id);
+    const rarity = RARITY_BY_ID[raw.rarity] || RARITIES[0];
+    const uniqueId = typeof raw.uniqueId === 'string' && Object.hasOwn(UNIQUES, raw.uniqueId) ? raw.uniqueId : undefined;
+    const source = ['crafted', 'drop', 'unique'].includes(raw.source) ? raw.source : 'drop';
+    const affixes = (Array.isArray(raw.affixes) ? raw.affixes : [])
+        .filter(a => isPlainObject(a) && AFFIX_STATS.has(a.stat) && Number.isFinite(a.value))
+        .slice(0, 6)
+        .map(a => ({ id: String(a.id ?? a.stat).slice(0, 32), name: String(a.name ?? a.stat).slice(0, 40), stat: a.stat, value: a.value, format: 'pct' }));
+    let materials = null;
+    if (isPlainObject(raw.materials)) {
+        materials = {};
+        for (const [resId, qty] of Object.entries(raw.materials)) if (Object.hasOwn(RESOURCES, resId) && finite(qty) > 0) materials[resId] = finite(qty);
+    }
+    const item = {
+        id, type: raw.type, tier: intIn(raw.tier, 1, MAX_GEAR_TIER, 1),
+        name: String(raw.name ?? '').slice(0, 80),
+        rarity: rarity.id, color: uniqueId ? UNIQUE_COLOR : rarity.color, icon: TYPE_ICONS[raw.type],
+        atk: Math.max(0, finite(raw.atk)), def: Math.max(0, finite(raw.def)),
+        affixes, upgrade: intIn(raw.upgrade, 0, MAX_UPGRADE, 0), reforges: intIn(raw.reforges, 0, 1e6, 0),
+        locked: raw.locked === true, value: Math.max(0, finite(raw.value)), source, materials
+    };
+    if (uniqueId) item.uniqueId = uniqueId;
+    if (Number.isSafeInteger(raw.depth) && raw.depth > 0) item.depth = raw.depth;
+    return item;
+}
+
+const LOG_TYPES = new Set(['info', 'system', 'level', 'achievement', 'unlock', 'loot', 'craft', 'death', 'prestige', 'boss', 'combat', 'daily', 'minigame']);
+
 /** Fill any missing keys from the default state and clamp obviously broken numbers. */
 function normalise(data, now) {
     const base = createDefaultState(now);
     const state = mergeInto(base, data);
     state.version = SAVE_VERSION;
+    // Keys the game doesn't know (an older version's, or anything added by hand) are dropped.
+    const known = createDefaultState(now);
+    for (const key of Object.keys(state)) if (!Object.hasOwn(known, key)) delete state[key];
+    for (const key of Object.keys(state.stats)) if (!Object.hasOwn(known.stats, key)) delete state.stats[key];
     for (const id of Object.keys(RESOURCES)) {
         const v = Number(state.resources[id]);
         state.resources[id] = Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
@@ -197,7 +247,34 @@ function normalise(data, now) {
         }
     }
     Object.assign(state.stats, { masteryLevels, masteryBest, masteries99 });
-    if (!Array.isArray(state.inventory)) state.inventory = [];
+    // Gear: rebuilt item by item (worn items first, so they keep their ids).
+    state.idCounter = Math.max(1, intIn(state.idCounter, 1, Number.MAX_SAFE_INTEGER, 1));
+    const ids = new Set();
+    const nextId = () => { while (ids.has(state.idCounter)) state.idCounter++; return state.idCounter++; };
+    for (const slot of EQUIP_SLOTS) {
+        const item = sanitizeItem(state.equipped[slot], ids, nextId);
+        state.equipped[slot] = item && TYPE_SLOTS[item.type].includes(slot) ? item : null;
+    }
+    state.inventory = (Array.isArray(state.inventory) ? state.inventory : []).map(i => sanitizeItem(i, ids, nextId)).filter(Boolean);
+    state.idCounter = Math.max(state.idCounter, ...ids, 0) + 1;
+    state.log = (Array.isArray(state.log) ? state.log : [])
+        .filter(e => isPlainObject(e) && typeof e.text === 'string')
+        .slice(-60)
+        .map(e => ({ t: finite(e.t, now), type: LOG_TYPES.has(e.type) ? e.type : 'info', text: e.text.slice(0, 300) }));
+    for (const key of Object.keys(state.stats.actionsBySkill)) if (!SKILL_IDS.includes(key)) delete state.stats.actionsBySkill[key];
+    for (const id of SKILL_IDS) state.stats.actionsBySkill[id] = Math.max(0, finite(state.stats.actionsBySkill[id]));
+    for (const group of ['resources', 'skills', 'perks', 'tools', 'camp', 'dungeons', 'minigame']) {
+        for (const key of Object.keys(state[group])) if (!Object.hasOwn(known[group], key)) delete state[group][key];
+    }
+    for (const group of ['achievements', 'unlocks', 'pets']) {
+        const saved = state[group];
+        state[group] = {};
+        for (const [key, value] of Object.entries(saved)) if (value === true && /^[a-z0-9_]{1,40}$/.test(key)) state[group][key] = true;
+    }
+    if (!['auto', 'none'].includes(state.combat.autoEat) && !Object.hasOwn(RESOURCES, state.combat.autoEat)) state.combat.autoEat = 'auto';
+    if (state.combat.potion !== 'none' && !Object.hasOwn(RESOURCES, state.combat.potion)) state.combat.potion = 'none';
+    if (state.action !== null && !(isPlainObject(state.action) && typeof state.action.kind === 'string')) state.action = null;
+    if (typeof state.settings.forceEvent !== 'string') state.settings.forceEvent = null;
     if (!Array.isArray(state.log)) state.log = [];
     state.gold = Math.max(0, Number(state.gold) || 0);
     state.combat.enemy = null; // always respawned on load
@@ -258,13 +335,36 @@ function normalise(data, now) {
     return state;
 }
 
+// Keys a save may never write: assigning them would change an object's prototype, or with
+// "__proto__" reach Object.prototype itself (a shared save string or a stored cloud save could then
+// change every object in the page, or on the server).
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const isPlainObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * Copy a loaded save over the defaults, key by key. Only the save's own keys are read, and a value
+ * must have the default's type: where the default is an object, a list, a number, a flag or a text
+ * and the save holds something else, the default stays. So one broken section loads as defaults
+ * instead of sinking the whole save, and a crafted save can't put markup where the UI shows a number.
+ */
 function mergeInto(target, source) {
     for (const key of Object.keys(source)) {
+        if (UNSAFE_KEYS.has(key)) continue;
         const value = source[key];
-        if (value && typeof value === 'object' && !Array.isArray(value) && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
-            mergeInto(target[key], value);
+        const current = Object.prototype.hasOwnProperty.call(target, key) ? target[key] : undefined;
+        if (isPlainObject(current)) {
+            if (isPlainObject(value)) mergeInto(current, value);
+        } else if (Array.isArray(current)) {
+            if (Array.isArray(value)) target[key] = value;
+        } else if (typeof current === 'number') {
+            const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+            if (typeof n === 'number' && Number.isFinite(n)) target[key] = n;
+        } else if (typeof current === 'boolean') {
+            if (typeof value === 'boolean') target[key] = value;
+        } else if (typeof current === 'string') {
+            if (typeof value === 'string') target[key] = value;
         } else {
-            target[key] = value;
+            target[key] = value; // defaults of null: objects the game fills in (items, the action), checked below
         }
     }
     return target;

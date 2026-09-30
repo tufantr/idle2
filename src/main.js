@@ -47,6 +47,9 @@ const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
 const loaded = loadLocal(Date.now());
 let game = withDevFlags(new Game(loaded, Date.now()));
+// When the local save was last written. Offline progress moves the game's clock to now, so the first
+// cloud sync compares the cloud copy with this instead (or the local save would always look newer).
+let bootSavedAt = loaded ? loaded.meta.savedAt : null;
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
@@ -82,7 +85,7 @@ setInterval(() => {
     handleEvents(game.drainEvents());
     if (now - lastSave > AUTOSAVE_MS) save(now);
     if (now - lastBackup > BACKUP_INTERVAL_MS) { lastBackup = now; rotateBackup(game.serialize(now), now); }
-    if (cloud.loggedIn && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
+    if (cloud.loggedIn && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
     if (ui.tab === 'clan' && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
     if ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS) {
@@ -109,7 +112,7 @@ document.addEventListener('keydown', event => {
         event.preventDefault();
         target.click();
     }
-    if (event.key === 'Escape' && ui.modalOpen) closeModal();
+    if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'conflict') closeModal(); // a conflict needs a choice
 }, { capture: true });
 
 // ---------- rendering ----------
@@ -224,7 +227,7 @@ function save(now) {
 }
 
 async function cloudSave(announce = true) {
-    if (!cloud.loggedIn) return;
+    if (!cloud.loggedIn || pendingConflict) return; // never overwrite the cloud while the player is choosing
     lastCloudSave = Date.now();
     try {
         await cloud.push(JSON.parse(game.serialize(Date.now())));
@@ -283,10 +286,16 @@ let pendingConflict = null;
 async function syncFromCloud() {
     try {
         const { state: remote } = await cloud.pull(Date.now());
-        const local = game.state;
-        const choice = chooseSave(local.stats.kills || local.meta.playtimeMs > 60000 ? local : null, remote);
+        const live = game.state;
+        const local = bootSavedAt ? { ...live, meta: { ...live.meta, savedAt: bootSavedAt } } : live;
+        bootSavedAt = null;
+        const choice = chooseSave(live.stats.kills || live.meta.playtimeMs > 60000 ? local : null, remote);
+        if (choice.conflict && remote) {
+            pendingConflict = { remote };
+            openModal(renderConflictModal(local, remote, choice.pick), 'conflict');
+            return;
+        }
         if (choice.pick === 'cloud' && remote) {
-            if (choice.conflict) { pendingConflict = { remote }; openModal(renderConflictModal(local, remote), 'conflict'); return; }
             adoptState(remote);
             toast('☁️ Cloud save loaded', 'info');
         } else {
@@ -488,8 +497,9 @@ window.FI = {
     resolveConflict(pick) {
         closeModal();
         if (!pendingConflict) return;
-        if (pick === 'cloud') adoptState(pendingConflict.remote); else cloudSave(false);
+        const { remote } = pendingConflict;
         pendingConflict = null;
+        if (pick === 'cloud') adoptState(remote); else cloudSave(false);
         render();
     },
     game: () => game

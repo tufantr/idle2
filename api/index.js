@@ -8,8 +8,10 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// No hard-coded fallback in production: a known secret would let anyone forge tokens.
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'dev-only-insecure-secret');
+// A known secret would let anyone forge tokens, so the fallback exists only for local development
+// (`vercel dev` sets NODE_ENV=development); anywhere else the API refuses to sign in without one.
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'development' ? 'dev-only-insecure-secret' : null);
+const JWT_ALGORITHM = 'HS256';
 const TOKEN_TTL = '30d';
 const USERNAME_RE = /^[A-Za-z0-9_-]{3,24}$/;
 const MIN_PASSWORD = 8;
@@ -41,7 +43,7 @@ function requireSecret(res) {
 }
 
 function signToken(user) {
-    return jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+    return jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: TOKEN_TTL, algorithm: JWT_ALGORITHM });
 }
 
 function validateCredentials(body) {
@@ -59,8 +61,8 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) return res.sendStatus(401);
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
+    jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] }, (err, user) => {
+        if (err || !user || !Number.isInteger(user.id)) return res.sendStatus(403);
         req.user = user;
         next();
     });
@@ -130,27 +132,42 @@ app.post('/api/login', route('login', async (req, res) => {
     res.json({ token: signToken(user), message: 'Login successful' });
 }));
 
-// Uploads are never rejected for looking odd — the save is the player's — but implausible jumps are
-// flagged on the account, and flagged accounts are left out of leaderboards.
-const OFFLINE_ALLOWANCE_MS = 25 * HOUR;       // the longest offline replay (24 h) plus slack
+// Uploads are never rejected for looking odd (the save is the player's), but implausible numbers are
+// flagged on the account. Flagged accounts are left out of leaderboards and don't size clan bosses.
+// Offline progress happens inside the real time between two uploads, so that time is the allowance.
 const XP_PER_HOUR_CEILING = 3_000_000;        // far above any skill's real rate, summed over skills
-const PLAYTIME_SLACK_MS = 10 * 60 * 1000;
+const SLACK_MS = 30 * 60 * 1000;              // clock drift and upload delays
 const FLAG_MEMORY_MS = 30 * DAY;
 
 function totalXp(state) {
     return Object.values(state.skills || {}).reduce((sum, s) => sum + (Number(s && s.xp) || 0), 0);
 }
+const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
+// Tokens one prestige can pay at a stage (BALANCE.prestige in src/core/formulas.js).
+const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
+
+// Ranked numbers: how fast each can honestly grow per hour of real time (plus a flat allowance), and
+// a ceiling no save reaches at all, checked on every upload including the first.
+const RANKED = [
+    { label: 'best stage', value: s => num(s.combat?.bestStage), perHour: 60, flat: 30, ceiling: 3000 },
+    { label: 'Titans defeated', value: s => num(s.titan?.kills), perHour: 1, flat: 2, ceiling: 20000 },
+    { label: 'dungeon clears', value: s => num(s.stats?.dungeonClears), perHour: 3600, flat: 200, ceiling: 1e8 },
+    { label: 'total XP', value: totalXp, perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
+    { label: 'prestige tokens', value: s => num(s.prestige?.tokens), perHour: null, flat: 0, ceiling: 1e9 }
+];
 
 /** Reasons a new save looks impossible next to the previous one (empty when it looks fine). */
 function plausibilityFlags(prev, next, elapsedMs) {
     const flags = [];
-    if (!prev) return flags;
-    const playDelta = (Number(next.meta?.playtimeMs) || 0) - (Number(prev.meta?.playtimeMs) || 0);
-    if (playDelta > elapsedMs + PLAYTIME_SLACK_MS) flags.push('playtime grew faster than real time');
-    const xpDelta = totalXp(next) - totalXp(prev);
-    if (xpDelta > XP_PER_HOUR_CEILING * (elapsedMs + OFFLINE_ALLOWANCE_MS) / HOUR) flags.push('XP grew faster than any play could');
-    if ((Number(next.combat?.bestStage) || 0) < (Number(prev.combat?.bestStage) || 0)) flags.push('best stage went down');
-    if ((Number(next.prestige?.tokens) || 0) < (Number(prev.prestige?.tokens) || 0)) flags.push('prestige tokens went down');
+    const hours = (Math.max(0, elapsedMs) + SLACK_MS) / HOUR;
+    for (const r of RANKED) {
+        const value = r.value(next);
+        if (value > r.ceiling) { flags.push(`${r.label} beyond any possible save`); continue; }
+        if (!prev) continue;
+        // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached.
+        const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(next.combat?.bestStage)));
+        if (value - r.value(prev) > r.flat + perHour * hours) flags.push(`${r.label} grew faster than any play could`);
+    }
     return flags;
 }
 
@@ -171,13 +188,14 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     const newFlags = plausibilityFlags(prev, state, savedAt - ((current && current.lastSaved) || savedAt));
     let flags = [];
     try { flags = JSON.parse((current && current.flags) || '[]'); } catch { flags = []; }
+    if (!Array.isArray(flags)) flags = [];
     if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason }))].slice(-20);
-    await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags));
+    // The numbers other players see (boards, clan damage) are computed here, once per upload.
+    let metrics = null;
+    try { metrics = (await engine()).powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
+    await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null);
     // "This week" leaderboards count from each player's first save of the week.
-    if (current && current.optIn) {
-        const { powerSummary } = await engine();
-        await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(powerSummary(state, savedAt)));
-    }
+    if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(metrics));
     res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0 });
 }));
 
@@ -199,6 +217,10 @@ const MAX_MEMBERS = 20;
 const ATTACKS_PER_DAY = 3;
 const BOSS_ATTACKS_TO_KILL = 12;   // the boss holds about four days of everyone attacking every time
 const MIN_BOSS_HP = 1000;
+// Damage and boss health stay exact integers in JavaScript and fit Postgres BIGINT, whatever a save says.
+const MAX_ATTACK_DAMAGE = 1e14;
+const MAX_BOSS_HP = 4e15;
+const safeDamage = v => (Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), MAX_ATTACK_DAMAGE) : 0);
 const REWARDS = {
     participation: { essence: 50, text: 'Clan boss: you fought this week' },
     top: [{ essence: 100, diamond: 1 }, { essence: 60, diamond: 1 }, { essence: 30, diamond: 1 }],
@@ -208,26 +230,23 @@ const REWARDS = {
 
 const cleanText = (value, max) => String(value || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
 
-async function memberPower(members, now) {
-    const { powerSummary } = await engine();
-    return members.map(m => {
-        let summary = null;
-        try { summary = m.state ? powerSummary(JSON.parse(m.state), now) : null; } catch { summary = null; }
-        return { ...m, power: summary };
-    });
+/** A member's stored numbers (computed when they last saved), or null. */
+function parseMetrics(json) {
+    try { const m = json ? JSON.parse(json) : null; return m && typeof m === 'object' ? m : null; } catch { return null; }
 }
 
-/** Pay the weekly rewards (participation, top three) of any finished week of this clan. */
+/** Pay the weekly rewards (participation, top three) of any finished week of this clan, at most once. */
 async function settleOldWeeks(clanId, now) {
     for (const boss of await store.unsettledBosses(clanId, isoWeek(now))) {
+        if (!(await store.claimSettlement(clanId, boss.week))) continue; // a parallel request is paying it
         const board = await store.weeklyDamage(clanId, boss.week);
         for (const [i, row] of board.entries()) {
-            await store.addReward(row.userId, 'participation', JSON.stringify({ ...REWARDS.participation, week: boss.week }), now);
+            // Once per player per week, even if they fought for several clans that week.
+            await store.addReward(row.userId, 'participation', JSON.stringify({ ...REWARDS.participation, week: boss.week }), now, `participation:${row.userId}:${boss.week}`);
             if (i < REWARDS.top.length) {
-                await store.addReward(row.userId, 'top', JSON.stringify({ ...REWARDS.top[i], text: `Clan boss: #${i + 1} damage in ${boss.week}`, week: boss.week }), now);
+                await store.addReward(row.userId, 'top', JSON.stringify({ ...REWARDS.top[i], text: `Clan boss: #${i + 1} damage in ${boss.week}`, week: boss.week }), now, `top:${row.userId}:${boss.week}`);
             }
         }
-        await store.markSettled(clanId, boss.week);
     }
 }
 
@@ -235,9 +254,10 @@ async function currentBoss(clanId, now) {
     const week = isoWeek(now);
     let boss = await store.getBoss(clanId, week);
     if (!boss) {
-        const members = await memberPower(await store.clanMembers(clanId), now);
-        const total = members.reduce((sum, m) => sum + (m.power ? m.power.attackDamage : 0), 0);
-        boss = await store.createBoss(clanId, week, Math.max(MIN_BOSS_HP, total * BOSS_ATTACKS_TO_KILL));
+        // Flagged members don't count, so one implausible save can't make the boss unbeatable.
+        const members = (await store.clanMembers(clanId)).filter(m => !recentlyFlagged(m.flags, now));
+        const total = members.reduce((sum, m) => sum + safeDamage(parseMetrics(m.metrics)?.attackDamage), 0);
+        boss = await store.createBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total * BOSS_ATTACKS_TO_KILL)));
     }
     return boss;
 }
@@ -255,14 +275,21 @@ app.post('/api/clans', authenticateToken, route('create clan', async (req, res) 
     if (!CLAN_TAG_RE.test(tag)) return res.status(400).json({ error: 'Tags are 2-5 letters or numbers.' });
     if (await store.membershipOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
     const now = Date.now();
+    let clanId;
     try {
-        const clanId = await store.createClan({ name, tag, description: cleanText(body.description, 200), lookingFor: cleanText(body.lookingFor, 100), ownerId: req.user.id, now });
-        await store.addMember(clanId, req.user.id, now);
-        res.json({ clanId });
+        clanId = await store.createClan({ name, tag, description: cleanText(body.description, 200), lookingFor: cleanText(body.lookingFor, 100), ownerId: req.user.id, now });
     } catch (err) {
         if (err.code === '23505') return res.status(400).json({ error: 'That clan name is taken.' });
         throw err;
     }
+    try {
+        await store.addMember(clanId, req.user.id, now, MAX_MEMBERS);
+    } catch (err) {
+        await store.deleteClan(clanId); // a parallel request put this player in another clan: no empty clans
+        if (err.code === '23505') return res.status(400).json({ error: 'Leave your clan first.' });
+        throw err;
+    }
+    res.json({ clanId });
 }));
 
 app.post('/api/clans/join', authenticateToken, route('join clan', async (req, res) => {
@@ -270,9 +297,27 @@ app.post('/api/clans/join', authenticateToken, route('join clan', async (req, re
     const clan = Number.isInteger(clanId) ? await store.getClan(clanId) : null;
     if (!clan) return res.status(404).json({ error: 'No such clan.' });
     if (await store.membershipOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
-    if ((await store.clanMembers(clanId)).length >= MAX_MEMBERS) return res.status(400).json({ error: 'That clan is full.' });
-    await store.addMember(clanId, req.user.id, Date.now());
+    let joined;
+    try { joined = await store.addMember(clanId, req.user.id, Date.now(), MAX_MEMBERS); } catch (err) {
+        if (err.code === '23505') return res.status(400).json({ error: 'Leave your clan first.' });
+        throw err;
+    }
+    if (!joined) return res.status(400).json({ error: 'That clan is full.' });
     res.json({ clanId });
+}));
+
+// The owner can remove a member (a griefer, or someone long gone). Their damage stays on the board.
+app.post('/api/clan/kick', authenticateToken, route('kick', async (req, res) => {
+    const membership = await store.membershipOf(req.user.id);
+    if (!membership) return res.status(400).json({ error: 'You are not in a clan.' });
+    const clan = await store.getClan(membership.clanId);
+    if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ error: 'Only the clan owner can remove members.' });
+    const username = String((req.body || {}).username || '');
+    const target = (await store.clanMembers(membership.clanId)).find(m => m.username === username);
+    if (!target) return res.status(404).json({ error: 'No such member.' });
+    if (target.userId === req.user.id) return res.status(400).json({ error: 'Leave the clan instead.' });
+    await store.removeMember(target.userId);
+    res.json({ removed: username });
 }));
 
 app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, res) => {
@@ -292,13 +337,14 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     if (!membership) return res.json({ clan: null });
     const clanId = membership.clanId;
     await settleOldWeeks(clanId, now);
-    const [clan, members, boss] = await Promise.all([store.getClan(clanId), store.clanMembers(clanId).then(m => memberPower(m, now)), currentBoss(clanId, now)]);
+    const [clan, rawMembers, boss] = await Promise.all([store.getClan(clanId), store.clanMembers(clanId), currentBoss(clanId, now)]);
+    const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = await store.weeklyDamage(clanId, boss.week);
     const used = await store.attacksToday(req.user.id, dayId(now));
     const lastHit = boss.lastHitUser ? members.find(m => m.userId === boss.lastHitUser) : null;
     res.json({
         clan: { ...clan, isOwner: clan.ownerId === req.user.id },
-        members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: m.power ? m.power.bestStage : 0, totalLevel: m.power ? m.power.totalLevel : 0, attackDamage: m.power ? m.power.attackDamage : 0 })),
+        members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: safeDamage(m.power?.attackDamage) })),
         boss: { week: boss.week, maxHp: boss.maxHp, hp: boss.hp, killed: boss.killedAt > 0, lastHit: lastHit ? lastHit.username : null, endsInMs: msToWeekEnd(now) },
         board: board.map(r => ({ username: r.username, damage: r.damage, attacks: r.attacks, you: r.userId === req.user.id })),
         attacksLeft: Math.max(0, ATTACKS_PER_DAY - used),
@@ -319,24 +365,26 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const save = await store.getSave(req.user.id);
     if (!save || !save.state) return res.status(400).json({ error: 'Save to the cloud first: the attack uses your stored hero.' });
     const boss = await currentBoss(clanId, now);
-    if (boss.hp <= 0) return res.status(400).json({ error: 'This week\'s boss is already defeated.' });
-    const { powerSummary } = await engine();
-    const damage = Math.max(1, powerSummary(JSON.parse(save.state), now).attackDamage);
+    const defeated = () => res.status(400).json({ error: 'This week\'s boss is already defeated.' });
+    if (boss.hp <= 0) return defeated();
+    const damage = Math.max(1, safeDamage(parseMetrics(save.metrics)?.attackDamage));
+    const slot = used + 1;
     try {
-        await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, slot: used + 1, damage, now });
+        await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, slot, damage, now });
     } catch (err) {
         if (err.code === '23505') return noneLeft(); // a parallel request took this slot
         throw err;
     }
     const after = await store.damageBoss(clanId, boss.week, damage);
-    const killed = !!after && after.hp <= 0 && await store.markBossKilled(clanId, boss.week, req.user.id, now);
+    if (!after) { await store.deleteAttack(req.user.id, day, slot); return defeated(); } // it fell to a parallel hit
+    const killed = after.hp <= 0 && await store.markBossKilled(clanId, boss.week, req.user.id, now);
     if (killed) {
         for (const row of await store.weeklyDamage(clanId, boss.week)) {
-            await store.addReward(row.userId, 'kill', JSON.stringify({ ...REWARDS.kill, week: boss.week }), now);
+            await store.addReward(row.userId, 'kill', JSON.stringify({ ...REWARDS.kill, week: boss.week }), now, `kill:${row.userId}:${boss.week}`);
         }
-        await store.addReward(req.user.id, 'lastHit', JSON.stringify({ ...REWARDS.lastHit, week: boss.week }), now);
+        await store.addReward(req.user.id, 'lastHit', JSON.stringify({ ...REWARDS.lastHit, week: boss.week }), now, `lastHit:${req.user.id}:${boss.week}`);
     }
-    res.json({ damage, hp: after ? after.hp : 0, maxHp: boss.maxHp, killed, attacksLeft: ATTACKS_PER_DAY - used - 1 });
+    res.json({ damage, hp: after.hp, maxHp: boss.maxHp, killed, attacksLeft: ATTACKS_PER_DAY - used - 1 });
 }));
 
 // ---------- rewards ----------
@@ -368,25 +416,23 @@ app.post('/api/leaderboard/consent', authenticateToken, route('consent', async (
 }));
 
 app.get('/api/leaderboard', authenticateToken, route('leaderboard', async (req, res) => {
-    const metric = METRICS[req.query.metric] ? req.query.metric : 'bestStage';
+    const metric = Object.hasOwn(METRICS, req.query.metric) ? req.query.metric : 'bestStage';
     const period = req.query.period === 'week' ? 'week' : 'all';
     const now = Date.now();
     const week = isoWeek(now);
     const key = `${metric}:${period}:${week}`;
     let rows = boardCache.get(key);
     if (!rows || now - rows.at > BOARD_CACHE_MS) {
-        const { powerSummary } = await engine();
         const entries = [];
-        for (const s of await store.optedInSaves()) {
-            if (recentlyFlagged(s.flags, now)) continue;
-            let value;
-            try { value = powerSummary(JSON.parse(s.state), now)[metric]; } catch { continue; }
+        for (const r of await store.leaderboardRows(week)) {
+            if (recentlyFlagged(r.flags, now)) continue;
+            let value = num(parseMetrics(r.metrics)?.[metric]);
             if (period === 'week') {
-                const snap = await store.getSnapshot(s.userId, week);
+                const snap = parseMetrics(r.weekMetrics);
                 if (!snap) continue;
-                value -= JSON.parse(snap)[metric] || 0;
+                value -= num(snap[metric]);
             }
-            entries.push({ userId: s.userId, username: s.username, value });
+            entries.push({ userId: r.userId, username: r.username, value });
         }
         entries.sort((a, b) => b.value - a.value || a.username.localeCompare(b.username));
         rows = { at: now, entries };

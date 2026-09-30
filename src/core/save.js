@@ -247,5 +247,7 @@ export function chooseSave(local, cloud) {
     if (!cloud) return { pick: 'local', conflict: false };
     const byPlaytime = (cloud.meta.playtimeMs || 0) > (local.meta.playtimeMs || 0) ? 'cloud' : 'local';
     const byTime = (cloud.meta.savedAt || 0) > (local.meta.savedAt || 0) ? 'cloud' : 'local';
-    return { pick: byPlaytime, conflict: byPlaytime !== byTime };
+    // Two different games (a guest save meeting an account's save) are never merged silently.
+    const sameGame = (cloud.meta.createdAt || 0) === (local.meta.createdAt || 0);
+    return { pick: byPlaytime, conflict: byPlaytime !== byTime || !sameGame };
 }

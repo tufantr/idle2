@@ -100,22 +100,42 @@ test('protected routes reject missing and forged tokens', async () => {
     assert.equal((await get('/load', forged)).status, 403);
 });
 
-test('implausible uploads are kept but flagged', async () => {
+test('implausible uploads are kept but flagged; honest ones are not', async () => {
     const token = await register('speedy');
     assert.equal((await post('/save', { state: heroSave({ playtimeMs: 1000, bestStage: 50, tokens: 100 }) }, token)).status, 200);
-    clock += 60 * 1000;
-    const res = await (await post('/save', { state: heroSave({ playtimeMs: 5 * 3600 * 1000, bestStage: 40, tokens: 50 }) }, token)).json();
+    clock += 1000;
+    // Uploads a second apart can't carry 99 in every skill or 950 new stages.
+    const res = await (await post('/save', { state: heroSave({ bestStage: 1000, xp: 13_034_431 * 3 }) }, token)).json();
     assert.equal(res.flagged, true);
     const flags = (await peek.flags('speedy')).map(f => f.reason);
-    assert.ok(flags.includes('playtime grew faster than real time'));
-    assert.ok(flags.includes('best stage went down'));
-    assert.ok(flags.includes('prestige tokens went down'));
+    assert.ok(flags.includes('best stage grew faster than any play could'));
+    assert.ok(flags.includes('total XP grew faster than any play could'));
     const loaded = await (await get('/load', token)).json();
-    assert.equal(loaded.state.combat.bestStage, 40, 'the save itself is accepted');
+    assert.equal(loaded.state.combat.bestStage, 1000, 'the save itself is accepted');
+
+    // A first upload is checked against what no save can reach.
+    const fresh = await register('fresh_cheat');
+    assert.equal((await (await post('/save', { state: heroSave({ bestStage: 1e9 }) }, fresh)).json()).flagged, true);
 
     const { plausibilityFlags } = app;
-    assert.deepEqual(plausibilityFlags(heroSave({ playtimeMs: 0 }), heroSave({ playtimeMs: 3600 * 1000 }), 3600 * 1000), []);
-    assert.ok(plausibilityFlags(heroSave(), heroSave({ xp: 1e12 }), 3600 * 1000).length);
+    const hour = 3600 * 1000;
+    assert.deepEqual(plausibilityFlags(heroSave({ bestStage: 40 }), heroSave({ bestStage: 90, xp: 2e6 }), hour), [], 'a good hour is fine');
+    assert.deepEqual(plausibilityFlags(heroSave({ bestStage: 90, tokens: 900 }), heroSave({ bestStage: 60, tokens: 10 }), hour), [], 'going back (a restored backup) is not cheating');
+    assert.deepEqual(plausibilityFlags(heroSave(), heroSave({ xp: 30e6 }), 12 * hour), [], 'a long absence allows a long replay');
+    assert.ok(plausibilityFlags(heroSave(), heroSave({ xp: 30e6 }), 60 * 1000).length, 'but not a minute later');
+});
+
+test('a save cannot reach the server\'s own objects', async () => {
+    const villain = await register('proto_villain');
+    const bystander = await register('bystander');
+    await post('/save', { state: heroSave() }, bystander);
+    const body = '{"state":{"version":3,"__proto__":{"toString":1,"ignoreExpiration":true,"polluted":"yes"},"combat":{"constructor":{"prototype":{"polluted":"yes"}}}}}';
+    const res = await fetch(base + '/save', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${villain}` }, body });
+    assert.equal(res.status, 200);
+    await post('/leaderboard/consent', { optIn: true }, villain);
+    await get('/leaderboard', villain);
+    assert.equal(({}).polluted, undefined);
+    assert.equal((await get('/load', bystander)).status, 200, 'everyone else still gets in');
 });
 
 test('clans: create, list, join, the member cap, leaving hands the clan on', async () => {
@@ -253,4 +273,75 @@ test('leaderboards: opt-in only, server-computed, flagged accounts left out, a w
     await post('/leaderboard/consent', { optIn: false }, proud);
     const after = await (await get('/leaderboard?metric=bestStage', proud)).json();
     assert.equal(after.me, null, 'opting out removes you at once');
+});
+
+test('parallel requests pay a finished week once, and once per player across clans', async () => {
+    const a = await register('race_a');
+    const b = await register('race_b');
+    await post('/save', { state: heroSave({ tokens: 50 }) }, a);
+    await post('/save', { state: heroSave({ tokens: 50 }) }, b);
+    const { clanId: first } = await (await post('/clans', { name: 'Racers One', tag: 'RC1' }, a)).json();
+    await post('/clan/attack', {}, a);
+    // Same week, a second clan: attack there too.
+    await post('/clans/leave', {}, a);
+    const { clanId: second } = await (await post('/clans', { name: 'Racers Two', tag: 'RC2' }, a)).json();
+    await post('/clans/join', { clanId: second }, b);
+    clock += 24 * 3600 * 1000;
+    await post('/clan/attack', {}, a);
+    await post('/clan/attack', {}, b);
+    assert.ok(first !== second);
+    clock += 8 * 24 * 3600 * 1000; // the week is over
+    await Promise.all(Array.from({ length: 8 }, () => get('/clan', b)));
+    const rewards = (await (await get('/rewards', a)).json()).rewards;
+    assert.equal(rewards.filter(r => r.kind === 'participation').length, 1, 'one participation reward for the week');
+    assert.ok(rewards.filter(r => r.kind === 'top').length <= 1, 'at most one top-three reward for the week');
+    const theirs = (await (await get('/rewards', b)).json()).rewards;
+    assert.equal(theirs.filter(r => r.kind === 'participation').length, 1);
+});
+
+test('an absurd save cannot break its clan', async () => {
+    const owner = await register('giant_owner');
+    const giant = await register('giant');
+    const { clanId } = await (await post('/clans', { name: 'Giants', tag: 'GNT' }, owner)).json();
+    await post('/clans/join', { clanId }, giant);
+    await post('/save', { state: heroSave({ tokens: 10 }) }, owner);
+    await post('/save', { state: heroSave({ tokens: 1e19, bestStage: 1 }) }, giant);
+    const view = await get('/clan', owner);
+    assert.equal(view.status, 200);
+    const data = await view.json();
+    assert.ok(Number.isSafeInteger(data.boss.maxHp), `boss HP ${data.boss.maxHp}`);
+    const hit = await post('/clan/attack', {}, giant);
+    assert.equal(hit.status, 200);
+    assert.ok(Number.isSafeInteger((await hit.json()).damage));
+    // The owner can remove them.
+    assert.equal((await post('/clan/kick', { username: 'giant_owner' }, giant)).status, 403, 'only the owner removes members');
+    assert.equal((await post('/clan/kick', { username: 'giant' }, owner)).status, 200);
+    assert.equal((await (await get('/clan', owner)).json()).members.length, 1);
+    assert.equal((await (await get('/clan', giant)).json()).clan, null);
+});
+
+test('clan races: parallel creates leave no empty clan, parallel joins respect the cap', async () => {
+    const solo = await register('double_founder');
+    const results = await Promise.all([
+        post('/clans', { name: 'Twin One', tag: 'TW1' }, solo),
+        post('/clans', { name: 'Twin Two', tag: 'TW2' }, solo)
+    ]);
+    assert.equal(results.filter(r => r.status === 200).length, 1);
+    const twins = (await (await get('/clans?search=twin', solo)).json()).clans;
+    assert.equal(twins.length, 1, 'the losing clan is removed');
+    assert.equal(twins[0].members, 1);
+
+    const host = await register('crowded_host');
+    const { clanId } = await (await post('/clans', { name: 'Crowded', tag: 'CRWD' }, host)).json();
+    const joiners = [];
+    for (let i = 0; i < 25; i++) joiners.push(await register(`crowd_${i}`));
+    await Promise.all(joiners.map(t => post('/clans/join', { clanId }, t)));
+    const view = await (await get('/clan', host)).json();
+    assert.equal(view.members.length, 20, 'never past 20');
+});
+
+test('leaderboards ignore inherited metric names', async () => {
+    const t = await register('curious');
+    const res = await (await get('/leaderboard?metric=constructor', t)).json();
+    assert.equal(res.metric, 'bestStage');
 });

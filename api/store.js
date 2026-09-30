@@ -1,6 +1,6 @@
 // Every query the API makes, in one place. Routes in index.js call these functions; the tests swap
 // this module for an in-memory implementation with the same interface (test/helpers/memory-store.cjs),
-// and tools/api-postgres-check.cjs runs these exact queries against a real Postgres.
+// or run these exact queries against a real Postgres when API_TEST_DATABASE_URL is set.
 
 const { sql } = require('./database');
 
@@ -21,6 +21,8 @@ async function ensureSchema() {
     // Columns added after the first release; IF NOT EXISTS keeps boot idempotent.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS flags TEXT DEFAULT '[]'`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS leaderboard_opt_in BOOLEAN DEFAULT FALSE`;
+    // Leaderboard and clan numbers, computed by the server from the save when it is stored.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS metrics TEXT`;
     await sql`
         CREATE TABLE IF NOT EXISTS clans (
             id SERIAL PRIMARY KEY,
@@ -39,6 +41,10 @@ async function ensureSchema() {
             joined_at BIGINT NOT NULL
         );
     `;
+    // A member holds one of the clan's numbered places, unique per clan, so parallel joins can't
+    // take a clan past its size.
+    await sql`ALTER TABLE clan_members ADD COLUMN IF NOT EXISTS slot SMALLINT`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS clan_members_slot ON clan_members (clan_id, slot)`;
     await sql`
         CREATE TABLE IF NOT EXISTS clan_bosses (
             clan_id INTEGER NOT NULL,
@@ -76,6 +82,9 @@ async function ensureSchema() {
             claimed_at BIGINT DEFAULT 0
         );
     `;
+    // Rewards that may be paid once per player per week (whatever clans they were in) carry a key.
+    await sql`ALTER TABLE rewards ADD COLUMN IF NOT EXISTS dedupe VARCHAR(80)`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS rewards_dedupe ON rewards (dedupe)`;
     await sql`
         CREATE TABLE IF NOT EXISTS weekly_snapshots (
             user_id INTEGER NOT NULL,
@@ -99,24 +108,28 @@ async function findUserByName(username) {
 }
 
 async function getSave(userId) {
-    const { rows } = await sql`SELECT game_state, last_saved, flags, leaderboard_opt_in FROM users WHERE id = ${userId}`;
+    const { rows } = await sql`SELECT game_state, last_saved, flags, leaderboard_opt_in, metrics FROM users WHERE id = ${userId}`;
     const row = rows[0];
     if (!row) return null;
-    return { state: row.game_state || null, lastSaved: int(row.last_saved), flags: row.flags || '[]', optIn: !!row.leaderboard_opt_in };
+    return { state: row.game_state || null, lastSaved: int(row.last_saved), flags: row.flags || '[]', optIn: !!row.leaderboard_opt_in, metrics: row.metrics || null };
 }
 
-async function putSave(userId, stateJson, savedAt, flagsJson) {
-    await sql`UPDATE users SET game_state = ${stateJson}, last_saved = ${savedAt}, flags = ${flagsJson} WHERE id = ${userId}`;
+async function putSave(userId, stateJson, savedAt, flagsJson, metricsJson) {
+    await sql`UPDATE users SET game_state = ${stateJson}, last_saved = ${savedAt}, flags = ${flagsJson}, metrics = ${metricsJson} WHERE id = ${userId}`;
 }
 
 async function setOptIn(userId, optIn) {
     await sql`UPDATE users SET leaderboard_opt_in = ${!!optIn} WHERE id = ${userId}`;
 }
 
-/** Saves of every opted-in user (for leaderboards). */
-async function optedInSaves() {
-    const { rows } = await sql`SELECT id, username, game_state, flags FROM users WHERE leaderboard_opt_in = TRUE AND game_state IS NOT NULL`;
-    return rows.map(r => ({ userId: r.id, username: r.username, state: r.game_state, flags: r.flags || '[]' }));
+/** Every opted-in player's stored numbers, with this week's snapshot if there is one (one query). */
+async function leaderboardRows(week) {
+    const { rows } = await sql`
+        SELECT u.id, u.username, u.flags, u.metrics, s.metrics AS week_metrics
+        FROM users u LEFT JOIN weekly_snapshots s ON s.user_id = u.id AND s.week = ${week}
+        WHERE u.leaderboard_opt_in = TRUE AND u.metrics IS NOT NULL
+    `;
+    return rows.map(r => ({ userId: r.id, username: r.username, flags: r.flags || '[]', metrics: r.metrics, weekMetrics: r.week_metrics || null }));
 }
 
 // ---------- weekly snapshots (for "this week" boards) ----------
@@ -172,22 +185,43 @@ async function membershipOf(userId) {
     return rows[0] ? { clanId: rows[0].clan_id, joinedAt: int(rows[0].joined_at) } : null;
 }
 
-async function addMember(clanId, userId, now) {
-    await sql`INSERT INTO clan_members (user_id, clan_id, joined_at) VALUES (${userId}, ${clanId}, ${now})`;
+/**
+ * Take the lowest free place in the clan. Returns false if the clan is full. Throws a unique
+ * violation (23505) if the player is already in a clan; a parallel join that took the same place
+ * is retried.
+ */
+async function addMember(clanId, userId, now, maxMembers) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+            const { rows } = await sql`
+                INSERT INTO clan_members (user_id, clan_id, joined_at, slot)
+                SELECT ${userId}::int, ${clanId}::int, ${now}::bigint, s FROM generate_series(1, ${maxMembers}::int) AS s
+                WHERE s NOT IN (SELECT slot FROM clan_members WHERE clan_id = ${clanId}::int AND slot IS NOT NULL)
+                  AND (SELECT COUNT(*) FROM clan_members WHERE clan_id = ${clanId}::int) < ${maxMembers}::int
+                ORDER BY s LIMIT 1
+                RETURNING slot
+            `;
+            return rows.length > 0;
+        } catch (err) {
+            if (err.code === '23505' && err.constraint === 'clan_members_slot') continue;
+            throw err;
+        }
+    }
+    return false;
 }
 
 async function removeMember(userId) {
     await sql`DELETE FROM clan_members WHERE user_id = ${userId}`;
 }
 
-/** Members with their saves, oldest member first. */
+/** Members with their stored numbers, oldest member first. */
 async function clanMembers(clanId) {
     const { rows } = await sql`
-        SELECT u.id, u.username, u.game_state, u.flags, m.joined_at
+        SELECT u.id, u.username, u.metrics, u.flags, m.joined_at
         FROM clan_members m JOIN users u ON u.id = m.user_id
         WHERE m.clan_id = ${clanId} ORDER BY m.joined_at ASC, u.id ASC
     `;
-    return rows.map(r => ({ userId: r.id, username: r.username, state: r.game_state, flags: r.flags || '[]', joinedAt: int(r.joined_at) }));
+    return rows.map(r => ({ userId: r.id, username: r.username, metrics: r.metrics || null, flags: r.flags || '[]', joinedAt: int(r.joined_at) }));
 }
 
 // ---------- the weekly clan boss ----------
@@ -232,13 +266,24 @@ async function unsettledBosses(clanId, beforeWeek) {
     return rows.map(bossRow);
 }
 
-async function markSettled(clanId, week) {
-    await sql`UPDATE clan_bosses SET settled = TRUE WHERE clan_id = ${clanId} AND week = ${week}`;
+/** Returns true for the one caller that settles this week (so its rewards are paid at most once). */
+async function claimSettlement(clanId, week) {
+    const { rows } = await sql`
+        UPDATE clan_bosses SET settled = TRUE
+        WHERE clan_id = ${clanId} AND week = ${week} AND settled = FALSE
+        RETURNING clan_id
+    `;
+    return rows.length > 0;
 }
 
 /** Throws a unique violation (code 23505) if that attack slot is already used today. */
 async function recordAttack({ clanId, userId, week, day, slot, damage, now }) {
     await sql`INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at) VALUES (${clanId}, ${userId}, ${week}, ${day}, ${slot}, ${damage}, ${now})`;
+}
+
+/** Give an attack slot back (the boss was already down when the attack landed). */
+async function deleteAttack(userId, day, slot) {
+    await sql`DELETE FROM clan_attacks WHERE user_id = ${userId} AND day = ${day} AND slot = ${slot}`;
 }
 
 async function attacksToday(userId, day) {
@@ -259,8 +304,9 @@ async function weeklyDamage(clanId, week) {
 
 // ---------- rewards ----------
 
-async function addReward(userId, kind, payloadJson, now) {
-    await sql`INSERT INTO rewards (user_id, kind, payload, created_at) VALUES (${userId}, ${kind}, ${payloadJson}, ${now})`;
+/** Add a reward; with a `dedupe` key, a second reward with the same key is silently skipped. */
+async function addReward(userId, kind, payloadJson, now, dedupe = null) {
+    await sql`INSERT INTO rewards (user_id, kind, payload, created_at, dedupe) VALUES (${userId}, ${kind}, ${payloadJson}, ${now}, ${dedupe}) ON CONFLICT (dedupe) DO NOTHING`;
 }
 
 async function unclaimedRewards(userId) {
@@ -284,9 +330,9 @@ async function claimRewards(userId, ids, now) {
 
 module.exports = {
     ensureSchema,
-    createUser, findUserByName, getSave, putSave, setOptIn, optedInSaves,
+    createUser, findUserByName, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
-    getBoss, createBoss, damageBoss, markBossKilled, unsettledBosses, markSettled, recordAttack, attacksToday, weeklyDamage,
+    getBoss, createBoss, damageBoss, markBossKilled, unsettledBosses, claimSettlement, recordAttack, deleteAttack, attacksToday, weeklyDamage,
     addReward, unclaimedRewards, claimRewards
 };

@@ -328,6 +328,45 @@ test('migration v2 -> v3 turns the old daily timestamp into banked crates', () =
     assert.equal(state.daily.banked, 1);
     const fresh = migrateState({ ...createDefaultState(T0), version: 2, daily: { lastClaim: T0 - 1000 } }, T0);
     assert.equal(fresh.daily.banked, 0);
+    // v2 held one waiting crate at most: after 41 hours there is still just the one.
+    const old = new Game({ ...createDefaultState(T0), version: 2, daily: { lastClaim: T0 - 41 * 3600 * 1000 } }, T0);
+    old.tick(T0 + 1000);
+    assert.equal(old.state.daily.banked, 1);
+});
+
+test('a save cannot reach Object.prototype, and a broken section loads as defaults', () => {
+    migrateState(JSON.parse('{"version":3,"__proto__":{"polluted":1},"meta":{"__proto__":{"polluted":1}},"combat":{"constructor":{"prototype":{"polluted":1}}}}'), T0);
+    assert.equal(({}).polluted, undefined);
+    const base = JSON.parse(JSON.stringify(createDefaultState(T0)));
+    for (const section of Object.keys(base)) {
+        for (const bad of [null, 'x', [], 1e308]) {
+            const game = new Game({ ...base, [section]: bad }, T0);
+            game.resumeFromSave(T0 + 3600_000);
+            game.tick(T0 + 3600_100);
+            assert.ok(game.serialize().length > 0, `${section} = ${JSON.stringify(bad)}`);
+        }
+    }
+});
+
+test('a hostile save string is rebuilt from the game\'s own tables', () => {
+    const X = '<img src=x onerror=alert(1)>';
+    const s = JSON.parse(JSON.stringify(createDefaultState(T0)));
+    s.prestige.skillPoints = X; s.camp.whetstone = X; s.stats.kills = X; s.gold = X; s.combat.potion = X;
+    s.equipped.Weapon = { id: '1)"><b>', type: 'Weapon', tier: X, name: X, rarity: X, color: 'red" onmouseover="x', icon: X, atk: X, def: 5, affixes: [{ stat: '__proto__', value: 1 }], upgrade: X };
+    s.inventory = [{ id: 7, type: X }, { id: 8, type: 'Ring', name: 'Ring', rarity: 'epic', atk: 3, def: 1 }, 'junk'];
+    s.log = [{ t: 1, type: 'x" onclick="y', text: X }];
+    const st = new Game(s, T0).state;
+    const w = st.equipped.Weapon;
+    assert.ok(Number.isSafeInteger(w.id) && w.tier === 1 && w.rarity === 'common' && w.atk === 0 && w.affixes.length === 0);
+    assert.match(w.color, /^#[0-9a-f]{6}$/);
+    assert.equal(w.name, X, 'text stays text: the UI escapes it');
+    assert.deepEqual(st.inventory.map(i => i.type), ['Ring']);
+    assert.equal(st.log[0].type, 'info');
+    assert.equal(st.prestige.skillPoints, 0);
+    assert.equal(st.gold, 0);
+    assert.equal(st.combat.potion, 'none');
+    const ids = [w.id, ...st.inventory.map(i => i.id)];
+    assert.equal(new Set(ids).size, ids.length, 'item ids stay unique');
 });
 
 test('offline replay gives the same result as playing online for the same time', () => {

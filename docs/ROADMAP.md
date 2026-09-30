@@ -186,8 +186,9 @@ nothing for sale, so the Vercel Hobby plan fits; players' numbers are computed o
 - [x] Groundwork: real accounts, bcrypt, expiring JWTs, cloud save with a conflict prompt
 - [x] **Server-side offline time**: `/api/load` returns the server's clock and the time of the last
       upload; the client replays that gap instead of trusting its own clock
-- [x] **Plausibility checks** on upload (play time vs real time, an XP ceiling, best stage and tokens
-      never falling) — flag, don't reject; flagged accounts are left out of leaderboards for 30 days
+- [x] **Plausibility checks** on upload: every ranked number may grow only as fast as play could in
+      the real time since the last upload, under absolute ceilings — flag, don't reject; flagged
+      accounts are left out of leaderboards and clan boss sizing for 30 days
 - [x] **Clan MVP**: clans of up to 20 with looking-for lines; a weekly shared-HP boss sized from the
       members' power; 3 attacks per member per day (a unique per-day slot in the database), **damage
       computed on the server** from the stored save; rewards for participation, top 3, the kill and the
