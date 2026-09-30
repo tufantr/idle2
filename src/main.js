@@ -8,8 +8,9 @@ import {
 import { describeOffline } from './systems/offline.js';
 import { renderNav, renderHeader, renderTab, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, TABS } from './ui/render.js';
 import { createScene } from './ui/scene.js';
+import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { isUnlocked } from './data/unlocks.js';
-import { fmt } from './ui/format.js';
+import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
 
@@ -29,6 +30,7 @@ const prefs = {
 
 const ui = {
     tab: prefs.get('fantasyIdle.tab') || 'combat',
+    fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
     smithMetal: 'copper_bar',
     craftBar: 'silver_bar',
     craftGem: 'amethyst',
@@ -42,6 +44,18 @@ const ui = {
     // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
     social: freshSocial()
 };
+
+function loadFresh() {
+    try {
+        const ids = JSON.parse(prefs.get('fantasyIdle.fresh') || '[]');
+        return new Set(Array.isArray(ids) ? ids.filter(id => TABS.some(t => t.id === id)) : []);
+    } catch { return new Set(); }
+}
+function markFresh(id, on) {
+    if (on === ui.fresh.has(id)) return;
+    if (on) ui.fresh.add(id); else ui.fresh.delete(id);
+    prefs.set('fantasyIdle.fresh', JSON.stringify([...ui.fresh]));
+}
 
 function freshSocial() {
     return {
@@ -65,6 +79,9 @@ const scene = createScene(document.getElementById('scene'), {
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); }
 });
+
+// Celebrations for the big moments (src/ui/rewards.js), in their own layer above the page.
+const rewards = createRewards(document.body.appendChild(Object.assign(document.createElement('div'), { id: 'celebrate' })));
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
@@ -114,10 +131,28 @@ setInterval(() => {
     }
 }, TICK_MS);
 
-function frame() {
+function frame(now) {
     patchLive(game, ui);
     scene.frame(game);
+    paintGold(now);
     requestAnimationFrame(frame);
+}
+
+// The gold counter rolls up to a new total instead of jumping (and drops at once when gold is spent).
+let goldShown = null;
+let goldPaintedAt = 0;
+function paintGold(now = performance.now()) {
+    const node = document.getElementById('hdr-gold');
+    if (!node) return;
+    const target = game.state.gold;
+    const dt = Math.min(250, Math.max(0, now - (goldPaintedAt || now)));
+    goldPaintedAt = now;
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (goldShown === null || target < goldShown || still) goldShown = target;
+    else goldShown += (target - goldShown) * Math.min(1, dt / 220);
+    if (target - goldShown <= Math.max(1, target * 1e-4)) goldShown = target;
+    const text = fmt(goldShown);
+    if (node.textContent !== text) node.textContent = text;
 }
 requestAnimationFrame(frame);
 
@@ -197,6 +232,7 @@ function render() {
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
     scene.sync(game, ui);
+    paintGold();
 }
 
 function handleEvents(events) {
@@ -204,26 +240,44 @@ function handleEvents(events) {
     for (const ev of events) {
         scene.event(ev, game);
         switch (ev.type) {
-            case 'levelUp': toast(`${SKILLS[ev.skill].icon} ${SKILLS[ev.skill].name} level ${ev.level}!`, 'level'); break;
+            case 'levelUp': {
+                const card = levelCelebration(ev);
+                if (card) rewards.celebrate(card);
+                else toast(`${SKILLS[ev.skill].icon} ${SKILLS[ev.skill].name} level ${ev.level}!`, 'level');
+                break;
+            }
             case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
-            case 'unlock': toast(`🔓 ${TABS.find(t => t.id === ev.id)?.name || ev.id.charAt(0).toUpperCase() + ev.id.slice(1)} unlocked!`, 'unlock'); break;
+            case 'unlock':
+                markFresh(ev.id === 'prestige' ? 'shop' : ev.id, true);
+                rewards.celebrate(unlockCelebration(ev.id, TABS));
+                break;
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.icon} ${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft'); break;
             case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
             case 'death': if (!onCombat) toast(`💀 Defeated at stage ${ev.stage} — retreating`, 'death'); break;
             case 'bossTimeout': if (!onCombat) toast(`⏳ The boss held out — regrouping for a minute`, 'death'); break;
-            case 'prestige': toast(`✨ Prestige! +${ev.tokens} tokens, +${ev.skillPoints} SP`, 'prestige'); save(Date.now()); break;
+            case 'prestige':
+                rewards.celebrate({ kind: 'prestige', icon: '✨', kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
+                    lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
+                save(Date.now());
+                break;
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`${SKILLS[ev.skill].icon} A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame'); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
             case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`🎁 Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss'); break;
             case 'dungeonFail': toast('🕳️ The dungeon run failed', 'death'); break;
             case 'titan': toast(ev.won ? `🗿 Titan defeated! Permanent +2% ATK and HP` : `🗿 The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death'); break;
-            case 'pet': toast(`🐾 ${ev.pet.icon} ${ev.pet.name} joined you! ${ev.pet.desc}`, 'achievement'); break;
-            case 'unique': toast(`🌟 Unique: ${ev.item.name}!`, 'achievement'); break;
+            case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: ev.pet.icon, kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'unique':
+                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: '🌟', kicker: 'Unique item', title: ev.item.name, lines: [`${ev.item.icon || '🛡️'} In your bag: equip it from the Inventory`] });
+                else toast(`🌟 A spare ${ev.item.name}: salvage it for essence`, 'achievement');
+                break;
             case 'obstacleBuilt': toast(`${ev.obstacle.icon} ${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement'); break;
-            case 'eventMilestone': toast(`${ev.event.icon} ${ev.event.name}: ${ev.milestone.desc}!`, 'achievement'); break;
-            case 'masteryLevel': if ([50, 75, 99].some(m => ev.from < m && ev.level >= m)) toast(`${SKILLS[ev.skill].icon} ${ev.name}: mastery ${ev.level}!`, ev.level >= 99 ? 'achievement' : 'level'); break;
+            case 'eventMilestone': rewards.celebrate({ kind: 'unlock', icon: ev.event.icon, kicker: ev.event.name, title: ev.milestone.desc }); break;
+            case 'masteryLevel':
+                if (ev.from < 99 && ev.level >= 99) rewards.celebrate({ key: `mastery:${ev.skill}:${ev.key}`, kind: 'legend', icon: SKILLS[ev.skill].icon, kicker: 'Mastery 99', title: ev.name });
+                else if ([50, 75].some(m => ev.from < m && ev.level >= m)) toast(`${SKILLS[ev.skill].icon} ${ev.name}: mastery ${ev.level}!`, 'level');
+                break;
             case 'kill': if (ev.enemy.boss && !onCombat) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss'); break;
             default: break;
         }
@@ -377,6 +431,7 @@ window.FI = {
     switchTab(id) {
         ui.tab = id;
         prefs.set('fantasyIdle.tab', id);
+        markFresh(id, false);
         if (id === 'clan' && cloud.loggedIn && Date.now() - ui.social.fetchedAt > 5000) refreshSocial();
         render();
     },
@@ -429,7 +484,7 @@ window.FI = {
     buyCamp(id, count) { game.buyCampUpgrade(id, count); render(); },
     enterDungeon(id) { if (game.enterDungeon(id)) window.FI.switchTab('combat'); else render(); },
     setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
-    assembleUnique(id) { const item = game.assembleUnique(id); if (item) toast(`🌟 ${item.name} assembled!`, 'achievement'); render(); },
+    assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
     challengeTitan() { if (game.challengeTitan()) window.FI.switchTab('combat'); else render(); },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
@@ -469,7 +524,14 @@ window.FI = {
     failMinigame(skill) { game.failMinigame(skill); render(); },
     pumpHeat(skill) { game.pumpHeat(skill); },
     setDragValue(skill, value) { game.setDragValue(skill, value); },
-    claimDaily() { const r = game.claimDaily(); if (r) toast(`📦 +${fmt(r.gold)} gold, +${r.essence} essence and materials!`, 'daily'); render(); },
+    claimDaily() {
+        const crate = game.claimDaily();
+        if (crate) {
+            if (ui.modalOpen === 'crate') closeModal(); // "open the next": the new crate replaces this one
+            openModal(renderCrateModal(crate, game.state.daily.banked), 'crate');
+        }
+        render();
+    },
     advisorGo(tab, action) {
         if (action === 'claimDaily') return window.FI.claimDaily();
         if (tab) window.FI.switchTab(tab);

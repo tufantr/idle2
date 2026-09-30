@@ -547,6 +547,13 @@ keeps:
   peaks, drowned columns, the volcano, ice, cloud spires, void crystals); dungeons are torch-lit halls
   (the Crystal Depths use the caves, the Dragon's Lair the volcano) and the Titan looms behind its fight.
 
+Reward moments (`src/ui/rewards.js`) follow the same rules. A level-up gets a celebration card only
+when it is a milestone (every tenth level, and 99) or opens something, and the card names what
+(`unlocksAtLevel` reads the nodes, recipes, metals, gems, crops, tools and obstacle slots); other
+levels stay a toast, so the cards keep their weight. Cards queue one at a time (at most four waiting,
+merged by key, so a burst of levels shows the highest). A new tab also gets a "New" badge until it is
+opened (remembered in the browser, not the save).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -784,7 +791,8 @@ src/data/             resources · skills · workshop · items · zones · camp 
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
-src/ui/               render.js (HTML per tab) · scene.js (the battle scene above the Combat tab) · format.js
+src/ui/               render.js (HTML per tab) · scene.js (the battle scene above the Combat tab) · rewards.js
+                      (celebrations, the daily crate) · format.js
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, saves, API; the API suite runs on an

@@ -226,8 +226,12 @@ one visual identity (dark fantasy: carved serif lettering, stone and bronze, gol
       banners, the combo meter, a campfire while resting, and a stage path whose cleared stones are
       buttons. Built once and driven by game events, so tab re-renders never cut an animation short;
       honours reduced motion and caps effects per frame for background-tab catch-up
-- [ ] **Reward moments**: level-up and unlock ceremonies, a gold counter that rolls up, the daily
-      crate opened like a chest, pet and unique reveals
+- [x] **Reward moments** (`src/ui/rewards.js`): a celebration card with rays and confetti for
+      milestone levels (every tenth, 99) and any level that opens something (it names what: "Mining 10 ·
+      Iron Vein"), new tabs (which also get a "New" badge until visited), pets, uniques, prestige,
+      mastery 99 and event milestones; one card at a time, merged by key, skipped while the tab is
+      hidden. The daily crate shakes, bursts open and hands out its loot one line at a time, with a
+      button for the next banked crate. The gold counter rolls up to a new total
 - [ ] **Dark fantasy theme** across every tab
 - [ ] **RPG screens**: an equipment paperdoll, a grid inventory with tooltips, a world map for stages
 - [ ] **Quest board** for the advisor's goals, and a phone layout with the scene and a hotbar on top

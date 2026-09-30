@@ -87,7 +87,8 @@ export function renderNav(game, ui) {
             if (!unlocked) {
                 html += `<button class="nav-btn locked" title="${esc(def?.hint || '')}"><span>🔒 ${tab.name}</span><span class="nav-hint">${def?.comingSoon ? 'soon' : ''}</span></button>`;
             } else {
-                html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}" onclick="FI.switchTab('${tab.id}')"><span>${tab.icon} ${tab.name}</span>${badge}</button>`;
+                const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
+                html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span>${tab.icon} ${tab.name}</span>${fresh || badge}</button>`;
             }
         }
     }
@@ -102,7 +103,7 @@ export function renderHeader(game, ui, cloud) {
     const goals = nextGoals(state, 1);
     const action = resolveAction(state);
     const chips = [
-        `<div class="chip gold" title="Gold: run-scoped combat gold (resets on prestige)"><span>Gold</span><b>${fmt(state.gold)}</b></div>`,
+        `<div class="chip gold" title="Gold: run-scoped combat gold (resets on prestige)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         `<div class="chip tokens" title="Prestige tokens: permanent +0.5% ATK/DEF each"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>`,
         `<div class="chip sp" title="Skill points: spend in the Shop"><span>SP</span><b>${state.prestige.skillPoints}</b></div>`,
         `<div class="chip essence" title="Monster essence: upgrades equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>`
