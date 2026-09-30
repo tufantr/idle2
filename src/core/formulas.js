@@ -2,7 +2,7 @@
 // change a constant here and re-run the simulator to see the pacing move.
 
 import { AUTHORED_STAGES, zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER } from '../data/items.js';
+import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER } from '../data/items.js';
 import { rng } from './rng.js';
 
 export const BALANCE = {
@@ -38,6 +38,8 @@ export const BALANCE = {
         tokenDivisor: 5,
         tokenExp: 1.5,
         startStageFraction: 0.10,
+        minRunMs: 10 * 60 * 1000,   // a run lasts at least this long before it can be prestiged
+        fullRunFraction: 0.5,       // the per-prestige skill point needs a run this share of your best
         spPerPrestige: 1,
         spStageStep: 25         // +1 SP for every 25 stages of all-time best, claimed once
     },
@@ -137,8 +139,13 @@ export function tokensForStage(maxStage, tokenMult = 1) {
 }
 
 /** Gold earned by one kill at the player's best stage: the unit for gold prices that must keep pace with inflation. */
+/**
+ * Gold for a regular kill at `stage`: the yardstick for prices and payouts. A boss stage prices like
+ * its regular monsters (a boss's 3x health and 3x gold made everything ~9x dearer while you were
+ * stuck at one).
+ */
 export function goldPerKillAtStage(stage, goldMult = 1) {
-    return goldForKill(enemyForStage(Math.max(1, stage)), goldMult);
+    return goldForKill({ maxHp: Math.floor(enemyBaseStats(Math.max(1, stage)).hp), boss: false }, goldMult);
 }
 
 export function prestigeStartStage(bestStage) {
@@ -223,7 +230,7 @@ export function generateDrop(zoneTier, boss, nextId) {
     const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));
     return generateEquipment({
         type, tier,
-        power: jewel ? gearTier.power * 0.8 : gearTier.power,
+        power: jewel ? gearTier.power * JEWEL_POWER : gearTier.power,
         materialName: jewel ? null : gearTier.name,
         gemName: jewel ? gearTier.jewel : null,
         rarityWeights: weights,

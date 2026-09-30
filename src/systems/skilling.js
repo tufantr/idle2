@@ -3,7 +3,7 @@
 
 import { SKILLS, skillNode } from '../data/skills.js';
 import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
-import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY } from '../data/items.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER } from '../data/items.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { GEM_DROP_TABLE } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
@@ -62,12 +62,11 @@ function resolveBase(state, action) {
             const gemTier = GEM_TIERS.find(g => g.gem === action.gem);
             if (!jewelBar || !gemTier || !CRAFTING_TYPES.includes(action.type)) return null;
             const gem = RESOURCES[action.gem];
-            const bar = RESOURCES[action.bar];
             return {
                 kind: 'craft', skill: 'crafting', id: `${action.bar}:${action.gem}:${action.type}`, label: `Craft ${gem.name} ${TYPE_NAMES[action.type]}`,
                 levelReq: Math.min(99, Math.max(jewelBar.levelReq, gemTier.levelReq) + (CRAFT_SLOT_OFFSET[action.type] || 0)), interval: CRAFT_INTERVAL, xp: gemTier.xp,
                 consumes: { [action.bar]: 1, [action.gem]: 1 },
-                item: { type: action.type, tier: gem.tier, power: (bar.power + gem.power) / 2, materialName: jewelBar.name, gemName: gem.name },
+                item: { type: action.type, tier: gem.tier, power: gem.power * JEWEL_POWER * jewelBar.powerMult, materialName: jewelBar.name, gemName: gem.name },
                 masteryKey: jewelKey(action.gem)
             };
         }

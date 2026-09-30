@@ -56,7 +56,7 @@ export function createDefaultState(now = Date.now()) {
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
         agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
         events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [] },
-        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0 },
+        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now },
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
         achievements: {},
@@ -283,6 +283,9 @@ function normalise(data, now) {
     state.combat.maxStage = Math.max(state.combat.stage, Math.floor(Number(state.combat.maxStage) || 1));
     state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
     state.combat.combo = 0;
+    // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
+    if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;
+    state.prestige.runStartedAt = Math.min(state.prestige.runStartedAt, now);
     // A titan fight never survives a reload; a dungeon run does (if it still makes sense).
     const run = state.combat.dungeon;
     const runDungeon = run ? DUNGEONS.find(d => d.id === run.id) : null;

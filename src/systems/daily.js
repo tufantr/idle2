@@ -2,7 +2,7 @@
 // costs nothing. No streaks. Each crate is worth ~40 kills of gold at your best stage plus
 // materials, essence and a gem from that zone.
 
-import { enemyForStage, goldForKill } from '../core/formulas.js';
+import { goldPerKillAtStage } from '../core/formulas.js';
 import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RESOURCES } from '../data/resources.js';
 import { rng } from '../core/rng.js';
@@ -11,7 +11,7 @@ import { log, bumpStat } from './progress.js';
 export const DAILY_INTERVAL_MS = 20 * 3600 * 1000;
 export const DAILY_MAX_BANKED = 3;
 
-/** Ripen crates for the time that has passed. The clock rests while the bank is full. */
+/** Ripen crates for the time that has passed. A full bank keeps the clock cycling, never adding a fourth. */
 export function accrueDaily(state, now) {
     const d = state.daily;
     while (d.banked < DAILY_MAX_BANKED && now >= d.nextAt) {
@@ -34,7 +34,7 @@ export function claimDaily(game) {
 
     const stage = Math.max(1, state.combat.bestStage);
     const zone = zoneForStage(stage);
-    const gold = 40 * goldForKill(enemyForStage(stage), game.derived.goldMult);
+    const gold = 40 * goldPerKillAtStage(stage, game.derived.goldMult);
     const materials = {};
     for (let i = 0; i < 6; i++) {
         const pick = rng.weighted(zone.loot);

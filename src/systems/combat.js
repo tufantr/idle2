@@ -1,9 +1,10 @@
 // Auto-battler: player and enemy attack on their own timers; food, potions, loot, death, clicks.
 
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, BALANCE } from '../core/formulas.js';
+import { BASE } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
 import { addItem } from './inventory.js';
-import { zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE } from '../data/zones.js';
+import { zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
@@ -128,13 +129,13 @@ export function playerAttack(game, { manual = false } = {}) {
 
     const potionActive = ensurePotion(game);
     const combo = c.combo || 0;
-    let critChance = d.critChance + (combo >= 10 ? 0.10 : 0);
+    const critChance = Math.min(BASE.caps.critChance, d.critChance + (combo >= 10 ? 0.10 : 0));
     const isCrit = rng.chance(critChance);
     let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult : 1);
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
     enemy.hp -= dmg;
 
-    const lifesteal = d.lifesteal + (combo >= 20 ? 0.15 : 0);
+    const lifesteal = Math.min(BASE.caps.lifesteal, d.lifesteal + (combo >= 20 ? 0.15 : 0));
     if (lifesteal > 0) c.hp = Math.min(d.maxHp, c.hp + Math.round(dmg * lifesteal));
 
     if (potionActive && !manual) {
@@ -240,6 +241,8 @@ export function onEnemyDeath(game) {
 
     if (c.mode === 'dungeon') { onDungeonKill(game); game.markDirty(); return; }
     if (c.mode === 'titan') { endTitan(game, true); game.markDirty(); return; }
+    // Beating the boss ends a regroup: you move on (otherwise it could be farmed at its first-fall payout).
+    if (enemy.boss) c.regroupLeft = 0;
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
         if (c.stage > c.maxStage) c.maxStage = c.stage;
@@ -267,11 +270,14 @@ export function onPlayerDeath(game) {
         return;
     }
     // Retreat to the start of the current zone: bosses are meant to be prepared for, not crawled past.
+    // Dying on a zone's first stage steps back one more, but never onto the previous zone's boss.
     const zoneStart = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
-    const retreatTo = Math.max(1, Math.min(zoneStart, c.stage - BALANCE.combat.retreatStages));
+    let retreatTo = Math.max(1, Math.min(zoneStart, c.stage - BALANCE.combat.retreatStages));
+    if (retreatTo > 1 && isBossStage(retreatTo)) retreatTo -= 1;
     log(game, `💀 You were defeated at stage ${c.stage}. Retreated to stage ${retreatTo}.`, 'death');
     game.emit({ type: 'death', stage: c.stage, mode });
     c.stage = retreatTo;
+    c.regroupLeft = 0;
     c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
     c.combo = 0;
     c.active = false;
@@ -342,7 +348,15 @@ export function tickCombat(game, dt) {
         if (pReady && (!eReady || pOver >= eOver)) {
             c.playerTimer -= d.attackInterval;
             tryEat(game);
+            const target = c.enemy;
+            const leftover = c.playerTimer;
             playerAttack(game);
+            // A kill spawns the next enemy with fresh timers; it has been there for the rest of this step.
+            if (c.active && c.enemy !== target) {
+                c.playerTimer = leftover;
+                c.enemyTimer = leftover;
+                if (c.enemy.boss) c.bossTimeLeft -= leftover;
+            }
         } else {
             c.enemyTimer -= c.enemy.interval;
             tryEat(game);

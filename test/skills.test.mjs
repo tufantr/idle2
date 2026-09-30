@@ -251,7 +251,8 @@ test('agility: build with gold and materials, permanent bonuses, run the course 
     assert.ok(game.state.skills.agility.xp > xp);
 
     game.state.combat.maxStage = 30;
-    game.prestige();
+    game.state.prestige.runStartedAt = 0;
+    assert.ok(game.prestige());
     assert.deepEqual(game.state.agility.built.slice(0, 2), ['rope_swing', 'monkey_bars'], 'the course survives prestige');
     assert.equal(obstacleById('monkey_bars').slot, 1);
 });

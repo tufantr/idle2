@@ -119,6 +119,7 @@ test('saves: unknown actions are dropped, bad numbers cleaned, stats rebuilt; pr
     const g = new Game(state, T0);
     g.state.combat.maxStage = 30;
     g.state.combat.bestStage = 30;
+    g.state.prestige.runStartedAt = 0;
     assert.ok(g.prestige());
     assert.equal(masteryLevel(g.state, 'mining', 'copper_ore'), 99);
     assert.equal(skillMastery(g.state, 'mining').maxed, 1);

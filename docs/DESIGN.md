@@ -144,8 +144,10 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   Weapon 3, Shield 3, Head 2, Body 5, Legs 4, Boots 1, Gloves 1 (19 for a full set). XP = bars × 18 /
   30 / 57 / 90 / 135 per metal.
 - **Jewellery:** 1 silver or gold bar + 1 gem → Ring, Earring or Amulet. The gem sets the base level
-  (1 / 10 / 25 / 40 / 55 / 70) and most of the power; Earrings add +2 and Amulets +4 levels; gold bars
-  need crafting 30. Silver and gold are jewellery-only metals.
+  (1 / 10 / 25 / 40 / 55 / 70), the tier and the power (0.8 × the tier's power, like dropped
+  jewellery); a gold setting adds 20%. Earrings add +2 and Amulets +4 levels; gold bars need crafting
+  30. Silver and gold are jewellery-only metals. (Power used to average the bar and the gem, which
+  made a gold-and-amethyst ring a tier-1 item stronger than mithril.)
 - **Crafted gear rolls Common to Rare.** Epic and Legendary come only from combat (§3.5).
 
 ### 3.5 Equipment
@@ -203,13 +205,15 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 - **HP:** no refill between enemies. Regen 0.1% of max HP per second in combat, 2% per second out of
   combat. **Auto-eat** below 50% HP (Gourmet perk raises it), "Auto" picks the smallest food that
   fills the gap. **Potions** hold 15 charges; one is used per player attack.
-- **Clicks and combo:** clicking the enemy lands a half-damage hit (at most ~8 clicks/s count) and
+- **Clicks and combo:** clicking the enemy lands a half-damage hit (at most ~5 clicks/s count) and
   adds a combo stack (diminishing, max 30, decays after 1.5 s idle). Each stack is +3% damage; 10+
   stacks give +10% crit, 20+ give +15% lifesteal, 30 gives 20% echo strikes.
 - **Boss timer:** a boss must fall within **30 seconds of fighting** (the clock only runs while you
   fight, so it works the same offline). If it holds out you step back one stage and farm there for
-  60 seconds before it is retried automatically. Bosses are the DPS checks; regular stages test
-  survival.
+  60 seconds before it is retried automatically; beating it sooner (by stepping forward) ends the
+  wait. Bosses are the DPS checks; regular stages test survival.
+- **Death** retreats to the start of the zone (from a zone's first stage, one stage back, never onto
+  the previous zone's boss) with half HP.
 - **Death:** retreat to the start of the zone (a boss death sends you back 9 stages), HP set to 50%,
   combat stops. **Farm mode** keeps you on the current stage; the stage arrows let you move back.
 - **Boss payouts:** a boss pays its bonus (gold ×3, XP ×5, its loot table) only on its **first fall
@@ -269,23 +273,25 @@ the Abyss repeats with a depth counter and steeper growth.
   25 levels each (×3.39 / ×3.39 / ×2.67 when maxed), cost `base × 1.30^level` (60 / 60 / 50 base).
   It turns each new run into a climb and gives gold a job.
 - **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 80
-  kills — the open-ended late-game sink) priced in "kills at your best stage"
-  (25–40 kills), so the price scales with income and can never be resold at a profit (the
-  prototype's Coal Wagon printed +350 gold per purchase).
+  kills — the open-ended late-game sink) priced in "kills at your best stage" (25–40 regular kills;
+  a boss stage prices like its regular monsters), so the price scales with income and can never be
+  resold at a profit (the prototype's Coal Wagon printed +350 gold per purchase).
 - **Gold resets on prestige.** It is run currency, like Clicker Heroes' gold.
 
 ### 3.9 Prestige, tokens, skill points and perks
 
 `src/systems/prestige.js`, `src/data/perks.js`.
 
-- **Available** from stage 10. Resets: stage (restart at 10% of your all-time best), gold, camp.
+- **Available** from stage 10, once the run has lasted **10 minutes** (otherwise a run that starts
+  past stage 10 could be prestiged again at once, forever). Resets: stage (restart at 10% of your
+  all-time best), gold, camp.
   Keeps: skills and mastery, gear, tools, materials, essence, achievements, tokens, perks, pets,
   dungeon clears and fragments, Titans defeated, the agility course and farming plots.
 - **Tokens** = `floor(((best stage this run − 5) / 5)^1.5)`: 1 at stage 10, 27 at 50, 82 at 100,
   156 at 150. Tokens are **held, never spent**; each is a permanent +0.5% ATK and DEF and +0.25% HP,
   in its own multiplicative layer. The Eternity achievement adds +10% tokens.
-- **Skill points:** 1 per prestige, plus 1 for every 25 stages of all-time best (each threshold pays
-  once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
+- **Skill points:** 1 per prestige for a run that reached at least half your all-time best, plus 1
+  for every 25 stages of all-time best (each threshold pays once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
   (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
   and food healing), Fortune (+5% gold and drop chance), and Paragon (+1% ATK, DEF and HP, 200 levels)
   so skill points always have a use once the others are full.
@@ -404,7 +410,10 @@ pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievemen
 time away with **the same code as online play**, silently: skill actions complete one by one
 (consuming inputs, stopping when they run out), workshop actions forge real items, and combat —
 including a dungeon run on repeat — is replayed in 1-second steps with food, potions, the boss timer
-and death. Farming plots and the bonfire run on timestamps, so they need no replay. Capped at
+and death. The replay runs on the clock, so the bonfire burns out, Focus starts and a weekend event
+begins or ends when it really did. Farming plots run on timestamps and need no replay. A tab that
+ticks less often (browsers slow hidden tabs to once a minute) is simulated in 5-second steps, and a
+kill hands the rest of a step to the next monster, so the step size never changes the result. Capped at
 **12 hours** (+2 h per Endurance perk, up to 24 h, +1 h from the Zipline). Absences under a minute
 are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
 plots ready to harvest, and why work stopped early.
@@ -525,7 +534,7 @@ Rules:
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
    `skillSpeed[skill]` and so on.
 2. **Layers multiply:** content layer × **token layer** (`1 + 0.005 × tokens`) × **camp layer**.
-3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.5 s),
+3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30% (combo bonuses included), attack speed +100% (attack interval ≥ 0.75 s),
    damage mitigation 90%, action interval ≥ 250 ms.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.

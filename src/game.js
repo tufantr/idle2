@@ -18,8 +18,8 @@ import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
 import { eventStatus, buyEventItem } from './systems/events.js';
 
-const MAX_TICK_MS = 5000;        // longer gaps are handled as offline progress
-const OFFLINE_GAP_MS = 60000;
+const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
+const OFFLINE_GAP_MS = 60000;    // gaps longer than this are replayed as offline progress
 // Events that happen many times a second in combat; they don't warrant re-rendering a tab.
 const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge']);
 
@@ -48,8 +48,9 @@ export class Game {
 
     /** Any click or key press: ends focus (the idle bonus) until the player leaves the game alone again. */
     noteInput(now = Date.now()) {
+        if (now > this.now) this.tick(now); // the time up to this input was still idle: simulate it first
         this.state.meta.lastInputAt = now;
-        if (this.derived?.focused) { this.now = Math.max(this.now, now); this.recompute(); this.revision++; }
+        if (this.derived?.focused) { this.recompute(); this.revision++; }
     }
     recompute() {
         this.state.meta.lastActiveAt = this.now;
@@ -72,22 +73,26 @@ export class Game {
             offlineSummary = applyOffline(this, now, { minMs: OFFLINE_GAP_MS });
             dt = 0;
         }
-        this.now = now;
-        this.state.meta.playtimeMs += Math.min(dt, MAX_TICK_MS);
-        if (this.dirty || isFocused(this.state, now) !== this.derived.focused || bonfireLit(this.state, now) !== this.derived.bonfire || this.eventId(now) !== this.derived.event) this.recompute();
-        this.state.meta.lastActiveAt = now;
-        accrueDaily(this.state, now);
-
-        if (dt > 0) {
+        // Work through the gap in steps of at most MAX_TICK_MS: a background tab may only tick once a
+        // minute, and every millisecond of it counts.
+        do {
             const step = Math.min(dt, MAX_TICK_MS);
-            const action = resolveAction(this.state);
-            if (action) {
-                tickAction(this, step);
-                tickMinigame(this, action.skill);
-                decayHeat(this, action.skill, step);
+            dt -= step;
+            this.now = now - dt;
+            this.state.meta.playtimeMs += step;
+            if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || this.eventId(this.now) !== this.derived.event) this.recompute();
+            this.state.meta.lastActiveAt = this.now;
+            accrueDaily(this.state, this.now);
+            if (step > 0) {
+                const action = resolveAction(this.state);
+                if (action) {
+                    tickAction(this, step);
+                    tickMinigame(this, action.skill);
+                    decayHeat(this, action.skill, step);
+                }
+                tickCombat(this, step);
             }
-            tickCombat(this, step);
-        }
+        } while (dt > 0);
 
         if (this.dirty) this.recompute();
         checkAchievements(this);
@@ -162,7 +167,7 @@ export class Game {
     titanReady() { return titanReady(this.state, this.now); }
     challengeTitan() { return this._act(() => challengeTitan(this)); }
 
-    canPrestige() { return canPrestige(this.state); }
+    canPrestige() { return canPrestige(this.state, this.now); }
     prestigePreview() { return prestigePreview(this); }
     prestige() { return this._act(() => doPrestige(this)); }
     buyPerk(id) { return this._act(() => buyPerk(this, id)); }

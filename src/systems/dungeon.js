@@ -7,7 +7,7 @@ import {
     ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS,
     TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES
 } from '../data/dungeons.js';
-import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, enemyForStage, BALANCE } from '../core/formulas.js';
+import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, BALANCE } from '../core/formulas.js';
 import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RARITIES } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
@@ -153,7 +153,7 @@ export function onDungeonKill(game) {
     c.dungeon.index += 1;
     if (c.dungeon.index > d.monsters.length) {
         completeDungeon(game, d);
-        if (c.autoRepeat) c.dungeon.index = 0;
+        if (c.autoRepeat) { c.dungeon.index = 0; c.hp = game.derived.maxHp; } // every run starts rested
         else { returnToStages(game); return; }
     }
     spawnEnemy(game);
@@ -274,7 +274,7 @@ export function endTitan(game, won) {
         state.titan.kills += 1;
         bumpStat(game, 'titanKills');
         const essence = 8 * level;
-        const gold = 30 * goldForKill(enemyForStage(Math.max(1, state.combat.bestStage)), game.derived.goldMult);
+        const gold = 30 * goldPerKillAtStage(state.combat.bestStage, game.derived.goldMult);
         state.resources.essence += essence;
         state.gold += gold;
         bumpStat(game, 'goldEarned', gold);

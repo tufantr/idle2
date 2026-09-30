@@ -65,6 +65,8 @@ export const AFFIXES = [
 // Upgrades: +UPGRADE_STEP base stats per level, up to MAX_UPGRADE. Paid in essence (combat drop) and
 // gold priced in "kills at your best stage" so the cost keeps pace with gold inflation.
 export const MAX_UPGRADE = 10;
+// Jewellery carries less raw power than armour of its tier (it brings the affixes instead).
+export const JEWEL_POWER = 0.8;
 export const UPGRADE_STEP = 0.05;
 export function upgradeCost(item, goldPerKill = 10) {
     const next = (item.upgrade || 0) + 1;

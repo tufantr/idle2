@@ -35,9 +35,10 @@ export function smithLevelReq(metal, type) {
 }
 
 // Jewellery: precious bar + gem. Crafting level gate comes from the gem; gold bars need level 30.
+// The gem sets a piece's tier and power (like dropped jewellery of that tier); a gold setting adds 20%.
 export const JEWEL_BARS = [
-    { bar: 'silver_bar', name: 'Silver', levelReq: 1 },
-    { bar: 'gold_bar',   name: 'Gold',   levelReq: 30 }
+    { bar: 'silver_bar', name: 'Silver', levelReq: 1,  powerMult: 1.0 },
+    { bar: 'gold_bar',   name: 'Gold',   levelReq: 30, powerMult: 1.2 }
 ];
 export const GEM_TIERS = [
     { gem: 'amethyst', levelReq: 1,  xp: 20 },

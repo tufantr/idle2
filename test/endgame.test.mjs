@@ -256,6 +256,7 @@ test('pets: Melvor chance per action, found once, a permanent bonus that survive
     assert.equal(game.state.stats.petsFound, 1);
     assert.ok(Math.abs(collectModifiers(game.state).skillSpeed.mining - speedBefore - PETS[0].mods.skillSpeed.mining) < 1e-9);
     game.state.combat.maxStage = 30;
+    game.state.prestige.runStartedAt = 0;
     assert.equal(game.prestige(), true);
     assert.equal(game.state.pets.pebble, true);
     game.tick(game.now + 100);

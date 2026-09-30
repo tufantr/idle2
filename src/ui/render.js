@@ -269,7 +269,7 @@ export function renderCombat(game, ui) {
             </div>
         </section>
         <section class="glass-panel">
-            <div class="panel-header"><h2>✨ Prestige</h2><span class="muted small">${canPrestige ? `+${preview.tokens} tokens if you prestige now` : `Reach stage ${BALANCE.prestige.minStage} to unlock`}</span></div>
+            <div class="panel-header"><h2>✨ Prestige</h2><span class="muted small">${canPrestige ? `+${preview.tokens} tokens if you prestige now` : c.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to unlock` : `A run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes: ready in ${duration(preview.waitMs)}`}</span></div>
             <p class="muted small">Convert this run's best stage (${c.maxStage}) into permanent tokens (+0.5% ATK/DEF each) and skill points. Gold, camp and stage reset; everything else stays. Next run starts at stage ${preview.startStage}.</p>
             <div class="prestige-row">
                 <button class="prestige-btn" onclick="FI.openPrestige()" ${canPrestige ? '' : 'disabled'}>Prestige now</button>
@@ -1057,7 +1057,8 @@ export function renderPrestigeModal(game) {
             <div class="prestige-box"><h4>You keep</h4><span>All skills and levels · all equipment, upgrades and tools · all materials, essence and potions · achievements, perks and tokens · pets, uniques, dungeon clears, Titans · the agility course and farm</span></div>
             <div class="prestige-box"><h4>You lose</h4><span>Stage progress (restart at stage ${p.startStage}) · ${fmt(state.gold)} gold · camp upgrades (${Object.values(state.camp).reduce((a, b) => a + b, 0)} levels)</span>
                 ${state.gold > 0 ? `<div class="muted small">Gold is run currency: spend it first — agility obstacles and upgrades, seeds, gear upgrades, or an Essence Cache in the Shop.</div>` : ''}</div>
-            <div class="prestige-box highlight"><h4>You gain</h4><span class="prestige-reward">+${p.tokens} tokens</span> <span class="muted">(→ ${fmt(p.tokensAfter)} total, +${Math.round(p.tokensAfter * 0.5)}% ATK/DEF)</span><br><span class="sp-text">+${p.skillPoints} skill points</span></div>
+            <div class="prestige-box highlight"><h4>You gain</h4><span class="prestige-reward">+${p.tokens} tokens</span> <span class="muted">(→ ${fmt(p.tokensAfter)} total, +${Math.round(p.tokensAfter * 0.5)}% ATK/DEF)</span><br><span class="sp-text">+${p.skillPoints} skill points</span>
+                ${p.fullRun ? '' : `<div class="muted small">No skill point for this run: it takes a run that reaches half your best stage (${Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage)}).</div>`}</div>
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmPrestige()">Prestige now</button></div>
     </div>`;

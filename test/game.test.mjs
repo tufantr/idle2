@@ -164,6 +164,8 @@ test('prestige converts the run into tokens and skill points, resetting only run
     game.state.resources.iron_bar = 12;
     const atkBefore = game.derived.atk;
     const expected = tokensForStage(40, game.derived.tokenMult);
+    assert.equal(game.prestige(), false, 'a run lasts at least ten minutes');
+    game.now = T0 + 10 * 60 * 1000;
     assert.ok(game.prestige());
     assert.equal(game.state.prestige.tokens, expected);
     assert.ok(game.state.prestige.skillPoints >= 2);

@@ -4,6 +4,7 @@
 import { resolveAction, completeAction, canComplete, intervalFor } from './skilling.js';
 import { tickCombat } from './combat.js';
 import { masteryLevel } from './mastery.js';
+import { isFocused, bonfireLit } from '../core/modifiers.js';
 import { RESOURCES } from '../data/resources.js';
 import { SKILLS } from '../data/skills.js';
 import { levelForXp } from '../core/xp.js';
@@ -20,7 +21,7 @@ function snapshot(state) {
         stage: state.combat.stage,
         kills: state.stats.kills,
         items: state.inventory.length,
-        salvaged: (state.stats.itemsSalvaged || 0) + (state.stats.itemsAutoSalvaged || 0),
+        salvaged: state.stats.itemsSalvaged || 0,
         deaths: state.stats.deaths,
         dungeons: Object.fromEntries(DUNGEONS.map(d => [d.id, { ...state.dungeons[d.id] }])),
         pets: { ...state.pets },
@@ -46,7 +47,7 @@ function diff(before, state) {
         stages: state.combat.stage - before.stage,
         kills: state.stats.kills - before.kills,
         items: state.inventory.length - before.items,
-        salvaged: (state.stats.itemsSalvaged || 0) + (state.stats.itemsAutoSalvaged || 0) - before.salvaged,
+        salvaged: (state.stats.itemsSalvaged || 0) - before.salvaged, // auto-salvages count here too
         died: state.stats.deaths > before.deaths,
         dungeonClears: DUNGEONS.map(d => ({ id: d.id, name: d.name, clears: state.dungeons[d.id].clears - before.dungeons[d.id].clears, fragments: state.dungeons[d.id].fragments - before.dungeons[d.id].fragments }))
             .filter(d => d.clears > 0),
@@ -78,17 +79,28 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     if (def) {
         mode = 'skill';
         if (def.mastery) mastery = { name: def.label, from: def.mastery.level };
+        // Replay on the clock: each action happens when it would have, so the bonfire burns out, Focus
+        // starts and a weekend event begins or ends at the right moment (and tokens land on the right day).
+        const savedNow = game.now;
+        game.now = now - simulated;
+        game.recompute();
         let interval = intervalFor(def, game.derived);
         let remaining = simulated;
         let guard = 0;
         while (remaining >= interval && guard++ < 200000) {
             if (!canComplete(state, def).ok) { stalledReason = `ran out of materials for ${def.label}`; break; }
+            game.now += interval;
             if (!completeAction(game, def, { offline: true })) break;
             remaining -= interval;
             if (!state.action) break; // one-off actions (tools)
-            // A mastery level-up makes the action faster and luckier from the next completion on.
-            if (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level) { def = resolveAction(state); interval = intervalFor(def, game.derived); }
+            // A mastery level, Focus, the bonfire or an event changing makes the next action different.
+            const stale = (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level)
+                || isFocused(state, game.now) !== game.derived.focused || bonfireLit(state, game.now) !== game.derived.bonfire
+                || game.eventId(game.now) !== game.derived.event;
+            if (stale) { game.recompute(); def = resolveAction(state); interval = intervalFor(def, game.derived); }
         }
+        game.now = savedNow;
+        game.recompute();
         if (state.action) state.action.progress = 0;
         if (mastery) mastery.to = masteryLevel(state, def.skill, def.mastery.key);
     } else if (state.combat.active) {
