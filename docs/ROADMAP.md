@@ -22,7 +22,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ✅ Done |
 | 6 — Game feel | ✅ Done |
-| 7 — Make it feel like a game | 🚧 In progress |
+| 7 — Make it feel like a game | ✅ Done |
 
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
@@ -255,7 +255,7 @@ one visual identity (dark fantasy: carved serif lettering, stone and bronze, gol
 **Exit:** a new player sees the fight within one click; no layout shift when bosses or banners
 appear; every tab passes the overflow and console check at 390 px and 1350 px.
 
-## Phase 7 — Make it feel like a game 🚧
+## Phase 7 — Make it feel like a game ✅
 
 Playtest feedback after Phase 6: "too static, word-like". A research pass on game feel
 ([notes](research_notes/game-feel.md)) set the rules: answer every action in three senses, show
@@ -272,9 +272,13 @@ progress as motion, art before words, one stage with a HUD around it.
 - [x] **The skill stage** (`src/ui/stage.js`): above every skill tab the hero stands in that
       skill's scenery with its tool and works on the chosen node: his swing follows the real
       action progress, a ring fills with it, the work lands on the beat and pops off the target
-- [ ] Progress everywhere: XP bars in the sidebar, a next-goal bar in the header, counters that bump
-- [ ] A text diet: icons and numbers first, descriptions on hover or tap
-- [ ] Press feel on every button; idle motion on cards
+- [x] **Progress everywhere**: an XP bar under every skill in the sidebar, the next unlock as a filling
+      bar in the header (each unlock now measures its own progress), and purse chips that bump when a
+      currency changes
+- [x] **A text diet**: the long explanations (prestige, forging, jewellery, events, dungeons, cloud save)
+      fold into a "How it works" disclosure, so icons and numbers come first
+- [x] **Press feel**: every button depresses on click (with its click sound); the active skill card's
+      medallion pulses
 
 ## Deferred on purpose
 

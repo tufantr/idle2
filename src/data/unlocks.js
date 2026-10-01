@@ -5,23 +5,33 @@ export const UNLOCKS = [
     { id: 'combat',       always: true },
     { id: 'mining',       always: true },
     { id: 'inventory',    always: true },
-    { id: 'smithing',     hint: 'Mine 5 ore to unlock Smithing',                    requires: s => (s.stats.actionsBySkill.mining || 0) >= 5 || heldOre(s) >= 5 },
-    { id: 'woodcutting',  hint: 'Smelt your first bar to unlock Woodcutting',       requires: s => s.stats.barsSmelted >= 1 },
-    { id: 'hunting',      hint: 'Reach Stage 5 to unlock Hunting',                  requires: s => s.combat.maxStage >= 5 },
-    { id: 'cooking',      hint: 'Hunt your first animal to unlock Cooking',         requires: s => s.stats.actionsBySkill.hunting >= 1 },
-    { id: 'fishing',      hint: 'Cook 5 dishes to unlock Fishing',                  requires: s => (s.stats.actionsBySkill.cooking || 0) >= 5 },
-    { id: 'firemaking',   hint: 'Cut 20 logs to unlock Firemaking',                 requires: s => (s.stats.actionsBySkill.woodcutting || 0) >= 20 },
-    { id: 'alchemy',      hint: 'Reach the Stage 10 boss to unlock Alchemy',        requires: s => s.combat.maxStage >= 10 },
-    { id: 'crafting',     hint: 'Reach Mining 20 or find a gem to unlock Crafting', requires: s => s.skills.mining.xp >= 4470 || (s.stats.gemsFound || 0) >= 1 || heldGems(s) >= 1 },
-    { id: 'shop',         hint: 'Reach the Stage 10 boss to unlock the Shop',       requires: s => s.combat.maxStage >= 10 },
-    { id: 'prestige',     hint: 'Reach Stage 10 to unlock Prestige',                requires: s => s.combat.maxStage >= 10 },
-    { id: 'achievements', hint: 'Reach Stage 10 to unlock Achievements',            requires: s => s.combat.maxStage >= 10 },
-    { id: 'dungeons',     hint: 'Reach Stage 20 to find the first dungeon',          requires: s => s.combat.bestStage >= 20 },
-    { id: 'events',       hint: 'Reach the Stage 10 boss to join weekend events',    requires: s => s.combat.maxStage >= 10 || s.combat.bestStage >= 10 },
-    { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411 },
-    { id: 'agility',      hint: 'Reach Stage 30 to unlock Agility',                 requires: s => s.combat.bestStage >= 30 },
-    { id: 'clan',         hint: 'Reach Stage 20 to join a clan',                     requires: s => s.combat.bestStage >= 20 }
+    { id: 'smithing',     hint: 'Mine 5 ore to unlock Smithing',                    requires: s => (s.stats.actionsBySkill.mining || 0) >= 5 || heldOre(s) >= 5,
+      progress: s => Math.max((s.stats.actionsBySkill.mining || 0), heldOre(s)) / 5 },
+    { id: 'woodcutting',  hint: 'Smelt your first bar to unlock Woodcutting',       requires: s => s.stats.barsSmelted >= 1, progress: s => s.stats.barsSmelted / 1 },
+    { id: 'hunting',      hint: 'Reach Stage 5 to unlock Hunting',                  requires: s => s.combat.maxStage >= 5, progress: s => s.combat.maxStage / 5 },
+    { id: 'cooking',      hint: 'Hunt your first animal to unlock Cooking',         requires: s => s.stats.actionsBySkill.hunting >= 1, progress: s => (s.stats.actionsBySkill.hunting || 0) / 1 },
+    { id: 'fishing',      hint: 'Cook 5 dishes to unlock Fishing',                  requires: s => (s.stats.actionsBySkill.cooking || 0) >= 5, progress: s => (s.stats.actionsBySkill.cooking || 0) / 5 },
+    { id: 'firemaking',   hint: 'Cut 20 logs to unlock Firemaking',                 requires: s => (s.stats.actionsBySkill.woodcutting || 0) >= 20, progress: s => (s.stats.actionsBySkill.woodcutting || 0) / 20 },
+    { id: 'alchemy',      hint: 'Reach the Stage 10 boss to unlock Alchemy',        requires: s => s.combat.maxStage >= 10, progress: s => s.combat.maxStage / 10 },
+    { id: 'crafting',     hint: 'Reach Mining 20 or find a gem to unlock Crafting', requires: s => s.skills.mining.xp >= 4470 || (s.stats.gemsFound || 0) >= 1 || heldGems(s) >= 1,
+      progress: s => Math.max(s.skills.mining.xp / 4470, (s.stats.gemsFound || 0), heldGems(s)) },
+    { id: 'shop',         hint: 'Reach the Stage 10 boss to unlock the Shop',       requires: s => s.combat.maxStage >= 10, progress: s => s.combat.maxStage / 10 },
+    { id: 'prestige',     hint: 'Reach Stage 10 to unlock Prestige',                requires: s => s.combat.maxStage >= 10, progress: s => s.combat.maxStage / 10 },
+    { id: 'achievements', hint: 'Reach Stage 10 to unlock Achievements',            requires: s => s.combat.maxStage >= 10, progress: s => s.combat.maxStage / 10 },
+    { id: 'dungeons',     hint: 'Reach Stage 20 to find the first dungeon',          requires: s => s.combat.bestStage >= 20, progress: s => s.combat.bestStage / 20 },
+    { id: 'events',       hint: 'Reach the Stage 10 boss to join weekend events',    requires: s => s.combat.maxStage >= 10 || s.combat.bestStage >= 10, progress: s => Math.max(s.combat.maxStage, s.combat.bestStage) / 10 },
+    { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411,
+      progress: s => Math.max((s.stats.actionsBySkill.alchemy || 0) / 10, s.skills.cooking.xp / 2411) },
+    { id: 'agility',      hint: 'Reach Stage 30 to unlock Agility',                 requires: s => s.combat.bestStage >= 30, progress: s => s.combat.bestStage / 30 },
+    { id: 'clan',         hint: 'Reach Stage 20 to join a clan',                     requires: s => s.combat.bestStage >= 20, progress: s => s.combat.bestStage / 20 }
 ];
+
+/** How far along a goal is, 0..1 (goals without a measure read as 0). */
+export function goalProgress(state, unlock) {
+    if (!unlock?.progress) return 0;
+    const p = Number(unlock.progress(state));
+    return Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : 0;
+}
 
 // Held counts let migrated prototype saves (which have no action stats) unlock straight away.
 function heldOre(state) {

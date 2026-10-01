@@ -9,7 +9,7 @@ import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICO
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
-import { UNLOCKS, isUnlocked, nextGoals } from '../data/unlocks.js';
+import { UNLOCKS, isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
@@ -79,17 +79,18 @@ export function renderNav(game, ui) {
             const active = ui.tab === tab.id ? 'active' : '';
             const working = (action && (action.skill === tab.skill)) || (tab.id === 'combat' && state.combat.active) ? 'action-active' : '';
             let badge = '';
-            if (tab.skill) {
-                const lp = levelProgress(state.skills[tab.skill].xp);
-                badge = `<span class="nav-level" title="${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP">${lp.level}</span>`;
-            } else if (tab.id === 'combat') {
-                badge = `<span class="nav-level" title="Combat level">${skillLevel(state, 'combat')}</span>`;
+            let xpBar = '';
+            const levelled = tab.skill || (tab.id === 'combat' ? 'combat' : null);
+            if (levelled) {
+                const lp = levelProgress(state.skills[levelled].xp);
+                badge = `<span class="nav-level" title="${lp.level >= MAX_LEVEL ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
+                xpBar = lp.level >= MAX_LEVEL ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             if (!unlocked) {
                 html += `<button class="nav-btn locked" title="${esc(def?.hint || '')}"><span>🔒 ${tab.name}</span><span class="nav-hint">${def?.comingSoon ? 'soon' : ''}</span></button>`;
             } else {
                 const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
-                html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span>${tab.icon} ${tab.name}</span>${fresh || badge}</button>`;
+                html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span>${tab.icon} ${tab.name}</span>${fresh || badge}${xpBar}</button>`;
             }
         }
     }
@@ -151,7 +152,7 @@ export function renderHeader(game, ui, cloud) {
         : state.combat.active
             ? `<span class="status-pill fighting">⚔️ Fighting — ${esc(fightingWhere(state))}</span>`
             : `<span class="status-pill idle">💤 Idle — start a skill or enter combat</span>`;
-    const goal = goals.length ? `<span class="goal-pill">🎯 ${esc(goals[0].hint)}</span>` : '';
+    const goal = goals.length ? `<span class="goal-pill" title="Your next unlock"><span>🎯 ${esc(goals[0].hint)}</span><i class="goal-bar" style="--p:${(goalProgress(state, goals[0]) * 100).toFixed(1)}%"></i></span>` : '';
     const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>` : `<span class="cloud-pill local" title="Local save only">💾 guest</span>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? '🔊' : '🔇'}</button>`;
@@ -259,7 +260,7 @@ export function renderCombat(game, ui) {
         </section>
         <section class="glass-panel">
             <div class="panel-header"><h2>✨ Prestige</h2><span class="muted small">${canPrestige ? `+${preview.tokens} tokens if you prestige now` : c.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to unlock` : `A run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes: ready in ${duration(preview.waitMs)}`}</span></div>
-            <p class="muted small">Convert this run's best stage (${c.maxStage}) into permanent tokens (+0.5% ATK/DEF each) and skill points. Gold, camp and stage reset; everything else stays. Next run starts at stage ${preview.startStage}.</p>
+            <details class="lore"><summary>How it works</summary><p class="muted small">Convert this run's best stage (${c.maxStage}) into permanent tokens (+0.5% ATK/DEF each) and skill points. Gold, camp and stage reset; everything else stays. Next run starts at stage ${preview.startStage}.</p></details>
             <div class="prestige-row">
                 <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${canPrestige ? '' : 'disabled'}>Prestige now</button>
                 <span class="muted small">Reach stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} for ${preview.nextZoneTokens} tokens</span>
@@ -537,7 +538,7 @@ export function renderSmithing(game, ui) {
         <h3 class="section-title">2. Forge equipment
             <select class="material-select" onchange="FI.selectSmithMetal(this.value)">${METALS.map(m => `<option value="${m.bar}" ${m.bar === metal.bar ? 'selected' : ''}>${m.name} (lvl ${m.levelReq}) — ${fmt(state.resources[m.bar])} bars</option>`).join('')}</select>
         </h3>
-        <p class="muted small">Each piece unlocks a few levels after the metal (swords first, plate bodies last). Forged items roll up to Rare quality — epic and legendary gear only drops in combat. The metal decides the power band, so a lucky copper sword never beats an honest runite one.</p>
+        <details class="lore"><summary>How it works</summary><p class="muted small">Each piece unlocks a few levels after the metal (swords first, plate bodies last). Forged items roll up to Rare quality — epic and legendary gear only drops in combat. The metal decides the power band, so a lucky copper sword never beats an honest runite one.</p></details>
         ${masteryRow(state, 'smithing', resolveAction(state, { kind: 'smith', type: SMITHING_TYPES[0], bar: metal.bar }).mastery, `${metal.name} forging mastery`)}
         <div class="node-grid">${forgeCards}</div>
         <h3 class="section-title">3. Tools</h3>
@@ -585,7 +586,7 @@ export function renderCrafting(game, ui) {
             <select class="material-select" onchange="FI.selectCraftBar(this.value)">${JEWEL_BARS.map(b => `<option value="${b.bar}" ${b.bar === bar.bar ? 'selected' : ''}>${b.name} bar (lvl ${b.levelReq}) — ${fmt(state.resources[b.bar])}</option>`).join('')}</select>
             <select class="material-select" onchange="FI.selectCraftGem(this.value)">${GEM_TIERS.map(g => `<option value="${g.gem}" ${g.gem === gem.gem ? 'selected' : ''}>${res(g.gem).name} (lvl ${g.levelReq}) — ${fmt(state.resources[g.gem])}</option>`).join('')}</select>
         </h3>
-        <p class="muted small">Gems turn up while mining (2% per ore) and drop from monsters. Jewellery gives a little ATK and DEF and is the best source of affixes.</p>
+        <details class="lore"><summary>How it works</summary><p class="muted small">Gems turn up while mining (2% per ore) and drop from monsters. Jewellery gives a little ATK and DEF and is the best source of affixes.</p></details>
         ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gem.gem }).mastery, `${res(gem.gem).name} jewellery mastery`)}
         <div class="node-grid">${cards}</div>
         <h3 class="section-title">Bows</h3>
@@ -771,7 +772,7 @@ export function renderShop(game, ui) {
                 <div><b>${preview.tokens}</b><span>tokens for this run (best stage ${state.combat.maxStage})</span></div>
                 <div><b>${preview.startStage}</b><span>next run starts at stage</span></div>
             </div>
-            <p class="muted small">Tokens are never spent — each one is a permanent +0.5% ATK and DEF (+0.25% HP). Skill points buy the perks on the right. Prestige resets your stage, gold and camp; skills, gear and materials stay.</p>
+            <details class="lore"><summary>How it works</summary><p class="muted small">Tokens are never spent — each one is a permanent +0.5% ATK and DEF (+0.25% HP). Skill points buy the perks on the right. Prestige resets your stage, gold and camp; skills, gear and materials stay.</p></details>
             <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>
         <section class="glass-panel">
@@ -820,7 +821,7 @@ export function renderEvents(game) {
         <div class="panel-header"><div><h2>${e.icon} ${esc(e.name)}</h2><div class="muted small">${status.active ? `Running now — ends in ${duration(status.endsAt - game.now)}` : `Next event — starts in ${duration(status.startsAt - game.now)}`}</div></div>
             <div class="chip tokens"><span>Festival tokens</span><b>${fmt(ev.tokens)}</b></div></div>
         <p>${esc(e.desc)}</p>
-        <p class="muted small">Every weekend (Friday to Monday, UTC) one event runs, in turn: ${rotation}. While it runs, every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token (a harvest counts ${5}), up to ${EVENT_DAILY_CAP} a day${status.active ? ` — ${today}/${EVENT_DAILY_CAP} today` : ''}. Tokens keep between events; the shop opens while one runs.</p>
+        <details class="lore"><summary>How it works</summary><p class="muted small">Every weekend (Friday to Monday, UTC) one event runs, in turn: ${rotation}. While it runs, every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token (a harvest counts ${5}), up to ${EVENT_DAILY_CAP} a day${status.active ? ` — ${today}/${EVENT_DAILY_CAP} today` : ''}. Tokens keep between events; the shop opens while one runs.</p></details>
     </section>
     <div class="two-col">
         <section class="glass-panel"><div class="panel-header"><h2>🎯 Milestones</h2><span class="muted small">${earned} earned this event</span></div><div class="ach-list">${milestones}</div></section>
@@ -983,7 +984,7 @@ export function renderDungeons(game) {
         <div class="panel-header"><h2>🏰 Dungeons</h2>
             <label class="toggle"><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>
         </div>
-        <p class="muted small">Elite monsters and a boss with a ${DUNGEON_BOSS_TIME_MS / 1000} s timer, fought with the gear you walk in with (it's locked inside). Dying, leaving or running out of time loses the run. Every clear opens a chest: a fragment of the dungeon's unique item, essence and materials, often a gem and sometimes a piece of boss-quality gear. Clear counts unlock permanent bonuses.</p>
+        <details class="lore"><summary>How it works</summary><p class="muted small">Elite monsters and a boss with a ${DUNGEON_BOSS_TIME_MS / 1000} s timer, fought with the gear you walk in with (it's locked inside). Dying, leaving or running out of time loses the run. Every clear opens a chest: a fragment of the dungeon's unique item, essence and materials, often a gem and sometimes a piece of boss-quality gear. Clear counts unlock permanent bonuses.</p></details>
         <div class="dungeon-grid">${cards}</div>
     </section>`;
 }
@@ -1021,7 +1022,7 @@ export function renderSettings(game, ui, cloud) {
     return `<div class="two-col">
         <section class="glass-panel">
             <div class="panel-header"><h2>☁️ Cloud save</h2><span class="muted small">${cloud?.loggedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest (local only)'}</span></div>
-            <p class="muted small">${cloud?.loggedIn ? 'Your save is uploaded every minute and on important events. Playing on another device loads whichever save has more play time.' : 'Sign in to keep your save in the cloud and play from any device. Your local save is kept either way.'}</p>
+            <details class="lore"><summary>How it works</summary><p class="muted small">${cloud?.loggedIn ? 'Your save is uploaded every minute and on important events. Playing on another device loads whichever save has more play time.' : 'Sign in to keep your save in the cloud and play from any device. Your local save is kept either way.'}</p></details>
             ${cloud?.loggedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save to cloud now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>

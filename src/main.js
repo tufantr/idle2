@@ -248,6 +248,20 @@ function focusFinder(el) {
     return null;
 }
 
+// The purse's chips bump when their number changes (gold rolls instead, see paintGold).
+let lastPurse = null;
+function bumpPurse() {
+    const s = game.state;
+    const purse = { tokens: s.prestige.tokens, sp: s.prestige.skillPoints, essence: s.resources.essence };
+    if (lastPurse && !document.body.classList.contains('reduced-motion')) {
+        for (const [key, value] of Object.entries(purse)) {
+            if (value === lastPurse[key]) continue;
+            document.querySelector(`.chip.${key}`)?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.14)', boxShadow: '0 0 18px rgba(251, 191, 36, 0.55)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360, easing: 'ease-out' });
+        }
+    }
+    lastPurse = purse;
+}
+
 function render() {
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
@@ -257,6 +271,7 @@ function render() {
     const tab = document.getElementById('tab');
     setHtml(document.getElementById('nav'), renderNav(game, ui));
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
+    bumpPurse();
     setHtml(hotbar, renderHotbar(game, ui));
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
