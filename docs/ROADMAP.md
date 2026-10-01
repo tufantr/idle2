@@ -279,6 +279,13 @@ progress as motion, art before words, one stage with a HUD around it.
       fold into a "How it works" disclosure, so icons and numbers come first
 - [x] **Press feel**: every button depresses on click (with its click sound); the active skill card's
       medallion pulses
+- [x] **Painted backdrops** (`tools/backdrops.py`, `assets/backdrops/`): every battle place and every
+      skill stage is an illustrated landscape instead of CSS silhouettes: three parallax layers (sky,
+      far, near) painted from noise, gradients, glow and fog (a sun over the meadow, moonlit pines,
+      stalactites and crystals, drowned columns under light shafts, a volcano with lava rivers, snow
+      peaks under an aurora, islands in cloud, the Titan's silhouette on the horizon), and tiled CC0
+      dungeon floors and walls for the interiors. Fifteen scenes, about 1 MB of WebP in all, drawn by
+      a script in a minute with no image model and no downloads
 
 ## Deferred on purpose
 

@@ -9,4 +9,7 @@ from the public-domain **RLTiles** set (http://rltiles.sf.net).
 The mapping from this game's monsters, equipment and hero layers to DCSS tiles is in
 `tools/atlas.py`. The draconian "dragonkin" are flattened from a DCSS base and job layer.
 
-Everything else in the interface (the knight drawing, scenery, icons) is original to this project.
+`backdrops/*.webp` are painted by `tools/backdrops.py` from noise, gradients and glow; the interiors
+(caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
+
+Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

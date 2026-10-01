@@ -442,7 +442,8 @@ export function createScene(root, actions) {
                 case 'kill': {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;
-                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}`, esc(ev.enemy.icon || '👾'), foe.x, body, 700);
+                    const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
+                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: (ev.enemy.boss ? 5 : 4) - (phone ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
                     coinBurst(ev.enemy.boss ? 7 : 1);
                     ev.drops.filter(dr => !dr.item).slice(0, 3).forEach((dr, i) => spawnFx('drop-pop', `+${fmt(dr.qty)} ${RESOURCES[dr.id]?.icon || ''}`, foe.x - 14 + i * 14, foe.bottom - 4, 1200));

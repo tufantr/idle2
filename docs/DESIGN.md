@@ -797,12 +797,14 @@ src/ui/               render.js (HTML per tab, the armory, the world map, the ph
                       sprites.js (atlas cells for monsters, items and the hero's layers) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · format.js
-assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup; CREDITS.md)
+assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
+                      parallax layers per place, WebP) · CREDITS.md
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
-                      atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles)
+                      atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·
+                      backdrops.py (paints assets/backdrops/*.webp from noise, gradients and the DCSS floor tiles)
 docs/                 DESIGN.md (this) · ROADMAP.md · reports/ · research_notes/
 ```

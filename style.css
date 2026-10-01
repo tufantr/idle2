@@ -1300,3 +1300,77 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
     .stage-sub { font-size: 0.7rem; }
     .stage-hero::after { width: 80px; }
 }
+
+/* ===== Painted backdrops (tools/backdrops.py -> assets/backdrops/*.webp) =====
+   Three layers per place, aligned to the bottom: the sky, the far and the near silhouettes. The
+   near and far layers keep their slow drift; interiors also get a strip of floor tiles as the ground. */
+.battle .battle-far, .battle .battle-near { top: 0; bottom: 0; height: auto; clip-path: none; background-repeat: no-repeat; background-position: center bottom; background-size: cover; }
+.battle .battle-sky { background-repeat: no-repeat; background-position: center bottom; background-size: cover; }
+.battle[data-scene="meadow"] .battle-sky { background-image: url(assets/backdrops/meadow-sky.webp); }
+.battle[data-scene="meadow"] .battle-far { background-image: url(assets/backdrops/meadow-far.webp); }
+.battle[data-scene="meadow"] .battle-near { background-image: url(assets/backdrops/meadow-near.webp); }
+.battle[data-scene="forest"] .battle-sky { background-image: url(assets/backdrops/forest-sky.webp); }
+.battle[data-scene="forest"] .battle-far { background-image: url(assets/backdrops/forest-far.webp); }
+.battle[data-scene="forest"] .battle-near { background-image: url(assets/backdrops/forest-near.webp); }
+.battle[data-scene="caves"] .battle-sky { background-image: url(assets/backdrops/caves-sky.webp); }
+.battle[data-scene="caves"] .battle-far { background-image: url(assets/backdrops/caves-far.webp); }
+.battle[data-scene="caves"] .battle-near { background-image: url(assets/backdrops/caves-near.webp); }
+.battle[data-scene="caves"]::before { background: url(assets/backdrops/caves-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.battle[data-scene="marsh"] .battle-sky { background-image: url(assets/backdrops/marsh-sky.webp); }
+.battle[data-scene="marsh"] .battle-far { background-image: url(assets/backdrops/marsh-far.webp); }
+.battle[data-scene="marsh"] .battle-near { background-image: url(assets/backdrops/marsh-near.webp); }
+.battle[data-scene="highland"] .battle-sky { background-image: url(assets/backdrops/highland-sky.webp); }
+.battle[data-scene="highland"] .battle-far { background-image: url(assets/backdrops/highland-far.webp); }
+.battle[data-scene="highland"] .battle-near { background-image: url(assets/backdrops/highland-near.webp); }
+.battle[data-scene="ruins"] .battle-sky { background-image: url(assets/backdrops/ruins-sky.webp); }
+.battle[data-scene="ruins"] .battle-far { background-image: url(assets/backdrops/ruins-far.webp); }
+.battle[data-scene="ruins"] .battle-near { background-image: url(assets/backdrops/ruins-near.webp); }
+.battle[data-scene="volcano"] .battle-sky { background-image: url(assets/backdrops/volcano-sky.webp); }
+.battle[data-scene="volcano"] .battle-far { background-image: url(assets/backdrops/volcano-far.webp); }
+.battle[data-scene="volcano"] .battle-near { background-image: url(assets/backdrops/volcano-near.webp); }
+.battle[data-scene="volcano"]::before { background: url(assets/backdrops/volcano-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.battle[data-scene="frost"] .battle-sky { background-image: url(assets/backdrops/frost-sky.webp); }
+.battle[data-scene="frost"] .battle-far { background-image: url(assets/backdrops/frost-far.webp); }
+.battle[data-scene="frost"] .battle-near { background-image: url(assets/backdrops/frost-near.webp); }
+.battle[data-scene="frost"]::before { background: url(assets/backdrops/frost-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.battle[data-scene="skyreach"] .battle-sky { background-image: url(assets/backdrops/skyreach-sky.webp); }
+.battle[data-scene="skyreach"] .battle-far { background-image: url(assets/backdrops/skyreach-far.webp); }
+.battle[data-scene="skyreach"] .battle-near { background-image: url(assets/backdrops/skyreach-near.webp); }
+.battle[data-scene="abyss"] .battle-sky { background-image: url(assets/backdrops/abyss-sky.webp); }
+.battle[data-scene="abyss"] .battle-far { background-image: url(assets/backdrops/abyss-far.webp); }
+.battle[data-scene="abyss"] .battle-near { background-image: url(assets/backdrops/abyss-near.webp); }
+.battle[data-scene="abyss"]::before { background: url(assets/backdrops/abyss-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.battle[data-scene="dungeon"] .battle-sky { background-image: url(assets/backdrops/dungeon-sky.webp); }
+.battle[data-scene="dungeon"] .battle-far { background-image: url(assets/backdrops/dungeon-far.webp); }
+.battle[data-scene="dungeon"] .battle-near { background-image: url(assets/backdrops/dungeon-near.webp); }
+.battle[data-scene="dungeon"]::before { background: url(assets/backdrops/dungeon-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.battle[data-scene="titan"] .battle-sky { background-image: url(assets/backdrops/titan-sky.webp); }
+.battle[data-scene="titan"] .battle-far { background-image: url(assets/backdrops/titan-far.webp); }
+.battle[data-scene="titan"] .battle-near { background-image: url(assets/backdrops/titan-near.webp); }
+.battle[data-scene="dungeon"] .battle-near::before, .battle[data-scene="dungeon"] .battle-near::after { display: none; } /* the torches are painted in now */
+
+/* The skill stages share the painted places: the mine is the crystal cave, the bench a wooden hall. */
+.stage .stage-far { top: 0; bottom: 0; height: auto; clip-path: none; background-repeat: no-repeat; background-position: center bottom; background-size: cover; }
+.stage .stage-sky { background-repeat: no-repeat; background-position: center bottom; background-size: cover; }
+.stage[data-skill="mining"] .stage-sky { background-image: url(assets/backdrops/caves-sky.webp); }
+.stage[data-skill="mining"] .stage-far { background-image: url(assets/backdrops/caves-far.webp), url(assets/backdrops/caves-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="mining"] .stage-ground { background: url(assets/backdrops/caves-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.stage[data-skill="woodcutting"] .stage-sky { background-image: url(assets/backdrops/forest-sky.webp); }
+.stage[data-skill="woodcutting"] .stage-far { background-image: url(assets/backdrops/forest-far.webp), url(assets/backdrops/forest-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="fishing"] .stage-sky { background-image: url(assets/backdrops/river-sky.webp); }
+.stage[data-skill="fishing"] .stage-far { background-image: url(assets/backdrops/river-far.webp), url(assets/backdrops/river-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="hunting"] .stage-sky { background-image: url(assets/backdrops/meadow-sky.webp); }
+.stage[data-skill="hunting"] .stage-far { background-image: url(assets/backdrops/meadow-far.webp), url(assets/backdrops/meadow-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="cooking"] .stage-sky { background-image: url(assets/backdrops/camp-sky.webp); }
+.stage[data-skill="cooking"] .stage-far { background-image: url(assets/backdrops/camp-far.webp), url(assets/backdrops/camp-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="firemaking"] .stage-sky { background-image: url(assets/backdrops/camp-sky.webp); }
+.stage[data-skill="firemaking"] .stage-far { background-image: url(assets/backdrops/camp-far.webp), url(assets/backdrops/camp-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="alchemy"] .stage-sky { background-image: url(assets/backdrops/abyss-sky.webp); }
+.stage[data-skill="alchemy"] .stage-far { background-image: url(assets/backdrops/abyss-far.webp), url(assets/backdrops/abyss-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="alchemy"] .stage-ground { background: url(assets/backdrops/abyss-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.stage[data-skill="smithing"] .stage-sky { background-image: url(assets/backdrops/volcano-sky.webp); }
+.stage[data-skill="smithing"] .stage-far { background-image: url(assets/backdrops/volcano-far.webp), url(assets/backdrops/volcano-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="smithing"] .stage-ground { background: url(assets/backdrops/volcano-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+.stage[data-skill="crafting"] .stage-sky { background-image: url(assets/backdrops/workshop-sky.webp); }
+.stage[data-skill="crafting"] .stage-far { background-image: url(assets/backdrops/workshop-far.webp), url(assets/backdrops/workshop-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
+.stage[data-skill="crafting"] .stage-ground { background: url(assets/backdrops/workshop-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
