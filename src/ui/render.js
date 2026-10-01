@@ -36,7 +36,7 @@ import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
-import { heroSvg } from './scene.js';
+import { sprite, heroSprite, itemSpriteKey, slotSpriteKey } from './sprites.js';
 
 export const TABS = [
     { id: 'combat', name: 'Combat', icon: '⚔️', group: 'COMBAT' },
@@ -153,10 +153,12 @@ export function renderHeader(game, ui, cloud) {
             : `<span class="status-pill idle">💤 Idle — start a skill or enter combat</span>`;
     const goal = goals.length ? `<span class="goal-pill">🎯 ${esc(goals[0].hint)}</span>` : '';
     const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>` : `<span class="cloud-pill local" title="Local save only">💾 guest</span>`;
+    const soundOn = state.settings.sound !== false;
+    const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? '🔊' : '🔇'}</button>`;
     return `
         <div class="header-row">
             <div class="chips">${chips.join('')}</div>
-            <div class="header-right">${daily}${user}</div>
+            <div class="header-right">${daily}${mute}${user}</div>
         </div>
         <div class="header-row second">${status}${focusPill}${bonfirePill}${eventPill}${goal}</div>
         <div class="stats-row">
@@ -615,7 +617,7 @@ function itemTile(state, item, { slot = null, selected = false } = {}) {
     const wearable = canWear(state, item);
     const better = !slot && wearable && isUpgrade(state, item);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
-    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}"><span class="tile-icon">${esc(item.icon)}</span>${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? '<i class="tile-lock" aria-hidden="true">🔒</i>' : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
+    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? '<i class="tile-lock" aria-hidden="true">🔒</i>' : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
 
 function dollSlot(state, slot, selectedId) {
@@ -623,7 +625,7 @@ function dollSlot(state, slot, selectedId) {
     const label = SLOT_LABELS[slot] || slot;
     const tile = item
         ? itemTile(state, item, { slot, selected: item.id === selectedId })
-        : `<div class="tile empty" title="${label}: empty"><span class="tile-icon">${TYPE_ICONS[slot.replace(/\d$/, '')]}</span></div>`;
+        : `<div class="tile empty" title="${label}: empty">${sprite(slotSpriteKey(slot.replace(/\d$/, '')), { scale: 1.5, cls: 'tile-icon', fallback: TYPE_ICONS[slot.replace(/\d$/, '')] })}</div>`;
     return `<div class="doll-slot">${tile}<span class="doll-label">${label}</span></div>`;
 }
 
@@ -667,7 +669,7 @@ export function renderItemDetail(game, id) {
     return `<div class="detail" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}">
         <button class="detail-close" onclick="FI.selectItem(null)" aria-label="Close">✕</button>
         <div class="detail-head">
-            <div class="detail-art">${esc(item.icon)}</div>
+            <div class="detail-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}</div>
             <div class="detail-title">
                 <div class="detail-name">${esc(item.name)}${up ? ` +${up}` : ''}</div>
                 <div class="detail-sub">${esc(rarity?.name || item.rarity)} ${esc(TYPE_NAMES[item.type] || item.type)} · tier ${Number(item.tier)}${item.depth ? ` · depth ${Number(item.depth)}` : ''} · ${source}${slot ? ' · worn' : ''}</div>
@@ -700,14 +702,12 @@ export function renderInventory(game, ui) {
     const resources = Object.keys(RESOURCES).filter(id => state.resources[id] > 0 && (filter === 'all' || RESOURCES[id].category === filter));
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
-    const weapon = state.equipped.Weapon;
-    const blade = weapon ? RARITIES.find(r => r.id === weapon.rarity) : null;
     return `<div class="armory">
         <section class="glass-panel doll-panel">
             <div class="panel-header"><h2>🧍 Your hero</h2><span class="muted small">Combat level ${d.combatLevel}</span></div>
             <div class="doll">
                 <div class="doll-col">${DOLL_LEFT.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
-                <div class="doll-figure${weapon ? ' armed' : ''}${state.equipped.Shield ? ' shielded' : ''}" style="--blade:${blade && blade.id !== 'common' ? blade.color : '#20242c'}">${heroSvg('doll')}</div>
+                <div class="doll-figure">${heroSprite(state, { scale: 6 })}</div>
                 <div class="doll-col">${DOLL_RIGHT.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
                 <div class="doll-hands">${DOLL_HANDS.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
             </div>
@@ -1035,6 +1035,7 @@ export function renderSettings(game, ui, cloud) {
     </div>
     <section class="glass-panel">
         <div class="panel-header"><h2>⚙️ Options</h2></div>
+        <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" ${state.settings.devUnlockAll ? 'checked' : ''}> Developer mode: unlock every tab and mini-game</label>
         <p class="muted small">Version ${state.version} save · ${state.stats.kills} kills · ${state.stats.deaths} deaths · ${state.stats.itemsCrafted} items made · ${state.stats.prestiges} prestiges.</p>

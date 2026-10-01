@@ -10,6 +10,9 @@ import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPres
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
+import { createSound } from './ui/sound.js';
+import { createStage } from './ui/stage.js';
+import { ATLAS } from './ui/sprites.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
@@ -80,7 +83,8 @@ let bootSavedAt = loaded ? loaded.meta.savedAt : null;
 const scene = createScene(document.getElementById('scene'), {
     strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
     toggle: () => window.FI.toggleCombat(),
-    stage: n => { game.setStage(n); render(); }
+    stage: n => { game.setStage(n); render(); },
+    sound: name => sound.play(name)
 });
 
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
@@ -90,6 +94,14 @@ const rewards = createRewards(layer('div', 'celebrate'));
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
+// Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
+const sound = createSound(() => game.state.settings.sound !== false);
+// The sprite atlas's size, for the CSS that cuts cells out of it.
+document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
+document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.rows}px`);
+
+// The skill stage above each skill tab: the hero at work (src/ui/stage.js).
+const stage = createStage(document.getElementById('stage'));
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
@@ -142,6 +154,7 @@ setInterval(() => {
 function frame(now) {
     patchLive(game, ui);
     scene.frame(game);
+    stage.frame(game);
     paintGold(now);
     requestAnimationFrame(frame);
 }
@@ -170,7 +183,14 @@ window.addEventListener('beforeunload', () => save(Date.now()));
 
 // A press in progress: re-rendering now would replace the button under the pointer and lose the click.
 const pointer = { down: false, downAt: 0, keyAt: 0 };
-document.addEventListener('pointerdown', () => { pointer.down = true; pointer.downAt = Date.now(); }, { capture: true, passive: true });
+document.addEventListener('pointerdown', event => {
+    pointer.down = true;
+    pointer.downAt = Date.now();
+    sound.unlock();
+    // Every button answers with a click; the monster has its own strike sound.
+    const button = event.target?.closest?.('button, [role="button"]');
+    if (button && !button.disabled && !button.classList.contains('foe') && !button.closest('.foe')) sound.play('click');
+}, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
 // A choice made in a dropdown or checkbox is done: let the tab refresh right away.
 document.addEventListener('change', event => {
@@ -190,6 +210,7 @@ const noteInput = () => {
 document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
 document.addEventListener('keydown', event => {
     noteInput();
+    sound.unlock();
     pointer.keyAt = Date.now();
     // Keyboard access for the clickable cards (role="button").
     const target = event.target;
@@ -241,15 +262,47 @@ function render() {
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
     scene.sync(game, ui);
+    stage.sync(game, ui);
     paintGold();
+}
+
+/** Which sound an event makes (null for none): the fight is heard only while it is watched. */
+function soundFor(ev, onCombat) {
+    switch (ev.type) {
+        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
+        case 'enemyHit': return onCombat ? ['hurt'] : null;
+        case 'dodge': return onCombat ? ['dodge'] : null;
+        case 'kill': return [ev.enemy.boss ? 'victory' : 'kill'];
+        case 'itemDropped': return [ev.item.rarity === 'legendary' ? 'legendary' : ['rare', 'epic'].includes(ev.item.rarity) ? 'rare' : 'drop'];
+        case 'itemCrafted': return [ev.item.rarity === 'legendary' ? 'legendary' : ['rare', 'epic'].includes(ev.item.rarity) ? 'rare' : 'craft'];
+        case 'actionComplete': return ui.tab === ev.skill ? [ev.made?.gem ? 'gem' : ev.made?.item ? 'craft' : (ev.made?.qty || 1) > 1 ? 'double' : 'action'] : null;
+        case 'toolMade': return ['unlock'];
+        case 'levelUp': return ['levelUp'];
+        case 'unlock': return ['unlock'];
+        case 'achievement': case 'eventMilestone': return ['achievement'];
+        case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
+        case 'death': case 'bossTimeout': case 'dungeonFail': return ['defeat'];
+        case 'prestige': return ['prestige'];
+        case 'pet': return ['pet'];
+        case 'unique': return ['legendary'];
+        case 'dungeonClear': return ['chest'];
+        case 'titan': return [ev.won ? 'victory' : 'defeat'];
+        case 'minigameWin': return ['gold'];
+        case 'harvest': return ['drop'];
+        case 'obstacleBuilt': return ['unlock'];
+        case 'error': return ['error'];
+        default: return null;
+    }
 }
 
 function handleEvents(events) {
     const onCombat = ui.tab === 'combat'; // the battle scene shows these itself
     for (const ev of events) {
         scene.event(ev, game);
+        const heard = soundFor(ev, onCombat);
+        if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
         switch (ev.type) {
-            case 'actionComplete': actionFx.actionComplete(ev, ui.tab); break;
+            case 'actionComplete': actionFx.actionComplete(ev, ui.tab, stage.anchor()); break;
             case 'levelUp': {
                 const card = levelCelebration(ev);
                 if (card) rewards.celebrate(card);
@@ -492,7 +545,7 @@ window.FI = {
     stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
-    buyCamp(id, count) { game.buyCampUpgrade(id, count); render(); },
+    buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
     enterDungeon(id) { if (game.enterDungeon(id)) window.FI.switchTab('combat'); else render(); },
     setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
@@ -506,9 +559,9 @@ window.FI = {
     upgradeObstacle(slot) { game.upgradeObstacle(slot); render(); },
     runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
 
-    equip(id) { game.equipItem(id); render(); },
-    unequip(slot) { game.unequipItem(slot); render(); },
-    sellItem(id) { game.sellItem(id); render(); },
+    equip(id) { if (game.equipItem(id) !== false) sound.play('equip'); render(); },
+    unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
+    sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
     sellAll(rarity) { game.sellAllItems(rarity); render(); },
     upgrade(id) { game.upgradeItem(id); render(); },
     reforge(id) { game.reforgeItem(id); render(); },
@@ -529,8 +582,8 @@ window.FI = {
         panel.innerHTML = renderItemDetail(game, shown);
         panel.classList.toggle('has-item', panel.querySelector('.detail') !== null);
     },
-    buyShop(id) { game.buyGoldShopItem(id); render(); },
-    buyPerk(id) { game.buyPerk(id); render(); },
+    buyShop(id) { if (game.buyGoldShopItem(id) !== false) sound.play('buy'); render(); },
+    buyPerk(id) { if (game.buyPerk(id) !== false) sound.play('buy'); render(); },
 
     openPrestige() { if (game.canPrestige()) openModal(renderPrestigeModal(game), 'prestige'); },
     confirmPrestige() {
@@ -549,6 +602,7 @@ window.FI = {
     claimDaily() {
         const crate = game.claimDaily();
         if (crate) {
+            sound.play('chest');
             if (ui.modalOpen === 'crate') closeModal(); // "open the next": the new crate replaces this one
             openModal(renderCrateModal(crate, game.state.daily.banked), 'crate');
         }
@@ -560,6 +614,12 @@ window.FI = {
     },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    toggleSound() {
+        game.state.settings.sound = game.state.settings.sound === false;
+        game.markDirty();
+        if (game.state.settings.sound) { sound.unlock(); sound.play('click'); }
+        render();
+    },
     async exportSave() {
         const text = await exportStringCompressed(game.serialize(Date.now()));
         ui.saveIo = text;

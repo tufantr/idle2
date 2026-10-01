@@ -11,6 +11,7 @@ import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
 import { titanLevel } from '../systems/dungeon.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
+import { sprite, heroSprite, heroLayers, monsterSpriteKey } from './sprites.js';
 
 // Backdrop per place: zone ids, dungeons and the Titan map onto these (see style.css, .battle[data-scene]).
 const DUNGEON_SCENES = { goblin_warren: 'dungeon', crystal_depths: 'caves', orc_stronghold: 'dungeon', dragons_lair: 'volcano' };
@@ -38,37 +39,6 @@ const MOVES = {
     wounded:   { ms: 700, rank: 1, frames: [{ boxShadow: 'inset 0 0 0 rgba(220, 38, 38, 0)' }, { boxShadow: 'inset 0 0 90px rgba(220, 38, 38, 0.75)', offset: 0.2 }, { boxShadow: 'inset 0 0 0 rgba(220, 38, 38, 0)' }] }
 };
 
-/** The knight. `id` prefixes the gradient ids, so the battle scene and the paperdoll can both draw him. */
-export function heroSvg(id = 'hero') {
-    return `<svg class="hero-svg" viewBox="0 0 120 140" aria-hidden="true">
-    <defs>
-        <linearGradient id="${id}-steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef1f6"/><stop offset="1" stop-color="#6b7383"/></linearGradient>
-        <linearGradient id="${id}-cape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b1c1c"/><stop offset="1" stop-color="#3f0b0b"/></linearGradient>
-        <linearGradient id="${id}-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d98a"/><stop offset="1" stop-color="#a8792a"/></linearGradient>
-    </defs>
-    <path class="hero-cape" d="M42 48 Q28 92 32 130 L70 130 Q66 90 60 48 Z" fill="url(#${id}-cape)"/>
-    <rect x="46" y="96" width="10" height="32" rx="3" fill="url(#${id}-steel)"/>
-    <rect x="60" y="96" width="10" height="32" rx="3" fill="url(#${id}-steel)"/>
-    <rect x="43" y="124" width="15" height="8" rx="2" fill="#2d313b"/>
-    <rect x="58" y="124" width="17" height="8" rx="2" fill="#2d313b"/>
-    <path d="M42 50 L74 50 L70 98 L46 98 Z" fill="url(#${id}-steel)" stroke="#20242c" stroke-width="1.5"/>
-    <path d="M50 56 L66 56 L64 80 L52 80 Z" fill="none" stroke="url(#${id}-gold)" stroke-width="1.5" opacity="0.8"/>
-    <rect x="45" y="88" width="26" height="5" fill="url(#${id}-gold)"/>
-    <path d="M46 26 Q58 10 70 26 L70 44 Q58 50 46 44 Z" fill="url(#${id}-steel)" stroke="#20242c" stroke-width="1.5"/>
-    <rect x="55" y="30" width="15" height="3" rx="1" fill="#0b0d12"/>
-    <path d="M57 15 Q66 1 78 9 Q69 9 62 19 Z" fill="#b91c1c"/>
-    <g class="hero-sword">
-        <rect x="70" y="58" width="18" height="8" rx="4" fill="url(#${id}-steel)"/>
-        <rect class="hero-blade" x="86" y="14" width="5" height="54" rx="1" fill="url(#${id}-steel)" stroke="#20242c" stroke-width="1"/>
-        <rect x="80" y="64" width="17" height="4" rx="1" fill="url(#${id}-gold)"/>
-        <rect x="86" y="67" width="5" height="10" fill="#5b3a1a"/>
-    </g>
-    <g class="hero-shield">
-        <path d="M28 56 L52 56 L52 78 Q40 96 28 78 Z" fill="#1c2f4d" stroke="url(#${id}-gold)" stroke-width="3"/>
-        <path d="M40 60 L40 86 M31 70 L49 70" stroke="url(#${id}-gold)" stroke-width="2"/>
-    </g>
-</svg>`;
-}
 
 // Deterministic scatter for the ambient particles (positions, delays, sizes), so the markup is stable.
 const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
@@ -96,7 +66,7 @@ export function createScene(root, actions) {
         <div class="battle-field">
             <div class="fighter hero">
                 <div class="fighter-bars"><span class="fbar-text"></span><div class="fbar"><i class="trail"></i><i class="fill"></i></div></div>
-                <div class="fighter-stand"><span class="campfire" aria-hidden="true">🔥</span><div class="fighter-sprite">${heroSvg('hero')}</div></div>
+                <div class="fighter-stand"><span class="campfire" aria-hidden="true">🔥</span><div class="fighter-sprite"><span class="hero-figure"></span></div></div>
                 <div class="fighter-name"></div>
                 <div class="fighter-meta"></div>
                 <div class="attack-bar" aria-hidden="true"><i></i></div>
@@ -119,7 +89,7 @@ export function createScene(root, actions) {
     const $ = sel => root.querySelector(sel);
     const el = {
         battle: $('.battle'), zone: $('.battle-zone'), stage: $('.battle-stage'), regroup: $('.battle-regroup'), path: $('.stage-path'),
-        hero: $('.hero'), heroStand: $('.hero .fighter-stand'), heroSprite: $('.hero .fighter-sprite'), heroBar: $('.hero .fill'), heroTrail: $('.hero .trail'), heroText: $('.hero .fbar-text'),
+        hero: $('.hero'), heroStand: $('.hero .fighter-stand'), heroSprite: $('.hero .fighter-sprite'), heroFigure: $('.hero-figure'), heroBar: $('.hero .fill'), heroTrail: $('.hero .trail'), heroText: $('.hero .fbar-text'),
         heroName: $('.hero .fighter-name'), heroMeta: $('.hero .fighter-meta'), heroAtk: $('.hero .attack-bar i'),
         foe: $('.foe'), foeStand: $('.foe .fighter-stand'), foeSprite: $('.foe .fighter-sprite'), foeBar: $('.foe .fill'), foeTrail: $('.foe .trail'), foeText: $('.foe .fbar-text'),
         foeName: $('.foe .fighter-name'), foeMeta: $('.foe .fighter-meta'), foeIcon: $('.foe-icon'), foeAtkBar: $('.foe .attack-bar'), foeAtk: $('.foe .attack-bar i'),
@@ -130,6 +100,7 @@ export function createScene(root, actions) {
     let preview = null;       // the monster waiting on this stage before the first fight
     let quiet = true;         // the next monster appears without an entrance (first frame, back from another tab)
     let lastPathKey = '';
+    let lastHeroLayers = '';  // the hero is redrawn only when his gear changes
     let bannerTimer = 0;
     let fxBudget = MAX_FX_PER_FRAME;
     let coinsInFlight = 0;
@@ -308,7 +279,8 @@ export function createScene(root, actions) {
 
     function showEnemy(game, enemy, silent) {
         const c = game.state.combat;
-        el.foeIcon.textContent = enemy.icon || '👾';
+        const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
+        el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: (enemy.boss ? 5 : 4) - (phone ? 1 : 0), fallback: esc(enemy.icon || '👾') });
         setText(el.foeName, enemy.name.replace(' (Boss)', ''));
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
@@ -322,6 +294,7 @@ export function createScene(root, actions) {
             const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : c.mode === 'dungeon' ? 'Dungeon boss' : `Boss · stage ${c.stage}`;
             banner(`<small>${label}</small><strong>${esc(enemy.name.replace(' (Boss)', ''))}</strong>`, 'boss', 2200);
             move(el.battle, 'shake');
+            actions.sound?.('boss');
         }
     }
 
@@ -374,11 +347,11 @@ export function createScene(root, actions) {
             setMarkup(el.heroMeta, heroKit(state));
             const enemy = currentEnemy(state);
             if (enemy === lastEnemy) setText(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
-            const weapon = state.equipped.Weapon;
-            const rarity = weapon ? RARITIES.find(r => r.id === weapon.rarity) : null;
-            el.hero.classList.toggle('armed', !!weapon);
-            el.hero.classList.toggle('shielded', !!state.equipped.Shield);
-            el.hero.style.setProperty('--blade', rarity && rarity.id !== 'common' ? rarity.color : 'transparent');
+            const layers = heroLayers(state).join(',');
+            if (layers !== lastHeroLayers) {
+                lastHeroLayers = layers;
+                el.heroFigure.innerHTML = heroSprite(state, { scale: window.matchMedia?.('(max-width: 600px)').matches ? 3 : 4 });
+            }
             el.battle.classList.toggle('idle', !c.active);
             el.cta.hidden = c.active;
         },

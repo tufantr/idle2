@@ -74,7 +74,7 @@ export function createDefaultState(now = Date.now()) {
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
         log: [],
-        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, cloudSync: true, autoSalvage: 'common', forceEvent: null },
+        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, cloudSync: true, autoSalvage: 'common', forceEvent: null },
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;

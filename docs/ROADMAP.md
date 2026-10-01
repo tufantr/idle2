@@ -22,6 +22,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 4 — Skill breadth | ✅ Done |
 | 5 — Social layer | ✅ Done |
 | 6 — Game feel | ✅ Done |
+| 7 — Make it feel like a game | 🚧 In progress |
 
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
@@ -253,6 +254,27 @@ one visual identity (dark fantasy: carved serif lettering, stone and bronze, gol
 
 **Exit:** a new player sees the fight within one click; no layout shift when bosses or banners
 appear; every tab passes the overflow and console check at 390 px and 1350 px.
+
+## Phase 7 — Make it feel like a game 🚧
+
+Playtest feedback after Phase 6: "too static, word-like". A research pass on game feel
+([notes](research_notes/game-feel.md)) set the rules: answer every action in three senses, show
+progress as motion, art before words, one stage with a HUD around it.
+
+- [x] **Real sprites, not emoji** (`tools/atlas.py`, `assets/sprites.png`, CC0 tiles from Dungeon
+      Crawl Stone Soup): every monster and boss, the Titan's five faces, equipment icons for every
+      slot and tier, and the hero as a paperdoll of layers, so he visibly wears what is equipped,
+      in the battle scene and the armory alike. One 172 KB atlas, drawn crisp at 3–6×
+- [x] **Sound and touch** (`src/ui/sound.js`): every action has a short synthesized sound (Web
+      Audio, no files): hits, crits, dodges, coins, drops by rarity, level-ups, unlocks, the boss
+      drum, chests, prestige, UI clicks; a phone also buzzes. One setting, a mute button in the
+      header, nothing before the first interaction, a cap on sounds per moment
+- [x] **The skill stage** (`src/ui/stage.js`): above every skill tab the hero stands in that
+      skill's scenery with its tool and works on the chosen node: his swing follows the real
+      action progress, a ring fills with it, the work lands on the beat and pops off the target
+- [ ] Progress everywhere: XP bars in the sidebar, a next-goal bar in the header, counters that bump
+- [ ] A text diet: icons and numbers first, descriptions on hover or tap
+- [ ] Press feel on every button; idle motion on cards
 
 ## Deferred on purpose
 

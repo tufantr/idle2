@@ -28,13 +28,13 @@ export function createActionFx(layer) {
 
     return {
         /** A finished action (the actionComplete event), shown when its skill's tab is open. */
-        actionComplete(ev, tab) {
+        actionComplete(ev, tab, anchor = null) {
             if (tab !== ev.skill || document.hidden || reduced()) return;
-            // After this tick's re-render, so the pop starts from the card as it is now drawn.
+            // After this tick's re-render, so the pop starts from the stage's target (or the card) as drawn now.
             requestAnimationFrame(() => {
                 const card = document.querySelector('#tab .node-card.active');
-                if (!card) return;
-                const art = card.querySelector('.skill-action-art') || card;
+                const art = anchor || card?.querySelector('.skill-action-art') || card;
+                if (!art) return;
                 const box = art.getBoundingClientRect();
                 if (!box.width) return;
                 const x = box.left + box.width / 2;
