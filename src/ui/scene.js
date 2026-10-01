@@ -185,7 +185,7 @@ export function createScene(root, actions) {
             coinsInFlight++;
             const coin = document.createElement('div');
             coin.className = 'flying-coin';
-            coin.textContent = '🪙';
+            coin.innerHTML = sprite('gold', { scale: 1, fallback: '🪙' });
             const x0 = from.left + from.width / 2 + (Math.random() - 0.5) * 40;
             const y0 = from.top + from.height / 2 + (Math.random() - 0.5) * 30;
             coin.style.left = `${x0}px`;

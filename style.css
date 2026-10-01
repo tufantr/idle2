@@ -1019,7 +1019,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .fx-layer > .loot-beam { width: 46px; height: 64%; transform: translateX(-50%); transform-origin: 50% 100%; opacity: 0; border-radius: 50% 50% 0 0 / 18% 18% 0 0; background: linear-gradient(0deg, var(--beam), transparent); mix-blend-mode: screen; animation: beam 2.4s ease-out forwards; }
 .loot-beam span { position: absolute; left: 50%; bottom: -8px; font-size: 1.8rem; line-height: 1; filter: drop-shadow(0 0 8px var(--beam)); animation: lootDrop 0.6s cubic-bezier(.3, 1.6, .6, 1) both; }
 .click-spark { font-size: 1.6rem; line-height: 1; color: #fde68a; text-shadow: 0 0 10px rgba(251, 191, 36, 0.9); animation: spark 0.45s ease-out forwards; }
-.flying-coin { position: fixed; z-index: 450; margin: -10px 0 0 -10px; font-size: 20px; line-height: 1; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
+.flying-coin { position: fixed; z-index: 450; margin: -16px 0 0 -16px; font-size: 20px; line-height: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
 
 /* banner, combo, call to action */
 .battle-banner {
@@ -1234,7 +1234,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .hero-doll { position: relative; display: inline-block; width: calc(32px * var(--k)); height: calc(32px * var(--k)); line-height: 0; }
 .hero-doll .spr { position: absolute; left: 0; top: 0; }
 .hero .hero-figure { display: block; line-height: 0; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.6)); animation: heroBreathe 2.8s ease-in-out infinite; transform-origin: 50% 100%; }
-.doll-figure .hero-doll { filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.65)); }
+.doll-figure .hero-doll { filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.65)); animation: heroBreathe 2.8s ease-in-out infinite; transform-origin: 50% 100%; }
 .tile .tile-icon.spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
 .detail-art { width: 72px; height: 72px; }
 .icon-btn { padding: 0.3rem 0.5rem; font-size: 0.95rem; line-height: 1; }
