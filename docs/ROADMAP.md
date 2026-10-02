@@ -309,6 +309,11 @@ progress as motion, art before words, one stage with a HUD around it.
       creatures (a stone beetle, a sapling, a hound, ...) shown as silhouettes until found, as are
       the unique items; farm plots go from a tilled mound to a sprout to a young plant to the crop
 
+- [x] **A title card, not a login form**: a new player's first screen is the game's title over the
+      meadow, the hero facing a slime, and one button that starts the first fight. Signing in is a
+      link on the card and the header's guest pill, which asks to "Save to cloud" once the first
+      boss is down
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;

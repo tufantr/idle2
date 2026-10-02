@@ -6,7 +6,7 @@ import {
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
 import { describeOffline } from './systems/offline.js';
-import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -118,7 +118,9 @@ if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On loa
 const offlineSummary = game.resumeFromSave(Date.now());
 if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderOfflineModal(describeOffline(offlineSummary)), 'offline');
 if (cloud.loggedIn) syncFromCloud();
-else if (!prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderAuthModal(), 'auth'); prefs.set('fantasyIdle.authSeen', '1'); }
+// A new player meets the game first, not a login form: a title card, then straight into a fight.
+// Signing in stays one click away (on the card, and in the header once there is progress to keep).
+else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -683,7 +685,14 @@ window.FI = {
         onYes?.();
     },
 
-    openAuth() { openModal(renderAuthModal(), 'auth'); },
+    openAuth() { if (ui.modalOpen === 'intro') closeModal(); openModal(renderAuthModal(), 'auth'); },
+    beginAdventure() {
+        closeModal();
+        sound.unlock();
+        sound.play('unlock');
+        if (!game.state.combat.active && !game.state.action) game.toggleCombat();
+        render();
+    },
     async auth(kind) {
         const user = document.getElementById('auth-user')?.value.trim();
         const pass = document.getElementById('auth-pass')?.value;

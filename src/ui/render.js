@@ -153,7 +153,9 @@ export function renderHeader(game, ui, cloud) {
             ? `<span class="status-pill fighting">⚔️ Fighting — ${esc(fightingWhere(state))}</span>`
             : `<span class="status-pill idle">💤 Idle — start a skill or enter combat</span>`;
     const goal = goals.length ? `<span class="goal-pill" title="Your next unlock"><span>🎯 ${esc(goals[0].hint)}</span><i class="goal-bar" style="--p:${(goalProgress(state, goals[0]) * 100).toFixed(1)}%"></i></span>` : '';
-    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>` : `<span class="cloud-pill local" title="Local save only">💾 guest</span>`;
+    const nudge = !cloud?.loggedIn && state.combat.bestStage > 10;   // past the first boss: worth keeping
+    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>`
+        : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" title="Local save only: sign in to keep it in the cloud">💾 ${nudge ? 'Save to cloud' : 'guest'}</button>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? '🔊' : '🔇'}</button>`;
     return `
@@ -1190,6 +1192,23 @@ export function renderOfflineModal(lines) {
         <div class="modal-header">🌙 Welcome back</div>
         <div class="modal-body"><div class="offline-lines">${lines.map(l => `<div>${esc(l)}</div>`).join('')}</div></div>
         <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="FI.closeModal()">Continue</button></div>
+    </div>`;
+}
+
+/** A new player's first screen: the title over the meadow, the hero and a slime, one button to begin. */
+export function renderIntroModal(state) {
+    const motes = Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 53 + 7) % 100}%;--y:${(i * 31 + 11) % 70}%;--d:${(i * 0.7) % 5}s"></i>`).join('');
+    return `<div class="intro" aria-labelledby="intro-title">
+        <div class="intro-scene" aria-hidden="true">
+            <div class="intro-layer sky"></div><div class="intro-layer far"></div><div class="intro-layer near"></div>
+            <div class="intro-motes">${motes}</div>
+            <div class="intro-hero">${heroSprite(state, { scale: 5 })}</div>
+            <div class="intro-foe">${sprite('mon/Slime', { scale: 4 })}</div>
+        </div>
+        <h1 id="intro-title" class="intro-logo">Fantasy Idle</h1>
+        <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>
+        <button class="modal-btn btn-confirm intro-go" onclick="FI.beginAdventure()">⚔️ Begin your adventure</button>
+        <button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>
     </div>`;
 }
 
