@@ -289,11 +289,14 @@ progress as motion, art before words, one stage with a HUD around it.
 
 ## Phase 8 — Art and polish (in progress)
 
-- [ ] **Hand-painted backdrops** (`docs/art/gemini.md`, `tools/paint.py`): one Gemini painting per
-      place (17 prompts in one consistent style) replaces the scripted layers of that place in the
-      battle scene and on its skill stages. The pipeline is ready and tested with stand-ins; Claude
-      in Chrome can't reach a browser from a cloud session, so the paintings are made by hand or by
-      a Claude session on the owner's computer, then imported with one command
+- [x] **Hand-painted backdrops** (`docs/art/gemini.md`, `tools/paint.py`, `assets/paint/`): all 17
+      places are Gemini paintings in one storybook style, made by a Claude session on the owner's
+      computer through Claude in Chrome (a cloud session can't reach a browser) and pushed to an
+      `art-inbox` branch. Each replaces its place's scripted layers in the battle scene and on the
+      skill stages that use it (smithing now works at a forge, alchemy in a lab) and drifts slowly;
+      a shade along the top keeps the zone title readable and a soft pool of shadow sits behind each
+      stage's caption. The new player's title card opens on the painted meadow. About 2.4 MB of WebP
+      in all; a place loads only when shown
 
 - [x] **Pixel-art resources** (`tools/resource_art.py`): all 73 resources have an icon in the
       sprite atlas instead of a shared emoji: DCSS gems, potions, meat, fruit and herbs (recolored

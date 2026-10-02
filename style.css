@@ -1428,21 +1428,22 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"]) .battle-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 46s ease-in-out infinite alternate; }
 .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"]) .battle-far, .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"]) .battle-near { display: none; }
 .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"])::before { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
-.battle[data-scene="meadow"] .battle-sky { background-image: url(assets/paint/meadow.webp); }
-.battle[data-scene="forest"] .battle-sky { background-image: url(assets/paint/forest.webp); }
-.battle[data-scene="caves"] .battle-sky { background-image: url(assets/paint/caves.webp); }
-.battle[data-scene="marsh"] .battle-sky { background-image: url(assets/paint/marsh.webp); }
-.battle[data-scene="highland"] .battle-sky { background-image: url(assets/paint/highland.webp); animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate; }
-.battle[data-scene="ruins"] .battle-sky { background-image: url(assets/paint/ruins.webp); }
-.battle[data-scene="volcano"] .battle-sky { background-image: url(assets/paint/volcano.webp); }
-.battle[data-scene="frost"] .battle-sky { background-image: url(assets/paint/frost.webp); background-position: center 76%; }
-.battle[data-scene="skyreach"] .battle-sky { background-image: url(assets/paint/skyreach.webp); background-position: center 72%; }
-.battle[data-scene="abyss"] .battle-sky { background-image: url(assets/paint/abyss.webp); }
-.battle[data-scene="dungeon"] .battle-sky { background-image: url(assets/paint/dungeon.webp); }
-.battle[data-scene="titan"] .battle-sky { background-image: url(assets/paint/titan.webp); animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate; }
+.battle[data-scene="meadow"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/meadow.webp); }
+.battle[data-scene="forest"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/forest.webp); }
+.battle[data-scene="caves"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/caves.webp); }
+.battle[data-scene="marsh"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/marsh.webp); }
+.battle[data-scene="highland"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/highland.webp); animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate; }
+.battle[data-scene="ruins"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/ruins.webp); }
+.battle[data-scene="volcano"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/volcano.webp); }
+.battle[data-scene="frost"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/frost.webp); background-position: center 76%; }
+.battle[data-scene="skyreach"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/skyreach.webp); background-position: center 72%; }
+.battle[data-scene="abyss"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/abyss.webp); }
+.battle[data-scene="dungeon"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/dungeon.webp); }
+.battle[data-scene="titan"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/titan.webp); animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 50s ease-in-out infinite alternate; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-far { display: none; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-ground { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
+.stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-text { margin-left: -0.9rem; padding: 0.35rem 1.4rem 0.4rem 0.9rem; border-radius: 12px; background: radial-gradient(ellipse at 45% 50%, rgba(12, 8, 5, 0.6), rgba(12, 8, 5, 0) 72%); }
 .stage[data-skill="mining"] .stage-sky { background-image: url(assets/paint/caves.webp); }
 .stage[data-skill="woodcutting"] .stage-sky { background-image: url(assets/paint/forest.webp); }
 .stage[data-skill="fishing"] .stage-sky { background-image: url(assets/paint/river.webp); }
@@ -1452,6 +1453,8 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .stage[data-skill="alchemy"] .stage-sky { background-image: url(assets/paint/lab.webp); }
 .stage[data-skill="smithing"] .stage-sky { background-image: url(assets/paint/forge.webp); }
 .stage[data-skill="crafting"] .stage-sky { background-image: url(assets/paint/workshop.webp); }
+.intro .intro-layer.sky { background-image: url(assets/paint/meadow.webp); background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 40s ease-in-out infinite alternate; }
+.intro .intro-layer.far, .intro .intro-layer.near { display: none; }
 /* paint:end */
 
 /* ===== The title card (a new player's first screen) ===== */

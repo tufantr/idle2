@@ -43,6 +43,10 @@ LIGHTNING = {'highland', 'titan'}  # their sky keeps the lightning flicker under
 FOCUS = {'skyreach': 72, 'frost': 76}
 DEFAULT_FOCUS = 80
 MAX_W = 1920
+# Paintings are brighter than the scripted layers: a shade along the top keeps the zone title and the
+# stage path readable, and a soft pool of shadow sits behind a stage's caption.
+TOP_SHADE = 'linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%)'
+CAPTION_SHADE = 'radial-gradient(ellipse at 45% 50%, rgba(12, 8, 5, 0.6), rgba(12, 8, 5, 0) 72%)'
 
 
 def place_of(path):
@@ -85,17 +89,23 @@ def css_block(painted):
             extra = f' background-position: center {FOCUS[p]}%;' if p in FOCUS else ''
             if p in LIGHTNING:
                 extra += ' animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate;'
-            lines.append(f'.battle[data-scene="{p}"] .battle-sky {{ background-image: url(assets/paint/{p}.webp);{extra} }}')
+            lines.append(f'.battle[data-scene="{p}"] .battle-sky {{ background-image: {TOP_SHADE}, url(assets/paint/{p}.webp);{extra} }}')
     if stages:
         anyof = ', '.join(f'[data-skill="{s}"]' for s in stages)
         lines += [
             f'.stage:is({anyof}) .stage-sky {{ background-position: center {DEFAULT_FOCUS}%; transform-origin: 50% 80%; animation: paintDrift 50s ease-in-out infinite alternate; }}',
             f'.stage:is({anyof}) .stage-far {{ display: none; }}',
             f'.stage:is({anyof}) .stage-ground {{ background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }}',
+            f'.stage:is({anyof}) .stage-text {{ margin-left: -0.9rem; padding: 0.35rem 1.4rem 0.4rem 0.9rem; border-radius: 12px; background: {CAPTION_SHADE}; }}',
         ]
         for skill, p in stages.items():
             extra = f' background-position: center {FOCUS[p]}%;' if p in FOCUS else ''
             lines.append(f'.stage[data-skill="{skill}"] .stage-sky {{ background-image: url(assets/paint/{p}.webp);{extra} }}')
+    if 'meadow' in painted:   # the title card a new player sees opens on the painted meadow
+        lines += [
+            f'.intro .intro-layer.sky {{ background-image: url(assets/paint/meadow.webp); background-position: center {DEFAULT_FOCUS}%; transform-origin: 50% 80%; animation: paintDrift 40s ease-in-out infinite alternate; }}',
+            '.intro .intro-layer.far, .intro .intro-layer.near { display: none; }',
+        ]
     lines.append(END)
     return '\n'.join(lines)
 
