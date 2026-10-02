@@ -4,6 +4,7 @@
 
 import { RESOURCES } from '../data/resources.js';
 import { fmt, escapeHtml as esc } from './format.js';
+import { resIcon } from './sprites.js';
 
 const MAX_FLOATING = 12;
 const POP_MS = 1150;
@@ -41,9 +42,9 @@ export function createActionFx(layer) {
                 const y = box.top - 6;
                 art.animate?.([{ transform: 'none' }, { transform: 'scale(1.16) rotate(-7deg)', offset: 0.3 }, { transform: 'none' }], { duration: 280, easing: 'ease-out' });
                 const made = ev.made || {};
-                if (made.id) pop(`+${fmt(made.qty)} ${RESOURCES[made.id]?.icon || ''}`, x, y, made.qty > 1 ? 'double' : '');
+                if (made.id) pop(`+${fmt(made.qty)} ${resIcon(made.id, { scale: 0.75 })}`, x, y, made.qty > 1 ? 'double' : '');
                 if (made.burnt) pop(`🔥${made.qty > 1 ? ' ×2' : ''}`, x, y, made.qty > 1 ? 'double' : '');
-                if (made.gem) pop(`${RESOURCES[made.gem]?.icon || '💎'} ${esc(RESOURCES[made.gem]?.name || 'Gem')}!`, x, y - 8, 'gem', 160);
+                if (made.gem) pop(`${resIcon(made.gem, { scale: 0.75 })} ${esc(RESOURCES[made.gem]?.name || 'Gem')}!`, x, y - 8, 'gem', 160);
                 if (made.item) pop(`${esc(made.item.icon)} ${esc(made.item.name)}`, x, y, 'item', 0, made.item.color || '');
                 if (ev.xp) pop(`+${fmt(ev.xp)} XP`, x + 30, y + 16, 'xp', 110);
             });

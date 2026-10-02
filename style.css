@@ -274,7 +274,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .grid-span { grid-column: 1 / -1; margin: 0.4rem 0 0; }
 
 /* ---------- cards: one family of recessed tiles ---------- */
-.node-card, .camp-card, .res-card, .dungeon-card, .plot-card, .agility-slot, .pet-card, .ach-item, .shop-item,
+.node-card, .camp-card, .dungeon-card, .plot-card, .agility-slot, .pet-card, .ach-item, .shop-item,
 .backup-row, .course-run, .clan-boss, .info-strip, .prestige-box, .event-shop-item, .obstacle, .inv-item, .slot {
     border: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(255, 236, 200, 0.03), rgba(0, 0, 0, 0.22));
@@ -534,12 +534,16 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .affixes { display: flex; flex-wrap: wrap; gap: 0.3rem; justify-content: flex-end; }
 .affix { padding: 0.1rem 0.45rem; border-radius: 6px; font-size: 0.68rem; color: #e4d4ff; background: rgba(124, 92, 196, 0.18); border: 1px solid rgba(183, 148, 246, 0.25); }
 .filter-row { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-.res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.7rem; margin-top: 0.5rem; }
-.res-card { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.7rem; border-radius: 12px; }
-.res-head { display: flex; gap: 0.6rem; align-items: center; }
-.res-icon { font-size: 1.5rem; }
-.res-name { font-weight: 700; }
-.res-qty { font-family: ui-monospace, monospace; font-size: 1.1rem; font-weight: 800; }
+.bank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; margin-top: 0.6rem; }
+.bank-qty { position: absolute; right: 4px; bottom: 1px; font-size: 0.7rem; font-weight: 800; color: #fff3d6; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+.bank-hint { margin-top: 0.7rem; }
+.bank-detail { display: flex; align-items: center; gap: 0.6rem 0.9rem; flex-wrap: wrap; margin-top: 0.8rem; padding: 0.7rem 0.9rem; border-radius: 12px; background: var(--well); border: 1px solid color-mix(in srgb, var(--r) 45%, #2a2016); }
+.bank-detail-art { line-height: 0; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6)); }
+.bank-detail-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1 1 12rem; }
+.bank-detail-qty { font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) { /* the picked material stays in view above the hotbar while the bank scrolls */
+    .bank-detail { position: sticky; bottom: calc(4.9rem + env(safe-area-inset-bottom, 0px)); z-index: 5; background: #17110b; box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.65); }
+}
 .res-actions { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
 .empty-state { padding: 3rem; text-align: center; font-style: italic; color: var(--text-muted); border-radius: 12px; background: var(--well); border: 1px dashed var(--line); }
 .lock-btn { padding: 0.2rem 0.45rem; font-size: 0.9rem; border-radius: 8px; background: transparent; }
@@ -1222,15 +1226,19 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 
 /* ===== Sprites (assets/sprites.png, cut by src/ui/sprites.js) =====
    A cell is 32px; --k scales it up with hard pixels. The hero is a stack of cells. */
-:root { --k: 2; --atlas-w: 512px; --atlas-h: 448px; }
+:root { --k: 2; --atlas-w: 512px; --atlas-h: 608px; }
 .spr {
     display: inline-block; width: calc(32px * var(--k)); height: calc(32px * var(--k)); vertical-align: middle;
-    background-image: url(assets/sprites.png); background-repeat: no-repeat;
+    background-image: var(--atlas, url(assets/sprites.png)); background-repeat: no-repeat;
     background-size: calc(var(--atlas-w) * var(--k)) calc(var(--atlas-h) * var(--k));
     background-position: calc(var(--sx) * -32px * var(--k)) calc(var(--sy) * -32px * var(--k));
     image-rendering: pixelated; image-rendering: crisp-edges;
 }
 .sp-fallback { display: inline-block; font-size: calc(22px * var(--k)); line-height: 1; vertical-align: middle; }
+.spr.soft { image-rendering: auto; }  /* below 1x a crisp downscale drops pixels; smooth reads better */
+.spr.res-spr { vertical-align: -0.32em; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
+.skill-action-art .spr, .stage-icon .spr, .plot-art .spr { vertical-align: middle; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.65)); }
+.bank-tile .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
 .hero-doll { position: relative; display: inline-block; width: calc(32px * var(--k)); height: calc(32px * var(--k)); line-height: 0; }
 .hero-doll .spr { position: absolute; left: 0; top: 0; }
 .hero .hero-figure { display: block; line-height: 0; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.6)); animation: heroBreathe 2.8s ease-in-out infinite; transform-origin: 50% 100%; }

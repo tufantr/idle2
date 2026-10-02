@@ -39,6 +39,7 @@ const ui = {
     craftBar: 'silver_bar',
     craftGem: 'amethyst',
     invFilter: 'all',
+    resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
     invPreview: null,    // the item under the pointer, shown instead while hovered
     cloudStatus: '',
@@ -96,7 +97,8 @@ const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
 // Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
 const sound = createSound(() => game.state.settings.sound !== false);
-// The sprite atlas's size, for the CSS that cuts cells out of it.
+// The sprite atlas (its versioned URL and its size), for the CSS that cuts cells out of it.
+document.documentElement.style.setProperty('--atlas', `url(${ATLAS.url})`); // versioned, so a new layout never meets an old cached sheet
 document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
 document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.rows}px`);
 
@@ -586,6 +588,7 @@ window.FI = {
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },
     invFilter(cat) { ui.invFilter = cat; render(); },
+    selectRes(id) { ui.resSelected = ui.resSelected === id ? null : id; render(); },
     selectItem(id) { ui.invSelected = id === null || ui.invSelected === id ? null : id; ui.invPreview = null; render(); },
     /** Hovering a tile shows it on the table without a full re-render; leaving shows the picked item again. */
     previewItem(id) {

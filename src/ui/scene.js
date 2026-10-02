@@ -11,7 +11,7 @@ import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
 import { titanLevel } from '../systems/dungeon.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
-import { sprite, heroSprite, heroLayers, monsterSpriteKey } from './sprites.js';
+import { sprite, heroSprite, heroLayers, monsterSpriteKey, resIcon } from './sprites.js';
 
 // Backdrop per place: zone ids, dungeons and the Titan map onto these (see style.css, .battle[data-scene]).
 const DUNGEON_SCENES = { goblin_warren: 'dungeon', crystal_depths: 'caves', orc_stronghold: 'dungeon', dragons_lair: 'volcano' };
@@ -260,13 +260,13 @@ export function createScene(root, actions) {
             const foods = foodsByHealing().filter(f => (c.autoEat === 'auto' || f.id === c.autoEat) && state.resources[f.id] > 0);
             const count = foods.reduce((n, f) => n + state.resources[f.id], 0);
             parts.push(count > 0
-                ? `<span title="Food for auto-eat">${foods[foods.length - 1].icon} ${fmt(count)}</span>`
-                : '<span class="warn" title="Nothing to eat: cook some food">🍖 no food</span>');
+                ? `<span title="Food for auto-eat">${resIcon(foods[foods.length - 1].id)} ${fmt(count)}</span>`
+                : `<span class="warn" title="Nothing to eat: cook some food">${resIcon('cooked_rabbit')} no food</span>`);
         }
         if (c.potion !== 'none') {
             const p = RESOURCES[c.potion];
             const left = c.potionCharges > 0 ? `${c.potionCharges} charges` : `×${fmt(state.resources[c.potion] || 0)}`;
-            parts.push(`<span title="${esc(p?.name || 'Potion')}">${p?.icon || '🧪'} ${left}</span>`);
+            parts.push(`<span title="${esc(p?.name || 'Potion')}">${resIcon(c.potion)} ${left}</span>`);
         }
         return parts.join('');
     }
@@ -446,7 +446,7 @@ export function createScene(root, actions) {
                     const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: (ev.enemy.boss ? 5 : 4) - (phone ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
                     coinBurst(ev.enemy.boss ? 7 : 1);
-                    ev.drops.filter(dr => !dr.item).slice(0, 3).forEach((dr, i) => spawnFx('drop-pop', `+${fmt(dr.qty)} ${RESOURCES[dr.id]?.icon || ''}`, foe.x - 14 + i * 14, foe.bottom - 4, 1200));
+                    ev.drops.filter(dr => !dr.item).slice(0, 3).forEach((dr, i) => spawnFx('drop-pop', `+${fmt(dr.qty)} ${resIcon(dr.id)}`, foe.x - 14 + i * 14, foe.bottom - 4, 1200));
                     if (ev.enemy.boss && !ev.enemy.titan && game.state.combat.mode === 'stages') {
                         banner(`<small>Victory</small><strong>${esc(ev.enemy.name.replace(' (Boss)', ''))} falls</strong><span>+${fmt(ev.gold)} gold</span>`, 'victory', 1800);
                     }

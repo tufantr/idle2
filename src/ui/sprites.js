@@ -3,6 +3,7 @@
 
 import { ATLAS, SPRITES } from '../data/sprites.js';
 import { TITAN_NAMES } from '../data/dungeons.js';
+import { RESOURCES } from '../data/resources.js';
 import { escapeHtml as esc } from './format.js';
 
 const TIERS = 7;
@@ -24,6 +25,15 @@ export function sprite(key, { scale = 2, cls = '', fallback = '', title = '' } =
     const style = spriteStyle(key);
     if (!style) return fallback ? `<span class="sp-fallback ${cls}" style="--k:${scale}" ${title ? `title="${esc(title)}"` : ''}>${fallback}</span>` : '';
     return `<i class="spr ${cls}" style="${style};--k:${scale}" ${title ? `title="${esc(title)}"` : ''} aria-hidden="true"></i>`;
+}
+
+/**
+ * A resource's icon (tools/resource_art.py): inline beside text by default (20px), bigger in a
+ * medallion. Below 1x it is scaled smooth rather than crisp; the emoji stands in if the cell is missing.
+ */
+export function resIcon(id, { scale = 0.625, cls = '', title = '' } = {}) {
+    const classes = ['res-spr', scale < 1 ? 'soft' : '', cls].filter(Boolean).join(' ');
+    return sprite(`res/${id}`, { scale, cls: classes, fallback: esc(RESOURCES[id]?.icon || '📦'), title });
 }
 
 export function monsterSpriteKey(enemy) {

@@ -295,6 +295,15 @@ progress as motion, art before words, one stage with a HUD around it.
       in Chrome can't reach a browser from a cloud session, so the paintings are made by hand or by
       a Claude session on the owner's computer, then imported with one command
 
+- [x] **Pixel-art resources** (`tools/resource_art.py`): all 73 resources have an icon in the
+      sprite atlas instead of a shared emoji: DCSS gems, potions, meat, fruit and herbs (recolored
+      per tier), and ores, bars, logs, fish and dishes drawn in the same manner, each ore's stone
+      and each bar tinted by its metal. They show on skill cards, recipes, the stage, work and
+      drop pops, the battle HUD, level-up lists and the daily crate
+- [x] **A bank, not a list**: the Materials panel is a grid of tiles with counts (73 materials
+      fit in about five rows on a desktop) and the picked one opens below with its uses and Sell
+      buttons; on phones that strip sticks above the hotbar
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;

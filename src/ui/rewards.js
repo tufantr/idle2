@@ -8,6 +8,7 @@ import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS } from '../data/
 import { CROPS } from '../data/farming.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
 import { fmt, escapeHtml as esc } from './format.js';
+import { resIcon } from './sprites.js';
 
 const SHOW_MS = 2800;
 const MAX_QUEUE = 4;
@@ -28,20 +29,20 @@ const TAB_BLURBS = {
 export function unlocksAtLevel(skill, level) {
     const found = [];
     const add = (icon, name) => found.push({ icon, name });
-    for (const n of SKILLS[skill]?.nodes || []) if (n.levelReq === level) add(RESOURCES[n.produces]?.icon || SKILLS[skill].icon, n.name);
+    for (const n of SKILLS[skill]?.nodes || []) if (n.levelReq === level) add(n.produces ? resIcon(n.produces) : SKILLS[skill].icon, n.name);
     if (skill === 'smithing') {
-        for (const r of SMELTING_RECIPES) if (r.levelReq === level) add(RESOURCES[r.produces]?.icon || '🔥', r.name);
+        for (const r of SMELTING_RECIPES) if (r.levelReq === level) add(resIcon(r.produces), r.name);
         for (const m of METALS) if (m.levelReq === level) add('⚒️', `${m.name} gear`);
     }
     if (skill === 'crafting') {
-        for (const g of GEM_TIERS) if (g.levelReq === level) add(RESOURCES[g.gem]?.icon || '💎', `${RESOURCES[g.gem]?.name || g.gem} jewellery`);
-        for (const b of JEWEL_BARS) if (b.levelReq === level) add(RESOURCES[b.bar]?.icon || '💍', `${b.name} settings`);
+        for (const g of GEM_TIERS) if (g.levelReq === level) add(resIcon(g.gem), `${RESOURCES[g.gem]?.name || g.gem} jewellery`);
+        for (const b of JEWEL_BARS) if (b.levelReq === level) add(resIcon(b.bar), `${b.name} settings`);
     }
     for (const tool of Object.values(TOOLS)) {
         if (tool.madeBy !== skill) continue;
         for (const t of tool.tiers) if (t.levelReq === level) add(tool.icon, t.name);
     }
-    if (skill === 'farming') for (const c of CROPS) if (c.levelReq === level) add(c.icon, c.name);
+    if (skill === 'farming') for (const c of CROPS) if (c.levelReq === level) add(resIcon(c.produces), c.name);
     if (skill === 'agility') AGILITY_SLOTS.forEach((slot, i) => { if (slot.levelReq === level) add('🧱', `Obstacle slot ${i + 1}`); });
     return found;
 }
@@ -79,7 +80,7 @@ export function renderCrateModal(result, banked) {
     const loot = [
         { icon: '🪙', text: `+${fmt(result.gold)} gold`, cls: 'gold' },
         { icon: '✨', text: `+${fmt(result.essence)} essence`, cls: 'essence' },
-        ...Object.entries(result.materials).map(([id, qty]) => ({ icon: RESOURCES[id]?.icon || '📦', text: `${fmt(qty)}× ${esc(RESOURCES[id]?.name || id)}`, cls: RESOURCES[id]?.category === 'gem' ? 'gem' : '' }))
+        ...Object.entries(result.materials).map(([id, qty]) => ({ icon: resIcon(id, { scale: 0.75 }), text: `${fmt(qty)}× ${esc(RESOURCES[id]?.name || id)}`, cls: RESOURCES[id]?.category === 'gem' ? 'gem' : '' }))
     ];
     return `<div class="modal-content narrow crate-modal">
         <div class="crate-stage" aria-hidden="true"><span class="crate-rays"></span><span class="crate-box">📦</span></div>

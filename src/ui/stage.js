@@ -9,7 +9,7 @@ import { TYPE_ICONS } from '../data/items.js';
 import { TOOLS } from '../data/workshop.js';
 import { resolveAction, intervalFor } from '../systems/skilling.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
-import { heroSprite, heroLayers } from './sprites.js';
+import { heroSprite, heroLayers, sprite, resIcon } from './sprites.js';
 
 export const STAGE_SKILLS = [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS];
 
@@ -47,14 +47,18 @@ export function createStage(root) {
     const reduced = () => document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
 
-    /** The thing being worked on: a resource, a piece of gear, a tool or the fire. */
+    /** The thing being worked on (as HTML): a resource, a piece of gear, a tool or the fire. */
     function targetFor(action, skill) {
         if (!action) return { icon: IDLE[skill]?.[0] || '✨', title: 'Resting', sub: IDLE[skill]?.[1] || 'Pick a job below' };
+        const scale = window.matchMedia?.('(max-width: 600px)').matches ? 1.25 : 1.5;
         if (action.kind === 'tool') { const t = TOOLS[action.tool]; return { icon: t?.icon || '🛠️', title: action.label, sub: 'A new tool' }; }
-        if (action.kind === 'smith' || action.kind === 'craft') return { icon: TYPE_ICONS[action.type] || '⚒️', title: action.label, sub: '' };
+        if (action.kind === 'smith' || action.kind === 'craft') {
+            const it = action.item || {};
+            return { icon: sprite(`item/${it.type}/${it.tier}`, { scale, fallback: TYPE_ICONS[it.type] || '⚒️' }), title: action.label, sub: '' };
+        }
         if (action.bonfireLog) return { icon: '🔥', title: action.label, sub: '' };
         const res = RESOURCES[action.output];
-        return { icon: res?.icon || '✨', title: action.label, sub: '', color: res?.color };
+        return { icon: res ? resIcon(action.output, { scale }) : '✨', title: action.label, sub: '', color: res?.color };
     }
 
     return {
@@ -72,7 +76,7 @@ export function createStage(root) {
             if (hk !== heroKey) { heroKey = hk; el.figure.innerHTML = heroSprite(state, { scale: window.matchMedia?.('(max-width: 600px)').matches ? 3 : 4, tool: skill }); }
             const t = targetFor(working ? action : null, skill);
             const tk = `${t.icon}|${t.title}`;
-            if (tk !== targetKey) { targetKey = tk; el.icon.textContent = t.icon; el.target.style.setProperty('--c', t.color || SKILLS[skill].color); }
+            if (tk !== targetKey) { targetKey = tk; el.icon.innerHTML = t.icon; el.target.style.setProperty('--c', t.color || SKILLS[skill].color); }
             setText(el.title, t.title);
             setText(el.sub, working ? `${seconds(intervalFor(action, game.derived))} per action · +${fmt(Math.round((action.xp || 0) * game.derived.xpMult))} XP${state.action?.stalled ? ' · waiting for materials' : ''}` : t.sub);
             el.stage.classList.toggle('working', working);

@@ -805,6 +805,7 @@ test/                 node:test suites (game, loot, endgame, skills, mastery, ev
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
                       atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·
+                      resource_art.py (the 73 resource icons: recolored DCSS tiles and drawn pixel art) ·
                       backdrops.py (paints assets/backdrops/*.webp from noise, gradients and the DCSS floor tiles) ·
                       paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for painted backdrops) · reports/ ·

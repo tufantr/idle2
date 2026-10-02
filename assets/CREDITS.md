@@ -9,6 +9,11 @@ from the public-domain **RLTiles** set (http://rltiles.sf.net).
 The mapping from this game's monsters, equipment and hero layers to DCSS tiles is in
 `tools/atlas.py`. The draconian "dragonkin" are flattened from a DCSS base and job layer.
 
+The resource icons in the same sheet come from `tools/resource_art.py`. Gems, potions, meat, fruit,
+herbs and the bait worm are DCSS tiles (CC0, as above), several recolored per tier. Ores, bars,
+logs, fish, shrimp, lobster, bowls and the crops are drawn pixel by pixel by that script, in the
+tiles' manner, and are original to this project.
+
 `backdrops/*.webp` are painted by `tools/backdrops.py` from noise, gradients and glow; the interiors
 (caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
 

@@ -36,7 +36,7 @@ import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
-import { sprite, heroSprite, itemSpriteKey, slotSpriteKey } from './sprites.js';
+import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon } from './sprites.js';
 
 export const TABS = [
     { id: 'combat', name: 'Combat', icon: '⚔️', group: 'COMBAT' },
@@ -62,7 +62,7 @@ export const TABS = [
 
 const rarityColor = id => RARITIES.find(r => r.id === id)?.color || '#e2e8f0';
 const res = id => RESOURCES[id];
-const resTag = (id, qty = null) => `<span class="res-tag" style="color:${res(id)?.color || '#e2e8f0'}">${res(id)?.icon || '📦'} ${qty !== null ? `${fmt(qty)}× ` : ''}${esc(res(id)?.name || id)}</span>`;
+const resTag = (id, qty = null) => `<span class="res-tag" style="color:${res(id)?.color || '#e2e8f0'}">${resIcon(id)} ${qty !== null ? `${fmt(qty)}× ` : ''}${esc(res(id)?.name || id)}</span>`;
 
 // ---------- sidebar ----------
 
@@ -227,7 +227,7 @@ export function renderCombat(game, ui) {
                     <option value="none" ${c.autoEat === 'none' ? 'selected' : ''}>None</option>
                     ${foodsByHealing().map(f => `<option value="${f.id}" ${c.autoEat === f.id ? 'selected' : ''}>${esc(f.name)} (+${Math.round(f.heals * d.foodMult)} HP) × ${fmt(state.resources[f.id])}</option>`).join('')}
                 </select>
-                <span class="muted small">Food: ${foods.length ? foods.map(f => `${f.icon}${fmt(state.resources[f.id])}`).join(' ') : 'none — cook some!'}</span>
+                <span class="muted small">Food: ${foods.length ? foods.map(f => `${resIcon(f.id)}${fmt(state.resources[f.id])}`).join(' ') : 'none — cook some!'}</span>
             </label>
             <label>Potion <span class="muted small">(${d.potionCharges} charges each)</span>
                 <select class="material-select" onchange="FI.setPotion(this.value)">
@@ -269,7 +269,7 @@ export function renderCombat(game, ui) {
     </div>
 
     <section class="glass-panel">
-        <div class="panel-header"><h2>📜 Combat log</h2><span class="muted small">Zone drops: ${zone.loot.map(l => `${res(l.id).icon} ${esc(res(l.id).name)}`).join(', ')}</span></div>
+        <div class="panel-header"><h2>📜 Combat log</h2><span class="muted small">Zone drops: ${zone.loot.map(l => `${resIcon(l.id)} ${esc(res(l.id).name)}`).join(', ')}</span></div>
         <div class="log-list">${recentLog.length ? recentLog.map(l => `<div class="log-line ${l.type}">${esc(l.text)}</div>`).join('') : '<div class="muted small">Nothing yet — enter combat to start.</div>'}</div>
     </section>`;
 }
@@ -389,7 +389,7 @@ function nodeGroup(skillId, node) {
 function skillExtras(game, skillId) {
     const state = game.state;
     if (skillId === 'fishing') {
-        return `<div class="info-strip">🪱 <b>${fmt(state.resources.fishing_bait)}</b> bait — each catch uses one, if you have any, for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish. Bait drops in the Fever Marsh, Drowned Ruins and Frozen Wastes, or buy a tin in the Shop.</div>`;
+        return `<div class="info-strip">${resIcon('fishing_bait')} <b>${fmt(state.resources.fishing_bait)}</b> bait — each catch uses one, if you have any, for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish. Bait drops in the Fever Marsh, Drowned Ruins and Frozen Wastes, or buy a tin in the Shop.</div>`;
     }
     if (skillId === 'firemaking') {
         const lit = bonfireLit(state, game.now);
@@ -419,14 +419,14 @@ export function renderSkill(game, ui, skillId) {
         const interval = intervalFor(def, d);
         const check = canComplete(state, def);
         let inputs = '';
-        if (node.consumes) inputs += Object.entries(node.consumes).map(([id, q]) => `<span class="${state.resources[id] >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id])})</i></span>`).join(' ');
-        if (node.fuel) { const log = fuelLog(state); inputs += ` <span class="${log ? 'ok' : 'missing'}">🪵 1 log${log ? ` (${esc(res(log).name)})` : ' (none!)'}</span>`; }
+        if (node.consumes) inputs += Object.entries(node.consumes).map(([id, q]) => `<span class="${state.resources[id] >= q ? 'ok' : 'missing'}">${q}× ${resIcon(id)} ${esc(res(id).name)} <i>(${fmt(state.resources[id])})</i></span>`).join(' ');
+        if (node.fuel) { const log = fuelLog(state); inputs += ` <span class="${log ? 'ok' : 'missing'}">${resIcon(log || 'normal_log')} 1 log${log ? ` (${esc(res(log).name)})` : ' (none!)'}</span>`; }
         const out = res(node.produces || node.bonfireLog);
         const gives = node.produces
             ? `${resTag(node.produces)} <i>(${fmt(state.resources[node.produces])})</i>${skillId === 'mining' ? ' · 2% gem' : ''}`
             : `🔥 +${BASE.bonfireSecondsPerLogTier * res(node.bonfireLog).tier} s of bonfire`;
         cards += `<div id="node-${skillId}-${node.id}" class="node-card ${active ? 'active' : ''} ${unlocked ? '' : 'locked'} ${active && action.stalled ? 'stalled' : ''}" ${unlocked ? `onclick="FI.startNode('${skillId}','${node.id}')" role="button" tabindex="0" aria-pressed="${active}"` : 'aria-disabled="true"'} style="--accent:${skill.color}">
-            <div class="skill-action-art" style="color:${out.color}">${out.icon}</div>
+            <div class="skill-action-art" style="color:${out.color}">${resIcon(node.produces || node.bonfireLog, { scale: 1.5 })}</div>
             <div class="node-name">${esc(node.name)}</div>
             ${unlocked ? '' : `<div class="req">Requires level ${node.levelReq}</div>`}
             <div class="node-io muted small">${inputs ? `Needs: ${inputs}<br>` : ''}Gives: ${gives}</div>
@@ -493,7 +493,7 @@ export function renderMinigame(game, skillId) {
 
 function recipeCard({ title, icon, color, inputs, output, xp, interval, active, stalled, onclick, disabled, reqText, footer = '', luck = '', mastery = '' }, state) {
     const cardId = `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-    const inputHtml = inputs.map(([id, q]) => `<span class="${(state.resources[id] || 0) >= q ? 'ok' : 'missing'}">${q}× ${res(id).icon} ${esc(res(id).name)} <i>(${fmt(state.resources[id] || 0)})</i></span>`).join(' ');
+    const inputHtml = inputs.map(([id, q]) => `<span class="${(state.resources[id] || 0) >= q ? 'ok' : 'missing'}">${q}× ${resIcon(id)} ${esc(res(id).name)} <i>(${fmt(state.resources[id] || 0)})</i></span>`).join(' ');
     return `<div id="${cardId}" class="node-card ${active ? 'active' : ''} ${disabled ? 'locked' : ''} ${active && stalled ? 'stalled' : ''}" ${disabled ? 'aria-disabled="true"' : `onclick="${onclick}" role="button" tabindex="0" aria-pressed="${!!active}"`} style="--accent:${color}">
         <div class="skill-action-art" style="color:${color}">${icon}</div>
         <div class="node-name">${esc(title)}</div>
@@ -514,7 +514,7 @@ export function renderSmithing(game, ui) {
     const def = resolveAction(state);
     const metal = METALS.find(m => m.bar === ui.smithMetal) || METALS[0];
     const smeltCards = SMELTING_RECIPES.map(r => { const def = resolveAction(state, { kind: 'smelt', id: r.id }); return recipeCard({
-        title: r.name, icon: res(r.produces).icon, color: res(r.produces).color,
+        title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), color: res(r.produces).color,
         inputs: Object.entries(r.consumes), output: resTag(r.produces, null) + ` <i>(${fmt(state.resources[r.produces])})</i>`,
         xp: Math.round(r.xp * d.xpMult), interval: intervalFor(def, d), luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
         active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
@@ -523,7 +523,7 @@ export function renderSmithing(game, ui) {
     const forgeCards = SMITHING_TYPES.map(type => {
         const recipe = resolveAction(state, { kind: 'smith', type, bar: metal.bar });
         return recipeCard({
-            title: `${metal.name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(metal.bar).color,
+            title: `${metal.name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${metal.tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), color: res(metal.bar).color,
             inputs: Object.entries(recipe.consumes), output: `equipment (tier ${metal.tier})`,
             xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
@@ -573,7 +573,7 @@ export function renderCrafting(game, ui) {
     const cards = CRAFTING_TYPES.map(type => {
         const recipe = resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gem.gem });
         return recipeCard({
-            title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: TYPE_ICONS[type], color: res(gem.gem).color,
+            title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), color: res(gem.gem).color,
             inputs: Object.entries(recipe.consumes), output: `jewellery (tier ${res(gem.gem).tier})`,
             xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
             active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
@@ -631,6 +631,33 @@ function dollSlot(state, slot, selectedId) {
 }
 
 /** The item on the table: stats, affixes, how it compares with what is worn, and what can be done with it. */
+/** A count that fits in a tile's corner: 240, 4.5K, 12K, 3.10M. */
+function shortQty(n) {
+    if (n < 1000) return String(Math.floor(n));
+    if (n < 1e6) return `${(n / 1000).toFixed(n < 1e4 ? 1 : 0)}K`;
+    return fmt(n);
+}
+
+/** One material in the bank: its icon and how many. */
+function bankTile(id, state, picked) {
+    const r = res(id);
+    return `<button class="tile bank-tile${picked === id ? ' selected' : ''}" style="--r:${r.color}" onclick="FI.selectRes('${id}')" title="${esc(r.name)}" aria-label="${esc(r.name)}: ${fmt(state.resources[id])}" aria-pressed="${picked === id}">${resIcon(id, { scale: 1.5, cls: 'tile-icon' })}<span class="bank-qty">${shortQty(state.resources[id])}</span></button>`;
+}
+
+/** The picked material: what it is, how many, and selling it. */
+function bankDetail(id, state) {
+    const r = res(id);
+    const about = [r.category, r.heals ? `heals ${r.heals}` : '', r.desc ? esc(r.desc) : ''].filter(Boolean).join(' · ');
+    const sell = id === 'essence'
+        ? '<span class="muted small">Upgrades and reforges gear</span>'
+        : `<div class="res-actions"><span class="muted small">${sellValue(id)} 🪙 each</span><button class="mini-btn" onclick="FI.sellRes('${id}',1)">Sell 1</button><button class="mini-btn" onclick="FI.sellRes('${id}',10)">10</button><button class="mini-btn" onclick="FI.sellRes('${id}',1e9)">All</button></div>`;
+    return `<div class="bank-detail" style="--r:${r.color}">
+        <div class="bank-detail-art">${resIcon(id, { scale: 2 })}</div>
+        <div class="bank-detail-text"><b style="color:${r.color}">${esc(r.name)}</b><span class="muted small">${about}</span><span class="bank-detail-qty">×${fmt(state.resources[id])}</span></div>
+        ${sell}
+    </div>`;
+}
+
 export function renderItemDetail(game, id) {
     const state = game.state;
     const found = findItem(state, id);
@@ -701,6 +728,7 @@ export function renderInventory(game, ui) {
     const filter = ui.invFilter || 'all';
     const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'herb', 'potion', 'material'];
     const resources = Object.keys(RESOURCES).filter(id => state.resources[id] > 0 && (filter === 'all' || RESOURCES[id].category === filter));
+    const picked = ui.resSelected && state.resources[ui.resSelected] > 0 ? ui.resSelected : null;
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
     return `<div class="armory">
@@ -735,11 +763,9 @@ export function renderInventory(game, ui) {
         <div class="panel-header"><h2>📦 Materials</h2>
             <div class="filter-row">${['all', ...categories].map(c => `<button class="mini-btn ${filter === c ? 'active' : ''}" onclick="FI.invFilter('${c}')">${c}</button>`).join('')}</div>
         </div>
-        <div class="res-grid">${resources.length ? resources.map(id => `<div class="res-card" style="border-color:${res(id).color}44">
-            <div class="res-head"><span class="res-icon" style="color:${res(id).color}">${res(id).icon}</span><div><div class="res-name">${esc(res(id).name)}</div><div class="muted small">${res(id).category}${res(id).heals ? ` · heals ${res(id).heals}` : ''}${res(id).desc ? ` · ${res(id).desc}` : ''}</div></div></div>
-            <div class="res-qty">×${fmt(state.resources[id])}</div>
-            ${id === 'essence' ? '<div class="muted small">Upgrades and reforges gear</div>' : `<div class="res-actions"><span class="muted small">${sellValue(id)} 🪙 each</span><button class="mini-btn" onclick="FI.sellRes('${id}',1)">Sell 1</button><button class="mini-btn" onclick="FI.sellRes('${id}',10)">10</button><button class="mini-btn" onclick="FI.sellRes('${id}',1e9)">All</button></div>`}
-        </div>`).join('') : '<div class="empty-state">Nothing here yet. Mine, cut, hunt or fight to collect materials.</div>'}</div>
+        ${resources.length ? `<div class="bank-grid">${resources.map(id => bankTile(id, state, picked)).join('')}</div>
+        ${picked ? bankDetail(picked, state) : '<p class="muted small bank-hint">Tap a material to see it and sell it.</p>'}`
+        : '<div class="empty-state">Nothing here yet. Mine, cut, hunt or fight to collect materials.</div>'}
     </section>`;
 }
 
@@ -853,7 +879,7 @@ export function renderFarming(game, ui) {
         const total = Math.max(1, plot.readyAt - plot.plantedAt);
         const done = plotReady(plot, game.now);
         const pctDone = done ? 100 : Math.min(100, (game.now - plot.plantedAt) / total * 100);
-        return `<div class="plot-card ${done ? 'ready' : 'growing'}"><div class="plot-art">${done ? crop.icon : '🌱'}</div>
+        return `<div class="plot-card ${done ? 'ready' : 'growing'}"><div class="plot-art">${done ? resIcon(crop.produces, { scale: 1.5 }) : '🌱'}</div>
             <div class="node-name">Plot ${i + 1} — ${esc(crop.name)}</div>
             <div class="muted small">${done ? 'Ready to harvest' : `Ready in ${duration(plot.readyAt - game.now)}`}</div>
             <div class="action-progress-container"><div class="action-progress-fill" style="width:${pctDone}%; background:${SKILLS.farming.color}"></div></div>
@@ -862,7 +888,7 @@ export function renderFarming(game, ui) {
     const rows = CROPS.map(c => {
         const unlocked = level >= c.levelReq;
         const avg = (c.yield[0] + c.yield[1]) / 2 * d.farmYield;
-        return `<tr class="${unlocked ? '' : 'locked-row'}"><td>${c.icon} ${esc(c.name)}</td><td>${c.levelReq}</td><td>${duration(growTime(d, c))}</td>
+        return `<tr class="${unlocked ? '' : 'locked-row'}"><td>${resIcon(c.produces)} ${esc(c.name)}</td><td>${c.levelReq}</td><td>${duration(growTime(d, c))}</td>
             <td>${c.yield[0]}–${c.yield[1]}× ${esc(res(c.produces).name)}</td><td>${fmt(Math.round(c.xp * avg * d.xpMult))}</td><td>${fmt(seedCost(state, c))}</td></tr>`;
     }).join('');
     return `<section class="glass-panel skill-panel">
