@@ -15,3 +15,6 @@ node_modules/
 
 # Source paintings (only the converted assets/paint/*.webp are committed)
 art/
+
+# Python bytecode from the tools/ scripts
+__pycache__/
