@@ -186,13 +186,46 @@ function fightingWhere(state) {
     return `${zoneForStage(c.stage).name} stage ${c.stage}`;
 }
 
+/** Food and potion for the fight, picked from tiles of what you carry (a loadout, not a form). */
+function renderLoadout(game) {
+    const state = game.state;
+    const c = state.combat;
+    const d = game.derived;
+    const pick = (on, onclick, inner, title) => `<button class="pick${on ? ' on' : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
+    const word = w => `<span class="pick-word">${w}</span>`;
+    const foods = foodsByHealing().filter(f => state.resources[f.id] > 0 || c.autoEat === f.id);
+    const potions = orderedByTier('potion').filter(p => state.resources[p.id] > 0 || c.potion === p.id);
+    const foodRow = [
+        pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat whatever best fits the missing HP'),
+        pick(c.autoEat === 'none', "FI.setAutoEat('none')", word('None'), 'Never eat automatically'),
+        ...foods.map(f => pick(c.autoEat === f.id, `FI.setAutoEat('${f.id}')`,
+            `${resIcon(f.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[f.id] || 0)}</span><span class="pick-sub">+${Math.round(f.heals * d.foodMult)}</span>`,
+            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)`))
+    ].join('');
+    const potionRow = [
+        pick(c.potion === 'none', "FI.setPotion('none')", word('None'), 'No potion'),
+        ...potions.map(p => pick(c.potion === p.id, `FI.setPotion('${p.id}')`,
+            `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
+            `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`))
+    ].join('');
+    const potionNote = c.potion !== 'none' ? (c.potionCharges > 0 ? `active, ${c.potionCharges} charges left` : (state.resources[c.potion] > 0 ? 'drinks on the next attack' : 'out of potions')) : `${d.potionCharges} charges each`;
+    return `<div class="loadout">
+            <div class="loadout-label">🍖 Auto-eat <span class="muted small">below ${pct(d.autoEatThreshold)} HP</span></div>
+            <div class="pick-row">${foodRow}</div>
+            ${foods.length ? '' : `<div class="muted small">No food yet. <button class="link-btn" onclick="FI.switchTab('cooking')">Cook some</button></div>`}
+        </div>
+        <div class="loadout">
+            <div class="loadout-label">🧪 Potion <span class="muted small">${potionNote}</span></div>
+            <div class="pick-row">${potionRow}</div>
+            ${potions.length ? '' : `<div class="muted small">No potions yet. Brew them in Alchemy.</div>`}
+        </div>`;
+}
+
 export function renderCombat(game, ui) {
     const state = game.state;
     const c = state.combat;
     const d = game.derived;
     const zone = zoneForStage(c.stage);
-    const foods = foodsByHealing().filter(f => state.resources[f.id] > 0);
-    const potions = orderedByTier('potion');
     const preview = game.prestigePreview();
     const canPrestige = isUnlocked(state, 'prestige') && preview.allowed;
     const recentLog = [...state.log].reverse().filter(l => ['combat', 'death', 'loot', 'prestige'].includes(l.type)).slice(0, 8);
@@ -223,23 +256,7 @@ export function renderCombat(game, ui) {
         </div>
         <div class="muted small">${where}</div>
         ${c.mode === 'stages' ? renderWorldMap(state) : ''}
-        <div class="combat-controls">
-            <label>Auto-eat <span class="muted small">(below ${pct(d.autoEatThreshold)} HP)</span>
-                <select class="material-select" onchange="FI.setAutoEat(this.value)">
-                    <option value="auto" ${c.autoEat === 'auto' ? 'selected' : ''}>Auto (best fit)</option>
-                    <option value="none" ${c.autoEat === 'none' ? 'selected' : ''}>None</option>
-                    ${foodsByHealing().map(f => `<option value="${f.id}" ${c.autoEat === f.id ? 'selected' : ''}>${esc(f.name)} (+${Math.round(f.heals * d.foodMult)} HP) × ${fmt(state.resources[f.id])}</option>`).join('')}
-                </select>
-                <span class="muted small">Food: ${foods.length ? foods.map(f => `${resIcon(f.id)}${fmt(state.resources[f.id])}`).join(' ') : 'none — cook some!'}</span>
-            </label>
-            <label>Potion <span class="muted small">(${d.potionCharges} charges each)</span>
-                <select class="material-select" onchange="FI.setPotion(this.value)">
-                    <option value="none" ${c.potion === 'none' ? 'selected' : ''}>None</option>
-                    ${potions.map(p => `<option value="${p.id}" ${c.potion === p.id ? 'selected' : ''}>${esc(p.name)} — ${p.desc} × ${fmt(state.resources[p.id])}</option>`).join('')}
-                </select>
-                <span class="muted small">${c.potion !== 'none' ? (c.potionCharges > 0 ? `Active — ${c.potionCharges} charges left` : (state.resources[c.potion] > 0 ? 'Will drink on next attack' : 'Out of potions')) : ''}</span>
-            </label>
-        </div>
+        <div class="combat-controls">${renderLoadout(game)}</div>
     </section>
     ${renderAdvisor(game)}
 

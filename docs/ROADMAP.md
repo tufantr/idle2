@@ -323,6 +323,9 @@ progress as motion, art before words, one stage with a HUD around it.
       the zone boss for the stage ones, a skill's best resource for its level medal), gold and lit
       when earned, dark with a progress bar and count until then
 
+- [x] **A loadout, not a form**: auto-eat and the potion are picked from rows of tiles of what you
+      carry (icon, count, how much it heals), the chosen one lit, instead of two dropdowns
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;

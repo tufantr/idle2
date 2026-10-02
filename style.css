@@ -377,9 +377,18 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .combat-panel { display: flex; flex-direction: column; gap: 0.8rem; }
 .combat-deck { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 1.2rem; }
 .stage-nav { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
-.combat-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
-.combat-controls label { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 260px; min-width: 0; max-width: 440px; font-size: 0.8rem; color: var(--text-main); }
-.combat-controls select { width: 100%; max-width: 100%; }
+.combat-controls { display: flex; flex-wrap: wrap; gap: 1rem 1.6rem; align-items: flex-start; }
+.loadout { display: flex; flex-direction: column; gap: 0.4rem; flex: 1 1 300px; min-width: 0; }
+.loadout-label { font-size: 0.82rem; font-weight: 700; color: var(--text-main); }
+.pick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick { position: relative; width: 54px; height: 54px; padding: 0; display: grid; place-items: center; border-radius: 10px;
+    color: var(--text-main); border: 1px solid rgba(214, 170, 92, 0.25); background: radial-gradient(circle at 50% 40%, #2a2016, #0e0a07 75%); box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6); }
+.pick:hover { transform: translateY(-2px); border-color: rgba(240, 198, 116, 0.7); }
+.pick.on { border-color: #f0c674; background: radial-gradient(circle at 50% 40%, #4a3818, #140e07 75%); box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.3), 0 0 14px rgba(240, 198, 116, 0.3), inset 0 0 8px rgba(0, 0, 0, 0.5); }
+.pick .spr { margin-top: -6px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.pick-word { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; }
+.pick-qty { position: absolute; right: 3px; top: 1px; font-size: 0.62rem; font-weight: 800; color: #fff3d6; text-shadow: 0 1px 2px #000, 0 0 3px #000; font-variant-numeric: tabular-nums; }
+.pick-sub { position: absolute; left: 0; right: 0; bottom: 2px; font-size: 0.6rem; font-weight: 800; color: #86efac; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
 .camp-grid { display: grid; grid-template-columns: 1fr; gap: 0.6rem; }
 .camp-card { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.7rem 0.9rem; border-radius: 12px; }
 .camp-title { font-weight: 700; }
@@ -1496,3 +1505,5 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 }
 /* A dialog has the floor: toasts slip behind its backdrop instead of covering its buttons. */
 body:has(#modal-root .modal-overlay.active) #toast-area { z-index: 99; }
+.link-btn { padding: 0; border: 0; background: none; box-shadow: none; color: var(--heading); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.link-btn:hover { transform: none; background: none; box-shadow: none; color: #fff1c9; }

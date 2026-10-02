@@ -559,7 +559,7 @@ window.FI = {
     selectCraftGem(gem) { ui.craftGem = gem; render(); },
 
     toggleCombat() { game.toggleCombat(); render(); },
-    setAutoEat(rule) { game.setAutoEat(rule); },
+    setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },
     stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },
     goZone(stage) { game.setStage(stage); render(); },
