@@ -12,3 +12,6 @@ node_modules/
 # OS / editor noise
 .DS_Store
 .vercel
+
+# Source paintings (only the converted assets/paint/*.webp are committed)
+art/

@@ -1374,3 +1374,8 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .stage[data-skill="crafting"] .stage-sky { background-image: url(assets/backdrops/workshop-sky.webp); }
 .stage[data-skill="crafting"] .stage-far { background-image: url(assets/backdrops/workshop-far.webp), url(assets/backdrops/workshop-near.webp); background-position: center bottom, center bottom; background-size: cover, cover; }
 .stage[data-skill="crafting"] .stage-ground { background: url(assets/backdrops/workshop-ground.webp) left bottom / auto 100% repeat-x; image-rendering: pixelated; }
+
+/* ===== Hand-painted backdrops (docs/art/gemini.md -> tools/paint.py -> assets/paint/*.webp) =====
+   A place with a painting shows it whole, drifting slowly, in place of the layers above. */
+/* paint:begin: written by tools/paint.py from assets/paint/; run it again instead of editing here. */
+/* paint:end */

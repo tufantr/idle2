@@ -287,6 +287,14 @@ progress as motion, art before words, one stage with a HUD around it.
       dungeon floors and walls for the interiors. Fifteen scenes, about 1 MB of WebP in all, drawn by
       a script in a minute with no image model and no downloads
 
+## Phase 8 — Art and polish (in progress)
+
+- [ ] **Hand-painted backdrops** (`docs/art/gemini.md`, `tools/paint.py`): one Gemini painting per
+      place (17 prompts in one consistent style) replaces the scripted layers of that place in the
+      battle scene and on its skill stages. The pipeline is ready and tested with stand-ins; Claude
+      in Chrome can't reach a browser from a cloud session, so the paintings are made by hand or by
+      a Claude session on the owner's computer, then imported with one command
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;
