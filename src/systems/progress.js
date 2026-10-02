@@ -34,6 +34,13 @@ export function grantXp(game, skillId, amount) {
     return after - before;
 }
 
+/** How far along an achievement's requirement is: { have, need }. */
+export function achievementProgress(state, req) {
+    if (req.type === 'stat') return { have: state.stats[req.key] || 0, need: req.value };
+    if (req.type === 'skillLevel') return { have: levelForXp(state.skills[req.skill]?.xp || 0), need: req.level };
+    return { have: 0, need: 1 };
+}
+
 function meetsRequirement(state, req) {
     if (req.type === 'stat') return (state.stats[req.key] || 0) >= req.value;
     if (req.type === 'skillLevel') return levelForXp(state.skills[req.skill]?.xp || 0) >= req.level;

@@ -319,6 +319,10 @@ progress as motion, art before words, one stage with a HUD around it.
       finds (pets with their picture, uniques, items, dungeon clears, ready plots, mastery) and what
       was used up; Collect plays the chest sound. Celebrations wait until the dialog is closed
 
+- [x] **A trophy case**: the 32 achievements are medals in a grid (a sword for the slayer medals,
+      the zone boss for the stage ones, a skill's best resource for its level medal), gold and lit
+      when earned, dark with a progress bar and count until then
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;

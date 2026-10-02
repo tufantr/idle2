@@ -21,6 +21,7 @@ import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/mi
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { advise } from '../systems/advisor.js';
+import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
 import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
 import { PETS, PET_BASE } from '../data/pets.js';
@@ -817,15 +818,43 @@ export function renderShop(game, ui) {
 
 // ---------- achievements ----------
 
+// What each achievement's medal shows: a sprite key (or an emoji) for its kind of deed.
+const MEDAL_ART = {
+    kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
+    titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
+    prestiges: '🔮', obstaclesBuilt: '🧱', minigameWins: '🎯', masteryLevels: '⭐', masteries99: '🌟', skills99: '👑'
+};
+const SKILL_MEDAL = {
+    mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', fishing: 'res/raw_shark', firemaking: '🔥',
+    farming: 'res/starfruit', agility: 'item/Boots/5', cooking: 'res/cooked_shark', alchemy: 'res/health_potion',
+    smithing: 'res/runite_bar', crafting: 'item/Ring/6', combat: 'item/Weapon/7'
+};
+
+function medalArt(a) {
+    let key = a.req.type === 'skillLevel' ? SKILL_MEDAL[a.req.skill] : MEDAL_ART[a.req.key];
+    if (a.req.key === 'maxStage') key = `mon/${ZONES[Math.min(ZONES.length - 1, Math.floor((a.req.value - 2) / STAGES_PER_ZONE))]?.boss}`;
+    if (!key) return '🏆';
+    return key.includes('/') || key === 'gold' ? sprite(key, { scale: 1.5, fallback: '🏆' }) : `<span class="medal-emoji">${key}</span>`;
+}
+
 export function renderAchievements(game) {
     const state = game.state;
     const done = ACHIEVEMENTS.filter(a => state.achievements[a.id]).length;
+    const medals = ACHIEVEMENTS.map(a => {
+        const won = !!state.achievements[a.id];
+        const { have, need } = achievementProgress(state, a.req);
+        const pct = Math.min(100, (have / Math.max(1, need)) * 100);
+        return `<div class="medal${won ? ' won' : ''}" title="${esc(a.desc)}: ${esc(a.reward)}">
+            <div class="medal-disc">${medalArt(a)}</div>
+            <div class="medal-name">${esc(a.name)}</div>
+            <div class="medal-desc">${esc(a.desc)}</div>
+            ${won ? `<div class="medal-reward">${esc(a.reward)}</div>`
+                : `<div class="medal-bar"><i style="--p:${pct.toFixed(1)}%"></i></div><div class="medal-count">${fmt(Math.min(have, need))} / ${fmt(need)}</div>`}
+        </div>`;
+    }).join('');
     return `<section class="glass-panel">
-        <div class="panel-header"><h2>🏆 Achievements</h2><span class="muted small">${done}/${ACHIEVEMENTS.length} · each one also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% ATK, DEF and skill speed (now +${done}%)</span></div>
-        <div class="ach-list">${ACHIEVEMENTS.map(a => {
-            const ok = !!state.achievements[a.id];
-            return `<div class="ach-item ${ok ? 'done' : ''}"><div><div class="ach-name">${ok ? '✅' : '🔒'} ${esc(a.name)}</div><div class="muted small">${esc(a.desc)}</div></div><div class="ach-reward">${esc(a.reward)}</div></div>`;
-        }).join('')}</div>
+        <div class="panel-header"><h2>🏆 Trophy case <span class="muted">${done}/${ACHIEVEMENTS.length}</span></h2><span class="muted small">Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% ATK, DEF and skill speed (now +${done}%)</span></div>
+        <div class="medal-grid">${medals}</div>
     </section>`;
 }
 
