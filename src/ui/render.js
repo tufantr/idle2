@@ -36,7 +36,7 @@ import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
-import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon } from './sprites.js';
+import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, monsterSpriteKey } from './sprites.js';
 
 export const TABS = [
     { id: 'combat', name: 'Combat', icon: '⚔️', group: 'COMBAT' },
@@ -293,7 +293,8 @@ function renderWorldMap(state) {
         const range = abyss && here > i ? `depth ${here - i}` : abyss ? `${first}+` : `${first}–${last}`;
         const state_ = current ? 'here' : cleared ? 'done' : open ? 'open' : 'locked';
         const label = `${zone.name}, stages ${range}${current ? ', you are here' : open ? '' : ', not reached this run'}`;
-        const face = `<span class="zone-emblem" aria-hidden="true">${open ? ZONE_EMBLEMS[zone.id] || '⚔️' : '🔒'}</span><span class="zone-name">${esc(zone.name)}</span><span class="zone-range">${range}</span>`;
+        const boss = sprite(`mon/${zone.boss}`, { scale: 1, cls: open ? '' : 'silhouette', fallback: open ? ZONE_EMBLEMS[zone.id] || '⚔️' : '🔒' });
+        const face = `<span class="zone-emblem" aria-hidden="true">${boss}${open ? '' : '<i class="zone-lock">🔒</i>'}</span><span class="zone-name">${esc(zone.name)}</span><span class="zone-range">${range}</span>`;
         return `<li class="zone-node ${state_}">${open && !(current && !abyss) && target !== c.stage
             ? `<button onclick="FI.goZone(${target})" aria-label="Travel to ${esc(label)}">${face}</button>`
             : `<div aria-label="${esc(label)}">${face}</div>`}</li>`;
@@ -869,7 +870,7 @@ export function renderFarming(game, ui) {
             return `<div class="plot-card locked"><div class="plot-art">🔒</div><div class="node-name">Plot ${i + 1}</div><div class="req">Opens at Farming ${FARMING_PLOTS[i]}</div></div>`;
         }
         if (!plot.crop) {
-            return `<div class="plot-card empty"><div class="plot-art">🟫</div><div class="node-name">Plot ${i + 1} — empty</div>
+            return `<div class="plot-card empty"><div class="plot-art">${sprite('farm/soil', { scale: 1.5, fallback: '🟫' })}</div><div class="node-name">Plot ${i + 1} — empty</div>
                 <label class="small">Plant <select class="material-select" id="plot-crop-${i}" aria-label="Crop for plot ${i + 1}">
                     ${choices.map(c => `<option value="${c.id}" ${c.id === lastCrop ? 'selected' : ''}>${c.icon} ${esc(c.name)} — ${fmt(seedCost(state, c))} gold</option>`).join('')}
                 </select></label>
@@ -879,7 +880,7 @@ export function renderFarming(game, ui) {
         const total = Math.max(1, plot.readyAt - plot.plantedAt);
         const done = plotReady(plot, game.now);
         const pctDone = done ? 100 : Math.min(100, (game.now - plot.plantedAt) / total * 100);
-        return `<div class="plot-card ${done ? 'ready' : 'growing'}"><div class="plot-art">${done ? resIcon(crop.produces, { scale: 1.5 }) : '🌱'}</div>
+        return `<div class="plot-card ${done ? 'ready' : 'growing'}"><div class="plot-art">${done ? resIcon(crop.produces, { scale: 1.5 }) : sprite(pctDone < 50 ? 'farm/sprout' : 'farm/growing', { scale: 1.5, fallback: '🌱' })}</div>
             <div class="node-name">Plot ${i + 1} — ${esc(crop.name)}</div>
             <div class="muted small">${done ? 'Ready to harvest' : `Ready in ${duration(plot.readyAt - game.now)}`}</div>
             <div class="action-progress-container"><div class="action-progress-fill" style="width:${pctDone}%; background:${SKILLS.farming.color}"></div></div>
@@ -974,7 +975,8 @@ export function renderDungeons(game) {
     const titanCard = !titanUnlocked(state)
         ? `<p class="muted small">Reach stage ${TITAN_UNLOCK_STAGE} to wake the first Titan.</p>`
         : `<div class="titan-row">
-            <div><b>Titan level ${tl}</b> · ${state.titan.kills} defeated (now +${Math.round(TITAN_BONUS.atkMult * 100 * state.titan.kills)}% ATK and HP)${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
+            <span class="dungeon-icon titan-face">${sprite(monsterSpriteKey(titanEnemy(state)), { scale: 2, fallback: '🗿' })}</span>
+            <div class="titan-text"><b>${esc(titanEnemy(state).name)}</b> · level ${tl} · ${state.titan.kills} defeated (now +${Math.round(TITAN_BONUS.atkMult * 100 * state.titan.kills)}% ATK and HP)${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
                 <div class="small ${readinessClass(titanFight.killSeconds, TITAN_TIME_MS / 1000, titanFight.surviveSeconds)}">Estimate: you would deal ~${Math.round(titanPct * 100)}% of its health in ${TITAN_TIME_MS / 1000} s${titanFight.surviveSeconds < TITAN_TIME_MS / 1000 ? `, but it would kill you in ~${Math.round(titanFight.surviveSeconds)} s without food` : ''}.</div></div>
             ${c.mode === 'titan' ? '<span class="status-pill fighting">Fighting now</span>'
                 : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">🗿 Challenge (${TITAN_TIME_MS / 1000} s)</button>`
@@ -990,7 +992,7 @@ export function renderDungeons(game) {
         const preview = dungeonPreview(game.derived, d);
         const limit = DUNGEON_BOSS_TIME_MS / 1000;
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
-            <div class="dungeon-head"><span class="dungeon-icon">${d.icon}</span><div><b>${esc(d.name)}</b><div class="muted small">${d.monsters.length} elites + ${esc(d.boss.name)} · like stage ${d.stage}–${d.stage + d.monsters.length} · chest loot tier ${d.chestTier}</div></div></div>
+            <div class="dungeon-head"><span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 1.5, fallback: d.icon })}</span><div><b>${esc(d.name)}</b><div class="muted small">${d.monsters.length} elites + ${esc(d.boss.name)} · like stage ${d.stage}–${d.stage + d.monsters.length} · chest loot tier ${d.chestTier}</div></div></div>
             ${open ? `<div class="small">Clears: <b>${record.clears}</b>${next ? ` · next milestone at ${next.clears}: ${next.desc}` : ' · all milestones earned'}</div>
                 ${done.length ? `<div class="muted small">Earned: ${done.join('; ')}</div>` : ''}
                 <div class="small">Fragments: <b>${record.fragments}/${FRAGMENTS_PER_UNIQUE}</b> toward <span style="color:#f97316">${esc(unique.name)}</span></div>
@@ -1023,12 +1025,12 @@ function renderCollection(game) {
         const hours = Math.round(PET_BASE / level / 3600);
         const hint = `~${fmt(hours)} h of ${p.skill} at level ${level} on average; the chance grows with your level (~${Math.round(PET_BASE / 99 / 3600)} h at 99)`;
         return `<div class="pet-card ${found ? 'found' : ''}" title="${found ? esc(p.desc) : esc(hint)}">
-            <span class="pet-icon">${found ? p.icon : '❔'}</span><div><b>${found ? esc(p.name) : 'Unknown pet'}</b><div class="muted small">${esc(p.skill)} · ${found ? esc(p.desc) : `~${fmt(hours)} h at Lv ${level}`}</div></div></div>`;
+            <span class="pet-icon">${sprite(`pet/${p.id}`, { scale: 1.5, cls: found ? '' : 'silhouette', fallback: found ? p.icon : '❔' })}</span><div><b>${found ? esc(p.name) : 'Unknown pet'}</b><div class="muted small">${esc(p.skill)} · ${found ? esc(p.desc) : `~${fmt(hours)} h at Lv ${level}`}</div></div></div>`;
     }).join('');
     const uniques = DUNGEONS.map(d => {
         const u = UNIQUES[d.unique];
         const owned = [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === u.id);
-        return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${owned ? '🌟' : '❔'}</span><div><b style="color:#f97316">${esc(u.name)}</b><div class="muted small">${d.name} · ${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}</div></div></div>`;
+        return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${u.id}`, { scale: 1.5, cls: owned ? '' : 'silhouette', fallback: owned ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${esc(u.name)}</b><div class="muted small">${d.name} · ${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}</div></div></div>`;
     }).join('');
     return `<section class="glass-panel">
         <div class="panel-header"><h2>🐾 Pets</h2><span class="muted small">${PETS.filter(p => state.pets[p.id]).length}/${PETS.length} · rare finds while training, kept forever</span></div>

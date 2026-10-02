@@ -487,7 +487,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .zone-range { font-size: 0.6rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .zone-node.here .zone-emblem { border-color: #fde68a; animation: nodePulse 1.6s ease-in-out infinite; }
 .zone-node.done .zone-emblem::after { content: "✓"; position: absolute; right: -3px; bottom: -3px; width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center; font-size: 0.6rem; font-weight: 800; color: #052e16; background: #4ade80; box-shadow: 0 0 0 2px #140f0a; }
-.zone-node.locked { opacity: 0.45; }
+.zone-node.locked { opacity: 0.8; }
 
 /* ---------- the quest board (the advisor) ---------- */
 .advisor-list { gap: 0.8rem; padding-top: 0.3rem; }
@@ -582,6 +582,8 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .dungeon-head { display: flex; gap: 0.6rem; align-items: center; }
 .dungeon-icon { font-size: 1.8rem; }
 .titan-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.titan-text { flex: 1 1 14rem; min-width: 0; }
+.titan-face { line-height: 0; }
 .pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
 .pet-card { display: flex; gap: 0.6rem; align-items: center; padding: 0.6rem 0.8rem; border-radius: 12px; opacity: 0.7; }
 .pet-card.found { opacity: 1; border-color: rgba(252, 211, 77, 0.45); background: linear-gradient(90deg, rgba(252, 211, 77, 0.08), rgba(0, 0, 0, 0.2)); }
@@ -598,7 +600,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .plot-card.locked { opacity: 0.55; }
 .plot-card.ready { border-color: rgba(132, 204, 22, 0.6); box-shadow: 0 0 16px rgba(132, 204, 22, 0.18); }
 .plot-card .material-select { width: 100%; margin-top: 0.25rem; }
-.plot-art { font-size: 1.8rem; }
+.plot-art { align-self: center; font-size: 1.8rem; line-height: 1; }
 .course-run { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; }
 .course-run.active { border-color: rgba(225, 29, 72, 0.55); }
 .course-run .action-progress-container { flex-basis: 100%; }
@@ -1226,7 +1228,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 
 /* ===== Sprites (assets/sprites.png, cut by src/ui/sprites.js) =====
    A cell is 32px; --k scales it up with hard pixels. The hero is a stack of cells. */
-:root { --k: 2; --atlas-w: 512px; --atlas-h: 608px; }
+:root { --k: 2; --atlas-w: 512px; --atlas-h: 640px; }
 .spr {
     display: inline-block; width: calc(32px * var(--k)); height: calc(32px * var(--k)); vertical-align: middle;
     background-image: var(--atlas, url(assets/sprites.png)); background-repeat: no-repeat;
@@ -1239,6 +1241,15 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .spr.res-spr { vertical-align: -0.32em; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
 .skill-action-art .spr, .stage-icon .spr, .plot-art .spr { vertical-align: middle; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.65)); }
 .bank-tile .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.spr.silhouette { filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.45)); opacity: 0.7; }  /* not found yet */
+.zone-emblem .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)); }
+.zone-emblem .spr.silhouette { opacity: 1; filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.95)) drop-shadow(0 0 3px rgba(240, 198, 116, 0.35)); }
+.zone-node.locked .zone-emblem { opacity: 1; }
+.zone-node.locked .zone-name, .zone-node.locked .zone-range { opacity: 0.55; }
+.zone-lock { position: absolute; right: -4px; bottom: -4px; font-size: 0.7rem; font-style: normal; }
+.dungeon-icon .spr, .pet-icon .spr { vertical-align: middle; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.65)); }
+.pet-icon .spr.silhouette { opacity: 1; filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.8)); }
+.cel-icon .spr { vertical-align: middle; image-rendering: pixelated; }
 .hero-doll { position: relative; display: inline-block; width: calc(32px * var(--k)); height: calc(32px * var(--k)); line-height: 0; }
 .hero-doll .spr { position: absolute; left: 0; top: 0; }
 .hero .hero-figure { display: block; line-height: 0; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.6)); animation: heroBreathe 2.8s ease-in-out infinite; transform-origin: 50% 100%; }

@@ -12,7 +12,7 @@ import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } 
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
-import { ATLAS } from './ui/sprites.js';
+import { ATLAS, sprite } from './ui/sprites.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
@@ -347,7 +347,7 @@ function handleEvents(events) {
             case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`🎁 Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss'); break;
             case 'dungeonFail': toast('🕳️ The dungeon run failed', 'death'); break;
             case 'titan': toast(ev.won ? `🗿 Titan defeated! Permanent +2% ATK and HP` : `🗿 The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death'); break;
-            case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: ev.pet.icon, kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'unique':
                 if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: '🌟', kicker: 'Unique item', title: ev.item.name, lines: [`${ev.item.icon || '🛡️'} In your bag: equip it from the Inventory`] });
                 else toast(`🌟 A spare ${ev.item.name}: salvage it for essence`, 'achievement');

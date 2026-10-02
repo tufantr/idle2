@@ -497,6 +497,38 @@ def nugget(color):
     return outline(a)
 
 
+def soil():
+    """A tilled mound of earth: the farm plot, empty."""
+    mound = ellipse(16, 23, 14, 6.5)
+    a = lit(mound, ramp('#7a5232', 5, lo=0.6, hi=0.35), noise=0.6, seed=12)
+    for k, y in enumerate((20, 23, 26)):             # furrows, with a lit ridge above each
+        row = mound & (np.abs(YY - y - (XX - 16) ** 2 * 0.004) < 0.6) & erode(mound)
+        a[row] = ramp('#7a5232', 5)[0]
+        a[np.roll(row, -1, axis=0) & erode(mound)] = ramp('#7a5232', 5)[3]
+    return outline(a)
+
+
+def sprout(tall=False, tiles=None):
+    """The plot growing: a sprout on the mound, or (tall) a leafy young plant."""
+    base = to_image(soil())
+    if tall and tiles:
+        plant = Image.open(f'{tiles}/mon/fungi_plants/plant_06.png').convert('RGBA').resize((24, 24), Image.NEAREST)
+        base.alpha_composite(plant, (4, 1))
+        return base
+    a = from_image(base)
+    g = ramp('#4caf50', 4, lo=0.45, hi=0.45)
+    for y in range(14, 21):                         # the stem
+        put(a, 16, y, g[1])
+    for x, y, k in [(13, 14, 2), (14, 13, 3), (15, 14, 2), (14, 15, 1), (17, 13, 2), (18, 12, 3), (19, 13, 2), (18, 14, 1), (12, 13, 1), (20, 12, 1)]:
+        put(a, x, y, g[k])                          # two leaves
+    return outline(a)
+
+
+def build_extras(tiles):
+    """Cells that are not resources: the farm plot, empty and growing."""
+    return {'farm/soil': fit(to_image(soil())), 'farm/sprout': fit(to_image(sprout())), 'farm/growing': fit(sprout(tall=True, tiles=tiles))}
+
+
 # ---------- the art direction: resource id -> how its cell is made ----------
 
 def build(tiles):

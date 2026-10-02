@@ -304,6 +304,11 @@ progress as motion, art before words, one stage with a HUD around it.
       fit in about five rows on a desktop) and the picked one opens below with its uses and Sell
       buttons; on phones that strip sticks above the hotbar
 
+- [x] **Faces instead of symbols**: the world map shows each zone's boss (a lit silhouette until
+      reached), dungeon cards their boss, the Titan panel the Titan's face; the twelve pets are DCSS
+      creatures (a stone beetle, a sapling, a hound, ...) shown as silhouettes until found, as are
+      the unique items; farm plots go from a tilled mound to a sprout to a young plant to the crop
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;
