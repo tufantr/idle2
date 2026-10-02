@@ -18,4 +18,7 @@ drawn trout), and the farm plot's mound and sprout are drawn by the same script.
 `backdrops/*.webp` are painted by `tools/backdrops.py` from noise, gradients and glow; the interiors
 (caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
 
+`paint/*.webp` are AI-generated with Google Gemini from the prompts in `docs/art/gemini.md`,
+then scaled by `tools/paint.py`.
+
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.
