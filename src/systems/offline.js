@@ -52,6 +52,7 @@ function diff(before, state) {
         dungeonClears: DUNGEONS.map(d => ({ id: d.id, name: d.name, clears: state.dungeons[d.id].clears - before.dungeons[d.id].clears, fragments: state.dungeons[d.id].fragments - before.dungeons[d.id].fragments }))
             .filter(d => d.clears > 0),
         pets: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => `${p.icon} ${p.name}`),
+        petIds: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => p.id),
         uniques: (state.stats.uniquesFound || 0) - before.uniques,
         startedInDungeon: before.combatMode === 'dungeon'
     };

@@ -314,6 +314,11 @@ progress as motion, art before words, one stage with a HUD around it.
       link on the card and the header's guest pill, which asks to "Save to cloud" once the first
       boss is down
 
+- [x] **Welcome back, as a haul**: the report after time away shows gold in a pill, each skill's XP
+      with its level bar filling (a level-up glows), the materials as tiles popping in one by one,
+      finds (pets with their picture, uniques, items, dungeon clears, ready plots, mastery) and what
+      was used up; Collect plays the chest sound. Celebrations wait until the dialog is closed
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;

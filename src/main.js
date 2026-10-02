@@ -5,8 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { describeOffline } from './systems/offline.js';
-import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderOfflineModal, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -91,7 +90,7 @@ const scene = createScene(document.getElementById('scene'), {
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
 // skill cards (src/ui/actionfx.js), and the phone hotbar.
 const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
-const rewards = createRewards(layer('div', 'celebrate'));
+const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen }); // cards wait behind dialogs
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
@@ -116,7 +115,7 @@ function withDevFlags(g) {
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
 const offlineSummary = game.resumeFromSave(Date.now());
-if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderOfflineModal(describeOffline(offlineSummary)), 'offline');
+if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderWelcomeBack(offlineSummary, game.state), 'offline');
 if (cloud.loggedIn) syncFromCloud();
 // A new player meets the game first, not a login form: a title card, then straight into a fight.
 // Signing in stays one click away (on the card, and in the header once there is progress to keep).
@@ -129,7 +128,7 @@ let lastCloudSave = Date.now();
 /** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
 function advance(now) {
     const summary = game.tick(now);
-    if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
+    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game.state), 'offline');
 }
 
 let tickErrorShown = false;
@@ -406,6 +405,7 @@ function closeModal() {
     ui.modalOpen = false;
     const next = ui.modalQueue.shift();
     if (next) showModal(next.html, next.key);
+    else rewards.resume();
 }
 
 // ---------- persistence ----------
@@ -502,7 +502,7 @@ async function syncFromCloud() {
 function adoptState(stateObject) {
     game = withDevFlags(new Game(stateObject, Date.now()));
     const summary = game.resumeFromSave(Date.now());
-    if (summary && summary.mode !== 'rest') openModal(renderOfflineModal(describeOffline(summary)), 'offline');
+    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game.state), 'offline');
     save(Date.now());
     render();
 }
@@ -686,6 +686,7 @@ window.FI = {
     },
 
     openAuth() { if (ui.modalOpen === 'intro') closeModal(); openModal(renderAuthModal(), 'auth'); },
+    collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
     beginAdventure() {
         closeModal();
         sound.unlock();

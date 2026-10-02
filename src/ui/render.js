@@ -1187,11 +1187,52 @@ export function renderConfirmModal(title, text, confirmLabel) {
     </div>`;
 }
 
-export function renderOfflineModal(lines) {
-    return `<div class="modal-content">
+/**
+ * Welcome back: what the hero did while you were away, as a haul to look at rather than a list:
+ * each skill's XP with its bar (a level-up stands out), the materials as tiles popping in one by
+ * one, gold, finds (pets, uniques, items, dungeon clears) and what was used up.
+ */
+export function renderWelcomeBack(summary, state) {
+    const mins = Math.floor(summary.simulated / 60000);
+    const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+    const story = summary.mode === 'rest' ? 'Your hero rested at camp. Start a skill or enter combat before you leave to keep progressing.'
+        : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
+        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.died ? (summary.startedInDungeon ? ', then a dungeon run failed' : ', then your hero fell and retreated') : ''}.`;
+    let i = 0;
+    const next = () => i++;
+    const skills = Object.entries(summary.skills).map(([id, s]) => {
+        const lp = levelProgress(state.skills[id]?.xp || 0);
+        const up = s.to > s.from;
+        return `<div class="wb-skill${up ? ' up' : ''}" style="--i:${next()};--c:${SKILLS[id]?.color || '#d6aa5c'}">
+            <span class="wb-skill-icon" aria-hidden="true">${SKILLS[id]?.icon || '✨'}</span>
+            <span class="wb-skill-name">${esc(SKILLS[id]?.name || id)}</span>
+            <span class="wb-skill-xp">+${fmt(s.xp)} XP</span>
+            <span class="wb-skill-lv">${up ? `Lv ${s.from} → <b>${s.to}</b>` : `Lv ${s.to}`}</span>
+            <i class="wb-bar" style="--p:${(lp.fraction * 100).toFixed(1)}%"></i>
+        </div>`;
+    }).join('');
+    const gains = Object.entries(summary.resources).filter(([, d]) => d > 0).sort((a, b) => b[1] - a[1]);
+    const used = Object.entries(summary.resources).filter(([, d]) => d < 0);
+    const tile = (id, text, cls = '') => `<div class="wb-tile${cls}" style="--i:${next()};--r:${res(id)?.color || '#e2e8f0'}" title="${esc(res(id)?.name || id)}">${resIcon(id, { scale: 1.25 })}<span>${text}</span></div>`;
+    const finds = [
+        ...(summary.petIds || []).map(id => { const p = PETS.find(x => x.id === id); return `<div class="wb-find pet" style="--i:${next()}">${sprite(`pet/${id}`, { scale: 1.5, fallback: p?.icon || '🐾' })}<span>A pet found you: <b>${esc(p?.name || id)}</b></span></div>`; }),
+        summary.uniques > 0 ? `<div class="wb-find unique" style="--i:${next()}"><span class="wb-find-icon">🌟</span><span><b>${summary.uniques}</b> unique item${summary.uniques > 1 ? 's' : ''} found</span></div>` : '',
+        summary.items > 0 ? `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">🎒</span><span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
+            : summary.salvaged > 0 ? `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">♻️</span><span><b>${summary.salvaged}</b> items salvaged for essence and bars</span></div>` : '',
+        ...(summary.dungeonClears || []).map(d => `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">🏰</span><span><b>${fmt(d.clears)}</b> ${esc(d.name)} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)</span></div>`),
+        summary.plotsReady ? `<div class="wb-find" style="--i:${next()}">${sprite('farm/growing', { scale: 1, fallback: '🌾' })}<span><b>${summary.plotsReady}</b> farm plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest</span></div>` : '',
+        summary.mastery && summary.mastery.to > summary.mastery.from ? `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">⭐</span><span>${esc(summary.mastery.name)} mastery ${summary.mastery.from} → <b>${summary.mastery.to}</b></span></div>` : ''
+    ].filter(Boolean).join('');
+    return `<div class="modal-content welcome-back">
         <div class="modal-header">🌙 Welcome back</div>
-        <div class="modal-body"><div class="offline-lines">${lines.map(l => `<div>${esc(l)}</div>`).join('')}</div></div>
-        <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="FI.closeModal()">Continue</button></div>
+        <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
+        <p class="wb-story">${story}</p>
+        ${summary.gold > 0 ? `<div class="wb-gold" style="--i:${next()}">${sprite('gold', { scale: 1.25 })}<b>+${fmt(summary.gold)}</b> gold</div>` : ''}
+        ${skills ? `<div class="wb-skills">${skills}</div>` : ''}
+        ${gains.length ? `<div class="wb-tiles">${gains.map(([id, d]) => tile(id, `+${shortQty(d)}`)).join('')}</div>` : ''}
+        ${finds ? `<div class="wb-finds">${finds}</div>` : ''}
+        ${used.length ? `<div class="wb-used"><span class="muted small">Used</span>${used.map(([id, d]) => tile(id, `−${shortQty(-d)}`, ' spent')).join('')}</div>` : ''}
+        <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="FI.collectOffline()">Collect</button></div>
     </div>`;
 }
 

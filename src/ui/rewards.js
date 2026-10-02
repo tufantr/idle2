@@ -93,8 +93,11 @@ export function renderCrateModal(result, banked) {
     </div>`;
 }
 
-/** The celebration layer in `root`: one card at a time, a short queue, confetti. */
-export function createRewards(root) {
+/**
+ * The celebration layer in `root`: one card at a time, a short queue, confetti. While `blocked()`
+ * (a dialog is open) cards wait in the queue; `resume()` shows them once it closes.
+ */
+export function createRewards(root, { blocked = () => false } = {}) {
     const queue = [];
     let showing = null;
     let timer = 0;
@@ -146,6 +149,12 @@ export function createRewards(root) {
     }
 
     function next() {
+        if (blocked()) { // a dialog came up: let the current card go, keep the rest for later
+            showing = null;
+            const node = root.querySelector('.celebration');
+            if (node) { node.classList.add('leaving'); setTimeout(() => node.remove(), 400); }
+            return;
+        }
         const card = queue.shift();
         if (card) { show(card); return; }
         showing = null;
@@ -163,7 +172,11 @@ export function createRewards(root) {
             const same = card.key ? queue.findIndex(q => q.key === card.key) : -1;
             if (same >= 0) queue[same] = card; else queue.push(card);
             while (queue.length > MAX_QUEUE) queue.shift();
-            if (!showing) next();
+            if (!showing && !blocked()) next();
+        },
+        /** The dialog that held the cards back has closed. */
+        resume() {
+            if (!showing && queue.length && !blocked()) next();
         }
     };
 }
