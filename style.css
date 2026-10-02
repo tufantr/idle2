@@ -1112,7 +1112,10 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 @keyframes dmgCrit { 0% { opacity: 0; transform: translate(-50%, -40%) scale(2.2) rotate(-8deg); } 18% { opacity: 1; transform: translate(-50%, -60%) scale(1) rotate(-4deg); } 30% { transform: translate(-50%, -66%) scale(1.15) rotate(3deg); } 100% { opacity: 0; transform: translate(-50%, -210%) scale(1) rotate(0deg); } }
 @keyframes dmgRise { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.7); } 20% { opacity: 1; transform: translate(-50%, -40%) scale(1.1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -170%) scale(1); } }
 @keyframes slash { 0% { opacity: 1; transform: translate(-50%, -50%) rotate(-34deg) scaleX(0.1); } 60% { opacity: 1; transform: translate(-50%, -50%) rotate(-34deg) scaleX(1.1); } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-34deg) scaleX(1.2); } }
-@keyframes corpse { 0% { opacity: 1; transform: translate(-50%, -50%); filter: brightness(2.2); } 100% { opacity: 0; transform: translate(-30%, -20%) rotate(40deg) scale(0.75); filter: grayscale(1) brightness(0.4); } }
+@keyframes corpse { /* knocked up and away from the spot the next monster appears in, fading as it goes */
+    0% { opacity: 1; transform: translate(-50%, -50%); filter: brightness(2.2); }
+    55% { opacity: 0.4; }
+    100% { opacity: 0; transform: translate(12%, -100%) rotate(60deg) scale(0.68); filter: grayscale(0.8) brightness(0.7); } }
 @keyframes puff { 0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.3); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); } }
 @keyframes dropPop { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); } 15% { opacity: 1; transform: translate(-50%, -70%) scale(1.1); } 30% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; transform: translate(-50%, -110%); } 100% { opacity: 0; transform: translate(-50%, -160%); } }
 @keyframes beam { 0% { opacity: 0; transform: translateX(-50%) scaleY(0); } 15% { opacity: 0.9; transform: translateX(-50%) scaleY(1); } 70% { opacity: 0.6; transform: translateX(-50%) scaleY(1); } 100% { opacity: 0; transform: translateX(-50%) scaleY(1); } }
