@@ -14,7 +14,7 @@ node_modules/
 .vercel
 
 # Source paintings (only the converted assets/paint/*.webp are committed)
-art/
+/art/
 
 # Python bytecode from the tools/ scripts
 __pycache__/
