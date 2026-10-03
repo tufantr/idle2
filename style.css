@@ -200,7 +200,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
     background: transparent; border: 1px solid transparent; border-radius: 10px; box-shadow: none;
 }
 .nav-icon { flex: 0 0 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: radial-gradient(circle at 35% 30%, #32281d, #140f0a 75%); box-shadow: inset 0 0 0 1px rgba(214, 170, 92, 0.22); }
-.nav-icon .spr, .quest-icon .spr, .hot-icon .spr, .h-icon .spr { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
+.nav-icon .spr, .hot-icon .spr, .h-icon .spr { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
 .nav-emoji { font-size: 1.05rem; line-height: 1; }
 .nav-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the next place to open: its picture, its name, what to do and how far along */
@@ -1540,25 +1540,9 @@ body:has(#modal-root .modal-overlay.active) #toast-area, body:has(#modal-root .m
 .link-btn { padding: 0; border: 0; background: none; box-shadow: none; color: var(--heading); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .link-btn:hover { transform: none; background: none; box-shadow: none; color: #fff1c9; }
 
-/* ===== A calmer screen: the guide, the cards, the banners and the About cards =====
+/* ===== A calmer screen: the cards, the banners and the About cards =====
    What a new player sees is what they have met so far (systems/disclosure.js); these are the pieces
    that replaced the walls of locked things and "How it works" paragraphs. */
-
-/* the guide: the next steps as notes pinned under the scene */
-#guide:empty { display: none; }
-.guide { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.quest-note {
-    position: relative; flex: 1 1 280px; display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.8rem 0.7rem;
-    text-align: left; font-size: 0.86rem; font-weight: 700; line-height: 1.3; color: #2a1c0c;
-    border-radius: 4px; border: 1px solid #8a6a32; background: linear-gradient(180deg, #efe2c4, #d6c196);
-    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.45), inset 0 0 18px rgba(120, 80, 30, 0.25);
-}
-button.quest-note:hover { transform: translateY(-2px); color: #1a1005; border-color: #b8893f; background: linear-gradient(180deg, #f7ecd2, #e2cfa6); box-shadow: 0 9px 16px rgba(0, 0, 0, 0.5), inset 0 0 18px rgba(120, 80, 30, 0.2); }
-.quest-icon { flex: 0 0 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: radial-gradient(circle at 35% 30%, #3d3023, #17110b 75%); box-shadow: inset 0 0 0 1px rgba(60, 40, 10, 0.6); }
-.quest-text { flex: 1; min-width: 0; text-wrap: balance; }
-.quest-go { font-weight: 800; color: #9b1c1c; }
-.quest-bar { position: absolute; left: 0.8rem; right: 0.8rem; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(60, 40, 10, 0.22); }
-.quest-bar::after { content: ""; display: block; height: 100%; width: var(--p, 0%); border-radius: 2px; background: linear-gradient(90deg, #8a5a12, #c8881a); transition: width 0.6s ease-out; }
 
 /* the "?" that opens an About card */
 .about-btn {
@@ -1588,7 +1572,6 @@ button.quest-note:hover { transform: translateY(-2px); color: #1a1005; border-co
 .cel-tile:hover { border-color: #fde68a; box-shadow: 0 0 14px rgba(252, 211, 77, 0.45); }
 .cel-tile span { padding: 0.25rem 0.3rem; font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; color: #fff7e6; text-shadow: 0 1px 3px #000; }
 @media (max-width: 600px) { .cel-art { margin: 0 -1.1rem 0.5rem; height: 104px; } }
-@media (max-width: 600px) { .guide .quest-note:nth-child(n+3) { display: none; } } /* two notes are plenty on a phone */
 
 /* a place's banner, on the tabs without a scene of their own */
 .tab-banner {
@@ -1706,9 +1689,7 @@ body.battle-full .fighter-meta { font-size: 0.8rem; }
 body.battle-full .attack-bar { width: min(100%, 200px); height: 5px; }
 body.battle-full .boss-clock { width: min(100%, 240px); height: 15px; }
 body.battle-full .battle-combo b { font-size: 2.6rem; }
-body.battle-full #guide { flex: 0 0 auto; padding: 0.55rem 0.8rem 0; background: var(--panel-2); border-top: 1px solid var(--line-strong); }
-body.battle-full #tab { flex: 0 1 auto; min-height: 0; max-height: 44dvh; overflow-y: auto; gap: 0.5rem; padding: 0.55rem 0.8rem 0.7rem; background: var(--panel-2); scrollbar-width: thin; }
-body.battle-full #guide:empty + #tab { border-top: 1px solid var(--line-strong); }
+body.battle-full #tab { flex: 0 1 auto; min-height: 0; max-height: 44dvh; overflow-y: auto; gap: 0.5rem; padding: 0.55rem 0.8rem 0.7rem; background: var(--panel-2); border-top: 1px solid var(--line-strong); scrollbar-width: thin; }
 body.battle-full .log-drawer { padding: 0.45rem 0.8rem; border-radius: 10px; box-shadow: none; }
 body.battle-full .log-drawer::before { display: none; }
 body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar, clear of the dock's buttons */
@@ -1773,8 +1754,6 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     body.battle-full .battle-combo b { font-size: 1.7rem; }
     body.battle-full #tab { max-height: 46dvh; padding: 0.5rem 0.6rem 0.6rem; }
     body.battle-full .zone-facts { display: none; } /* the map's zone card has the drops */
-    body.battle-full #guide { padding: 0.5rem 0.6rem 0; }
-    body.battle-full .guide .quest-note:nth-child(n+2) { display: none; } /* one note: the dock needs the room */
     .menu-word { display: none; }
     .perks-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
     .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }

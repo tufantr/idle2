@@ -257,7 +257,6 @@ export function onPlayerDeath(game) {
     const state = game.state;
     const c = state.combat;
     bumpStat(game, 'deaths');
-    c.lastSetbackAt = game.now;
     const mode = c.mode;
     if (mode !== 'stages') {
         if (mode === 'dungeon') failDungeon(game, 'you were defeated');
@@ -291,7 +290,6 @@ export function onBossTimeout(game) {
     if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`); return; }
     if (c.mode === 'titan') { endTitan(game, false); return; }
     bumpStat(game, 'bossEscapes');
-    c.lastSetbackAt = game.now;
     const back = Math.max(1, c.stage - 1);
     log(game, `⏳ ${c.enemy.name} held out for ${BALANCE.combat.bossTimeMs / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
     game.emit({ type: 'bossTimeout', stage: c.stage });

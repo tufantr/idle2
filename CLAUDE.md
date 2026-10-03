@@ -27,7 +27,7 @@ Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.m
   (Phase 8, art and polish, is current; add a line for each visible change).
   `docs/research_notes/game-feel.md`: the rules the UI follows. `docs/art/gemini.md`: painted art.
 - `src/game.js` (the Game class), `src/core/`, `src/data/`, `src/systems/`: pure logic, no DOM, tested.
-- `src/ui/`: `render.js` (tabs as HTML strings, the sidebar, the guide), `scene.js` (battle scene),
+- `src/ui/`: `render.js` (tabs as HTML strings, the sidebar, the battle dock), `scene.js` (battle scene),
   `stage.js` (skill stage), `features.js` (each place's painting, one line and rules: unlock cards,
   banners, the About cards behind every "?"), `worldmap.js` (zone pins on the painted map),
   `rewards.js` (celebrations, daily crate), `actionfx.js` (work pops), `sound.js` (synthesized),
@@ -61,7 +61,8 @@ Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.m
 - A new player sees only what they have met (DESIGN §3.22). A new piece of a screen opens through
   `src/systems/disclosure.js`, never as a greyed-out placeholder; a ladder shows the next rung only;
   each thing is said once; a card at rest shows art, name and time; rules go behind a "?"
-  (`src/ui/features.js`), not into a paragraph on the tab.
+  (`src/ui/features.js`), not into a paragraph on the tab. No suggestion notes ("do this next"):
+  show what is ready on the thing itself (a badge, a glow), as the owner asked.
 - Entering combat fills the screen (`body.battle-full`, DESIGN §3.23). Whatever a run needs must be
   in its dock: if a new thing is part of the fight-spend-prestige loop, it goes there (or in a dialog
   over the fight), not on another tab.

@@ -11,7 +11,6 @@ import { withArticle } from '../src/core/text.js';
 import { DISCLOSURES, seen, evaluateDisclosures } from '../src/systems/disclosure.js';
 import { UNLOCKS, nextGoals } from '../src/data/unlocks.js';
 import { generateEquipment } from '../src/core/formulas.js';
-import { advise } from '../src/systems/advisor.js';
 
 rng.setSource(seededRandom(77));
 const T0 = 1_700_000_000_000;
@@ -148,21 +147,7 @@ test('the loop stays in the fight: prestige can walk straight into the next run'
     assert.ok(early.state.combat.active);
 });
 
-test('the guide can leave out what the full-screen fight has buttons for', () => {
-    const game = new Game(null, T0);
-    const s = game.state;
-    s.gold = 500;
-    s.prestige.skillPoints = 2;
-    s.inventory.push(generateEquipment({ type: 'Weapon', tier: 1, power: 1, materialName: 'Copper' }, s.idCounter++));
-    const kinds = list => list.map(t => t.kind);
-    const all = kinds(advise(game, 8));
-    for (const kind of ['goal', 'perks', 'equip', 'camp']) assert.ok(all.includes(kind), kind);
-    const inFight = kinds(advise(game, 8, { skip: ['camp', 'prestige', 'perks', 'equip'] }));
-    assert.deepEqual(inFight, ['goal'], 'only the notes that need another place are left');
-    for (const tip of advise(game, 8)) assert.ok(tip.kind, 'every note names its kind');
-});
-
-test('every goal says what to do in a few words, and where', () => {
+test('every goal says what to do in a few words, and where (the sidebar\'s Next card)', () => {
     const tabs = new Set(UNLOCKS.map(u => u.id));
     for (const u of UNLOCKS.filter(u => !u.always)) {
         assert.ok(u.task && u.task.length <= 30, `${u.id} has a short task`);

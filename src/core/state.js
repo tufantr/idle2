@@ -44,7 +44,6 @@ export function createDefaultState(now = Date.now()) {
             farmMode: false,
             bossTimeLeft: 0,   // ms of fighting left before the current boss escapes
             regroupLeft: 0,    // ms left farming the previous stage after a boss escaped
-            lastSetbackAt: 0,  // last death or boss escape (the advisor uses it)
             mode: 'stages',    // 'stages' | 'dungeon' | 'titan'
             dungeon: null,     // { id, index } while in a dungeon run
             autoRepeat: true   // start the dungeon again after each clear

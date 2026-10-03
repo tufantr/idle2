@@ -337,13 +337,14 @@ progress as motion, art before words, one stage with a HUD around it.
       arrives with the gold for its first upgrade, the food row with Cooking, the potion row with
       Alchemy, the stage arrows after the first defeat, the map with the second zone, the jewellery
       slots with Crafting, mastery and the mini-game when they first matter. What has opened is saved
-      and never closes; it glows once as it arrives. The first fight is the scene, one note and one
-      small panel, at both widths
-- [x] **One guide**: the quest board is a strip of notes under the scene on every tab: the next
-      unlock with its bar, then one or two things worth doing (two notes before the first boss, three
-      after). A note leads to its tab, and to the right step of Smithing. The header lost its goal
-      pill, its stats row and the second Enter combat button went from under the scene; the crate
-      has one button (the header, or the hotbar on a phone); the hero's numbers moved to the Inventory
+      and never closes; it glows once as it arrives. The first fight is the scene and one small
+      panel, at both widths
+- [x] **Each thing said once**: the header lost its goal pill and its stats row, and the second
+      Enter combat button went from under the scene; the crate has one button (the header, or the
+      hotbar on a phone); the hero's numbers moved to the Inventory
+- [x] **No suggestions**: the advisor's notes (the quest board, then a strip under the scene) are
+      gone, with `src/systems/advisor.js`. The next unlock is the sidebar's Next card; what is ready
+      shows where it lives (a ▲ on better gear, a lit camp upgrade, a glowing Perks button)
 - [x] **Cards that are quiet at rest**: an action card shows art, name, what it needs and how long it
       takes; the one being worked opens up with its pile, XP, luck, mastery and the bar. A ladder
       shows what is unlocked and the next rung as a silhouette (mining: 2 cards on day one, not 8;
@@ -363,7 +364,7 @@ progress as motion, art before words, one stage with a HUD around it.
       ("+5% attack", a level badge, a gold price); supplies and perks are item cards with their
       picture; a dungeon card says in one line whether you are ready, and shows its unique as a bar
       of fragments; prestige is one line with a button. The battle log folds into a drawer
-- [x] **Pixel icons in the sidebar, the hotbar and the guide** instead of emoji (a sword, an ore, a
+- [x] **Pixel icons in the sidebar and the hotbar** instead of emoji (a sword, an ore, a
       log, a potion, the crown), from the atlas
 - [x] **The fight on the whole screen** (DESIGN §3.23): entering combat hides the sidebar and the
       hotbar; the scene fills the window with bigger fighters, and a dock under it holds everything a

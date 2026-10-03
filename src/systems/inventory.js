@@ -39,6 +39,24 @@ export function isUpgrade(state, item) {
     return slots.some(slot => itemScore(item) > itemScore(state.equipped[slot]));
 }
 
+/** The weakest equipped slot an item could go into (empty slots first). */
+function weakestSlotFor(state, type) {
+    const slots = TYPE_SLOTS[type] || [];
+    return slots.reduce((worst, slot) => (itemScore(state.equipped[slot]) < itemScore(state.equipped[worst]) ? slot : worst), slots[0]);
+}
+
+/** The best wearable upgrade in the bag, if any: { item, slot, gain } (the fight's one-tap Equip). */
+export function findUpgrade(state) {
+    let best = null;
+    for (const item of state.inventory) {
+        if (!canWear(state, item)) continue;
+        const slot = weakestSlotFor(state, item.type);
+        const gain = itemScore(item) - itemScore(state.equipped[slot]);
+        if (gain > 0 && (!best || gain > best.gain)) best = { item, slot, gain };
+    }
+    return best;
+}
+
 /** Bag items worth equipping: the best of their type in the bag (one per slot) that beat what is worn. */
 function neededInBag(state) {
     const needed = new Set();

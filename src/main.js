@@ -5,7 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderHeader, renderGuide, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, TABS } from './ui/render.js';
 import { renderAboutCard } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
@@ -291,7 +291,6 @@ function render() {
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
     setHtml(hotbar, renderHotbar(game, ui));
-    setHtml(document.getElementById('guide'), renderGuide(game, ui));
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
@@ -710,11 +709,6 @@ window.FI = {
             openModal(renderCrateModal(crate, game.state.daily.banked), 'crate');
         }
         render();
-    },
-    /** A note in the guide was tapped: go where it points (and to the right step of Smithing). */
-    advisorGo(tab, view) {
-        if (tab === 'smithing' && view) ui.smithView = view;
-        if (tab) window.FI.switchTab(tab);
     },
     /** The "?" on a panel: what this place is, with its picture. */
     about(id) { openModal(renderAboutCard(id), 'about'); },

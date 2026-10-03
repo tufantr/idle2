@@ -388,18 +388,17 @@ pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievemen
   Achievements at stage 10, Dungeons at stage 20, Agility at stage 30, Farming after 10 Alchemy actions
   or Cooking 15, Crafting at mining 20 or the first gem (but never before the first bar: jewellery
   needs bars, and a lucky gem in the first minute used to open Crafting ahead of Smithing). Each goal
-  carries a `task` in a few words and the `tab` where the work happens; the sidebar's "next" slot and
-  the guide show it with its progress. Settings has a developer switch (and `?dev=1`) that unlocks all.
+  carries a `task` in a few words and the `tab` where the work happens; the sidebar's Next card
+  shows it with its progress. Settings has a developer switch (and `?dev=1`) that unlocks all.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for
   you**, so a missed day costs nothing; no streaks. A crate holds 40 kills of gold at your best stage,
   12 materials and a gem from that zone, and `3 × zone tier` essence.
-- **Next steps** (`src/systems/advisor.js`): the next unlock first (with how far along it is),
-  then the most urgent of: a waking Titan, a unique ready to assemble, unspent skill points, ready or
-  empty farming plots, an affordable agility obstacle, an upgrade in the bag, the next piece to forge,
-  food, an affordable camp upgrade, the next tool, a prestige worth taking, the skill gating the next
-  metal, a newly opened dungeon. Two notes in all while the first boss is still ahead, three after.
-  The daily crate is not among them: it has its own button (the header, or the hotbar on a phone).
-  Every note names its `kind`, so a screen that already has a button for something can leave its note out.
+- **No suggestions.** There used to be an advisor: notes on what to do next (forge this, plant
+  that, the Titan is awake, spend your skill points), first as a quest board and then as a strip
+  under the scene. It was taken out to keep the screen simple. What is ready shows where it lives
+  instead: the next unlock in the sidebar's Next card, a ▲ on gear that beats what you wear (and
+  a one-tap Equip in the fight), a lit camp upgrade you can afford, a glowing Perks button when
+  there are skill points, a crate button when one is ripe.
 
 ### 3.15 Active play: mini-games and Focus
 
@@ -579,13 +578,10 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 - **One step ahead, no further.** A ladder shows what is unlocked and the next rung as a
   silhouette: mining shows two cards on day one, not eight; the smithy three, not eighteen. The
   same goes for farm plots, agility slots and dungeons.
-- **Each thing is said once.** The next goal lives in the guide (and the sidebar's slot), not also
-  in the header. The crate has one button. The battle scene starts the fight; the tab below only
+- **Each thing is said once.** The next goal lives in the sidebar's Next card, not also in the
+  header. The crate has one button. The battle scene starts the fight; the tab below only
   holds the orders. The header says what the hero is doing only when the tab in view doesn't show
   it. The hero's numbers are in the Inventory, by the hero.
-- **The guide.** The advisor's notes sit in one strip under the scene on every tab: the next unlock
-  with its bar, then one or two things worth doing now. A note leads to its tab (and to the right
-  step of Smithing).
 - **Cards are quiet at rest.** An action card shows its art, its name, what it needs and how long
   it takes. The card being worked opens up: the pile it has made, XP, luck, mastery, the progress
   bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
@@ -615,8 +611,6 @@ needs another screen: fight, spend, prestige and fight on.
   stack with prestige and the camp first, and the dock scrolls while the scene keeps its share.
 - **Prestige walks on.** `Game.prestige({ resume: true })` starts the new run's first fight if the
   hero was fighting, so the screen never drops back to the menu between runs.
-- **The guide doesn't send the player away** for what the dock offers: in the fight it leaves out
-  the notes about the camp, prestige, perks and gear (`advise(..., { skip })`).
 - **The way out is always there.** On the top bar, "Menu" (with a dot when a new place is
   waiting) and the leave-full-screen button both fold the fight back into the page while it goes
   on, and so does Esc; a Full screen button on the combat tab brings it back, and the next fight
@@ -852,7 +846,7 @@ disagreed, the implementation follows the simulator:
 ## 8. Code map
 
 ```
-index.html            page shell (sidebar, header, scene, stage, guide, tab, toasts, modals)
+index.html            page shell (sidebar, header, scene, stage, tab, toasts, modals)
 style.css             styles: theme tokens and components (dark fantasy), the battle scene, reward moments,
                       phone layout, reduced motion
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
@@ -863,10 +857,10 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
-                      · farming · agility · prestige · camp · minigame · offline · daily · advisor
+                      · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
                       · disclosure (which pieces of the screens have opened for the player)
-src/ui/               render.js (HTML per tab, the sidebar, the guide, the armory, the phone hotbar) · scene.js (the
+src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
                       worldmap.js (the zones as pins on the painted map) ·

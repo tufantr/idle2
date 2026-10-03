@@ -30,7 +30,7 @@ rules of thumb that recur across sources:
 - Variable rewards and milestones: rare drops, doubles, gems, pets. → Each gets a distinct sound
   and look so the player learns to recognise luck.
 - Pacing: slow down just enough to nudge toward the next upgrade, never a dead wait. → Already in
-  the balance; the UI's job is to make the upgrade visible (the ▲ on gear, the quest board).
+  the balance; the UI's job is to make the upgrade visible (the ▲ on gear, the lit camp upgrade).
 
 ## 3. What the UI of a game looks like (versus a web page)
 
@@ -70,6 +70,9 @@ between tabs.
   drawn; the one next thing is shown as a picture with a bar.
 - **Say each thing once.** Two buttons for one action make a player wonder what the difference is.
   → One crate button, one goal, one way into the fight.
+- **Show what is ready where it lives, don't tell.** A strip of advice ("spend your skill points",
+  "the Titan is awake") read as chores, however helpful each note was. → No suggestions: a badge,
+  a glow or a lit button on the thing itself.
 - **Quiet at rest.** Numbers belong to the thing in hand. → A card shows art, name and time; the
   one being worked opens up.
 - **A picture, then a line, then the rules on request.** → Every place has a painting; its rules

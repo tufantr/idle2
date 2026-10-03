@@ -18,9 +18,8 @@ import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/ski
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
 import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
-import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
+import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
-import { advise, findUpgrade } from '../systems/advisor.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
 import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
@@ -159,7 +158,7 @@ export function renderHotbar(game, ui) {
 
 // The header is the purse and a few pills. A currency shows once the player holds some
 // (systems/disclosure.js); the status pill only says what is running somewhere else than the tab in
-// view; the next goal lives in the guide and the sidebar; the hero's numbers are in the Inventory.
+// view; the next goal lives in the sidebar's Next card; the hero's numbers are in the Inventory.
 export function renderHeader(game, ui, cloud) {
     const state = game.state;
     const d = game.derived;
@@ -212,27 +211,6 @@ export function renderHeader(game, ui, cloud) {
             <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
             <div class="header-right">${daily}${screen}${mute}${user}</div>
         </div>`;
-}
-
-// ---------- the guide (the quest board, as one line under the scene) ----------
-
-/** The advisor's notes: the next unlock with its progress, then what is worth doing now. */
-export function renderGuide(game, ui) {
-    if (['settings', 'clan'].includes(ui.tab)) return '';
-    // While the fight fills the screen its dock has the buttons for these: no note needs to send the player away.
-    const tips = advise(game, undefined, { skip: battleMode(game, ui) ? ['camp', 'prestige', 'perks', 'equip'] : [] });
-    if (!tips.length) return '';
-    const notes = tips.map(t => {
-        const where = t.tab && isUnlocked(game.state, t.tab) ? t.tab : null;
-        const go = where && (where !== ui.tab || t.view);
-        const icon = t.goal ? tabIcon(t.goal, 0.75) : where ? tabIcon(where, 0.75) : `<span class="nav-emoji" aria-hidden="true">${t.icon}</span>`;
-        const inner = `<span class="quest-icon">${icon}</span><span class="quest-text">${esc(t.text)}</span>${go ? '<span class="quest-go" aria-hidden="true">→</span>' : ''}
-            ${t.goal ? `<i class="quest-bar" style="--p:${((t.progress || 0) * 100).toFixed(1)}%" aria-hidden="true"></i>` : ''}`;
-        // A note that leads somewhere is a button; one about the tab in view is just a note.
-        return go ? `<button class="quest-note${t.goal ? ' goal' : ''}" onclick="FI.advisorGo('${where}', ${t.view ? `'${t.view}'` : 'null'})">${inner}</button>`
-            : `<div class="quest-note${t.goal ? ' goal' : ''}">${inner}</div>`;
-    }).join('');
-    return `<div class="guide" role="group" aria-label="What to do next">${notes}</div>`;
 }
 
 // ---------- combat ----------
@@ -508,7 +486,7 @@ function toolEffect(toolId, tier) {
     return `−${speed}% ${SKILLS[tool.skill].name} time, +${dbl}% double yield`;
 }
 
-/** The tool in hand, once there is one (the guide says when one can be made). */
+/** The tool in hand, once there is one (Smithing's Tools step shows what can be made). */
 function toolBadge(game, skillId) {
     const skill = SKILLS[skillId];
     if (!skill.tool) return '';
