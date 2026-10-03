@@ -20,7 +20,7 @@ import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
 import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
-import { advise } from '../systems/advisor.js';
+import { advise, findUpgrade } from '../systems/advisor.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
 import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
@@ -66,6 +66,11 @@ export const TABS = [
 const rarityColor = id => RARITIES.find(r => r.id === id)?.color || '#e2e8f0';
 const res = id => RESOURCES[id];
 const resTag = (id, qty = null) => `<span class="res-tag" style="color:${res(id)?.color || '#e2e8f0'}">${resIcon(id)} ${qty !== null ? `${fmt(qty)}× ` : ''}${esc(res(id)?.name || id)}</span>`;
+
+/** Is the fight filling the screen? On the combat tab, while fighting, unless the player folded it away. */
+export function battleMode(game, ui) {
+    return ui.tab === 'combat' && game.state.combat.active && ui.battleFull !== false;
+}
 
 // ---------- sidebar ----------
 
@@ -162,7 +167,7 @@ export function renderHeader(game, ui, cloud) {
     ];
     const banked = state.daily.banked;
     const daily = banked > 0
-        ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">📦 Daily crate${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
+        ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">📦<span class="daily-word"> Daily crate</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
         : '';
     const bonfirePill = bonfireLit(state, game.now)
         ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">🔥 +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
@@ -186,14 +191,21 @@ export function renderHeader(game, ui, cloud) {
     }
     const nudge = !cloud?.loggedIn && state.combat.bestStage > 10;   // past the first boss: worth keeping
     const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>`
-        : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" aria-label="Local save only: sign in to keep it in the cloud" title="Local save only: sign in to keep it in the cloud">💾${nudge ? ' Save to cloud' : ''}</button>`;
+        : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" aria-label="Local save only: sign in to keep it in the cloud" title="Local save only: sign in to keep it in the cloud">💾${nudge ? '<span class="cloud-word"> Save to cloud</span>' : ''}</button>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? '🔊' : '🔇'}</button>`;
+    // While the fight fills the screen, the sidebar is out of sight: the header carries the way back
+    // to it (with a dot when a new place is waiting there) and the browser's own full screen.
+    const full = battleMode(game, ui);
+    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${ui.fresh?.size ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
+    const native = typeof document !== 'undefined' && document.fullscreenEnabled;
+    const screen = full && native ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.toggleFullscreen()" aria-pressed="${!!document.fullscreenElement}" aria-label="${document.fullscreenElement ? 'Leave full screen' : 'Use the whole screen'}" title="${document.fullscreenElement ? 'Leave full screen' : 'Use the whole screen'}">⛶</button>` : '';
     return `
         <div class="header-row">
+            ${menu}
             <div class="chips">${chips.join('')}</div>
             <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
-            <div class="header-right">${daily}${mute}${user}</div>
+            <div class="header-right">${daily}${screen}${mute}${user}</div>
         </div>`;
 }
 
@@ -202,7 +214,8 @@ export function renderHeader(game, ui, cloud) {
 /** The advisor's notes: the next unlock with its progress, then what is worth doing now. */
 export function renderGuide(game, ui) {
     if (['settings', 'clan'].includes(ui.tab)) return '';
-    const tips = advise(game);
+    // While the fight fills the screen its dock has the buttons for these: no note needs to send the player away.
+    const tips = advise(game, undefined, { skip: battleMode(game, ui) ? ['camp', 'prestige', 'perks', 'equip'] : [] });
     if (!tips.length) return '';
     const notes = tips.map(t => {
         const where = t.tab && isUnlocked(game.state, t.tab) ? t.tab : null;
@@ -320,12 +333,11 @@ function renderBattleLog(state, ui) {
     </details>`;
 }
 
-export function renderCombat(game, ui) {
+/** The orders for the fight: leave it, move between stages, open the map; and what this place drops. */
+function combatOrders(game, ui) {
     const state = game.state;
     const c = state.combat;
     const zone = zoneForStage(c.stage);
-
-    // The battle scene above the tab (src/ui/scene.js) shows the fight and starts it; this panel holds the orders.
     const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
     const leave = c.mode === 'dungeon' ? 'Abandon run' : c.mode === 'titan' ? 'Give up' : 'Retreat';
     const retreat = c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">🏳️ ${leave}</button>` : '';
@@ -340,22 +352,91 @@ export function renderCombat(game, ui) {
             </div>`
         : '';
     const map = c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">🗺️ Map</button>` : '';
+    // Folded away mid-fight: one button brings the full screen back.
+    const expand = c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">⛶ Full screen</button>` : '';
     const where = run
         ? `<div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`
         : c.mode === 'titan'
             ? '<div class="muted small">Deal as much damage as you can before the timer runs out. Clicking the Titan helps.</div>'
             : `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
-    const deck = retreat || nav || map ? `<div class="combat-deck">${retreat}${nav}${map}</div>` : '';
-    const loadout = renderLoadout(game);
+    const deck = retreat || nav || map || expand ? `<div class="combat-deck">${retreat}${nav}${expand}${map}</div>` : '';
+    return `${deck}${where}`;
+}
 
+export function renderCombat(game, ui) {
+    if (battleMode(game, ui)) return renderBattleDock(game, ui);
+    const state = game.state;
+    // The battle scene above the tab (src/ui/scene.js) shows the fight and starts it; this panel holds the orders.
+    const loadout = renderLoadout(game);
     return `
     <section class="glass-panel combat-panel">
-        ${deck}
-        ${where}
+        ${combatOrders(game, ui)}
         ${loadout ? `<div class="combat-controls">${loadout}</div>` : ''}
     </section>
     ${renderCamp(game)}
     ${renderPrestigeStrip(game)}
+    ${renderBattleLog(state, ui)}`;
+}
+
+// ---------- the fight on the whole screen ----------
+
+// While the fight fills the screen (battleMode), everything a run needs sits in one dock under the
+// scene: the orders, the food and the potion, the camp, prestige, perks and the best piece of gear
+// waiting in the bag. A player can fight, spend, prestige and fight on without leaving it.
+
+/** The camp as three tokens to tap: the picture, the level, what a level gives and its price. */
+function renderCampTokens(game) {
+    const state = game.state;
+    if (!seen(state, 'camp')) return '';
+    const tokens = CAMP_UPGRADES.map(u => {
+        const level = state.camp[u.id] || 0;
+        const cost = nextCampCost(state, u.id);
+        const can = cost !== null && state.gold >= cost;
+        const canTwo = can && level + 1 < u.max && state.gold >= cost + campCost(u, level + 1);
+        const total = Math.round((Math.pow(1 + u.bonus, level) - 1) * 100);
+        return `<div class="camp-token${can ? ' can' : ''}">
+            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now +${total}%)` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
+                <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
+                <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
+            </button>
+            ${canTwo ? `<button class="mini-btn camp-max" onclick="FI.buyCamp('${u.id}', 'max')" title="Buy as many levels of the ${esc(u.name)} as your gold allows">Max</button>` : ''}
+        </div>`;
+    }).join('');
+    return `<div class="dock-group dock-camp"><div class="dock-title">Camp ${aboutButton('camp')}</div><div class="camp-tokens">${tokens}</div></div>`;
+}
+
+/** Prestige, perks and the upgrade in the bag: the steps of the loop that used to need another tab. */
+function renderLoopActions(game) {
+    const state = game.state;
+    const c = state.combat;
+    const parts = [];
+    if (isUnlocked(state, 'prestige')) {
+        const preview = game.prestigePreview();
+        const line = preview.allowed ? `+${fmt(preview.tokens)} tokens${preview.skillPoints ? `, +${preview.skillPoints} SP` : ''}`
+            : c.maxStage < BALANCE.prestige.minStage ? `at stage ${BALANCE.prestige.minStage}`
+            : `ready in ${duration(preview.waitMs)}`;
+        parts.push(`<button class="prestige-btn arcane dock-prestige" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>`);
+    }
+    if (seen(state, 'skill_points')) {
+        const sp = state.prestige.skillPoints;
+        parts.push(`<button class="shop-btn dock-perks${sp > 0 ? ' ready' : ''}" onclick="FI.openPerks()" title="Spend skill points on perks that last forever"><b>Perks</b><span>${sp > 0 ? `${sp} SP to spend` : 'no SP now'}</span></button>`);
+    }
+    const upgrade = findUpgrade(state);
+    if (upgrade) {
+        parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span></span></button>`);
+    }
+    return parts.length ? `<div class="dock-group dock-loop">${parts.join('')}</div>` : '';
+}
+
+function renderBattleDock(game, ui) {
+    const state = game.state;
+    const loadout = renderLoadout(game);
+    return `<section class="battle-dock" aria-label="Orders for the fight">
+        <div class="dock-group dock-orders">${combatOrders(game, ui)}</div>
+        ${loadout ? `<div class="dock-group dock-loadout">${loadout}</div>` : ''}
+        ${renderCampTokens(game)}
+        ${renderLoopActions(game)}
+    </section>
     ${renderBattleLog(state, ui)}`;
 }
 
@@ -901,10 +982,9 @@ export function renderInventory(game, ui) {
 
 // ---------- shop ----------
 
-export function renderShop(game, ui) {
-    const state = game.state;
-    const d = game.derived;
-    const perks = PERKS.map(p => {
+/** The perks as item cards (the Shop shows them, and so does the dialog opened from the fight). */
+function perkList(state) {
+    return PERKS.map(p => {
         const level = state.perks[p.id] || 0;
         const can = state.prestige.skillPoints > 0 && level < p.max;
         return `<div class="shop-item">
@@ -913,6 +993,24 @@ export function renderShop(game, ui) {
             <button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${can ? '' : 'disabled'}>${level >= p.max ? 'Max' : '1 SP'}</button>
         </div>`;
     }).join('');
+}
+
+/** Perks in a dialog, so skill points can be spent without leaving the fight. */
+export function renderPerksModal(game) {
+    const state = game.state;
+    const sp = state.prestige.skillPoints;
+    return `<div class="modal-content perks-modal">
+        <div class="modal-header">Perks</div>
+        <p class="about-blurb">${sp > 0 ? `<b class="sp-text">${sp} skill point${sp === 1 ? '' : 's'}</b> to spend.` : 'No skill points now: every prestige brings more.'} Perks last forever.</p>
+        <div class="shop-list">${perkList(state)}</div>
+        <div class="modal-footer"><button class="modal-btn btn-confirm" data-autofocus onclick="FI.closeModal()">Done</button></div>
+    </div>`;
+}
+
+export function renderShop(game, ui) {
+    const state = game.state;
+    const d = game.derived;
+    const perks = perkList(state);
     const goods = GOLD_SHOP.map(e => {
         const price = goldShopPrice(game, e);
         const [resId] = Object.keys(e.gives);

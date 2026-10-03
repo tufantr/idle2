@@ -399,6 +399,7 @@ pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievemen
   food, an affordable camp upgrade, the next tool, a prestige worth taking, the skill gating the next
   metal, a newly opened dungeon. Two notes in all while the first boss is still ahead, three after.
   The daily crate is not among them: it has its own button (the header, or the hotbar on a phone).
+  Every note names its `kind`, so a screen that already has a button for something can leave its note out.
 
 ### 3.15 Active play: mini-games and Focus
 
@@ -598,6 +599,30 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 - **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from
   the zone's name on the scene or the Map button. A pin puts its zone under the map (stages, drops,
   gear tier) with a Travel button; on a phone the pins lose their labels and the zone card names them.
+
+### 3.23 Presentation: the fight on the whole screen
+
+Entering combat lets the fight take the screen (`battleMode` in `src/ui/render.js`; `main.js` sets
+`body.battle-full`). The sidebar and the phone hotbar go out of sight, the header becomes a thin bar,
+the battle scene takes all the room that is left with the fighters drawn bigger (whole-number scales,
+sized by the room the scene has), and the tab under it becomes a dock. The point is that a run never
+needs another screen: fight, spend, prestige and fight on.
+
+- **The dock holds the loop.** Orders (retreat, the stage arrows, the map), the food and the potion,
+  the camp as three tokens to tap, and the loop's own buttons: Prestige with what it would pay now,
+  Perks (a dialog over the fight, so skill points are spent there), and the best piece of gear
+  waiting in the bag as a one-tap Equip. On a wide screen the groups sit in one row; on a phone they
+  stack with prestige and the camp first, and the dock scrolls while the scene keeps its share.
+- **Prestige walks on.** `Game.prestige({ resume: true })` starts the new run's first fight if the
+  hero was fighting, so the screen never drops back to the menu between runs.
+- **The guide doesn't send the player away** for what the dock offers: in the fight it leaves out
+  the notes about the camp, prestige, perks and gear (`advise(..., { skip })`).
+- **The way out is always there.** "Menu" on the top bar (or Esc) folds the fight back into the
+  page while it goes on, with a dot when a new place is waiting; a Full screen button on the combat
+  tab brings it back, and the next fight opens full again. Retreat ends the fight and the mode.
+  The ⛶ button asks the browser for its own full screen, for those who want the address bar gone.
+- **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
+  fight; toasts move under the top bar so they never cover the dock.
 
 ## 4. The modifier pipeline
 

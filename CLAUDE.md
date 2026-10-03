@@ -13,7 +13,7 @@ Work on the branch `claude/intelligent-einstein-y5i5iq` (main holds the old game
 python3 -m http.server 8000      # then http://localhost:8000 ; ?dev=1 unlocks every tab
 node --test test/*.test.mjs test/*.test.cjs   # game logic, saves, API: all must pass
 node tools/shots.mjs             # screenshots at 1280 and 390 px into shots/, fails on sideways scroll or page errors
-node tools/shots.mjs combat,farming   # chosen tabs; --fresh plays a new player's first minutes (title, fight, first skill, first unlock)
+node tools/shots.mjs combat,battle    # chosen tabs ('battle' is the fight filling the screen); --fresh plays a new player's first minutes
 ```
 
 `tools/shots.mjs` needs Playwright once: `npm i --no-save playwright && npx playwright install chromium`.
@@ -62,6 +62,9 @@ Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.m
   `src/systems/disclosure.js`, never as a greyed-out placeholder; a ladder shows the next rung only;
   each thing is said once; a card at rest shows art, name and time; rules go behind a "?"
   (`src/ui/features.js`), not into a paragraph on the tab.
+- Entering combat fills the screen (`body.battle-full`, DESIGN §3.23). Whatever a run needs must be
+  in its dock: if a new thing is part of the fight-spend-prestige loop, it goes there (or in a dialog
+  over the fight), not on another tab.
 - Check desktop (1280) and phone (390) widths: no sideways scroll; phones have a bottom hotbar.
   Honor reduced motion (`body.reduced-motion` and `prefers-reduced-motion`).
 - Never commit `art/` (source paintings), `.env` files or keys. `api/node_modules` is tracked on

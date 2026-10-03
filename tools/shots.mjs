@@ -4,7 +4,8 @@
 // shot in a late-game save so that every one of them has something in it.
 //
 //   node tools/shots.mjs                          # the default tabs
-//   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...)
+//   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
+//                                                 # 'battle' is the fight filling the screen)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -22,7 +23,8 @@ const OUT = join(ROOT, 'shots');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
     '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
 const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
-const DEFAULT_TABS = ['combat', 'mining', 'smithing', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons'];
+// 'battle' is not a tab: it is the combat tab with the fight on, which fills the screen.
+const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons'];
 
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
@@ -129,7 +131,11 @@ for (const viewport of VIEWPORTS) {
     await quiet(page);
     await page.waitForTimeout(1600); // everything this save has earned opens at once and glows: let that pass
     for (const tab of tabs) {
-        await page.evaluate(t => FI.switchTab(t), tab);
+        await page.evaluate(t => {
+            const fighting = FI.game().state.combat.active;
+            FI.switchTab(t === 'battle' ? 'combat' : t);
+            if ((t === 'battle') !== fighting && (t === 'battle' || t === 'combat')) FI.toggleCombat(); // 'combat' shows the tab at rest
+        }, tab);
         await page.waitForTimeout(700);
         await shoot(page, tab, viewport.width);
     }

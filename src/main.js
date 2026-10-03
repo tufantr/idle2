@@ -5,7 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderHeader, renderGuide, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderGuide, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, TABS } from './ui/render.js';
 import { renderAboutCard } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
@@ -41,6 +41,7 @@ const ui = {
     craftBar: null,
     craftGem: null,
     open: {},            // drawers the player has opened (the battle log, the crop table)
+    battleFull: true,    // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -186,6 +187,14 @@ function paintGold(now = performance.now()) {
 requestAnimationFrame(frame);
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(Date.now()); });
+document.addEventListener('fullscreenchange', () => render());
+// The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
+let resizeQueued = false;
+window.addEventListener('resize', () => {
+    if (resizeQueued || !document.body.classList.contains('battle-full')) return;
+    resizeQueued = true;
+    requestAnimationFrame(() => { resizeQueued = false; render(); });
+});
 window.addEventListener('pagehide', () => save(Date.now()));
 window.addEventListener('beforeunload', () => save(Date.now()));
 
@@ -227,6 +236,7 @@ document.addEventListener('keydown', event => {
         target.click();
     }
     if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'conflict') closeModal(); // a conflict needs a choice
+    else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui) && !document.fullscreenElement) window.FI.battleFull(false); // Esc folds the full-screen fight (the browser's own full screen takes Esc first)
 }, { capture: true });
 
 // ---------- rendering ----------
@@ -277,6 +287,7 @@ function render() {
     const focus = document.activeElement;
     const findAgain = focusFinder(focus);
     const tab = document.getElementById('tab');
+    document.body.classList.toggle('battle-full', battleMode(game, ui)); // before the scene syncs: it sizes the fighters by it
     setHtml(document.getElementById('nav'), renderNav(game, ui));
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
@@ -289,6 +300,19 @@ function render() {
     stage.sync(game, ui);
     paintGold();
     glowArrivals();
+    refreshPerks();
+}
+
+/** The perks dialog stays current while it is open (a perk bought, a skill point spent). */
+function refreshPerks() {
+    if (ui.modalOpen !== 'perks') return;
+    const overlay = document.querySelector('#modal-root .modal-overlay');
+    const html = renderPerksModal(game);
+    if (!overlay || overlay.__html === html) return;
+    const scroll = overlay.querySelector('.modal-content')?.scrollTop || 0;
+    setHtml(overlay, html);
+    const content = overlay.querySelector('.modal-content');
+    if (content) content.scrollTop = scroll;
 }
 
 // A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
@@ -429,7 +453,8 @@ function showModal(html, key) {
     const root = document.getElementById('modal-root');
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
-    (root.querySelector('[data-autofocus]') || root.querySelector('input, button.btn-confirm, button'))?.focus(); // the map opens on its Close button, not on its first pin
+    const marked = root.querySelector('[data-autofocus]'); // the map opens on its Close button, not on its first pin
+    if (marked) marked.focus({ preventScroll: true }); else root.querySelector('input, button.btn-confirm, button')?.focus();
 }
 let pendingConfirm = null;
 /** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
@@ -596,17 +621,37 @@ window.FI = {
     selectCraftBar(bar) { ui.craftBar = bar; render(); },
     selectCraftGem(gem) { ui.craftGem = gem; render(); },
 
-    toggleCombat() { game.toggleCombat(); render(); },
+    /** Enter or leave the fight. Entering it lets it fill the screen. */
+    toggleCombat() {
+        const fighting = game.state.combat.active;
+        game.toggleCombat();
+        if (!fighting && game.state.combat.active) ui.battleFull = true;
+        render();
+    },
+    /** Fold the full-screen fight back into the page (it goes on), or let it fill the screen again. */
+    battleFull(on) { ui.battleFull = !!on; render(); },
+    /** The browser's own full screen, for those who want the tabs and the address bar gone too. */
+    toggleFullscreen() {
+        if (document.fullscreenElement) document.exitFullscreen?.();
+        else document.documentElement.requestFullscreen?.().catch(() => { /* refused: the page still fills the window */ });
+    },
+    /** Perks in a dialog over the fight: skill points are spent without leaving it. */
+    openPerks() {
+        const html = renderPerksModal(game);
+        openModal(html, 'perks');
+        const overlay = document.querySelector('#modal-root .modal-overlay');
+        if (overlay && ui.modalOpen === 'perks') overlay.__html = html;
+    },
     setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },
     stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
-    enterDungeon(id) { if (game.enterDungeon(id)) window.FI.switchTab('combat'); else render(); },
+    enterDungeon(id) { if (game.enterDungeon(id)) { ui.battleFull = true; window.FI.switchTab('combat'); } else render(); },
     setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
-    challengeTitan() { if (game.challengeTitan()) window.FI.switchTab('combat'); else render(); },
+    challengeTitan() { if (game.challengeTitan()) { ui.battleFull = true; window.FI.switchTab('combat'); } else render(); },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
     buyEventItem(id) { if (game.buyEventItem(id)) toast('🎉 Bought!', 'info'); render(); },
@@ -647,7 +692,7 @@ window.FI = {
     confirmPrestige() {
         writeBackup(game.serialize(Date.now()), 'prestige', `Before prestige ${game.state.prestige.count + 1}`);
         closeModal();
-        game.prestige();
+        game.prestige({ resume: true }); // a hero who was fighting walks into the new run's first fight
         render();
     },
     closeModal() { closeModal(); },

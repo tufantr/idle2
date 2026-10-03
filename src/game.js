@@ -173,7 +173,15 @@ export class Game {
 
     canPrestige() { return canPrestige(this.state, this.now); }
     prestigePreview() { return prestigePreview(this); }
-    prestige() { return this._act(() => doPrestige(this)); }
+    /** Prestige. With `resume`, a hero who was fighting walks straight into the new run's first fight. */
+    prestige({ resume = false } = {}) {
+        return this._act(() => {
+            const fighting = this.state.combat.active;
+            const done = doPrestige(this);
+            if (done && resume && fighting) enterCombat(this);
+            return done;
+        });
+    }
     buyPerk(id) { return this._act(() => buyPerk(this, id)); }
 
     startMinigame(skill) { return this._act(() => startMinigame(this, skill)); }

@@ -1679,3 +1679,117 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .frag-row { display: flex; align-items: center; gap: 0.5rem; }
 .frag-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
 .frag-bar i { display: block; width: var(--p, 0%); height: 100%; background: linear-gradient(90deg, #c2410c, #f97316); }
+
+/* ===== The fight on the whole screen (body.battle-full, set by main.js while battleMode) =====
+   Entering combat hides the sidebar and the phone hotbar. The header becomes a thin bar with the way
+   back to the menu, the battle scene takes all the room that is left, and the tab below it is a dock
+   with everything a run needs: orders, food and potion, the camp, prestige, perks, the best gear in
+   the bag. The fighters are drawn bigger by src/ui/scene.js (fighterScale). */
+body.battle-full { height: 100dvh; padding: 0; overflow: hidden; }
+body.battle-full #app.layout-sidebar { max-width: none; height: 100dvh; gap: 0; }
+body.battle-full #sidebar, body.battle-full #hotbar { display: none; }
+body.battle-full #main-content { height: 100dvh; gap: 0; overflow: hidden; }
+body.battle-full #header { flex: 0 0 auto; padding: 0.45rem 0.8rem; border-radius: 0; border-width: 0 0 1px; box-shadow: none; }
+body.battle-full #header::before, body.battle-full #scene::after { display: none; }
+body.battle-full #scene { flex: 1 1 0; min-height: clamp(250px, 46dvh, 440px); display: flex; } /* the scene keeps its share; the dock scrolls if it must */
+body.battle-full .battle { flex: 1; min-height: 0; border: 0; border-radius: 0; box-shadow: none; container-type: size; }
+body.battle-full .battle-top { padding: 0.9rem 1.2rem 2rem; }
+body.battle-full .battle-zone { font-size: 1.5rem; }
+body.battle-full .battle-field { width: min(100%, 1100px); padding-bottom: 1.1rem; }
+body.battle-full .fighter-stand { height: clamp(100px, calc(100cqh - 215px), 250px); } /* what the scene has left under its banner and around the bars */
+body.battle-full .fighter-stand::after { width: 170px; height: 22px; }
+body.battle-full .fighter-bars { width: min(100%, 260px); }
+body.battle-full .fbar { height: 13px; }
+body.battle-full .fbar-text { font-size: 0.82rem; }
+body.battle-full .fighter-name { font-size: 1rem; }
+body.battle-full .fighter-meta { font-size: 0.8rem; }
+body.battle-full .attack-bar { width: min(100%, 200px); height: 5px; }
+body.battle-full .boss-clock { width: min(100%, 240px); height: 15px; }
+body.battle-full .battle-combo b { font-size: 2.6rem; }
+body.battle-full #guide { flex: 0 0 auto; padding: 0.55rem 0.8rem 0; background: var(--panel-2); border-top: 1px solid var(--line-strong); }
+body.battle-full #tab { flex: 0 1 auto; min-height: 0; max-height: 44dvh; overflow-y: auto; gap: 0.5rem; padding: 0.55rem 0.8rem 0.7rem; background: var(--panel-2); scrollbar-width: thin; }
+body.battle-full #guide:empty + #tab { border-top: 1px solid var(--line-strong); }
+body.battle-full .log-drawer { padding: 0.45rem 0.8rem; border-radius: 10px; box-shadow: none; }
+body.battle-full .log-drawer::before { display: none; }
+body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar, clear of the dock's buttons */
+
+.menu-btn { position: relative; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.75rem; font-size: 0.82rem; }
+.menu-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-color); box-shadow: 0 0 8px rgba(252, 211, 77, 0.9); }
+.expand-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+
+/* the dock: one row of groups on a wide screen, a column on a phone */
+.battle-dock { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem; }
+.dock-group {
+    flex: 1 1 230px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 0.5rem; padding: 0.6rem 0.75rem;
+    border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255, 236, 200, 0.03), rgba(0, 0, 0, 0.22));
+}
+.dock-title { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-display); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-color); }
+.dock-orders { flex: 1 1 250px; }
+.dock-orders .combat-deck { gap: 0.5rem 0.6rem; }
+.dock-orders .map-btn { margin-left: 0; }
+.dock-orders .stage-nav { order: 3; flex-basis: 100%; }
+.dock-loadout { flex: 2 1 300px; gap: 0.45rem; }
+.dock-loadout .loadout { flex: 0 0 auto; gap: 0.25rem; }
+.dock-loadout .pick-row { flex-wrap: nowrap; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; } /* one row, however much food there is */
+.dock-loadout .pick { flex: 0 0 auto; }
+.dock-camp { flex: 2 1 340px; }
+.camp-tokens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
+.camp-token { display: flex; flex-direction: column; align-items: stretch; gap: 0.3rem; min-width: 0; }
+.camp-buy { display: flex; align-items: center; gap: 0.5rem; min-width: 0; padding: 0.4rem 0.5rem; text-align: left; border-radius: 10px; }
+.camp-token.can .camp-buy { border-color: rgba(252, 211, 77, 0.65); box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.08), 0 0 14px rgba(252, 211, 77, 0.18); }
+.camp-buy .camp-medal { flex: 0 0 auto; width: 40px; height: 40px; margin: 0; }
+.camp-token-text { min-width: 0; display: flex; flex-direction: column; font-size: 0.78rem; line-height: 1.3; }
+.camp-price { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold-color); }
+.camp-max { align-self: center; padding: 0.2rem 0.7rem; }
+.dock-loop { flex: 1 1 210px; }
+.dock-prestige, .dock-perks { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.85rem; text-align: left; }
+.dock-prestige span, .dock-perks span { font-size: 0.78rem; font-weight: 400; opacity: 0.92; text-align: right; }
+.dock-perks.ready { border-color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
+.dock-equip { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.7rem; text-align: left; color: #bbf7d0; border-color: rgba(74, 222, 128, 0.5); }
+.dock-equip > span { min-width: 0; display: flex; flex-direction: column; font-size: 0.8rem; line-height: 1.25; }
+.dock-equip > span > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); font-weight: 400; }
+.perks-modal { max-width: 780px; }
+.perks-modal .shop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 0.5rem; }
+.perks-modal .shop-item { padding: 0.6rem 0.7rem; }
+.perks-modal .modal-footer { position: sticky; bottom: -2rem; margin: 1rem -2rem -2rem; padding: 0.8rem 2rem 1.2rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 35%); }
+.perks-modal .modal-header { margin-bottom: 0.7rem; padding-bottom: 0.6rem; }
+.perks-modal .about-blurb { margin-bottom: 0.9rem; }
+
+@media (max-width: 900px) {
+    body.battle-full #header { top: auto; }
+}
+@media (max-width: 600px) {
+    body.battle-full #header { padding: 0.35rem 0.6rem; }
+    body.battle-full .battle-top { padding: 0.5rem 0.7rem 0.8rem; }
+    body.battle-full .battle-zone { font-size: 1.05rem; }
+    body.battle-full .battle-field { padding-bottom: 0.7rem; }
+    body.battle-full .fighter-stand { height: clamp(96px, calc(100cqh - 190px), 170px); }
+    body.battle-full .fighter-stand::after { width: 110px; height: 16px; }
+    body.battle-full .fighter-name { font-size: 0.8rem; }
+    body.battle-full .fighter-meta { font-size: 0.66rem; }
+    body.battle-full .fbar-text { font-size: 0.72rem; }
+    body.battle-full .battle-combo b { font-size: 1.7rem; }
+    body.battle-full #tab { max-height: 46dvh; padding: 0.5rem 0.6rem 0.6rem; }
+    body.battle-full .zone-facts { display: none; } /* the map's zone card has the drops */
+    body.battle-full #guide { padding: 0.5rem 0.6rem 0; }
+    body.battle-full .guide .quest-note:nth-child(n+2) { display: none; } /* one note: the dock needs the room */
+    .menu-word { display: none; }
+    .perks-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
+    .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }
+    /* on a phone the dock is a column: what a run uses most comes first */
+    .dock-loop { order: 1; display: grid; grid-template-columns: 1fr 1fr; }
+    .dock-loop > :only-child, .dock-loop > .dock-equip, .dock-loop > .dock-prestige:not(:has(+ .dock-perks)) { grid-column: 1 / -1; }
+    .dock-prestige, .dock-perks { flex-direction: column; align-items: flex-start; gap: 0; padding: 0.45rem 0.7rem; }
+    .dock-prestige span, .dock-perks span { text-align: left; }
+    .dock-camp { order: 2; }
+    .dock-orders { order: 3; }
+    .dock-loadout { order: 4; }
+    /* and the top bar keeps to one line: icons only */
+    body.battle-full .cloud-word, body.battle-full .screen-btn, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
+    body.battle-full .pills:empty { display: none; }
+    body.battle-full #header .daily-btn { display: inline-flex; } /* the hotbar is out of sight here, so the crate keeps its button */
+    body.battle-full .daily-word { display: none; }
+    body.battle-full #toast-area { top: 3.2rem; }
+    .camp-buy { flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.25rem; text-align: center; }
+    .camp-token-text { align-items: center; }
+}

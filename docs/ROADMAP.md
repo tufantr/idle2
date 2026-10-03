@@ -365,6 +365,12 @@ progress as motion, art before words, one stage with a HUD around it.
       of fragments; prestige is one line with a button. The battle log folds into a drawer
 - [x] **Pixel icons in the sidebar, the hotbar and the guide** instead of emoji (a sword, an ore, a
       log, a potion, the crown), from the atlas
+- [x] **The fight on the whole screen** (DESIGN §3.23): entering combat hides the sidebar and the
+      hotbar; the scene fills the window with bigger fighters, and a dock under it holds everything a
+      run needs: retreat, the stage arrows and the map, food and potion, the camp as three tokens,
+      Prestige with what it pays now, Perks in a dialog, and one-tap Equip for the best gear in the
+      bag. Prestige walks straight into the next run's first fight, so fight, spend, prestige and
+      fight on never leaves the screen. Menu (or Esc) folds it away while the fight goes on
 - [x] Fixes found on the way: on phones the food and potion rows stood 300 px tall each (a flex
       basis that became a height in a column); "Cook some" pointed at a locked tab; "Found a
       Amethyst" (and "Forge a Iron Sword") now get the right article, and the gem no longer lands

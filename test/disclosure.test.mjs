@@ -11,6 +11,7 @@ import { withArticle } from '../src/core/text.js';
 import { DISCLOSURES, seen, evaluateDisclosures } from '../src/systems/disclosure.js';
 import { UNLOCKS, nextGoals } from '../src/data/unlocks.js';
 import { generateEquipment } from '../src/core/formulas.js';
+import { advise } from '../src/systems/advisor.js';
 
 rng.setSource(seededRandom(77));
 const T0 = 1_700_000_000_000;
@@ -113,6 +114,52 @@ test('a lucky gem waits for the smithy: Crafting never opens before the first ba
     other.state.stats.barsSmelted = 1;
     other.tick(T0 + 200);
     assert.ok(other.state.unlocks.crafting);
+});
+
+test('the loop stays in the fight: prestige can walk straight into the next run', () => {
+    const fresh = () => {
+        const game = new Game(null, T0);
+        const s = game.state;
+        s.combat.maxStage = 24; s.combat.bestStage = 24; s.combat.stage = 24;
+        s.prestige.runStartedAt = 0;
+        s.gold = 900; s.camp.whetstone = 2;
+        game.recompute();
+        return game;
+    };
+    const game = fresh();
+    game.enterCombat();
+    assert.ok(game.prestige({ resume: true }));
+    assert.ok(game.state.combat.active, 'a hero who was fighting fights on');
+    assert.equal(game.state.combat.enemy.stage, game.state.combat.stage, 'against the new run\'s first monster');
+    assert.equal(game.state.gold, 0);
+    assert.equal(game.state.camp.whetstone, 0);
+    assert.equal(game.state.prestige.count, 1);
+
+    const resting = fresh();
+    assert.ok(resting.prestige({ resume: true }));
+    assert.ok(!resting.state.combat.active, 'a hero who was resting keeps resting');
+    const plain = fresh();
+    plain.enterCombat();
+    assert.ok(plain.prestige());
+    assert.ok(!plain.state.combat.active, 'without resume, prestige leaves the fight as before');
+    const early = new Game(null, T0);
+    early.enterCombat();
+    assert.equal(early.prestige({ resume: true }), false, 'a prestige that is not allowed changes nothing');
+    assert.ok(early.state.combat.active);
+});
+
+test('the guide can leave out what the full-screen fight has buttons for', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.gold = 500;
+    s.prestige.skillPoints = 2;
+    s.inventory.push(generateEquipment({ type: 'Weapon', tier: 1, power: 1, materialName: 'Copper' }, s.idCounter++));
+    const kinds = list => list.map(t => t.kind);
+    const all = kinds(advise(game, 8));
+    for (const kind of ['goal', 'perks', 'equip', 'camp']) assert.ok(all.includes(kind), kind);
+    const inFight = kinds(advise(game, 8, { skip: ['camp', 'prestige', 'perks', 'equip'] }));
+    assert.deepEqual(inFight, ['goal'], 'only the notes that need another place are left');
+    for (const tip of advise(game, 8)) assert.ok(tip.kind, 'every note names its kind');
 });
 
 test('every goal says what to do in a few words, and where', () => {

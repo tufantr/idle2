@@ -18,6 +18,7 @@ import { sprite, heroSprite, heroLayers, monsterSpriteKey, resIcon } from './spr
 const DUNGEON_SCENES = { goblin_warren: 'dungeon', crystal_depths: 'caves', orc_stronghold: 'dungeon', dragons_lair: 'volcano' };
 const PARTICLES = { meadow: 'motes', forest: 'fireflies', caves: 'sparkles', marsh: 'bubbles', highland: 'rain', ruins: 'bubbles', volcano: 'embers', frost: 'snow', skyreach: 'motes', abyss: 'void', dungeon: 'embers', titan: 'rain' };
 const PARTICLE_COUNT = 18;
+const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
 const MAX_COINS_IN_FLIGHT = 14;
 
@@ -101,7 +102,8 @@ export function createScene(root, actions) {
     let preview = null;       // the monster waiting on this stage before the first fight
     let quiet = true;         // the next monster appears without an entrance (first frame, back from another tab)
     let lastPathKey = '';
-    let lastHeroLayers = '';  // the hero is redrawn only when his gear changes
+    let lastHeroLayers = '';  // the hero is redrawn only when his gear (or the size of the stage) changes
+    let lastFoeScale = 0;     // the monster is redrawn when the stage changes size
     let bannerTimer = 0;
     let fxBudget = MAX_FX_PER_FRAME;
     let coinsInFlight = 0;
@@ -142,6 +144,18 @@ export function createScene(root, actions) {
         return anchors;
     }
     const jitter = spread => (Math.random() - 0.5) * spread;
+
+    /**
+     * How big the fighters are drawn, in whole pixels per sprite pixel: 4 on a desktop and 3 on a
+     * phone in the page; while the fight fills the screen (body.battle-full) they grow with it.
+     */
+    function fighterScale() {
+        const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
+        if (!document.body.classList.contains('battle-full')) return phone ? 3 : 4;
+        // The stand's height follows the scene's (style.css); a boss is one size up and must fit it too.
+        const fit = Math.floor((el.foeStand.clientHeight || 0) / ATLAS_CELL) - 1;
+        return Math.max(phone ? 3 : 4, Math.min(phone ? 4 : 6, fit));
+    }
 
     function trailFor(t, pct, now, dt) {
         if (pct < t.last - 0.01) t.holdUntil = now + 320;
@@ -280,8 +294,8 @@ export function createScene(root, actions) {
 
     function showEnemy(game, enemy, silent) {
         const c = game.state.combat;
-        const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
-        el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: (enemy.boss ? 5 : 4) - (phone ? 1 : 0), fallback: esc(enemy.icon || '👾') });
+        lastFoeScale = fighterScale();
+        el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: lastFoeScale + (enemy.boss ? 1 : 0), fallback: esc(enemy.icon || '👾') });
         setText(el.foeName, enemy.name.replace(' (Boss)', ''));
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
@@ -353,11 +367,13 @@ export function createScene(root, actions) {
             setMarkup(el.heroMeta, heroKit(state));
             const enemy = currentEnemy(state);
             if (enemy === lastEnemy) setText(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
-            const layers = heroLayers(state).join(',');
+            const scale = fighterScale();
+            const layers = `${scale}|${heroLayers(state).join(',')}`;
             if (layers !== lastHeroLayers) {
                 lastHeroLayers = layers;
-                el.heroFigure.innerHTML = heroSprite(state, { scale: window.matchMedia?.('(max-width: 600px)').matches ? 3 : 4 });
+                el.heroFigure.innerHTML = heroSprite(state, { scale });
             }
+            if (lastEnemy && scale !== lastFoeScale) showEnemy(game, lastEnemy, true); // the stage changed size: redraw the monster to match
             el.battle.classList.toggle('idle', !c.active);
             el.cta.hidden = c.active;
         },
@@ -448,8 +464,7 @@ export function createScene(root, actions) {
                 case 'kill': {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;
-                    const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
-                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: (ev.enemy.boss ? 5 : 4) - (phone ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
+                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: fighterScale() + (ev.enemy.boss ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
                     coinBurst(ev.enemy.boss ? 7 : 1);
                     ev.drops.filter(dr => !dr.item).slice(0, 3).forEach((dr, i) => spawnFx('drop-pop', `+${fmt(dr.qty)} ${resIcon(dr.id)}`, foe.x - 14 + i * 14, foe.bottom - 4, 1200));

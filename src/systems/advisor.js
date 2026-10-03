@@ -79,53 +79,54 @@ export function adviceLimit(state) {
 }
 
 /**
- * Up to `limit` suggestions: { icon, text, tab?, view?, goal?, progress? }. `tab` is where to go and
- * `view` the part of that tab (Smithing's steps). The next unlock comes first, as { goal: id,
- * progress: 0..1 }, so the list always holds it; the rest follow in order of urgency.
+ * Up to `limit` suggestions: { kind, icon, text, tab?, view?, goal?, progress? }. `tab` is where to go
+ * and `view` the part of that tab (Smithing's steps). The next unlock comes first, as { goal: id,
+ * progress: 0..1 }, so the list always holds it; the rest follow in order of urgency. `skip` leaves
+ * kinds out: the full-screen fight has its own buttons for the camp, prestige, perks and gear.
  */
-export function advise(game, limit = adviceLimit(game.state)) {
+export function advise(game, limit = adviceLimit(game.state), { skip = [] } = {}) {
     const state = game.state;
     const out = [];
-    const add = (icon, text, tab = null, extra = {}) => out.push({ icon, text, tab, ...extra });
+    const add = (kind, icon, text, tab = null, extra = {}) => { if (!skip.includes(kind)) out.push({ kind, icon, text, tab, ...extra }); };
 
-    if (titanReady(state, game.now) && state.combat.mode === 'stages') add('🗿', 'The Titan is awake — challenge it for a permanent bonus', 'dungeons');
+    if (titanReady(state, game.now) && state.combat.mode === 'stages') add('titan', '🗿', 'The Titan is awake — challenge it for a permanent bonus', 'dungeons');
     for (const d of DUNGEONS) {
-        if ((state.dungeons[d.id]?.fragments || 0) >= FRAGMENTS_PER_UNIQUE) { add('🌟', `Assemble ${UNIQUES[d.unique].name} from your fragments`, 'dungeons'); break; }
+        if ((state.dungeons[d.id]?.fragments || 0) >= FRAGMENTS_PER_UNIQUE) { add('unique', '🌟', `Assemble ${UNIQUES[d.unique].name} from your fragments`, 'dungeons'); break; }
     }
-    if (state.prestige.skillPoints > 0) add('🌟', `Spend ${state.prestige.skillPoints} skill point${state.prestige.skillPoints > 1 ? 's' : ''} on perks`, 'shop');
+    if (state.prestige.skillPoints > 0) add('perks', '🌟', `Spend ${state.prestige.skillPoints} skill point${state.prestige.skillPoints > 1 ? 's' : ''} on perks`, 'shop');
 
     if (isUnlocked(state, 'farming')) {
         const ready = state.farming.plots.filter(p => plotReady(p, game.now)).length;
         const empty = state.farming.plots.filter((p, i) => !p.crop && plotUnlocked(state, i)).length;
-        if (ready) add('🌾', `${ready} farming plot${ready > 1 ? 's are' : ' is'} ready to harvest`, 'farming');
-        else if (empty) add('🌱', `Plant your ${empty} empty plot${empty > 1 ? 's' : ''} — they grow while you do anything else`, 'farming');
+        if (ready) add('farm', '🌾', `${ready} farming plot${ready > 1 ? 's are' : ' is'} ready to harvest`, 'farming');
+        else if (empty) add('farm', '🌱', `Plant your ${empty} empty plot${empty > 1 ? 's' : ''} — they grow while you do anything else`, 'farming');
     }
     if (isUnlocked(state, 'agility')) {
         const affordable = AGILITY_SLOTS.flatMap((slot, i) => (state.agility.built[i] ? [] : slot.obstacles)).find(o => canBuild(state, o.id).ok);
-        if (affordable) add(affordable.icon, `Build the ${affordable.name} — ${affordable.desc}, permanently`, 'agility');
+        if (affordable) add('agility', affordable.icon, `Build the ${affordable.name} — ${affordable.desc}, permanently`, 'agility');
     }
 
     const upgrade = findUpgrade(state);
-    if (upgrade) add('🎒', `Equip ${upgrade.item.name} — it beats what you're wearing`, 'inventory');
+    if (upgrade) add('equip', '🎒', `Equip ${upgrade.item.name} — it beats what you're wearing`, 'inventory');
 
     if (isUnlocked(state, 'smithing')) {
         const forge = nextForge(state);
-        if (forge) add('⚒️', forge.text, 'smithing', { view: forge.view });
+        if (forge) add('forge', '⚒️', forge.text, 'smithing', { view: forge.view });
     }
 
     const foodHp = orderedByTier('food').reduce((sum, f) => sum + (state.resources[f.id] || 0) * f.heals, 0);
     if (isUnlocked(state, 'cooking') && foodHp < game.derived.maxHp * 3 && (state.stats.deaths > 0 || state.combat.bestStage >= 10)) {
-        add('🍳', 'Cook some food — auto-eat keeps you alive in long fights', 'cooking');
+        add('food', '🍳', 'Cook some food — auto-eat keeps you alive in long fights', 'cooking');
     }
 
     const cheapestCamp = Math.min(...CAMP_UPGRADES.map(u => ((state.camp[u.id] || 0) < u.max ? campCost(u, state.camp[u.id] || 0) : Infinity)));
-    if (state.gold >= cheapestCamp) add('🏕️', 'You can afford a camp upgrade', 'combat');
+    if (state.gold >= cheapestCamp) add('camp', '🏕️', 'You can afford a camp upgrade', 'combat');
 
     for (const [toolId, tool] of Object.entries(TOOLS)) {
         const next = tool.tiers.find(t => t.tier === (state.tools[toolId] || 0) + 1);
         if (!next || !isUnlocked(state, tool.madeBy) || !isUnlocked(state, tool.skill)) continue;
         if (skillLevel(state, tool.madeBy) >= next.levelReq) {
-            add(tool.icon, `Make ${withArticle(next.name)} for faster ${SKILLS[tool.skill].name.toLowerCase()}`, tool.madeBy, { view: 'tools' });
+            add('tool', tool.icon, `Make ${withArticle(next.name)} for faster ${SKILLS[tool.skill].name.toLowerCase()}`, tool.madeBy, { view: 'tools' });
             break;
         }
     }
@@ -133,18 +134,18 @@ export function advise(game, limit = adviceLimit(game.state)) {
     if (isUnlocked(state, 'prestige') && state.combat.maxStage >= 10) {
         const tokens = tokensForStage(state.combat.maxStage, game.derived.tokenMult);
         const recentSetback = game.now - (state.combat.lastSetbackAt || 0) < SETBACK_WINDOW_MS;
-        if (tokens >= Math.max(5, state.prestige.tokens * 0.25) && recentSetback) add('✨', `Prestige for +${tokens} tokens (+${Math.round(tokens * 0.5)}% ATK/DEF)`, 'shop');
+        if (tokens >= Math.max(5, state.prestige.tokens * 0.25) && recentSetback) add('prestige', '✨', `Prestige for +${tokens} tokens (+${Math.round(tokens * 0.5)}% ATK/DEF)`, 'shop');
     }
 
     if (game.now - (state.combat.lastSetbackAt || 0) < SETBACK_WINDOW_MS) {
         const hint = nextMetalHint(state);
-        if (hint) add('🧱', hint, 'smithing', { view: 'forge' });
+        if (hint) add('stuck', '🧱', hint, 'smithing', { view: 'forge' });
     }
 
     const newDungeon = DUNGEONS.find(d => dungeonUnlocked(state, d) && !(state.dungeons[d.id]?.clears));
-    if (newDungeon && state.combat.mode === 'stages') add(newDungeon.icon, `${newDungeon.name} is open — clear it for a chest and a unique fragment`, 'dungeons');
+    if (newDungeon && state.combat.mode === 'stages') add('dungeon', newDungeon.icon, `${newDungeon.name} is open — clear it for a chest and a unique fragment`, 'dungeons');
 
     const [goal] = nextGoals(state, 1);
-    const lead = goal ? [{ icon: '🎯', text: goal.hint, tab: goal.tab || null, goal: goal.id, progress: goalProgress(state, goal) }] : [];
+    const lead = goal ? [{ kind: 'goal', icon: '🎯', text: goal.hint, tab: goal.tab || null, goal: goal.id, progress: goalProgress(state, goal) }] : [];
     return [...lead, ...out].slice(0, Math.max(1, limit));
 }
