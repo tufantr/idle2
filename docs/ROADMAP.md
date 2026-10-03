@@ -402,7 +402,10 @@ progress as motion, art before words, one stage with a HUD around it.
       their price, the next one as a silhouette) instead of a dropdown and a Plant button on every
       empty plot. Pick a seed, then tap an empty plot to plant it or a ready one to harvest it;
       "Plant N plots" fills every open plot at once (`plantAll`). Two plots a row on a phone
-- [ ] **Agility obstacles as picture cards** instead of rows of text (S)
+- [x] **Agility obstacles as picture cards**: a card per slot instead of rows of text. A built
+      obstacle shows its picture, level and bonus with Upgrade; an open slot shows its price once
+      and three obstacles to pick from as tiles; the next slot is a padlock. Swapping one out is
+      behind a ↺ and asks first (no refund, its levels are lost)
 - [ ] **A painting for each dungeon**, on its card and behind its fight (four Gemini paintings; the
       Crystal Depths and the Dragon's Lair borrow the caves and the volcano today) (S)
 - [ ] **Sprites for the last emoji**: perks, tools, the crate, Settings (needs `tools/atlas.py` and

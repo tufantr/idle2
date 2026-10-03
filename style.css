@@ -289,8 +289,8 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .grid-span { grid-column: 1 / -1; margin: 0.4rem 0 0; }
 
 /* ---------- cards: one family of recessed tiles ---------- */
-.node-card, .dungeon-card, .plot-card, .agility-slot, .pet-card, .ach-item, .shop-item,
-.backup-row, .course-run, .clan-boss, .info-strip, .prestige-box, .event-shop-item, .obstacle, .inv-item, .slot {
+.node-card, .dungeon-card, .plot-card, .course-slot, .pet-card, .ach-item, .shop-item,
+.backup-row, .course-run, .clan-boss, .info-strip, .prestige-box, .event-shop-item, .inv-item, .slot {
     border: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(255, 236, 200, 0.03), rgba(0, 0, 0, 0.22));
 }
@@ -654,12 +654,25 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .course-run { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; }
 .course-run.active { border-color: rgba(225, 29, 72, 0.55); }
 .course-run .action-progress-container { flex-basis: 100%; }
-.agility-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.8rem; }
-.agility-slot { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.8rem; border-radius: 14px; }
-.agility-slot.locked { opacity: 0.55; }
-.slot-head { display: flex; flex-direction: column; gap: 0.15rem; }
-.obstacle { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.45rem 0.55rem; border-radius: 10px; }
-.obstacle.built { background: rgba(225, 29, 72, 0.12); border-color: rgba(225, 29, 72, 0.4); }
+/* the course: a card per slot (built, open with three obstacles to pick from, or the next padlock) */
+.course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 0.7rem; }
+.course-slot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.8rem 0.7rem; border-radius: 14px; text-align: center; }
+.course-slot.built { border-color: rgba(225, 29, 72, 0.45); box-shadow: inset 0 0 22px rgba(225, 29, 72, 0.08); }
+.course-slot.open { border-style: dashed; justify-content: flex-start; }
+.course-slot.locked { opacity: 0.6; border-style: dashed; }
+.obstacle-medal { width: 48px; height: 48px; }
+.obstacle-medal .nav-emoji { font-size: 1.45rem; }
+.slot-name { font-family: var(--font-display); line-height: 1.2; color: var(--heading); }
+.slot-bonus { font-size: 0.8rem; line-height: 1.3; text-wrap: balance; }
+.slot-swap { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border-radius: 50%; font-size: 0.82rem; }
+.slot-price { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.3rem 0.7rem; font-size: 0.78rem; }
+.slot-price .camp-price.missing { color: #f87171; }
+.obstacle-picks { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 0.4rem; width: 100%; }
+.obstacle-pick { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; min-width: 0; padding: 0.55rem 0.25rem; text-align: center; border-radius: 10px; }
+.obstacle-pick .slot-bonus { font-size: 0.7rem; font-weight: 600; }
+.obstacle-pick .obstacle-medal { width: 40px; height: 40px; }
+.obstacle-pick .obstacle-medal .nav-emoji { font-size: 1.2rem; }
+.obstacle-up { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.85rem; }
 
 /* ---------- tables, clans, events, settings ---------- */
 .table-wrap { overflow-x: auto; }

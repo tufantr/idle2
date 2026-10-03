@@ -25,7 +25,7 @@ import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUE
 import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
 import { PETS, PET_BASE } from '../data/pets.js';
 import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
-import { AGILITY_SLOTS, obstacleById, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
+import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
@@ -1203,6 +1203,9 @@ export function renderFarming(game, ui) {
 
 // ---------- agility ----------
 
+// The course: one card per obstacle slot. A built obstacle shows its picture, level and bonus, with
+// Upgrade; an open slot shows its price and the three obstacles to pick from, as tiles; the next slot
+// to earn is a padlock. Swapping a built obstacle (no refund) is behind a small ↺ on its card.
 export function renderAgility(game, ui) {
     const state = game.state;
     const d = game.derived;
@@ -1210,41 +1213,50 @@ export function renderAgility(game, ui) {
     const course = courseDef(state);
     const running = state.action?.kind === 'agility';
     const interval = course ? actionInterval(course.interval, d, 'agility') : 0;
+    const coin = sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' });
+    const medal = (icon, lvl = 0) => `<span class="camp-medal obstacle-medal"><span class="nav-emoji" aria-hidden="true">${icon}</span>${lvl ? `<b class="camp-lv">${lvl}</b>` : ''}</span>`;
     const slots = AGILITY_SLOTS.map((slot, i) => {
-        const built = state.agility.built[i];
         const open = level >= slot.levelReq;
-        if (!open && i > 0 && level < AGILITY_SLOTS[i - 1].levelReq) return ''; // only the next slot to earn
-        const cost = obstacleCost(state, i);
-        const haveMaterials = Object.entries(cost.materials).every(([id, q]) => (state.resources[id] || 0) >= q);
-        const affordable = state.gold >= cost.gold && haveMaterials;
-        const lvl = obstacleLevel(state, i);
-        const up = upgradeInfo(state, i);
-        const options = slot.obstacles.map(o => {
-            const here = built === o.id;
-            const upBtn = here && up
-                ? `<button class="mini-btn" onclick="FI.upgradeObstacle(${i})" ${level >= up.levelReq && state.gold >= up.gold ? '' : 'disabled'} title="${level >= up.levelReq ? `Level ${up.toLevel}: ${fmt(up.gold)} gold` : `Needs Agility ${up.levelReq}`}">⬆ Lv ${up.toLevel}: ${fmt(up.gold)}${level >= up.levelReq ? '' : ` (Agility ${up.levelReq})`}</button>`
-                : '';
-            return `<div class="obstacle ${here ? 'built' : ''}">
-                <div><b>${o.icon} ${esc(o.name)}${here ? ` <span class="muted">Lv ${lvl}/${MAX_OBSTACLE_LEVEL}</span>` : ''}</b><div class="small">${esc(o.desc)}${here && lvl > 1 ? ` ×${lvl}` : ''}</div><div class="muted small">${seconds(o.interval)} · ${here ? Math.round(o.xp * (1 + 0.25 * (lvl - 1))) : o.xp} XP per run</div></div>
-                ${here ? (upBtn || '<span class="status-pill working">Max</span>') : `<button class="mini-btn" onclick="FI.buildObstacle('${o.id}')" ${open && affordable ? '' : 'disabled'}>${built ? 'Replace' : 'Build'}</button>`}
+        if (!open) {
+            if (i > 0 && level < AGILITY_SLOTS[i - 1].levelReq) return ''; // only the next slot to earn
+            return `<div class="course-slot locked">${medal('🔒')}<span class="req">Agility ${slot.levelReq}</span></div>`;
+        }
+        const built = state.agility.built[i] ? obstacleById(state.agility.built[i]) : null;
+        if (built && ui.agilitySwap !== i) {
+            const lvl = obstacleLevel(state, i);
+            const up = upgradeInfo(state, i);
+            const upgrade = !up ? '<span class="perk-max">Max</span>'
+                : level >= up.levelReq
+                    ? `<button class="gold-btn obstacle-up" onclick="FI.upgradeObstacle(${i})" ${state.gold >= up.gold ? '' : 'disabled'} title="Level ${up.toLevel}: the bonus once more">⬆ ${coin} ${fmt(up.gold)}</button>`
+                    : `<span class="req" title="Level ${up.toLevel} needs Agility ${up.levelReq}">⬆ at Agility ${up.levelReq}</span>`;
+            return `<div class="course-slot built">
+                <button class="slot-swap" onclick="FI.agilitySwap(${i})" title="Swap for another obstacle (no refund)" aria-label="Swap the ${esc(built.name)} for another obstacle">↺</button>
+                ${medal(built.icon, lvl)}
+                <b class="slot-name">${esc(built.name)}</b>
+                <span class="slot-bonus">${esc(built.desc)}${lvl > 1 ? ` ×${lvl}` : ''}</span>
+                ${upgrade}
             </div>`;
-        }).join('');
-        return `<div class="agility-slot ${open ? '' : 'locked'}">
-            <div class="slot-head"><b>Obstacle ${i + 1}</b> <span class="muted small">${open ? `cost: ${fmt(cost.gold)} gold + ${Object.entries(cost.materials).map(([id, q]) => `<span class="${(state.resources[id] || 0) >= q ? 'ok' : 'missing'}">${q}× ${esc(res(id).name)}</span>`).join(', ')}` : `opens at Agility ${slot.levelReq}`}</span></div>
-            ${options}
+        }
+        const cost = obstacleCost(state, i);
+        const affordable = state.gold >= cost.gold && Object.entries(cost.materials).every(([id, q]) => (state.resources[id] || 0) >= q);
+        const others = slot.obstacles.filter(o => o.id !== built?.id);
+        const picks = others.map(o =>
+            `<button class="obstacle-pick" onclick="FI.buildObstacle('${o.id}')" ${affordable ? '' : 'disabled'} title="${esc(o.name)}: ${esc(o.desc)} · ${seconds(o.interval)} and ${o.xp} XP a run" aria-label="Build the ${esc(o.name)}: ${esc(o.desc)}">${medal(o.icon)}<span class="slot-bonus">${esc(o.desc)}</span></button>`).join('');
+        return `<div class="course-slot open">
+            <div class="slot-price"><span class="camp-price${state.gold >= cost.gold ? '' : ' missing'}">${coin} ${fmt(cost.gold)}</span>${needChips(state, cost.materials)}</div>
+            <div class="obstacle-picks" style="--n:${others.length}">${picks}</div>
+            ${built ? `<button class="mini-btn" onclick="FI.agilitySwap(null)">Keep the ${esc(built.name)}</button>` : ''}
         </div>`;
     }).join('');
-    const builtList = state.agility.built.filter(Boolean).map(id => obstacleById(id));
     return `${banner('agility')}
     <section class="glass-panel skill-panel">
         ${xpHeader(game, 'agility', '', { title: false })}
-        ${builtList.length ? `<div class="info-strip">${builtList.map(o => `${o.icon} ${esc(o.desc)}`).join(' · ')}</div>` : ''}
-        <div class="course-run ${running ? 'active' : ''}">
-            <div><b>${course ? esc(course.label) : 'No course yet'}</b>${course ? `<div class="muted small">${seconds(interval)} per run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div>` : ''}</div>
-            ${course ? `<button class="prestige-btn" onclick="FI.runCourse()">${running ? 'Stop' : 'Run the course'}</button>` : ''}
+        ${course ? `<div class="course-run ${running ? 'active' : ''}">
+            <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div></div>
+            <button class="prestige-btn" onclick="FI.runCourse()">${running ? 'Stop' : 'Run'}</button>
             ${running ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-agility-course" style="width:${Math.min(100, state.action.progress / interval * 100)}%; background:${SKILLS.agility.color}"></div></div>` : ''}
-        </div>
-        <div class="agility-grid">${slots}</div>
+        </div>` : ''}
+        <div class="course-grid">${slots}</div>
     </section>`;
 }
 

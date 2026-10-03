@@ -18,6 +18,7 @@ import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
+import { AGILITY_SLOTS } from './data/agility.js';
 
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
@@ -659,7 +660,17 @@ window.FI = {
     buyEventItem(id) { if (game.buyEventItem(id)) toast('🎉 Bought!', 'info'); render(); },
     harvest(plot) { game.harvest(plot); render(); },
     harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`🌾 Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info'); render(); },
-    buildObstacle(id) { game.buildObstacle(id); render(); },
+    /** Build an obstacle; swapping out a built one (no refund, its levels lost) asks first. */
+    buildObstacle(id) {
+        const slot = AGILITY_SLOTS.findIndex(s => s.obstacles.some(o => o.id === id));
+        const old = slot >= 0 && game.state.agility.built[slot] ? AGILITY_SLOTS[slot].obstacles.find(o => o.id === game.state.agility.built[slot]) : null;
+        const build = () => { if (game.buildObstacle(id)) { ui.agilitySwap = null; sound.play('unlock'); } render(); };
+        if (!old) { build(); return; }
+        const fresh = AGILITY_SLOTS[slot].obstacles.find(o => o.id === id);
+        askConfirm('Swap obstacles?', `The ${old.name} is torn down with no refund, and its levels are lost. The ${fresh.name} goes up in its place.`, 'Swap', build);
+    },
+    /** Show a built obstacle's slot with the other two to pick from (null: back to the obstacle). */
+    agilitySwap(slot) { ui.agilitySwap = slot; render(); },
     upgradeObstacle(slot) { game.upgradeObstacle(slot); render(); },
     runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
 
