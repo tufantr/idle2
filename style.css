@@ -248,6 +248,10 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
     box-shadow: 0 0 6px color-mix(in srgb, var(--coin) 55%, transparent), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 .chip span { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+/* a chip that opens something (the SP chip opens the perks): it keeps the chip's look, and lifts a little */
+button.chip { font: inherit; color: inherit; cursor: pointer; }
+button.chip:hover { transform: translateY(-1px); background: linear-gradient(180deg, #2c2218, #18120d); border-color: rgba(240, 198, 116, 0.65); box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.1), 0 0 12px rgba(125, 211, 252, 0.25); }
+button.chip:active { transform: scale(0.97); }
 .chip b { font-size: 0.98rem; font-variant-numeric: tabular-nums; }
 .chip i { font-size: 0.7rem; font-style: normal; color: var(--arcane); }
 .chip.gold b { color: var(--gold-color); }
@@ -417,6 +421,10 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 /* prestige in one line */
 .prestige-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem 1rem; padding: 1rem 1.25rem; background: linear-gradient(90deg, rgba(17, 13, 9, 0.95) 30%, rgba(17, 13, 9, 0.45)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2); }
 .prestige-strip-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.strip-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.strip-actions .shop-btn.ready { border-color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
+.perk-max { min-width: 4.5rem; text-align: center; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold-color); }
+.perk-purse { margin: -0.4rem 0 0.8rem; color: var(--text-main); }
 .prestige-panel, .titan-panel { background: linear-gradient(180deg, rgba(17, 13, 9, 0.8), rgba(17, 13, 9, 0.96)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2); }
 /* the battle log, folded away */
 .log-drawer { padding: 0.75rem 1.25rem; }

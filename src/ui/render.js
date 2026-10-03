@@ -167,7 +167,7 @@ export function renderHeader(game, ui, cloud) {
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
         seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +0.5% ATK/DEF each"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
-        seen(state, 'skill_points') ? `<div class="chip sp" title="Skill points: spend them on perks in the Shop"><span>SP</span><b>${state.prestige.skillPoints}</b></div>` : ''
+        seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill points: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
     const banked = state.daily.banked;
     const daily = banked > 0
@@ -302,7 +302,10 @@ function renderPrestigeStrip(game) {
             <h2>Prestige ${aboutButton('prestige')}</h2>
             <span class="small">${line} <span class="muted">· stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} pays ${preview.nextZoneTokens}</span></span>
         </div>
-        <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>Prestige</button>
+        <div class="strip-actions">
+            ${seen(state, 'skill_points') ? `<button class="shop-btn${state.prestige.skillPoints > 0 ? ' ready' : ''}" onclick="FI.openPerks()">Perks${state.prestige.skillPoints > 0 ? ` · ${state.prestige.skillPoints} SP` : ''}</button>` : ''}
+            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>Prestige</button>
+        </div>
     </section>`;
 }
 
@@ -966,25 +969,36 @@ export function renderInventory(game, ui) {
 // ---------- shop ----------
 
 /** The perks as item cards (the Shop shows them, and so does the dialog opened from the fight). */
+// Every perk level costs one skill point, so the price is said once, above the list; a row's button
+// says what it does (Learn, then Upgrade) and is lit only while there are points to spend.
 function perkList(state) {
+    const sp = state.prestige.skillPoints;
     return PERKS.map(p => {
         const level = state.perks[p.id] || 0;
-        const can = state.prestige.skillPoints > 0 && level < p.max;
+        const action = level >= p.max ? '<span class="perk-max">Max</span>'
+            : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp > 0 ? '' : 'disabled'} title="${sp > 0 ? 'Costs 1 skill point' : 'Needs a skill point: every prestige brings more'}">${level ? 'Upgrade' : 'Learn'}</button>`;
         return `<div class="shop-item">
             <div class="shop-art"><span class="nav-emoji" aria-hidden="true">${p.icon}</span>${level ? `<b class="camp-lv">${level}</b>` : ''}</div>
             <div class="shop-item-info"><span class="shop-item-name">${esc(p.name)} <span class="muted small">${level}/${p.max}</span></span><span class="shop-item-desc">${esc(p.desc)}</span></div>
-            <button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${can ? '' : 'disabled'}>${level >= p.max ? 'Max' : '1 SP'}</button>
+            ${action}
         </div>`;
     }).join('');
 }
 
-/** Perks in a dialog, so skill points can be spent without leaving the fight. */
+/** The line above the perks: how many points there are, and what a level costs. */
+function perkPurse(state) {
+    const sp = state.prestige.skillPoints;
+    return sp > 0
+        ? `You have <b class="sp-text">${sp} skill point${sp === 1 ? '' : 's'}</b>. Each perk level costs one, and lasts forever.`
+        : 'No skill points now. Every prestige brings more; perks last forever.';
+}
+
+/** Perks in a window, opened from the SP chip on any screen, the prestige strip or the fight's dock. */
 export function renderPerksModal(game) {
     const state = game.state;
-    const sp = state.prestige.skillPoints;
     return `<div class="modal-content perks-modal">
         <div class="modal-header">Perks</div>
-        <p class="about-blurb">${sp > 0 ? `<b class="sp-text">${sp} skill point${sp === 1 ? '' : 's'}</b> to spend.` : 'No skill points now: every prestige brings more.'} Perks last forever.</p>
+        <p class="about-blurb">${perkPurse(state)}</p>
         <div class="shop-list">${perkList(state)}</div>
         <div class="modal-footer"><button class="modal-btn btn-confirm" data-autofocus onclick="FI.closeModal()">Done</button></div>
     </div>`;
@@ -1021,7 +1035,8 @@ export function renderShop(game, ui) {
             <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>
         <section class="glass-panel">
-            <div class="panel-header"><h2>Perks</h2><span class="muted small" title="+1 skill point per prestige, +1 per 25 stages of your record">${state.prestige.skillPoints} SP to spend</span></div>
+            <div class="panel-header"><h2>Perks</h2></div>
+            <p class="small perk-purse" title="+1 skill point per prestige, +1 per 25 stages of your record">${perkPurse(state)}</p>
             <div class="shop-list">${perks}</div>
         </section>
     </div>`;

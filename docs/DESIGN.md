@@ -606,7 +606,7 @@ needs another screen: fight, spend, prestige and fight on.
 
 - **The dock holds the loop.** Orders (retreat, the stage arrows, the map), the food and the potion,
   the camp as three tokens to tap, and the loop's own buttons: Prestige with what it would pay now,
-  Perks (a dialog over the fight, so skill points are spent there), and the best piece of gear
+  Perks (a window over the fight, so skill points are spent there), and the best piece of gear
   waiting in the bag as a one-tap Equip. On a wide screen the groups sit in one row; on a phone they
   stack with prestige and the camp first, and the dock scrolls while the scene keeps its share.
 - **Prestige walks on.** `Game.prestige({ resume: true })` starts the new run's first fight if the
@@ -618,6 +618,10 @@ needs another screen: fight, spend, prestige and fight on.
   the mode. "Full screen" means the game fills the browser's window. It does not ask the browser
   for its own full screen: that was tried and taken out, because its button read as the way *out*
   of the full-screen fight, and on a Mac the system menu bar slides over the top bar there.
+- **The perks window is everywhere skill points are.** The SP chip in the header opens it on any
+  screen, and so do Perks buttons beside Prestige (the fight's dock, the combat tab's prestige strip);
+  the Shop shows the same list. Every level costs one point, so the price is said once above the
+  list and each row's button says what it does: Learn, then Upgrade, lit only while there are points.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
   fight; toasts move under the top bar so they never cover the dock.
 

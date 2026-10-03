@@ -342,6 +342,9 @@ progress as motion, art before words, one stage with a HUD around it.
 - [x] **Each thing said once**: the header lost its goal pill and its stats row, and the second
       Enter combat button went from under the scene; the crate has one button (the header, or the
       hotbar on a phone); the hero's numbers moved to the Inventory
+- [x] **Perks from anywhere**: the SP chip opens the perks window on every screen, and the combat
+      tab's prestige strip has a Perks button like the fight's dock. A perk's button says Learn or
+      Upgrade instead of "1 SP" on every row; the cost is said once, above the list
 - [x] **No suggestions**: the advisor's notes (the quest board, then a strip under the scene) are
       gone, with `src/systems/advisor.js`. The next unlock is the sidebar's Next card; what is ready
       shows where it lives (a ▲ on better gear, a lit camp upgrade, a glowing Perks button)
