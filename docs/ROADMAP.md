@@ -23,7 +23,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 5 — Social layer | ✅ Done |
 | 6 — Game feel | ✅ Done |
 | 7 — Make it feel like a game | ✅ Done |
-| 8 — Art and polish | 🔄 In progress ([what is left](#still-to-do)) |
+| 8 — Art and polish | ✅ Done |
 
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
@@ -31,8 +31,8 @@ ones, with regression tests. Phases 6 and 7 gave it the look and feel of a game:
 reward moments, a dark fantasy theme, an armory, sprites, sound and a phone hotbar. Phase 8 paints it
 (Gemini paintings for every place and a world map) and makes it simple: the screen grows with the
 player instead of showing everything at once, there are no suggestion notes, and the fight fills the
-screen with everything a run needs. Besides Phase 8's [last items](#still-to-do), what is left is content and the owner's
-decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
+screen with everything a run needs; everything the player handles is a sprite, not an emoji (the
+small stat glyphs beside numbers stay as type). What is left is content and the owner's decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
 
@@ -427,7 +427,8 @@ progress as motion, art before words, one stage with a HUD around it.
       is a sprite too
 - [x] **The last emoji around the edges**: the sound, cloud, map, retreat and resting controls are
       drawn line icons; the weekend events, the title card's button, Enter combat, the bonfire pill,
-      the toasts, the celebrations, the welcome-back report and the loot beam use sprites
+      the toasts, the celebrations, the welcome-back report, the loot beam, the last achievement
+      medals (a campfire, a crown), the bag's Salvage and Sell and the Titan's Challenge use sprites
 
 **Exit:** every place a player sees has a painting or a sprite, not an emoji; a new player's first
 screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` passes both modes.

@@ -81,6 +81,7 @@ const ICON_CLOUD_OK = svg(`${CLOUD}M6.2 9.4l1.3 1.3 2.5-2.7`);
 const ICON_MAP = svg('M1.5 3.6 5.5 2l5 1.6 4-1.6v10.4l-4 1.6-5-1.6-4 1.6zM5.5 2v10.4M10.5 3.6V14');
 const ICON_FLAG = svg('M3.5 14.5V2M3.5 2.6h8.4l-2 3 2 3H3.5');
 const ICON_MOON = svg('M12.6 10.4A5.6 5.6 0 0 1 5.6 3.4a5.6 5.6 0 1 0 7 7z');
+const ICON_CHECK = svg('M3 8.6l3.2 3.2L13 4.6');
 
 /** A weekend event's picture (src/ui/features.js EVENT_ART), small enough for a pill or a line. */
 const eventIcon = (e, scale = 0.5) => sprite(EVENT_ART[e.id], { scale, cls: scale < 1 ? 'soft res-spr' : '', fallback: e.icon });
@@ -915,7 +916,7 @@ export function renderItemDetail(game, id) {
         <div class="detail-actions">
             ${slot ? `<button class="mini-btn" onclick="FI.unequip('${slot}')">Take off</button>` : `<button class="prestige-btn" onclick="FI.equip(${itemId})" ${wearable ? '' : 'disabled'}>Equip</button>`}
             ${upgradeBtn}${reforgeBtn}
-            ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">♻️ Salvage</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>💰 Sell for ${fmt(itemSellValue(item))}</button>`}
+            ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">${resIcon('essence')} Salvage</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell for ${fmt(itemSellValue(item))}</button>`}
         </div>
     </div>`;
 }
@@ -967,8 +968,8 @@ export function renderInventory(game, ui) {
         <section class="glass-panel bag-panel">
             <div class="panel-header"><h2>Bag <span class="muted">${items.length}/${size}</span></h2>
                 ${seen(state, 'bag_tools') ? `<div class="btn-row">
-                    <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>♻️ Salvage commons</button>
-                    <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>💰 Sell commons</button>
+                    <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>${resIcon('essence')} Salvage commons</button>
+                    <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell commons</button>
                 </div>` : ''}
             </div>
             <div class="bag-grid">${bag}</div>
@@ -1070,10 +1071,11 @@ export function renderShop(game, ui) {
 const MEDAL_ART = {
     kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
     titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
-    prestiges: '🔮', obstaclesBuilt: '🧱', minigameWins: '🎯', masteryLevels: '⭐', masteries99: '🌟', skills99: '👑'
+    prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond',
+    masteries99: 'uniq/crystal_heart', skills99: 'crown'
 };
 const SKILL_MEDAL = {
-    mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', fishing: 'res/raw_shark', firemaking: '🔥',
+    mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', fishing: 'res/raw_shark', firemaking: 'campfire',
     farming: 'res/starfruit', agility: 'item/Boots/5', cooking: 'res/cooked_shark', alchemy: 'res/health_potion',
     smithing: 'res/runite_bar', crafting: 'item/Ring/6', combat: 'item/Weapon/7'
 };
@@ -1081,8 +1083,7 @@ const SKILL_MEDAL = {
 function medalArt(a) {
     let key = a.req.type === 'skillLevel' ? SKILL_MEDAL[a.req.skill] : MEDAL_ART[a.req.key];
     if (a.req.key === 'maxStage') key = `mon/${ZONES[Math.min(ZONES.length - 1, Math.floor((a.req.value - 2) / STAGES_PER_ZONE))]?.boss}`;
-    if (!key) return '🏆';
-    return key.includes('/') || key === 'gold' ? sprite(key, { scale: 1.5, fallback: '🏆' }) : `<span class="medal-emoji">${key}</span>`;
+    return sprite(key || 'crown', { scale: 1.5, fallback: '🏆' });
 }
 
 export function renderAchievements(game) {
@@ -1118,7 +1119,7 @@ export function renderEvents(game) {
     const today = ev.day === new Date(game.now).toISOString().slice(0, 10) ? ev.earnedToday : 0;
     const milestones = EVENT_MILESTONES.map(m => {
         const done = sameInstance && ev.milestones.includes(m.tokens);
-        return `<div class="ach-item ${done ? 'done' : ''}"><div><div class="ach-name">${done ? '✅' : '🎯'} ${m.tokens} tokens this event</div></div><div class="ach-reward">${esc(m.desc)}</div></div>`;
+        return `<div class="ach-item ${done ? 'done' : ''}"><div><div class="ach-name">${done ? ICON_CHECK : ''} ${m.tokens} tokens this event</div></div><div class="ach-reward">${esc(m.desc)}</div></div>`;
     }).join('');
     const shop = EVENT_SHOP.map(item => `<div class="event-shop-item"><div><b>${esc(item.name)}</b><div class="muted small">${esc(item.desc)}</div></div>
         <button class="gold-btn" onclick="FI.buyEventItem('${item.id}')" ${status.active && ev.tokens >= item.cost ? '' : 'disabled'}>🎟️ ${item.cost}</button></div>`).join('');
@@ -1301,7 +1302,7 @@ export function renderDungeons(game) {
             <div class="titan-text"><b>${esc(titanEnemy(state).name)}</b> · level ${tl}${state.titan.kills ? ` · ${state.titan.kills} defeated: +${Math.round(TITAN_BONUS.atkMult * 100 * state.titan.kills)}% attack and health` : ''}${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
                 <div class="small ${readinessClass(titanFight.killSeconds, TITAN_TIME_MS / 1000, titanFight.surviveSeconds)}">You would deal about ${Math.round(titanPct * 100)}% of its health in ${TITAN_TIME_MS / 1000} s${titanFight.surviveSeconds < TITAN_TIME_MS / 1000 ? `, and last about ${Math.round(titanFight.surviveSeconds)} s without food` : ''}.</div></div>
             ${c.mode === 'titan' ? '<span class="status-pill fighting">Fighting now</span>'
-                : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">🗿 Challenge (${TITAN_TIME_MS / 1000} s)</button>`
+                : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">${sprite('titan/0', { scale: 0.625, cls: 'soft res-spr' })} Challenge (${TITAN_TIME_MS / 1000} s)</button>`
                 : `<button class="mini-btn" disabled>Rests for ${duration(state.titan.readyAt - game.now)}</button>`}
         </div>`;
     const nextDungeon = DUNGEONS.find(d => !dungeonUnlocked(state, d));
