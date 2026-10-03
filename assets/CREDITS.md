@@ -15,12 +15,19 @@ logs, fish, shrimp, lobster, bowls and the crops are drawn pixel by pixel by tha
 tiles' manner, and are original to this project. The pets are DCSS creatures (one, the fish, is the
 drawn trout), and the farm plot's mound and sprout are drawn by the same script.
 
+The perk badges are DCSS spell and god icons (CC0, as above: Sure Blade, Charming, Haste, Fedhas's
+Grow Oklob, Zin's Recite, Cheibriados's Temporal Distortion) and DCSS items (a meat chunk, browned; a
+gold pile; the Crown of Vainglory) set in a gold frame drawn by `tools/resource_art.py`. The axe, the
+bow and the daily crate (the Box of Beasts) are DCSS items, the settings cog is cut from the Invent
+Gizmo ability icon, and the hero's hoe keeps the haft of the DCSS scythe. The pickaxe, hoe, fishing
+rod and tinderbox icons are drawn by the same script and are original to this project.
+
 `backdrops/*.webp` are painted by `tools/backdrops.py` from noise, gradients and glow; the interiors
 (caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
 
 `paint/*.webp` are AI-generated with Google Gemini from the prompts in `docs/art/gemini.md`,
 then scaled by `tools/paint.py`: the seventeen backdrops, the four dungeons (warren, depths,
 stronghold, lair), the pictures for cards and banners (market, shrine, hall, festival, clanhall,
-farm, course) and the world map.
+farm, course; the farm and the course are also the Farming and Agility stages) and the world map.
 
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

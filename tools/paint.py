@@ -13,7 +13,8 @@ paintings instead of the layers from tools/backdrops.py. A place without a paint
 
 Some paintings are not backdrops of a fight or a skill but pictures for cards and banners (the
 market, the shrine, the world map: CARDS below). They are imported the same way and used by
-src/ui/features.js and src/ui/worldmap.js; the CSS block doesn't mention them.
+src/ui/features.js and src/ui/worldmap.js; the CSS block mentions one only where a skill stage
+stands on it (the farm, the course: STAGES).
 
 A file counts for a place when its name holds the place's name as a word: meadow.png,
 02-forest.jpg and Forest final.webp all do. Needs Pillow (pip install pillow).
@@ -39,7 +40,7 @@ BATTLE = ['meadow', 'forest', 'caves', 'marsh', 'highland', 'ruins', 'volcano', 
 STAGES = {
     'mining': ['caves'], 'woodcutting': ['forest'], 'fishing': ['river'], 'hunting': ['meadow'],
     'cooking': ['camp'], 'firemaking': ['camp'], 'alchemy': ['lab', 'abyss'], 'smithing': ['forge', 'volcano'],
-    'crafting': ['workshop'],
+    'crafting': ['workshop'], 'farming': ['farm'], 'agility': ['course'],
 }
 # Pictures for cards, banners and the world map (src/ui/features.js, src/ui/worldmap.js).
 CARDS = ['market', 'shrine', 'hall', 'festival', 'clanhall', 'farm', 'course', 'map']

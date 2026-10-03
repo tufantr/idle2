@@ -5,6 +5,10 @@ meat, fruit and vegetables, herbs, the worm for bait. The rest (ores, bars, logs
 lobster, bowls, pies) is drawn here in the same manner as those tiles: a dark outline, light from
 the top left, a handful of flat tones per material, and per-tier colors taken from the game's own
 resource colors so that a mithril bar matches mithril ore everywhere.
+
+The game's own things are made here too (build_icons): the perks as DCSS spell and god icons in a
+gold frame, the tools (the axe and the bow are DCSS items; the pickaxe, hoe, rod and tinderbox are
+drawn), the daily crate, the settings gear and the hoe in the hero's hand.
 """
 import math
 
@@ -527,6 +531,206 @@ def sprout(tall=False, tiles=None):
 def build_extras(tiles):
     """Cells that are not resources: the farm plot, empty and growing."""
     return {'farm/soil': fit(to_image(soil())), 'farm/sprout': fit(to_image(sprout())), 'farm/growing': fit(sprout(tall=True, tiles=tiles))}
+
+
+# ---------- the game's own things: perk badges, tools, the crate, the settings gear ----------
+
+GOLD_LIGHT, GOLD_MID, GOLD_DARK, GOLD_DEEP = (255, 222, 140, 255), (214, 170, 92, 255), (138, 98, 44, 255), (70, 46, 20, 255)
+WOOD = ramp('#a8743a', 4, lo=0.55, hi=0.35)
+STEEL = ramp('#9aa3ad', 5, lo=0.6, hi=0.55)
+COPPER = ramp('#c47a3c', 5, lo=0.6, hi=0.45)
+
+
+def gold_frame(a):
+    """A bevelled gold frame on the ring 2..29, where DCSS's spell icons have a grey one: lit top and left."""
+    for i in range(2, 30):
+        a[2, i] = a[i, 2] = GOLD_LIGHT
+        a[29, i] = a[i, 29] = GOLD_DARK
+    a[2, 29] = a[29, 2] = GOLD_MID
+    for i in range(3, 29):                   # and the dark inner line the DCSS frames have
+        a[28, i] = a[i, 28] = GOLD_DEEP
+    return a
+
+
+def badge(img):
+    """A DCSS spell or god icon as a perk badge: its picture on black in a gold frame. Its own grey
+    frame goes, and so do the notched corners of the god icons."""
+    src = from_image(img)
+    opaque = src[..., 3] > 0
+    clear = np.pad(~opaque, 1, constant_values=True)
+    near = np.zeros_like(opaque)             # opaque pixels touching the outside, diagonals too
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            near |= clear[1 + dy:CELL + 1 + dy, 1 + dx:CELL + 1 + dx]
+    pic = src.copy()
+    pic[(opaque & near) | ~opaque] = (0, 0, 0, 255)
+    a = blank()
+    a[3:29, 3:29] = pic[3:29, 3:29]
+    return gold_frame(a)
+
+
+def badge_item(img, glow, scale=1.0):
+    """An item as a perk badge: on a dark ground with a soft glow of `glow` behind it, framed like the spells."""
+    r = np.hypot(XX - 15.5, YY - 15.5)
+    t = np.clip(1 - r / 15, 0, 1) ** 1.6 * 0.55
+    a = blank()
+    a[..., :3] = (rgb(glow)[None, None, :] * t[..., None]).astype(np.uint8)
+    a[..., 3] = 255
+    if scale != 1.0:
+        img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+    img = img.crop(img.getbbox())
+    layer = Image.new('RGBA', (CELL, CELL), (0, 0, 0, 0))
+    layer.paste(img, ((CELL - img.width) // 2, (CELL - img.height) // 2 + 1), img)
+    a = from_image(Image.alpha_composite(to_image(a), layer))
+    a[:3, :] = a[29:, :] = 0
+    a[:, :3] = a[:, 29:] = 0
+    return gold_frame(a)
+
+
+def item_shadow(a, dx=2, dy=2, alpha=70):
+    """The soft shadow down and to the right that DCSS's item tiles carry."""
+    m = a[..., 3] > 0
+    s = np.zeros_like(m)
+    s[dy:, dx:] = m[:-dy, :-dx]
+    out = a.copy()
+    out[s & ~m] = (0, 0, 0, alpha)
+    return out
+
+
+def haft(a, x0, x1, grip=None, s=32):
+    """A wooden haft along x + y = s from x0 to x1, lit on its upper side, with a leather grip."""
+    for x in range(x0, x1 + 1):
+        put(a, x, s - 1 - x, WOOD[2])
+        put(a, x, s - x, WOOD[1])
+    for x in range(*(grip or (0, -1))):
+        put(a, x, s - 1 - x, (120, 70, 40, 255))
+        put(a, x, s - x, (84, 46, 26, 255))
+    return a
+
+
+def metal(mask, palette=STEEL):
+    return lit(mask, palette, light=(-0.6, -0.8, 0.7))
+
+
+def pickaxe():
+    """A pick: a crescent of steel across the top of the haft, both points bent toward the grip."""
+    a = haft(blank(), 6, 22, grip=(6, 11))
+    c, u, v = np.array([22.5, 9.5]), np.array([1, 1]) / math.sqrt(2), np.array([-1, 1]) / math.sqrt(2)
+    upper, lower = [], []
+    for t in np.linspace(-1, 1, 15):
+        p = c + u * t * 11.5 + v * (t ** 2) * 4.2
+        half = 1.9 * (1 - abs(t) ** 1.6) + 0.35
+        upper.append(tuple(p - v * half))
+        lower.append(tuple(p + v * half))
+    h = metal(poly_mask(upper + lower[::-1]))
+    a[h[..., 3] > 0] = h[h[..., 3] > 0]
+    for x, y in ((21, 10), (22, 10), (21, 9)):   # the haft through the eye
+        put(a, x, y, WOOD[1])
+    return item_shadow(outline(a))
+
+
+def hoe():
+    """A hoe: a flat blade set square to the top of the haft, bent down toward the ground."""
+    a = haft(blank(), 5, 21, grip=(5, 10))
+    h = metal(poly_mask([(20.5, 10.5), (22.5, 8.5), (28.5, 14.5), (28.5, 20.5), (24.5, 20.5), (24.5, 15.5)]))
+    a[h[..., 3] > 0] = h[h[..., 3] > 0]
+    return item_shadow(outline(a))
+
+
+def fishing_rod():
+    """A rod with a reel at the grip, its line hanging from the tip to a red and white float."""
+    a = blank()
+    for x in range(4, 27):                         # long and thin, thicker at the grip
+        put(a, x, 31 - x, (196, 150, 92, 255) if x > 11 else (120, 70, 40, 255))
+        if x <= 11:
+            put(a, x, 32 - x, (84, 46, 26, 255))
+    for x, y in ((8, 25), (9, 25), (8, 26), (9, 26), (10, 25)):
+        put(a, x, y, (176, 184, 196, 255))
+    put(a, 9, 24, (232, 236, 244, 255))
+    a = outline(a)
+    for y in range(6, 20):
+        put(a, 27 + (y > 13), y, (226, 232, 240, 230))
+    for x, y, c in ((27, 20, (230, 60, 50)), (28, 20, (230, 60, 50)), (27, 21, (250, 250, 250)), (28, 21, (250, 250, 250)), (27, 22, (200, 40, 40)), (28, 22, (230, 60, 50))):
+        put(a, x, y, c + (255,))
+    return item_shadow(a)
+
+
+def tinderbox():
+    """A copper tinderbox with its lid thrown open and a flame rising from the tinder."""
+    a = blank()
+    lid = lit(poly_mask([(8, 15), (25, 15), (27, 6), (11, 6)]), ramp('#a8642e', 5, lo=0.65, hi=0.35), light=(-0.5, -0.9, 0.6))
+    a[lid[..., 3] > 0] = lid[lid[..., 3] > 0]
+    a = outline(a)
+    flame = (ellipse(16.5, 13, 4.2, 6.5) & (YY <= 17)) | poly_mask([(13, 10), (20, 10), (17, 2)])
+    core = ((XX - 16.5) / 2.4) ** 2 + ((YY - 13.5) / 4.0) ** 2 <= 1
+    a[flame] = (255, 150, 50, 255)
+    a[flame & core] = (255, 240, 170, 255)
+    for x, y in ((17, 1), (16, 3), (19, 5), (13, 8)):
+        put(a, x, y, (255, 120, 40, 255))
+    box = lit(poly_mask([(6, 16), (26, 16), (26, 27), (6, 27)]), COPPER, light=(-0.6, -0.8, 0.7), round_=0.6)
+    box[(YY == 16) & (XX >= 6) & (XX <= 26)] = COPPER[4]   # the rim
+    box[(YY == 21) & (XX >= 6) & (XX <= 26)] = COPPER[1]   # a band round it
+    a[box[..., 3] > 0] = box[box[..., 3] > 0]
+    put(a, 16, 21, (250, 220, 140, 255))                     # the clasp
+    put(a, 16, 22, (180, 120, 60, 255))
+    return item_shadow(outline(a))
+
+
+def gear(tiles):
+    """The settings gear: the bronze cog of DCSS's Invent Gizmo ability, out of its frame."""
+    src = from_image(Image.open(f'{tiles}/gui/abilities/invent_gizmo.png'))
+    hsv = np.array(Image.fromarray(src[..., :3], 'RGB').convert('HSV')).astype(int)
+    cog = (src[..., 3] > 0) & (hsv[..., 1] > 90) & (hsv[..., 2] > 60)
+    a = blank()
+    a[cog] = src[cog]
+    return outline(a)
+
+
+def hoe_in_hand(tiles):
+    """The hero's hoe, drawn like the paperdoll's tools (player/hand1): the scythe's haft, held where
+    the hero's hand is, with a hoe's blade at the top instead of the scythe's."""
+    scythe = from_image(Image.open(f'{tiles}/player/hand1/scythe.png'))
+    a = blank()
+    a[4:, 5:8] = scythe[4:, 5:8]
+    wood = tuple(scythe[10, 6])
+    for y in range(1, 4):
+        put(a, 5, y, INK)
+        put(a, 6, y, wood)
+        put(a, 7, y, INK)
+    put(a, 6, 0, INK)
+    blade = metal(poly_mask([(7.5, 2.5), (10.5, 2.5), (12.5, 5.5), (12.5, 10.5), (10.5, 10.5), (10.5, 5.5), (7.5, 4.5)]))
+    blade = outline(blade)
+    a[blade[..., 3] > 0] = blade[blade[..., 3] > 0]
+    return a
+
+
+# perk id -> how its badge is made: a DCSS spell or god icon (rltiles/gui/...), or an item on a glow.
+PERK_BADGES = {
+    'knight': 'spells/enchantment/sure_blade', 'warlord': 'spells/enchantment/charming', 'rogue': 'spells/enchantment/haste',
+    'forager': 'invocations/fedhas_grow_oklob', 'scholar': 'invocations/zin_recite', 'endurance': 'invocations/cheibriados_temporal_distortion',
+    'gourmet': ('item/food/chunk', '#e07a3a', 0.8, '#c0743a'), 'fortune': ('item/gold/06', '#7ad04a', 1.0, None),
+    'paragon': ('item/armour/artefact/urand_crown_of_vainglory', '#b46cf0', 0.8, None),
+}
+
+
+def build_icons(tiles):
+    """Cells for the game's own things: perk/<id>, tool/<id>, the crate, the gear, the hero's hoe."""
+    tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
+    out = {}
+    for pid, how in PERK_BADGES.items():
+        if isinstance(how, str):
+            out[f'perk/{pid}'] = badge(tile(f'gui/{how}'))
+        else:
+            path, glow, scale, roast = how
+            img = browned(tile(path), roast) if roast else tile(path)
+            out[f'perk/{pid}'] = badge_item(img, glow, scale)
+    out.update({
+        'tool/pickaxe': pickaxe(), 'tool/axe': from_image(tile('item/weapon/hand_axe1')), 'tool/bow': from_image(tile('item/weapon/ranged/shortbow1')),
+        'tool/rod': fishing_rod(), 'tool/tinderbox': tinderbox(), 'tool/hoe': hoe(),
+        'crate': from_image(tile('item/misc/misc_box_of_beasts_inert')), 'gear': gear(tiles),
+        'hero/tool/farming': hoe_in_hand(tiles),
+    })
+    return {key: to_image(a) for key, a in out.items()}
 
 
 # ---------- the art direction: resource id -> how its cell is made ----------

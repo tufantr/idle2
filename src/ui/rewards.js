@@ -8,7 +8,7 @@ import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS } from '../data/
 import { CROPS } from '../data/farming.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
 import { fmt, escapeHtml as esc } from './format.js';
-import { resIcon } from './sprites.js';
+import { sprite, resIcon, toolIcon } from './sprites.js';
 import { feature, artStyle, FEATURE_TAB } from './features.js';
 
 const SHOW_MS = 2800;
@@ -25,15 +25,15 @@ export function unlocksAtLevel(skill, level) {
     for (const n of SKILLS[skill]?.nodes || []) if (n.levelReq === level) add(n.produces ? resIcon(n.produces) : SKILLS[skill].icon, n.name);
     if (skill === 'smithing') {
         for (const r of SMELTING_RECIPES) if (r.levelReq === level) add(resIcon(r.produces), r.name);
-        for (const m of METALS) if (m.levelReq === level) add('⚒️', `${m.name} gear`);
+        for (const m of METALS) if (m.levelReq === level) add(sprite(`item/Weapon/${m.tier}`, { scale: 0.625, cls: 'soft res-spr', fallback: '⚒️' }), `${m.name} gear`);
     }
     if (skill === 'crafting') {
         for (const g of GEM_TIERS) if (g.levelReq === level) add(resIcon(g.gem), `${RESOURCES[g.gem]?.name || g.gem} jewellery`);
         for (const b of JEWEL_BARS) if (b.levelReq === level) add(resIcon(b.bar), `${b.name} settings`);
     }
-    for (const tool of Object.values(TOOLS)) {
+    for (const [id, tool] of Object.entries(TOOLS)) {
         if (tool.madeBy !== skill) continue;
-        for (const t of tool.tiers) if (t.levelReq === level) add(tool.icon, t.name);
+        for (const t of tool.tiers) if (t.levelReq === level) add(toolIcon(id), t.name);
     }
     if (skill === 'farming') for (const c of CROPS) if (c.levelReq === level) add(resIcon(c.produces), c.name);
     if (skill === 'agility') AGILITY_SLOTS.forEach((slot, i) => { if (slot.levelReq === level) add('🧱', `Obstacle slot ${i + 1}`); });
@@ -80,12 +80,12 @@ export function unlockCelebration(ids) {
 /** The daily crate, opened: the loot comes out one piece at a time. `banked` crates are still waiting. */
 export function renderCrateModal(result, banked) {
     const loot = [
-        { icon: '🪙', text: `+${fmt(result.gold)} gold`, cls: 'gold' },
-        { icon: '✨', text: `+${fmt(result.essence)} essence`, cls: 'essence' },
+        { icon: sprite('gold', { scale: 0.75, cls: 'soft', fallback: '🪙' }), text: `+${fmt(result.gold)} gold`, cls: 'gold' },
+        { icon: resIcon('essence', { scale: 0.75 }), text: `+${fmt(result.essence)} essence`, cls: 'essence' },
         ...Object.entries(result.materials).map(([id, qty]) => ({ icon: resIcon(id, { scale: 0.75 }), text: `${fmt(qty)}× ${esc(RESOURCES[id]?.name || id)}`, cls: RESOURCES[id]?.category === 'gem' ? 'gem' : '' }))
     ];
     return `<div class="modal-content narrow crate-modal">
-        <div class="crate-stage" aria-hidden="true"><span class="crate-rays"></span><span class="crate-box">📦</span></div>
+        <div class="crate-stage" aria-hidden="true"><span class="crate-rays"></span><span class="crate-box">${sprite('crate', { scale: 3, fallback: '📦' })}</span></div>
         <div class="modal-header">Daily crate</div>
         <ul class="crate-loot">${loot.map((l, i) => `<li class="${l.cls}" style="--i:${i}"><span>${l.icon}</span>${l.text}</li>`).join('')}</ul>
         <div class="modal-footer">

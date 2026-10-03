@@ -411,10 +411,19 @@ progress as motion, art before words, one stage with a HUD around it.
       orc fortress courtyard at dusk, a dragon's hoard among lava falls). A dungeon card opens on its
       painting with the boss in front; the Crystal Depths and the Dragon's Lair no longer borrow the
       caves and the volcano
-- [ ] **Sprites for the last emoji**: perks, tools, the crate, Settings (needs `tools/atlas.py` and
-      the DCSS tiles; their spell and ability icons fit perks) (M)
-- [ ] **The hero at work on the Farming and Agility banners**, like the skill stages (needs a hoe
-      and a running pose in the atlas) (S)
+- [x] **Sprites for the last emoji**: perks wear DCSS spell and god icons in a gold frame (a
+      sword, a heart, a runner, a plant, a book, an hourglass, a roast, coins, a crown); the tools
+      are a pickaxe, an axe, a bow, a fishing rod, a tinderbox and a hoe (the axe and bow from DCSS,
+      the rest drawn in its manner); the daily crate is a DCSS chest, in the header, the hotbar and
+      its dialog; Settings is a cog. All from `build_icons` in `tools/resource_art.py`
+- [x] **The hero at work on the farm and the course**: Farming and Agility have the skill stage on
+      their paintings instead of a banner. On the farm he hoes while anything grows, and the ring is
+      the nearest crop's growth; on the course he runs empty-handed, a leap at the end of each lap.
+      A resting stage faces the place's own picture instead of an emoji
+- [ ] **Pictures for the agility obstacles**: the eighteen obstacle medals are still emoji (M)
+- [ ] **The last emoji around the edges**: the event pill, the sound and cloud buttons, the status
+      pills (resting, the bonfire, focus), the Map button, the title card's button, and the skill
+      icons in toasts and the welcome-back report (M)
 
 **Exit:** every place a player sees has a painting or a sprite, not an emoji; a new player's first
 screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` passes both modes.

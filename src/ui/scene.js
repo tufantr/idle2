@@ -503,7 +503,7 @@ export function createScene(root, actions) {
                     if (ev.won) banner('<small>Titan defeated</small><strong>+2% ATK and HP, forever</strong>', 'victory', 2400);
                     break;
                 case 'dungeonClear':
-                    banner(`<small>Dungeon cleared${ev.clears > 1 ? ` · ${ev.clears}×` : ''}</small><strong>📦 The chest is yours</strong>${ev.item ? `<span>${esc(ev.item.name)}</span>` : ''}`, 'victory', 2200);
+                    banner(`<small>Dungeon cleared${ev.clears > 1 ? ` · ${ev.clears}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest is yours</strong>${ev.item ? `<span>${esc(ev.item.name)}</span>` : ''}`, 'victory', 2200);
                     break;
                 case 'prestige':
                     banner(`<small>Prestige</small><strong>+${fmt(ev.tokens)} tokens</strong>`, 'victory', 2400);

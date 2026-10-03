@@ -560,6 +560,13 @@ merged by key, so a burst of levels shows the highest). A new place's card carri
 stays long enough to read (seven seconds, or until tapped); its tab also gets a "New" badge until it
 is opened (remembered in the browser, not the save).
 
+The skill stage (`src/ui/stage.js`) is the same idea for work: a strip of the place's painting above
+every skill tab, built once, with the hero holding that skill's tool and facing what he works on. His
+swing follows the real action progress and lands on the beat. Farming and Agility have it too: on the
+farm he hoes while anything grows (crops grow on the clock, so the hoe keeps its own time) and the ring
+is the nearest crop's growth; on the course he runs empty-handed, a bounce every stride and a leap at
+the end of each lap. At rest he faces the place's own picture, dimmed, with a line on what to pick.
+
 ### 3.22 Presentation: a screen that grows with the player
 
 A new player used to meet everything at once: nineteen tabs (fifteen padlocked), four currencies
@@ -589,9 +596,12 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
 - **Places have pictures; rules live behind a "?".** `src/ui/features.js` holds, for every place,
   its painting, one line and the rules in a few short points. That one entry is the card shown when
-  the place opens, the banner on tabs without a scene (shop, achievements, events, clan, dungeons,
-  farming, agility) and the About card behind every "?", which is where the "How it works"
+  the place opens, the banner on tabs without a scene or a skill stage (shop, achievements, events,
+  clan, dungeons) and the About card behind every "?", which is where the "How it works"
   paragraphs went.
+- **Pictures, not emoji.** Everything the player handles has a sprite: perks are DCSS spell and god
+  icons in a gold frame, the tools are items (two from DCSS, four drawn in its manner), the daily
+  crate is a DCSS chest and Settings a cog (`build_icons` in `tools/resource_art.py`).
 - **One card per moment.** Places that open together share a card (the first boss opens five), so
   nothing queues up. A card is a button: it goes to the place.
 - **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from
@@ -871,7 +881,7 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
                       worldmap.js (the zones as pins on the painted map) ·
-                      sprites.js (atlas cells for monsters, items and the hero's layers) · sound.js (synthesized
+                      sprites.js (atlas cells for monsters, items, perks, tools and the hero's layers) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
@@ -882,7 +892,8 @@ test/                 node:test suites (game, loot, endgame, skills, mastery, ev
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
                       atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·
-                      resource_art.py (the 73 resource icons: recolored DCSS tiles and drawn pixel art) ·
+                      resource_art.py (the 73 resource icons: recolored DCSS tiles and drawn pixel art; the perk
+                      badges, tools, crate, gear and the hero's hoe) ·
                       backdrops.py (paints assets/backdrops/*.webp from noise, gradients and the DCSS floor tiles) ·
                       paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css) ·
                       shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors)

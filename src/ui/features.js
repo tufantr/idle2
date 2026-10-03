@@ -57,7 +57,7 @@ export const FEATURES = {
         points: ['One event runs each weekend, Friday to Monday (UTC), and brings its own bonuses.', `Every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token, up to ${EVENT_DAILY_CAP} a day.`, 'Tokens keep between events. The event shop opens while one runs.'] },
     clan: { name: 'Clan', art: 'clanhall', icon: 'item/Shield/4', blurb: 'Join a clan and fight a weekly boss together.',
         points: ['Each week the clan fights one shared boss. Every member gets three attacks a day.', 'An attack deals what your saved hero would deal in 60 seconds, worked out on the server from your cloud save.', 'Everyone who fought is rewarded with essence and diamonds, with more for the top three and the last hit.'] },
-    settings: { name: 'Settings', icon: '⚙️', blurb: 'Saves, sound and motion.', points: [] },
+    settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
     camp: { name: 'Camp', art: 'camp', icon: 'mon/Magma Slime', blurb: 'Upgrades for this run, bought with gold.',
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.'] },
     mastery: { name: 'Mastery', art: 'caves', icon: 'res/diamond', blurb: 'Every action gets better the more you do it.',

@@ -4,6 +4,7 @@
 import { ATLAS, SPRITES } from '../data/sprites.js';
 import { TITAN_NAMES } from '../data/dungeons.js';
 import { RESOURCES } from '../data/resources.js';
+import { TOOLS } from '../data/workshop.js';
 import { escapeHtml as esc } from './format.js';
 
 const TIERS = 7;
@@ -36,6 +37,12 @@ export function resIcon(id, { scale = 0.625, cls = '', title = '' } = {}) {
     return sprite(`res/${id}`, { scale, cls: classes, fallback: esc(RESOURCES[id]?.icon || '📦'), title });
 }
 
+/** A tool's icon (pickaxe, axe, bow, rod, tinderbox, hoe), sized like resIcon. */
+export function toolIcon(id, { scale = 0.625, cls = '' } = {}) {
+    const classes = ['res-spr', scale < 1 ? 'soft' : '', cls].filter(Boolean).join(' ');
+    return sprite(`tool/${id}`, { scale, cls: classes, fallback: esc(TOOLS[id]?.icon || '🛠️') });
+}
+
 export function monsterSpriteKey(enemy) {
     if (!enemy) return null;
     if (enemy.titan) {
@@ -61,9 +68,10 @@ export function slotSpriteKey(type) {
 
 /**
  * The hero, as atlas keys from the back layer to the front, dressed in what is equipped.
- * `tool` (a skill id) puts that skill's tool in the hand instead of the weapon.
+ * `tool` (a skill id) puts that skill's tool in the hand instead of the weapon; `bare` leaves both
+ * hands empty (on the agility course).
  */
-export function heroLayers(state, { tool = null } = {}) {
+export function heroLayers(state, { tool = null, bare = false } = {}) {
     const eq = state.equipped || {};
     const tierOf = slot => (eq[slot] ? clampTier(eq[slot].tier) : 0);
     const layers = ['hero/cloak', 'hero/base'];
@@ -77,6 +85,7 @@ export function heroLayers(state, { tool = null } = {}) {
     if (gloves) layers.push(`hero/gloves/${gloves}`);
     const head = tierOf('Head');
     if (head) layers.push(`hero/head/${head}`); else layers.push('hero/hair');
+    if (bare) return layers.filter(hasSprite);
     if (tool && hasSprite(`hero/tool/${tool}`)) layers.push(`hero/tool/${tool}`);
     else if (eq.Weapon) layers.push(eq.Weapon.uniqueId && hasSprite(`hero/weapon_unique/${eq.Weapon.uniqueId}`) ? `hero/weapon_unique/${eq.Weapon.uniqueId}` : `hero/weapon/${clampTier(eq.Weapon.tier)}`);
     if (!tool && eq.Shield) layers.push(`hero/shield/${tierOf('Shield')}`);
@@ -84,8 +93,8 @@ export function heroLayers(state, { tool = null } = {}) {
 }
 
 /** The hero drawn from his layers, at `scale`. */
-export function heroSprite(state, { scale = 3, tool = null, cls = '' } = {}) {
-    return `<span class="hero-doll ${cls}" style="--k:${scale}" aria-hidden="true">${heroLayers(state, { tool }).map(key => `<i class="spr" style="${spriteStyle(key)}"></i>`).join('')}</span>`;
+export function heroSprite(state, { scale = 3, tool = null, bare = false, cls = '' } = {}) {
+    return `<span class="hero-doll ${cls}" style="--k:${scale}" aria-hidden="true">${heroLayers(state, { tool, bare }).map(key => `<i class="spr" style="${spriteStyle(key)}"></i>`).join('')}</span>`;
 }
 
 export { ATLAS };

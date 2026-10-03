@@ -36,7 +36,8 @@ import { DAILY_MAX_BANKED } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
-import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, monsterSpriteKey } from './sprites.js';
+import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey } from './sprites.js';
+import { STAGE_SKILLS } from './stage.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 
@@ -82,7 +83,7 @@ export function battleMode(game, ui) {
 export function tabIcon(id, scale = 0.75) {
     const key = FEATURES[id]?.icon || '';
     const tab = TABS.find(t => t.id === id);
-    return key.includes('/') || key === 'gold'
+    return key.includes('/') || key === 'gold' || key === 'gear'
         ? sprite(key, { scale, cls: scale < 1 ? 'soft' : '', fallback: tab?.icon || '' })
         : `<span class="nav-emoji" aria-hidden="true">${key || tab?.icon || ''}</span>`;
 }
@@ -158,7 +159,7 @@ export function renderHotbar(game, ui) {
         button(tabIcon('combat', 1), fighting ? 'Fighting' : 'Battle', "FI.switchTab('combat')", { active: ui.tab === 'combat', live: fighting }),
         work,
         button(tabIcon('inventory', 1), 'Inventory', "FI.switchTab('inventory')", { active: ui.tab === 'inventory', badge: upgrade ? '▲' : '' }),
-        button('📦', banked > 0 ? 'Crate' : duration(state.daily.nextAt - game.now), 'FI.claimDaily()', { badge: banked > 0 ? String(banked) : '', disabled: banked < 1 })
+        button(sprite('crate', { scale: 1, fallback: '📦' }), banked > 0 ? 'Crate' : duration(state.daily.nextAt - game.now), 'FI.claimDaily()', { badge: banked > 0 ? String(banked) : '', disabled: banked < 1 })
     ].join('');
 }
 
@@ -179,7 +180,7 @@ export function renderHeader(game, ui, cloud) {
     ];
     const banked = state.daily.banked;
     const daily = banked > 0
-        ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">📦<span class="daily-word"> Daily crate</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
+        ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">Daily crate</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
         : '';
     const bonfirePill = bonfireLit(state, game.now)
         ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">🔥 +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
@@ -192,7 +193,7 @@ export function renderHeader(game, ui, cloud) {
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">🧘 Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
     // What the hero is doing, when that is not what the tab in view already shows.
-    const here = ui.tab === 'combat' || NON_COMBAT_SKILLS.includes(ui.tab) || ['smithing', 'crafting'].includes(ui.tab); // tabs with a scene or a stage of their own
+    const here = ui.tab === 'combat' || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
     let status = '';
     if (action) {
         if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</button>`;
@@ -447,7 +448,7 @@ function banner(id, { title = null, sub = null, extra = '' } = {}) {
 
 // ---------- skills ----------
 
-function xpHeader(game, skillId, extra = '', { title = true } = {}) {
+function xpHeader(game, skillId, extra = '') {
     const state = game.state;
     const skill = SKILLS[skillId];
     const lp = levelProgress(state.skills[skillId].xp);
@@ -456,8 +457,8 @@ function xpHeader(game, skillId, extra = '', { title = true } = {}) {
         const m = skillMastery(state, skillId);
         mastery = `<button class="mastery-total" onclick="FI.about('mastery')" title="Mastery levels gained across this skill's ${m.actions} actions (${m.maxed} at ${MASTERY_MAX_LEVEL}). Every action levels its own mastery as you do it.">Mastery ${fmt(m.levels)}</button>`;
     }
-    return `<div class="panel-header${title ? '' : ' bare'}">
-        ${title ? `<h2><span class="h-icon">${tabIcon(skillId, 1)}</span>${skill.name} ${aboutButton(skillId)}</h2>` : ''}
+    return `<div class="panel-header">
+        <h2><span class="h-icon">${tabIcon(skillId, 1)}</span>${skill.name} ${aboutButton(skillId)}</h2>
         <div class="skill-info">
             ${extra}${mastery}
             <span class="skill-level" style="color:${skill.color}; background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
@@ -504,7 +505,7 @@ function toolBadge(game, skillId) {
     const tool = TOOLS[skill.tool];
     const tier = game.state.tools[skill.tool] || 0;
     const def = tool.tiers.find(t => t.tier === tier);
-    return def ? `<span class="tool-badge" title="${toolEffect(skill.tool, tier)}">${tool.icon} ${esc(def.name)}</span>` : '';
+    return def ? `<span class="tool-badge" title="${toolEffect(skill.tool, tier)}">${toolIcon(skill.tool)} ${esc(def.name)}</span>` : '';
 }
 
 /** Cooking lists three kinds of dish; group the cards so each line reads as a ladder. */
@@ -737,7 +738,7 @@ function renderToolCard(game, toolId) {
     const tool = TOOLS[toolId];
     const owned = state.tools[toolId] || 0;
     const next = tool.tiers.find(t => t.tier === owned + 1);
-    const icon = `<span class="nav-emoji" aria-hidden="true">${tool.icon}</span>`;
+    const icon = sprite(`tool/${toolId}`, { scale: 1.5, fallback: tool.icon });
     if (!next) return `<div class="node-card locked"><div class="skill-action-art">${icon}</div><div class="node-name">${esc(tool.tiers[tool.tiers.length - 1].name)}</div><div class="muted small">The best there is</div></div>`;
     const level = skillLevel(state, tool.madeBy);
     return recipeCard({
@@ -986,7 +987,7 @@ function perkList(state) {
         const action = level >= p.max ? '<span class="perk-max">Max</span>'
             : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp > 0 ? '' : 'disabled'} title="${sp > 0 ? 'Costs 1 skill point' : 'Needs a skill point: every prestige brings more'}">${level ? 'Upgrade' : 'Learn'}</button>`;
         return `<div class="shop-item">
-            <div class="shop-art"><span class="nav-emoji" aria-hidden="true">${p.icon}</span>${level ? `<b class="camp-lv">${level}</b>` : ''}</div>
+            <div class="perk-art">${sprite(`perk/${p.id}`, { scale: 2, fallback: p.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</div>
             <div class="shop-item-info"><span class="shop-item-name">${esc(p.name)} <span class="muted small">${level}/${p.max}</span></span><span class="shop-item-desc">${esc(p.desc)}</span></div>
             ${action}
         </div>`;
@@ -1183,9 +1184,8 @@ export function renderFarming(game, ui) {
         ready ? `<button class="prestige-btn" onclick="FI.harvestAll()">Harvest ${ready} and replant</button>` : '',
         empty > 1 && seed ? `<button class="prestige-btn" onclick="FI.plantAll('${seed.id}')" ${affordable ? '' : 'disabled'}>Plant ${empty} plots</button>` : ''
     ].join('');
-    return `${banner('farming')}
-    <section class="glass-panel skill-panel">
-        ${xpHeader(game, 'farming', toolBadge(game, 'farming'), { title: false })}
+    return `<section class="glass-panel skill-panel">
+        ${xpHeader(game, 'farming', toolBadge(game, 'farming'))}
         <div class="seed-bag">
             <div class="loadout-label">Seeds</div>
             <div class="pick-row">${seeds}</div>
@@ -1248,9 +1248,8 @@ export function renderAgility(game, ui) {
             ${built ? `<button class="mini-btn" onclick="FI.agilitySwap(null)">Keep the ${esc(built.name)}</button>` : ''}
         </div>`;
     }).join('');
-    return `${banner('agility')}
-    <section class="glass-panel skill-panel">
-        ${xpHeader(game, 'agility', '', { title: false })}
+    return `<section class="glass-panel skill-panel">
+        ${xpHeader(game, 'agility')}
         ${course ? `<div class="course-run ${running ? 'active' : ''}">
             <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div></div>
             <button class="prestige-btn" onclick="FI.runCourse()">${running ? 'Stop' : 'Run'}</button>
