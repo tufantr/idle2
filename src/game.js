@@ -14,7 +14,7 @@ import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
 import { enterDungeon, returnToStages, setDungeonRepeat, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
-import { plant, harvest, harvestAll } from './systems/farming.js';
+import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
 import { eventStatus, buyEventItem } from './systems/events.js';
@@ -155,6 +155,7 @@ export class Game {
     buyCampUpgrade(id, count) { return this._act(() => buyCampUpgrade(this, id, count)); }
 
     plant(plot, crop) { return this._act(() => plant(this, plot, crop)); }
+    plantAll(crop) { return this._act(() => plantAll(this, crop)); }
     harvest(plot) { return this._act(() => harvest(this, plot)); }
     harvestAll(opts) { return this._act(() => harvestAll(this, opts)); }
     buildObstacle(id) { return this._act(() => buildObstacle(this, id)); }

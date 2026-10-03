@@ -653,6 +653,9 @@ window.FI = {
     challengeTitan() { if (game.challengeTitan()) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
+    /** The seed the farm plants: picked from the bag of seeds, used by every empty plot. */
+    pickSeed(crop) { ui.lastCrop = crop; render(); },
+    plantAll(crop) { ui.lastCrop = crop; if (game.plantAll(crop) > 0) sound.play('drop'); render(); },
     buyEventItem(id) { if (game.buyEventItem(id)) toast('🎉 Bought!', 'info'); render(); },
     harvest(plot) { game.harvest(plot); render(); },
     harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`🌾 Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info'); render(); },

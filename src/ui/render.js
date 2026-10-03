@@ -1123,34 +1123,55 @@ export function renderEvents(game) {
 
 // ---------- farming ----------
 
+// The farm: a bag of seeds as tiles (the crops this level can plant, and the next as a silhouette) and
+// the plots. Pick a seed, then tap an empty plot to plant it, or a ready one to harvest it.
 export function renderFarming(game, ui) {
     const state = game.state;
     const d = game.derived;
     const level = skillLevel(state, 'farming');
     const ready = state.farming.plots.filter(p => plotReady(p, game.now)).length;
     const choices = CROPS.filter(c => c.levelReq <= level);
-    const lastCrop = ui.lastCrop && cropById(ui.lastCrop) && cropById(ui.lastCrop).levelReq <= level ? ui.lastCrop : choices[choices.length - 1]?.id;
+    const picked = cropById(ui.lastCrop);
+    const seed = picked && picked.levelReq <= level ? picked : choices[choices.length - 1] || null;
+    const price = seed ? seedCost(state, seed) : 0;
+    const affordable = seed && state.gold >= price;
+    const empty = state.farming.plots.filter((p, i) => !p.crop && plotUnlocked(state, i)).length;
+    const coin = sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' });
+    const seeds = withNext(CROPS, c => c.levelReq, level).map(c => {
+        if (c.levelReq > level) {
+            return `<div class="pick seed locked" title="${esc(c.name)} opens at Farming ${c.levelReq}" aria-label="${esc(c.name)} opens at Farming ${c.levelReq}">${resIcon(c.produces, { scale: 1.25, cls: 'silhouette' })}<span class="pick-sub">Lv ${c.levelReq}</span></div>`;
+        }
+        const tip = `${c.name}: grows in ${duration(growTime(d, c))}, ${c.yield[0]}–${c.yield[1]} a harvest, seeds ${fmt(seedCost(state, c))} gold`;
+        return `<button class="pick seed${c === seed ? ' on' : ''}" onclick="FI.pickSeed('${c.id}')" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${c === seed}">${resIcon(c.produces, { scale: 1.25 })}<span class="pick-sub">${fmt(seedCost(state, c))}</span></button>`;
+    }).join('');
     const plots = state.farming.plots.map((plot, i) => {
         if (!plotUnlocked(state, i)) {
             if (i > 0 && !plotUnlocked(state, i - 1)) return ''; // only the next plot to earn
             return `<div class="plot-card locked"><div class="plot-art">${sprite('farm/soil', { scale: 1.5, cls: 'silhouette', fallback: '🟫' })}</div><div class="node-name">Plot ${i + 1}</div><div class="req">Level ${FARMING_PLOTS[i]}</div></div>`;
         }
         if (!plot.crop) {
-            return `<div class="plot-card empty"><div class="plot-art">${sprite('farm/soil', { scale: 1.5, fallback: '🟫' })}</div><div class="node-name">Plot ${i + 1} — empty</div>
-                <label class="small">Plant <select class="material-select" id="plot-crop-${i}" aria-label="Crop for plot ${i + 1}">
-                    ${choices.map(c => `<option value="${c.id}" ${c.id === lastCrop ? 'selected' : ''}>${c.icon} ${esc(c.name)} — ${fmt(seedCost(state, c))} gold</option>`).join('')}
-                </select></label>
-                <button class="prestige-btn" onclick="FI.plant(${i}, document.getElementById('plot-crop-${i}').value)">Plant</button></div>`;
+            if (!seed) return `<div class="plot-card empty"><div class="plot-art">${sprite('farm/soil', { scale: 1.5, fallback: '🟫' })}</div><div class="node-name">Plot ${i + 1}</div></div>`;
+            return `<button class="plot-card empty" onclick="FI.plant(${i}, '${seed.id}')" ${affordable ? '' : 'disabled'} title="${affordable ? `Plant ${esc(seed.name)} here` : `${esc(seed.name)} seeds cost ${fmt(price)} gold`}">
+                <span class="plot-art">${sprite('farm/soil', { scale: 1.5, fallback: '🟫' })}</span>
+                <span class="node-name">Plot ${i + 1}</span>
+                <span class="plot-do">Plant ${resIcon(seed.produces)} <span class="camp-price${affordable ? '' : ' missing'}">${coin} ${fmt(price)}</span></span>
+            </button>`;
         }
         const crop = cropById(plot.crop);
         const total = Math.max(1, plot.readyAt - plot.plantedAt);
         const done = plotReady(plot, game.now);
         const pctDone = done ? 100 : Math.min(100, (game.now - plot.plantedAt) / total * 100);
-        return `<div class="plot-card ${done ? 'ready' : 'growing'}"><div class="plot-art">${done ? resIcon(crop.produces, { scale: 1.5 }) : sprite(pctDone < 50 ? 'farm/sprout' : 'farm/growing', { scale: 1.5, fallback: '🌱' })}</div>
-            <div class="node-name">Plot ${i + 1} — ${esc(crop.name)}</div>
-            <div class="muted small">${done ? 'Ready to harvest' : `Ready in ${duration(plot.readyAt - game.now)}`}</div>
-            <div class="action-progress-container"><div class="action-progress-fill" style="width:${pctDone}%; background:${SKILLS.farming.color}"></div></div>
-            ${done ? `<button class="prestige-btn" onclick="FI.harvest(${i})">Harvest</button>` : ''}</div>`;
+        if (done) {
+            return `<button class="plot-card ready" onclick="FI.harvest(${i})" title="Harvest the ${esc(crop.name.toLowerCase())}">
+                <span class="plot-art">${resIcon(crop.produces, { scale: 1.5 })}</span>
+                <span class="node-name">${esc(crop.name)}</span>
+                <span class="plot-do">Harvest</span>
+            </button>`;
+        }
+        return `<div class="plot-card growing"><div class="plot-art">${sprite(pctDone < 50 ? 'farm/sprout' : 'farm/growing', { scale: 1.5, fallback: '🌱' })}</div>
+            <div class="node-name">${esc(crop.name)}</div>
+            <div class="muted small">${duration(plot.readyAt - game.now)}</div>
+            <div class="action-progress-container"><div class="action-progress-fill" style="width:${pctDone}%; background:${SKILLS.farming.color}"></div></div></div>`;
     }).join('');
     const rows = CROPS.map(c => {
         const unlocked = level >= c.levelReq;
@@ -1158,10 +1179,18 @@ export function renderFarming(game, ui) {
         return `<tr class="${unlocked ? '' : 'locked-row'}"><td>${resIcon(c.produces)} ${esc(c.name)}</td><td>${c.levelReq}</td><td>${duration(growTime(d, c))}</td>
             <td>${c.yield[0]}–${c.yield[1]}× ${esc(res(c.produces).name)}</td><td>${fmt(Math.round(c.xp * avg * d.xpMult))}</td><td>${fmt(seedCost(state, c))}</td></tr>`;
     }).join('');
+    const quick = [
+        ready ? `<button class="prestige-btn" onclick="FI.harvestAll()">Harvest ${ready} and replant</button>` : '',
+        empty > 1 && seed ? `<button class="prestige-btn" onclick="FI.plantAll('${seed.id}')" ${affordable ? '' : 'disabled'}>Plant ${empty} plots</button>` : ''
+    ].join('');
     return `${banner('farming')}
     <section class="glass-panel skill-panel">
         ${xpHeader(game, 'farming', toolBadge(game, 'farming'), { title: false })}
-        ${ready ? `<div class="btn-row"><button class="prestige-btn" onclick="FI.harvestAll()">Harvest ${ready} and replant</button></div>` : ''}
+        <div class="seed-bag">
+            <div class="loadout-label">Seeds</div>
+            <div class="pick-row">${seeds}</div>
+        </div>
+        ${quick ? `<div class="btn-row">${quick}</div>` : ''}
         <div class="plot-grid">${plots}</div>
         <details class="drawer" ${ui.open?.crops ? 'open' : ''} ontoggle="FI.setOpen('crops', this.open)">
             <summary>All crops</summary>

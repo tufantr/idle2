@@ -635,11 +635,21 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 /* ---------- fishing, firemaking, farming, agility ---------- */
 .info-strip { margin: 0.6rem 0 0.9rem; padding: 0.6rem 0.85rem; border-radius: 12px; font-size: 0.85rem; line-height: 1.45; }
 .info-strip.lit { border-color: rgba(249, 115, 22, 0.55); background: rgba(249, 115, 22, 0.08); }
-.plot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 0.75rem; margin: 0.8rem 0; }
-.plot-card { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.8rem; border-radius: 14px; }
+.plot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; margin: 0.8rem 0; }
+.plot-card { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.7rem 0.6rem; border-radius: 14px; }
 .plot-card.locked { opacity: 0.55; }
 .plot-card.ready { border-color: rgba(132, 204, 22, 0.6); box-shadow: 0 0 16px rgba(132, 204, 22, 0.18); }
-.plot-card .material-select { width: 100%; margin-top: 0.25rem; }
+/* the bag of seeds, and plots you tap: an empty plot plants the picked seed, a ready one harvests */
+.seed-bag { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.8rem; }
+.seed .pick-sub { color: var(--gold-color); }
+.seed.locked { opacity: 0.6; border-style: dashed; cursor: default; }
+.seed.locked .pick-sub { color: var(--text-muted); }
+button.plot-card { align-items: center; text-align: center; color: inherit; font: inherit; }
+button.plot-card.empty { border-style: dashed; }
+button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 198, 116, 0.65); }
+.plot-do { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; font-weight: 700; color: var(--heading); }
+.plot-card.ready .plot-do { color: #bef264; }
+.plot-do .camp-price.missing { color: #f87171; }
 .plot-art { align-self: center; font-size: 1.8rem; line-height: 1; }
 .course-run { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; }
 .course-run.active { border-color: rgba(225, 29, 72, 0.55); }

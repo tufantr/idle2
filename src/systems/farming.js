@@ -85,6 +85,23 @@ export function harvestAll(game, { replant = true } = {}) {
     return { harvested, replanted };
 }
 
+/** Plant one crop in every empty plot that is open, while the gold lasts. Returns how many were planted. */
+export function plantAll(game, cropId) {
+    const state = game.state;
+    const crop = cropById(cropId);
+    if (!crop) return 0;
+    if (skillLevel(state, 'farming') < crop.levelReq) { game.emit({ type: 'error', text: `Farming level ${crop.levelReq} required.` }); return 0; }
+    let planted = 0;
+    let short = 0;
+    state.farming.plots.forEach((plot, index) => {
+        if (plot.crop || !plotUnlocked(state, index)) return;
+        if (state.gold < seedCost(state, crop)) { short++; return; }
+        if (plant(game, index, crop.id)) planted++;
+    });
+    if (short) game.emit({ type: 'error', text: `Not enough gold for ${short} more plot${short > 1 ? 's' : ''}.` });
+    return planted;
+}
+
 /** The best crop you can plant now (highest level), for quick buttons and the simulator. */
 export function bestCrop(state, filter = () => true) {
     const level = skillLevel(state, 'farming');

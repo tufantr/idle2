@@ -199,6 +199,21 @@ test('farming: plant with gold, grows on the clock, harvest for crops and XP, re
     assert.ok(game.state.farming.plots.slice(0, 2).every(p => p.crop === 'potato'));
 });
 
+test('farming: plant every open plot at once, while the gold lasts', () => {
+    const game = newGame({ farming: 15 });               // three plots open
+    const potato = cropById('potato');
+    const cost = seedCost(game.state, potato);
+    game.state.gold = cost * 2;
+    assert.equal(game.plantAll('potato'), 2, 'gold for two plots');
+    assert.deepEqual(game.state.farming.plots.slice(0, 4).map(p => p.crop), ['potato', 'potato', null, null], 'the fourth plot is not open');
+    assert.ok(game.drainEvents().some(e => e.type === 'error' && /Not enough gold for 1 more plot/.test(e.text)));
+    game.state.gold = cost;
+    assert.equal(game.plantAll('potato'), 1);
+    assert.equal(game.plantAll('potato'), 0, 'nothing left to plant');
+    assert.equal(game.state.gold, 0);
+    assert.equal(game.plantAll('starfruit'), 0, 'a crop above the farming level plants nowhere');
+});
+
 test('farming: plots keep growing while the game is closed, and the hoe speeds them up', () => {
     const game = newGame({ farming: 20 });
     game.state.gold = 1e6;

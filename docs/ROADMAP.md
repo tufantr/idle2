@@ -398,7 +398,10 @@ progress as motion, art before words, one stage with a HUD around it.
 - [x] **The phone's Next card in view**: it sat at the end of the scrolling tab strip, off screen,
       so a new player on a phone saw no goal. It is its own slot now: beside the title on a phone
       (the place, the task and the bar), under the tabs on a desktop as before
-- [ ] **Farm crops as picture tiles** instead of a dropdown on every empty plot (S)
+- [x] **Farm crops as picture tiles**: a bag of seeds (the crops this level can plant as tiles with
+      their price, the next one as a silhouette) instead of a dropdown and a Plant button on every
+      empty plot. Pick a seed, then tap an empty plot to plant it or a ready one to harvest it;
+      "Plant N plots" fills every open plot at once (`plantAll`). Two plots a row on a phone
 - [ ] **Agility obstacles as picture cards** instead of rows of text (S)
 - [ ] **A painting for each dungeon**, on its card and behind its fight (four Gemini paintings; the
       Crystal Depths and the Dragon's Lair borrow the caves and the volcano today) (S)
