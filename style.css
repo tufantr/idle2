@@ -83,6 +83,8 @@ body::before { /* the guild hall (assets/paint/guildhall.webp) behind everything
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 230, 180, 0.06), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
 }
+/* the sidebar and the header are thinner glass: the guild hall shows through them */
+#sidebar.glass-panel, #header.glass-panel { background: linear-gradient(180deg, rgba(255, 236, 200, 0.035), transparent 42%), linear-gradient(180deg, rgba(26, 21, 16, 0.66), rgba(17, 13, 9, 0.76)); }
 /* A painted panel (render.js painted()): its place's painting under a shade that is lighter at the top,
    where the title sits, and darker where the cards are; the cards let a little of it through. */
 .glass-panel.painted, .dock-group.painted, .modal-content.painted {
