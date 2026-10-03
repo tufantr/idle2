@@ -118,18 +118,26 @@ export function renderNav(game, ui) {
             html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span class="nav-icon">${tabIcon(tab.id)}</span><span class="nav-name">${tab.name}</span>${fresh || badge}${xpBar}</button>`;
         }
     }
-    const [goal] = nextGoals(state, 1);
-    if (goal) {
-        const f = feature(goal.id);
-        const where = isUnlocked(state, goal.tab) ? goal.tab : 'combat';
-        html += `<button class="nav-next" onclick="FI.switchTab('${where}')" title="${esc(goal.hint)}" style="${artStyle(goal.id)}">
-            <span class="nav-next-kicker">Next</span>
-            <span class="nav-next-name">${esc(f.name)}</span>
-            <span class="nav-next-task">${esc(goal.task || goal.hint)}</span>
-            <i class="goal-bar" style="--p:${(goalProgress(state, goal) * 100).toFixed(1)}%" aria-hidden="true"></i>
-        </button>`;
-    }
     return html;
+}
+
+/**
+ * The next place to open: its picture, its name, what to do and how far along. A sidebar card of its
+ * own (under the tabs on a desktop; beside the title on a phone, where the tabs are a scrolling strip
+ * and the end of it is out of sight).
+ */
+export function renderNavNext(game) {
+    const state = game.state;
+    const [goal] = nextGoals(state, 1);
+    if (!goal) return '';
+    const f = feature(goal.id);
+    const where = isUnlocked(state, goal.tab) ? goal.tab : 'combat';
+    return `<button class="nav-next" onclick="FI.switchTab('${where}')" title="${esc(goal.hint)}" style="${artStyle(goal.id)}">
+        <span class="nav-next-kicker">Next</span>
+        <span class="nav-next-name">${esc(f.name)}</span>
+        <span class="nav-next-task">${esc(goal.task || goal.hint)}</span>
+        <i class="goal-bar" style="--p:${(goalProgress(state, goal) * 100).toFixed(1)}%" aria-hidden="true"></i>
+    </button>`;
 }
 
 // ---------- phone hotbar ----------

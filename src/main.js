@@ -5,7 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, TABS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, TABS } from './ui/render.js';
 import { renderAboutCard } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
@@ -288,6 +288,7 @@ function render() {
     const tab = document.getElementById('tab');
     document.body.classList.toggle('battle-full', battleMode(game, ui)); // before the scene syncs: it sizes the fighters by it
     setHtml(document.getElementById('nav'), renderNav(game, ui));
+    setHtml(document.getElementById('nav-next'), renderNavNext(game));
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
     setHtml(hotbar, renderHotbar(game, ui));

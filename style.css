@@ -188,7 +188,9 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
 }
-#nav { display: flex; flex-direction: column; gap: 0.3rem; }
+#nav { order: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+#nav-next { order: 2; display: flex; flex-direction: column; } /* under the tabs on a desktop */
+#nav-next:empty { display: none; }
 #sidebar h3 {
     display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; margin: 1rem 0 0.3rem;
     font-family: var(--font-display); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; color: var(--accent-color);
@@ -723,17 +725,21 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 @media (max-width: 900px) {
     body { padding: 0.75rem 1rem; }
     #app.layout-sidebar { flex-direction: column; }
-    #sidebar { width: 100%; height: auto; flex-direction: column; gap: 0.3rem; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
-    .brand { font-size: 1.05rem; padding-bottom: 0.3rem; margin-bottom: 0.2rem; }
+    #sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
+    .brand { flex: 1 0 auto; font-size: 1.05rem; padding-bottom: 0.3rem; margin-bottom: 0.2rem; text-align: left; }
+    #nav { order: 3; flex: 1 1 100%; min-width: 0; }
+    /* the next place sits beside the title: in view, where the end of the tab strip is not */
+    #nav-next { order: 1; flex: 0 1 auto; min-width: 0; max-width: 62%; }
     #nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 0.35rem; padding-bottom: 0.2rem; scrollbar-width: thin; }
     #nav h3 { display: none; }
     #sidebar .nav-btn { flex: 0 0 auto; min-width: 0; gap: 0.4rem; padding: 0.35rem 0.6rem 0.4rem 0.4rem; font-size: 0.82rem; white-space: nowrap; }
     .nav-icon { flex-basis: 24px; height: 24px; }
     .nav-name { flex: 0 0 auto; overflow: visible; }
-    .nav-next { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 0.4rem; min-height: 0; margin: 0; padding: 0.35rem 0.7rem 0.5rem; white-space: nowrap; }
-    .nav-next-name { font-size: 0.82rem; }
-    .nav-next-task { display: none; }
-    .nav-next .goal-bar { left: 0.7rem; right: 0.7rem; bottom: 4px; }
+    .nav-next { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 0 0.4rem; min-height: 0; margin: 0; padding: 0.3rem 0.65rem 0.5rem; white-space: nowrap; border-radius: 10px; }
+    .nav-next-kicker { font-size: 0.55rem; }
+    .nav-next-name { overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
+    .nav-next-task { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem; line-height: 1.25; }
+    .nav-next .goal-bar { left: 0.65rem; right: 0.65rem; bottom: 3px; }
     #sidebar .nav-btn:hover { transform: none; }
     #sidebar .nav-btn.active { box-shadow: inset 0 -2px 0 var(--gold-color); }
     #sidebar .nav-btn.action-active { box-shadow: inset 0 -2px 0 var(--verdigris); }
