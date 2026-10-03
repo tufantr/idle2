@@ -5,15 +5,15 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, TABS } from './ui/render.js';
-import { renderAboutCard } from './ui/features.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, TABS } from './ui/render.js';
+import { renderAboutCard, FEATURES, EVENT_ART } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
-import { ATLAS, sprite } from './ui/sprites.js';
+import { ATLAS, sprite, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
@@ -363,9 +363,11 @@ function soundFor(ev, onCombat) {
 }
 
 const REVEAL_TOASTS = {
-    mastery: '⭐ Mastery: every action gets better the more you do it',
-    world_map: '🗺️ The map is yours: travel between the zones you have reached'
+    mastery: 'Mastery: every action gets better the more you do it',
+    world_map: 'The map is yours: travel between the zones you have reached'
 };
+// A toast's picture: a sprite, small (the text beside it is plain text).
+const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
 
 function handleEvents(events) {
     const onCombat = ui.tab === 'combat'; // the battle scene shows these itself
@@ -383,56 +385,58 @@ function handleEvents(events) {
         switch (ev.type) {
             case 'reveal':
                 arrivals.add(ev.id);
-                if (REVEAL_TOASTS[ev.id]) toast(REVEAL_TOASTS[ev.id], 'level');
+                if (REVEAL_TOASTS[ev.id]) toast(REVEAL_TOASTS[ev.id], 'level', pic(FEATURES[ev.id]?.icon || 'res/diamond'));
                 break;
             case 'actionComplete': actionFx.actionComplete(ev, ui.tab, stage.anchor()); break;
             case 'levelUp': {
                 const card = levelCelebration(ev);
                 if (card) rewards.celebrate(card);
-                else toast(`${SKILLS[ev.skill].icon} ${SKILLS[ev.skill].name} level ${ev.level}!`, 'level');
+                else toast(`${SKILLS[ev.skill].name} level ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
                 break;
             }
-            case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
-            case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
-            case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.icon} ${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft'); break;
-            case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
-            case 'death': if (!onCombat) toast(`💀 Defeated at stage ${ev.stage} — retreating`, 'death'); break;
-            case 'bossTimeout': if (!onCombat) toast(`⏳ The boss held out — regrouping for a minute`, 'death'); break;
+            case 'achievement': toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625)); break;
+            case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
+            case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
+            case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
+            case 'death': if (!onCombat) toast(`Defeated at stage ${ev.stage} — retreating`, 'death'); break;
+            case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
             case 'prestige':
-                rewards.celebrate({ kind: 'prestige', icon: '✨', kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
+                rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
                     lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
                 save(Date.now());
                 break;
-            case 'minigameReady': if (ui.tab !== ev.skill) toast(`${SKILLS[ev.skill].icon} A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame'); break;
+            case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
-            case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`🎁 Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss'); break;
-            case 'dungeonFail': toast('🕳️ The dungeon run failed', 'death'); break;
-            case 'titan': toast(ev.won ? `🗿 Titan defeated! Permanent +2% ATK and HP` : `🗿 The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death'); break;
+            case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate')); break;
+            case 'dungeonFail': toast('The dungeon run failed', 'death'); break;
+            case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'unique':
-                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: '🌟', kicker: 'Unique item', title: ev.item.name, lines: [`${ev.item.icon || '🛡️'} In your bag: equip it from the Inventory`] });
-                else toast(`🌟 A spare ${ev.item.name}: salvage it for essence`, 'achievement');
+                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory'] });
+                else toast(`A spare ${ev.item.name}: salvage it for essence`, 'achievement', pic(itemSpriteKey(ev.item)));
                 break;
-            case 'obstacleBuilt': toast(`${ev.obstacle.icon} ${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement'); break;
-            case 'eventMilestone': rewards.celebrate({ kind: 'unlock', icon: ev.event.icon, kicker: ev.event.name, title: ev.milestone.desc }); break;
+            case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;
+            case 'eventMilestone': rewards.celebrate({ kind: 'unlock', icon: sprite(EVENT_ART[ev.event.id], { scale: 2, fallback: ev.event.icon }), kicker: ev.event.name, title: ev.milestone.desc }); break;
             case 'masteryLevel':
-                if (ev.from < 99 && ev.level >= 99) rewards.celebrate({ key: `mastery:${ev.skill}:${ev.key}`, kind: 'legend', icon: SKILLS[ev.skill].icon, kicker: 'Mastery 99', title: ev.name });
-                else if ([50, 75].some(m => ev.from < m && ev.level >= m)) toast(`${SKILLS[ev.skill].icon} ${ev.name}: mastery ${ev.level}!`, 'level');
+                if (ev.from < 99 && ev.level >= 99) rewards.celebrate({ key: `mastery:${ev.skill}:${ev.key}`, kind: 'legend', icon: tabIcon(ev.skill, 2), kicker: 'Mastery 99', title: ev.name });
+                else if ([50, 75].some(m => ev.from < m && ev.level >= m)) toast(`${ev.name}: mastery ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
                 break;
-            case 'kill': if (ev.enemy.boss && !onCombat) toast(`👑 ${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss'); break;
+            case 'kill': if (ev.enemy.boss && !onCombat) toast(`${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss', pic(monsterSpriteKey(ev.enemy))); break;
             default: break;
         }
     }
 }
 
-function toast(text, kind = 'info') {
+/** A short note in the corner: plain `text`, with a picture (`icon`, sprite HTML) before it if given. */
+function toast(text, kind = 'info', icon = '') {
     const area = document.getElementById('toast-area');
     if (!area) return;
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
     el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
-    el.textContent = text;
+    if (icon) el.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>`;
+    el.append(text);
     area.appendChild(el);
     while (area.children.length > 5) area.removeChild(area.firstChild);
     setTimeout(() => el.classList.add('fade'), 3200);
@@ -483,7 +487,7 @@ async function cloudSave(announce = true) {
     try {
         await cloud.push(JSON.parse(game.serialize(Date.now())));
         ui.cloudStatus = `Cloud save OK at ${new Date().toLocaleTimeString()}`;
-        if (announce) toast('☁️ Saved to cloud', 'info');
+        if (announce) toast('Saved to cloud', 'info');
     } catch (err) {
         ui.cloudStatus = `Cloud save failed: ${err.message}`;
         if (announce) toast(ui.cloudStatus, 'error');
@@ -551,7 +555,7 @@ async function syncFromCloud() {
         }
         if (choice.pick === 'cloud' && remote) {
             adoptState(remote);
-            toast('☁️ Cloud save loaded', 'info');
+            toast('Cloud save loaded', 'info');
         } else {
             await cloudSave(false);
         }
@@ -603,14 +607,14 @@ window.FI = {
         ui.social.attacking = true;
         render();
         await cloudSave(false); // the server attacks with the stored save, so upload the hero first
-        await socialAction(() => cloud.clanAttack(), r => `⚔️ Hit the clan boss for ${fmt(r.damage)}${r.killed ? ' — and brought it down!' : ''}`);
+        await socialAction(() => cloud.clanAttack(), r => `Hit the clan boss for ${fmt(r.damage)}${r.killed ? ' — and brought it down!' : ''}`);
         ui.social.attacking = false;
         render();
     },
     async claimRewards() {
         const ids = ui.social.rewards.map(r => r.id);
         const result = await socialAction(() => cloud.claimRewards(ids));
-        for (const reward of result?.rewards || []) toast(`🎁 ${game.applyReward(reward)}`, 'achievement');
+        for (const reward of result?.rewards || []) toast(game.applyReward(reward), 'achievement', pic('crate'));
         if (result?.rewards?.length) { save(Date.now()); cloudSave(false); }
     },
     boardMetric(metric) { ui.social.metric = metric; refreshSocial(); },
@@ -657,9 +661,9 @@ window.FI = {
     /** The seed the farm plants: picked from the bag of seeds, used by every empty plot. */
     pickSeed(crop) { ui.lastCrop = crop; render(); },
     plantAll(crop) { ui.lastCrop = crop; if (game.plantAll(crop) > 0) sound.play('drop'); render(); },
-    buyEventItem(id) { if (game.buyEventItem(id)) toast('🎉 Bought!', 'info'); render(); },
+    buyEventItem(id) { if (game.buyEventItem(id)) toast('Bought!', 'info'); render(); },
     harvest(plot) { game.harvest(plot); render(); },
-    harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`🌾 Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info'); render(); },
+    harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info', tabIcon('farming', 0.625)); render(); },
     /** Build an obstacle; swapping out a built one (no refund, its levels lost) asks first. */
     buildObstacle(id) {
         const slot = AGILITY_SLOTS.findIndex(s => s.obstacles.some(o => o.id === id));
@@ -680,8 +684,8 @@ window.FI = {
     sellAll(rarity) { game.sellAllItems(rarity); render(); },
     upgrade(id) { game.upgradeItem(id); render(); },
     reforge(id) { game.reforgeItem(id); render(); },
-    salvage(id) { const g = game.salvageItem(id); if (g) toast(`♻️ +${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info'); render(); },
-    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`♻️ Salvaged ${r.count} items (+${r.essence} essence)`, 'info'); render(); },
+    salvage(id) { const g = game.salvageItem(id); if (g) toast(`+${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info', resIcon('essence')); render(); },
+    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} items (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },
@@ -808,7 +812,7 @@ window.FI = {
             if (kind === 'login') await cloud.login(user, pass); else await cloud.register(user, pass);
             ui.social = freshSocial(); // nothing from the previous account carries over
             closeModal();
-            toast(`☁️ Signed in as ${cloud.username}`, 'info');
+            toast(`Signed in as ${cloud.username}`, 'info');
             await syncFromCloud();
             render();
         } catch (e) { if (err) err.textContent = e.message; }

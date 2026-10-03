@@ -420,10 +420,14 @@ progress as motion, art before words, one stage with a HUD around it.
       their paintings instead of a banner. On the farm he hoes while anything grows, and the ring is
       the nearest crop's growth; on the course he runs empty-handed, a leap at the end of each lap.
       A resting stage faces the place's own picture instead of an emoji
-- [ ] **Pictures for the agility obstacles**: the eighteen obstacle medals are still emoji (M)
-- [ ] **The last emoji around the edges**: the event pill, the sound and cloud buttons, the status
-      pills (resting, the bonfire, focus), the Map button, the title card's button, and the skill
-      icons in toasts and the welcome-back report (M)
+- [x] **Pictures for the agility obstacles**: each of the eighteen has its own sprite (a coiled
+      rope, a log on trestles, stones across a pool, a net, monkey bars, a tightrope, a pipe, a wall
+      with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
+      boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
+      is a sprite too
+- [x] **The last emoji around the edges**: the sound, cloud, map, retreat and resting controls are
+      drawn line icons; the weekend events, the title card's button, Enter combat, the bonfire pill,
+      the toasts, the celebrations, the welcome-back report and the loot beam use sprites
 
 **Exit:** every place a player sees has a painting or a sprite, not an emoji; a new player's first
 screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` passes both modes.

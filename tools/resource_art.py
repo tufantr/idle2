@@ -8,7 +8,8 @@ resource colors so that a mithril bar matches mithril ore everywhere.
 
 The game's own things are made here too (build_icons): the perks as DCSS spell and god icons in a
 gold frame, the tools (the axe and the bow are DCSS items; the pickaxe, hoe, rod and tinderbox are
-drawn), the daily crate, the settings gear and the hoe in the hero's hand.
+drawn), the daily crate, the settings gear and the hoe in the hero's hand, the eighteen obstacles of
+the agility course (a few DCSS items, the rest drawn) and the campfire the resting hero sits by.
 """
 import math
 
@@ -704,6 +705,240 @@ def hoe_in_hand(tiles):
     return a
 
 
+# ---------- the agility course: one picture per obstacle, and the campfire the resting hero sits by ----------
+
+WOOD_POST = ramp('#9a6a36', 5, lo=0.6, hi=0.4)
+STONE = ramp('#8a8580', 5, lo=0.65, hi=0.45)
+WATER = ramp('#3f86c8', 5, lo=0.55, hi=0.5)
+ROPE_LIGHT, ROPE_DARK = (226, 196, 150, 255), (150, 110, 70, 255)
+
+
+def paste(a, b):
+    m = b[..., 3] > 0
+    a[m] = b[m]
+    return a
+
+
+def rect(x0, y0, x1, y1):
+    return (XX >= x0) & (XX <= x1) & (YY >= y0) & (YY <= y1)
+
+
+def post(x, y0, y1, w=2):
+    return lit(rect(x, y0, x + w - 1, y1), WOOD_POST, round_=0.5)
+
+
+def pool(mask, texture, bright=1.0):
+    """A pool of a DCSS floor texture (mud, lava) filling `mask`, darker at its edge."""
+    t = from_image(texture).astype(float)
+    t[..., :3] = np.clip(t[..., :3] * bright, 0, 255)
+    a = blank()
+    a[mask] = t.astype(np.uint8)[mask]
+    edge = mask & ~erode(mask)
+    a[edge, :3] = (a[edge, :3] * 0.55).astype(np.uint8)
+    return outline(a)
+
+
+def stepping_stones():
+    a = lit(ellipse(16, 21, 15, 7.5), WATER, round_=0.4)
+    for cx, cy, r in ((8, 20, 3.6), (16, 22, 3.8), (24, 20, 3.6)):
+        paste(a, outline(lit(ellipse(cx, cy, r + 0.8, r * 0.62), STONE, noise=0.6, seed=cx)))
+    for x, y in ((12, 18), (20, 25), (27, 23), (5, 23)):
+        put(a, x, y, (200, 230, 255, 255))
+    return outline(a)
+
+
+def log_balance():
+    a = blank()
+    for x0 in (7, 22):                                   # two A-frame trestles
+        for dy in range(11):
+            put(a, x0 - dy // 3, 17 + dy, WOOD_POST[1])
+            put(a, x0 + 2 + dy // 3, 17 + dy, WOOD_POST[1])
+    a = outline(a)
+    bark = ramp('#8a5a2b', 5, lo=0.6, hi=0.35)
+    b = lit(rect(3, 12, 28, 16), bark, light=(0, -1, 0.6), round_=0.7)
+    for y in (13, 15):
+        for x in range(6, 27, 5):
+            put(b, x, y, bark[0])
+            put(b, x + 1, y, bark[0])
+    b[ellipse(3.5, 14, 2.2, 2.6)] = (232, 195, 138, 255)  # the cut end and its rings
+    b[ellipse(3.5, 14, 0.9, 1.1)] = (190, 140, 90, 255)
+    return paste(a, outline(b))
+
+
+def monkey_bars():
+    a = paste(post(4, 9, 29), post(26, 9, 29))
+    paste(a, lit(rect(4, 8, 27, 9) | rect(4, 12, 27, 12), STEEL))
+    for x in range(8, 26, 4):
+        paste(a, lit(rect(x, 9, x, 12), STEEL))
+    return item_shadow(outline(a))
+
+
+def tightrope():
+    a = outline(paste(post(3, 8, 29), post(27, 8, 29)))
+    for x in range(5, 27):
+        sag = 2.2 * math.sin((x - 5) / 22 * math.pi)
+        put(a, x, round(10 + sag), ROPE_LIGHT)
+        put(a, x, round(11 + sag), ROPE_DARK)
+    for x in (2, 3, 4, 27, 28, 29):
+        put(a, x, 7, INK)
+    return item_shadow(a)
+
+
+def pipe_crawl():
+    grey = ramp('#7a8590', 5, lo=0.6, hi=0.45)
+    a = lit(rect(10, 11, 29, 24), grey, light=(0, -1, 0.5), round_=0.8)
+    for x in (17, 24):                                   # the joints
+        a[rect(x, 11, x, 24)] = grey[0]
+    a[ellipse(10, 17.5, 5.5, 7)] = (110, 120, 130, 255)  # its mouth, dark inside
+    a[ellipse(10, 17.5, 4, 5.4)] = (18, 14, 12, 255)
+    a[ellipse(9.4, 18.5, 2.4, 3.4)] = (8, 6, 5, 255)
+    return item_shadow(outline(a))
+
+
+def wall_climb():
+    brick = ramp('#8a6a58', 5, lo=0.55, hi=0.3)
+    wall = rect(4, 6, 27, 29)
+    w = lit(wall, brick, round_=0.3)
+    for y in range(9, 30, 4):                            # the mortar
+        w[rect(4, y, 27, y) & wall] = brick[0]
+        for x in range(4 + (0 if (y // 4) % 2 else 3), 28, 6):
+            w[rect(x, y - 3, x, y - 1) & wall] = brick[0]
+    a = outline(w)
+    for y in range(3, 27):                               # a rope over the top, hooked on
+        put(a, 16 + (8 < y < 18), y, ROPE_LIGHT)
+        put(a, 17 + (8 < y < 18), y, ROPE_DARK)
+    for x, y in ((14, 3), (15, 2), (16, 2), (17, 2), (18, 2), (19, 3), (20, 4)):
+        put(a, x, y, STEEL[3])
+    return item_shadow(a)
+
+
+def zipline():
+    a = blank()
+    for x in range(2, 31):
+        put(a, x, round(4 + (x - 2) * 0.42), (60, 64, 72, 255))
+    paste(a, outline(lit(poly_mask([(14, 7), (19, 9), (18, 12), (13, 10)]), STEEL)))   # the trolley
+    for y in range(12, 20):
+        put(a, 15, y, (60, 64, 72, 255))
+    paste(a, outline(lit(rect(10, 20, 21, 21), ramp('#d04a3a', 4, lo=0.5, hi=0.4))))   # the handle
+    return item_shadow(a)
+
+
+def hurdles():
+    a = blank()
+    for x in (6, 24):
+        paste(a, lit(rect(x, 14, x + 1, 28), STEEL))
+        paste(a, lit(rect(x - 2, 28, x + 3, 29), STEEL))
+    bar = rect(3, 9, 28, 14)
+    shade = lit(bar, ramp('#888888', 5, lo=0.4, hi=0.3), round_=0.6)[..., :3].astype(float) / 160
+    stripes = blank()
+    for x in range(3, 29):
+        stripes[9:15, x] = (236, 236, 236, 255) if (x // 4) % 2 else (214, 58, 48, 255)
+    stripes[..., :3] = np.clip(stripes[..., :3] * np.clip(shade, 0.6, 1.25), 0, 255).astype(np.uint8)
+    return item_shadow(outline(paste(a, stripes)))
+
+
+def mud_pit(tiles):
+    a = pool(ellipse(16, 20, 14.5, 8.5), Image.open(f'{tiles}/dngn/floor/mud0.png'), bright=1.9)
+    for cx, cy in ((11, 19), (20, 22), (17, 17)):        # bubbles
+        a[ellipse(cx, cy, 1.6, 1.1)] = (150, 116, 70, 255)
+        put(a, cx - 1, cy - 1, (200, 170, 120, 255))
+    return a
+
+
+def lava_crossing(tiles):
+    a = pool(ellipse(16, 20, 15, 8.5), Image.open(f'{tiles}/dngn/floor/lava00.png'), bright=1.45)
+    for cx, cy in ((11, 20), (21, 19)):                  # two stones to cross on
+        paste(a, outline(lit(ellipse(cx, cy, 3.6, 2.2), ramp('#4a4440', 5, lo=0.6, hi=0.5), noise=0.6, seed=cx)))
+    return a
+
+
+def rooftop():
+    tile_red = ramp('#b0402e', 5, lo=0.6, hi=0.35)
+    a = outline(lit(rect(21, 5, 24, 13), ramp('#9a5040', 5, lo=0.6, hi=0.35)))   # the chimney
+    roof = poly_mask([(2, 21), (16, 7), (30, 21)])
+    r = lit(roof, tile_red, round_=0.6)
+    for y in range(11, 22, 3):
+        r[(YY == y) & roof] = tile_red[0]
+    paste(a, outline(r))
+    paste(a, outline(lit(rect(6, 21, 26, 28), ramp('#d8c8a0', 5, lo=0.55, hi=0.3), round_=0.4)))
+    a[rect(13, 23, 16, 26)] = (70, 120, 170, 255)        # a window
+    return item_shadow(a)
+
+
+def waterfall():
+    a = blank()
+    for x0, x1 in ((2, 10), (22, 30)):                   # the cliffs either side
+        cliff = rect(x0, 3, x1, 22) & ~((XX - (x0 + x1) / 2) ** 2 / 30 + (YY - 2) ** 2 / 4 < 1)
+        paste(a, outline(lit(cliff, STONE, noise=1.2, seed=x0)))
+    for y, x in np.argwhere(rect(11, 3, 21, 24)):        # the fall, streaked with foam
+        a[y, x] = (235, 246, 255, 255) if (x * 7 + y * 3 + (x % 3) * 5) % 9 < 3 else WATER[3]
+    p = lit(ellipse(16, 25, 14, 5), WATER, round_=0.4)
+    for x in range(8, 25, 3):
+        put(p, x, 22 + (x % 2), (235, 246, 255, 255))
+    return outline(paste(a, p))
+
+
+def rock_wall():
+    a = ore('#7a7068', rock='#7a7068', seed=11)           # a boulder, then holds of every colour
+    for x, y, c in ((9, 14, (230, 80, 60)), (16, 11, (250, 200, 60)), (22, 15, (80, 180, 240)), (12, 20, (120, 210, 90)),
+                    (20, 21, (230, 80, 60)), (25, 19, (250, 200, 60)), (7, 21, (80, 180, 240)), (16, 17, (230, 120, 200))):
+        a[ellipse(x, y, 1.3, 1.0)] = c + (255,)
+        put(a, x - 1, y - 1, tuple(min(255, v + 60) for v in c) + (255,))
+    return a
+
+
+def sky_bridge():
+    arc = lambda x, base, depth: round(base + depth * math.sin((x - 4) / 24 * math.pi))
+    a = paste(post(2, 10, 26), post(28, 10, 26))
+    for x in range(4, 28, 3):                            # planks hanging in an arc
+        paste(a, lit(rect(x, arc(x, 18, 4), x + 1, arc(x, 18, 4) + 1), WOOD_POST))
+    a = outline(a)
+    for x in range(4, 28):                               # the hand ropes, tied down to the planks
+        put(a, x, arc(x, 11, 3), ROPE_LIGHT)
+        if x % 3 == 0:
+            for y in range(arc(x, 11, 3) + 1, arc(x, 18, 4)):
+                put(a, x, y, ROPE_DARK[:3] + (200,))
+    return item_shadow(a)
+
+
+def cloud_walk():
+    m = np.zeros((CELL, CELL), bool)
+    for cx, cy, rx, ry in ((16, 19, 12, 6), (11, 16, 6, 6), (19, 13, 7, 7), (25, 18, 5, 4.5), (7, 20, 5, 4)):
+        m |= ellipse(cx, cy, rx, ry)
+    return outline(lit(m, ramp('#c8d6e8', 5, lo=0.35, hi=0.8), round_=0.9), (70, 84, 110, 255))
+
+
+def campfire():
+    a = blank()
+    for x0, y0, x1, y1 in ((5, 27, 25, 21), (7, 21, 27, 27)):    # two crossed logs
+        for t in np.linspace(0, 1, 40):
+            x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            for dy in (0, 1, 2):
+                put(a, round(x), round(y) + dy - 1, ramp('#7a4a26', 4)[dy])
+    a = outline(a)
+    flame = (ellipse(16, 17, 5.5, 7.5) & (YY <= 22)) | poly_mask([(12, 13), (21, 13), (17, 3)])
+    f = blank()
+    f[flame] = (255, 140, 40, 255)
+    f[flame & ellipse(16, 18.5, 2.8, 4.2)] = (255, 236, 160, 255)
+    paste(a, outline(f, (140, 40, 10, 255)))
+    for x, y in ((11, 8), (22, 7), (19, 2)):              # sparks
+        put(a, x, y, (255, 200, 90, 255))
+    return a
+
+
+def build_obstacles(tiles):
+    """obstacle/<id> for the agility course's eighteen obstacles (src/data/agility.js)."""
+    tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
+    return {f'obstacle/{k}': v for k, v in {
+        'rope_swing': from_image(tile('item/weapon/bullwhip')), 'log_balance': log_balance(), 'stepping_stones': stepping_stones(),
+        'cargo_net': from_image(rehue(tile('item/weapon/ranged/throwing_net'), '#c8965a', sat=0.6, val=0.85)),
+        'monkey_bars': monkey_bars(), 'tightrope': tightrope(), 'pipe_crawl': pipe_crawl(), 'wall_climb': wall_climb(),
+        'gap_leap': from_image(tile('item/armour/artefact/urand_seven_league_boots')), 'zipline': zipline(),
+        'hurdles': hurdles(), 'mud_pit': mud_pit(tiles), 'rooftop_run': rooftop(), 'waterfall': waterfall(),
+        'rock_wall': rock_wall(), 'sky_bridge': sky_bridge(), 'lava_crossing': lava_crossing(tiles), 'cloud_walk': cloud_walk(),
+    }.items()}
+
+
 # perk id -> how its badge is made: a DCSS spell or god icon (rltiles/gui/...), or an item on a glow.
 PERK_BADGES = {
     'knight': 'spells/enchantment/sure_blade', 'warlord': 'spells/enchantment/charming', 'rogue': 'spells/enchantment/haste',
@@ -714,7 +949,8 @@ PERK_BADGES = {
 
 
 def build_icons(tiles):
-    """Cells for the game's own things: perk/<id>, tool/<id>, the crate, the gear, the hero's hoe."""
+    """Cells for the game's own things: perk/<id>, tool/<id>, obstacle/<id>, the crate, the gear, the
+    campfire and the hero's hoe."""
     tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
     out = {}
     for pid, how in PERK_BADGES.items():
@@ -728,8 +964,9 @@ def build_icons(tiles):
         'tool/pickaxe': pickaxe(), 'tool/axe': from_image(tile('item/weapon/hand_axe1')), 'tool/bow': from_image(tile('item/weapon/ranged/shortbow1')),
         'tool/rod': fishing_rod(), 'tool/tinderbox': tinderbox(), 'tool/hoe': hoe(),
         'crate': from_image(tile('item/misc/misc_box_of_beasts_inert')), 'gear': gear(tiles),
-        'hero/tool/farming': hoe_in_hand(tiles),
+        'hero/tool/farming': hoe_in_hand(tiles), 'campfire': campfire(),
     })
+    out.update(build_obstacles(tiles))
     return {key: to_image(a) for key, a in out.items()}
 
 

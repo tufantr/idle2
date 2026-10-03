@@ -36,7 +36,7 @@ export function unlocksAtLevel(skill, level) {
         for (const t of tool.tiers) if (t.levelReq === level) add(toolIcon(id), t.name);
     }
     if (skill === 'farming') for (const c of CROPS) if (c.levelReq === level) add(resIcon(c.produces), c.name);
-    if (skill === 'agility') AGILITY_SLOTS.forEach((slot, i) => { if (slot.levelReq === level) add('🧱', `Obstacle slot ${i + 1}`); });
+    if (skill === 'agility') AGILITY_SLOTS.forEach((slot, i) => { if (slot.levelReq === level) add(sprite(slot.obstacles[0] ? `obstacle/${slot.obstacles[0].id}` : feature('agility').icon, { scale: 0.625, cls: 'soft res-spr', fallback: '🧱' }), `Obstacle slot ${i + 1}`); });
     return found;
 }
 

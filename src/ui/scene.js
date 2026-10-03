@@ -12,7 +12,7 @@ import { killPayout } from '../systems/combat.js';
 import { titanLevel } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
-import { sprite, heroSprite, heroLayers, monsterSpriteKey, resIcon } from './sprites.js';
+import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon } from './sprites.js';
 import { DUNGEON_ART } from './features.js';
 
 // Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
@@ -69,7 +69,7 @@ export function createScene(root, actions) {
         <div class="battle-field">
             <div class="fighter hero">
                 <div class="fighter-bars"><span class="fbar-text"></span><div class="fbar"><i class="trail"></i><i class="fill"></i></div></div>
-                <div class="fighter-stand"><span class="campfire" aria-hidden="true">🔥</span><div class="fighter-sprite"><span class="hero-figure"></span></div></div>
+                <div class="fighter-stand"><span class="campfire" aria-hidden="true">${sprite('campfire', { scale: 1, fallback: '🔥' })}</span><div class="fighter-sprite"><span class="hero-figure"></span></div></div>
                 <div class="fighter-name"></div>
                 <div class="fighter-meta"></div>
                 <div class="attack-bar" aria-hidden="true"><i></i></div>
@@ -86,7 +86,7 @@ export function createScene(root, actions) {
         </div>
         <div class="battle-banner" aria-live="polite"></div>
         <div class="battle-combo" hidden><b></b><span>Combo</span><em></em></div>
-        <button class="battle-cta" type="button" hidden>⚔️ Enter combat</button>
+        <button class="battle-cta" type="button" hidden>${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Enter combat</button>
     </section>`;
 
     const $ = sel => root.querySelector(sel);
@@ -350,7 +350,7 @@ export function createScene(root, actions) {
             }
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);
-                setText(el.zone, dg ? `${dg.icon} ${dg.name}` : 'Dungeon');
+                setText(el.zone, dg ? dg.name : 'Dungeon');
                 setText(el.stage, dg ? `Room ${Math.min((c.dungeon?.index || 0) + 1, dg.monsters.length + 1)} of ${dg.monsters.length + 1}` : '');
             } else if (c.mode === 'titan') {
                 setText(el.zone, '🗿 Titan challenge');
@@ -478,7 +478,7 @@ export function createScene(root, actions) {
                     const rarity = RARITIES.find(r => r.id === ev.item.rarity);
                     if (!rarity || RARITIES.indexOf(rarity) < 2) break;
                     const { foe } = anchor();
-                    const beam = spawnFx(`loot-beam r-${rarity.id}`, `<span>${esc(ev.item.icon)}</span>`, foe.x + jitter(16), Math.max(0, foe.bottom - 64), 2400);
+                    const beam = spawnFx(`loot-beam r-${rarity.id}`, `<span>${sprite(itemSpriteKey(ev.item), { scale: 1, fallback: esc(ev.item.icon) })}</span>`, foe.x + jitter(16), Math.max(0, foe.bottom - 64), 2400);
                     if (beam) beam.style.setProperty('--beam', rarity.color);
                     break;
                 }

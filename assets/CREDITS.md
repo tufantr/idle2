@@ -22,6 +22,11 @@ bow and the daily crate (the Box of Beasts) are DCSS items, the settings cog is 
 Gizmo ability icon, and the hero's hoe keeps the haft of the DCSS scythe. The pickaxe, hoe, fishing
 rod and tinderbox icons are drawn by the same script and are original to this project.
 
+Of the agility obstacles, the rope swing (the DCSS bullwhip), the cargo net (the throwing net,
+recolored), the gap leap (the Seven-League Boots), and the textures of the mud pit and the lava
+crossing (DCSS floor tiles) come from DCSS; the other obstacles and the campfire are drawn by
+`tools/resource_art.py` and are original to this project.
+
 `backdrops/*.webp` are painted by `tools/backdrops.py` from noise, gradients and glow; the interiors
 (caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
 

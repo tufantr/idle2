@@ -600,8 +600,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   clan, dungeons) and the About card behind every "?", which is where the "How it works"
   paragraphs went.
 - **Pictures, not emoji.** Everything the player handles has a sprite: perks are DCSS spell and god
-  icons in a gold frame, the tools are items (two from DCSS, four drawn in its manner), the daily
-  crate is a DCSS chest and Settings a cog (`build_icons` in `tools/resource_art.py`).
+  icons in a gold frame, the tools are items (two from DCSS, four drawn in its manner), each agility
+  obstacle has its own picture, the daily crate is a DCSS chest and Settings a cog (`build_icons` in
+  `tools/resource_art.py`). Controls that are switches rather than things (sound, cloud save, the
+  map, retreat, resting, full screen) are drawn line icons in `src/ui/render.js`. Toasts take a
+  sprite beside their text.
 - **One card per moment.** Places that open together share a card (the first boss opens five), so
   nothing queues up. A card is a button: it goes to the place.
 - **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from

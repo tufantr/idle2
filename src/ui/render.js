@@ -38,7 +38,7 @@ import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
-import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, paintStyle } from './features.js';
+import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 
 export const TABS = [
@@ -71,6 +71,19 @@ const resTag = (id, qty = null) => `<span class="res-tag" style="color:${res(id)
 // one glyph there is for this (⛶) reads as "full screen" both ways.
 const ICON_EXPAND = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>';
 const ICON_SHRINK = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>';
+// The header's and the orders' controls, drawn in the same hand: they are switches, not things.
+const svg = d => `<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="${d}"/></svg>`;
+const CLOUD = 'M4.6 12.5h6.9a3 3 0 0 0 .4-6 4 4 0 0 0-7.6-.7 3.4 3.4 0 0 0 .3 6.7z';
+const ICON_SOUND_ON = svg('M2 6h3l4-3v10l-4-3H2zM11.3 5.6a3.4 3.4 0 0 1 0 4.8M13.4 3.6a6.2 6.2 0 0 1 0 8.8');
+const ICON_SOUND_OFF = svg('M2 6h3l4-3v10l-4-3H2zM11.2 6.2l3.6 3.6M14.8 6.2l-3.6 3.6');
+const ICON_CLOUD_UP = svg(`${CLOUD}M8 11V7.6M6.6 9 8 7.6 9.4 9`);
+const ICON_CLOUD_OK = svg(`${CLOUD}M6.2 9.4l1.3 1.3 2.5-2.7`);
+const ICON_MAP = svg('M1.5 3.6 5.5 2l5 1.6 4-1.6v10.4l-4 1.6-5-1.6-4 1.6zM5.5 2v10.4M10.5 3.6V14');
+const ICON_FLAG = svg('M3.5 14.5V2M3.5 2.6h8.4l-2 3 2 3H3.5');
+const ICON_MOON = svg('M12.6 10.4A5.6 5.6 0 0 1 5.6 3.4a5.6 5.6 0 1 0 7 7z');
+
+/** A weekend event's picture (src/ui/features.js EVENT_ART), small enough for a pill or a line. */
+const eventIcon = (e, scale = 0.5) => sprite(EVENT_ART[e.id], { scale, cls: scale < 1 ? 'soft res-spr' : '', fallback: e.icon });
 
 /** Is the fight filling the screen? On the combat tab, while fighting, unless the player folded it away. */
 export function battleMode(game, ui) {
@@ -183,14 +196,14 @@ export function renderHeader(game, ui, cloud) {
         ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">Daily crate</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
         : '';
     const bonfirePill = bonfireLit(state, game.now)
-        ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">🔥 +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
+        ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')
-        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.desc)}">${ev.event.icon} ${esc(ev.event.name)} · ${duration(ev.endsAt - game.now)} left</button>`
+        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.desc)}">${eventIcon(ev.event)} ${esc(ev.event.name)} · ${duration(ev.endsAt - game.now)} left</button>`
         : '';
     const focusPill = game.derived.focused
-        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">🧘 Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
+        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
     // What the hero is doing, when that is not what the tab in view already shows.
     const here = ui.tab === 'combat' || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
@@ -200,13 +213,13 @@ export function renderHeader(game, ui, cloud) {
     } else if (state.combat.active) {
         if (ui.tab !== 'combat') status = `<button class="status-pill fighting" onclick="FI.switchTab('combat')">${tabIcon('combat', 0.625)} ${esc(fightingWhere(state))}</button>`;
     } else if (!here) {
-        status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">💤 Resting</button>`;
+        status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }
     const nudge = !cloud?.loggedIn && state.combat.bestStage > 10;   // past the first boss: worth keeping
-    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">☁️ ${esc(cloud.username || 'signed in')}</span>`
-        : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" aria-label="Local save only: sign in to keep it in the cloud" title="Local save only: sign in to keep it in the cloud">💾${nudge ? '<span class="cloud-word"> Save to cloud</span>' : ''}</button>`;
+    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} ${esc(cloud.username || 'signed in')}</span>`
+        : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" aria-label="Local save only: sign in to keep it in the cloud" title="Local save only: sign in to keep it in the cloud">${ICON_CLOUD_UP}${nudge ? '<span class="cloud-word">Save to cloud</span>' : ''}</button>`;
     const soundOn = state.settings.sound !== false;
-    const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? '🔊' : '🔇'}</button>`;
+    const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>`;
     // While the fight fills the screen, the sidebar is out of sight. The header carries the way back,
     // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
     // leave-full-screen button. Both fold the fight back into the page; it goes on.
@@ -365,10 +378,10 @@ function combatOrders(game, ui) {
     const c = state.combat;
     const leave = c.mode === 'dungeon' ? 'Abandon run' : c.mode === 'titan' ? 'Give up' : 'Retreat';
     const orders = [
-        c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">🏳️ ${leave}</button>` : '',
+        c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">${ICON_FLAG} ${leave}</button>` : '',
         // Folded away mid-fight: one button brings the full screen back.
         c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '',
-        c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">🗺️ Map</button>` : '',
+        c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">${ICON_MAP} Map</button>` : '',
         c.mode === 'stages' && seen(state, 'stage_nav') ? `<label class="toggle stay-toggle" title="Stay on this stage instead of moving on: for gathering its loot"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Stay on this stage</label>` : ''
     ].filter(Boolean);
     return orders.length ? `<div class="combat-side">${orders.join('')}</div>` : '';
@@ -1109,8 +1122,8 @@ export function renderEvents(game) {
     }).join('');
     const shop = EVENT_SHOP.map(item => `<div class="event-shop-item"><div><b>${esc(item.name)}</b><div class="muted small">${esc(item.desc)}</div></div>
         <button class="gold-btn" onclick="FI.buyEventItem('${item.id}')" ${status.active && ev.tokens >= item.cost ? '' : 'disabled'}>🎟️ ${item.cost}</button></div>`).join('');
-    const rotation = EVENTS.map(x => `<span class="${x.id === e.id ? 'b' : 'muted'}">${x.icon} ${esc(x.name)}</span>`).join(' → ');
-    return `${banner('events', { title: `${e.icon} ${esc(e.name)}`, sub: status.active ? `Running now: ends in ${duration(status.endsAt - game.now)}` : `The next event: starts in ${duration(status.startsAt - game.now)}`,
+    const rotation = EVENTS.map(x => `<span class="${x.id === e.id ? 'b' : 'muted'}">${eventIcon(x)} ${esc(x.name)}</span>`).join(' → ');
+    return `${banner('events', { title: `${eventIcon(e, 1)} ${esc(e.name)}`, sub: status.active ? `Running now: ends in ${duration(status.endsAt - game.now)}` : `The next event: starts in ${duration(status.startsAt - game.now)}`,
         extra: `<div class="chip tokens" title="Festival tokens${status.active ? `: ${today} of ${EVENT_DAILY_CAP} earned today` : ''}"><span>Tokens</span><b>${fmt(ev.tokens)}</b></div>` })}
     <section class="glass-panel event-panel" style="--accent:${e.color}">
         <p>${esc(e.desc)}</p>
@@ -1214,12 +1227,13 @@ export function renderAgility(game, ui) {
     const running = state.action?.kind === 'agility';
     const interval = course ? actionInterval(course.interval, d, 'agility') : 0;
     const coin = sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' });
-    const medal = (icon, lvl = 0) => `<span class="camp-medal obstacle-medal"><span class="nav-emoji" aria-hidden="true">${icon}</span>${lvl ? `<b class="camp-lv">${lvl}</b>` : ''}</span>`;
+    const medal = (art, lvl = 0) => `<span class="camp-medal obstacle-medal">${art}${lvl ? `<b class="camp-lv">${lvl}</b>` : ''}</span>`;
+    const art = o => sprite(`obstacle/${o.id}`, { scale: 1, fallback: o.icon });
     const slots = AGILITY_SLOTS.map((slot, i) => {
         const open = level >= slot.levelReq;
         if (!open) {
             if (i > 0 && level < AGILITY_SLOTS[i - 1].levelReq) return ''; // only the next slot to earn
-            return `<div class="course-slot locked">${medal('🔒')}<span class="req">Agility ${slot.levelReq}</span></div>`;
+            return `<div class="course-slot locked">${medal('<span class="nav-emoji" aria-hidden="true">🔒</span>')}<span class="req">Agility ${slot.levelReq}</span></div>`;
         }
         const built = state.agility.built[i] ? obstacleById(state.agility.built[i]) : null;
         if (built && ui.agilitySwap !== i) {
@@ -1231,7 +1245,7 @@ export function renderAgility(game, ui) {
                     : `<span class="req" title="Level ${up.toLevel} needs Agility ${up.levelReq}">⬆ at Agility ${up.levelReq}</span>`;
             return `<div class="course-slot built">
                 <button class="slot-swap" onclick="FI.agilitySwap(${i})" title="Swap for another obstacle (no refund)" aria-label="Swap the ${esc(built.name)} for another obstacle">↺</button>
-                ${medal(built.icon, lvl)}
+                ${medal(art(built), lvl)}
                 <b class="slot-name">${esc(built.name)}</b>
                 <span class="slot-bonus">${esc(built.desc)}${lvl > 1 ? ` ×${lvl}` : ''}</span>
                 ${upgrade}
@@ -1241,7 +1255,7 @@ export function renderAgility(game, ui) {
         const affordable = state.gold >= cost.gold && Object.entries(cost.materials).every(([id, q]) => (state.resources[id] || 0) >= q);
         const others = slot.obstacles.filter(o => o.id !== built?.id);
         const picks = others.map(o =>
-            `<button class="obstacle-pick" onclick="FI.buildObstacle('${o.id}')" ${affordable ? '' : 'disabled'} title="${esc(o.name)}: ${esc(o.desc)} · ${seconds(o.interval)} and ${o.xp} XP a run" aria-label="Build the ${esc(o.name)}: ${esc(o.desc)}">${medal(o.icon)}<span class="slot-bonus">${esc(o.desc)}</span></button>`).join('');
+            `<button class="obstacle-pick" onclick="FI.buildObstacle('${o.id}')" ${affordable ? '' : 'disabled'} title="${esc(o.name)}: ${esc(o.desc)} · ${seconds(o.interval)} and ${o.xp} XP a run" aria-label="Build the ${esc(o.name)}: ${esc(o.desc)}">${medal(art(o))}<span class="slot-bonus">${esc(o.desc)}</span></button>`).join('');
         return `<div class="course-slot open">
             <div class="slot-price"><span class="camp-price${state.gold >= cost.gold ? '' : ' missing'}">${coin} ${fmt(cost.gold)}</span>${needChips(state, cost.materials)}</div>
             <div class="obstacle-picks" style="--n:${others.length}">${picks}</div>
@@ -1519,7 +1533,7 @@ export function renderWelcomeBack(summary, state) {
         const lp = levelProgress(state.skills[id]?.xp || 0);
         const up = s.to > s.from;
         return `<div class="wb-skill${up ? ' up' : ''}" style="--i:${next()};--c:${SKILLS[id]?.color || '#d6aa5c'}">
-            <span class="wb-skill-icon" aria-hidden="true">${SKILLS[id]?.icon || '✨'}</span>
+            <span class="wb-skill-icon" aria-hidden="true">${tabIcon(id, 0.75)}</span>
             <span class="wb-skill-name">${esc(SKILLS[id]?.name || id)}</span>
             <span class="wb-skill-xp">+${fmt(s.xp)} XP</span>
             <span class="wb-skill-lv">${up ? `Lv ${s.from} → <b>${s.to}</b>` : `Lv ${s.to}`}</span>
@@ -1531,15 +1545,15 @@ export function renderWelcomeBack(summary, state) {
     const tile = (id, text, cls = '') => `<div class="wb-tile${cls}" style="--i:${next()};--r:${res(id)?.color || '#e2e8f0'}" title="${esc(res(id)?.name || id)}">${resIcon(id, { scale: 1.25 })}<span>${text}</span></div>`;
     const finds = [
         ...(summary.petIds || []).map(id => { const p = PETS.find(x => x.id === id); return `<div class="wb-find pet" style="--i:${next()}">${sprite(`pet/${id}`, { scale: 1.5, fallback: p?.icon || '🐾' })}<span>A pet found you: <b>${esc(p?.name || id)}</b></span></div>`; }),
-        summary.uniques > 0 ? `<div class="wb-find unique" style="--i:${next()}"><span class="wb-find-icon">🌟</span><span><b>${summary.uniques}</b> unique item${summary.uniques > 1 ? 's' : ''} found</span></div>` : '',
-        summary.items > 0 ? `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">🎒</span><span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
-            : summary.salvaged > 0 ? `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">♻️</span><span><b>${summary.salvaged}</b> items salvaged for essence and bars</span></div>` : '',
-        ...(summary.dungeonClears || []).map(d => `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">🏰</span><span><b>${fmt(d.clears)}</b> ${esc(d.name)} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)</span></div>`),
+        summary.uniques > 0 ? `<div class="wb-find unique" style="--i:${next()}">${sprite(FEATURES.achievements.icon, { scale: 1 })}<span><b>${summary.uniques}</b> unique item${summary.uniques > 1 ? 's' : ''} found</span></div>` : '',
+        summary.items > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.inventory.icon, { scale: 1 })}<span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
+            : summary.salvaged > 0 ? `<div class="wb-find" style="--i:${next()}">${resIcon('essence', { scale: 1 })}<span><b>${summary.salvaged}</b> items salvaged for essence and bars</span></div>` : '',
+        ...(summary.dungeonClears || []).map(d => `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.dungeons.icon, { scale: 1 })}<span><b>${fmt(d.clears)}</b> ${esc(d.name)} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)</span></div>`),
         summary.plotsReady ? `<div class="wb-find" style="--i:${next()}">${sprite('farm/growing', { scale: 1, fallback: '🌾' })}<span><b>${summary.plotsReady}</b> farm plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest</span></div>` : '',
-        summary.mastery && summary.mastery.to > summary.mastery.from ? `<div class="wb-find" style="--i:${next()}"><span class="wb-find-icon">⭐</span><span>${esc(summary.mastery.name)} mastery ${summary.mastery.from} → <b>${summary.mastery.to}</b></span></div>` : ''
+        summary.mastery && summary.mastery.to > summary.mastery.from ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.mastery.icon, { scale: 1 })}<span>${esc(summary.mastery.name)} mastery ${summary.mastery.from} → <b>${summary.mastery.to}</b></span></div>` : ''
     ].filter(Boolean).join('');
     return `<div class="modal-content welcome-back">
-        <div class="modal-header">🌙 Welcome back</div>
+        <div class="modal-header">Welcome back</div>
         <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
         <p class="wb-story">${story}</p>
         ${summary.gold > 0 ? `<div class="wb-gold" style="--i:${next()}">${sprite('gold', { scale: 1.25 })}<b>+${fmt(summary.gold)}</b> gold</div>` : ''}
@@ -1563,14 +1577,14 @@ export function renderIntroModal(state) {
         </div>
         <h1 id="intro-title" class="intro-logo">Fantasy Idle</h1>
         <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>
-        <button class="modal-btn btn-confirm intro-go" onclick="FI.beginAdventure()">⚔️ Begin your adventure</button>
+        <button class="modal-btn btn-confirm intro-go" onclick="FI.beginAdventure()">${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Begin your adventure</button>
         <button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>
     </div>`;
 }
 
 export function renderAuthModal(message = '') {
     return `<div class="modal-content narrow">
-        <div class="modal-header">☁️ Cloud save</div>
+        <div class="modal-header">Cloud save</div>
         <div class="modal-body">
             <p class="muted small">Create an account to sync your save across devices, or keep playing as a guest with a local save.</p>
             <div class="auth-error" id="auth-error">${esc(message)}</div>
