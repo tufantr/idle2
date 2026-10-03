@@ -19,7 +19,8 @@ drawn trout), and the farm plot's mound and sprout are drawn by the same script.
 (caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
 
 `paint/*.webp` are AI-generated with Google Gemini from the prompts in `docs/art/gemini.md`,
-then scaled by `tools/paint.py`: the seventeen backdrops, the pictures for cards and banners
-(market, shrine, hall, festival, clanhall, farm, course) and the world map.
+then scaled by `tools/paint.py`: the seventeen backdrops, the four dungeons (warren, depths,
+stronghold, lair), the pictures for cards and banners (market, shrine, hall, festival, clanhall,
+farm, course) and the world map.
 
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

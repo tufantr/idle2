@@ -406,8 +406,11 @@ progress as motion, art before words, one stage with a HUD around it.
       obstacle shows its picture, level and bonus with Upgrade; an open slot shows its price once
       and three obstacles to pick from as tiles; the next slot is a padlock. Swapping one out is
       behind a ↺ and asks first (no refund, its levels are lost)
-- [ ] **A painting for each dungeon**, on its card and behind its fight (four Gemini paintings; the
-      Crystal Depths and the Dragon's Lair borrow the caves and the volcano today) (S)
+- [x] **A painting for each dungeon**, on its card and behind its fight: four more Gemini
+      paintings (a goblin warren dug under tree roots, a crystal heart over an underground lake, an
+      orc fortress courtyard at dusk, a dragon's hoard among lava falls). A dungeon card opens on its
+      painting with the boss in front; the Crystal Depths and the Dragon's Lair no longer borrow the
+      caves and the volcano
 - [ ] **Sprites for the last emoji**: perks, tools, the crate, Settings (needs `tools/atlas.py` and
       the DCSS tiles; their spell and ability icons fit perks) (M)
 - [ ] **The hero at work on the Farming and Agility banners**, like the skill stages (needs a hoe

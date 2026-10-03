@@ -13,10 +13,11 @@ import { titanLevel } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, resIcon } from './sprites.js';
+import { DUNGEON_ART } from './features.js';
 
-// Backdrop per place: zone ids, dungeons and the Titan map onto these (see style.css, .battle[data-scene]).
-const DUNGEON_SCENES = { goblin_warren: 'dungeon', crystal_depths: 'caves', orc_stronghold: 'dungeon', dragons_lair: 'volcano' };
-const PARTICLES = { meadow: 'motes', forest: 'fireflies', caves: 'sparkles', marsh: 'bubbles', highland: 'rain', ruins: 'bubbles', volcano: 'embers', frost: 'snow', skyreach: 'motes', abyss: 'void', dungeon: 'embers', titan: 'rain' };
+// Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
+const PARTICLES = { meadow: 'motes', forest: 'fireflies', caves: 'sparkles', marsh: 'bubbles', highland: 'rain', ruins: 'bubbles', volcano: 'embers', frost: 'snow', skyreach: 'motes', abyss: 'void', dungeon: 'embers', titan: 'rain',
+    warren: 'embers', depths: 'sparkles', stronghold: 'embers', lair: 'embers' };
 const PARTICLE_COUNT = 18;
 const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
@@ -227,7 +228,7 @@ export function createScene(root, actions) {
     function sceneFor(state) {
         const c = state.combat;
         if (c.mode === 'titan') return 'titan';
-        if (c.mode === 'dungeon') return DUNGEON_SCENES[c.dungeon?.id] || 'dungeon';
+        if (c.mode === 'dungeon') return DUNGEON_ART[c.dungeon?.id] || 'dungeon';
         const zone = zoneForStage(c.stage);
         return zone.depth > 0 ? 'abyss' : zone.id;
     }

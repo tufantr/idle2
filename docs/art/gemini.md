@@ -165,6 +165,32 @@ Same style and rules. Next, Smithy: a blacksmith's forge, a glowing furnace and 
 Same style and rules. Next, Alchemist's Lab: a candle-lit alchemy room in a stone tower, shelves of glowing potion bottles in many colors, bubbling glass flasks and copper stills, old books, a round window onto a starry night; a wooden floor across the bottom.
 ```
 
+## The dungeons
+
+One painting per dungeon, a backdrop like the places (`tools/paint.py` lists them in `BATTLE`; the
+game maps dungeons to them in `DUNGEON_ART`, `src/ui/features.js`). They show behind the dungeon's
+fight and at the top of its card. After the world map, the chat needs reminding which set it is in:
+
+`warren.png` (the Goblin Warren)
+```text
+Back to the backdrop set: same style and rules as the place backdrops (side view, wide 16:9, flat open ground across the bottom quarter, nothing standing in the middle, no people, no creatures, no text). Next, Goblin Warren: a cramped goblin warren dug deep into earth under tree roots, crooked wooden supports and rickety ladders, crude goblin totems with feathers and painted wooden masks, piles of stolen crates, sacks and pots at the left and right edges, tallow candles and a warm fire glow, dark tunnels leading off into the back; a packed dirt floor across the bottom.
+```
+
+`depths.png` (the Crystal Depths)
+```text
+Same style and rules. Next, Crystal Depths: deeper and grander than the earlier caves, an enormous crystal cavern around a still underground lake, gigantic amethyst and teal crystal spires rising at the left and right edges, a great glowing crystal heart far in the back casting beams of refracted light, sparkling dust in the air, deep violet shadows above; a flat stone floor veined with small glowing crystals across the bottom.
+```
+
+`stronghold.png` (the Orc Stronghold)
+```text
+Same style and rules. Next, Orc Stronghold: the inner courtyard of a brutal orc fortress at dusk under a red sky, tall spiked palisade walls of dark timber bound with iron at the left and right edges, ragged war banners in red and black, iron braziers burning with orange flames, a great iron-studded gate shut in the back, war drums and racks of crude spears and axes along the walls; a trampled earth courtyard across the bottom.
+```
+
+`lair.png` (the Dragon's Lair)
+```text
+Same style and rules. Next, Dragon's Lair: a vast cavern deep inside a volcano, great heaps of gold coins, goblets, crowns and treasure chests piled at the left and right edges, slow rivers of glowing lava in the background, huge ancient dragon skulls carved into the rock walls, scorch marks and drifting embers, a high broken stone archway at the back; a flat scorched stone floor across the bottom.
+```
+
 ## Cards, banners and the world map
 
 These are not backdrops of a fight. `src/ui/features.js` shows them on the card of a newly opened
@@ -228,6 +254,9 @@ landmark, not on top of it.
   ("Download full size image", the last one on the page) rather than by where it was on screen.
 - Look at a corner of the first download. A full-size download from a paid account carries no
   sparkle mark; then import with `--trim 0`, as the first set was (1920 × 1072).
+- Chrome can hold a download unfinished (as a hidden `.com.google.Chrome.*` file in Downloads,
+  waiting on its download bar). The image inside is complete once it opens as a 2752 × 1536 JPEG:
+  copy it to `art/gemini/` and discard the download in Chrome later.
 - To add to the set later, continue the same chat ("Sunlit Meadow Background Generation"), so the
   style holds.
 - When the set is done, run the import with `--sheet art/sheet.png`. Look at the sheet, then check

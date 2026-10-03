@@ -616,10 +616,19 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 
 /* ---------- dungeons, titan, collection ---------- */
 .dungeon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.8rem; }
-.dungeon-card { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.9rem; border-radius: 14px; }
-.dungeon-card.locked { opacity: 0.55; }
+.dungeon-card { display: flex; flex-direction: column; gap: 0.6rem; padding: 0 0 0.9rem; overflow: hidden; border-radius: 14px; }
+.dungeon-card.locked { opacity: 0.6; }
+/* each dungeon on its painting, its boss in front */
+.dungeon-art {
+    display: flex; align-items: flex-end; gap: 0.7rem; min-height: 120px; padding: 0.7rem 0.9rem;
+    background: linear-gradient(180deg, rgba(12, 8, 5, 0) 25%, rgba(12, 8, 5, 0.92)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2);
+    border-bottom: 1px solid var(--line);
+}
+.dungeon-card.locked .dungeon-art { filter: grayscale(0.75) brightness(0.65); }
+.dungeon-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding-bottom: 0.2rem; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
+.dungeon-title b { font-family: var(--font-display); font-size: 1.08rem; color: var(--heading); }
+.dungeon-body { display: flex; flex-direction: column; gap: 0.45rem; padding: 0 0.9rem; }
 .dungeon-card.active { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 18px rgba(239, 68, 68, 0.2); }
-.dungeon-head { display: flex; gap: 0.6rem; align-items: center; }
 .dungeon-icon { font-size: 1.8rem; }
 .titan-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .titan-text { flex: 1 1 14rem; min-width: 0; }
@@ -1471,9 +1480,9 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
    A place with a painting shows it whole, drifting slowly, in place of the layers above. */
 /* paint:begin: written by tools/paint.py from assets/paint/; run it again instead of editing here. */
 @keyframes paintDrift { from { transform: scale(1.06) translateX(-1.3%); } to { transform: scale(1.06) translateX(1.3%); } }
-.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"]) .battle-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 46s ease-in-out infinite alternate; }
-.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"]) .battle-far, .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"]) .battle-near { display: none; }
-.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"])::before { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
+.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"]) .battle-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 46s ease-in-out infinite alternate; }
+.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"]) .battle-far, .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"]) .battle-near { display: none; }
+.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"])::before { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
 .battle[data-scene="meadow"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/meadow.webp); }
 .battle[data-scene="forest"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/forest.webp); }
 .battle[data-scene="caves"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/caves.webp); }
@@ -1486,6 +1495,10 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .battle[data-scene="abyss"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/abyss.webp); }
 .battle[data-scene="dungeon"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/dungeon.webp); }
 .battle[data-scene="titan"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/titan.webp); animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate; }
+.battle[data-scene="warren"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/warren.webp); }
+.battle[data-scene="depths"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/depths.webp); }
+.battle[data-scene="stronghold"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/stronghold.webp); }
+.battle[data-scene="lair"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/lair.webp); }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 50s ease-in-out infinite alternate; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-far { display: none; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"]) .stage-ground { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }

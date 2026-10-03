@@ -66,6 +66,12 @@ export const FEATURES = {
         points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Skipping costs nothing.'] }
 };
 
+// Each dungeon's painting (assets/paint): on its card, and behind its fight (src/ui/scene.js).
+export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair' };
+
+/** The inline style that puts painting `name` behind an element (as --art, with its focus). */
+export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/paint/${name}.webp);--art-at:${focus}`;
+
 // The 'prestige' unlock has no tab of its own: it lives in the Shop.
 export const FEATURE_TAB = { prestige: 'shop', titan: 'dungeons', camp: 'combat', mastery: null, minigames: null };
 

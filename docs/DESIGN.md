@@ -548,8 +548,9 @@ keeps:
   auto-clicker guard (120 ms) measures real time rather than the last 100 ms tick; the first input
   after a long absence gets its welcome-back report the same way.
 - **Places.** Each zone has a palette and two silhouette layers (hills, pines, stalactites, reeds,
-  peaks, drowned columns, the volcano, ice, cloud spires, void crystals); dungeons are torch-lit halls
-  (the Crystal Depths use the caves, the Dragon's Lair the volcano) and the Titan looms behind its fight.
+  peaks, drowned columns, the volcano, ice, cloud spires, void crystals); each dungeon has its own
+  painting (a goblin warren under the roots, a crystal lake, an orc courtyard, a dragon's hoard;
+  `DUNGEON_ART` in `src/ui/features.js`), shown on its card too, and the Titan looms behind its fight.
 
 Reward moments (`src/ui/rewards.js`) follow the same rules. A level-up gets a celebration card only
 when it is a milestone (every tenth level, and 99) or opens something, and the card names what

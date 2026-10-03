@@ -37,7 +37,7 @@ import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, monsterSpriteKey } from './sprites.js';
-import { FEATURES, feature, artStyle, aboutButton } from './features.js';
+import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 
 export const TABS = [
@@ -1308,8 +1308,11 @@ export function renderDungeons(game) {
             : fight.surviveSeconds < limit ? `Too strong for now: you would last ~${fmtSeconds(fight.surviveSeconds)}`
             : `Too tough for now: the boss needs ~${fmtSeconds(fight.killSeconds)}, and you have ${limit} s`;
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
-            <div class="dungeon-head"><span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 1.5, cls: open ? '' : 'silhouette', fallback: d.icon })}</span>
-                <div><b>${esc(d.name)}</b><div class="muted small" title="Like stages ${d.stage}–${d.stage + d.monsters.length}; the chest holds tier ${d.chestTier} loot">${d.monsters.length} elites, then the ${esc(d.boss.name)}</div></div></div>
+            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}">
+                <span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 2, cls: open ? '' : 'silhouette', fallback: d.icon })}</span>
+                <div class="dungeon-title"><b>${esc(d.name)}</b><span class="small" title="Like stages ${d.stage}–${d.stage + d.monsters.length}; the chest holds tier ${d.chestTier} loot">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span></div>
+            </div>
+            <div class="dungeon-body">
             ${open ? `<div class="small ${ready}" title="An estimate without food, regeneration, lifesteal or combo">${verdict}</div>
                 <div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: ownsUnique(state, d.unique) ? '' : 'silhouette', fallback: '🌟' })}
                     <div class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></div><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
@@ -1319,6 +1322,7 @@ export function renderDungeons(game) {
                     ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${ownsUnique(state, d.unique) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique) ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
                 </div>`
                 : `<div class="req">Opens at stage ${d.unlockStage}</div>`}
+            </div>
         </div>`;
     }).join('');
     return `${banner('dungeons', { extra: `<label class="toggle"><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>` })}
