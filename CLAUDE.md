@@ -73,8 +73,5 @@ Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.m
 
 ## Ideas not done yet
 
-- Sprites for the few icons that are still emoji: tools, perks, the crate, Settings.
-- The hero at work on the Farming and Agility banners, like the skill stages (the paintings keep
-  the bottom quarter clear for him).
-- Agility obstacles and farm crops as picture tiles instead of rows and a dropdown.
-- A painting for each dungeon and each Titan on its card.
+The open items are the [Still to do](docs/ROADMAP.md#still-to-do) list at the end of Phase 8 in the
+roadmap; tick them there as they land.

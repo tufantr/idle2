@@ -23,12 +23,15 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 5 — Social layer | ✅ Done |
 | 6 — Game feel | ✅ Done |
 | 7 — Make it feel like a game | ✅ Done |
+| 8 — Art and polish | 🔄 In progress ([what is left](#still-to-do)) |
 
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
-ones, with regression tests. Phase 6 then gave it the look and feel of a game: a battle scene,
-reward moments, a dark fantasy theme, an armory, a world map and a phone hotbar, and Phase 8 made the
-screen grow with the player instead of showing everything at once. What is left is content and the owner's
+ones, with regression tests. Phases 6 and 7 gave it the look and feel of a game: a battle scene,
+reward moments, a dark fantasy theme, an armory, sprites, sound and a phone hotbar. Phase 8 paints it
+(Gemini paintings for every place and a world map) and makes it simple: the screen grows with the
+player instead of showing everything at once, there are no suggestion notes, and the fight fills the
+screen with everything a run needs. Besides Phase 8's [last items](#still-to-do), what is left is content and the owner's
 decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
@@ -335,7 +338,7 @@ progress as motion, art before words, one stage with a HUD around it.
       under the first fight. Now the sidebar lists only the places that are open, plus one "next" slot
       with the place's painting, the task and a bar; a currency shows once you hold some; the camp
       arrives with the gold for its first upgrade, the food row with Cooking, the potion row with
-      Alchemy, the stage arrows after the first defeat, the map with the second zone, the jewellery
+      Alchemy, "Stay on this stage" after the first defeat, the map with the second zone, the jewellery
       slots with Crafting, mastery and the mini-game when they first matter. What has opened is saved
       and never closes; it glows once as it arrives. The first fight is the scene and one small
       panel, at both widths
@@ -381,7 +384,7 @@ progress as motion, art before words, one stage with a HUD around it.
       log, a potion, the crown), from the atlas
 - [x] **The fight on the whole screen** (DESIGN §3.23): entering combat hides the sidebar and the
       hotbar; the scene fills the window with bigger fighters, and a dock under it holds everything a
-      run needs: retreat, the stage arrows and the map, food and potion, the camp as three tokens,
+      run needs: food and potion, the camp as three tokens, retreat and the map,
       Prestige with what it pays now, Perks in a dialog, and one-tap Equip for the best gear in the
       bag. Prestige walks straight into the next run's first fight, so fight, spend, prestige and
       fight on never leaves the screen. Menu (or Esc) folds it away while the fight goes on
@@ -389,6 +392,22 @@ progress as motion, art before words, one stage with a HUD around it.
       basis that became a height in a column); "Cook some" pointed at a locked tab; "Found a
       Amethyst" (and "Forge a Iron Sword") now get the right article, and the gem no longer lands
       in the battle log
+
+### Still to do
+
+- [ ] **The phone's Next card in view**: on a phone it sits at the end of the scrolling tab strip,
+      off screen, so a new player sees no goal there
+- [ ] **Farm crops as picture tiles** instead of a dropdown on every empty plot (S)
+- [ ] **Agility obstacles as picture cards** instead of rows of text (S)
+- [ ] **A painting for each dungeon**, on its card and behind its fight (four Gemini paintings; the
+      Crystal Depths and the Dragon's Lair borrow the caves and the volcano today) (S)
+- [ ] **Sprites for the last emoji**: perks, tools, the crate, Settings (needs `tools/atlas.py` and
+      the DCSS tiles; their spell and ability icons fit perks) (M)
+- [ ] **The hero at work on the Farming and Agility banners**, like the skill stages (needs a hoe
+      and a running pose in the atlas) (S)
+
+**Exit:** every place a player sees has a painting or a sprite, not an emoji; a new player's first
+screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` passes both modes.
 
 ## Deferred on purpose
 
@@ -423,6 +442,8 @@ real-time chat; synchronous party content; gacha pets; any purchasable power.
 2. `node --test test/*.test.mjs test/*.test.cjs` — must stay green.
 3. `node tools/pacing.mjs` and `node tools/simulate.mjs --hours=150 --seed=1` (and a second seed) —
    compare against the phase's exit numbers and DESIGN §5.
-4. Open the game (`npx serve .` or any static server, then `?dev=1` to unlock every tab) and play the
-   changed part.
-5. Update DESIGN.md if a number in it changed.
+4. Open the game (`python3 -m http.server 8000`, then `?dev=1` to unlock every tab) and play the
+   changed part. That server lets the browser keep old copies of files: after an update, reload with
+   ⌘⇧R (or Ctrl+Shift+R), or a module may half-load.
+5. For anything visible, `node tools/shots.mjs` (and `--fresh`) and look at the pictures in `shots/`.
+6. Update DESIGN.md if a number or a rule in it changed, and add a line here for each visible change.
