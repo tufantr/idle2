@@ -37,4 +37,7 @@ farm, course; the farm and the course are also the Farming and Agility stages), 
 the nine rooms behind the menus' panels (guild hall, armory, chest, storeroom, vault, library,
 study, supply table, war table).
 
+`paint/cards/*.webp`, the ninety pictures on the action cards, are AI-generated with Google Gemini
+too, nine to a sheet from the prompts in `tools/cards.py`, and cut out and scaled by that script.
+
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

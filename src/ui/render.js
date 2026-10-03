@@ -38,6 +38,7 @@ import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
+import { CARD_ART } from '../data/cardart.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 
@@ -562,10 +563,15 @@ function needChips(state, consumes) {
  * the card being worked opens up with its numbers (yield, XP, luck, mastery) and the progress bar.
  * The same numbers sit in the tooltip of the others. A locked card is the next one to earn.
  */
+/** An action card's own picture (tools/cards.py), or its workshop's when it has none; null if neither. */
+const cardPic = (name, fallback = null) => (CARD_ART.has(name) ? name : CARD_ART.has(fallback) ? fallback : null);
+const picBand = pic => (pic ? `<div class="card-pic" style="--pic:url(assets/paint/cards/${pic}.webp)" aria-hidden="true"></div>` : '');
+
 function actionCard(c) {
+    const pic = picBand(c.pic);
     if (c.locked) {
-        return `<div class="node-card locked" aria-disabled="true" style="--accent:${c.color}">
-            <div class="skill-action-art">${c.art}</div>
+        return `<div class="node-card locked${pic ? ' has-pic' : ''}" aria-disabled="true" style="--accent:${c.color}">
+            ${pic}<div class="skill-action-art">${c.art}</div>
             <div class="node-name">${esc(c.title)}</div>
             <div class="req">${esc(c.locked)}</div>
         </div>`;
@@ -573,8 +579,8 @@ function actionCard(c) {
     const bar = c.active
         ? `<div class="action-progress-container"><div class="action-progress-fill" ${c.progressId ? `id="${c.progressId}"` : 'data-progress="1"'} style="width:${c.progress || 0}%; background:${c.stalled ? '#ef4444' : c.color}"></div></div>`
         : '';
-    return `<div ${c.id ? `id="${c.id}"` : ''} class="node-card ${c.active ? 'active' : ''} ${c.active && c.stalled ? 'stalled' : ''}" onclick="${c.onclick}" role="button" tabindex="0" aria-pressed="${!!c.active}" style="--accent:${c.color}" ${c.tip ? `title="${esc(c.tip)}"` : ''}>
-        <div class="skill-action-art" style="color:${c.color}">${c.art}</div>
+    return `<div ${c.id ? `id="${c.id}"` : ''} class="node-card ${c.active ? 'active' : ''} ${c.active && c.stalled ? 'stalled' : ''}${pic ? ' has-pic' : ''}" onclick="${c.onclick}" role="button" tabindex="0" aria-pressed="${!!c.active}" style="--accent:${c.color}" ${c.tip ? `title="${esc(c.tip)}"` : ''}>
+        ${pic}<div class="skill-action-art" style="color:${c.color}">${c.art}</div>
         <div class="node-name">${esc(c.title)}</div>
         ${c.note ? `<div class="node-io muted small">${c.note}</div>` : ''}
         ${c.inputs ? `<div class="node-io small">${c.inputs}</div>` : ''}
@@ -611,7 +617,8 @@ export function renderSkill(game, ui, skillId) {
         for (const node of withNext(nodes, n => n.levelReq, level)) {
             const out = res(node.produces || node.bonfireLog);
             const art = resIcon(node.produces || node.bonfireLog, { scale: 1.5 });
-            if (level < node.levelReq) { cards += actionCard({ locked: `Level ${node.levelReq}`, art, title: node.name, color: skill.color }); continue; }
+            const pic = cardPic(node.id, skillId === 'cooking' ? 'kitchen' : null);
+            if (level < node.levelReq) { cards += actionCard({ locked: `Level ${node.levelReq}`, art, pic, title: node.name, color: skill.color }); continue; }
             const active = action?.kind === 'node' && action.skill === skillId && action.id === node.id;
             const def = resolveAction(state, { kind: 'node', skill: skillId, id: node.id });
             const interval = intervalFor(def, d);
@@ -621,7 +628,7 @@ export function renderSkill(game, ui, skillId) {
             const xp = Math.round(node.xp * d.xpMult);
             const gives = node.produces ? `${out.name}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;
             cards += actionCard({
-                id: `node-${skillId}-${node.id}`, art, title: node.name, color: skill.color, inputs, time: interval,
+                id: `node-${skillId}-${node.id}`, art, pic, title: node.name, color: skill.color, inputs, time: interval,
                 tip: `${gives} · +${xp} XP · ${seconds(interval)}`,
                 active, stalled: active && (action.stalled || !check.ok), onclick: `FI.startNode('${skillId}','${node.id}')`,
                 have: node.produces ? state.resources[node.produces] : undefined, haveIcon: node.produces ? resIcon(node.produces) : '',
@@ -691,10 +698,10 @@ export function renderMinigame(game, skillId) {
 // ---------- smithing & crafting ----------
 
 /** A recipe (smelting, forging, jewellery, a tool) as an action card. */
-function recipeCard({ title, icon, color, inputs, note = '', have, haveIcon, xp, interval, active, stalled, onclick, disabled, reqText, luck = '', mastery = '', tip = '' }, state) {
-    if (disabled) return actionCard({ locked: reqText, art: icon, title, color });
+function recipeCard({ title, icon, pic = null, color, inputs, note = '', have, haveIcon, xp, interval, active, stalled, onclick, disabled, reqText, luck = '', mastery = '', tip = '' }, state) {
+    if (disabled) return actionCard({ locked: reqText, art: icon, pic, title, color });
     return actionCard({
-        id: `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, art: icon, title, color, note, inputs: needChips(state, Object.fromEntries(inputs)), time: interval,
+        id: `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, art: icon, pic, title, color, note, inputs: needChips(state, Object.fromEntries(inputs)), time: interval,
         tip: tip || `+${xp} XP · ${seconds(interval)}`, active, stalled: active && stalled, onclick, have, haveIcon,
         stats: `<span>✨ ${xp} XP</span><span>⏱️ ${seconds(interval)}</span>${luck}`, mastery
     });
@@ -717,7 +724,7 @@ export function renderSmithing(game, ui) {
         body = `<div class="node-grid">${withNext(SMELTING_RECIPES, r => r.levelReq, level).map(r => {
             const def = resolveAction(state, { kind: 'smelt', id: r.id });
             return recipeCard({
-                title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), color: res(r.produces).color, inputs: Object.entries(r.consumes),
+                title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), pic: cardPic(r.id, 'smithy'), color: res(r.produces).color, inputs: Object.entries(r.consumes),
                 have: state.resources[r.produces], haveIcon: resIcon(r.produces),
                 xp: Math.round(r.xp * d.xpMult), interval: intervalFor(def, d), luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
                 active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
@@ -730,7 +737,7 @@ export function renderSmithing(game, ui) {
         const metal = metals.find(m => m.bar === ui.smithMetal) || [...metals].reverse().find(m => state.resources[m.bar] > 0) || metals[metals.length - 1] || METALS[0];
         const recipes = SMITHING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'smith', type, bar: metal.bar }) }));
         const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
-            title: `${metal.name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${metal.tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), color: res(metal.bar).color,
+            title: `${metal.name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${metal.tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`forge_${type}`, 'smithy'), color: res(metal.bar).color,
             inputs: Object.entries(recipe.consumes), xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
             onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
@@ -759,10 +766,11 @@ function renderToolCard(game, toolId) {
     const owned = state.tools[toolId] || 0;
     const next = tool.tiers.find(t => t.tier === owned + 1);
     const icon = sprite(`tool/${toolId}`, { scale: 1.5, fallback: tool.icon });
-    if (!next) return `<div class="node-card locked"><div class="skill-action-art">${icon}</div><div class="node-name">${esc(tool.tiers[tool.tiers.length - 1].name)}</div><div class="muted small">The best there is</div></div>`;
+    const best = picBand(cardPic(`tool_${toolId}`, tool.madeBy === 'crafting' ? 'jeweller' : 'smithy'));
+    if (!next) return `<div class="node-card locked${best ? ' has-pic' : ''}">${best}<div class="skill-action-art">${icon}</div><div class="node-name">${esc(tool.tiers[tool.tiers.length - 1].name)}</div><div class="muted small">The best there is</div></div>`;
     const level = skillLevel(state, tool.madeBy);
     return recipeCard({
-        title: next.name, icon, color: '#facc15', inputs: Object.entries(next.consumes), note: toolEffect(toolId, next.tier),
+        title: next.name, icon, pic: cardPic(`tool_${toolId}`, tool.madeBy === 'crafting' ? 'jeweller' : 'smithy'), color: '#facc15', inputs: Object.entries(next.consumes), note: toolEffect(toolId, next.tier),
         xp: Math.round(next.xp * d.xpMult), interval: actionInterval(4000, d, tool.madeBy),
         active: state.action?.kind === 'tool' && state.action.tool === toolId, stalled: state.action?.stalled,
         onclick: `FI.makeTool('${toolId}', ${next.tier})`, disabled: level < next.levelReq, reqText: `${SKILLS[tool.madeBy].name} ${next.levelReq}`
@@ -780,7 +788,7 @@ export function renderCrafting(game, ui) {
     const gem = gems.find(g => g.gem === ui.craftGem) || [...gems].reverse().find(g => state.resources[g.gem] > 0) || gems[gems.length - 1] || GEM_TIERS[0];
     const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gem.gem }) }));
     const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
-        title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), color: res(gem.gem).color,
+        title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(gem.gem).color,
         inputs: Object.entries(recipe.consumes), xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
@@ -1179,17 +1187,18 @@ export function renderFarming(game, ui) {
             </button>`;
         }
         const crop = cropById(plot.crop);
+        const pic = picBand(cardPic(crop.produces));   // the crop's own picture once it is in the ground
         const total = Math.max(1, plot.readyAt - plot.plantedAt);
         const done = plotReady(plot, game.now);
         const pctDone = done ? 100 : Math.min(100, (game.now - plot.plantedAt) / total * 100);
         if (done) {
-            return `<button class="plot-card ready" onclick="FI.harvest(${i})" title="Harvest the ${esc(crop.name.toLowerCase())}">
-                <span class="plot-art">${resIcon(crop.produces, { scale: 1.5 })}</span>
+            return `<button class="plot-card ready${pic ? ' has-pic' : ''}" onclick="FI.harvest(${i})" title="Harvest the ${esc(crop.name.toLowerCase())}">
+                ${pic}<span class="plot-art">${resIcon(crop.produces, { scale: 1.5 })}</span>
                 <span class="node-name">${esc(crop.name)}</span>
                 <span class="plot-do">Harvest</span>
             </button>`;
         }
-        return `<div class="plot-card growing"><div class="plot-art">${sprite(pctDone < 50 ? 'farm/sprout' : 'farm/growing', { scale: 1.5, fallback: '🌱' })}</div>
+        return `<div class="plot-card growing${pic ? ' has-pic' : ''}">${pic}<div class="plot-art">${sprite(pctDone < 50 ? 'farm/sprout' : 'farm/growing', { scale: 1.5, fallback: '🌱' })}</div>
             <div class="node-name">${esc(crop.name)}</div>
             <div class="muted small">${duration(plot.readyAt - game.now)}</div>
             <div class="action-progress-container"><div class="action-progress-fill" style="width:${pctDone}%; background:${SKILLS.farming.color}"></div></div></div>`;

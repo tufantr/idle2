@@ -1700,6 +1700,18 @@ body:has(#modal-root .modal-overlay.active) #toast-area, body:has(#modal-root .m
 .node-time { font-variant-numeric: tabular-nums; }
 .node-have { display: flex; align-items: center; gap: 0.3rem; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--heading); }
 .node-card.locked { filter: none; opacity: 0.6; border-style: dashed; }
+/* an action card's own picture (tools/cards.py) across its top, the medallion set on its lower edge */
+.node-card.has-pic, .plot-card.has-pic { padding-top: 0; }
+.card-pic {
+    flex: 0 0 auto; align-self: stretch; height: 92px; margin: 0 calc(-1 * var(--pad-x, 0.8rem)) -36px;
+    background: linear-gradient(180deg, rgba(18, 13, 9, 0) 40%, rgba(18, 13, 9, 0.88)), var(--pic) center / cover no-repeat;
+}
+.node-card.has-pic .skill-action-art, .plot-card.has-pic .plot-art { position: relative; z-index: 1; }
+.plot-card { --pad-x: 0.6rem; }
+.plot-card .card-pic { height: 76px; margin-bottom: -30px; }
+.plot-card.growing .card-pic { filter: saturate(0.75) brightness(0.8); }  /* not ready yet */
+.node-card.locked .card-pic { filter: grayscale(0.9) brightness(0.45); }
+@media (max-width: 600px) { .card-pic { height: 78px; } }
 .node-card.locked .skill-action-art .spr, .node-card.locked .skill-action-art .nav-emoji { filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.8)); }
 button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-shadow: none; cursor: pointer; }
 .minigame-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.9rem; font-size: 0.8rem; color: var(--text-main); }

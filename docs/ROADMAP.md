@@ -425,6 +425,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A picture on every action card**: ninety small Gemini paintings, one per action, across
+      the top of its card: each ore in its vein, each tree, each fire, each fish and animal in the
+      wild, herbs and crops, potions on the alchemist's table, ingots, the piece on the anvil, each
+      tool and jewel, every dish. Painted nine to a sheet and cut by `tools/cards.py`; locked cards
+      show theirs in grey, and a planted farm plot shows its crop
 - [x] **A painting behind every panel**: nothing is plain brown any more. The page stands in a
       painted guild hall; a skill's panel continues its stage's painting below it, so the cards sit
       in the cave, the forest or the forge; the inventory is an armory (the hero on a dais), the bag

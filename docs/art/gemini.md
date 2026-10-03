@@ -296,6 +296,34 @@ Same style and rules, filling the picture to the edges. Next, War Table: a comma
 Import them like the rest; a separate folder keeps the earlier pictures from being encoded again:
 `python3 tools/paint.py art/rooms --trim 0`.
 
+## Action cards
+
+Every action card has a small picture across its top (the ore, the tree, the fish, the dish, the
+piece on the anvil...). There are ninety, so Gemini paints them nine to a sheet: a 3 by 3 grid on
+one wide picture, which `tools/cards.py` cuts into `assets/paint/cards/<card>.webp`. The tool holds
+the list (`SHEETS`: each card's name and what to paint) and writes the messages from it, so the
+order of the paintings and the names can't drift apart:
+
+```bash
+python3 tools/cards.py --prompts                          # the ten messages, one per sheet
+python3 tools/cards.py art/cards --sheet art/cards.png    # cut the sheets, write src/data/cardart.js
+```
+
+Send the messages in the same chat as the places, in order, and save each sheet as
+`art/cards/cards01.png` ... `cards10.png`. Look at every cell before going on: Gemini sometimes
+paints the wrong metal (the first silver came out gold) or carves letters into a rune stone (the
+first wording, "rune-carved", asked for it). "Keep this sheet exactly as it is, but repaint the
+second one..." fixes a cell or two without touching the rest. When an earlier version of a sheet had
+one picture right, save it as `cards01 only-runite_ore.png`: the tool takes just that card from it.
+Gemini sets the paintings in little frames or on paper with borders; the tool finds the grid's lines
+and trims each cell, so either way works.
+
+Once Chrome started dropping the full-size downloads (Gemini said "Image downloaded", nothing
+arrived). The full-size picture still reaches the page: wrapping `window.fetch` to keep any image
+response over 500 KB catches it when the download button is pressed. Drawn into a canvas a quarter at
+a time (1376 x 768) at half its size in CSS pixels, each quarter is saved at full detail with a zoomed
+screenshot (`save_to_disk`, scale 1); four quarters stitch back into the 2752 x 1536 sheet.
+
 The map's pins are placed by eye: `ZONE_PINS` in `src/ui/worldmap.js` holds each zone's spot in
 percent of the picture's width and height. A new map painting needs new numbers there: open the
 map in the game (`?dev=1`, then the Map button on the Combat tab) and move each pin beside its

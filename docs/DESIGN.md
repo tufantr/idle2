@@ -594,6 +594,13 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 - **Cards are quiet at rest.** An action card shows its art, its name, what it needs and how long
   it takes. The card being worked opens up: the pile it has made, XP, luck, mastery, the progress
   bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
+- **Every action card has its own picture.** A small painting runs across the card's top, the
+  medallion set on its lower edge: the vein, the tree, the fish leaping, the animal, the herb, the
+  potion, the ingot, the piece on the anvil, the dish (ninety in all, `assets/paint/cards/`).
+  Gemini paints them nine to a sheet and `tools/cards.py` cuts them out; `src/data/cardart.js`
+  lists the ones that exist, so a card without its own uses its workshop's (the smithy, the
+  jeweller's bench, the kitchen hearth) or none. A locked card shows its picture in grey, and a
+  planted farm plot shows its crop's (dimmed while it grows).
 - **No plain panels.** Every panel stands on a painting (`painted()` in `src/ui/render.js`, CSS
   `.painted`): a skill's panel continues its stage's painting, the other places reuse their card
   pictures, and nine rooms (`ROOMS` in `tools/paint.py`: the guild hall behind the page, the
@@ -883,6 +890,7 @@ src/core/             xp · rng · state (defaults, migration) · modifiers · f
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
+                      · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
@@ -898,7 +906,7 @@ assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
-test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, saves, API; the API suite runs on an
+test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
                       atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·
@@ -906,6 +914,7 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       badges, tools, crate, gear and the hero's hoe) ·
                       backdrops.py (paints assets/backdrops/*.webp from noise, gradients and the DCSS floor tiles) ·
                       paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css) ·
+                      cards.py (cuts the action cards' pictures from sheets of nine, writes src/data/cardart.js) ·
                       shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for the paintings) · reports/ ·
                       research_notes/
