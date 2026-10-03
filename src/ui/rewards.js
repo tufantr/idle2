@@ -13,6 +13,7 @@ import { feature, artStyle, FEATURE_TAB } from './features.js';
 
 const SHOW_MS = 2800;
 const UNLOCK_MS = 7000;   // a new place comes with a picture and a line to read
+const ARM_MS = 600;       // a card that can be tapped ignores taps for its first moment
 const MAX_QUEUE = 4;
 const CONFETTI = 26;
 const CONFETTI_COLORS = ['#fcd34d', '#f59e0b', '#fde68a', '#f472b6', '#60a5fa', '#34d399', '#c084fc'];
@@ -142,13 +143,18 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
             ${card.lines?.length ? `<span class="cel-lines">${card.lines.map(l => `<span>${l}</span>`).join('')}</span>` : ''}
             ${card.note ? `<span class="cel-note">${esc(card.note)}</span>` : ''}
             ${card.tiles ? `<span class="cel-tiles">${card.tiles.map((t, i) => `<button type="button" class="cel-tile" data-tile="${i}" style="${t.art}"><span>${esc(t.name)}</span></button>`).join('')}</span>` : ''}
-            ${card.go ? '<span class="cel-go">Take a look →</span>' : ''}`;
-        // A card with somewhere to go is a button: the whole card, or each of its pictures.
+            ${card.go ? '<span class="cel-go">Take a look →</span>' : ''}
+            ${card.go || card.tiles ? '<button type="button" class="cel-close" aria-label="Dismiss">✕</button>' : ''}`;
+        // A card with somewhere to go is a button: the whole card, or each of its pictures. It ignores
+        // the first moment after it appears, so a tap already on its way to the monster doesn't leave the fight.
         if (card.go || card.tiles) {
+            const shownAt = Date.now();
             node.addEventListener('click', event => {
+                if (Date.now() - shownAt < ARM_MS) return;
+                const close = event.target.closest?.('.cel-close');
                 const tile = event.target.closest?.('[data-tile]');
-                const where = tile ? card.tiles[Number(tile.dataset.tile)]?.go : card.go;
-                if (card.tiles && !tile) return;
+                const where = close ? null : tile ? card.tiles[Number(tile.dataset.tile)]?.go : card.go;
+                if (card.tiles && !tile && !close) return;
                 clearTimeout(timer);
                 next();
                 if (where) go(where);
