@@ -807,7 +807,8 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·
                       resource_art.py (the 73 resource icons: recolored DCSS tiles and drawn pixel art) ·
                       backdrops.py (paints assets/backdrops/*.webp from noise, gradients and the DCSS floor tiles) ·
-                      paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css)
+                      paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css) ·
+                      shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for painted backdrops) · reports/ ·
                       research_notes/
 ```

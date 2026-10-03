@@ -53,7 +53,12 @@ Node 22+, no install needed (the API tests use the packages in `api/node_modules
 node --test test/*.test.mjs test/*.test.cjs   # game logic, loot, endgame, skills, mastery, events, saves, API
 node tools/pacing.mjs                           # hours of training to reach each skill level
 node tools/simulate.mjs --hours=150 --seed=1    # plays the whole game headlessly, prints milestones
+node tools/shots.mjs                            # screenshots at desktop and phone widths, checks layout
 ```
+
+`tools/shots.mjs` serves the game itself, shoots the main tabs (or `node tools/shots.mjs combat,farming`,
+or `--fresh` for a new player's first screens) into `shots/`, and fails if anything scrolls sideways or
+the page logs an error. It needs Playwright once: `npm i --no-save playwright && npx playwright install chromium`.
 
 The API tests use an in-memory store by default. To run the same tests against a real Postgres
 (checks the SQL in `api/store.js`), install `pg` somewhere on `NODE_PATH` and point them at a

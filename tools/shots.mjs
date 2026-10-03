@@ -1,0 +1,125 @@
+#!/usr/bin/env node
+// Screenshots of the game at a desktop and a phone width, with the two checks a layout change most
+// often breaks: nothing may scroll sideways, and the page may not throw or log an error. Tabs are
+// shot in a late-game save so that every one of them has something in it.
+//
+//   node tools/shots.mjs                          # the default tabs
+//   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...)
+//   node tools/shots.mjs --fresh                  # a brand-new player: the title card, then the first fight
+//
+// Writes shots/<name>-<width>.png (git-ignored) and exits 1 on overflow or errors.
+// Needs Playwright, once:  npm i --no-save playwright && npx playwright install chromium
+
+import { createServer } from 'node:http';
+import { readFile, mkdir } from 'node:fs/promises';
+import { extname, join, normalize, dirname, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const OUT = join(ROOT, 'shots');
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+    '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
+const DEFAULT_TABS = ['combat', 'mining', 'smithing', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons'];
+
+let chromium;
+try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
+    console.error('Playwright is missing. Once: npm i --no-save playwright && npx playwright install chromium');
+    process.exit(2);
+}
+
+const args = process.argv.slice(2);
+const fresh = args.includes('--fresh');
+const tabs = (args.find(a => !a.startsWith('--')) || DEFAULT_TABS.join(',')).split(',').filter(Boolean);
+
+// The game is ES modules, which need HTTP and the right content types: a small static server.
+const server = createServer(async (req, res) => {
+    const path = normalize(decodeURIComponent(new URL(req.url, 'http://local').pathname)).replace(/^[/\\]+/, '');
+    const file = join(ROOT, path || 'index.html');
+    if (file !== ROOT && !file.startsWith(ROOT + sep)) { res.writeHead(403).end(); return; }
+    try {
+        const body = await readFile(file);
+        res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream' }).end(body);
+    } catch { res.writeHead(404).end(); }
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const base = `http://127.0.0.1:${server.address().port}/`;
+
+await mkdir(OUT, { recursive: true });
+const browser = await chromium.launch();
+const errors = [];
+const problems = [];
+
+/** A page that records errors; requests the static server can't answer (the API, web fonts offline) don't count. */
+async function open(viewport, url) {
+    const ctx = await browser.newContext({ viewport });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => errors.push(`${viewport.width}px: ${e.message}`));
+    page.on('console', m => {
+        const where = m.location()?.url || '';
+        if (m.type() === 'error' && !where.includes('/api/') && !where.includes('fonts.g')) errors.push(`${viewport.width}px: ${m.text()}`);
+    });
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1200);
+    return page;
+}
+
+/** Celebrations and toasts come and go; keep them out of the pictures. */
+const quiet = page => page.addStyleTag({ content: '#celebrate, #toast-area { display: none !important; }' });
+
+async function shoot(page, name, width) {
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    await page.screenshot({ path: join(OUT, `${name}-${width}.png`) });
+    console.log(`${String(width).padStart(4)}px  ${name.padEnd(14)} overflow ${overflow}`);
+    if (overflow > 0) problems.push(`${name} at ${width}px scrolls sideways by ${overflow}px`);
+}
+
+/** A save well into the game: levels in the 40s and 60s, gear, a full bag, materials, mining under way. */
+const lateGame = page => page.evaluate(async () => {
+    FI.closeModal();
+    const { generateDrop, generateEquipment } = await import('/src/core/formulas.js');
+    const { xpForLevel } = await import('/src/core/xp.js');
+    const g = FI.game(); const s = g.state;
+    for (const id of Object.keys(s.skills)) s.skills[id].xp = xpForLevel(id === 'combat' ? 62 : 48);
+    s.combat.bestStage = 64; s.combat.maxStage = 58; s.combat.stage = 56;
+    s.prestige.tokens = 420; s.prestige.count = 6; s.prestige.skillPoints = 2;
+    for (const r of Object.keys(s.resources)) s.resources[r] = 240;
+    s.resources.essence = 3200; s.gold = 4.8e6;
+    for (const type of ['Weapon', 'Shield', 'Head', 'Body']) s.equipped[type] = generateEquipment({ type, tier: 3, power: 20, materialName: 'Mithril', source: 'crafted' }, s.idCounter++);
+    for (let i = 0; i < 12; i++) s.inventory.push(generateDrop(2 + (i % 3), i % 4 === 0, s.idCounter++));
+    s.daily.banked = 1;
+    g.markDirty(); g.recompute(); g.setStage(56);
+    g.startNodeAction('mining', 'mithril_ore');
+});
+
+for (const viewport of VIEWPORTS) {
+    if (fresh) {
+        const page = await open(viewport, base);
+        await quiet(page);
+        await shoot(page, 'title', viewport.width);
+        if (await page.$('.intro-go')) {
+            await page.click('.intro-go');
+            await page.waitForTimeout(2500);
+            await shoot(page, 'first-fight', viewport.width);
+        } else problems.push(`no title card for a new player at ${viewport.width}px`);
+        await page.context().close();
+        continue;
+    }
+    const page = await open(viewport, `${base}?dev=1`);
+    await lateGame(page);
+    await quiet(page);
+    for (const tab of tabs) {
+        await page.evaluate(t => FI.switchTab(t), tab);
+        await page.waitForTimeout(700);
+        await shoot(page, tab, viewport.width);
+    }
+    await page.context().close();
+}
+
+await browser.close();
+server.close();
+for (const e of errors) console.log(`error  ${e}`);
+for (const p of problems) console.log(`problem  ${p}`);
+console.log(`\n${errors.length || problems.length ? 'FAILED' : 'ok'} · pictures in shots/`);
+process.exit(errors.length || problems.length ? 1 : 0);
