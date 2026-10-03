@@ -215,7 +215,8 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 - **Death** retreats to the start of the zone (from a zone's first stage, one stage back, never onto
   the previous zone's boss) with half HP.
 - **Death:** retreat to the start of the zone (a boss death sends you back 9 stages), HP set to 50%,
-  combat stops. **Farm mode** keeps you on the current stage; the stage arrows let you move back.
+  combat stops. **Farm mode** ("Stay on this stage") keeps you on the current stage; the map, and the stones on
+  the scene's stage path, take you back to any stage reached this run.
 - **Boss payouts:** a boss pays its bonus (gold ×3, XP ×5, its loot table) only on its **first fall
   in a run** — the kill that moves you on — and the Titan always does. A boss you farm after beating
   it, and every dungeon boss, pays like the regular monsters its health is worth (a ×3-health boss
@@ -569,7 +570,7 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   place's painting, its name, the task and a bar). Group headings come when the list is seven long.
   Inside a screen, a piece opens the first time it means something (`src/systems/disclosure.js`):
   a currency when you hold some, the camp with the gold for its first upgrade, the food row with
-  Cooking, the potion row with Alchemy, going back a stage after the first defeat, the world map
+  Cooking, the potion row with Alchemy, "Stay on this stage" after the first defeat, the world map
   with the second zone, the jewellery slots with Crafting, the bag's tools once there is a bag to
   tidy, mastery after 20 mastery levels, the mini-game with the first chance to play. What has
   opened is saved (`state.seen`) and never closes again: a currency spent to zero keeps its place.
@@ -604,7 +605,8 @@ the battle scene takes all the room that is left with the fighters drawn bigger 
 sized by the room the scene has), and the tab under it becomes a dock. The point is that a run never
 needs another screen: fight, spend, prestige and fight on.
 
-- **The dock holds the loop.** Orders (retreat, the stage arrows, the map), the food and the potion,
+- **The dock holds the loop.** The food and the potion with what drops here below them, the orders
+  on the side (retreat, the map, stay on this stage),
   the camp as three tokens to tap, and the loop's own buttons: Prestige with what it would pay now,
   Perks (a window over the fight, so skill points are spent there), and the best piece of gear
   waiting in the bag as a one-tap Equip. On a wide screen the groups sit in one row; on a phone they

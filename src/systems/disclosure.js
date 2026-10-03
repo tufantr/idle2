@@ -22,7 +22,7 @@ export const DISCLOSURES = [
     { id: 'skill_points', when: s => s.prestige.skillPoints > 0 || s.prestige.count > 0 || Object.values(s.perks).some(level => level > 0) },
     // the combat tab
     { id: 'camp',         when: s => s.gold >= CHEAPEST_CAMP || Object.values(s.camp).some(level => level > 0) || s.prestige.count > 0 },
-    { id: 'stage_nav',    when: s => s.stats.deaths > 0 || s.stats.bossEscapes > 0 || s.combat.bestStage > STAGES_PER_ZONE },  // going back means something after a setback
+    { id: 'stage_nav',    when: s => s.stats.deaths > 0 || s.stats.bossEscapes > 0 || s.combat.bestStage > STAGES_PER_ZONE },  // "Stay on this stage": staying means something after a setback
     { id: 'world_map',    when: s => s.combat.bestStage > STAGES_PER_ZONE },                                                     // a second zone to travel to
     { id: 'food',         when: s => !!s.unlocks.cooking || owns(s, 'food') },
     { id: 'potions',      when: s => !!s.unlocks.alchemy || owns(s, 'potion') },

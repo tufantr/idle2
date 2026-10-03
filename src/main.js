@@ -315,7 +315,7 @@ function refreshPerks() {
 
 // A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
 const ARRIVALS = {
-    essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel', stage_nav: '.stage-nav', world_map: '.map-btn',
+    essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
     auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line'
 };
@@ -643,7 +643,6 @@ window.FI = {
     },
     setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },
-    stageNav(delta) { game.setStage(game.state.combat.stage + delta); render(); },
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },

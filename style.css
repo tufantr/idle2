@@ -385,9 +385,12 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .mastery-total { padding: 0.2rem 0.55rem; border-radius: 999px; white-space: nowrap; font-size: 0.75rem; font-weight: 700; color: #d8c4ff; background: rgba(124, 92, 196, 0.16); border: 1px solid rgba(183, 148, 246, 0.35); }
 
 /* ---------- combat tab (the fight itself is the battle scene below) ---------- */
-.combat-panel { display: flex; flex-direction: column; gap: 0.8rem; }
-.combat-deck { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 1.2rem; }
-.stage-nav { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+/* the combat panel: food, potion and the drops in the main column; the orders on the side */
+.combat-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.9rem 1.6rem; align-items: start; }
+.combat-main { min-width: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.combat-side { display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; min-width: 168px; padding-left: 1.2rem; border-left: 1px solid var(--line); }
+.combat-side .mini-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.5rem 0.8rem; font-size: 0.82rem; }
+.combat-side .stay-toggle { margin-top: 0.2rem; }
 .combat-controls { display: flex; flex-wrap: wrap; gap: 1rem 1.6rem; align-items: flex-start; }
 .loadout { display: flex; flex-direction: column; gap: 0.4rem; flex: 1 1 300px; min-width: 0; }
 .loadout-label { font-size: 0.82rem; font-weight: 700; color: var(--text-main); }
@@ -405,8 +408,6 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .pick-word { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; }
 .pick-qty { position: absolute; right: 3px; top: 1px; font-size: 0.62rem; font-weight: 800; color: #fff3d6; text-shadow: 0 1px 2px #000, 0 0 3px #000; font-variant-numeric: tabular-nums; }
 .pick-sub { position: absolute; left: 0; right: 0; bottom: 2px; font-size: 0.6rem; font-weight: 800; color: #86efac; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
-.retreat-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
-.map-btn { margin-left: auto; padding: 0.45rem 0.8rem; font-size: 0.8rem; }
 .zone-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; }
 .fact { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px; background: var(--well); border: 1px solid var(--line); }
 /* the camp: three upgrades as tokens on the camp painting */
@@ -1707,7 +1708,6 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 
 .menu-btn { position: relative; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.75rem; font-size: 0.82rem; }
 .menu-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-color); box-shadow: 0 0 8px rgba(252, 211, 77, 0.9); }
-.expand-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.8rem; font-size: 0.8rem; }
 .ico { flex: 0 0 auto; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .screen-btn { display: inline-grid; place-items: center; padding: 0.42rem 0.5rem; }
 
@@ -1718,14 +1718,13 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255, 236, 200, 0.03), rgba(0, 0, 0, 0.22));
 }
 .dock-title { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-display); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-color); }
-.dock-orders { flex: 1 1 250px; }
-.dock-orders .combat-deck { gap: 0.5rem 0.6rem; }
-.dock-orders .map-btn { margin-left: 0; }
-.dock-orders .stage-nav { order: 3; flex-basis: 100%; }
-.dock-loadout { flex: 2 1 300px; gap: 0.45rem; }
-.dock-loadout .loadout { flex: 0 0 auto; gap: 0.25rem; }
-.dock-loadout .pick-row { flex-wrap: nowrap; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; } /* one row, however much food there is */
-.dock-loadout .pick { flex: 0 0 auto; }
+.dock-orders { flex: 0 0 auto; min-width: 160px; }
+.dock-orders .combat-side { min-width: 0; padding-left: 0; border-left: 0; }
+.dock-main { flex: 2 1 300px; gap: 0.6rem; }
+.dock-main .combat-controls { flex-direction: column; flex-wrap: nowrap; gap: 0.45rem; }
+.dock-main .loadout { flex: 0 0 auto; gap: 0.25rem; }
+.dock-main .pick-row { flex-wrap: nowrap; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; } /* one row, however much food there is */
+.dock-main .pick { flex: 0 0 auto; }
 .dock-camp { flex: 2 1 340px; }
 .camp-tokens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
 .camp-token { display: flex; flex-direction: column; align-items: stretch; gap: 0.3rem; min-width: 0; }
@@ -1774,8 +1773,8 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     .dock-prestige, .dock-perks { flex-direction: column; align-items: flex-start; gap: 0; padding: 0.45rem 0.7rem; }
     .dock-prestige span, .dock-perks span { text-align: left; }
     .dock-camp { order: 2; }
-    .dock-orders { order: 3; }
-    .dock-loadout { order: 4; }
+    .dock-main { order: 3; }
+    .dock-orders { order: 4; }
     /* and the top bar keeps to one line: icons only */
     body.battle-full .cloud-word, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
     body.battle-full .pills:empty { display: none; }
@@ -1784,4 +1783,11 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     body.battle-full #toast-area { top: 3.2rem; }
     .camp-buy { flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.25rem; text-align: center; }
     .camp-token-text { align-items: center; }
+}
+
+/* phones: the orders go under the food, potion and drops, in one row */
+@media (max-width: 600px) {
+    .combat-panel { grid-template-columns: minmax(0, 1fr); }
+    .combat-side { flex-direction: row; flex-wrap: wrap; align-items: center; min-width: 0; padding: 0.8rem 0 0; border-left: 0; border-top: 1px solid var(--line); }
+    .dock-orders .combat-side { padding-top: 0; border-top: 0; }
 }

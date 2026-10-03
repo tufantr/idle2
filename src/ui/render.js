@@ -324,45 +324,49 @@ function renderBattleLog(state, ui) {
     </details>`;
 }
 
-/** The orders for the fight: leave it, move between stages, open the map; and what this place drops. */
+/** What this place drops and the tier of its gear (or what a dungeon run or the Titan is about). */
+function zoneFacts(game) {
+    const state = game.state;
+    const c = state.combat;
+    const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
+    if (run) return `<div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`;
+    if (c.mode === 'titan') return '<div class="muted small">Deal as much damage as you can before the timer runs out. Clicking the Titan helps.</div>';
+    const zone = zoneForStage(c.stage);
+    return `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
+}
+
+/** The fight's main column: food and potion first, then what drops here. */
+function combatMain(game) {
+    const loadout = renderLoadout(game);
+    return `${loadout ? `<div class="combat-controls">${loadout}</div>` : ''}${zoneFacts(game)}`;
+}
+
+/**
+ * The orders, on the side: leave the fight, bring the full screen back, the map, and stay on this
+ * stage. Moving between stages is the map's job (and the stones on the scene's path).
+ */
 function combatOrders(game, ui) {
     const state = game.state;
     const c = state.combat;
-    const zone = zoneForStage(c.stage);
-    const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
     const leave = c.mode === 'dungeon' ? 'Abandon run' : c.mode === 'titan' ? 'Give up' : 'Retreat';
-    const retreat = c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">🏳️ ${leave}</button>` : '';
-    const far = c.maxStage > STAGES_PER_ZONE; // a jump of ten needs a second zone
-    const nav = c.mode === 'stages' && seen(state, 'stage_nav')
-        ? `<div class="stage-nav">
-                ${far ? `<button class="mini-btn" aria-label="Back 10 stages" onclick="FI.stageNav(-10)" ${c.stage <= 1 ? 'disabled' : ''}>«</button>` : ''}
-                <button class="mini-btn" aria-label="Back 1 stage" onclick="FI.stageNav(-1)" ${c.stage <= 1 ? 'disabled' : ''}>‹</button>
-                <button class="mini-btn" aria-label="Forward 1 stage" onclick="FI.stageNav(1)" ${c.stage >= c.maxStage ? 'disabled' : ''}>›</button>
-                ${far ? `<button class="mini-btn" aria-label="Forward 10 stages" onclick="FI.stageNav(10)" ${c.stage >= c.maxStage ? 'disabled' : ''}>»</button>` : ''}
-                <label class="toggle" title="Stay on this stage instead of moving on: for gathering its loot"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Stay on this stage</label>
-            </div>`
-        : '';
-    const map = c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">🗺️ Map</button>` : '';
-    // Folded away mid-fight: one button brings the full screen back.
-    const expand = c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '';
-    const where = run
-        ? `<div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`
-        : c.mode === 'titan'
-            ? '<div class="muted small">Deal as much damage as you can before the timer runs out. Clicking the Titan helps.</div>'
-            : `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
-    const deck = retreat || nav || map || expand ? `<div class="combat-deck">${retreat}${nav}${expand}${map}</div>` : '';
-    return `${deck}${where}`;
+    const orders = [
+        c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">🏳️ ${leave}</button>` : '',
+        // Folded away mid-fight: one button brings the full screen back.
+        c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '',
+        c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">🗺️ Map</button>` : '',
+        c.mode === 'stages' && seen(state, 'stage_nav') ? `<label class="toggle stay-toggle" title="Stay on this stage instead of moving on: for gathering its loot"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Stay on this stage</label>` : ''
+    ].filter(Boolean);
+    return orders.length ? `<div class="combat-side">${orders.join('')}</div>` : '';
 }
 
 export function renderCombat(game, ui) {
     if (battleMode(game, ui)) return renderBattleDock(game, ui);
     const state = game.state;
     // The battle scene above the tab (src/ui/scene.js) shows the fight and starts it; this panel holds the orders.
-    const loadout = renderLoadout(game);
     return `
     <section class="glass-panel combat-panel">
+        <div class="combat-main">${combatMain(game)}</div>
         ${combatOrders(game, ui)}
-        ${loadout ? `<div class="combat-controls">${loadout}</div>` : ''}
     </section>
     ${renderCamp(game)}
     ${renderPrestigeStrip(game)}
@@ -421,12 +425,12 @@ function renderLoopActions(game) {
 
 function renderBattleDock(game, ui) {
     const state = game.state;
-    const loadout = renderLoadout(game);
+    const orders = combatOrders(game, ui);
     return `<section class="battle-dock" aria-label="Orders for the fight">
-        <div class="dock-group dock-orders">${combatOrders(game, ui)}</div>
-        ${loadout ? `<div class="dock-group dock-loadout">${loadout}</div>` : ''}
+        <div class="dock-group dock-main">${combatMain(game)}</div>
         ${renderCampTokens(game)}
         ${renderLoopActions(game)}
+        ${orders ? `<div class="dock-group dock-orders">${orders}</div>` : ''}
     </section>
     ${renderBattleLog(state, ui)}`;
 }
