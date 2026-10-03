@@ -41,7 +41,7 @@ const ui = {
     craftBar: null,
     craftGem: null,
     open: {},            // drawers the player has opened (the battle log, the crop table)
-    battleFull: true,    // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
+    battleFull: prefs.get('fantasyIdle.battleFull') !== '0', // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -187,7 +187,6 @@ function paintGold(now = performance.now()) {
 requestAnimationFrame(frame);
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(Date.now()); });
-document.addEventListener('fullscreenchange', () => render());
 // The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
 let resizeQueued = false;
 window.addEventListener('resize', () => {
@@ -236,7 +235,7 @@ document.addEventListener('keydown', event => {
         target.click();
     }
     if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'conflict') closeModal(); // a conflict needs a choice
-    else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui) && !document.fullscreenElement) window.FI.battleFull(false); // Esc folds the full-screen fight (the browser's own full screen takes Esc first)
+    else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
 }, { capture: true });
 
 // ---------- rendering ----------
@@ -569,6 +568,12 @@ function adoptState(stateObject) {
     render();
 }
 
+/** The fight fills the screen, or is folded into the page; a fold is remembered until the next fight. */
+function setBattleFull(on) {
+    ui.battleFull = !!on;
+    if (on) prefs.remove('fantasyIdle.battleFull'); else prefs.set('fantasyIdle.battleFull', '0');
+}
+
 // ---------- public facade for inline handlers ----------
 
 window.FI = {
@@ -625,16 +630,11 @@ window.FI = {
     toggleCombat() {
         const fighting = game.state.combat.active;
         game.toggleCombat();
-        if (!fighting && game.state.combat.active) ui.battleFull = true;
+        if (!fighting && game.state.combat.active) setBattleFull(true);
         render();
     },
     /** Fold the full-screen fight back into the page (it goes on), or let it fill the screen again. */
-    battleFull(on) { ui.battleFull = !!on; render(); },
-    /** The browser's own full screen, for those who want the tabs and the address bar gone too. */
-    toggleFullscreen() {
-        if (document.fullscreenElement) document.exitFullscreen?.();
-        else document.documentElement.requestFullscreen?.().catch(() => { /* refused: the page still fills the window */ });
-    },
+    battleFull(on) { setBattleFull(on); render(); },
     /** Perks in a dialog over the fight: skill points are spent without leaving it. */
     openPerks() {
         const html = renderPerksModal(game);
@@ -648,10 +648,10 @@ window.FI = {
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
-    enterDungeon(id) { if (game.enterDungeon(id)) { ui.battleFull = true; window.FI.switchTab('combat'); } else render(); },
+    enterDungeon(id) { if (game.enterDungeon(id)) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
     setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
-    challengeTitan() { if (game.challengeTitan()) { ui.battleFull = true; window.FI.switchTab('combat'); } else render(); },
+    challengeTitan() { if (game.challengeTitan()) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
     buyEventItem(id) { if (game.buyEventItem(id)) toast('🎉 Bought!', 'info'); render(); },
@@ -788,7 +788,7 @@ window.FI = {
         closeModal();
         sound.unlock();
         sound.play('unlock');
-        if (!game.state.combat.active && !game.state.action) game.toggleCombat();
+        if (!game.state.combat.active && !game.state.action) { game.toggleCombat(); setBattleFull(true); }
         render();
     },
     async auth(kind) {

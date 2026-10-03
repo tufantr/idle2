@@ -1715,7 +1715,9 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 
 .menu-btn { position: relative; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.75rem; font-size: 0.82rem; }
 .menu-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-color); box-shadow: 0 0 8px rgba(252, 211, 77, 0.9); }
-.expand-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+.expand-btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+.ico { flex: 0 0 auto; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.screen-btn { display: inline-grid; place-items: center; padding: 0.42rem 0.5rem; }
 
 /* the dock: one row of groups on a wide screen, a column on a phone */
 .battle-dock { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem; }
@@ -1785,7 +1787,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     .dock-orders { order: 3; }
     .dock-loadout { order: 4; }
     /* and the top bar keeps to one line: icons only */
-    body.battle-full .cloud-word, body.battle-full .screen-btn, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
+    body.battle-full .cloud-word, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
     body.battle-full .pills:empty { display: none; }
     body.battle-full #header .daily-btn { display: inline-flex; } /* the hotbar is out of sight here, so the crate keeps its button */
     body.battle-full .daily-word { display: none; }

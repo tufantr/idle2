@@ -67,6 +67,11 @@ const rarityColor = id => RARITIES.find(r => r.id === id)?.color || '#e2e8f0';
 const res = id => RESOURCES[id];
 const resTag = (id, qty = null) => `<span class="res-tag" style="color:${res(id)?.color || '#e2e8f0'}">${resIcon(id)} ${qty !== null ? `${fmt(qty)}× ` : ''}${esc(res(id)?.name || id)}</span>`;
 
+// The two halves of one switch: the fight fills the screen, or sits in the page. Drawn, because the
+// one glyph there is for this (⛶) reads as "full screen" both ways.
+const ICON_EXPAND = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>';
+const ICON_SHRINK = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>';
+
 /** Is the fight filling the screen? On the combat tab, while fighting, unless the player folded it away. */
 export function battleMode(game, ui) {
     return ui.tab === 'combat' && game.state.combat.active && ui.battleFull !== false;
@@ -194,12 +199,12 @@ export function renderHeader(game, ui, cloud) {
         : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" aria-label="Local save only: sign in to keep it in the cloud" title="Local save only: sign in to keep it in the cloud">💾${nudge ? '<span class="cloud-word"> Save to cloud</span>' : ''}</button>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? '🔊' : '🔇'}</button>`;
-    // While the fight fills the screen, the sidebar is out of sight: the header carries the way back
-    // to it (with a dot when a new place is waiting there) and the browser's own full screen.
+    // While the fight fills the screen, the sidebar is out of sight. The header carries the way back,
+    // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
+    // leave-full-screen button. Both fold the fight back into the page; it goes on.
     const full = battleMode(game, ui);
     const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${ui.fresh?.size ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
-    const native = typeof document !== 'undefined' && document.fullscreenEnabled;
-    const screen = full && native ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.toggleFullscreen()" aria-pressed="${!!document.fullscreenElement}" aria-label="${document.fullscreenElement ? 'Leave full screen' : 'Use the whole screen'}" title="${document.fullscreenElement ? 'Leave full screen' : 'Use the whole screen'}">⛶</button>` : '';
+    const screen = full ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.battleFull(false)" aria-label="Leave full screen" title="Leave full screen (Esc). The fight goes on.">${ICON_SHRINK}</button>` : '';
     return `
         <div class="header-row">
             ${menu}
@@ -353,7 +358,7 @@ function combatOrders(game, ui) {
         : '';
     const map = c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">🗺️ Map</button>` : '';
     // Folded away mid-fight: one button brings the full screen back.
-    const expand = c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">⛶ Full screen</button>` : '';
+    const expand = c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '';
     const where = run
         ? `<div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`
         : c.mode === 'titan'

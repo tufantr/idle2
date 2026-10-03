@@ -617,10 +617,13 @@ needs another screen: fight, spend, prestige and fight on.
   hero was fighting, so the screen never drops back to the menu between runs.
 - **The guide doesn't send the player away** for what the dock offers: in the fight it leaves out
   the notes about the camp, prestige, perks and gear (`advise(..., { skip })`).
-- **The way out is always there.** "Menu" on the top bar (or Esc) folds the fight back into the
-  page while it goes on, with a dot when a new place is waiting; a Full screen button on the combat
-  tab brings it back, and the next fight opens full again. Retreat ends the fight and the mode.
-  The ⛶ button asks the browser for its own full screen, for those who want the address bar gone.
+- **The way out is always there.** On the top bar, "Menu" (with a dot when a new place is
+  waiting) and the leave-full-screen button both fold the fight back into the page while it goes
+  on, and so does Esc; a Full screen button on the combat tab brings it back, and the next fight
+  opens full again (a fold is remembered across a reload until then). Retreat ends the fight and
+  the mode. "Full screen" means the game fills the browser's window. It does not ask the browser
+  for its own full screen: that was tried and taken out, because its button read as the way *out*
+  of the full-screen fight, and on a Mac the system menu bar slides over the top bar there.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
   fight; toasts move under the top bar so they never cover the dock.
 
