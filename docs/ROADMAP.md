@@ -342,6 +342,10 @@ progress as motion, art before words, one stage with a HUD around it.
 - [x] **Each thing said once**: the header lost its goal pill and its stats row, and the second
       Enter combat button went from under the scene; the crate has one button (the header, or the
       hotbar on a phone); the hero's numbers moved to the Inventory
+- [x] **A camp that takes one line**: on the combat tab the camp is a strip on its painting, the
+      title beside the same three tokens the fight's dock uses (the picture with its level, what a
+      level gives, the price, all one button; Max beside it when two levels are affordable). About
+      84 px tall on a desktop instead of 290
 - [x] **Orders on the side**: the stage arrows are gone (the map and the stones on the scene's path
       move between stages); the combat panel and the fight's dock put food and potion first, what
       drops here below them, and Retreat, Map and "Stay on this stage" in a column on the side (under

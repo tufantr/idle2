@@ -411,19 +411,21 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .zone-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; }
 .fact { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px; background: var(--well); border: 1px solid var(--line); }
 /* the camp: three upgrades as tokens on the camp painting */
-.camp-panel { background: linear-gradient(180deg, rgba(17, 13, 9, 0.42), rgba(17, 13, 9, 0.86)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2); }
-.camp-panel h2 { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); }
-.camp-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
-.camp-up { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0.9rem 0.5rem 0.8rem; border-radius: 12px; text-align: center; border: 1px solid var(--line); background: rgba(13, 10, 7, 0.72); backdrop-filter: blur(3px); }
-.camp-up.can { border-color: rgba(252, 211, 77, 0.55); box-shadow: 0 0 16px rgba(252, 211, 77, 0.12); }
+/* the camp on the combat tab: one strip on its painting, the title beside its three tokens */
+.camp-panel {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem 1.4rem; padding: 0.85rem 1.25rem;
+    background: linear-gradient(90deg, rgba(17, 13, 9, 0.9) 10%, rgba(17, 13, 9, 0.55)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2);
+}
+.camp-panel h2 { flex: 0 0 auto; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); }
+.camp-panel .camp-tokens { flex: 1 1 480px; gap: 0.6rem; }
+@media (min-width: 601px) { .camp-panel .camp-token { flex-direction: row; align-items: center; } } /* room to spare: Max sits beside the token (under it on a phone) */
+.camp-panel .camp-buy { flex: 1 1 auto; background: rgba(13, 10, 7, 0.78); }
+.camp-panel .camp-buy:hover { background: rgba(30, 23, 15, 0.9); }
 .camp-medal, .shop-art { position: relative; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #3a2e22, #140f0a 72%); border: 1px solid rgba(214, 170, 92, 0.55); box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(0, 0, 0, 0.35); }
-.camp-medal { width: 64px; height: 64px; margin-bottom: 0.2rem; border-radius: 50%; }
+.camp-medal { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; }
 .camp-medal .spr, .shop-art .spr { filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.65)); }
 .camp-lv { position: absolute; right: -5px; bottom: -5px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #1f1406; background: linear-gradient(180deg, #f0cb72, #b08233); box-shadow: 0 0 0 2px #140f0a; }
-.camp-name { font-family: var(--font-display); font-weight: 700; line-height: 1.2; color: var(--heading); text-wrap: balance; }
-.camp-gives { font-size: 0.8rem; text-wrap: balance; }
-.camp-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.25rem; }
-.camp-actions .gold-btn, .shop-item .gold-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.9rem; }
+.shop-item .gold-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.9rem; }
 /* prestige in one line */
 .prestige-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem 1rem; padding: 1rem 1.25rem; background: linear-gradient(90deg, rgba(17, 13, 9, 0.95) 30%, rgba(17, 13, 9, 0.45)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2); }
 .prestige-strip-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
@@ -1730,7 +1732,6 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .camp-token { display: flex; flex-direction: column; align-items: stretch; gap: 0.3rem; min-width: 0; }
 .camp-buy { display: flex; align-items: center; gap: 0.5rem; min-width: 0; padding: 0.4rem 0.5rem; text-align: left; border-radius: 10px; }
 .camp-token.can .camp-buy { border-color: rgba(252, 211, 77, 0.65); box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.08), 0 0 14px rgba(252, 211, 77, 0.18); }
-.camp-buy .camp-medal { flex: 0 0 auto; width: 40px; height: 40px; margin: 0; }
 .camp-token-text { min-width: 0; display: flex; flex-direction: column; font-size: 0.78rem; line-height: 1.3; }
 .camp-price { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold-color); }
 .camp-max { align-self: center; padding: 0.2rem 0.7rem; }

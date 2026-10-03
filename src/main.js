@@ -315,7 +315,7 @@ function refreshPerks() {
 
 // A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
 const ARRIVALS = {
-    essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel', stage_nav: '.stay-toggle', world_map: '.map-btn',
+    essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
     auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line'
 };

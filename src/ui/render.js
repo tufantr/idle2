@@ -267,29 +267,35 @@ function renderLoadout(game) {
         </div>` : ''}`;
 }
 
-/** The camp: three upgrades as tokens on the camp painting. It arrives with the gold for the first one. */
-function renderCamp(game) {
+/**
+ * The camp's three upgrades as tokens: the picture with its level, what a level gives and its price,
+ * all one button; Max beside it buys as many levels as the gold allows. The combat tab and the
+ * fight's dock show the same tokens.
+ */
+function campTokens(game) {
     const state = game.state;
-    if (!seen(state, 'camp')) return '';
-    const cards = CAMP_UPGRADES.map(u => {
+    return CAMP_UPGRADES.map(u => {
         const level = state.camp[u.id] || 0;
         const cost = nextCampCost(state, u.id);
         const can = cost !== null && state.gold >= cost;
         const canTwo = can && level + 1 < u.max && state.gold >= cost + campCost(u, level + 1);
         const total = Math.round((Math.pow(1 + u.bonus, level) - 1) * 100);
-        return `<div class="camp-up${can ? ' can' : ''}" title="${esc(u.desc)}">
-            <div class="camp-medal">${sprite(u.art, { scale: 1.5, fallback: u.icon })}${level ? `<b class="camp-lv" aria-label="level ${level} of ${u.max}">${level}</b>` : ''}</div>
-            <div class="camp-name">${esc(u.name)}</div>
-            <div class="camp-gives">${esc(u.short)}${level ? ` <span class="muted">· now +${total}%</span>` : ''}</div>
-            <div class="camp-actions">
-                <button class="gold-btn" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold`}">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</button>
-                ${canTwo ? `<button class="mini-btn" onclick="FI.buyCamp('${u.id}', 'max')" title="Buy as many levels as your gold allows">Max</button>` : ''}
-            </div>
+        return `<div class="camp-token${can ? ' can' : ''}">
+            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now +${total}%)` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
+                <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
+                <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
+            </button>
+            ${canTwo ? `<button class="mini-btn camp-max" onclick="FI.buyCamp('${u.id}', 'max')" title="Buy as many levels of the ${esc(u.name)} as your gold allows">Max</button>` : ''}
         </div>`;
     }).join('');
+}
+
+/** The camp on the combat tab: one strip on its painting. It arrives with the gold for the first upgrade. */
+function renderCamp(game) {
+    if (!seen(game.state, 'camp')) return '';
     return `<section class="glass-panel camp-panel" style="${artStyle('camp')}">
-        <div class="panel-header"><h2>Camp ${aboutButton('camp')}</h2></div>
-        <div class="camp-row">${cards}</div>
+        <h2>Camp ${aboutButton('camp')}</h2>
+        <div class="camp-tokens">${campTokens(game)}</div>
     </section>`;
 }
 
@@ -379,25 +385,10 @@ export function renderCombat(game, ui) {
 // scene: the orders, the food and the potion, the camp, prestige, perks and the best piece of gear
 // waiting in the bag. A player can fight, spend, prestige and fight on without leaving it.
 
-/** The camp as three tokens to tap: the picture, the level, what a level gives and its price. */
+/** The camp in the fight's dock: the same tokens as the combat tab. */
 function renderCampTokens(game) {
-    const state = game.state;
-    if (!seen(state, 'camp')) return '';
-    const tokens = CAMP_UPGRADES.map(u => {
-        const level = state.camp[u.id] || 0;
-        const cost = nextCampCost(state, u.id);
-        const can = cost !== null && state.gold >= cost;
-        const canTwo = can && level + 1 < u.max && state.gold >= cost + campCost(u, level + 1);
-        const total = Math.round((Math.pow(1 + u.bonus, level) - 1) * 100);
-        return `<div class="camp-token${can ? ' can' : ''}">
-            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now +${total}%)` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
-                <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
-                <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
-            </button>
-            ${canTwo ? `<button class="mini-btn camp-max" onclick="FI.buyCamp('${u.id}', 'max')" title="Buy as many levels of the ${esc(u.name)} as your gold allows">Max</button>` : ''}
-        </div>`;
-    }).join('');
-    return `<div class="dock-group dock-camp"><div class="dock-title">Camp ${aboutButton('camp')}</div><div class="camp-tokens">${tokens}</div></div>`;
+    if (!seen(game.state, 'camp')) return '';
+    return `<div class="dock-group dock-camp"><div class="dock-title">Camp ${aboutButton('camp')}</div><div class="camp-tokens">${campTokens(game)}</div></div>`;
 }
 
 /** Prestige, perks and the upgrade in the bag: the steps of the loop that used to need another tab. */
