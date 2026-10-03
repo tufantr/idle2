@@ -9,21 +9,13 @@ import { CROPS } from '../data/farming.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
 import { fmt, escapeHtml as esc } from './format.js';
 import { resIcon } from './sprites.js';
+import { feature, artStyle, FEATURE_TAB } from './features.js';
 
 const SHOW_MS = 2800;
+const UNLOCK_MS = 7000;   // a new place comes with a picture and a line to read
 const MAX_QUEUE = 4;
 const CONFETTI = 26;
 const CONFETTI_COLORS = ['#fcd34d', '#f59e0b', '#fde68a', '#f472b6', '#60a5fa', '#34d399', '#c084fc'];
-
-// One line on what a newly opened tab is for (skills use their own description).
-const TAB_BLURBS = {
-    shop: 'Spend gold on supplies and skill points on perks.',
-    prestige: 'Trade a run for permanent power: tokens and skill points.',
-    achievements: 'Goals with rewards that last forever.',
-    dungeons: 'Elite monsters, a chest at the end and fragments of unique gear.',
-    events: 'Weekend events with their own tokens and shop.',
-    clan: 'Join a clan and fight a weekly boss together.'
-};
 
 /** What reaching `level` in `skill` opens up: nodes, recipes, metals, gems, crops, tools and obstacle slots. */
 export function unlocksAtLevel(skill, level) {
@@ -69,10 +61,19 @@ export function levelCelebration(ev) {
     };
 }
 
-export function unlockCelebration(id, tabs) {
-    const tab = tabs.find(t => t.id === id);
-    const name = tab?.name || id.charAt(0).toUpperCase() + id.slice(1);
-    return { key: `unlock:${id}`, kind: 'unlock', icon: tab?.icon || '🔓', kicker: 'Unlocked', title: name, note: SKILLS[id]?.desc || TAB_BLURBS[id] || '' };
+/**
+ * New places, as one card: a single unlock shows its painting, its name and what it is for; several
+ * at once (the first boss opens four) share a card of small pictures, so nothing queues up. A click
+ * on the card, or on one of its pictures, goes there.
+ */
+export function unlockCelebration(ids) {
+    const places = ids.map(id => ({ id, tab: Object.hasOwn(FEATURE_TAB, id) ? FEATURE_TAB[id] : id, ...feature(id) }));
+    if (places.length === 1) {
+        const [p] = places;
+        return { key: `unlock:${p.id}`, kind: 'unlock', art: artStyle(p.id), kicker: 'Unlocked', title: p.name, note: p.blurb, go: p.tab, ms: UNLOCK_MS };
+    }
+    return { key: `unlock:${ids.join('+')}`, kind: 'unlock', kicker: 'Unlocked', title: `${places.length} new places`,
+        tiles: places.map(p => ({ art: artStyle(p.id), name: p.name, go: p.tab })), ms: UNLOCK_MS + 1000 * places.length };
 }
 
 /** The daily crate, opened: the loot comes out one piece at a time. `banked` crates are still waiting. */
@@ -97,7 +98,7 @@ export function renderCrateModal(result, banked) {
  * The celebration layer in `root`: one card at a time, a short queue, confetti. While `blocked()`
  * (a dialog is open) cards wait in the queue; `resume()` shows them once it closes.
  */
-export function createRewards(root, { blocked = () => false } = {}) {
+export function createRewards(root, { blocked = () => false, go = () => {} } = {}) {
     const queue = [];
     let showing = null;
     let timer = 0;
@@ -132,14 +133,27 @@ export function createRewards(root, { blocked = () => false } = {}) {
         clearTimeout(timer);
         root.querySelector('.celebration')?.remove();
         const node = document.createElement('div');
-        node.className = `celebration ${card.kind || ''}`;
+        node.className = `celebration ${card.kind || ''}${card.art ? ' pictured' : ''}${card.go || card.tiles ? ' clickable' : ''}`;
         node.setAttribute('role', 'status');
-        node.innerHTML = `<span class="cel-rays" aria-hidden="true"></span>
-            <span class="cel-icon" aria-hidden="true">${card.icon}</span>
+        node.innerHTML = `${card.art ? `<span class="cel-art" style="${card.art}" aria-hidden="true"></span>` : '<span class="cel-rays" aria-hidden="true"></span>'}
+            ${card.icon ? `<span class="cel-icon" aria-hidden="true">${card.icon}</span>` : ''}
             <span class="cel-kicker">${esc(card.kicker)}</span>
             <strong class="cel-title">${esc(card.title)}</strong>
             ${card.lines?.length ? `<span class="cel-lines">${card.lines.map(l => `<span>${l}</span>`).join('')}</span>` : ''}
-            ${card.note ? `<span class="cel-note">${esc(card.note)}</span>` : ''}`;
+            ${card.note ? `<span class="cel-note">${esc(card.note)}</span>` : ''}
+            ${card.tiles ? `<span class="cel-tiles">${card.tiles.map((t, i) => `<button type="button" class="cel-tile" data-tile="${i}" style="${t.art}"><span>${esc(t.name)}</span></button>`).join('')}</span>` : ''}
+            ${card.go ? '<span class="cel-go">Take a look →</span>' : ''}`;
+        // A card with somewhere to go is a button: the whole card, or each of its pictures.
+        if (card.go || card.tiles) {
+            node.addEventListener('click', event => {
+                const tile = event.target.closest?.('[data-tile]');
+                const where = tile ? card.tiles[Number(tile.dataset.tile)]?.go : card.go;
+                if (card.tiles && !tile) return;
+                clearTimeout(timer);
+                next();
+                if (where) go(where);
+            });
+        }
         root.appendChild(node);
         requestAnimationFrame(() => {
             const box = node.getBoundingClientRect();

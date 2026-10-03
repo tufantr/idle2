@@ -5,7 +5,8 @@
 //
 //   node tools/shots.mjs                          # the default tabs
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...)
-//   node tools/shots.mjs --fresh                  # a brand-new player: the title card, then the first fight
+//   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
+//                                                 # fight, the first skill at work, the first place to open
 //
 // Writes shots/<name>-<width>.png (git-ignored) and exits 1 on overflow or errors.
 // Needs Playwright, once:  npm i --no-save playwright && npx playwright install chromium
@@ -93,6 +94,16 @@ const lateGame = page => page.evaluate(async () => {
     g.startNodeAction('mining', 'mithril_ore');
 });
 
+/** A new player a minute in: mining under way, four ores up, so the fifth opens Smithing on camera. */
+const firstSkill = page => page.evaluate(() => {
+    const g = FI.game();
+    FI.switchTab('mining');
+    FI.startNode('mining', 'copper_ore');
+    g.state.stats.actionsBySkill.mining = 4;
+    g.state.resources.copper_ore = 4;
+    g.markDirty();
+});
+
 for (const viewport of VIEWPORTS) {
     if (fresh) {
         const page = await open(viewport, base);
@@ -102,6 +113,13 @@ for (const viewport of VIEWPORTS) {
             await page.click('.intro-go');
             await page.waitForTimeout(2500);
             await shoot(page, 'first-fight', viewport.width);
+            await firstSkill(page);
+            await page.waitForTimeout(1500);
+            await shoot(page, 'first-skill', viewport.width);
+            await page.addStyleTag({ content: '#celebrate { display: block !important; }' }); // this picture is of the card
+            await page.waitForTimeout(2600);
+            if (!(await page.$('.celebration'))) problems.push(`no card for the first unlock at ${viewport.width}px`);
+            await shoot(page, 'first-unlock', viewport.width);
         } else problems.push(`no title card for a new player at ${viewport.width}px`);
         await page.context().close();
         continue;
@@ -109,6 +127,7 @@ for (const viewport of VIEWPORTS) {
     const page = await open(viewport, `${base}?dev=1`);
     await lateGame(page);
     await quiet(page);
+    await page.waitForTimeout(1600); // everything this save has earned opens at once and glows: let that pass
     for (const tab of tabs) {
         await page.evaluate(t => FI.switchTab(t), tab);
         await page.waitForTimeout(700);

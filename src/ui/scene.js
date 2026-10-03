@@ -10,6 +10,7 @@ import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
 import { titanLevel } from '../systems/dungeon.js';
+import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, resIcon } from './sprites.js';
 
@@ -47,7 +48,7 @@ const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
 
 /**
  * Builds the scene into `root` and returns its controls.
- * `actions`: { strike() -> bool (a click on the monster; true if it landed), toggle() (enter or leave combat), stage(n) (go to stage n) }.
+ * `actions`: { strike() -> bool (a click on the monster; true if it landed), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map) }.
  */
 export function createScene(root, actions) {
     root.innerHTML = `
@@ -58,7 +59,7 @@ export function createScene(root, actions) {
         <div class="battle-particles" aria-hidden="true">${PARTICLE_HTML}</div>
         <header class="battle-top">
             <div class="battle-title">
-                <span class="battle-zone"></span>
+                <button type="button" class="battle-zone" disabled></button>
                 <span class="battle-sub"><span class="battle-stage"></span><span class="battle-regroup" hidden></span></span>
             </div>
             <ol class="stage-path" aria-label="Stages in this zone"></ol>
@@ -256,7 +257,7 @@ export function createScene(root, actions) {
     function heroKit(state) {
         const c = state.combat;
         const parts = [];
-        if (c.autoEat !== 'none') {
+        if (c.autoEat !== 'none' && seen(state, 'food')) { // before food exists for the player, there is nothing to warn about
             const foods = foodsByHealing().filter(f => (c.autoEat === 'auto' || f.id === c.autoEat) && state.resources[f.id] > 0);
             const count = foods.reduce((n, f) => n + state.resources[f.id], 0);
             parts.push(count > 0
@@ -309,6 +310,7 @@ export function createScene(root, actions) {
         spawnFx('click-spark', '✦', (event.clientX - box.left) / box.width * 100, (event.clientY - box.top) / box.height * 100, 450);
     });
     el.cta.addEventListener('click', () => actions.toggle());
+    el.zone.addEventListener('click', () => actions.map?.());
     el.path.addEventListener('click', event => {
         const node = event.target.closest?.('button[data-stage]');
         if (node) actions.stage(Number(node.dataset.stage));
@@ -342,6 +344,10 @@ export function createScene(root, actions) {
                 setText(el.zone, zoneForStage(c.stage).name);
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
             }
+            // The zone's name opens the world map, once there is a second zone to travel to.
+            const mapped = c.mode === 'stages' && seen(state, 'world_map');
+            el.zone.disabled = !mapped;
+            el.zone.title = mapped ? 'Open the world map' : '';
             renderPath(state);
             setText(el.heroName, `You · Combat Lv ${d.combatLevel}`);
             setMarkup(el.heroMeta, heroKit(state));

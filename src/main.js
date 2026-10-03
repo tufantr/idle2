@@ -5,7 +5,9 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
+import { renderNav, renderHeader, renderGuide, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, TABS } from './ui/render.js';
+import { renderAboutCard } from './ui/features.js';
+import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -34,9 +36,11 @@ const prefs = {
 const ui = {
     tab: prefs.get('fantasyIdle.tab') || 'combat',
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
-    smithMetal: 'copper_bar',
-    craftBar: 'silver_bar',
-    craftGem: 'amethyst',
+    smithView: 'smelt',  // the step of Smithing on screen: smelt, forge or tools
+    smithMetal: null,    // null: the best metal there are bars for
+    craftBar: null,
+    craftGem: null,
+    open: {},            // drawers the player has opened (the battle log, the crop table)
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -84,13 +88,14 @@ const scene = createScene(document.getElementById('scene'), {
     strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },
+    map: () => window.FI.openMap(),
     sound: name => sound.play(name)
 });
 
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
 // skill cards (src/ui/actionfx.js), and the phone hotbar.
 const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
-const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen }); // cards wait behind dialogs
+const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen, go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
@@ -276,12 +281,32 @@ function render() {
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
     setHtml(hotbar, renderHotbar(game, ui));
+    setHtml(document.getElementById('guide'), renderGuide(game, ui));
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
     scene.sync(game, ui);
     stage.sync(game, ui);
     paintGold();
+    glowArrivals();
+}
+
+// A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
+const ARRIVALS = {
+    essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel', stage_nav: '.stage-nav', world_map: '.map-btn',
+    food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
+    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line'
+};
+const arrivals = new Set();
+function glowArrivals() {
+    if (!arrivals.size) return;
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    for (const id of arrivals) {
+        const node = ARRIVALS[id] && document.querySelector(ARRIVALS[id]);
+        if (!node) continue; // not on this tab: it glows when the player gets there
+        arrivals.delete(id);
+        if (!still) node.animate?.([{ boxShadow: '0 0 0 0 rgba(252, 211, 77, 0)', filter: 'brightness(1)' }, { boxShadow: '0 0 0 3px rgba(252, 211, 77, 0.7), 0 0 26px rgba(252, 211, 77, 0.5)', filter: 'brightness(1.25)', offset: 0.3 }, { boxShadow: '0 0 0 0 rgba(252, 211, 77, 0)', filter: 'brightness(1)' }], { duration: 1400, easing: 'ease-out' });
+    }
 }
 
 /** Which sound an event makes (null for none): the fight is heard only while it is watched. */
@@ -313,13 +338,29 @@ function soundFor(ev, onCombat) {
     }
 }
 
+const REVEAL_TOASTS = {
+    mastery: '⭐ Mastery: every action gets better the more you do it',
+    world_map: '🗺️ The map is yours: travel between the zones you have reached'
+};
+
 function handleEvents(events) {
     const onCombat = ui.tab === 'combat'; // the battle scene shows these itself
+    // Places that open in the same moment share one card (and one sound), so nothing queues up.
+    const unlocked = events.filter(ev => ev.type === 'unlock').map(ev => ev.id);
+    if (unlocked.length) {
+        for (const id of unlocked) markFresh(id === 'prestige' ? 'shop' : id, true);
+        rewards.celebrate(unlockCelebration(unlocked));
+        sound.play('unlock');
+    }
     for (const ev of events) {
         scene.event(ev, game);
-        const heard = soundFor(ev, onCombat);
+        const heard = ev.type === 'unlock' ? null : soundFor(ev, onCombat);
         if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
         switch (ev.type) {
+            case 'reveal':
+                arrivals.add(ev.id);
+                if (REVEAL_TOASTS[ev.id]) toast(REVEAL_TOASTS[ev.id], 'level');
+                break;
             case 'actionComplete': actionFx.actionComplete(ev, ui.tab, stage.anchor()); break;
             case 'levelUp': {
                 const card = levelCelebration(ev);
@@ -328,10 +369,6 @@ function handleEvents(events) {
                 break;
             }
             case 'achievement': toast(`🏆 ${ev.name} — ${ev.reward}`, 'achievement'); break;
-            case 'unlock':
-                markFresh(ev.id === 'prestige' ? 'shop' : ev.id, true);
-                rewards.celebrate(unlockCelebration(ev.id, TABS));
-                break;
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.icon} ${ev.item.rarity} ${ev.item.name}!`, 'craft'); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.icon} ${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft'); break;
             case 'toolMade': toast('🛠️ New tool made!', 'craft'); break;
@@ -392,7 +429,7 @@ function showModal(html, key) {
     const root = document.getElementById('modal-root');
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
-    root.querySelector('input, button.btn-confirm, button')?.focus();
+    (root.querySelector('[data-autofocus]') || root.querySelector('input, button.btn-confirm, button'))?.focus(); // the map opens on its Close button, not on its first pin
 }
 let pendingConfirm = null;
 /** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
@@ -554,6 +591,7 @@ window.FI = {
     smith(type, bar) { game.startSmithing(type, bar); render(); },
     craft(type, bar, gem) { game.startCrafting(type, bar, gem); render(); },
     makeTool(tool, tier) { game.startToolCraft(tool, tier); render(); },
+    smithView(view) { ui.smithView = view; render(); },
     selectSmithMetal(bar) { ui.smithMetal = bar; render(); },
     selectCraftBar(bar) { ui.craftBar = bar; render(); },
     selectCraftGem(gem) { ui.craftGem = gem; render(); },
@@ -628,10 +666,24 @@ window.FI = {
         }
         render();
     },
-    advisorGo(tab, action) {
-        if (action === 'claimDaily') return window.FI.claimDaily();
+    /** A note in the guide was tapped: go where it points (and to the right step of Smithing). */
+    advisorGo(tab, view) {
+        if (tab === 'smithing' && view) ui.smithView = view;
         if (tab) window.FI.switchTab(tab);
     },
+    /** The "?" on a panel: what this place is, with its picture. */
+    about(id) { openModal(renderAboutCard(id), 'about'); },
+    /** A drawer was opened or closed; remember it, so a re-render keeps it that way. */
+    setOpen(key, open) { ui.open[key] = !!open; },
+    openMap() { openModal(renderWorldMapModal(game), 'map'); },
+    /** A pin on the map was tapped: show that zone under the map (the map itself stays put). */
+    mapSelect(index) {
+        const info = document.querySelector('.map-info');
+        if (!info) return;
+        info.innerHTML = renderZoneInfo(game, index);
+        for (const pin of document.querySelectorAll('.map-pin')) pin.classList.toggle('picked', Number(pin.dataset.zone) === index);
+    },
+    mapTravel(stage) { closeModal(); game.setStage(stage); if (ui.tab !== 'combat') window.FI.switchTab('combat'); else render(); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
     toggleSound() {

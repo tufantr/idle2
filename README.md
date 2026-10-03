@@ -82,7 +82,8 @@ src/data/               content tables: resources, skills, workshop, items, zone
                         farming, agility, camp, perks, achievements, unlocks, events, mastery,
                         social settings
 src/systems/            skilling, combat, dungeons & Titan, inventory, farming, agility, prestige,
-                        camp, mini-games, offline, daily, advisor, events, mastery, clan rewards
+                        camp, mini-games, offline, daily, advisor, events, mastery, clan rewards,
+                        disclosure (which pieces of the screens a player has met)
 src/ui/                 rendering and formatting
 api/                    Express API for Vercel: routes, data layer, connection
 test/, tools/           tests, simulator, pacing table

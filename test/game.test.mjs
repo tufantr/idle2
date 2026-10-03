@@ -9,7 +9,7 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel, levelForXp } from '../src/core/xp.js';
 import { createDefaultState, migrateState, SAVE_VERSION } from '../src/core/state.js';
 import { actionInterval } from '../src/core/modifiers.js';
-import { advise } from '../src/systems/advisor.js';
+import { advise, adviceLimit } from '../src/systems/advisor.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../src/systems/daily.js';
 import { generateEquipment, enemyForStage, tokensForStage, enemyDamage } from '../src/core/formulas.js';
 import { RESOURCES, sellValue } from '../src/data/resources.js';
@@ -412,12 +412,40 @@ test('a 12 h offline combat replay is silent and fast', () => {
 
 test('the advisor points a new player at the next step', () => {
     const game = new Game(null, T0);
-    const tips = advise(game).map(t => t.text).join(' | ');
-    assert.match(tips, /daily crate/);
-    assert.match(tips, /Mine 5 ore/);
+    const first = advise(game);
+    assert.equal(first.length, 1, 'a new player gets one note');
+    assert.match(first[0].text, /Mine 5 ore/);
+    assert.equal(first[0].goal, 'smithing');
+    assert.equal(first[0].tab, 'mining', 'the note leads to where the work is');
+    assert.equal(first[0].progress, 0);
+    assert.doesNotMatch(first.map(t => t.text).join(' | '), /crate/, 'the daily crate has its own button and is not said twice');
+    game.state.stats.actionsBySkill.mining = 2;
+    assert.equal(advise(game)[0].progress, 0.4, 'the goal carries how far along it is');
     game.state.unlocks.smithing = true;
     game.state.resources.copper_bar = 3;
-    assert.match(advise(game).map(t => t.text).join(' | '), /Forge a Copper Sword/);
+    const forge = advise(game);
+    assert.equal(forge[0].goal, 'woodcutting', 'the next unlock leads the list');
+    assert.match(forge[1].text, /Forge a Copper Sword/);
+    assert.equal(forge[1].view, 'forge', 'and names the step of Smithing to open');
     game.state.inventory.push(generateEquipment({ type: 'Weapon', tier: 1, power: 1, materialName: 'Copper' }, 77));
-    assert.match(advise(game).map(t => t.text).join(' | '), /Equip Copper Sword/);
+    const equip = advise(game);
+    assert.equal(equip.length, 2, 'two notes while the first zone is still ahead');
+    assert.match(equip[1].text, /Equip Copper Sword/);
+    assert.equal(advise(game, 1).length, 1, 'a list of one is the goal alone');
+    assert.equal(advise(game, 1)[0].goal, 'woodcutting');
+    assert.equal(adviceLimit(game.state), 2);
+    game.state.combat.bestStage = 12;
+    assert.equal(adviceLimit(game.state), 3, 'room for three notes after the first boss');
+});
+
+test('names get the article that fits them', () => {
+    const game = new Game(null, T0);
+    game.state.unlocks.smithing = true;
+    game.state.unlocks.woodcutting = true;
+    game.state.skills.smithing.xp = xpForLevel(15);
+    game.state.equipped.Weapon = generateEquipment({ type: 'Weapon', tier: 1, power: 1, materialName: 'Copper' }, 78);
+    game.state.resources.iron_bar = 3;
+    assert.match(advise(game, 6).map(t => t.text).join(' | '), /Forge an Iron Sword/);
+    game.state.resources.iron_bar = 0;
+    assert.match(advise(game, 6).map(t => t.text).join(' | '), /for an Iron Sword/);
 });

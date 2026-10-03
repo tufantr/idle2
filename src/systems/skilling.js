@@ -13,6 +13,7 @@ import { masteryFor, addMasteryXp } from './mastery.js';
 import { forgeKey, jewelKey } from '../data/mastery.js';
 import { generateEquipment } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
+import { withArticle } from '../core/text.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
@@ -244,7 +245,7 @@ export function completeAction(game, def, { offline = false } = {}) {
             state.resources[gem.id] += 1;
             made.gem = gem.id;
             bumpStat(game, 'gemsFound');
-            if (!offline) log(game, `💎 Found a ${RESOURCES[gem.id].name} while mining!`, 'loot');
+            if (!offline) log(game, `💎 Found ${withArticle(RESOURCES[gem.id].name)} while mining!`, 'info'); // not 'loot': that is the battle log's
         }
         if (!offline && amount === 2) game.emit({ type: 'doubleDrop', resource: def.output });
     } else if (def.kind === 'smith' || def.kind === 'craft') {
@@ -256,7 +257,7 @@ export function completeAction(game, def, { offline = false } = {}) {
         if (!offline || item.rarity !== 'common') log(game, `${item.icon} Made ${item.rarity === 'common' ? '' : item.rarity + ' '}${item.name}`, 'craft');
     } else if (def.kind === 'tool') {
         state.tools[def.tool] = def.tier;
-        log(game, `${TOOLS[def.tool].icon} Made a ${TOOLS[def.tool].tiers.find(t => t.tier === def.tier).name}!`, 'craft');
+        log(game, `${TOOLS[def.tool].icon} Made ${withArticle(TOOLS[def.tool].tiers.find(t => t.tier === def.tier).name)}!`, 'craft');
         game.emit({ type: 'toolMade', tool: def.tool, tier: def.tier });
         state.action = null; // one-off
     }

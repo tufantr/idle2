@@ -27,7 +27,8 @@ of them are checked by the test suite or the balance simulator, not by feel.
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
 ones, with regression tests. Phase 6 then gave it the look and feel of a game: a battle scene,
-reward moments, a dark fantasy theme, an armory, a world map and a phone hotbar. What is left is content and the owner's
+reward moments, a dark fantasy theme, an armory, a world map and a phone hotbar, and Phase 8 made the
+screen grow with the player instead of showing everything at once. What is left is content and the owner's
 decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
@@ -328,6 +329,46 @@ progress as motion, art before words, one stage with a HUD around it.
 
 - [x] **A loadout, not a form**: auto-eat and the potion are picked from rows of tiles of what you
       carry (icon, count, how much it heals), the chosen one lit, instead of two dropdowns
+
+- [x] **A screen that grows with the player** (DESIGN §3.22, `src/systems/disclosure.js`): a new
+      player met 19 tabs (15 padlocked), 4 currencies (3 at zero), 7 combat numbers and six panels
+      under the first fight. Now the sidebar lists only the places that are open, plus one "next" slot
+      with the place's painting, the task and a bar; a currency shows once you hold some; the camp
+      arrives with the gold for its first upgrade, the food row with Cooking, the potion row with
+      Alchemy, the stage arrows after the first defeat, the map with the second zone, the jewellery
+      slots with Crafting, mastery and the mini-game when they first matter. What has opened is saved
+      and never closes; it glows once as it arrives. The first fight is the scene, one note and one
+      small panel, at both widths
+- [x] **One guide**: the quest board is a strip of notes under the scene on every tab: the next
+      unlock with its bar, then one or two things worth doing (two notes before the first boss, three
+      after). A note leads to its tab, and to the right step of Smithing. The header lost its goal
+      pill, its stats row and the second Enter combat button went from under the scene; the crate
+      has one button (the header, or the hotbar on a phone); the hero's numbers moved to the Inventory
+- [x] **Cards that are quiet at rest**: an action card shows art, name, what it needs and how long it
+      takes; the one being worked opens up with its pile, XP, luck, mastery and the bar. A ladder
+      shows what is unlocked and the next rung as a silhouette (mining: 2 cards on day one, not 8;
+      the smithy: 3, not 18). Smithing is three steps, Smelt, Forge and Tools, one on screen
+- [x] **New places, one card at a time**: an unlock is a card with the place's painting, one line and
+      "Take a look"; places that open together share one card of small pictures (the first boss
+      opens five), and a tap goes there. A lucky gem no longer opens Crafting before the first bar
+- [x] **The painted world map** (`src/ui/worldmap.js`): the ten zones are pins on a Gemini painting
+      of the whole road, from the meadow's windmill to the violet rift, opened from the zone's name
+      on the scene or the Map button. A pin shows its zone below: stages, boss, drops, and Travel
+- [x] **A picture for every place** (`src/ui/features.js`): eight more Gemini paintings (market,
+      shrine, trophy hall, festival, clan hall, farm, training course, the map) in the style of the
+      backdrops. Shop, Achievements, Events, Clan, Dungeons, Farming and Agility open on a banner;
+      every "How it works" paragraph became an About card behind a "?", with the place's painting
+      and its rules in a few short points
+- [x] **Camp, shop and dungeons as things, not rows**: the camp is three tokens on the camp painting
+      ("+5% attack", a level badge, a gold price); supplies and perks are item cards with their
+      picture; a dungeon card says in one line whether you are ready, and shows its unique as a bar
+      of fragments; prestige is one line with a button. The battle log folds into a drawer
+- [x] **Pixel icons in the sidebar, the hotbar and the guide** instead of emoji (a sword, an ore, a
+      log, a potion, the crown), from the atlas
+- [x] Fixes found on the way: on phones the food and potion rows stood 300 px tall each (a flex
+      basis that became a height in a column); "Cook some" pointed at a locked tab; "Found a
+      Amethyst" (and "Forge a Iron Sword") now get the right article, and the gem no longer lands
+      in the battle log
 
 ## Deferred on purpose
 

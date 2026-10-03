@@ -3,6 +3,7 @@
 import { SKILLS } from '../data/skills.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { evaluateUnlocks } from '../data/unlocks.js';
+import { evaluateDisclosures } from './disclosure.js';
 import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
 import { petForSkill, petChance } from '../data/pets.js';
 import { rng } from '../core/rng.js';
@@ -69,6 +70,13 @@ export function checkUnlocks(game) {
         game.emit({ type: 'unlock', id });
         log(game, `🔓 Unlocked: ${id.charAt(0).toUpperCase() + id.slice(1)}`, 'unlock');
     }
+    return newly;
+}
+
+/** Open the pieces of the interface the player has now met (systems/disclosure.js). */
+export function checkDisclosures(game) {
+    const newly = evaluateDisclosures(game.state);
+    for (const id of newly) game.emit({ type: 'reveal', id });
     return newly;
 }
 

@@ -1,16 +1,18 @@
 // The advisor: a short, prioritised list of "what to do next" for the current state. Pure function
-// of the game, so it is testable and the UI just renders what it returns.
+// of the game, so it is testable and the UI just renders what it returns (the guide under the scene).
+// The next unlock leads the list, with how far along it is; the daily crate is not in it, because it
+// has a button of its own in the header and the hotbar.
 
 import { SKILLS } from '../data/skills.js';
 import { METALS, SMELTING_RECIPES, TOOLS, smithLevelReq } from '../data/workshop.js';
 import { TYPE_SLOTS, TYPE_NAMES, SMITHING_BAR_COST } from '../data/items.js';
 import { orderedByTier, RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
-import { nextGoals, isUnlocked } from '../data/unlocks.js';
+import { nextGoals, goalProgress, isUnlocked } from '../data/unlocks.js';
 import { skillLevel } from '../core/modifiers.js';
+import { withArticle } from '../core/text.js';
 import { tokensForStage } from '../core/formulas.js';
 import { canWear, itemScore } from './inventory.js';
-import { dailyReady } from './daily.js';
 import { titanReady, dungeonUnlocked } from './dungeon.js';
 import { DUNGEONS, FRAGMENTS_PER_UNIQUE, UNIQUES } from '../data/dungeons.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
@@ -48,11 +50,11 @@ function nextForge(state) {
         if (worn >= metal.tier || owned) continue;
         const cost = SMITHING_BAR_COST[type];
         const name = `${metal.name} ${TYPE_NAMES[type]}`;
-        if ((state.resources[metal.bar] || 0) >= cost) return `Forge a ${name} — you have the bars`;
+        if ((state.resources[metal.bar] || 0) >= cost) return { text: `Forge ${withArticle(name)} — you have the bars`, view: 'forge' };
         const recipe = SMELTING_RECIPES.find(r => r.produces === metal.bar);
         const missing = cost - (state.resources[metal.bar] || 0);
         const inputs = Object.entries(recipe.consumes).map(([id, qty]) => `${qty * missing} ${RESOURCES[id].name.toLowerCase()}`).join(' + ');
-        return `Smelt ${missing} ${metal.name.toLowerCase()} bar${missing > 1 ? 's' : ''} (${inputs}) for a ${name}`;
+        return { text: `Smelt ${missing} ${metal.name.toLowerCase()} bar${missing > 1 ? 's' : ''} (${inputs}) for ${withArticle(name)}`, view: 'smelt' };
     }
     return null;
 }
@@ -71,16 +73,21 @@ function nextMetalHint(state) {
     return `Stuck? Forge ${next.name} gear, buy camp upgrades, or prestige for tokens`;
 }
 
+/** How many notes fit the player: two while the first zone is still ahead of them, three after. */
+export function adviceLimit(state) {
+    return state.combat.bestStage < 10 ? 2 : 3;
+}
+
 /**
- * Up to `limit` suggestions: { icon, text, tab?, action? }. `tab` is where to go, `action` a one-click
- * handler name the UI knows (only 'claimDaily' so far).
+ * Up to `limit` suggestions: { icon, text, tab?, view?, goal?, progress? }. `tab` is where to go and
+ * `view` the part of that tab (Smithing's steps). The next unlock comes first, as { goal: id,
+ * progress: 0..1 }, so the list always holds it; the rest follow in order of urgency.
  */
-export function advise(game, limit = 4) {
+export function advise(game, limit = adviceLimit(game.state)) {
     const state = game.state;
     const out = [];
-    const add = (icon, text, tab = null, action = null) => out.push({ icon, text, tab, action });
+    const add = (icon, text, tab = null, extra = {}) => out.push({ icon, text, tab, ...extra });
 
-    if (dailyReady(state, game.now)) add('📦', `Claim your daily crate (${state.daily.banked} waiting)`, null, 'claimDaily');
     if (titanReady(state, game.now) && state.combat.mode === 'stages') add('🗿', 'The Titan is awake — challenge it for a permanent bonus', 'dungeons');
     for (const d of DUNGEONS) {
         if ((state.dungeons[d.id]?.fragments || 0) >= FRAGMENTS_PER_UNIQUE) { add('🌟', `Assemble ${UNIQUES[d.unique].name} from your fragments`, 'dungeons'); break; }
@@ -103,7 +110,7 @@ export function advise(game, limit = 4) {
 
     if (isUnlocked(state, 'smithing')) {
         const forge = nextForge(state);
-        if (forge) add('⚒️', forge, 'smithing');
+        if (forge) add('⚒️', forge.text, 'smithing', { view: forge.view });
     }
 
     const foodHp = orderedByTier('food').reduce((sum, f) => sum + (state.resources[f.id] || 0) * f.heals, 0);
@@ -118,7 +125,7 @@ export function advise(game, limit = 4) {
         const next = tool.tiers.find(t => t.tier === (state.tools[toolId] || 0) + 1);
         if (!next || !isUnlocked(state, tool.madeBy) || !isUnlocked(state, tool.skill)) continue;
         if (skillLevel(state, tool.madeBy) >= next.levelReq) {
-            add(tool.icon, `Make a ${next.name} for faster ${SKILLS[tool.skill].name.toLowerCase()}`, tool.madeBy);
+            add(tool.icon, `Make ${withArticle(next.name)} for faster ${SKILLS[tool.skill].name.toLowerCase()}`, tool.madeBy, { view: 'tools' });
             break;
         }
     }
@@ -131,13 +138,13 @@ export function advise(game, limit = 4) {
 
     if (game.now - (state.combat.lastSetbackAt || 0) < SETBACK_WINDOW_MS) {
         const hint = nextMetalHint(state);
-        if (hint) add('🧱', hint, 'smithing');
+        if (hint) add('🧱', hint, 'smithing', { view: 'forge' });
     }
 
     const newDungeon = DUNGEONS.find(d => dungeonUnlocked(state, d) && !(state.dungeons[d.id]?.clears));
     if (newDungeon && state.combat.mode === 'stages') add(newDungeon.icon, `${newDungeon.name} is open — clear it for a chest and a unique fragment`, 'dungeons');
 
-    for (const goal of nextGoals(state, 1)) add('🎯', goal.hint);
-
-    return out.slice(0, limit);
+    const [goal] = nextGoals(state, 1);
+    const lead = goal ? [{ icon: '🎯', text: goal.hint, tab: goal.tab || null, goal: goal.id, progress: goalProgress(state, goal) }] : [];
+    return [...lead, ...out].slice(0, Math.max(1, limit));
 }

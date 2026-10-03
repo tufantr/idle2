@@ -386,16 +386,19 @@ pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievemen
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
   first hunt, Fishing after 5 dishes, Firemaking after 20 logs, Alchemy / Shop / Prestige /
   Achievements at stage 10, Dungeons at stage 20, Agility at stage 30, Farming after 10 Alchemy actions
-  or Cooking 15, Crafting at mining 20 or the first gem. The header shows the next goal. Settings has a developer switch (and
-  `?dev=1`) that unlocks all.
+  or Cooking 15, Crafting at mining 20 or the first gem (but never before the first bar: jewellery
+  needs bars, and a lucky gem in the first minute used to open Crafting ahead of Smithing). Each goal
+  carries a `task` in a few words and the `tab` where the work happens; the sidebar's "next" slot and
+  the guide show it with its progress. Settings has a developer switch (and `?dev=1`) that unlocks all.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for
   you**, so a missed day costs nothing; no streaks. A crate holds 40 kills of gold at your best stage,
   12 materials and a gem from that zone, and `3 × zone tier` essence.
-- **Next steps** (`src/systems/advisor.js`): up to four suggestions from the state, most urgent
-  first — a ready crate, a waking Titan, a unique ready to assemble, unspent skill points, an upgrade
-  in the bag, the next piece to forge, food, an affordable camp upgrade, the next tool, a prestige
-  worth taking, the skill gating the next metal, a newly opened dungeon, ready or empty farming plots,
-  an affordable agility obstacle, the next unlock.
+- **Next steps** (`src/systems/advisor.js`): the next unlock first (with how far along it is),
+  then the most urgent of: a waking Titan, a unique ready to assemble, unspent skill points, ready or
+  empty farming plots, an affordable agility obstacle, an upgrade in the bag, the next piece to forge,
+  food, an affordable camp upgrade, the next tool, a prestige worth taking, the skill gating the next
+  metal, a newly opened dungeon. Two notes in all while the first boss is still ahead, three after.
+  The daily crate is not among them: it has its own button (the header, or the hotbar on a phone).
 
 ### 3.15 Active play: mini-games and Focus
 
@@ -551,8 +554,50 @@ Reward moments (`src/ui/rewards.js`) follow the same rules. A level-up gets a ce
 when it is a milestone (every tenth level, and 99) or opens something, and the card names what
 (`unlocksAtLevel` reads the nodes, recipes, metals, gems, crops, tools and obstacle slots); other
 levels stay a toast, so the cards keep their weight. Cards queue one at a time (at most four waiting,
-merged by key, so a burst of levels shows the highest). A new tab also gets a "New" badge until it is
-opened (remembered in the browser, not the save).
+merged by key, so a burst of levels shows the highest). A new place's card carries its painting and
+stays long enough to read (seven seconds, or until tapped); its tab also gets a "New" badge until it
+is opened (remembered in the browser, not the save).
+
+### 3.22 Presentation: a screen that grows with the player
+
+A new player used to meet everything at once: nineteen tabs (fifteen padlocked), four currencies
+(three at zero), seven combat numbers, and under the first fight a camp, prestige, a world map,
+potions and a log. The game hid *tabs* until they were earned, but drew every *piece* inside a
+screen from the first second. Now the same rule holds inside the screens. The rules:
+
+- **Hidden, not locked.** The sidebar lists the places that are open and one "next" slot (the
+  place's painting, its name, the task and a bar). Group headings come when the list is seven long.
+  Inside a screen, a piece opens the first time it means something (`src/systems/disclosure.js`):
+  a currency when you hold some, the camp with the gold for its first upgrade, the food row with
+  Cooking, the potion row with Alchemy, going back a stage after the first defeat, the world map
+  with the second zone, the jewellery slots with Crafting, the bag's tools once there is a bag to
+  tidy, mastery after 20 mastery levels, the mini-game with the first chance to play. What has
+  opened is saved (`state.seen`) and never closes again: a currency spent to zero keeps its place.
+  A loaded save opens with what it has earned, without fanfare; a piece that opens during play
+  glows once where it appears.
+- **One step ahead, no further.** A ladder shows what is unlocked and the next rung as a
+  silhouette: mining shows two cards on day one, not eight; the smithy three, not eighteen. The
+  same goes for farm plots, agility slots and dungeons.
+- **Each thing is said once.** The next goal lives in the guide (and the sidebar's slot), not also
+  in the header. The crate has one button. The battle scene starts the fight; the tab below only
+  holds the orders. The header says what the hero is doing only when the tab in view doesn't show
+  it. The hero's numbers are in the Inventory, by the hero.
+- **The guide.** The advisor's notes sit in one strip under the scene on every tab: the next unlock
+  with its bar, then one or two things worth doing now. A note leads to its tab (and to the right
+  step of Smithing).
+- **Cards are quiet at rest.** An action card shows its art, its name, what it needs and how long
+  it takes. The card being worked opens up: the pile it has made, XP, luck, mastery, the progress
+  bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
+- **Places have pictures; rules live behind a "?".** `src/ui/features.js` holds, for every place,
+  its painting, one line and the rules in a few short points. That one entry is the card shown when
+  the place opens, the banner on tabs without a scene (shop, achievements, events, clan, dungeons,
+  farming, agility) and the About card behind every "?", which is where the "How it works"
+  paragraphs went.
+- **One card per moment.** Places that open together share a card (the first boss opens five), so
+  nothing queues up. A card is a button: it goes to the place.
+- **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from
+  the zone's name on the scene or the Map button. A pin puts its zone under the map (stages, drops,
+  gear tier) with a Travel button; on a phone the pins lose their labels and the zone card names them.
 
 ## 4. The modifier pipeline
 
@@ -779,21 +824,24 @@ disagreed, the implementation follows the simulator:
 ## 8. Code map
 
 ```
-index.html            page shell (sidebar, header, tab, toasts, modals)
+index.html            page shell (sidebar, header, scene, stage, guide, tab, toasts, modals)
 style.css             styles: theme tokens and components (dark fantasy), the battle scene, reward moments,
                       phone layout, reduced motion
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export,
-                      cloud client) · power (server-side numbers)
+                      cloud client) · power (server-side numbers) · text (articles for names)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily · advisor
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
-src/ui/               render.js (HTML per tab, the armory, the world map, the phone hotbar) · scene.js (the
+                      · disclosure (which pieces of the screens have opened for the player)
+src/ui/               render.js (HTML per tab, the sidebar, the guide, the armory, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
+                      features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
+                      worldmap.js (the zones as pins on the painted map) ·
                       sprites.js (atlas cells for monsters, items and the hero's layers) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · format.js
@@ -801,7 +849,7 @@ assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
-test/                 node:test suites (game, loot, endgame, skills, mastery, events, saves, API; the API suite runs on an
+test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
                       atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·
@@ -809,6 +857,6 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       backdrops.py (paints assets/backdrops/*.webp from noise, gradients and the DCSS floor tiles) ·
                       paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css) ·
                       shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors)
-docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for painted backdrops) · reports/ ·
+docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for the paintings) · reports/ ·
                       research_notes/
 ```

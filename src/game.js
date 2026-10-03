@@ -7,7 +7,8 @@ import { tickAction, startNodeAction, startSmelting, startSmithing, startCraftin
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
-import { checkAchievements, checkUnlocks } from './systems/progress.js';
+import { checkAchievements, checkUnlocks, checkDisclosures } from './systems/progress.js';
+import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue } from './systems/minigame.js';
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
@@ -35,6 +36,7 @@ export class Game {
         this.mods = null;
         this.recompute();
         if (!this.state.combat.enemy) spawnEnemy(this);
+        evaluateDisclosures(this.state); // a loaded save opens with what it has earned, without fanfare
     }
 
     // ----- infrastructure -----
@@ -97,6 +99,7 @@ export class Game {
         if (this.dirty) this.recompute();
         checkAchievements(this);
         checkUnlocks(this);
+        checkDisclosures(this);
         if (this.dirty) this.recompute();
         return offlineSummary;
     }
@@ -108,6 +111,7 @@ export class Game {
         const summary = applyOffline(this, now);
         checkAchievements(this);
         checkUnlocks(this);
+        evaluateDisclosures(this.state);
         if (this.dirty) this.recompute();
         this.state.meta.savedAt = now;
         return summary;

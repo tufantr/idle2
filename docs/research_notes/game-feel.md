@@ -58,6 +58,26 @@ small beside them.
   thud plus a tick; a coin is a bright ping; a level-up is a three-note rising chime.
 - Respect the browser: sound starts only after the first interaction; a mute setting is remembered.
 
+## 5. A new player meets one thing at a time
+
+Added with Phase 8, after watching a first minute of play: nineteen tabs (fifteen padlocked), four
+currencies (three at zero) and six panels under the first fight read as chaos, however good each
+piece looked. Progressive disclosure is the standard answer in idle games (Melvor, Idleon and
+Kittens Game all start with one thing to click), and it has to hold inside a screen as well as
+between tabs.
+
+- **Hide, don't lock.** A greyed-out thing still costs a look. → Only what the player has met is
+  drawn; the one next thing is shown as a picture with a bar.
+- **Say each thing once.** Two buttons for one action make a player wonder what the difference is.
+  → One crate button, one goal, one way into the fight.
+- **Quiet at rest.** Numbers belong to the thing in hand. → A card shows art, name and time; the
+  one being worked opens up.
+- **A picture, then a line, then the rules on request.** → Every place has a painting; its rules
+  sit behind a "?".
+- **Arrivals are moments.** A new piece that just appears is missed; one that pops every ten
+  seconds is noise. → A place opens with a card and its painting; several at once share one card;
+  a small piece glows once where it lands.
+
 ## Sources
 
 - [Making a game feel "juicy" with simple effects](https://resprawn.medium.com/when-you-play-a-great-game-it-feels-good-d23761b6eccf)

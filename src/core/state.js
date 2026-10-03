@@ -61,6 +61,7 @@ export function createDefaultState(now = Date.now()) {
         perks: {},
         achievements: {},
         unlocks: {},
+        seen: {},              // pieces of the interface that have opened (systems/disclosure.js)
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
@@ -266,7 +267,7 @@ function normalise(data, now) {
     for (const group of ['resources', 'skills', 'perks', 'tools', 'camp', 'dungeons', 'minigame']) {
         for (const key of Object.keys(state[group])) if (!Object.hasOwn(known[group], key)) delete state[group][key];
     }
-    for (const group of ['achievements', 'unlocks', 'pets']) {
+    for (const group of ['achievements', 'unlocks', 'pets', 'seen']) {
         const saved = state[group];
         state[group] = {};
         for (const [key, value] of Object.entries(saved)) if (value === true && /^[a-z0-9_]{1,40}$/.test(key)) state[group][key] = true;
