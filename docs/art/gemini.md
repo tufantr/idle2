@@ -3,6 +3,8 @@
 The battle scene and the skill stages show one backdrop per place. Today a script paints them
 (`tools/backdrops.py`). This page swaps them for real paintings made with Gemini: one wide picture
 per place, 17 in all. A place you skip keeps its scripted backdrop, so a few at a time is fine.
+Eight more paintings in the same style are pictures for cards and banners and the world map; they
+are at the end, under [Cards, banners and the world map](#cards-banners-and-the-world-map).
 
 ## The quick way: Claude on your computer
 
@@ -163,19 +165,78 @@ Same style and rules. Next, Smithy: a blacksmith's forge, a glowing furnace and 
 Same style and rules. Next, Alchemist's Lab: a candle-lit alchemy room in a stone tower, shelves of glowing potion bottles in many colors, bubbling glass flasks and copper stills, old books, a round window onto a starry night; a wooden floor across the bottom.
 ```
 
+## Cards, banners and the world map
+
+These are not backdrops of a fight. `src/ui/features.js` shows them on the card of a newly opened
+place, on the banner of its tab and on its About card; the map is the board of `src/ui/worldmap.js`.
+Paint them in the same chat as the places, so the style holds, and import them the same way.
+
+`market.png` (the Shop)
+```text
+Same style and rules. Next, Merchant's Stall: a merchant's market stall on a cobbled town square at dusk, a striped red and cream awning over a wooden counter, shelves and crates of potions, sacks, rope and tools, barrels at the left edge, hanging brass lanterns glowing warm, a small open strongbox of gold coins on the counter, timber-framed houses and a clock tower behind; worn cobblestones across the bottom.
+```
+
+`shrine.png` (Prestige)
+```text
+Same style and rules. Next, Shrine of Rebirth: an ancient hilltop shrine at dawn, a ring of weathered standing stones carved with softly glowing violet runes around a stone altar holding a large glowing violet crystal, a thin spiral of light rising from it into a pink and gold sky, distant misty mountains, wind-bent grass and small white flowers; a flat stone terrace across the bottom.
+```
+
+`hall.png` (Achievements)
+```text
+Same style and rules. Next, Trophy Hall: a grand stone hall of trophies in warm afternoon light, tall arched windows casting sunbeams through dust, golden cups, medals on ribbons and laurel wreaths on carved wooden pedestals and shelves along the back wall, crossed swords, round shields and long plain banners hanging between stone pillars, a red carpet runner at the left edge; a polished stone floor across the bottom.
+```
+
+`festival.png` (Events)
+```text
+Same style and rules. Next, Festival Grounds: a village fair on a green at early evening, striped tents and game booths at the left and right edges, strings of colorful bunting flags and paper lanterns between tall poles, a maypole with ribbons in the distance, fireworks bursting in a deep blue and orange sky, hay bales and barrels; trampled grass and a dirt path across the bottom.
+```
+
+`clanhall.png` (Clan)
+```text
+Same style and rules. Next, Clan Hall: the inside of a great timber longhall at night, heavy carved beams, a huge stone hearth with a roaring fire at the left edge, a long oak feast table with benches along the back wall, round shields and crossed axes on the walls, long plain banners in deep red and blue hanging from the rafters, iron chandeliers with candles, fur rugs; a wide wooden plank floor across the bottom.
+```
+
+`farm.png` (Farming)
+```text
+Same style and rules. Next, Farmstead: a small farm at sunrise, neat tilled plots with rows of young green crops, cabbages and orange pumpkins in the middle distance, a wooden fence and a wheelbarrow at the left edge, a thatched barn and a windmill on a low hill at the right, golden mist over the fields, a pale pink and blue sky; a bare earth path across the bottom.
+```
+
+`course.png` (Agility)
+```text
+Same style and rules. Next, Training Course: an obstacle course in a sunny forest clearing, a rope bridge between two wooden platforms at the left edge, a climbing net on a timber frame, balance logs and stepping posts of different heights, a rope swing hanging from a big oak, a low stone wall, bright flags on poles, pine trees and hazy hills behind; packed earth across the bottom.
+```
+
+`map.png` (the world map)
+```text
+One last picture, of a different kind but in the same hand-painted storybook style: the world map of this game, painted like an illustrated fantasy map on old parchment, seen from high above at a slight tilt, wide 16:9. A single winding dirt road crosses the whole map from the left edge to the right edge, zigzagging gently up and down, and passes through ten small landscapes in this order, each with its own clear space: 1 a sunny green meadow with a windmill, 2 a dark old forest, 3 a rocky hill with a cave mouth and glowing blue crystals, 4 a murky green swamp, 5 stormy grey highlands with a ruined watchtower, 6 white marble ruins half sunk at a sea coast, 7 an erupting volcano with lava, 8 snowy frozen wastes with glaciers, 9 a tall white spire on floating rocks above clouds, 10 a dark swirling violet rift at the end of the road. Worn parchment edges. Absolutely no text, no letters, no labels, no numbers, no compass rose, no banners, no people and no creatures.
+```
+
+The map's pins are placed by eye: `ZONE_PINS` in `src/ui/worldmap.js` holds each zone's spot in
+percent of the picture's width and height. A new map painting needs new numbers there: open the
+map in the game (`?dev=1`, then the Map button on the Combat tab) and move each pin beside its
+landmark, not on top of it.
+
 ## For Claude, working through Chrome
 
 - Open a new tab at gemini.google.com and use one chat for the whole set, in the order above.
 - Look at each picture before moving on. Ask again if it shows a character, an animal or text, if
   the middle of the ground is cluttered, or if it isn't wide.
 - Save each picture with Gemini's download button (full size). It lands in the browser's Downloads
-  folder. Move the newest download to `art/gemini/<place>.png`.
+  folder as `Gemini_Generated_Image_<id>`, up to a minute after the click, so wait for the file
+  instead of clicking again. Move the newest one to `art/gemini/<place>.png` (or `.jpeg`; the
+  importer reads both). The page shifts while a picture loads: press the button by its label
+  ("Download full size image", the last one on the page) rather than by where it was on screen.
+- Look at a corner of the first download. A full-size download from a paid account carries no
+  sparkle mark; then import with `--trim 0`, as the first set was (1920 × 1072).
+- To add to the set later, continue the same chat ("Sunlit Meadow Background Generation"), so the
+  style holds.
 - When the set is done, run the import with `--sheet art/sheet.png`. Look at the sheet, then check
   the battle scene and a few skill tabs in the game at desktop and phone widths.
 - Add the credits line. Then create a branch `art-inbox` from where you are, commit
   `assets/paint/*.webp`, `style.css` and `assets/CREDITS.md` on it (never the PNGs in `art/`), and
   push it with `git push -u origin art-inbox`. Leave `claude/intelligent-einstein-y5i5iq` alone;
-  the paintings get merged from `art-inbox`.
+  the paintings get merged from `art-inbox`. (When the session painting is also the one working on
+  the game, as `CLAUDE.md` describes, commit them on the working branch with the code that uses them.)
 - `tools/paint.py` needs Pillow: `pip install pillow` (or `python -m pip install pillow` on
   Windows) if the import says it is missing.
 - If Gemini asks you to sign in, refuses a prompt, or the download button does nothing twice in a
@@ -193,7 +254,7 @@ Add this to `assets/CREDITS.md` once paintings are in:
 `tools/paint.py` prepares each picture:
 
 - It cuts off the bottom 7%, where Gemini puts its sparkle mark (`--trim 0` keeps everything).
-- It scales the picture to at most 1920 px wide.
+- It scales the picture to at most 1920 px wide (the world map to 1400).
 - It writes `assets/paint/<place>.webp`.
 - It rewrites the paint block at the end of `style.css`. Rerun it with `--css` after deleting a
   painting.

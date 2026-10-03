@@ -11,6 +11,10 @@ scaled to at most 1920 px wide and saved as assets/paint/<place>.webp. Then the 
 paint markers in style.css is written again, so the battle scene and the skill stages show the
 paintings instead of the layers from tools/backdrops.py. A place without a painting keeps those.
 
+Some paintings are not backdrops of a fight or a skill but pictures for cards and banners (the
+market, the shrine, the world map: CARDS below). They are imported the same way and used by
+src/ui/features.js and src/ui/worldmap.js; the CSS block doesn't mention them.
+
 A file counts for a place when its name holds the place's name as a word: meadow.png,
 02-forest.jpg and Forest final.webp all do. Needs Pillow (pip install pillow).
 """
@@ -36,13 +40,16 @@ STAGES = {
     'cooking': ['camp'], 'firemaking': ['camp'], 'alchemy': ['lab', 'abyss'], 'smithing': ['forge', 'volcano'],
     'crafting': ['workshop'],
 }
-PLACES = BATTLE + ['river', 'camp', 'workshop', 'forge', 'lab']
+# Pictures for cards, banners and the world map (src/ui/features.js, src/ui/worldmap.js).
+CARDS = ['market', 'shrine', 'hall', 'festival', 'clanhall', 'farm', 'course', 'map']
+PLACES = BATTLE + ['river', 'camp', 'workshop', 'forge', 'lab'] + CARDS
 LIGHTNING = {'highland', 'titan'}  # their sky keeps the lightning flicker under the slow drift
 # How far down the painting the visible band sits (CSS background-position y). The ground the
 # fighters stand on is the bottom quarter of each picture, so the band leans low.
 FOCUS = {'skyreach': 72, 'frost': 76}
 DEFAULT_FOCUS = 80
 MAX_W = 1920
+WIDTHS = {'map': 1400}  # shown in a dialog, never as wide as a backdrop
 # Paintings are brighter than the scripted layers: a shade along the top keeps the zone title and the
 # stage path readable, and a soft pool of shadow sits behind a stage's caption.
 TOP_SHADE = 'linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%)'
@@ -60,8 +67,9 @@ def import_one(src, place, trim):
     w, h = img.size
     if trim:
         img = img.crop((0, 0, w, round(h * (1 - trim))))
-    if img.width > MAX_W:
-        img = img.resize((MAX_W, round(img.height * MAX_W / img.width)), Image.LANCZOS)
+    max_w = WIDTHS.get(place, MAX_W)
+    if img.width > max_w:
+        img = img.resize((max_w, round(img.height * max_w / img.width)), Image.LANCZOS)
     OUT.mkdir(parents=True, exist_ok=True)
     dest = OUT / f'{place}.webp'
     img.save(dest, 'WEBP', quality=82, method=6)
@@ -158,8 +166,10 @@ def main():
         for place, f in found.items():
             done.append((place, import_one(f, place, args.trim)))
         missing = [p for p in PLACES if p not in found and not (OUT / f'{p}.webp').exists()]
-        if missing:
-            print(f'still procedural: {", ".join(missing)}')
+        if [p for p in missing if p not in CARDS]:
+            print(f'still procedural: {", ".join(p for p in missing if p not in CARDS)}')
+        if [p for p in missing if p in CARDS]:
+            print(f'cards without a picture: {", ".join(p for p in missing if p in CARDS)}')
         if args.sheet and done:
             contact_sheet(done, args.sheet)
     write_css()
