@@ -237,6 +237,65 @@ Same style and rules. Next, Training Course: an obstacle course in a sunny fores
 One last picture, of a different kind but in the same hand-painted storybook style: the world map of this game, painted like an illustrated fantasy map on old parchment, seen from high above at a slight tilt, wide 16:9. A single winding dirt road crosses the whole map from the left edge to the right edge, zigzagging gently up and down, and passes through ten small landscapes in this order, each with its own clear space: 1 a sunny green meadow with a windmill, 2 a dark old forest, 3 a rocky hill with a cave mouth and glowing blue crystals, 4 a murky green swamp, 5 stormy grey highlands with a ruined watchtower, 6 white marble ruins half sunk at a sea coast, 7 an erupting volcano with lava, 8 snowy frozen wastes with glaciers, 9 a tall white spire on floating rocks above clouds, 10 a dark swirling violet rift at the end of the road. Worn parchment edges. Absolutely no text, no letters, no labels, no numbers, no compass rose, no banners, no people and no creatures.
 ```
 
+## Rooms behind the menus
+
+The panels of the menus stand in a place too (`painted()` in `src/ui/render.js`): a skill's panel
+continues its stage's painting, and the shop, the trophy hall, the festival and the clan hall reuse
+their cards. These nine are for everything else, and `tools/paint.py` lists them in `ROOMS`. The
+guild hall stands behind the whole page. They were painted in the same chat after the dungeons;
+this set's first message carries its own rules, because cards and words are laid over them:
+
+`guildhall.png` (behind the page)
+```text
+New set, same hand-painted storybook style as the places in this chat, but these are backgrounds for the game's menus: panels that hold buttons, cards and text. Rules for this set: wide 16:9 with the same soft visible brushwork and rich natural colors; dim, cozy light (candles, lanterns, firelight or moonlight) and fairly low contrast, so text laid on top stays readable; the details sit at the left and right edges and along the top, while the middle of the picture is a calm, fairly plain surface (a wall, a floor or a tabletop) because cards will be laid over it; no people, no creatures, no animals, no text, no letters, no logos, no frame. First, Guild Hall: the great hall of an adventurers' guild at night, seen from inside, dark timber walls and stone pillars at the left and right edges hung with old maps, round shields and crossed swords, a big stone fireplace glowing low at the far left, iron candle chandeliers along the top, a quiet wall of dark wood panels across the middle, barrels and a weapon rack at the right edge, a worn wooden floor.
+```
+
+`armory.png` (the Inventory's hero)
+```text
+Same style and rules as the Guild Hall. Next, Armory: a small stone armory lit by two wall torches, racks of swords, spears and axes and a row of round shields on the walls at the left and right edges, chainmail and a helmet on wooden stands at the edges, and in the middle of the floor an empty round wooden dais with a worn red rug on it, because the hero will be drawn standing there; dark flagstone floor.
+```
+
+`chest.png` (the bag)
+```text
+Same style and rules. Next, Treasure Chest: looking straight down into a big open wooden treasure chest from above, so its inside fills the picture; the inside is lined with plain deep red velvet, smooth and empty across the whole middle (the bag's slots will be drawn over it), the chest's dark wooden walls and iron corner bands frame the edges, the open lid with brass studs along the top edge, warm candlelight from one side.
+```
+
+`storeroom.png` (materials)
+```text
+Same style and rules as the Guild Hall and the Armory (not top-down this time). Next, Storeroom: a cellar storeroom by lantern light, tall wooden shelves at the left and right edges stacked with clay jars, sacks of grain, bundles of dried herbs, small crates of ore and stacked firewood, barrels and a ladder at the edges, a plain whitewashed stone back wall in the middle, a packed earth floor.
+```
+
+`vault.png` (a piece of gear, the unique items, the daily crate)
+```text
+Same style and rules. Next, Treasure Vault: a dark stone vault, a single carved stone pedestal in the middle lit by a soft beam of light falling from a small high window, its flat top empty (one item will be drawn on it), heavy iron-banded doors, closed chests and a few gold coins half in shadow at the left and right edges, dust floating in the light.
+```
+
+`library.png` (perks)
+```text
+Same style and rules. Next, Arcane Library: a tall arcane library at night, towering dark bookshelves with ladders at the left and right edges, candles and a few softly glowing violet runes floating in the air, a big round window full of stars at the top, and in the middle a faint glowing constellation of connected stars hanging in the dark air like a skill tree, above a dark wooden floor with a worn rug.
+```
+
+`study.png` (settings, sign-in and other questions)
+```text
+Same style and rules. Next, Scribe's Study: a quiet study at night, a wooden desk along the bottom with an open ledger, rolled scrolls tied with ribbon, a quill in an inkpot, a brass candlestick and a small locked chest, shelves of old books and a globe at the left edge, a leaded window with moonlight at the right edge, a plain wood-panelled wall in the middle.
+```
+The first study came with a white torn-paper border; "paint it again without the white paper border:
+the painting must fill the whole picture right to the edges" fixed it, and the last two prompts ask
+for that up front.
+
+`supplies.png` (food and potions, on the Combat tab and in the fight's dock)
+```text
+Same style and rules, filling the picture to the edges. Next, Supply Table: a sturdy wooden table inside a canvas camp tent by lantern light, at the left edge loaves of bread, a roast, a wheel of cheese and apples on wooden boards, at the right edge rows of corked potion bottles glowing red, blue, green and pink on a little rack, a rolled blanket and a waterskin hanging from the tent pole, the middle of the tabletop bare and the canvas wall behind it plain.
+```
+
+`wartable.png` (the fight's orders: retreat, the map)
+```text
+Same style and rules, filling the picture to the edges. Next, War Table: a commander's war table inside a dark tent by candlelight, seen a little from above, an old parchment map of hills and rivers spread across the table with no writing on it, small carved wooden figurines and tiny flags standing at the left and right edges of the map, a dagger, a brass compass and a candle at the corners, a glowing brazier at the far left and dark hanging banners at the right, the middle of the map calm and empty.
+```
+
+Import them like the rest; a separate folder keeps the earlier pictures from being encoded again:
+`python3 tools/paint.py art/rooms --trim 0`.
+
 The map's pins are placed by eye: `ZONE_PINS` in `src/ui/worldmap.js` holds each zone's spot in
 percent of the picture's width and height. A new map painting needs new numbers there: open the
 map in the game (`?dev=1`, then the Map button on the Combat tab) and move each pin beside its
@@ -257,6 +316,10 @@ landmark, not on top of it.
 - Chrome can hold a download unfinished (as a hidden `.com.google.Chrome.*` file in Downloads,
   waiting on its download bar). The image inside is complete once it opens as a 2752 × 1536 JPEG:
   copy it to `art/gemini/` and discard the download in Chrome later.
+- Once a full-size download never arrived at all, though Gemini said "Image downloaded" (the war
+  table). The picture shown in the chat is a 1024 px blob: drawn into a canvas, shown at its natural
+  size in an overlay at the top left of the page, and saved with a zoomed screenshot
+  (`save_to_disk`) it comes out at 1456 px, plenty for a panel. Remove the overlay afterwards.
 - To add to the set later, continue the same chat ("Sunlit Meadow Background Generation"), so the
   style holds.
 - When the set is done, run the import with `--sheet art/sheet.png`. Look at the sheet, then check

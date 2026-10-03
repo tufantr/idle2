@@ -594,6 +594,13 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 - **Cards are quiet at rest.** An action card shows its art, its name, what it needs and how long
   it takes. The card being worked opens up: the pile it has made, XP, luck, mastery, the progress
   bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
+- **No plain panels.** Every panel stands on a painting (`painted()` in `src/ui/render.js`, CSS
+  `.painted`): a skill's panel continues its stage's painting, the other places reuse their card
+  pictures, and nine rooms (`ROOMS` in `tools/paint.py`: the guild hall behind the page, the
+  armory, chest, storeroom and vault of the inventory, the perks' library, the settings' study, the
+  fight's supply table and war table) cover the rest. A shade lighter at the top keeps titles on the
+  painting and cards readable; cards let a little of it through. Panels without a painting (the
+  sidebar, the header) are smoked glass over the guild hall.
 - **Places have pictures; rules live behind a "?".** `src/ui/features.js` holds, for every place,
   its painting, one line and the rules in a few short points. That one entry is the card shown when
   the place opens, the banner on tabs without a scene or a skill stage (shop, achievements, events,

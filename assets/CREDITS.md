@@ -33,6 +33,8 @@ crossing (DCSS floor tiles) come from DCSS; the other obstacles and the campfire
 `paint/*.webp` are AI-generated with Google Gemini from the prompts in `docs/art/gemini.md`,
 then scaled by `tools/paint.py`: the seventeen backdrops, the four dungeons (warren, depths,
 stronghold, lair), the pictures for cards and banners (market, shrine, hall, festival, clanhall,
-farm, course; the farm and the course are also the Farming and Agility stages) and the world map.
+farm, course; the farm and the course are also the Farming and Agility stages), the world map, and
+the nine rooms behind the menus' panels (guild hall, armory, chest, storeroom, vault, library,
+study, supply table, war table).
 
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

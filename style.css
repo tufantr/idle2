@@ -54,9 +54,14 @@ body {
     position: relative;
     overflow-x: hidden;
 }
-body::before { /* stone grain */
+body::before { /* the guild hall (assets/paint/guildhall.webp) behind everything, dimmed, under a stone grain */
     content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.85 0 0 0 0 0.7 0 0 0 0 0.45 0 0 0 0.07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.85 0 0 0 0 0.7 0 0 0 0 0.45 0 0 0 0.07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+        radial-gradient(ellipse 80% 70% at 50% 45%, rgba(13, 10, 7, 0.45), rgba(13, 10, 7, 0.82)),
+        url(assets/paint/guildhall.webp);
+    background-size: auto, cover, cover;
+    background-position: 0 0, center, center 55%;
 }
 ::selection { background: rgba(214, 170, 92, 0.35); color: #fff; }
 
@@ -74,9 +79,25 @@ body::before { /* stone grain */
     border: 1px solid var(--line);
     background:
         linear-gradient(180deg, rgba(255, 236, 200, 0.035), transparent 42%),
-        linear-gradient(180deg, var(--panel), var(--panel-2));
+        linear-gradient(180deg, rgba(26, 21, 16, 0.84), rgba(17, 13, 9, 0.9));
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 230, 180, 0.06), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
 }
+/* A painted panel (render.js painted()): its place's painting under a shade that is lighter at the top,
+   where the title sits, and darker where the cards are; the cards let a little of it through. */
+.glass-panel.painted, .dock-group.painted, .modal-content.painted {
+    background:
+        linear-gradient(180deg, rgba(17, 13, 9, 0.38), rgba(17, 13, 9, 0.66) 38%, rgba(17, 13, 9, 0.8)),
+        var(--art) var(--art-at, center 35%) / cover no-repeat,
+        var(--panel-2);
+    -webkit-backdrop-filter: none; backdrop-filter: none; /* nothing shows through a painting */
+}
+.painted :is(.node-card, .shop-item, .medal, .ach-item, .plot-card, .course-slot, .course-run, .pet-card, .dungeon-body, .backup-row,
+    .event-shop-item, .info-strip, .clan-boss, .bank-tile, .seed-bag, .forge-bar) {
+    background: linear-gradient(180deg, rgba(33, 26, 19, 0.8), rgba(18, 13, 9, 0.86));
+}
+.painted .node-card.active { background: linear-gradient(180deg, rgba(33, 26, 19, 0.82) 0%, color-mix(in srgb, var(--accent, var(--verdigris)) 18%, rgba(18, 13, 9, 0.88)) 100%); }
+.painted .panel-header h2, .painted .dock-title { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95); }
 .glass-panel::before { /* gilded corner brackets */
     content: ""; position: absolute; inset: 5px; pointer-events: none;
     background:
@@ -520,6 +541,9 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .detail-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .detail-actions .prestige-btn { padding: 0.45rem 1.1rem; font-size: 0.85rem; }
 .detail-empty { padding: 0.6rem 0.4rem; text-align: center; font-size: 0.9rem; }
+/* nothing picked: the vault's empty pedestal waits, with the hint at its foot */
+.painted .detail-empty { min-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; background: none; border: 0; }
+.painted .detail-empty .muted { color: var(--text-main); text-shadow: 0 1px 4px #000, 0 0 12px #000; }
 .detail-empty p + p { margin-top: 0.3rem; }
 @keyframes legendGlow { 0%, 100% { box-shadow: inset 0 0 14px color-mix(in srgb, var(--r) 40%, transparent), 0 0 10px color-mix(in srgb, var(--r) 40%, transparent); } 50% { box-shadow: inset 0 0 16px color-mix(in srgb, var(--r) 50%, transparent), 0 0 18px color-mix(in srgb, var(--r) 60%, transparent); } }
 @keyframes sheetUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
@@ -1789,7 +1813,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .dock-orders { flex: 0 0 auto; min-width: 160px; }
 .dock-orders .combat-side { min-width: 0; padding-left: 0; border-left: 0; }
 .dock-main { flex: 2 1 300px; gap: 0.6rem; }
-.dock-main .combat-controls { flex-direction: column; flex-wrap: nowrap; gap: 0.45rem; }
+.dock-main .combat-controls { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0.45rem; }
 .dock-main .loadout { flex: 0 0 auto; gap: 0.25rem; }
 .dock-main .pick-row { flex-wrap: nowrap; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; } /* one row, however much food there is */
 .dock-main .pick { flex: 0 0 auto; }

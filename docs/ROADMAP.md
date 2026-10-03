@@ -425,6 +425,15 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A painting behind every panel**: nothing is plain brown any more. The page stands in a
+      painted guild hall; a skill's panel continues its stage's painting below it, so the cards sit
+      in the cave, the forest or the forge; the inventory is an armory (the hero on a dais), the bag
+      a velvet-lined chest, the materials a storeroom and a piece of gear a vault's pedestal; perks
+      sit in an arcane library, settings in a scribe's study, the fight's food and potions on a
+      supply table and its orders on a war table; the shop, achievements, events, clan and dungeons
+      reuse their pictures. Nine new Gemini paintings (`ROOMS` in `tools/paint.py`); the cards on
+      them let a little of the painting through. Also fixed: in the fight's dock a long food row ran
+      across the camp and prestige groups instead of scrolling
 - [x] **The last emoji around the edges**: the sound, cloud, map, retreat and resting controls are
       drawn line icons; the weekend events, the title card's button, Enter combat, the bonfire pill,
       the toasts, the celebrations, the welcome-back report, the loot beam, the last achievement

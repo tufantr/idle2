@@ -12,9 +12,9 @@ paint markers in style.css is written again, so the battle scene and the skill s
 paintings instead of the layers from tools/backdrops.py. A place without a painting keeps those.
 
 Some paintings are not backdrops of a fight or a skill but pictures for cards and banners (the
-market, the shrine, the world map: CARDS below). They are imported the same way and used by
-src/ui/features.js and src/ui/worldmap.js; the CSS block mentions one only where a skill stage
-stands on it (the farm, the course: STAGES).
+market, the shrine, the world map: CARDS below) or rooms behind the menus' panels (ROOMS). They are
+imported the same way and used by src/ui/features.js, src/ui/worldmap.js and src/ui/render.js; the
+CSS block mentions one only where a skill stage stands on it (the farm, the course: STAGES).
 
 A file counts for a place when its name holds the place's name as a word: meadow.png,
 02-forest.jpg and Forest final.webp all do. Needs Pillow (pip install pillow).
@@ -44,7 +44,11 @@ STAGES = {
 }
 # Pictures for cards, banners and the world map (src/ui/features.js, src/ui/worldmap.js).
 CARDS = ['market', 'shrine', 'hall', 'festival', 'clanhall', 'farm', 'course', 'map']
-PLACES = BATTLE + ['river', 'camp', 'workshop', 'forge', 'lab'] + CARDS
+# The menus' rooms: what stands behind the page (the guild hall) and behind panels that have no
+# place of their own (src/ui/render.js painted()): the inventory's armory, chest, storeroom and
+# vault, the perks' library, the settings' study, and the fight's supply table and war table.
+ROOMS = ['guildhall', 'armory', 'chest', 'storeroom', 'vault', 'library', 'study', 'supplies', 'wartable']
+PLACES = BATTLE + ['river', 'camp', 'workshop', 'forge', 'lab'] + CARDS + ROOMS
 LIGHTNING = {'highland', 'titan'}  # their sky keeps the lightning flicker under the slow drift
 # How far down the painting the visible band sits (CSS background-position y). The ground the
 # fighters stand on is the bottom quarter of each picture, so the band leans low.
@@ -168,10 +172,10 @@ def main():
         for place, f in found.items():
             done.append((place, import_one(f, place, args.trim)))
         missing = [p for p in PLACES if p not in found and not (OUT / f'{p}.webp').exists()]
-        if [p for p in missing if p not in CARDS]:
-            print(f'still procedural: {", ".join(p for p in missing if p not in CARDS)}')
-        if [p for p in missing if p in CARDS]:
-            print(f'cards without a picture: {", ".join(p for p in missing if p in CARDS)}')
+        if [p for p in missing if p not in CARDS + ROOMS]:
+            print(f'still procedural: {", ".join(p for p in missing if p not in CARDS + ROOMS)}')
+        if [p for p in missing if p in CARDS + ROOMS]:
+            print(f'cards and rooms without a picture: {", ".join(p for p in missing if p in CARDS + ROOMS)}')
         if args.sheet and done:
             contact_sheet(done, args.sheet)
     write_css()

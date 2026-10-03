@@ -9,7 +9,7 @@ import { CROPS } from '../data/farming.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
 import { fmt, escapeHtml as esc } from './format.js';
 import { sprite, resIcon, toolIcon } from './sprites.js';
-import { feature, artStyle, FEATURE_TAB } from './features.js';
+import { feature, artStyle, paintStyle, FEATURE_TAB } from './features.js';
 
 const SHOW_MS = 2800;
 const UNLOCK_MS = 7000;   // a new place comes with a picture and a line to read
@@ -84,7 +84,7 @@ export function renderCrateModal(result, banked) {
         { icon: resIcon('essence', { scale: 0.75 }), text: `+${fmt(result.essence)} essence`, cls: 'essence' },
         ...Object.entries(result.materials).map(([id, qty]) => ({ icon: resIcon(id, { scale: 0.75 }), text: `${fmt(qty)}× ${esc(RESOURCES[id]?.name || id)}`, cls: RESOURCES[id]?.category === 'gem' ? 'gem' : '' }))
     ];
-    return `<div class="modal-content narrow crate-modal">
+    return `<div class="modal-content narrow crate-modal painted" style="${paintStyle('vault', 'center 45%')}">
         <div class="crate-stage" aria-hidden="true"><span class="crate-rays"></span><span class="crate-box">${sprite('crate', { scale: 3, fallback: '📦' })}</span></div>
         <div class="modal-header">Daily crate</div>
         <ul class="crate-loot">${loot.map((l, i) => `<li class="${l.cls}" style="--i:${i}"><span>${l.icon}</span>${l.text}</li>`).join('')}</ul>

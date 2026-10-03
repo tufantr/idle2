@@ -393,7 +393,7 @@ export function renderCombat(game, ui) {
     const state = game.state;
     // The battle scene above the tab (src/ui/scene.js) shows the fight and starts it; this panel holds the orders.
     return `
-    <section class="glass-panel combat-panel">
+    <section class="glass-panel combat-panel ${painted('supplies', 'center 55%')}">
         <div class="combat-main">${combatMain(game)}</div>
         ${combatOrders(game, ui)}
     </section>
@@ -411,7 +411,7 @@ export function renderCombat(game, ui) {
 /** The camp in the fight's dock: the same tokens as the combat tab. */
 function renderCampTokens(game) {
     if (!seen(game.state, 'camp')) return '';
-    return `<div class="dock-group dock-camp"><div class="dock-title">Camp ${aboutButton('camp')}</div><div class="camp-tokens">${campTokens(game)}</div></div>`;
+    return `<div class="dock-group dock-camp ${painted('camp', 'center 60%')}"><div class="dock-title">Camp ${aboutButton('camp')}</div><div class="camp-tokens">${campTokens(game)}</div></div>`;
 }
 
 /** Prestige, perks and the upgrade in the bag: the steps of the loop that used to need another tab. */
@@ -434,17 +434,17 @@ function renderLoopActions(game) {
     if (upgrade) {
         parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span></span></button>`);
     }
-    return parts.length ? `<div class="dock-group dock-loop">${parts.join('')}</div>` : '';
+    return parts.length ? `<div class="dock-group dock-loop ${painted('shrine', 'center 45%')}">${parts.join('')}</div>` : '';
 }
 
 function renderBattleDock(game, ui) {
     const state = game.state;
     const orders = combatOrders(game, ui);
     return `<section class="battle-dock" aria-label="Orders for the fight">
-        <div class="dock-group dock-main">${combatMain(game)}</div>
+        <div class="dock-group dock-main ${painted('supplies', 'center 55%')}">${combatMain(game)}</div>
         ${renderCampTokens(game)}
         ${renderLoopActions(game)}
-        ${orders ? `<div class="dock-group dock-orders">${orders}</div>` : ''}
+        ${orders ? `<div class="dock-group dock-orders ${painted('wartable', 'center 50%')}">${orders}</div>` : ''}
     </section>
     ${renderBattleLog(state, ui)}`;
 }
@@ -452,6 +452,12 @@ function renderBattleDock(game, ui) {
 // ---------- banners ----------
 
 /** A place's banner: its painting, its name, one line and the "?" (for the tabs without a scene of their own). */
+// A panel stands in its place: a painting (assets/paint) behind it, dimmed from the top down so the
+// cards and words on it read (CSS .painted). Skill panels continue the painting of their stage above.
+// It ends a class attribute and adds the style: class="glass-panel ${painted('market')}".
+const painted = (name, focus = 'center 35%') => `painted" style="${paintStyle(name, focus)}`;
+const skillPainted = id => painted(FEATURES[id]?.art || 'camp', 'center 22%');
+
 function banner(id, { title = null, sub = null, extra = '' } = {}) {
     const f = feature(id);
     return `<div class="tab-banner" style="${artStyle(id)}">
@@ -626,7 +632,7 @@ export function renderSkill(game, ui, skillId) {
         }
     }
     const bait = skillId === 'fishing' && state.resources.fishing_bait > 0 ? `<span class="tool-badge" title="Each catch uses one bait for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish">${resIcon('fishing_bait')} ${fmt(state.resources.fishing_bait)} bait</span>` : '';
-    return `<section class="glass-panel skill-panel">
+    return `<section class="glass-panel skill-panel ${skillPainted(skillId)}">
         ${xpHeader(game, skillId, bait + toolBadge(game, skillId))}
         ${skillExtras(game, skillId)}
         ${NON_COMBAT_SKILLS.includes(skillId) ? renderMinigame(game, skillId) : ''}
@@ -739,7 +745,7 @@ export function renderSmithing(game, ui) {
         const tools = ['pickaxe', 'axe', 'tinderbox', 'hoe'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
         body = `<div class="node-grid">${tools.map(toolId => renderToolCard(game, toolId)).join('')}</div>`;
     }
-    return `<section class="glass-panel skill-panel">
+    return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
         ${xpHeader(game, 'smithing')}
         ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
         ${body}
@@ -783,7 +789,7 @@ export function renderCrafting(game, ui) {
         ? `<select class="material-select" aria-label="${label}" onchange="${handler}(this.value)">${list.map(o => `<option value="${text(o).id}" ${text(o).id === value ? 'selected' : ''}>${esc(text(o).name)}</option>`).join('')}</select>`
         : '');
     const tools = ['bow', 'rod'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
-    return `<section class="glass-panel skill-panel">
+    return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
         ${xpHeader(game, 'crafting')}
         <div class="forge-bar">
             ${pick(bars, bar.bar, 'FI.selectCraftBar', 'Setting', b => ({ id: b.bar, name: `${b.name} setting` }))}
@@ -944,7 +950,7 @@ export function renderInventory(game, ui) {
     const doll = seen(state, 'jewellery') ? DOLL.jewelled : DOLL.plain;
     const stat = (icon, value, label, title) => `<span title="${title}">${icon} <b>${value}</b> ${label}</span>`;
     return `<div class="armory${hasGear ? '' : ' bare'}">
-        <section class="glass-panel doll-panel">
+        <section class="glass-panel doll-panel ${painted('armory', 'center 62%')}">
             <div class="panel-header"><h2>Your hero</h2><span class="muted small">Combat level ${d.combatLevel}</span></div>
             <div class="doll">
                 <div class="doll-col">${doll.left.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
@@ -964,8 +970,8 @@ export function renderInventory(game, ui) {
                 <span title="How long your hero keeps going while you are away">🌙 ${Math.round(d.offlineMs / 3600000)}h away</span>
             </div>
         </section>
-        ${hasGear ? `<section class="glass-panel detail-panel${shownId !== null ? ' has-item' : ''}" id="item-detail" aria-live="polite">${renderItemDetail(game, shownId)}</section>` : ''}
-        <section class="glass-panel bag-panel">
+        ${hasGear ? `<section class="glass-panel detail-panel${shownId !== null ? ' has-item' : ''} ${painted('vault', 'center 55%')}" id="item-detail" aria-live="polite">${renderItemDetail(game, shownId)}</section>` : ''}
+        <section class="glass-panel bag-panel ${painted('chest', 'center 50%')}">
             <div class="panel-header"><h2>Bag <span class="muted">${items.length}/${size}</span></h2>
                 ${seen(state, 'bag_tools') ? `<div class="btn-row">
                     <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>${resIcon('essence')} Salvage commons</button>
@@ -979,7 +985,7 @@ export function renderInventory(game, ui) {
             </label>` : ''}
         </section>
     </div>
-    <section class="glass-panel">
+    <section class="glass-panel ${painted('storeroom', 'center 45%')}">
         <div class="panel-header"><h2>Materials</h2>
             ${filters ? `<div class="filter-row">${['all', ...categories].map(c => `<button class="mini-btn ${filter === c ? 'active' : ''}" onclick="FI.invFilter('${c}')">${c}</button>`).join('')}</div>` : ''}
         </div>
@@ -1019,7 +1025,7 @@ function perkPurse(state) {
 /** Perks in a window, opened from the SP chip on any screen, the prestige strip or the fight's dock. */
 export function renderPerksModal(game) {
     const state = game.state;
-    return `<div class="modal-content perks-modal">
+    return `<div class="modal-content perks-modal ${painted('library', 'center 40%')}">
         <div class="modal-header">Perks</div>
         <p class="about-blurb">${perkPurse(state)}</p>
         <div class="shop-list">${perkList(state)}</div>
@@ -1042,7 +1048,7 @@ export function renderShop(game, ui) {
     }).join('');
     const preview = game.prestigePreview();
     return `${banner('shop')}
-    <section class="glass-panel">
+    <section class="glass-panel ${painted('market', 'center 55%')}">
         <div class="panel-header"><h2>Supplies</h2></div>
         <div class="shop-grid">${goods}</div>
     </section>
@@ -1057,7 +1063,7 @@ export function renderShop(game, ui) {
             </div>
             <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>
-        <section class="glass-panel">
+        <section class="glass-panel ${painted('library', 'center 40%')}">
             <div class="panel-header"><h2>Perks</h2></div>
             <p class="small perk-purse" title="+1 skill point per prestige, +1 per 25 stages of your record">${perkPurse(state)}</p>
             <div class="shop-list">${perks}</div>
@@ -1102,7 +1108,7 @@ export function renderAchievements(game) {
         </div>`;
     }).join('');
     return `${banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${ACHIEVEMENTS.length}</span>` })}
-    <section class="glass-panel">
+    <section class="glass-panel ${painted('hall', 'center 40%')}">
         <div class="medal-grid">${medals}</div>
     </section>`;
 }
@@ -1126,13 +1132,13 @@ export function renderEvents(game) {
     const rotation = EVENTS.map(x => `<span class="${x.id === e.id ? 'b' : 'muted'}">${eventIcon(x)} ${esc(x.name)}</span>`).join(' → ');
     return `${banner('events', { title: `${eventIcon(e, 1)} ${esc(e.name)}`, sub: status.active ? `Running now: ends in ${duration(status.endsAt - game.now)}` : `The next event: starts in ${duration(status.startsAt - game.now)}`,
         extra: `<div class="chip tokens" title="Festival tokens${status.active ? `: ${today} of ${EVENT_DAILY_CAP} earned today` : ''}"><span>Tokens</span><b>${fmt(ev.tokens)}</b></div>` })}
-    <section class="glass-panel event-panel" style="--accent:${e.color}">
+    <section class="glass-panel event-panel painted" style="--accent:${e.color};${paintStyle('festival', 'center 30%')}">
         <p>${esc(e.desc)}</p>
         <p class="muted small event-rotation">${rotation}</p>
     </section>
     <div class="two-col">
-        <section class="glass-panel"><div class="panel-header"><h2>Milestones</h2><span class="muted small">${earned} earned this event</span></div><div class="ach-list">${milestones}</div></section>
-        <section class="glass-panel"><div class="panel-header"><h2>Event shop</h2><span class="muted small">${status.active ? 'Open' : 'Opens with the next event'}</span></div><div class="event-shop">${shop}</div></section>
+        <section class="glass-panel ${painted('festival', 'left 60%')}"><div class="panel-header"><h2>Milestones</h2><span class="muted small">${earned} earned this event</span></div><div class="ach-list">${milestones}</div></section>
+        <section class="glass-panel ${painted('festival', 'right 60%')}"><div class="panel-header"><h2>Event shop</h2><span class="muted small">${status.active ? 'Open' : 'Opens with the next event'}</span></div><div class="event-shop">${shop}</div></section>
     </div>`;
 }
 
@@ -1198,7 +1204,7 @@ export function renderFarming(game, ui) {
         ready ? `<button class="prestige-btn" onclick="FI.harvestAll()">Harvest ${ready} and replant</button>` : '',
         empty > 1 && seed ? `<button class="prestige-btn" onclick="FI.plantAll('${seed.id}')" ${affordable ? '' : 'disabled'}>Plant ${empty} plots</button>` : ''
     ].join('');
-    return `<section class="glass-panel skill-panel">
+    return `<section class="glass-panel skill-panel ${skillPainted('farming')}">
         ${xpHeader(game, 'farming', toolBadge(game, 'farming'))}
         <div class="seed-bag">
             <div class="loadout-label">Seeds</div>
@@ -1263,7 +1269,7 @@ export function renderAgility(game, ui) {
             ${built ? `<button class="mini-btn" onclick="FI.agilitySwap(null)">Keep the ${esc(built.name)}</button>` : ''}
         </div>`;
     }).join('');
-    return `<section class="glass-panel skill-panel">
+    return `<section class="glass-panel skill-panel ${skillPainted('agility')}">
         ${xpHeader(game, 'agility')}
         ${course ? `<div class="course-run ${running ? 'active' : ''}">
             <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div></div>
@@ -1340,7 +1346,7 @@ export function renderDungeons(game) {
         </div>`;
     }).join('');
     return `${banner('dungeons', { extra: `<label class="toggle"><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>` })}
-    <section class="glass-panel">
+    <section class="glass-panel ${painted('dungeon', 'center 50%')}">
         <div class="dungeon-grid">${cards}</div>
     </section>
     <section class="glass-panel titan-panel" style="${artStyle('titan')}">
@@ -1364,11 +1370,11 @@ function renderCollection(game) {
         const owned = [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === u.id);
         return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${u.id}`, { scale: 1.5, cls: owned ? '' : 'silhouette', fallback: owned ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${esc(u.name)}</b><div class="muted small">${d.name} · ${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}</div></div></div>`;
     }).join('');
-    return `<section class="glass-panel">
+    return `<section class="glass-panel ${painted('forest', 'center 45%')}">
         <div class="panel-header"><h2>Pets</h2><span class="muted small">${PETS.filter(p => state.pets[p.id]).length}/${PETS.length} · rare finds while training, kept forever</span></div>
         <div class="pet-grid">${pets}</div>
     </section>
-    <section class="glass-panel">
+    <section class="glass-panel ${painted('vault', 'center 40%')}">
         <div class="panel-header"><h2>Unique items</h2><span class="muted small">Assembled from dungeon fragments, or found in a chest</span></div>
         <div class="pet-grid">${uniques}</div>
     </section>`;
@@ -1380,13 +1386,13 @@ export function renderSettings(game, ui, cloud) {
     const state = game.state;
     const played = duration(state.meta.playtimeMs);
     return `<div class="two-col">
-        <section class="glass-panel">
+        <section class="glass-panel ${painted('study', 'left 45%')}">
             <div class="panel-header"><h2>Cloud save</h2><span class="muted small">${cloud?.loggedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest (local only)'}</span></div>
             <p class="muted small">${cloud?.loggedIn ? 'Your save is uploaded every minute and on important events. Another device loads whichever save has more play time.' : 'Sign in to keep your save in the cloud and play from any device. Your local save is kept either way.'}</p>
             ${cloud?.loggedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save to cloud now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>
-        <section class="glass-panel">
+        <section class="glass-panel ${painted('study', 'right 45%')}">
             <div class="panel-header"><h2>Save file</h2><span class="muted small">Played ${played}</span></div>
             <div class="btn-row"><button class="mini-btn" onclick="FI.exportSave()">Copy export string</button><button class="mini-btn" onclick="FI.importSavePrompt()">Import string</button></div>
             <textarea id="save-io" class="save-io" placeholder="Paste a save string here, then press Import." rows="3" oninput="FI.setSaveIo(this.value)">${esc(ui.saveIo || '')}</textarea>
@@ -1394,7 +1400,7 @@ export function renderSettings(game, ui, cloud) {
             ${renderBackups()}
         </section>
     </div>
-    <section class="glass-panel">
+    <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
@@ -1419,7 +1425,7 @@ export function renderClan(game, ui, cloud) {
         return banner('clan', { extra: `<button class="prestige-btn" onclick="FI.openAuth()">Sign in to join a clan</button>` });
     }
     if (cloud.available === false) {
-        return `${banner('clan')}<section class="glass-panel"><p class="warn">The clan server isn't reachable from here — clans need the game's API (the Vercel deployment).</p></section>`;
+        return `${banner('clan')}<section class="glass-panel ${painted('clanhall')}"><p class="warn">The clan server isn't reachable from here — clans need the game's API (the Vercel deployment).</p></section>`;
     }
     const status = social.error ? `<p class="warn small">${esc(social.error)}</p>` : social.loading && !social.loaded ? '<p class="muted small">Loading…</p>' : '';
     const rewards = (social.rewards || []).length
@@ -1432,12 +1438,12 @@ export function renderClan(game, ui, cloud) {
         const rows = (social.clans || []).map(c => `<tr><td class="wrap"><b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
-            <section class="glass-panel"><div class="panel-header"><h2>Find a clan</h2></div>
+            <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
                 <div class="btn-row"><input id="clan-search" class="text-input" placeholder="Name or tag" value="${esc(form.search)}" oninput="FI.clanForm('search', this.value)" onkeydown="if (event.key === 'Enter') FI.searchClans()" aria-label="Search clans">
                 <button class="mini-btn" onclick="FI.searchClans()">Search</button></div>
                 ${rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Clan</th><th>Members</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted small">No clans found — start one.</p>'}
             </section>
-            <section class="glass-panel"><div class="panel-header"><h2>Start a clan</h2></div>
+            <section class="glass-panel ${painted('clanhall', 'right 50%')}"><div class="panel-header"><h2>Start a clan</h2></div>
                 <label class="small">Name <input id="clan-name" class="text-input" maxlength="32" placeholder="Iron Wolves" value="${esc(form.name)}" oninput="FI.clanForm('name', this.value)"></label>
                 <label class="small">Tag <input id="clan-tag" class="text-input" maxlength="5" placeholder="IWF" value="${esc(form.tag)}" oninput="FI.clanForm('tag', this.value)"></label>
                 <label class="small">Description <input id="clan-desc" class="text-input" maxlength="200" placeholder="Casual, EU evenings" value="${esc(form.description)}" oninput="FI.clanForm('description', this.value)"></label>
@@ -1452,7 +1458,7 @@ export function renderClan(game, ui, cloud) {
         const board = (social.board || []).map((r, i) => `<tr class="${r.you ? 'you-row' : ''}"><td>${i + 1}</td><td>${esc(r.username)}</td><td>${fmt(Number(r.damage) || 0)}</td><td>${Number(r.attacks) || 0}</td></tr>`).join('');
         const canKick = !!c.isOwner;
         const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? '👑 ' : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${fmt(Number(m.attackDamage) || 0)}</td></tr>`).join('');
-        body = `<section class="glass-panel">
+        body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
             <div class="panel-header"><div><h2>🛡️ ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? `<div class="clan-boss">
@@ -1469,7 +1475,7 @@ export function renderClan(game, ui, cloud) {
         </section>`;
     }
     return `${banner('clan', { extra: `<button class="mini-btn" onclick="FI.refreshSocial()">↻ Refresh</button>` })}
-        ${status || rewards ? `<section class="glass-panel">${status}${rewards}</section>` : ''}
+        ${status || rewards ? `<section class="glass-panel ${painted('clanhall', 'center 70%')}">${status}${rewards}</section>` : ''}
         ${body}
         ${renderLeaderboard(social)}`;
 }
@@ -1482,7 +1488,7 @@ function renderLeaderboard(social) {
         ? `<p class="small">You are listed by your username with numbers the server works out from your cloud save. <button class="mini-btn" onclick="FI.setLeaderboardConsent(false)">Leave the leaderboards</button></p>`
         : `<p class="small">Leaderboards are opt-in. Joining lists your <b>username</b> with your best stage, total level, Titans and dungeon clears — worked out on the server from your cloud save, never from numbers the game sends. You can leave at any time. <button class="prestige-btn" onclick="FI.setLeaderboardConsent(true)">Join the leaderboards</button></p>`;
     const rows = board ? board.entries.map(e => `<tr class="${e.you ? 'you-row' : ''}"><td>${e.rank}</td><td>${esc(e.username)}</td><td>${fmt(e.value)}</td></tr>`).join('') : '';
-    return `<section class="glass-panel">
+    return `<section class="glass-panel ${painted('hall', 'center 60%')}">
         <div class="panel-header"><h2>Leaderboards</h2>
             <div class="btn-row">${Object.entries(BOARD_METRICS).map(([id, label]) => `<button class="mini-btn ${social.metric === id ? 'active' : ''}" onclick="FI.boardMetric('${id}')">${label}</button>`).join('')}
             <button class="mini-btn ${social.period === 'week' ? 'active' : ''}" onclick="FI.boardPeriod('${social.period === 'week' ? 'all' : 'week'}')">${social.period === 'week' ? 'This week' : 'All time'}</button></div></div>
@@ -1510,7 +1516,7 @@ export function renderPrestigeModal(game) {
 
 /** An in-page yes/no; confirm() is blocked when the game runs inside another page. */
 export function renderConfirmModal(title, text, confirmLabel) {
-    return `<div class="modal-content">
+    return `<div class="modal-content ${painted('study', 'center 40%')}">
         <div class="modal-header">${esc(title)}</div>
         <div class="modal-body"><p>${esc(text)}</p></div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmYes()">${esc(confirmLabel)}</button></div>
@@ -1553,7 +1559,7 @@ export function renderWelcomeBack(summary, state) {
         summary.plotsReady ? `<div class="wb-find" style="--i:${next()}">${sprite('farm/growing', { scale: 1, fallback: '🌾' })}<span><b>${summary.plotsReady}</b> farm plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest</span></div>` : '',
         summary.mastery && summary.mastery.to > summary.mastery.from ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.mastery.icon, { scale: 1 })}<span>${esc(summary.mastery.name)} mastery ${summary.mastery.from} → <b>${summary.mastery.to}</b></span></div>` : ''
     ].filter(Boolean).join('');
-    return `<div class="modal-content welcome-back">
+    return `<div class="modal-content welcome-back ${painted('guildhall', 'center 45%')}">
         <div class="modal-header">Welcome back</div>
         <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
         <p class="wb-story">${story}</p>
@@ -1584,7 +1590,7 @@ export function renderIntroModal(state) {
 }
 
 export function renderAuthModal(message = '') {
-    return `<div class="modal-content narrow">
+    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
         <div class="modal-header">Cloud save</div>
         <div class="modal-body">
             <p class="muted small">Create an account to sync your save across devices, or keep playing as a guest with a local save.</p>
@@ -1600,7 +1606,7 @@ export function renderAuthModal(message = '') {
 export function renderConflictModal(local, cloud, suggested = null) {
     const line = s => `${duration(s.meta.playtimeMs)} played · best stage ${s.combat.bestStage} · saved ${new Date(s.meta.savedAt).toLocaleString()}`;
     const more = side => (suggested === side ? ' <span class="keep-text">· more progress</span>' : '');
-    return `<div class="modal-content">
+    return `<div class="modal-content ${painted('study', 'right 45%')}">
         <div class="modal-header">⚠️ Two saves found</div>
         <div class="modal-body">
             <div class="prestige-box"><h4>This device${more('local')}</h4><span>${line(local)}</span></div>

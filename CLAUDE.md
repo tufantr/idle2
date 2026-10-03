@@ -46,7 +46,9 @@ Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.m
 - Backdrops: `assets/paint/*.webp` are Gemini paintings (AI-made, credited), imported with
   `python3 tools/paint.py <folder> --trim 0`; places without one fall back to `assets/backdrops/`
   from `tools/backdrops.py`. The same folder holds the pictures for cards and banners and the world
-  map (`CARDS` in `tools/paint.py`; pins in `src/ui/worldmap.js`).
+  map (`CARDS` in `tools/paint.py`; pins in `src/ui/worldmap.js`), and the rooms behind the menus'
+  panels (`ROOMS`). Every panel stands on a painting (`painted()` in `src/ui/render.js`); a new
+  panel gets one too, never plain brown.
 - New painted art: the owner's Gemini is signed in in Chrome. Use Claude in Chrome, keep the style of
   `docs/art/gemini.md` (one chat for a set, wide 16:9, no characters or text), look at every picture,
   import, then check it in the game. Credit every new source in `assets/CREDITS.md`.
