@@ -235,30 +235,35 @@ function renderLoadout(game) {
     const word = w => `<span class="pick-word">${w}</span>`;
     const foods = foodsByHealing().filter(f => state.resources[f.id] > 0 || c.autoEat === f.id);
     const potions = orderedByTier('potion').filter(p => state.resources[p.id] > 0 || c.potion === p.id);
+    // With none in the bag, the row ends in one more tile that goes to where they are made.
+    const goTile = (tab, word, label) => (isUnlocked(state, tab)
+        ? `<button class="pick pick-go" onclick="FI.switchTab('${tab}')" title="${label}" aria-label="${label}">${tabIcon(tab, 1)}<span class="pick-sub">${word}</span></button>`
+        : '');
+    const noFood = !foods.some(f => state.resources[f.id] > 0);
+    const noPotions = !potions.some(p => state.resources[p.id] > 0);
     const foodRow = [
         pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat whatever best fits the missing health'),
         pick(c.autoEat === 'none', "FI.setAutoEat('none')", word('None'), 'Never eat automatically'),
         ...foods.map(f => pick(c.autoEat === f.id, `FI.setAutoEat('${f.id}')`,
             `${resIcon(f.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[f.id] || 0)}</span><span class="pick-sub">+${Math.round(f.heals * d.foodMult)}</span>`,
-            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)`))
+            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)`)),
+        noFood ? goTile('cooking', 'Cook', 'No food left: cook some') : ''
     ].join('');
     const potionRow = [
         pick(c.potion === 'none', "FI.setPotion('none')", word('None'), 'No potion'),
         ...potions.map(p => pick(c.potion === p.id, `FI.setPotion('${p.id}')`,
             `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
-            `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`))
+            `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`)),
+        noPotions ? goTile('alchemy', 'Brew', 'No potions left: brew some') : ''
     ].join('');
     const potionNote = c.potion !== 'none' ? (c.potionCharges > 0 ? `${c.potionCharges} attacks left` : (state.resources[c.potion] > 0 ? 'drinks on the next attack' : 'none left')) : '';
-    const link = (tab, text) => (isUnlocked(state, tab) ? ` <button class="link-btn" onclick="FI.switchTab('${tab}')">${text}</button>` : '');
     return `${showFood ? `<div class="loadout">
             <div class="loadout-label">Food <span class="muted small">eaten below ${pct(d.autoEatThreshold)} health</span></div>
             <div class="pick-row">${foodRow}</div>
-            ${foods.length ? '' : `<div class="muted small">No food yet.${link('cooking', 'Cook some')}</div>`}
         </div>` : ''}
         ${showPotions ? `<div class="loadout">
             <div class="loadout-label">Potion${potionNote ? ` <span class="muted small">${potionNote}</span>` : ''}</div>
             <div class="pick-row">${potionRow}</div>
-            ${potions.length ? '' : `<div class="muted small">No potions yet.${link('alchemy', 'Brew some')}</div>`}
         </div>` : ''}`;
 }
 
