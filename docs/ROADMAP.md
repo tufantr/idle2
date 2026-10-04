@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The great crate**: every seventh daily crate opened is a great one (three times the gold,
+      twice the rest, a better gem), in a golden dialog; seven little crates in the dialog show the way
+      to the next. A count, not a streak: a missed day still costs nothing
 - [x] **Name your hero on the title card**: an optional field above Begin your adventure (Enter
       starts too); the name is over him in his first fight. The button keeps the focus, so a phone's
       keyboard doesn't jump up

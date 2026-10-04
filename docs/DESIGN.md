@@ -429,7 +429,10 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   shows it with its progress. Settings has a developer switch (and `?dev=1`) that unlocks all.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for
   you**, so a missed day costs nothing; no streaks. A crate holds 40 kills of gold at your best stage,
-  12 materials and a gem from that zone, and `3 × zone tier` essence.
+  12 materials and a gem from that zone, and `3 × zone tier` essence. Every seventh crate opened
+  (a count, not consecutive days, so still no streak to lose) is a **great crate**: three times the
+  gold, twice the rest, and a gem of the next tier besides (+29% over a week). The crate's dialog
+  shows seven little crates for the way there.
 - **No suggestions.** There used to be an advisor: notes on what to do next (forge this, plant
   that, the Titan is awake, spend your skill points), first as a quest board and then as a strip
   under the scene. It was taken out to keep the screen simple. What is ready shows where it lives

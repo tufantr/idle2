@@ -1382,6 +1382,17 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
 .crate-loot li.gold { color: #fcd34d; }
 .crate-loot li.essence { color: #e879f9; }
 .crate-loot li.gem { color: #93c5fd; }
+/* the way to the next great crate: seven little crates, the opened ones lit, the seventh bigger */
+.crate-way { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; margin-top: 0.9rem; opacity: 0; animation: fadeIn 0.4s ease-out 1.3s forwards; }
+.crate-pips { display: inline-flex; align-items: flex-end; gap: 0.35rem; }
+.crate-pips i { display: inline-grid; place-items: center; opacity: 0.35; filter: grayscale(1) brightness(0.6); }
+.crate-pips i.on { opacity: 1; filter: sepia(0.5) saturate(1.6) brightness(1.25) drop-shadow(0 0 6px rgba(251, 191, 36, 0.75)); }
+.crate-pips i.great.on { filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.95)) brightness(1.15); }
+/* a great crate: brighter rays and a golden ring around the dialog */
+.crate-modal.great { box-shadow: 0 0 0 2px rgba(252, 211, 77, 0.7), 0 0 50px rgba(252, 211, 77, 0.35), 0 20px 60px rgba(0, 0, 0, 0.6); }
+.crate-modal.great .crate-rays { background: repeating-conic-gradient(rgba(253, 230, 138, 0.55) 0deg 12deg, transparent 12deg 30deg); width: 260px; height: 260px; margin: -130px 0 0 -130px; }
+.crate-modal.great .modal-header { color: #fde68a; text-shadow: 0 0 16px rgba(252, 211, 77, 0.6); }
+body.reduced-motion .crate-way { animation: none; opacity: 1; }
 
 .nav-new {
     padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;

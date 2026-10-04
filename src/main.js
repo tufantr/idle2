@@ -21,6 +21,7 @@ import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
+import { cratesTowardGreat } from './systems/daily.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 
 const TICK_MS = 100;
@@ -772,7 +773,7 @@ window.FI = {
         if (crate) {
             sound.play('chest');
             if (ui.modalOpen === 'crate') closeModal(); // "open the next": the new crate replaces this one
-            openModal(renderCrateModal(crate, game.state.daily.banked), 'crate');
+            openModal(renderCrateModal(crate, game.state.daily.banked, cratesTowardGreat(game.state)), 'crate');
         }
         render();
     },

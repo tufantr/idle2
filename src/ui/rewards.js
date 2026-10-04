@@ -10,6 +10,7 @@ import { AGILITY_SLOTS } from '../data/agility.js';
 import { fmt, escapeHtml as esc } from './format.js';
 import { sprite, resIcon, toolIcon } from './sprites.js';
 import { feature, artStyle, paintStyle, FEATURE_TAB } from './features.js';
+import { GREAT_CRATE_EVERY } from '../systems/daily.js';
 
 const SHOW_MS = 2800;
 const UNLOCK_MS = 7000;   // a new place comes with a picture and a line to read
@@ -79,16 +80,27 @@ export function unlockCelebration(ids) {
 }
 
 /** The daily crate, opened: the loot comes out one piece at a time. `banked` crates are still waiting. */
-export function renderCrateModal(result, banked) {
+/**
+ * The crate opened: its contents popping out one by one, and seven little crates for the way to the
+ * next great one (`toward`: crates opened since the last; a great crate fills them all).
+ */
+export function renderCrateModal(result, banked, toward = 0) {
     const loot = [
         { icon: sprite('gold', { scale: 0.75, cls: 'soft', fallback: '🪙' }), text: `+${fmt(result.gold)} gold`, cls: 'gold' },
         { icon: resIcon('essence', { scale: 0.75 }), text: `+${fmt(result.essence)} essence`, cls: 'essence' },
         ...Object.entries(result.materials).map(([id, qty]) => ({ icon: resIcon(id, { scale: 0.75 }), text: `${fmt(qty)}× ${esc(RESOURCES[id]?.name || id)}`, cls: RESOURCES[id]?.category === 'gem' ? 'gem' : '' }))
     ];
-    return `<div class="modal-content narrow crate-modal painted" style="${paintStyle('vault', 'center 45%')}">
+    const lit = result.great ? GREAT_CRATE_EVERY : toward;
+    const pips = Array.from({ length: GREAT_CRATE_EVERY }, (_, i) => `<i class="${i < lit ? 'on' : ''}${i === GREAT_CRATE_EVERY - 1 ? ' great' : ''}">${sprite('crate', { scale: i === GREAT_CRATE_EVERY - 1 ? 0.75 : 0.5, cls: 'soft' })}</i>`).join('');
+    const left = GREAT_CRATE_EVERY - toward;
+    return `<div class="modal-content narrow crate-modal painted${result.great ? ' great' : ''}" style="${paintStyle('vault', 'center 45%')}">
         <div class="crate-stage" aria-hidden="true"><span class="crate-rays"></span><span class="crate-box">${sprite('crate', { scale: 3, fallback: '📦' })}</span></div>
-        <div class="modal-header">Daily crate</div>
+        <div class="modal-header">${result.great ? 'A great crate' : 'Daily crate'}</div>
         <ul class="crate-loot">${loot.map((l, i) => `<li class="${l.cls}" style="--i:${i}"><span>${l.icon}</span>${l.text}</li>`).join('')}</ul>
+        <div class="crate-way" title="Every ${GREAT_CRATE_EVERY}th crate opened is a great crate: three times the gold, twice the rest, and a better gem">
+            <span class="crate-pips" aria-hidden="true">${pips}</span>
+            <span class="muted small">${result.great ? 'Three times the gold, twice the rest, and a better gem' : `${left === 1 ? 'The next crate is' : `${left} more crates to`} a great one`}</span>
+        </div>
         <div class="modal-footer">
             ${banked > 0 ? `<button class="modal-btn btn-cancel" onclick="FI.claimDaily()">Next crate (${banked})</button>` : ''}
             <button class="modal-btn btn-confirm" onclick="FI.closeModal()">Collect</button>

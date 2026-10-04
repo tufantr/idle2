@@ -1,5 +1,5 @@
 // The world: the first step ever into a zone is announced once (not again after a prestige, not
-// for the Abyss's deeper depths, not while away).
+// for the Abyss's deeper depths, not while away); and every seventh daily crate is a great one.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -47,4 +47,24 @@ test('the Abyss is announced once, at its first depth', () => {
     assert.deepEqual(beat(game).map(e => e.zone), [ZONES[ZONES.length - 1].id]);
     const deeper = heroAt(first + STAGES_PER_ZONE);
     assert.deepEqual(beat(deeper), [], 'a deeper depth is the same land');
+});
+
+test('every seventh crate opened is a great crate, whenever it is opened', async () => {
+    const { GREAT_CRATE_EVERY, cratesTowardGreat } = await import('../src/systems/daily.js');
+    const game = new Game(null, T0);
+    game.state.combat.bestStage = 25;
+    const crates = [];
+    for (let i = 0; i < 2 * GREAT_CRATE_EVERY; i++) {
+        game.state.daily.banked = 1;          // ripe, however long it took
+        crates.push(game.claimDaily());
+    }
+    const great = crates.map(c => c.great);
+    assert.deepEqual(great.map((g, i) => (g ? i + 1 : 0)).filter(Boolean), [GREAT_CRATE_EVERY, 2 * GREAT_CRATE_EVERY]);
+    const plain = crates[0], big = crates[GREAT_CRATE_EVERY - 1];
+    assert.equal(big.gold, plain.gold * 3);
+    assert.equal(big.essence, plain.essence * 2);
+    const gems = c => Object.keys(c.materials).filter(id => ['amethyst', 'topaz', 'sapphire', 'emerald', 'ruby', 'diamond'].includes(id));
+    assert.equal(gems(plain).length, 1);
+    assert.equal(gems(big).length, 2, 'and a gem of the next tier');
+    assert.equal(cratesTowardGreat(game.state), 0);
 });
