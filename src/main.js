@@ -328,6 +328,17 @@ const ARRIVALS = {
     auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line'
 };
 const arrivals = new Set();
+
+/** A quick pop with a glow on something just drawn: the answer to a press on the armory's buttons. */
+function flourish(selector, glow = 'rgba(253, 230, 138, 0.9)') {
+    if (document.body.classList.contains('reduced-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelector(selector)?.animate?.([
+        { transform: 'none', filter: 'none' },
+        { transform: 'translateY(-6px) scale(1.12)', filter: `drop-shadow(0 0 12px ${glow}) brightness(1.35)`, offset: 0.35 },
+        { transform: 'none', filter: 'none' }
+    ], { duration: 560, easing: 'cubic-bezier(.3,1.4,.6,1)' });
+}
+
 function glowArrivals() {
     if (!arrivals.size) return;
     const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -715,13 +726,13 @@ window.FI = {
     upgradeObstacle(slot) { game.upgradeObstacle(slot); render(); },
     runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
 
-    equip(id) { if (game.equipItem(id) !== false) sound.play('equip'); render(); },
+    equip(id) { if (game.equipItem(id) !== false) { sound.play('equip'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
     unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
     sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
-    sellAll(rarity) { game.sellAllItems(rarity); render(); },
-    upgrade(id) { game.upgradeItem(id); render(); },
-    reforge(id) { game.reforgeItem(id); render(); },
-    salvage(id) { const g = game.salvageItem(id); if (g) toast(`+${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info', resIcon('essence')); render(); },
+    sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
+    upgrade(id) { const ok = game.upgradeItem(id); if (ok) sound.play('craft'); render(); if (ok) flourish('#item-detail .detail-art'); },
+    reforge(id) { const ok = game.reforgeItem(id); if (ok) sound.play('rare'); render(); if (ok) flourish('#item-detail .detail-art', 'rgba(196, 165, 255, 0.95)'); },
+    salvage(id) { const g = game.salvageItem(id); if (g) { sound.play('drop'); toast(`+${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info', resIcon('essence')); } render(); },
     salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} items (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },

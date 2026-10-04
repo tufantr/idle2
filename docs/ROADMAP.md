@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The armory answers**: Upgrade rings the anvil and the piece pops with a glow, Reforge chimes
+      with a violet glow, Sell commons pours coins, Salvage drops, and putting on gear makes the hero on
+      his dais hop (all still with reduced motion, sounds aside)
 - [x] **A fall is not the end of the fight**: after a death the hero rests at the campfire until his
       health is full (the scene counts it down) and goes back in by himself from where he retreated;
       the dock's Retreat becomes "Stay at camp" meanwhile, and the fight keeps the screen. The time
