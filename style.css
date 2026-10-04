@@ -616,6 +616,8 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .rarity-pills { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
 .rarity-pill { padding: 0.22rem 0.65rem; border-radius: 999px; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--r); background: rgba(0, 0, 0, 0.35); border: 1px solid color-mix(in srgb, var(--r) 45%, transparent); box-shadow: none; cursor: pointer; }
 .rarity-pill:hover { transform: none; border-color: var(--r); background: color-mix(in srgb, var(--r) 12%, rgba(0, 0, 0, 0.35)); }
+/* a phone: the clan's tables keep what matters and fit (attacks made, total level left out) */
+@media (max-width: 600px) { .clan-board :is(th, td):nth-child(4), .clan-members :is(th, td):nth-child(3) { display: none; } }
 .rarity-pill.on { color: #120d08; background: var(--r); border-color: var(--r); box-shadow: 0 0 10px color-mix(in srgb, var(--r) 45%, transparent); }
 
 /* ---------- shop, prestige, achievements ---------- */

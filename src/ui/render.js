@@ -1733,8 +1733,8 @@ export function renderClan(game, ui, cloud) {
                     <span class="muted small">Your hero hits for about ${fmt((social.members || []).find(m => m.you)?.attackDamage || 0)} per attack.</span></div>
             </div>` : ''}
             <div class="two-col">
-                <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Member</th><th>Damage</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
-                <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th>Per attack</th></tr></thead><tbody>${members}</tbody></table></div></div>
+                <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table clan-board"><thead><tr><th>#</th><th>Member</th><th>Damage</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
+                <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table clan-members"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th>Per attack</th></tr></thead><tbody>${members}</tbody></table></div></div>
             </div>
         </section>`;
     }
