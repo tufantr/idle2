@@ -2157,6 +2157,14 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .camp-price { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold-color); }
 .camp-max { align-self: center; padding: 0.2rem 0.7rem; }
 .dock-loop { flex: 1 1 210px; }
+/* a dungeon run: its clears, the unique's fragments and the repeat switch */
+.dock-group.dock-run { flex: 1 1 230px; gap: 0.45rem; }   /* in the dock's row; in the tab's column a basis would be a height */
+.glass-panel.dock-run { display: flex; flex-direction: column; gap: 0.5rem; }
+.run-clears { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.run-clears b { font-family: var(--font-display); font-size: 1.35rem; color: var(--heading); }
+.run-clears .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.run-assemble { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
+.run-repeat { font-size: 0.85rem; }
 .dock-prestige, .dock-perks { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.85rem; text-align: left; }
 .dock-prestige span, .dock-perks span { font-size: 0.78rem; font-weight: 400; opacity: 0.92; text-align: right; }
 .dock-perks.ready { border-color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
@@ -2207,6 +2215,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     .dock-prestige, .dock-perks { flex-direction: column; align-items: flex-start; gap: 0; padding: 0.45rem 0.7rem; }
     .dock-prestige span, .dock-perks span { text-align: left; }
     .dock-camp { order: 2; }
+    .dock-run { order: 0; }   /* in a dungeon, the run comes first */
     .dock-main { order: 3; }
     .dock-orders { order: 4; }
     /* and the top bar keeps to one line: icons only */

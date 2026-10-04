@@ -428,6 +428,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A dungeon run says it is being won**: the owner asked how to win a dungeon that "goes on
+      forever" (it was winning, then repeating). During a run the dock now leads with its clears, the
+      unique's fragments (Assemble when 50 are in) and the "Repeat after each clear" switch, which
+      was only on the Dungeons tab; the first clear of each dungeon is a card that says a clear is a
+      win, gives a fragment, and repeats while the switch is on
 - [x] **The chronicle**: the Hall's Records end with the hero's story, newest first: each first with
       its date and picture (the adventure begun, every new land, each pet joining, uniques won, a
       dungeon's first clear, the first Titan, the first prestige and each rank, a skill at 99), noted as

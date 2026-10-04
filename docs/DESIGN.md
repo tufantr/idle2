@@ -359,8 +359,12 @@ the Abyss repeats with a depth counter and steeper growth.
 `src/data/dungeons.js`, `src/systems/dungeon.js`. A dungeon is an authored gauntlet: elite
 monsters (×1.4 HP, ×1.15 ATK) and a boss (×1.5 on top of the boss multipliers) with a **60-second
 timer**, fought with the gear you walk in with — gear is locked inside, and the run starts at full
-health. Dying, leaving or running out of time loses the run; clearing it opens a chest, and
-**Repeat** starts the next run. Runs continue offline.
+health. Dying, leaving or running out of time loses the run; clearing it (the boss falls) is a win
+that opens a chest, and **Repeat after each clear** (on by default) starts the next run, so an
+idle hero farms the dungeon; off, the hero goes back to the stages. Runs continue offline. During a
+run the fight's dock leads with a panel of its own: the clears so far, the unique's fragments (with
+Assemble once there are 50) and the Repeat switch; the first clear of each dungeon is a card that
+says what the runs are for.
 
 | Dungeon | Opens at | Like stages | Boss (HP / ATK) | Chest loot tier | Unique |
 |---|---|---|---|---|---|

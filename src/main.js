@@ -21,7 +21,7 @@ import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
-import { dungeonById } from './data/dungeons.js';
+import { dungeonById, UNIQUES, FRAGMENTS_PER_UNIQUE } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
 import { nextLook, lookForMedal } from './data/looks.js';
@@ -490,7 +490,16 @@ function handleEvents(events) {
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
-            case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate')); break;
+            case 'dungeonClear': {
+                const d = dungeonById(ev.dungeon);
+                if (ev.clears === 1 && d) {   // the first win: a card that says what the runs are for, and that they go on
+                    const u = UNIQUES[d.unique];
+                    rewards.celebrate({ key: `dungeon:${d.id}:first`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`uniq/${d.unique}`, { scale: 2, cls: 'silhouette' }),
+                        kicker: `${d.name} cleared`, title: `A fragment of the ${u.name}`, lines: [`${game.state.dungeons[d.id].fragments} of ${FRAGMENTS_PER_UNIQUE}`],
+                        note: game.state.combat.autoRepeat ? 'Every clear opens a chest and gives a fragment. The run starts again while “Repeat after each clear” is on.' : 'Every clear opens a chest and gives a fragment.', ms: 6500 });
+                } else if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate'));
+                break;
+            }
             case 'dungeonFail': toast('The dungeon run failed', 'death'); break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
                 const zone = ZONES.find(z => z.id === ev.zone);

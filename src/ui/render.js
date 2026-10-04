@@ -412,7 +412,7 @@ function zoneFacts(game) {
     const state = game.state;
     const c = state.combat;
     const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
-    if (run) return `<div class="muted small">Dungeon run · ${state.dungeons[run.id].clears} clears · ${c.autoRepeat ? 'repeats after each clear' : 'stops after this clear'} · dying or leaving loses the run</div>`;
+    if (run) return '';   // the run panel (renderRunPanel) has the clears, the fragments and the repeat switch
     if (c.mode === 'titan') return '<div class="muted small">Deal as much damage as you can before the timer runs out. Clicking the Titan helps.</div>';
     const zone = zoneForStage(c.stage);
     return `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
@@ -453,6 +453,7 @@ export function renderCombat(game, ui) {
         <div class="combat-main">${combatMain(game)}</div>
         ${combatOrders(game, ui)}
     </section>
+    ${renderRunPanel(game, 'glass-panel')}
     ${renderCamp(game)}
     ${renderPrestigeStrip(game)}
     ${renderBattleLog(state, ui)}`;
@@ -463,6 +464,29 @@ export function renderCombat(game, ui) {
 // While the fight fills the screen (battleMode), everything a run needs sits in one dock under the
 // scene: the orders, the food and the potion, the camp, prestige, perks and the best piece of gear
 // waiting in the bag. A player can fight, spend, prestige and fight on without leaving it.
+
+/**
+ * A dungeon run, in the dock (and the combat tab): how many times it has been won, the unique's
+ * fragments with Assemble once there are enough, and the switch that starts the run again after
+ * each clear (or not). A clear is a win: the chest opens and, with the switch on, the run starts over.
+ */
+function renderRunPanel(game, cls = 'dock-group') {
+    const state = game.state;
+    const c = state.combat;
+    const d = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
+    if (!d) return '';
+    const record = state.dungeons[d.id];
+    const unique = UNIQUES[d.unique];
+    const owned = ownsUnique(state, d.unique);
+    const ready = record.fragments >= FRAGMENTS_PER_UNIQUE;
+    return `<div class="${cls} dock-run ${painted(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}">
+        <div class="run-clears" title="Each clear opens a chest and gives a fragment">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span></div>
+        <div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of the ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: owned ? '' : 'silhouette', fallback: '🌟' })}
+            <span class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></span><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
+        ${ready ? `<button class="prestige-btn run-assemble" onclick="FI.assembleUnique('${d.id}')">${owned ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
+        <label class="toggle run-repeat" title="On: after the boss falls and the chest opens, the run starts again. Off: back to the stages."><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>
+    </div>`;
+}
 
 /** The camp in the fight's dock: the same tokens as the combat tab. */
 function renderCampTokens(game) {
@@ -497,6 +521,7 @@ function renderBattleDock(game, ui) {
     const state = game.state;
     const orders = combatOrders(game, ui);
     return `<section class="battle-dock" aria-label="Orders for the fight">
+        ${renderRunPanel(game)}
         <div class="dock-group dock-main ${painted('supplies', 'center 55%')}">${combatMain(game)}</div>
         ${renderCampTokens(game)}
         ${renderLoopActions(game)}
