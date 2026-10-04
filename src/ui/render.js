@@ -1230,7 +1230,7 @@ function renderBestiary(game) {
             return `<div class="beast${seen ? '' : ' unmet'}${m.boss ? ' boss' : ''}${s === KILL_STARS.length ? ' gold' : ''}" title="${esc(tip)}">
                 <span class="beast-art">${sprite(`mon/${m.name}`, { scale: 2, cls: seen ? '' : 'silhouette', fallback: '👾' })}</span>
                 <b class="beast-name">${seen ? esc(m.name) : '???'}</b>
-                ${seen ? `${starRow(s)}<span class="beast-kills">${fmt(k)}</span>` : ''}
+                ${seen ? `${starRow(s)}<span class="beast-kills">${fmt(k)}${next ? `<i class="beast-next" style="--p:${Math.min(100, (k - (KILL_STARS[s - 1] || 0)) / (next - (KILL_STARS[s - 1] || 0)) * 100).toFixed(1)}%"></i>` : ''}</span>` : ''}
             </div>`;
         }).join('');
         const art = g.kind === 'zone' ? g.id : DUNGEON_ART[g.id] || 'dungeon';

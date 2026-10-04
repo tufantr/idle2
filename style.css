@@ -1952,7 +1952,9 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .beast-stars i { line-height: 0; }
 .beast-stars .star { width: 14px; height: 14px; fill: rgba(0, 0, 0, 0.55); stroke: rgba(214, 170, 92, 0.45); stroke-width: 1; }
 .beast-stars i.on .star { fill: var(--gold-color); stroke: #8a6423; filter: drop-shadow(0 0 3px rgba(252, 211, 77, 0.5)); }
-.beast-kills { font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.beast-kills { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+/* the way to the next star: a thin gold bar under the count */
+.beast-next { display: block; width: 46px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #fcd34d var(--p), rgba(0, 0, 0, 0.5) var(--p)); }
 @media (max-width: 600px) { .beast-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.45rem; } }
 
 /* the armory's second line of numbers; shop goods with their picture; drawers */
