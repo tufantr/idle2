@@ -40,7 +40,7 @@ import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, mo
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank } from '../data/ranks.js';
-import { LOOKS, lookOpen } from '../data/looks.js';
+import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
@@ -1177,6 +1177,13 @@ const SKILL_MEDAL = {
     smithing: 'res/runite_bar', crafting: 'item/Ring/6', combat: 'item/Weapon/7'
 };
 
+/** A medal that also brings a look: the hero in it on the disc's rim (a silhouette until the medal is won). */
+function medalLook(state, a, won) {
+    const look = lookForMedal(a.id);
+    if (!look) return '';
+    return `<span class="medal-look" title="${esc(`Also a look for your hero: ${look.name}`)}">${heroSprite({ ...state, equipped: {}, hero: { ...state.hero, look: look.id } }, { scale: 1, cls: won ? '' : 'silhouette' })}</span>`;
+}
+
 /** A medal's picture: its deed's sprite (`scale` 1.5 in the Hall, 2 on the card that announces it). */
 export function medalArt(a, scale = 1.5) {
     let key = a.req.type === 'skillLevel' ? SKILL_MEDAL[a.req.skill] : MEDAL_ART[a.req.key];
@@ -1291,7 +1298,7 @@ export function renderAchievements(game) {
         const { have, need } = achievementProgress(state, a.req);
         const pct = Math.min(100, (have / Math.max(1, need)) * 100);
         return `<div class="medal${won ? ' won' : ''}" title="${esc(a.desc)}: ${esc(a.reward)}">
-            <div class="medal-disc">${medalArt(a)}</div>
+            <div class="medal-disc">${medalArt(a)}${medalLook(state, a, won)}</div>
             <div class="medal-name">${esc(a.name)}</div>
             <div class="medal-desc">${esc(a.desc)}</div>
             ${won ? `<div class="medal-reward">${esc(a.reward)}</div>`
