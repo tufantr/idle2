@@ -287,9 +287,10 @@ function dungeonTask() {
     const pick = ready[ready.length - 1];
     if (!pick) return null;
     // Only worth it while the dungeon still pays: its unique isn't assembled yet, or its chests can
-    // still hold gear at least as good as the weapon we wear.
+    // still hold gear better than the weapon we wear (a chest of the top tier would otherwise keep a
+    // hero who already wears that tier farming it forever instead of pushing).
     const hasUnique = [...S.inventory, ...Object.values(S.equipped)].some(i => i && i.uniqueId === pick.unique);
-    if (hasUnique && pick.chestTier < (S.equipped.Weapon?.tier || 0)) return null;
+    if (hasUnique && pick.chestTier <= (S.equipped.Weapon?.tier || 0)) return null;
     const end = now + 30 * 60000;
     return {
         kind: 'dungeon', id: pick.id, why: `run ${pick.name}`,

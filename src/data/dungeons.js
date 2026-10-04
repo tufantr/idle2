@@ -73,6 +73,18 @@ export const DUNGEONS = [
         ],
         boss: { name: 'Elder Dragon', icon: '🐉' },
         unique: 'dragonheart_plate'
+    },
+    {
+        // The late game's dungeon: a fortress adrift in the void, deep in the Abyss.
+        id: 'void_citadel', name: 'Void Citadel', icon: '🌌', unlockStage: 160, stage: 165, chestTier: 7,
+        monsters: [
+            { name: 'Void Acolyte', icon: '🧙' }, { name: 'Starcursed Mass', icon: '🌑' }, { name: 'Rift Crab', icon: '🦀' },
+            { name: 'Wretched Star', icon: '⭐' }, { name: 'Void Acolyte', icon: '🧙' }, { name: 'Soul Reaper', icon: '💀' },
+            { name: 'Tormentor', icon: '👹' }, { name: 'Starcursed Mass', icon: '🌑' }, { name: 'Citadel Sentinel', icon: '🗿' },
+            { name: 'Soul Eater', icon: '👻' }
+        ],
+        boss: { name: 'Void King', icon: '👑' },
+        unique: 'void_aegis'
     }
 ];
 
@@ -90,6 +102,10 @@ export const UNIQUES = {
     warlord_cleaver: {
         id: 'warlord_cleaver', name: "Warlord's Cleaver", type: 'Weapon', tier: 4, power: 11.7,
         affixes: [ { stat: 'critDmg', name: 'Crit Damage', value: 0.25 }, { stat: 'critChance', name: 'Crit Chance', value: 0.05 }, { stat: 'attackSpeed', name: 'Attack Speed', value: 0.06 } ]
+    },
+    void_aegis: {
+        id: 'void_aegis', name: "Void King's Aegis", type: 'Shield', tier: 7, power: 123,
+        affixes: [ { stat: 'hpMult', name: 'Max HP', value: 0.12 }, { stat: 'dodge', name: 'Dodge', value: 0.06 }, { stat: 'lifesteal', name: 'Lifesteal', value: 0.04 }, { stat: 'attackSpeed', name: 'Attack Speed', value: 0.06 } ]
     },
     dragonheart_plate: {
         id: 'dragonheart_plate', name: 'Dragonheart Plate', type: 'Body', tier: 6, power: 56,

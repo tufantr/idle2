@@ -36,7 +36,7 @@ END = '/* paint:end */'
 # Where each place shows. Battle places are the scene's data-scene values (zones, dungeons, the
 # titan); the skill stages take the first place in their list that has a painting.
 BATTLE = ['meadow', 'forest', 'caves', 'marsh', 'highland', 'ruins', 'volcano', 'frost', 'skyreach', 'abyss', 'dungeon', 'titan',
-          'warren', 'depths', 'stronghold', 'lair']  # the last four: one per dungeon (src/ui/features.js, DUNGEON_ART)
+          'warren', 'depths', 'stronghold', 'lair', 'citadel']  # the last five: one per dungeon (src/ui/features.js, DUNGEON_ART)
 STAGES = {
     'mining': ['caves'], 'woodcutting': ['forest'], 'fishing': ['river'], 'hunting': ['meadow'],
     'cooking': ['camp'], 'firemaking': ['camp'], 'alchemy': ['lab', 'abyss'], 'smithing': ['forge', 'volcano'],

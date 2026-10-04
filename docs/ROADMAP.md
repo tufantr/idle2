@@ -425,6 +425,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A fifth dungeon, the Void Citadel**: a fortress adrift in the void (a new Gemini painting),
+      open from stage 160: ten elites from the Abyss (Void Acolytes, Starcursed Masses, a Rift Crab,
+      Wretched Stars, a Soul Reaper, a Tormentor, a Citadel Sentinel, a Soul Eater) and the Void
+      King, with chests of the top tier and a unique shield, the Void King's Aegis. The simulator's
+      player now stops farming a dungeon that can no longer upgrade it
 - [x] **Ranks and cloaks**: prestiges earn the hero a rank, worn as his cloak's colour (red, then
       green, blue, purple, gold, white and black at 1, 5, 15, 40, 100 and 250 prestiges); a badge by
       the hero and on the Prestige panel shows it and the count to the next, and a new rank is a card

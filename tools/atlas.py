@@ -71,6 +71,10 @@ MONSTERS = {
     'Dragonkin Knight': ['draco/draco-base-red', 'draco/draco-job-knight'],
     'Dragon Priest': ['draco/draco-base-yellow', 'draco/draco-job-stormcaller'],
     'Elder Dragon': 'dragons/golden_dragon',
+    # Void Citadel
+    'Void Acolyte': 'abyss/abyssal_acolyte', 'Starcursed Mass': 'abyss/starcursed_mass', 'Rift Crab': 'abyss/apocalypse_crab',
+    'Wretched Star': 'abyss/wretched_star', 'Soul Reaper': 'demons/reaper', 'Tormentor': 'demons/tormentor',
+    'Citadel Sentinel': 'demons/hell_sentinel', 'Soul Eater': 'demons/soul_eater', 'Void King': 'abyss/herald_of_the_abyss',
 }
 # The Titan's five faces, by level (cycling).
 TITANS = ['humanoids/giants/stone_giant', 'humanoids/giants/fire_giant', 'humanoids/giants/frost_giant', 'humanoids/giants/iron_giant', 'humanoids/giants/titan']
@@ -95,7 +99,8 @@ PETS = {
     'glimmer': 'animals/sun_moth', 'fang': 'animals/hound', 'finn': 'res:raw_trout',
     'cinder': 'animals/crystal_echidna', 'sprout': 'animals/torpor_snail', 'hopper': 'animals/bullfrog',
 }
-UNIQUES = { 'goblin_crown': 'armour/headgear/helmet_art2', 'crystal_heart': 'amulet/fluorescent', 'warlord_cleaver': 'weapon/executioner_axe1', 'dragonheart_plate': 'armour/fire_dragon_armour' }
+UNIQUES = { 'goblin_crown': 'armour/headgear/helmet_art2', 'crystal_heart': 'amulet/fluorescent', 'warlord_cleaver': 'weapon/executioner_axe1', 'dragonheart_plate': 'armour/fire_dragon_armour',
+            'void_aegis': 'armour/shields/tower_shield_dd_dk' }
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------

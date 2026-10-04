@@ -70,7 +70,7 @@ export const FEATURES = {
 export const EVENT_ART = { harvest_festival: 'res/pumpkin', titans_fury: 'titan/0', miners_rush: 'tool/pickaxe', guild_fair: 'res/mithril_bar' };
 
 // Each dungeon's painting (assets/paint): on its card, and behind its fight (src/ui/scene.js).
-export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair' };
+export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair', void_citadel: 'citadel' };
 
 /** The inline style that puts painting `name` behind an element (as --art, with its focus). */
 export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/paint/${name}.webp);--art-at:${focus}`;

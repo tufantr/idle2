@@ -354,6 +354,7 @@ health. Dying, leaving or running out of time loses the run; clearing it opens a
 | Crystal Depths | 50 | 55–62 | 9,269 / 372 | 3 | Crystal Heart (Amulet, tier 3) |
 | Orc Stronghold | 80 | 85–93 | 87,243 / 2,625 | 4 | Warlord's Cleaver (Weapon, tier 4) |
 | Dragon's Lair | 120 | 125–135 | 2,515,540 / 51,285 | 6 | Dragonheart Plate (Body, tier 6) |
+| Void Citadel | 160 | 165–175 | 65,738,659 / 925,413 | 7 | Void King's Aegis (Shield, tier 7) |
 
 - **Placement:** each dungeon sits about where a typical player reaches its unique's tier by crafting,
   so a unique rewards farming a little early instead of skipping tiers.
@@ -777,6 +778,14 @@ Dungeons and the Titan put the sensible player ahead through stage 200 (dungeons
 deep Abyss drops are the late-game gear and the sensible bot still splits its time with outgrown
 dungeons and skilling. The Titan alone moves a skiller's stage 100 forward by 3–10 hours. Farming a
 comfortable stage is weaker than pushing, because each boss's first fall is worth the risk.
+
+The fifth dungeon, the Void Citadel (stage 160, chests of the top tier), changed the bot: it farmed a
+dungeon while its chests could hold gear *at least as good as* its weapon, and a top-tier chest
+always can, so it farmed the Citadel for the last 90 hours instead of pushing (best stage 219 and 226
+on seeds 1 and 2). Now it stops once it holds the dungeon's unique and its weapon is already of the
+chest's tier. With that rule the Citadel's Aegis comes at 41–46 h and the 150-hour runs end higher
+than before the Citadel (best stage 258 and 295, against 236 and 277), with the milestones up to stage
+200 in the same bands.
 
 ### 5.3 Known risks
 

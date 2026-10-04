@@ -191,6 +191,11 @@ Same style and rules. Next, Orc Stronghold: the inner courtyard of a brutal orc 
 Same style and rules. Next, Dragon's Lair: a vast cavern deep inside a volcano, great heaps of gold coins, goblets, crowns and treasure chests piled at the left and right edges, slow rivers of glowing lava in the background, huge ancient dragon skulls carved into the rock walls, scorch marks and drifting embers, a high broken stone archway at the back; a flat scorched stone floor across the bottom.
 ```
 
+`citadel.png` (the Void Citadel)
+```text
+Back to the backdrop set: same style and rules as the place backdrops (side view at eye level, wide 16:9, the bottom quarter flat open ground running straight across with nothing standing on it in the middle, the scenery in the distance and at the left and right edges, no people, no creatures, no text). Next, Void Citadel: the inner courtyard of a black obsidian fortress adrift in the violet void, jagged dark towers and broken battlements at the left and right edges lit by cold violet fire in iron braziers, a great sealed gate in the back wall, floating shards of rock and a starry violet nebula in the sky, thin glowing violet cracks in the walls; dark polished flagstones with a faint violet glow across the bottom.
+```
+
 ## Cards, banners and the world map
 
 These are not backdrops of a fight. `src/ui/features.js` shows them on the card of a newly opened
