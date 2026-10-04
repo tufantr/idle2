@@ -1615,7 +1615,16 @@ export function renderClan(game, ui, cloud) {
     const social = ui.social || {};
     const form = social.form || { name: '', tag: '', description: '', lookingFor: '', search: '' };
     if (!cloud?.loggedIn) {
-        return banner('clan', { extra: `<button class="prestige-btn" onclick="FI.openAuth()">Sign in to join a clan</button>` });
+        // before signing in: what a clan is, in three pictures (the rules are behind the "?")
+        const tile = (art, name, line) => `<div class="clan-tile"><span class="clan-tile-art">${art}</span><b>${name}</b><span class="muted small">${line}</span></div>`;
+        return `${banner('clan', { extra: `<button class="prestige-btn" onclick="FI.openAuth()">Sign in to join a clan</button>` })}
+        <section class="glass-panel ${painted('clanhall', 'center 40%')}">
+            <div class="clan-tiles">
+                ${tile(sprite('mon/Elder Dragon', { scale: 3, fallback: '🐉' }), 'A boss each week', 'fought by the whole clan')}
+                ${tile(heroSprite(game.state, { scale: 3 }), 'Three attacks a day', 'by your saved hero')}
+                ${tile(`${resIcon('essence', { scale: 2 })}${resIcon('diamond', { scale: 2 })}`, 'Rewards for all', 'more for the top three')}
+            </div>
+        </section>`;
     }
     if (cloud.available === false) {
         return `${banner('clan')}<section class="glass-panel ${painted('clanhall')}"><p class="warn">The clan server isn't reachable from here — clans need the game's API (the Vercel deployment).</p></section>`;

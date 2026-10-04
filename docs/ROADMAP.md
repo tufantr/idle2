@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The clan tab before signing in**: instead of an empty hall, three pictures say what a clan
+      is (the dragon of the weekly boss, the hero for three attacks a day, essence and a diamond for
+      the rewards); the rules stay behind the "?"
 - [x] **The hero on the world map**: he stands, bobbing, beside the pin of where he is (his zone, or
       the gate of the dungeon he is in), dressed as he is in the fight
 - [x] **No empty strip in a new player's first fight on a phone**: the dock's supplies group, which

@@ -1933,6 +1933,14 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
     .zone-card .zone-emblem { width: 46px; height: 46px; }
 }
 
+/* the clan before signing in: what it is, in three pictures */
+.clan-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
+.clan-tile { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.9rem 0.5rem 0.8rem; text-align: center; border-radius: 12px; background: rgba(12, 9, 6, 0.72); border: 1px solid var(--line); }
+.clan-tile b { font-family: var(--font-display); color: var(--heading); font-size: 0.95rem; line-height: 1.2; }
+.clan-tile-art { display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7)); }
+.clan-tile-art { min-height: 100px; }
+@media (max-width: 600px) { .clan-tiles { gap: 0.4rem; } .clan-tile { padding: 0.7rem 0.3rem; } .clan-tile b { font-size: 0.8rem; } .clan-tile-art { min-height: 68px; } .clan-tile-art .spr, .clan-tile-art .hero-doll { --k: 2 !important; } .clan-tile-art .res-spr { --k: 1.25 !important; } }
+
 /* shop goods as a grid of item cards; a dungeon's unique as a bar of fragments */
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 0.6rem; }
 .frag-row { display: flex; align-items: center; gap: 0.5rem; }
