@@ -679,11 +679,27 @@ function skillExtras(game, skillId) {
     return '';
 }
 
-/** What an action needs, as small chips: how many, the icon, and how many you hold. */
+// Where an item comes from, for the tooltips on what an action needs ("from Hunting").
+let itemSources = null;
+function sourceOf(id) {
+    if (!itemSources) {
+        itemSources = {};
+        for (const skill of Object.values(SKILLS)) for (const n of skill.nodes || []) if (n.produces) itemSources[n.produces] ||= skill.name;
+        for (const r of SMELTING_RECIPES) itemSources[r.produces] ||= SKILLS.smithing.name;
+        for (const c of CROPS) itemSources[c.produces] ||= SKILLS.farming.name;
+    }
+    return itemSources[id] || (RESOURCES[id]?.category === 'gem' ? `${SKILLS.mining.name}, now and then` : null);
+}
+
+/** A tooltip of the game's own (main.js shows it at once on hover, on a tap on a phone): a name in bold, then a line. */
+export const tipAttrs = (title, line) => `data-tip-title="${esc(title)}" data-tip="${esc(line)}" aria-label="${esc(`${title}: ${line}`)}"`;
+
+/** What an action needs, as small chips: the item's icon, then how many you hold of how many it takes (red when short). Hovered, a chip names its item. */
 function needChips(state, consumes) {
     return Object.entries(consumes || {}).map(([id, q]) => {
         const have = state.resources[id] || 0;
-        return `<span class="need ${have >= q ? 'ok' : 'missing'}" title="${esc(res(id).name)}: needs ${q}, you have ${fmt(have)}">${q}× ${resIcon(id)} <i>(${shortQty(have)})</i></span>`;
+        const from = sourceOf(id);
+        return `<span class="need ${have >= q ? 'ok' : 'missing'}" ${tipAttrs(res(id).name, `Needs ${fmt(q)}, you have ${fmt(have)}${from ? ` · from ${from}` : ''}`)}>${resIcon(id, { scale: 0.75 })}<b>${shortQty(have)}</b><i>/${fmt(q)}</i></span>`;
     }).join(' ');
 }
 
@@ -714,7 +730,7 @@ function actionCard(c) {
         ${c.note ? `<div class="node-io muted small">${c.note}</div>` : ''}
         ${c.inputs ? `<div class="node-io small">${c.inputs}</div>` : ''}
         ${c.active
-            ? `${c.have !== undefined ? `<div class="node-have" title="You have ${fmt(c.have)}">${c.haveIcon || ''}<b>${fmt(c.have)}</b></div>` : ''}<div class="node-stats">${c.stats}</div>${c.mastery || ''}${bar}`
+            ? `${c.have !== undefined ? `<div class="node-have" ${tipAttrs(c.haveName || c.title, `You have ${fmt(c.have)}`)}>${c.haveIcon || ''}<b>${fmt(c.have)}</b></div>` : ''}<div class="node-stats">${c.stats}</div>${c.mastery || ''}${bar}`
             : `<div class="node-time muted small">${glyph('time')} ${seconds(c.time)}</div>`}
     </div>`;
 }
@@ -753,14 +769,18 @@ export function renderSkill(game, ui, skillId) {
             const interval = intervalFor(def, d);
             const check = canComplete(state, def);
             let inputs = needChips(state, node.consumes);
-            if (node.fuel) { const log = fuelLog(state); inputs += ` <span class="need ${log ? 'ok' : 'missing'}" title="${log ? `Burns one ${esc(res(log).name)} per dish` : 'Needs a log to burn: cut some in Woodcutting'}">1× ${resIcon(log || 'normal_log')}${log ? '' : ' <i>(0)</i>'}</span>`; }
+            if (node.fuel) {   // a log to cook on: the cheapest one carried
+                const log = fuelLog(state);
+                const tip = log ? tipAttrs(res(log).name, `Each dish burns one (the cheapest log you carry) · you have ${fmt(state.resources[log])}`) : tipAttrs('A log', `Each dish burns one · from ${SKILLS.woodcutting.name}`);
+                inputs += ` <span class="need ${log ? 'ok' : 'missing'}" ${tip}>${resIcon(log || 'normal_log', { scale: 0.75 })}<b>${log ? shortQty(state.resources[log]) : 0}</b><i>/1</i></span>`;
+            }
             const xp = Math.round(node.xp * d.xpMult);
             const gives = node.produces ? `${out.name}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;
             cards += actionCard({
                 id: `node-${skillId}-${node.id}`, art, pic, title: node.name, color: skill.color, inputs, time: interval,
                 tip: `${gives} · +${xp} XP · ${seconds(interval)}`,
                 active, stalled: active && (action.stalled || !check.ok), onclick: `FI.startNode('${skillId}','${node.id}')`,
-                have: node.produces ? state.resources[node.produces] : undefined, haveIcon: node.produces ? resIcon(node.produces) : '',
+                have: node.produces ? state.resources[node.produces] : undefined, haveIcon: node.produces ? resIcon(node.produces) : '', haveName: node.produces ? res(node.produces).name : '',
                 stats: `<span>${glyph('xp')} ${xp} XP</span><span>${glyph('time')} ${seconds(interval)}</span>${luckStats(d, def)}`,
                 mastery: masteryRow(state, skillId, def.mastery),
                 progressId: `progress-${skillId}-${node.id}`, progress: active ? Math.min(100, action.progress / interval * 100) : 0
@@ -832,11 +852,11 @@ export function renderMinigame(game, skillId) {
 // ---------- smithing & crafting ----------
 
 /** A recipe (smelting, forging, jewellery, a tool) as an action card. */
-function recipeCard({ title, icon, pic = null, color, inputs, note = '', have, haveIcon, xp, interval, active, stalled, onclick, disabled, reqText, luck = '', mastery = '', tip = '' }, state) {
+function recipeCard({ title, icon, pic = null, color, inputs, note = '', have, haveIcon, haveName = '', xp, interval, active, stalled, onclick, disabled, reqText, luck = '', mastery = '', tip = '' }, state) {
     if (disabled) return actionCard({ locked: reqText, art: icon, pic, title, color });
     return actionCard({
         id: `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, art: icon, pic, title, color, note, inputs: needChips(state, Object.fromEntries(inputs)), time: interval,
-        tip: tip || `+${xp} XP · ${seconds(interval)}`, active, stalled: active && stalled, onclick, have, haveIcon,
+        tip: tip || `+${xp} XP · ${seconds(interval)}`, active, stalled: active && stalled, onclick, have, haveIcon, haveName,
         stats: `<span>${glyph('xp')} ${xp} XP</span><span>${glyph('time')} ${seconds(interval)}</span>${luck}`, mastery
     });
 }
@@ -860,7 +880,7 @@ export function renderSmithing(game, ui) {
             const def = resolveAction(state, { kind: 'smelt', id: r.id });
             return recipeCard({
                 title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), pic: cardPic(r.id, 'smithy'), color: res(r.produces).color, inputs: Object.entries(r.consumes),
-                have: state.resources[r.produces], haveIcon: resIcon(r.produces),
+                have: state.resources[r.produces], haveIcon: resIcon(r.produces), haveName: res(r.produces).name,
                 xp: Math.round(r.xp * d.xpMult), interval: intervalFor(def, d), luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
                 active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
                 onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: `Level ${r.levelReq}`

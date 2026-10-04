@@ -224,16 +224,18 @@ for (const type of ['pointerup', 'pointercancel']) document.addEventListener(typ
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
 // bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked';
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip]';
 let tipNode = null;
 let tipTimer = 0;
-function showTip(el, text) {
+/** The game's own tooltip over `el`: `title` in bold above `text`. It goes after a moment, or with the pointer when `stay`. */
+function showTip(el, text, { title = '', stay = false } = {}) {
     tipNode?.remove();
     clearTimeout(tipTimer);
     const node = document.createElement('div');
     node.className = 'tap-tip';
     node.setAttribute('role', 'tooltip');
-    node.textContent = text;
+    if (title) { const name = document.createElement('b'); name.className = 'tip-title'; name.textContent = title; node.append(name); }
+    node.append(document.createTextNode(text));
     document.body.appendChild(node);
     const box = el.getBoundingClientRect();
     const w = node.offsetWidth;
@@ -243,15 +245,38 @@ function showTip(el, text) {
     node.style.left = `${x - w / 2}px`;   // x is the bubble's centre
     node.style.top = `${above ? box.top - h - 8 : box.bottom + 8}px`;
     tipNode = node;
-    tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
+    if (!stay) tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
 }
 document.addEventListener('click', event => {
     if (!window.matchMedia?.('(hover: none)').matches) return;
     const el = event.target?.closest?.(TIP_TARGETS);
     if (!el || (el.closest('button, a') && !el.matches('.pg-keep-item'))) { tipNode?.remove(); tipNode = null; return; }
     const text = el.getAttribute('title') || el.dataset.tip || el.getAttribute('aria-label');
-    if (text) showTip(el, text);
+    if (text) showTip(el, text, { title: el.getAttribute('title') ? '' : el.dataset.tipTitle || '' });
 });
+// On a mouse, anything with a data-tip (an item an action needs, say) names itself at once in the same
+// bubble, for as long as the pointer stays on it; the browser's slower tooltip of the card under it
+// is held back meanwhile, so two never show at once.
+let hoverTip = null;
+function endHoverTip() {
+    if (!hoverTip) return;
+    for (const [node, title] of hoverTip.held) node.setAttribute('title', title);
+    if (tipNode === hoverTip.node) { tipNode.remove(); tipNode = null; }
+    hoverTip = null;
+}
+document.addEventListener('pointerover', event => {
+    if (event.pointerType && event.pointerType !== 'mouse') return;
+    const el = event.target?.closest?.('[data-tip]');
+    if (el && el === hoverTip?.el) return;
+    endHoverTip();
+    if (!el) return;
+    const held = [];
+    for (let n = el.parentElement?.closest('[title]'); n; n = n.parentElement?.closest('[title]')) { held.push([n, n.getAttribute('title')]); n.removeAttribute('title'); }
+    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '', stay: true });
+    hoverTip = { el, held, node: tipNode };
+});
+document.addEventListener('pointerdown', endHoverTip, { capture: true });
+window.addEventListener('scroll', endHoverTip, { capture: true, passive: true });
 // A choice made in a dropdown or checkbox is done: let the tab refresh right away.
 document.addEventListener('change', event => {
     if (event.target?.matches?.('select, input[type="checkbox"], input[type="radio"]')) { event.target.blur(); render(); }

@@ -429,6 +429,12 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Requirements that name themselves**: the owner found what an action needs unclear (tiny
+      icons, "1× (0)"). Each requirement is now a chip: the item's icon and how many you hold of how
+      many it takes ("0/1", red when short, green when met); hovered with the mouse it shows at once
+      a tooltip with the item's name, the numbers and where it comes from ("Raw Fox · needs 1, you
+      have 11 · from Hunting"), and a tap shows it on a phone. The same goes for the log a dish burns,
+      the pile an action has made, and the agility course's prices
 - [x] **Auto lights up the food it eats**: the owner asked whether eating was automatic, since the
       food sat in its own unlit box beside a lit Auto. It is: Auto eats from all the food carried.
       Now, under Auto, every food tile in the bag is lit softly with it; under None, or with one food

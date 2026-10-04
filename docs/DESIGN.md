@@ -688,6 +688,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 - **Cards are quiet at rest.** An action card shows its art, its name, what it needs and how long
   it takes. The card being worked opens up: the pile it has made, XP, luck, mastery, the progress
   bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
+  What an action needs is a row of chips, each the item's icon and how many you hold of how many it
+  takes ("0/1", red when short); hovered (tapped on a phone), a chip names its item in the game's own
+  tooltip, with where it comes from ("Raw Fox · needs 1, you have 11 · from Hunting"). Anything with
+  a `data-tip` gets that tooltip at once on a mouse (`tipAttrs` in render.js, main.js), and holds
+  back the browser's slower one of the card beneath.
 - **Every action card has its own picture.** A small painting runs across the card's top, the
   medallion set on its lower edge: the vein, the tree, the fish leaping, the animal, the herb, the
   potion, the ingot, the piece on the anvil, the dish (ninety in all, `assets/paint/cards/`).
