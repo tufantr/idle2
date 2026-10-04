@@ -31,8 +31,11 @@ ones, with regression tests. Phases 6 and 7 gave it the look and feel of a game:
 reward moments, a dark fantasy theme, an armory, sprites, sound and a phone hotbar. Phase 8 paints it
 (Gemini paintings for every place and a world map) and makes it simple: the screen grows with the
 player instead of showing everything at once, there are no suggestion notes, and the fight fills the
-screen with everything a run needs; everything the player handles is a sprite, not an emoji (the
-small stat glyphs beside numbers stay as type). What is left is content and the owner's decisions: a new weekend event is one entry in `src/data/events.js`, a new dungeon one entry in
+screen with everything a run needs; everything the player handles is a sprite or a pixel glyph, not
+an emoji. Its list below keeps growing as polish lands (the hero's looks and name, the codex, the
+chronicle, secret medals, great crates, a sixth weekend event). What is left is content and the
+owner's decisions: a new weekend event is one entry in `src/data/events.js` plus a new era in
+`ROTATION_ERAS` (`src/systems/events.js`), a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
 
@@ -291,7 +294,7 @@ progress as motion, art before words, one stage with a HUD around it.
       dungeon floors and walls for the interiors. Fifteen scenes, about 1 MB of WebP in all, drawn by
       a script in a minute with no image model and no downloads
 
-## Phase 8 — Art and polish (in progress)
+## Phase 8 — Art and polish ✅
 
 - [x] **Hand-painted backdrops** (`docs/art/gemini.md`, `tools/paint.py`, `assets/paint/`): all 17
       places are Gemini paintings in one storybook style, made by a Claude session on the owner's
