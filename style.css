@@ -713,7 +713,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .plot-card.locked { opacity: 0.55; }
 .plot-card.ready { border-color: rgba(132, 204, 22, 0.6); box-shadow: 0 0 16px rgba(132, 204, 22, 0.18); }
 /* the bag of seeds, and plots you tap: an empty plot plants the picked seed, a ready one harvests */
-.seed-bag { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.8rem; }
+.seed-bag { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.8rem; padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid var(--line); }
 .seed .pick-sub { color: var(--gold-color); }
 .seed.locked { opacity: 0.6; border-style: dashed; cursor: default; }
 .seed.locked .pick-sub { color: var(--text-muted); }
@@ -1869,7 +1869,7 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .seg-btn.on b { color: #1f1406; background: var(--gold-color); border-color: transparent; }
 .forge-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.9rem; }
 .forge-bar .mastery-row { flex: 1 1 200px; width: auto; }
-.forge-bar { align-items: flex-end; gap: 0.6rem 1.1rem; padding: 0.7rem 0.8rem; border-radius: 12px; }
+.forge-bar { align-items: flex-end; gap: 0.6rem 1.1rem; padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid var(--line); }
 /* the metal, the setting and the gem as picture tiles with what you hold (no dropdowns) */
 .material-picks { display: flex; flex-direction: column; gap: 0.3rem; }
 .pick.empty .spr { opacity: 0.5; filter: grayscale(0.6) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
