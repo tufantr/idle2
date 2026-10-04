@@ -250,6 +250,21 @@ export function createScene(root, actions) {
         }
     }
 
+    // Near a zone's boss, fetch the next land's painting, so stepping into it shows it at once.
+    const preloaded = new Set();
+    function preloadNextLand(state) {
+        const c = state.combat;
+        const into = (c.stage - 1) % STAGES_PER_ZONE;   // 0 on a zone's first stage, 9 on its boss
+        if (c.mode !== 'stages' || into < STAGES_PER_ZONE - 3) return;
+        const next = zoneForStage(c.stage - into + STAGES_PER_ZONE);
+        const scene = next.depth > 0 ? 'abyss' : next.id;
+        if (preloaded.has(scene)) return;
+        preloaded.add(scene);
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = `assets/paint/${scene}.webp`;
+    }
+
     function sceneFor(state) {
         const c = state.combat;
         if (c.mode === 'titan') return 'titan';
@@ -376,6 +391,7 @@ export function createScene(root, actions) {
             const c = state.combat;
             const d = game.derived;
             const scene = sceneFor(state);
+            preloadNextLand(state);
             if (el.battle.dataset.scene !== scene) {
                 el.battle.dataset.scene = scene;
                 el.battle.dataset.particles = PARTICLES[scene] || 'motes';

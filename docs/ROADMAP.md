@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The next land is ready before the hero gets there**: from a zone's eighth stage the next
+      zone's painting is fetched, so beating the boss never shows an empty backdrop on a slow line
 - [x] **The prestige dialog in pictures**: what is gained leads, big (the tokens and skill points as
       their coins, and a new rank with the hero already in its cloak); then what starts over (a stage
       pip, the gold, the camp) and what stays, as a row of pictures of what this player has met,
