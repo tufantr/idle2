@@ -847,6 +847,8 @@ window.FI = {
     openAuth() { if (ui.modalOpen === 'intro') closeModal(); openModal(renderAuthModal(), 'auth'); },
     collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
     beginAdventure() {
+        const name = document.getElementById('intro-name')?.value || '';
+        if (name.trim()) game.setHeroName(name);   // optional: without one he is "You"
         closeModal();
         sound.unlock();
         sound.play('unlock');

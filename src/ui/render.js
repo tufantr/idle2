@@ -1832,7 +1832,8 @@ export function renderIntroModal(state) {
         </div>
         <h1 id="intro-title" class="intro-logo">Fantasy Idle</h1>
         <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>
-        <button class="modal-btn btn-confirm intro-go" onclick="FI.beginAdventure()">${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Begin your adventure</button>
+        <input id="intro-name" class="text-input intro-name" maxlength="${HERO_NAME_MAX}" placeholder="Name your hero" aria-label="Your hero's name (optional; Settings can change it)" autocomplete="off" spellcheck="false" onkeydown="if (event.key === 'Enter') FI.beginAdventure()">
+        <button class="modal-btn btn-confirm intro-go" data-autofocus onclick="FI.beginAdventure()">${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Begin your adventure</button>
         <button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>
     </div>`;
 }

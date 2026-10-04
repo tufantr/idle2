@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Name your hero on the title card**: an optional field above Begin your adventure (Enter
+      starts too); the name is over him in his first fight. The button keeps the focus, so a phone's
+      keyboard doesn't jump up
 - [x] **Metals, settings and gems as picture tiles**: the Forge's metal and Crafting's setting and gem
       are rows of tiles with how many you hold (the picked one lit, an empty one grey) instead of
       dropdowns; Crafting starts on the best setting you have; the bag's auto-salvage level is a row of
