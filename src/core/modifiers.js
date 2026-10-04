@@ -81,7 +81,7 @@ function emptyMods() {
         goldMult: 0, dropMult: 0, combatXpMult: 0, xpMult: 0,
         skillSpeed, doubleChance,
         foodMult: 0, autoEatThreshold: 0, potionCharges: 0, offlineHours: 0,
-        boostDuration: 0, craftQuality: 0, tokenMult: 0, farmYield: 0
+        boostDuration: 0, craftQuality: 0, tokenMult: 0, farmYield: 0, gildedChance: 0
     };
 }
 
@@ -225,6 +225,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         craftQuality: mods.craftQuality,
         tokenMult: 1 + mods.tokenMult,
         farmYield: 1 + mods.farmYield,
+        gildedMult: 1 + mods.gildedChance,   // how much more often gilded monsters come
         skillSpeed: mods.skillSpeed,
         doubleChance: mods.doubleChance,
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),

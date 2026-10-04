@@ -16,6 +16,7 @@ export const ACHIEVEMENTS = [
     // The bestiary (data/bestiary.js): a star for 10, 100 and 1,000 defeats of each kind.
     { id: 'naturalist',   name: 'Naturalist',        desc: 'Earn 25 bestiary stars',          req: stat('bestiaryStars', 25),   reward: '+5% gold from combat',    mods: { goldMult: 0.05 } },
     { id: 'monster_lore', name: 'Monster Scholar',   desc: 'Earn 100 bestiary stars',         req: stat('bestiaryStars', 100),  reward: '+5% drop chance',         mods: { dropMult: 0.05 } },
+    { id: 'gold_rush',    name: 'Gold Rush',         desc: 'Defeat 25 gilded monsters',       req: stat('gildedKills', 25),     reward: 'Gilded monsters come 50% more often', mods: { gildedChance: 0.5 } },
     { id: 'boss_1',       name: 'Chieftain Slayer',  desc: 'Defeat the Stage 10 boss',        req: stat('maxStage', 11),        reward: '+10% Max HP',             mods: { hpMult: 0.10 } },
     { id: 'boss_5',       name: 'Highland Conqueror',desc: 'Reach Stage 50',                  req: stat('maxStage', 50),        reward: '+10% DEF',                mods: { defMult: 0.10 } },
     { id: 'boss_10',      name: 'Abyss Walker',      desc: 'Reach Stage 100',                 req: stat('maxStage', 100),       reward: '+10% ATK, +10% DEF',      mods: { atkMult: 0.10, defMult: 0.10 } },

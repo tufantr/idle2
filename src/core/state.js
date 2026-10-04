@@ -71,7 +71,8 @@ export function createDefaultState(now = Date.now()) {
             clanRewards: 0, clanLastHits: 0,
             masteryLevels: 0, masteryBest: 1, masteries99: 0, ingredientsSaved: 0, campLevels: 0,
             actionsBySkill: {},
-            killsByMonster: {}, bestiaryStars: 0   // the bestiary (data/bestiary.js): defeats per kind, and its stars
+            killsByMonster: {}, bestiaryStars: 0,  // the bestiary (data/bestiary.js): defeats per kind, and its stars
+            gildedKills: 0
         },
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },

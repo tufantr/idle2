@@ -1189,6 +1189,24 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .battle-banner.boss { --banner: #f87171; --banner-glow: rgba(239, 68, 68, 0.65); border-color: rgba(239, 68, 68, 0.6); }
 .battle-banner.victory { --banner: #fcd34d; --banner-glow: rgba(251, 191, 36, 0.65); }
 .battle-banner.defeat { --banner: #cbd5e1; --banner-glow: rgba(100, 116, 139, 0.5); border-color: rgba(148, 163, 184, 0.4); }
+.battle-banner.gilded { --banner: #fde68a; --banner-glow: rgba(252, 211, 77, 0.8); border-color: rgba(252, 211, 77, 0.7); }
+
+/* a gilded monster: its sprite turned to gold, a slow shine across it and a golden aura */
+.foe.gilded .foe-icon .spr { filter: grayscale(1) sepia(1) saturate(5.5) hue-rotate(8deg) brightness(1.4) contrast(1.15); }  /* grey first, so every monster turns the same gold */
+.foe.gilded .foe-icon { filter: drop-shadow(0 0 10px rgba(252, 211, 77, 0.75)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.55)); }
+.foe.gilded .foe-aura { background: radial-gradient(circle, rgba(252, 211, 77, 0.55), transparent 62%); animation: auraPulse 1.2s ease-in-out infinite; }
+.foe.gilded .fighter-name { color: #fde68a; text-shadow: 0 0 10px rgba(252, 211, 77, 0.7), 0 1px 2px #000; }
+.foe.gilded .fighter-sprite::after { /* the shine */
+    content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 250, 220, 0.75) 50%, transparent 62%) -150% 0 / 250% 100% no-repeat;
+    -webkit-mask: radial-gradient(ellipse 40% 50% at 50% 60%, #000 60%, transparent 70%); mask: radial-gradient(ellipse 40% 50% at 50% 60%, #000 60%, transparent 70%);
+    animation: gildShine 2.4s ease-in-out infinite;
+}
+@keyframes gildShine { 0%, 30% { background-position: -150% 0; } 70%, 100% { background-position: 150% 0; } }
+.corpse.gilded .spr { filter: grayscale(1) sepia(1) saturate(5.5) hue-rotate(8deg) brightness(1.4) contrast(1.15); }
+.dmg.gilded-gold { font-family: var(--font-display); font-size: 1.5rem; color: #fde68a; text-shadow: 0 2px 0 #7a5410, 0 0 16px rgba(252, 211, 77, 0.9); animation: dmgRise 1.4s ease-out forwards; }
+body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe.gilded .foe-aura { animation: none; }
+@media (prefers-reduced-motion: reduce) { .foe.gilded .fighter-sprite::after, .foe.gilded .foe-aura { animation: none; } }
 .battle-combo { position: absolute; left: 50%; top: 60%; z-index: 4; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); }
 .battle-combo b { font-family: var(--font-display); font-size: 2rem; font-weight: 800; line-height: 1; color: #f8fafc; }
 .battle-combo span { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: #cbd5e1; }

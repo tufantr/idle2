@@ -19,7 +19,15 @@ export function spawnEnemy(game) {
     const c = state.combat;
     if (c.mode === 'dungeon' && c.dungeon) c.enemy = dungeonEnemy(c.dungeon);
     else if (c.mode === 'titan') c.enemy = titanEnemy(state);
-    else { c.mode = 'stages'; c.enemy = enemyForStage(c.stage); }
+    else {
+        c.mode = 'stages';
+        c.enemy = enemyForStage(c.stage);
+        // Now and then a regular monster comes gilded: the same fight, a far better payout.
+        if (!c.enemy.boss && rng.chance(BALANCE.rewards.gildedChance * (game.derived?.gildedMult || 1))) {
+            c.enemy = { ...c.enemy, gilded: true, name: `Gilded ${c.enemy.name}` };
+            game.emit({ type: 'gilded', enemy: c.enemy });
+        }
+    }
     c.playerTimer = 0;
     c.enemyTimer = 0;
     c.bossTimeLeft = c.enemy.boss ? (c.enemy.timeLimit || BALANCE.combat.bossTimeMs) : 0;
@@ -191,8 +199,7 @@ function rollLoot(game, enemy, payout) {
     for (let roll = 0; roll < payout.rolls; roll++) {
         if (boss || rng.chance(r.materialDropChance * d.dropMult)) add(rng.weighted(zone.loot).id, 1 + Math.floor(zone.tier / 3));
         if (rng.chance(r.gemDropChance * d.dropMult * (boss ? 10 : 1))) {
-            const candidates = GEM_DROP_TABLE.filter(g => Math.abs(g.tier - zone.tier) <= 1).map(g => ({ ...g, weight: g.tier <= zone.tier ? 3 : 1 }));
-            add(rng.weighted(candidates).id, 1);
+            add(pickGem(zone), 1);
             bumpStat(game, 'gemsFound');
         }
         let essence = 0;
@@ -212,7 +219,20 @@ function rollLoot(game, enemy, payout) {
             if (result.kept) game.emit({ type: 'itemDropped', item });
         }
     }
+    if (enemy.gilded) {   // a gilded monster always leaves a gem and some essence
+        add(pickGem(zone), 1);
+        bumpStat(game, 'gemsFound');
+        const essence = rng.int(r.gildedEssence[0], r.gildedEssence[1]) * Math.max(1, Math.round(zone.tier / 2));
+        add('essence', essence);
+        bumpStat(game, 'essenceFound', essence);
+    }
     return drops;
+}
+
+/** A gem of about the zone's tier (one either side, the lower ones three times as likely). */
+function pickGem(zone) {
+    const candidates = GEM_DROP_TABLE.filter(g => Math.abs(g.tier - zone.tier) <= 1).map(g => ({ ...g, weight: g.tier <= zone.tier ? 3 : 1 }));
+    return rng.weighted(candidates).id;
 }
 
 /** The bestiary: one more of this kind defeated, and a star when it reaches 10, 100 or 1,000. */
@@ -236,12 +256,14 @@ export function onEnemyDeath(game) {
 
     const payout = killPayout(state, enemy);
     const paidAs = payout.full ? enemy : { ...enemy, boss: false };
-    const gold = goldForKill(paidAs, d.goldMult);
-    const xp = combatXpForKill(paidAs, d.combatXpMult) * payout.rolls;
+    const r = BALANCE.rewards;
+    const gold = goldForKill(paidAs, d.goldMult) * (enemy.gilded ? r.gildedGoldMult : 1);
+    const xp = combatXpForKill(paidAs, d.combatXpMult) * payout.rolls * (enemy.gilded ? r.gildedXpMult : 1);
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'kills');
     if (enemy.boss) bumpStat(game, 'bossKills');
+    if (enemy.gilded) bumpStat(game, 'gildedKills');
     countKind(game, enemy);
     grantXp(game, 'combat', xp);
     const drops = rollLoot(game, enemy, payout);

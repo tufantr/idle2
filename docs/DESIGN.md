@@ -265,6 +265,12 @@ the Abyss repeats with a depth counter and steeper growth.
   few drops an hour and salvages most of them.
 - **Zone loot tables** feed the skills at the zone's tier — e.g. the Forest drops iron ore, coal,
   oak logs and raw fox; the Volcano drops runite ore, yew logs and raw bear. Combat is never a dead end.
+- **Gilded monsters:** one regular monster of the stage ladder in 150 comes gilded (never a boss, a
+  dungeon elite or the Titan): the same fight for 5× gold, 2× XP, a gem and 3–6 × zone tier / 2
+  essence for certain. The scene turns it gold with a banner and a chime as it arrives; it counts
+  toward its kind in the bestiary and in `stats.gildedKills`, and the Gold Rush medal (25 of them)
+  makes them come 50% more often (`gildedMult`). About +3% gold over a run: in the simulator the
+  runs with and without them land within each other's spread (DESIGN §5.2 is chaotic past 50 h).
 
 ### 3.8 Economy: gold, camp and supplies
 

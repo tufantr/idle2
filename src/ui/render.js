@@ -1087,7 +1087,7 @@ export function renderShop(game, ui) {
 const MEDAL_ART = {
     kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
     titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
-    prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin',
+    prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin', gildedKills: 'gold',
     masteries99: 'uniq/crystal_heart', skills99: 'crown'
 };
 const SKILL_MEDAL = {

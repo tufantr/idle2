@@ -61,6 +61,7 @@ test('regression: rarity is a bounded quality bonus — a legendary copper sword
 });
 
 test('regression: offline progress with a workshop action does not throw and makes items', () => {
+    rng.setSource(seededRandom(1234));   // its own sequence: what the tests before it drew doesn't matter
     const game = new Game(null, T0);
     game.state.resources.copper_bar = 30;
     assert.ok(game.startSmithing('Weapon', 'copper_bar'));

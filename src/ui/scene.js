@@ -289,7 +289,7 @@ export function createScene(root, actions) {
 
     function foeMeta(state, d, enemy) {
         const payout = killPayout(state, enemy);
-        const gold = goldForKill(payout.full ? enemy : { ...enemy, boss: false }, d.goldMult);
+        const gold = goldForKill(payout.full ? enemy : { ...enemy, boss: false }, d.goldMult) * (enemy.gilded ? BALANCE.rewards.gildedGoldMult : 1);
         return `⚔️ ${fmt(enemy.atk)} · ⏱ ${seconds(enemy.interval)} · 🪙 ${fmt(gold)}`;
     }
 
@@ -300,12 +300,17 @@ export function createScene(root, actions) {
         setText(el.foeName, enemy.name.replace(' (Boss)', ''));
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
+        el.foe.classList.toggle('gilded', !!enemy.gilded);
         el.foe.setAttribute('aria-label', `Strike ${enemy.name}: half damage, builds your combo`);
         el.foe.title = `Click to strike ${enemy.name}: half damage, builds your combo`;
         setText(el.foeMeta, foeMeta(game.state, game.derived, enemy));
         resetTrail(trails.foe, Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100))); // a fresh monster has no damage trail
         if (silent) return;
         move(el.foeSprite, enemy.boss ? 'bossSpawn' : 'spawn');
+        if (enemy.gilded && c.active) {   // a rare sight: say so, once, as it arrives
+            banner(`<small>A rare sight</small><strong>${esc(enemy.name)}</strong><span>Five times the gold, and a gem</span>`, 'gilded', 1600);
+            actions.sound?.('rare');
+        }
         if (enemy.boss && c.active) {
             const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : c.mode === 'dungeon' ? 'Dungeon boss' : `Boss · stage ${c.stage}`;
             banner(`<small>${label}</small><strong>${esc(enemy.name.replace(' (Boss)', ''))}</strong>`, 'boss', 2200);
@@ -465,9 +470,10 @@ export function createScene(root, actions) {
                 case 'kill': {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;
-                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: fighterScale() + (ev.enemy.boss ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
+                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: fighterScale() + (ev.enemy.boss ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
-                    coinBurst(ev.enemy.boss ? 7 : 1);
+                    coinBurst(ev.enemy.boss ? 7 : ev.enemy.gilded ? 6 : 1);
+                    if (ev.enemy.gilded) spawnFx('dmg gilded-gold', `+${fmt(ev.gold)}`, foe.x, foe.top - 6, 1400);
                     ev.drops.filter(dr => !dr.item).slice(0, 3).forEach((dr, i) => spawnFx('drop-pop', `+${fmt(dr.qty)} ${resIcon(dr.id)}`, foe.x - 14 + i * 14, foe.bottom - 4, 1200));
                     if (ev.enemy.boss && !ev.enemy.titan && game.state.combat.mode === 'stages') {
                         banner(`<small>Victory</small><strong>${esc(ev.enemy.name.replace(' (Boss)', ''))} falls</strong><span>+${fmt(ev.gold)} gold</span>`, 'victory', 1800);

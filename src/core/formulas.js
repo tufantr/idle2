@@ -28,7 +28,14 @@ export const BALANCE = {
         materialDropChance: 0.35,
         gemDropChance: 0.03,
         essenceDropChance: 0.10,
-        bossEssence: [3, 6]
+        bossEssence: [3, 6],
+        // Gilded monsters (a variable reward, docs/research_notes/game-feel.md §2): now and then a
+        // regular monster of the stage ladder comes gilded. The same fight, for five times the gold,
+        // twice the XP, and a gem and some essence for certain.
+        gildedChance: 1 / 150,
+        gildedGoldMult: 5,
+        gildedXpMult: 2,
+        gildedEssence: [3, 6]
     },
     prestige: {
         minStage: 10,

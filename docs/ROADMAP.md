@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Gilded monsters**: one regular monster in 150 comes gilded, for five times the gold, twice
+      the XP and a sure gem and essence. It turns gold on the scene, with a banner, a chime and a
+      shower of coins; a new medal, Gold Rush (25 of them), makes them come more often
 - [x] **An app icon, and the game on a home screen**: the hero in his plumed helm on the painted
       meadow (`tools/icons.py`) in the browser tab and on a phone's home screen; `manifest.json`
       lets the game be installed and open full screen like an app
