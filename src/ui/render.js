@@ -1504,6 +1504,16 @@ function fmtSeconds(value) {
     return value < 10 ? `${value.toFixed(1)} s` : `${Math.round(value)} s`;
 }
 
+/** Who waits in dungeon `d`, room by room: little portraits (a silhouette for an elite never met), the boss last. */
+function dungeonLineup(state, d) {
+    const kills = state.stats.killsByMonster || {};
+    const face = (name, boss) => {
+        const met = boss || (kills[name] || 0) > 0;   // the boss is already on the card's painting
+        return `<span class="lineup-face${boss ? ' boss' : ''}" title="${met ? esc(name) : 'Not met yet'}">${sprite(`mon/${name}`, { scale: 0.75, cls: `soft${met ? '' : ' silhouette'}` })}</span>`;
+    };
+    return `<div class="lineup" aria-label="${d.monsters.length} elites, then the ${esc(d.boss.name)}">${d.monsters.map(m => face(m.name, false)).join('')}${face(d.boss.name, true)}</div>`;
+}
+
 /** How a run at dungeon `d` would end at its boss, in words and a colour (an estimate without food). */
 export function dungeonVerdict(game, d) {
     const limit = DUNGEON_BOSS_TIME_MS / 1000;
@@ -1547,7 +1557,7 @@ export function renderDungeons(game) {
                 <div class="dungeon-title"><b>${esc(d.name)}</b><span class="small" title="Like stages ${d.stage}–${d.stage + d.monsters.length}; the chest holds tier ${d.chestTier} loot">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span></div>
             </div>
             <div class="dungeon-body">
-            ${open ? `<div class="small ${ready}" title="An estimate without food, regeneration, lifesteal or combo">${verdict}</div>
+            ${open ? `${dungeonLineup(state, d)}<div class="small ${ready}" title="An estimate without food, regeneration, lifesteal or combo">${verdict}</div>
                 <div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: ownsUnique(state, d.unique) ? '' : 'silhouette', fallback: '🌟' })}
                     <div class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></div><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
                 <div class="muted small">${record.clears} clear${record.clears === 1 ? '' : 's'}${next ? ` · at ${next.clears}: ${next.desc}` : ' · every bonus earned'}${done.length ? ` · earned: ${done.join('; ')}` : ''}</div>

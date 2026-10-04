@@ -693,6 +693,11 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .dungeon-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding-bottom: 0.2rem; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
 .dungeon-title b { font-family: var(--font-display); font-size: 1.08rem; color: var(--heading); }
 .dungeon-body { display: flex; flex-direction: column; gap: 0.45rem; padding: 0 0.9rem; }
+/* who waits inside, room by room (a silhouette for a kind never met, the boss ringed in red) */
+.lineup { display: flex; flex-wrap: wrap; gap: 3px; }
+.lineup-face { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #2a2016, #0c0906 75%); border: 1px solid rgba(214, 170, 92, 0.3); }
+.lineup-face.boss { width: 32px; height: 32px; border-color: rgba(239, 68, 68, 0.7); }
+.lineup-face .spr.silhouette { opacity: 0.75; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.7)); }
 .dungeon-card.active { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 18px rgba(239, 68, 68, 0.2); }
 .dungeon-icon { font-size: 1.8rem; }
 .titan-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
