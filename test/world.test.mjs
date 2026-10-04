@@ -103,7 +103,8 @@ test('secret medals: hidden until earned, for patting the pet, a great crate and
 });
 
 test('the gear codex fills a page for each kind and tier found, kept or salvaged, and old saves count what they carry', async () => {
-    const { CODEX_SIZE, CODEX_TYPES } = await import('../src/data/items.js');
+    const { CODEX_SIZE, CODEX_TYPES, RARITIES } = await import('../src/data/items.js');
+    const rarity = id => RARITIES.find(r => r.id === id);
     const { generateEquipment } = await import('../src/core/formulas.js');
     const { addItem } = await import('../src/systems/inventory.js');
     const { migrateState } = await import('../src/core/state.js');
@@ -112,17 +113,17 @@ test('the gear codex fills a page for each kind and tier found, kept or salvaged
     const game = new Game(null, T0);
     assert.deepEqual(game.state.codex, {});
     game.state.settings.autoSalvage = 'common';
-    game.state.equipped.Weapon = generateEquipment({ type: 'Weapon', tier: 4, power: 1, materialName: 'Adamant', source: 'drop', rarity: 'rare' }, 500);
-    const sword = generateEquipment({ type: 'Weapon', tier: 2, power: 1, materialName: 'Iron', source: 'drop', rarity: 'common' }, 501);
+    game.state.equipped.Weapon = generateEquipment({ type: 'Weapon', tier: 4, power: 1, materialName: 'Adamant', source: 'drop', rarity: rarity('rare') }, 500);
+    const sword = generateEquipment({ type: 'Weapon', tier: 2, power: 1, materialName: 'Iron', source: 'drop', rarity: rarity('common') }, 501);
     const kept = addItem(game, sword);
     assert.equal(kept.kept, false, 'a common drop is salvaged as it lands');
     assert.equal(game.state.codex['Weapon/2'], true, 'but it was found');
-    addItem(game, generateEquipment({ type: 'Ring', tier: 5, power: 1, materialName: 'Ruby', source: 'crafted', rarity: 'rare' }, 502));
+    addItem(game, generateEquipment({ type: 'Ring', tier: 5, power: 1, materialName: 'Ruby', source: 'crafted', rarity: rarity('rare') }, 502));
     assert.equal(game.state.stats.codexFound, 2, 'the worn sword was never added, so it is not a page yet');
 
     const saved = JSON.parse(game.serialize(T0));
     delete saved.codex;                                  // a save from before the codex
-    saved.equipped.Head = generateEquipment({ type: 'Head', tier: 3, power: 1, materialName: 'Mithril', source: 'drop', rarity: 'common' }, 503);
+    saved.equipped.Head = generateEquipment({ type: 'Head', tier: 3, power: 1, materialName: 'Mithril', source: 'drop', rarity: rarity('common') }, 503);
     let state = migrateState(saved, T0);
     assert.deepEqual(Object.keys(state.codex).sort(), ['Head/3', 'Ring/5', 'Weapon/4'], 'what it carries and wears counts');
     saved.codex = { 'Weapon/2': true, 'Wand/1': true, 'Weapon/9': true, 'Head/3': 'yes' };
