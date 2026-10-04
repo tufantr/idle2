@@ -95,6 +95,13 @@ export const GEAR_TIERS = [
 ];
 export const MAX_GEAR_TIER = GEAR_TIERS.length;
 
+// The gear codex: every kind of gear at every tier (10 kinds x 7 tiers), a silhouette until one has
+// been found, forged or crafted. Keys are "<type>/<tier>" and are saved.
+export const CODEX_TYPES = Object.keys(TYPE_SLOTS);
+export const CODEX_SIZE = CODEX_TYPES.length * GEAR_TIERS.length;
+export const codexKey = item => `${item.type}/${Math.max(1, Math.min(MAX_GEAR_TIER, Math.round(Number(item.tier) || 1)))}`;
+export const isCodexKey = key => /^(\w+)\/(\d+)$/.test(key) && CODEX_TYPES.includes(key.split('/')[0]) && Number(key.split('/')[1]) >= 1 && Number(key.split('/')[1]) <= MAX_GEAR_TIER;
+
 // Chance that a kill drops a piece of gear, and how its tier relates to the zone's gear tier.
 // Regular kills are a treat (an AFK fighter sees a few an hour, most of them salvage); a boss's
 // first fall in a run is a coin flip.

@@ -2021,6 +2021,16 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
     .zone-card .zone-emblem { width: 46px; height: 46px; }
 }
 
+/* the gear codex: a row per kind of gear, a cell per tier (a silhouette until found) */
+.codex-grid { display: flex; flex-direction: column; gap: 0.35rem; overflow-x: auto; }
+.codex-row { display: grid; grid-template-columns: 5.2rem repeat(7, 40px); align-items: center; gap: 0.35rem; }
+.codex-type { font-size: 0.8rem; font-weight: 700; color: var(--text-main); }
+.codex-cell { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 9px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(214, 170, 92, 0.18); }
+.codex-cell.found { background: radial-gradient(circle at 50% 40%, #3a2c1c, #140e07 75%); border-color: rgba(214, 170, 92, 0.5); }
+.codex-cell .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.codex-cell .spr.silhouette { opacity: 0.55; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.6)); }
+@media (max-width: 600px) { .codex-row { grid-template-columns: 3.6rem repeat(7, minmax(0, 1fr)); gap: 0.2rem; } .codex-type { font-size: 0.7rem; } .codex-cell { width: 100%; height: auto; aspect-ratio: 1; } .codex-cell .spr { --k: 0.75 !important; image-rendering: auto; } }
+
 /* the clan before signing in: what it is, in three pictures */
 .clan-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
 .clan-tile { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.9rem 0.5rem 0.8rem; text-align: center; border-radius: 12px; background: rgba(12, 9, 6, 0.72); border: 1px solid var(--line); }

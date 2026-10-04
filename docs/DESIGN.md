@@ -418,13 +418,16 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 
 ### 3.14 Achievements, unlocks and the daily crate
 
-- **Achievements** (`src/data/achievements.js`): 35 open and 3 secret, each with a named reward applied through the
+- **Achievements** (`src/data/achievements.js`): 36 open and 3 secret, each with a named reward applied through the
   pipeline **plus** +1% ATK, DEF and skill speed per achievement (Antimatter Dimensions / Cookie
   Clicker "milk" pattern). Dungeon clears, Titans, pets, uniques, the new skills, a finished agility
   course and mastery (500 and 2,500 levels, a first 99) have their own. A test checks that every bonus in the data is well-formed (the Forager perk
   once had a malformed bonus and did nothing). Three are **secret** (`secret: true`): not shown nor counted in the Hall
   until earned (pat your pet 25 times, open a great crate, get back up after 100 falls), so finding
   one is a small surprise; the Hall's count is of the medals shown.
+- **The gear codex** (`state.codex`, `CODEX_TYPES` in `src/data/items.js`): a page per kind of gear
+  and tier, 70 in all, filled by `addItem` whenever a piece arrives (kept or salvaged on landing);
+  shown in the Hall's Collection. The Armourer medal comes at 40 pages.
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true —
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
   first hunt, Fishing after 5 dishes, Firemaking after 20 logs, Alchemy / Shop / Prestige /

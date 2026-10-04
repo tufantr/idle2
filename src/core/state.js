@@ -3,7 +3,7 @@
 
 import { RESOURCES } from '../data/resources.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
-import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER } from '../data/items.js';
+import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
@@ -63,6 +63,7 @@ export function createDefaultState(now = Date.now()) {
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
         achievements: {},
+        codex: {},             // "<type>/<tier>" -> true: the gear codex (data/items.js), pages filled
         unlocks: {},
         seen: {},              // pieces of the interface that have opened (systems/disclosure.js)
         hero: { name: '', look: DEFAULT_LOOK },    // the name the player gave the hero ('' is "You"), and the look (data/looks.js)
@@ -77,7 +78,8 @@ export function createDefaultState(now = Date.now()) {
             actionsBySkill: {},
             killsByMonster: {}, bestiaryStars: 0,  // the bestiary (data/bestiary.js): defeats per kind, and its stars
             gildedKills: 0,
-            petPats: 0, greatCrates: 0, recoveries: 0  // for the secret medals: pats for the pet, great crates opened, falls got up from
+            petPats: 0, greatCrates: 0, recoveries: 0, // for the secret medals: pats for the pet, great crates opened, falls got up from
+            codexFound: 0          // pages of the gear codex filled
         },
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
@@ -287,6 +289,12 @@ function normalise(data, now) {
         state[group] = {};
         for (const [key, value] of Object.entries(saved)) if (value === true && /^[a-z0-9_]{1,40}$/.test(key)) state[group][key] = true;
     }
+    // The gear codex: known pages only, and every piece worn or carried counts (saves from before it).
+    const pages = isPlainObject(state.codex) ? state.codex : {};
+    state.codex = {};
+    for (const [key, value] of Object.entries(pages)) if (value === true && isCodexKey(key)) state.codex[key] = true;
+    for (const item of [...state.inventory, ...Object.values(state.equipped)]) if (item?.type && isCodexKey(codexKey(item))) state.codex[codexKey(item)] = true;
+    state.stats.codexFound = Object.keys(state.codex).length;
     if (!['auto', 'none'].includes(state.combat.autoEat) && !Object.hasOwn(RESOURCES, state.combat.autoEat)) state.combat.autoEat = 'auto';
     if (state.combat.potion !== 'none' && !Object.hasOwn(RESOURCES, state.combat.potion)) state.combat.potion = 'none';
     if (state.action !== null && !(isPlainObject(state.action) && typeof state.action.kind === 'string')) state.action = null;

@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The gear codex**: the Hall's Collection gains a page for every kind of gear at every tier (ten
+      kinds, seven tiers), a silhouette until one has been found, forged or crafted (a drop salvaged as it
+      lands counts; old saves count what they carry and wear). A new medal, Armourer, at 40 pages
 - [x] **The road on the world map**: the zones joined in order by an inked route, red dashes as far
       as this run has come and faint dots beyond, like a treasure map's
 - [x] **A medal is a card**: earning one shows its picture in a gold disc with its name and lasting

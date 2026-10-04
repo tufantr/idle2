@@ -45,6 +45,7 @@ export const ACHIEVEMENTS = [
     { id: 'titan_slayer', name: 'Titan Slayer',      desc: 'Defeat a Titan',                  req: stat('titanKills', 1),       reward: '+5% ATK',                 mods: { atkMult: 0.05 } },
     { id: 'pet_friend',   name: 'Best Friends',      desc: 'Find a pet',                      req: stat('petsFound', 1),        reward: '+5% XP from all skills',  mods: { xpMult: 0.05 } },
     { id: 'collector',    name: 'Collector',         desc: 'Obtain a unique item',            req: stat('uniquesFound', 1),     reward: '+5% drop chance',         mods: { dropMult: 0.05 } },
+    { id: 'armourer',     name: 'Armourer',          desc: 'Fill 40 pages of the gear codex', req: stat('codexFound', 40),      reward: '+5% DEF',                 mods: { defMult: 0.05 } },
     { id: 'completionist',name: 'Completionist',     desc: 'Reach level 99 in any skill',     req: stat('skills99', 1),         reward: '+10% XP from all skills', mods: { xpMult: 0.10 } },
     // Secret medals: not shown (nor counted) until earned, for little things found by playing.
     { id: 'companion',    name: 'Good Companion',    desc: 'Pat your pet 25 times',           req: stat('petPats', 25),         reward: '+5% gold from combat',    mods: { goldMult: 0.05 }, secret: true },

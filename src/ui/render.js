@@ -5,7 +5,7 @@
 import { SKILLS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, sellValue } from '../data/resources.js';
 import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
-import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS } from '../data/items.js';
+import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown } from '../data/achievements.js';
@@ -1166,7 +1166,7 @@ const MEDAL_ART = {
     kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
     titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
     prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin', gildedKills: 'gold',
-    masteries99: 'uniq/crystal_heart', skills99: 'crown', petPats: 'pet/fang', greatCrates: 'crate', recoveries: 'campfire'
+    masteries99: 'uniq/crystal_heart', skills99: 'crown', petPats: 'pet/fang', greatCrates: 'crate', recoveries: 'campfire', codexFound: 'item/Head/5'
 };
 const SKILL_MEDAL = {
     mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', fishing: 'res/raw_shark', firemaking: 'campfire',
@@ -1589,6 +1589,26 @@ function renderCollection(game) {
     <section class="glass-panel ${painted('vault', 'center 40%')}">
         <div class="panel-header"><h2>Unique items</h2><span class="muted small">Assembled from dungeon fragments, or found in a chest</span></div>
         <div class="pet-grid">${uniques}</div>
+    </section>
+    ${renderCodex(state)}`;
+}
+
+/** The gear codex: every kind of gear at every tier, a silhouette until one has been found or made. */
+function renderCodex(state) {
+    const tiers = GEAR_TIERS;
+    const rows = CODEX_TYPES.map(type => {
+        const jewel = CRAFTING_TYPES.includes(type);
+        const cells = tiers.map(t => {
+            const found = !!state.codex[`${type}/${t.tier}`];
+            const name = `${jewel ? t.jewel : t.name} ${TYPE_NAMES[type] || type}`;
+            return `<span class="codex-cell${found ? ' found' : ''}" title="${found ? esc(name) : `Tier ${t.tier} · not found yet`}">${sprite(`item/${type}/${t.tier}`, { scale: 1, cls: found ? '' : 'silhouette', fallback: '?' })}</span>`;
+        }).join('');
+        return `<div class="codex-row"><span class="codex-type">${esc(TYPE_NAMES[type] || type)}</span>${cells}</div>`;
+    }).join('');
+    const found = Object.keys(state.codex).length;
+    return `<section class="glass-panel ${painted('armory', 'center 45%')}">
+        <div class="panel-header"><h2>Gear codex</h2><span class="muted small">${found}/${CODEX_SIZE} · every kind at every tier, found or made</span></div>
+        <div class="codex-grid">${rows}</div>
     </section>`;
 }
 

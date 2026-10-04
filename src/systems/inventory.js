@@ -2,7 +2,7 @@
 
 import {
     TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, upgradeCost, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
-    BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost
+    BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey
 } from '../data/items.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
@@ -81,8 +81,19 @@ export function bagSize() {
  * one — is salvaged (never the best upgrade for a slot), so nothing is ever silently thrown away.
  * Returns { kept, salvaged }.
  */
+/** Note a piece of gear in the codex (data/items.js): the first of its kind and tier fills a page. */
+export function markCodex(state, item) {
+    if (!item?.type || !TYPE_SLOTS[item.type]) return false;
+    const key = codexKey(item);
+    if (state.codex[key]) return false;
+    state.codex[key] = true;
+    state.stats.codexFound = Object.keys(state.codex).length;
+    return true;
+}
+
 export function addItem(game, item) {
     const state = game.state;
+    markCodex(state, item);   // found, even if it is salvaged as it lands
     const filter = state.settings.autoSalvage || 'off';
     if (item.source !== 'crafted' && filter !== 'off' && rarityIndex(item.rarity) <= rarityIndex(filter) && !isUpgrade(state, item)) {
         const gained = salvageObject(game, item, { auto: true });
