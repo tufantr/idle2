@@ -384,12 +384,17 @@ function renderPrestigeStrip(game) {
 }
 
 /** The battle log, folded away: its last line shows, the rest opens on a tap. */
+// A log line's picture by its kind; the emoji its saved text may start with is left out.
+const LOG_ART = { combat: 'item/Weapon/3', death: 'mon/Skeleton', loot: 'crate', prestige: 'res/essence' };
+const LEADING_EMOJI = /^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D]+\s*)+/u;
+const logLine = (l, cls) => `<span class="${cls} ${l.type}">${sprite(LOG_ART[l.type] || 'item/Weapon/3', { scale: 0.5, cls: 'soft res-spr' })} ${esc(l.text.replace(LEADING_EMOJI, ''))}</span>`;
+
 function renderBattleLog(state, ui) {
     const lines = [...state.log].reverse().filter(l => ['combat', 'death', 'loot', 'prestige'].includes(l.type)).slice(0, 8);
     if (!lines.length) return '';
     return `<details class="glass-panel log-drawer" ${ui.open?.log ? 'open' : ''} ontoggle="FI.setOpen('log', this.open)">
-        <summary><span class="log-title">Battle log</span><span class="log-last ${lines[0].type}">${esc(lines[0].text)}</span></summary>
-        <div class="log-list">${lines.map(l => `<div class="log-line ${l.type}">${esc(l.text)}</div>`).join('')}</div>
+        <summary><span class="log-title">Battle log</span>${logLine(lines[0], 'log-last')}</summary>
+        <div class="log-list">${lines.map(l => logLine(l, 'log-line')).join('')}</div>
     </details>`;
 }
 

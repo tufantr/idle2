@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The battle log in pictures**: each line starts with a sprite for its kind (a sword, a chest,
+      a skeleton, essence), and the emoji saved at the start of old lines is left out
 - [x] **Level-up cards on their painting**: a milestone level opens on its skill's place (the cave
       for Mining, the forge for Smithing), with the skill's sprite instead of its emoji
 - [x] **Records**: a fourth view in the Hall: the hero's lifetime numbers as big figures with a
