@@ -894,6 +894,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
     .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */
     .pills .pill-short { display: inline; }
+    .pills .status-pill { display: none; }  /* the hotbar's Battle and work buttons already show what the hero is doing */
     .chip span, .chip i:not(.spr) { display: none; }
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
     .chip b { font-size: 0.9rem; }

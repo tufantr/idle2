@@ -465,7 +465,8 @@ progress as motion, art before words, one stage with a HUD around it.
       instead of three paragraphs
 - [x] **A shorter header on a phone**: the purse, then one row for the rest: the fight's pill says
       just "Stage 59", the event's its picture and time, the cloud button is its icon. Content starts
-      about 70 px higher on every tab
+      about 70 px higher on every tab. The Focus and bonfire pills have short phone wording too, and the
+      "what the hero is doing" pill stays off a phone's header (the hotbar shows it)
 - [x] **The clan tab before signing in**: instead of an empty hall, three pictures say what a clan
       is (the dragon of the weekly boss, the hero for three attacks a day, essence and a diamond for
       the rewards); the rules stay behind the "?"

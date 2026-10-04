@@ -234,14 +234,14 @@ export function renderHeader(game, ui, cloud) {
         ? `<button class="daily-btn ready${greatNext ? ' great' : ''}" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">${greatNext ? 'Great crate' : 'Daily crate'}</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
         : '';
     const bonfirePill = bonfireLit(state, game.now)
-        ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
+        ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}%<span class="pill-long"> XP · ${duration(state.bonfire.until - game.now)}</span></span>`
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')
         ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></button>`
         : '';
     const focusPill = game.derived.focused
-        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
+        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
     // What the hero is doing, when that is not what the tab in view already shows.
     const here = ui.tab === 'combat' || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
