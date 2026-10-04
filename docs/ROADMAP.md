@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A new land**: the first step ever into a zone is a card on its painting, with its ruler as a
+      silhouette (met at its tenth stage), its stages and what drops there. Once per zone in the
+      whole game (not again after a prestige, not for the Abyss's deeper depths)
 - [x] **What the chest held**: a dungeon clear's banner names the dungeon and shows the chest's
       contents as pictures that pop out one after another (gear in its rarity's glow, the unique's
       fragments, essence, materials, a gem) instead of "The chest is yours". The bonuses at 25, 100

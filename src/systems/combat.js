@@ -4,7 +4,7 @@ import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKil
 import { BASE } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
 import { addItem } from './inventory.js';
-import { zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
+import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
@@ -295,7 +295,12 @@ export function onEnemyDeath(game) {
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
         if (c.stage > c.maxStage) c.maxStage = c.stage;
-        if (c.stage > c.bestStage) c.bestStage = c.stage;
+        if (c.stage > c.bestStage) {
+            c.bestStage = c.stage;
+            // the first step ever into a zone (the Abyss once, at its first depth)
+            const zone = Math.floor((c.stage - 1) / STAGES_PER_ZONE);
+            if ((c.stage - 1) % STAGES_PER_ZONE === 0 && zone >= 1 && zone < ZONES.length) game.emit({ type: 'zoneReached', zone: ZONES[zone].id, stage: c.stage });
+        }
         if (c.bestStage > state.stats.maxStage) state.stats.maxStage = c.bestStage;
     }
     spawnEnemy(game);

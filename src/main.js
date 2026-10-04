@@ -21,6 +21,7 @@ import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
+import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
@@ -350,7 +351,7 @@ function soundFor(ev, onCombat) {
         case 'actionComplete': return ui.tab === ev.skill ? [ev.made?.gem ? 'gem' : ev.made?.item ? 'craft' : (ev.made?.qty || 1) > 1 ? 'double' : 'action'] : null;
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
-        case 'unlock': return ['unlock'];
+        case 'unlock': case 'zoneReached': return ['unlock'];
         case 'achievement': case 'eventMilestone': case 'dungeonMilestone': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
         case 'death': case 'bossTimeout': case 'dungeonFail': return ['defeat'];
@@ -425,6 +426,15 @@ function handleEvents(events) {
             case 'error': toast(ev.text, 'error'); break;
             case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate')); break;
             case 'dungeonFail': toast('The dungeon run failed', 'death'); break;
+            case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
+                const zone = ZONES.find(z => z.id === ev.zone);
+                if (!zone) break;
+                const last = ev.stage + STAGES_PER_ZONE - 1;
+                const abyss = zone === ZONES[ZONES.length - 1];
+                rewards.celebrate({ key: `zone:${zone.id}`, kind: 'unlock', art: paintStyle(zone.id), icon: sprite(`mon/${zone.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
+                    kicker: 'A new land', title: zone.name, lines: [abyss ? `Stages ${ev.stage}+, without end` : `Stages ${ev.stage}–${last}`, zone.loot.map(l => resIcon(l.id)).join(' ')] });
+                break;
+            }
             case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting
                 const d = dungeonById(ev.dungeon);
                 if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),

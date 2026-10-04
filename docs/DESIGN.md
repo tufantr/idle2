@@ -596,7 +596,11 @@ when it is a milestone (every tenth level, and 99) or opens something, and the c
 levels stay a toast, so the cards keep their weight. Cards queue one at a time (at most four waiting,
 merged by key, so a burst of levels shows the highest). A new place's card carries its painting and
 stays long enough to read (seven seconds, or until tapped); its tab also gets a "New" badge until it
-is opened (remembered in the browser, not the save).
+is opened (remembered in the browser, not the save). Two more moments get a card on a painting: the
+first step ever into a zone (`zoneReached`: its ruler a silhouette, its stages, its drops) and a
+dungeon's lasting bonus at 25, 100 and 250 clears (`dungeonMilestone`). A dungeon clear itself is a
+banner on the scene with the chest's contents popping out as pictures. Offline replay is silent, so
+none of these queue up behind the welcome-back report.
 
 The skill stage (`src/ui/stage.js`) is the same idea for work: a strip of the place's painting above
 every skill tab, built once, with the hero holding that skill's tool and facing what he works on. His
