@@ -7,6 +7,8 @@ import { BALANCE } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { bumpStat, log } from './progress.js';
 
+export const CHALLENGE_MS = 10000;   // how long a challenge lasts once started
+
 export const MINIGAME_CONFIG = {
     mining:      { icon: '⛏️', label: 'Ore Vein Pulse', desc: 'Tap while the pulse sweeps through the ore seam.', type: 'timing', accent: '#34d399', actionText: 'Pulse the Vein' },
     woodcutting: { icon: '🌳', label: 'Perfect Chop',   desc: 'Catch the axe rhythm at the heartwood ring.',     type: 'timing', accent: '#22c55e', actionText: 'Catch the Rhythm' },
@@ -48,7 +50,7 @@ export function hasOpportunity(state, skillId, now) {
 
 export function buildChallenge(skillId, now) {
     const conf = MINIGAME_CONFIG[skillId];
-    const expiresAt = now + 10000;
+    const expiresAt = now + CHALLENGE_MS;
     if (conf.type === 'timing') return { type: 'timing', zoneStart: +(0.18 + rng.random() * 0.44).toFixed(2), zoneWidth: 0.16, cycleMs: 900 + rng.int(0, 500), startedAt: now, expiresAt };
     if (conf.type === 'moving-target') return { type: 'moving-target', zoneStart: +(0.38 + rng.random() * 0.18).toFixed(2), zoneWidth: 0.14, cycleMs: 1000 + rng.int(0, 500), startedAt: now, expiresAt };
     if (conf.type === 'heat') return { type: 'heat', heat: 0.35, targetStart: +(0.42 + rng.random() * 0.12).toFixed(2), targetWidth: 0.18, expiresAt };

@@ -17,7 +17,7 @@ import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/f
 import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
-import { MINIGAME_CONFIG, hasOpportunity, animatedPosition } from '../systems/minigame.js';
+import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
@@ -727,7 +727,7 @@ export function renderMinigame(game, skillId) {
     let body;
     if (ch) {
         // the time left, as a bar draining under the prompt
-        const left = ch.expiresAt > ch.startedAt ? Math.max(0, Math.min(1, (ch.expiresAt - now) / (ch.expiresAt - ch.startedAt))) : 0;
+        const left = Math.max(0, Math.min(1, (ch.expiresAt - now) / CHALLENGE_MS));
         const timer = `<i class="mg-time" style="--p:${(left * 100).toFixed(1)}%" aria-label="${Math.max(0, Math.ceil((ch.expiresAt - now) / 1000))} seconds left"></i>`;
         if (ch.type === 'timing' || ch.type === 'moving-target') {
             body = `<div class="minigame-prompt">${ch.type === 'timing' ? 'Tap when the marker is inside the glowing zone.' : conf.desc}</div>${timer}
