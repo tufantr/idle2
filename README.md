@@ -16,7 +16,7 @@ The game is static files, but ES modules need to be served over HTTP (opening `i
 won't work):
 
 ```bash
-npx serve .            # or: python3 -m http.server 8000
+python3 tools/serve.py   # or: npx serve .   (or python3 -m http.server 8000, then reload with Ctrl+Shift+R after a change)
 ```
 
 Then open the printed URL. Add `?dev=1` to unlock every tab and mini-game immediately, and

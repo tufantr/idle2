@@ -498,8 +498,8 @@ real-time chat; synchronous party content; gacha pets; any purchasable power.
 2. `node --test test/*.test.mjs test/*.test.cjs` — must stay green.
 3. `node tools/pacing.mjs` and `node tools/simulate.mjs --hours=150 --seed=1` (and a second seed) —
    compare against the phase's exit numbers and DESIGN §5.
-4. Open the game (`python3 -m http.server 8000`, then `?dev=1` to unlock every tab) and play the
-   changed part. That server lets the browser keep old copies of files: after an update, reload with
-   ⌘⇧R (or Ctrl+Shift+R), or a module may half-load.
+4. Open the game (`python3 tools/serve.py`, then `?dev=1` to unlock every tab) and play the changed
+   part. It asks the browser to check every file again, so a plain reload shows the latest code
+   (with `python3 -m http.server` the browser keeps old copies: reload with ⌘⇧R or Ctrl+Shift+R).
 5. For anything visible, `node tools/shots.mjs` (and `--fresh`) and look at the pictures in `shots/`.
 6. Update DESIGN.md if a number or a rule in it changed, and add a line here for each visible change.

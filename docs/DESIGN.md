@@ -939,6 +939,7 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       paint.py (imports hand-made paintings into assets/paint/ and the paint block of style.css) ·
                       cards.py (cuts the action cards' pictures from sheets of nine, writes src/data/cardart.js) ·
                       icons.py (the app icons in assets/icons/, the hero on the meadow; manifest.json installs them) ·
+                      serve.py (the local server: no stale modules after a change) ·
                       shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for the paintings) · reports/ ·
                       research_notes/
