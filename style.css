@@ -1142,6 +1142,14 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path .boss b, .stage-path .boss button { font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.65); }
 .stage-path .next.boss b { background: rgba(60, 10, 10, 0.9); }
 .stage-path .now.boss b { background: radial-gradient(circle, #f87171, #7f1d1d); animation-name: bossNodePulse; }
+/* a dungeon run: each room a round portrait of who waits there */
+.stage-path .portrait b { width: 28px; min-width: 28px; height: 28px; padding: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #2a2016, #0c0906 75%); }
+.stage-path .portrait.now b { width: 32px; min-width: 32px; height: 32px; background: radial-gradient(circle at 50% 40%, #6b4a17, #1a1205 75%); }
+.stage-path .portrait.now.boss b { background: radial-gradient(circle at 50% 40%, #7f1d1d, #1a0505 75%); }
+.stage-path .portrait.done b { background: radial-gradient(circle at 50% 40%, #2a2016, #0c0906 75%); }
+.stage-path .portrait.done .spr { filter: grayscale(1) brightness(0.55); }
+.stage-path .portrait.next .spr:not(.silhouette) { opacity: 0.55; }
+.stage-path .portrait .spr.silhouette { opacity: 0.8; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.7)); }
 
 /* the fighters */
 .battle-field {
@@ -1318,6 +1326,9 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
     .stage-path li + li::before { width: 3px; }
     .stage-path b, .stage-path button { min-width: 19px; height: 19px; padding: 0 3px; font-size: 0.55rem; }
     .stage-path .now b { min-width: 23px; height: 23px; }
+    .stage-path .portrait b { width: 22px; min-width: 22px; height: 22px; }
+    .stage-path .portrait.now b { width: 26px; min-width: 26px; height: 26px; }
+    .stage-path .portrait .spr { --k: 0.625 !important; }
     .battle-field { gap: 0.4rem; padding: 0 0.5rem 0.55rem; }
     .fighter-stand { height: 88px; }
     .fighter-bars { width: 100%; }

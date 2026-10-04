@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A dungeon run as a row of portraits**: the scene's path shows each room as the monster
+      waiting in it (beaten ones grey, a kind never met a silhouette, the boss ringed in red) instead of
+      numbers
 - [x] **A place's bestiary stars on the map**: a zone's or a dungeon's card under the map shows its
       stars earned of all there are (★ 3/15), once the Hall is open
 - [x] **Secret medals**: three medals not shown (nor counted) until earned: Good Companion (pat

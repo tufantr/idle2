@@ -287,10 +287,18 @@ export function createScene(root, actions) {
         const c = state.combat;
         let nodes;
         if (c.mode === 'dungeon') {
+            // a run's rooms as the portraits of who waits in them: beaten ones grey, a kind never met a silhouette
             const d = dungeonById(c.dungeon?.id);
             const total = d ? d.monsters.length + 1 : 1;
             const at = c.dungeon?.index || 0;
-            nodes = Array.from({ length: total }, (_, i) => ({ label: i + 1, state: i < at ? 'done' : i === at ? 'now' : 'next', boss: i === total - 1, title: i === total - 1 ? 'Dungeon boss' : `Room ${i + 1}` }));
+            const kills = state.stats.killsByMonster || {};
+            nodes = Array.from({ length: total }, (_, i) => {
+                const name = d ? (i < d.monsters.length ? d.monsters[i].name : d.boss.name) : '';
+                const st = i < at ? 'done' : i === at ? 'now' : 'next';
+                const met = st !== 'next' || (kills[name] || 0) > 0;
+                const boss = i === total - 1;
+                return { label: i + 1, state: st, boss, portrait: name ? sprite(`mon/${name}`, { scale: 0.75, cls: `soft${met ? '' : ' silhouette'}` }) : '', title: `${boss ? 'The boss' : `Room ${i + 1}`}${met && name ? `: ${name}` : ''}` };
+            });
         } else if (c.mode === 'titan') {
             nodes = [{ label: 'T', state: 'now', boss: true, title: 'The Titan' }];
         } else {
@@ -305,8 +313,8 @@ export function createScene(root, actions) {
         if (key === lastPathKey) return;
         lastPathKey = key;
         el.path.innerHTML = nodes.map(n => {
-            const face = n.boss ? SKULL : `<span>${n.label}</span>`;
-            return `<li class="${n.state}${n.boss ? ' boss' : ''}">${n.go
+            const face = n.portrait || (n.boss ? SKULL : `<span>${n.label}</span>`);
+            return `<li class="${n.state}${n.boss ? ' boss' : ''}${n.portrait ? ' portrait' : ''}">${n.go
                 ? `<button type="button" data-stage="${n.label}" title="Go to ${n.title}" aria-label="Go to ${n.title}">${face}</button>`
                 : `<b title="${n.title}${n.state === 'now' ? ' (here)' : n.state === 'next' ? ' (not reached yet)' : ''}">${face}</b>`}</li>`;
         }).join('');
