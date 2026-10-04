@@ -294,8 +294,14 @@ function dungeonTask() {
     const end = now + 30 * 60000;
     return {
         kind: 'dungeon', id: pick.id, why: `run ${pick.name}`,
-        // When time is up, stop repeating and let the current run finish.
-        until: () => { if (now >= end) game.setDungeonRepeat(false); return S.combat.mode !== 'dungeon'; }
+        // When time is up, stop repeating, let the current run finish, and end the dungeon at its chest.
+        until: () => {
+            if (now >= end) {
+                game.setDungeonRepeat(false);
+                if (S.combat.dungeon?.choiceLeft > 0) game.dungeonEnd();
+            }
+            return S.combat.mode !== 'dungeon';
+        }
     };
 }
 
@@ -476,7 +482,7 @@ function apply(task) {
     else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
     else if (task.kind === 'tool') ok = game.startToolCraft(task.tool, task.tier);
     else if (task.kind === 'agility') ok = game.startAgility();
-    else if (task.kind === 'dungeon') { game.setDungeonRepeat(true); ok = game.enterDungeon(task.id); if (ok) lastStageGainAt = now; }
+    else if (task.kind === 'dungeon') { ok = game.enterDungeon(task.id); if (ok) { game.setDungeonRepeat(true); lastStageGainAt = now; } }   // the player keeps going, decided up front
     else if (task.kind === 'farm') {
         game.enterCombat();
         if (task.stage) { game.setStage(task.stage); game.setFarmMode(true); }

@@ -360,11 +360,14 @@ the Abyss repeats with a depth counter and steeper growth.
 monsters (×1.4 HP, ×1.15 ATK) and a boss (×1.5 on top of the boss multipliers) with a **60-second
 timer**, fought with the gear you walk in with — gear is locked inside, and the run starts at full
 health. Dying, leaving or running out of time loses the run; clearing it (the boss falls) is a win
-that opens a chest, and **Repeat after each clear** (on by default) starts the next run, so an
-idle hero farms the dungeon; off, the hero goes back to the stages. Runs continue offline. During a
-run the fight's dock leads with a panel of its own: the clears so far, the unique's fragments (with
-Assemble once there are 50) and the Repeat switch; the first clear of each dungeon is a card that
-says what the runs are for.
+that opens a chest. **After the first clear of a visit the hero waits at the open chest** (it stands in
+the boss's place on the scene) and a dialog offers **Keep going** (the run starts again after every
+clear, until the hero leaves; an ∞ marks it) or **End the dungeon** (back to the stage the hero left,
+fighting on). With no answer in `DUNGEON_CHOICE_MS` (30 s), or with nobody there while away, the hero
+keeps going, so idle time is never lost; leaving while waiting is not a failure, as the run is won.
+There is no standing repeat switch any more (old saves drop `combat.autoRepeat`). During a run the
+fight's dock leads with a panel of its own: the clears, the unique's fragments (Assemble once there are
+50), the choice while waiting with its countdown, and the run's orders (Leave dungeon, Map).
 
 | Dungeon | Opens at | Like stages | Boss (HP / ATK) | Chest loot tier | Unique |
 |---|---|---|---|---|---|

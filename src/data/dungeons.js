@@ -11,6 +11,10 @@
 // the chest (the zone's gearTier there); essence and gems follow the zone's richness tier.
 
 export const DUNGEON_BOSS_TIME_MS = 60000;
+// After the first clear of a visit the hero waits at the chest while the player chooses to keep going
+// (the run repeats until the hero leaves) or to end the dungeon. With no answer in this time (or with
+// nobody there, while away) the hero keeps going, so idle time is never lost.
+export const DUNGEON_CHOICE_MS = 30000;
 export const ELITE_HP_MULT = 1.4;
 export const ELITE_ATK_MULT = 1.15;
 export const DUNGEON_BOSS_HP_MULT = 1.5;   // on top of the normal boss multipliers

@@ -21,8 +21,8 @@ import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from 
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
-import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
-import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
+import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS } from '../data/dungeons.js';
+import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique, choosingAfterClear } from '../systems/dungeon.js';
 import { PETS, PET_BASE, companionPet } from '../data/pets.js';
 import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
@@ -291,7 +291,7 @@ function fightingWhere(state) {
     const c = state.combat;
     if (c.mode === 'titan') return c.enemy?.name || 'the Titan';
     const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
-    if (run) return `${run.name} ${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}`;
+    if (run) return choosingAfterClear(state) ? `${run.name} cleared` : `${run.name} ${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}`;
     return `${zoneForStage(c.stage).name} stage ${c.stage}`;
 }
 
@@ -431,9 +431,10 @@ function combatMain(game) {
 function combatOrders(game, ui) {
     const state = game.state;
     const c = state.combat;
-    const leave = c.mode === 'dungeon' ? 'Abandon run' : c.mode === 'titan' ? 'Give up' : 'Retreat';
+    const leave = c.mode === 'dungeon' ? 'Leave dungeon' : c.mode === 'titan' ? 'Give up' : 'Retreat';
     const orders = [
-        c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">${ICON_FLAG} ${leave}</button>` : '',
+        // at the chest after a clear the run panel offers the two ways on instead
+        c.active && !choosingAfterClear(state) ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">${ICON_FLAG} ${leave}</button>` : '',
         // fallen and resting: he goes back in by himself, unless told to stay
         !c.active && c.recovering ? `<button class="mini-btn retreat-btn" onclick="FI.stayAtCamp()" title="Rest without going back into the fight">${ICON_MOON} Stay at camp</button>` : '',
         // Folded away mid-fight: one button brings the full screen back.
@@ -466,25 +467,65 @@ export function renderCombat(game, ui) {
 // waiting in the bag. A player can fight, spend, prestige and fight on without leaving it.
 
 /**
- * A dungeon run, in the dock (and the combat tab): how many times it has been won, the unique's
- * fragments with Assemble once there are enough, and the switch that starts the run again after
- * each clear (or not). A clear is a win: the chest opens and, with the switch on, the run starts over.
+ * A dungeon run, in the dock (and the combat tab): how many times it has been won and the unique's
+ * fragments (Assemble once there are enough). After the first clear of a visit the hero waits at the
+ * chest and the panel offers Keep going or End the dungeon, with the time left before keeping going
+ * on its own; once the player keeps going, an ∞ says the runs go on until the hero leaves.
  */
-function renderRunPanel(game, cls = 'dock-group') {
+function renderRunPanel(game, cls = 'dock-group', orders = '') {
     const state = game.state;
     const c = state.combat;
     const d = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
     if (!d) return '';
     const record = state.dungeons[d.id];
+    const choosing = choosingAfterClear(state);
+    return `<div class="${cls} dock-run${choosing ? ' choosing' : ''} ${painted(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}">
+        <div class="run-clears" title="Each clear opens a chest and gives a fragment">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span>${c.dungeon.repeat ? '<span class="run-loop" title="Runs again after each clear, until you leave">∞</span>' : ''}</div>
+        ${uniqueProgress(state, d)}
+        ${choosing ? `${runChoiceButtons(game)}${runCountdown(c)}` : ''}
+        ${orders ? `<div class="run-orders">${orders}</div>` : ''}
+    </div>`;
+}
+
+/** A dungeon's unique: its fragments as a bar, and Assemble once there are enough. */
+function uniqueProgress(state, d) {
+    const record = state.dungeons[d.id];
     const unique = UNIQUES[d.unique];
     const owned = ownsUnique(state, d.unique);
-    const ready = record.fragments >= FRAGMENTS_PER_UNIQUE;
-    return `<div class="${cls} dock-run ${painted(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}">
-        <div class="run-clears" title="Each clear opens a chest and gives a fragment">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span></div>
-        <div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of the ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: owned ? '' : 'silhouette', fallback: '🌟' })}
+    return `<div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of the ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: owned ? '' : 'silhouette', fallback: '🌟' })}
             <span class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></span><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
-        ${ready ? `<button class="prestige-btn run-assemble" onclick="FI.assembleUnique('${d.id}')">${owned ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
-        <label class="toggle run-repeat" title="On: after the boss falls and the chest opens, the run starts again. Off: back to the stages."><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>
+        ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="prestige-btn run-assemble" onclick="FI.assembleUnique('${d.id}')">${owned ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}`;
+}
+
+/** The choice after a clear: run it again and again, or end the dungeon (back to the stage the hero left). */
+function runChoiceButtons(game) {
+    const c = game.state.combat;
+    const back = `${zoneForStage(c.stage).name}, stage ${c.stage}`;
+    return `<div class="run-choice-btns">
+        <button class="prestige-btn run-keep" onclick="FI.dungeonKeepGoing()"><b>Keep going</b><span>Again and again, until you leave</span></button>
+        <button class="modal-btn btn-cancel run-end" onclick="FI.dungeonEnd()"><b>End the dungeon</b><span>Back to ${esc(back)}</span></button>
+    </div>`;
+}
+
+/** The time left at the chest, a bar that drains (patchLive keeps it moving) before the hero keeps going. */
+const runCountdown = c => `<div class="run-countdown" style="--p:${(c.dungeon.choiceLeft / DUNGEON_CHOICE_MS * 100).toFixed(1)}%"><i></i><span>Keeps going on its own in <b>${Math.ceil(c.dungeon.choiceLeft / 1000)}</b> s</span></div>`;
+
+/** After the first clear of a visit: the dungeon won, its clears and the unique's fragments, and the choice. */
+export function renderRunChoiceModal(game) {
+    const state = game.state;
+    const c = state.combat;
+    const d = choosingAfterClear(state) ? dungeonById(c.dungeon.id) : null;
+    if (!d) return '';
+    const record = state.dungeons[d.id];
+    return `<div class="modal-content narrow about-card run-choice">
+        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}" aria-hidden="true"></div>
+        <div class="run-choice-head"><span class="run-kicker">Dungeon cleared</span><div class="modal-header">${esc(d.name)}</div></div>
+        <div class="run-choice-facts">
+            <div class="run-clears">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span></div>
+            ${uniqueProgress(state, d)}
+        </div>
+        ${runChoiceButtons(game)}
+        ${runCountdown(c)}
     </div>`;
 }
 
@@ -520,12 +561,13 @@ function renderLoopActions(game) {
 function renderBattleDock(game, ui) {
     const state = game.state;
     const orders = combatOrders(game, ui);
+    const inRun = state.combat.mode === 'dungeon' && !!dungeonById(state.combat.dungeon?.id);   // a dungeon's orders go in its own panel
     return `<section class="battle-dock" aria-label="Orders for the fight">
-        ${renderRunPanel(game)}
+        ${inRun ? renderRunPanel(game, 'dock-group', orders) : ''}
         <div class="dock-group dock-main ${painted('supplies', 'center 55%')}">${combatMain(game)}</div>
         ${renderCampTokens(game)}
         ${renderLoopActions(game)}
-        ${orders ? `<div class="dock-group dock-orders ${painted('wartable', 'center 50%')}">${orders}</div>` : ''}
+        ${orders && !inRun ? `<div class="dock-group dock-orders ${painted('wartable', 'center 50%')}">${orders}</div>` : ''}
     </section>
     ${renderBattleLog(state, ui)}`;
 }
@@ -1630,14 +1672,14 @@ export function renderDungeons(game) {
                     <div class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></div><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
                 <div class="muted small">${record.clears} clear${record.clears === 1 ? '' : 's'}${next ? ` · at ${next.clears}: ${next.desc}` : ' · every bonus earned'}${done.length ? ` · earned: ${done.join('; ')}` : ''}</div>
                 <div class="btn-row">
-                    ${here ? '<button class="mini-btn danger" onclick="FI.toggleCombat()">Abandon run</button>' : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
+                    ${here ? (choosingAfterClear(state) ? '<button class="prestige-btn" onclick="FI.openRunChoice()">Cleared: keep going?</button>' : '<button class="mini-btn danger" onclick="FI.toggleCombat()">Leave dungeon</button>') : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
                     ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${ownsUnique(state, d.unique) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique) ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
                 </div>`
                 : `<div class="req">Opens at stage ${d.unlockStage}</div>`}
             </div>
         </div>`;
     }).join('');
-    return `${banner('dungeons', { extra: `<label class="toggle"><input type="checkbox" onchange="FI.setDungeonRepeat(this.checked)" ${c.autoRepeat ? 'checked' : ''}> Repeat after each clear</label>` })}
+    return `${banner('dungeons')}
     <section class="glass-panel ${painted('dungeon', 'center 50%')}">
         <div class="dungeon-grid">${cards}</div>
     </section>
@@ -2006,6 +2048,14 @@ export function patchLive(game, ui) {
     const d = game.derived;
     const action = resolveAction(state);
     set2('hdr-hp', fmt(state.combat.hp));
+    if (choosingAfterClear(state)) {   // the wait at the chest, draining
+        const left = state.combat.dungeon.choiceLeft;
+        for (const el of document.querySelectorAll('.run-countdown')) {
+            el.style.setProperty('--p', `${(left / DUNGEON_CHOICE_MS * 100).toFixed(1)}%`);
+            const n = el.querySelector('b');
+            if (n) n.textContent = String(Math.ceil(left / 1000));
+        }
+    }
     if (action && state.action) {
         const interval = intervalFor(action, d);
         const fillId = action.kind === 'node' ? `progress-${action.skill}-${action.id}` : action.kind === 'agility' ? 'progress-agility-course' : null;

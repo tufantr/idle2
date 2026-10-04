@@ -2159,6 +2159,27 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .dock-loop { flex: 1 1 210px; }
 /* a dungeon run: its clears, the unique's fragments and the repeat switch */
 .dock-group.dock-run { flex: 1 1 230px; gap: 0.45rem; }   /* in the dock's row; in the tab's column a basis would be a height */
+.run-orders .combat-side { flex-direction: row; flex-wrap: wrap; gap: 0.4rem; min-width: 0; padding: 0; border: 0; }
+.run-orders .combat-side > * { flex: 1 1 auto; }
+.run-loop { margin-left: auto; padding: 0 0.55rem; border-radius: 999px; font-size: 1.15rem; font-weight: 800; line-height: 1.5; color: #fde68a; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(252, 211, 77, 0.45); }
+/* after a clear: keep going, or end the dungeon, and the time left before it keeps going on its own */
+.dock-run.choosing { border-color: rgba(252, 211, 77, 0.7); box-shadow: 0 0 18px rgba(252, 211, 77, 0.25); }
+.run-choice-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.run-choice-btns button { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; padding: 0.6rem 0.7rem; text-align: center; }
+.run-choice-btns b { font-size: 0.95rem; }
+.run-choice-btns span { font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
+.run-countdown { position: relative; display: flex; flex-direction: column; gap: 0.25rem; }
+.run-countdown i { display: block; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #fcd34d var(--p), rgba(0, 0, 0, 0.45) var(--p)); }
+.run-countdown span { font-size: 0.75rem; color: var(--text-muted); text-align: center; }
+.run-choice .modal-header { margin-bottom: 0.2rem; }
+.run-choice-head { text-align: center; }
+.run-kicker { display: block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #fcd34d; }
+.run-choice-facts { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.4rem 0 0.9rem; }
+.run-choice .run-choice-btns { margin-bottom: 0.7rem; }
+/* the chest in the monster's place after a clear */
+.foe.chest .fighter-bars, .foe.chest .attack-bar, .foe.chest .fighter-meta { visibility: hidden; }
+.foe.chest .foe-icon { filter: drop-shadow(0 0 14px rgba(252, 211, 77, 0.65)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.6)); }
+.foe.chest .fighter-name { color: #fde68a; }
 .glass-panel.dock-run { display: flex; flex-direction: column; gap: 0.5rem; }
 .run-clears { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
 .run-clears b { font-family: var(--font-display); font-size: 1.35rem; color: var(--heading); }

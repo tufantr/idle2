@@ -8,7 +8,7 @@ import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } fro
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
-import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan } from './dungeon.js';
+import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan, choosingAfterClear, tickDungeonChoice } from './dungeon.js';
 import { COMBAT_PET_SECONDS } from '../data/pets.js';
 import { eventProgress } from './events.js';
 import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
@@ -42,7 +42,7 @@ export function enterCombat(game) {
     c.recovering = false;
     c.combo = 0;
     if (c.hp <= 0) c.hp = game.derived.maxHp;
-    if (!c.enemy || (c.mode === 'stages' && c.enemy.stage !== c.stage)) spawnEnemy(game);
+    if ((!c.enemy && !choosingAfterClear(state)) || (c.mode === 'stages' && c.enemy?.stage !== c.stage)) spawnEnemy(game);
     game.markDirty();
 }
 
@@ -389,6 +389,7 @@ export function tickCombat(game, dt) {
         }
         return;
     }
+    if (choosingAfterClear(state)) { tickDungeonChoice(game, dt); return; }   // waiting at the chest after a clear
     if (!c.enemy) spawnEnemy(game);
 
     if (c.combo > 0 && game.now - (c.lastComboAt || 0) > BALANCE.combat.comboDecayAfterMs) {
@@ -413,6 +414,7 @@ export function tickCombat(game, dt) {
             const target = c.enemy;
             const leftover = c.playerTimer;
             playerAttack(game);
+            if (choosingAfterClear(state)) break;   // the run is won: no monster now, the hero waits at the chest
             // A kill spawns the next enemy with fresh timers; it has been there for the rest of this step.
             if (c.active && c.enemy !== target) {
                 c.playerTimer = leftover;

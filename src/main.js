@@ -5,7 +5,8 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
+import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
@@ -21,7 +22,7 @@ import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
-import { dungeonById, UNIQUES, FRAGMENTS_PER_UNIQUE } from './data/dungeons.js';
+import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
 import { nextLook, lookForMedal } from './data/looks.js';
@@ -100,7 +101,8 @@ const scene = createScene(document.getElementById('scene'), {
     stage: n => { game.setStage(n); render(); },
     map: () => window.FI.openMap(),
     sound: name => sound.play(name),
-    pat: () => game.patPet()
+    pat: () => game.patPet(),
+    chest: () => window.FI.openRunChoice()
 });
 
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
@@ -490,16 +492,13 @@ function handleEvents(events) {
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
-            case 'dungeonClear': {
-                const d = dungeonById(ev.dungeon);
-                if (ev.clears === 1 && d) {   // the first win: a card that says what the runs are for, and that they go on
-                    const u = UNIQUES[d.unique];
-                    rewards.celebrate({ key: `dungeon:${d.id}:first`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`uniq/${d.unique}`, { scale: 2, cls: 'silhouette' }),
-                        kicker: `${d.name} cleared`, title: `A fragment of the ${u.name}`, lines: [`${game.state.dungeons[d.id].fragments} of ${FRAGMENTS_PER_UNIQUE}`],
-                        note: game.state.combat.autoRepeat ? 'Every clear opens a chest and gives a fragment. The run starts again while “Repeat after each clear” is on.' : 'Every clear opens a chest and gives a fragment.', ms: 6500 });
-                } else if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate'));
+            case 'dungeonClear':   // the first clear of a visit asks (dungeonChoice); while it repeats, a note every tenth
+                if (game.state.combat.dungeon?.repeat && ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate'));
                 break;
-            }
+            case 'dungeonChoice':   // the hero waits at the open chest: once the boss's fall and the chest have shown, ask
+                setTimeout(() => window.FI.openRunChoice(), 1500);
+                break;
+            case 'dungeonChosen': if (ui.modalOpen === 'runChoice') closeModal(); break;
             case 'dungeonFail': toast('The dungeon run failed', 'death'); break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
                 const zone = ZONES.find(z => z.id === ev.zone);
@@ -765,7 +764,10 @@ window.FI = {
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
     enterDungeon(id) { if (game.enterDungeon(id)) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
-    setDungeonRepeat(on) { game.setDungeonRepeat(on); render(); },
+    /** After the first clear of a visit: the choice, in a dialog over whatever is on screen. */
+    openRunChoice() { if (choosingAfterClear(game.state) && !ui.modalOpen) openModal(renderRunChoiceModal(game), 'runChoice'); },
+    dungeonKeepGoing() { if (game.dungeonKeepGoing()) sound.play('unlock'); if (ui.modalOpen === 'runChoice') closeModal(); render(); },
+    dungeonEnd() { game.dungeonEnd(); if (ui.modalOpen === 'runChoice') closeModal(); render(); },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
     challengeTitan() { if (game.challengeTitan()) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
 

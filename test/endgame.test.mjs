@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_COOLDOWN_MS, TITAN_UNLOCK_STAGE, TITAN_TIME_MS, TITAN_BONUS, DUNGEON_MILESTONES, CHEST_ESSENCE_PER_TIER } from '../src/data/dungeons.js';
+import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_COOLDOWN_MS, TITAN_UNLOCK_STAGE, TITAN_TIME_MS, TITAN_BONUS, DUNGEON_MILESTONES, CHEST_ESSENCE_PER_TIER, DUNGEON_CHOICE_MS } from '../src/data/dungeons.js';
+import { migrateState } from '../src/core/state.js';
 import { GEAR_TIERS } from '../src/data/items.js';
 import { BALANCE, enemyForStage, goldForKill } from '../src/core/formulas.js';
 import { killPayout, onEnemyDeath, spawnEnemy } from '../src/systems/combat.js';
@@ -59,22 +60,74 @@ test('dungeons open at their stage and a strong hero clears one for a chest and 
     assert.ok(record.fragments >= 1);
     assert.equal(game.state.stats.dungeonClears, 1);
     assert.ok(game.state.resources.essence >= essenceBefore + Math.round(CHEST_ESSENCE_PER_TIER * warren.chestTier), 'the chest holds essence');
-    assert.equal(events(game, 'dungeonClear').length, 1);
-    // Repeat is on by default: the run starts again.
+    const first = game.drainEvents();
+    assert.equal(first.filter(e => e.type === 'dungeonClear').length, 1);
+    // The first clear of a visit: the hero waits at the open chest while the player chooses.
+    assert.equal(first.filter(e => e.type === 'dungeonChoice').length, 1);
     assert.equal(c.mode, 'dungeon');
-    assert.equal(c.dungeon.index, 0);
+    assert.ok(c.dungeon.choiceLeft > 0);
+    assert.equal(c.enemy, null, 'no monster while waiting');
+    assert.equal(game.clickAttack(), false, 'nothing to strike');
 
-    // Over many clears the chest sometimes holds gear, and every clear holds a fragment.
+    // Keep going: the run starts again, and runs on without asking again.
+    assert.ok(game.dungeonKeepGoing());
+    assert.equal(c.dungeon.index, 0);
+    assert.equal(c.dungeon.choiceLeft, 0);
+    assert.ok(c.enemy);
     runUntil(game, () => record.clears >= 40, 60 * 60 * 1000);
     assert.equal(record.clears, 40);
     assert.ok(record.fragments >= 40);
     assert.ok(game.state.stats.itemsDropped >= 3, `gear from 40 chests: ${game.state.stats.itemsDropped}`);
+    assert.equal(game.drainEvents().filter(e => e.type === 'dungeonChoice').length, 0, 'asked once a visit');
+});
 
-    game.setDungeonRepeat(false);
-    runUntil(game, () => record.clears >= 41);
-    assert.equal(c.mode, 'stages', 'with repeat off the hero returns to the stage ladder');
+test('after the first clear: end the dungeon, back to the stages fighting on; or no answer keeps going', () => {
+    const game = newGame({ bestStage: 20, tokens: 20000 });
+    game.state.combat.stage = 14;
+    game.enterDungeon(warren.id);
+    const c = game.state.combat;
+    runUntil(game, () => c.dungeon?.choiceLeft > 0);
+    assert.equal(game.dungeonEnd(), true);
+    assert.equal(c.mode, 'stages');
     assert.equal(c.dungeon, null);
-    assert.equal(c.active, true);
+    assert.equal(c.active, true, 'fighting on');
+    assert.equal(c.stage, 14, 'where the hero was');
+    assert.equal(game.drainEvents().filter(e => e.type === 'dungeonFail').length, 0, 'ending a won dungeon is no failure');
+    assert.equal(game.dungeonEnd(), false, 'nothing to end now');
+
+    // the next visit asks again; with no answer for 30 s the hero keeps going
+    game.enterDungeon(warren.id);
+    runUntil(game, () => c.dungeon?.choiceLeft > 0);
+    const clears = game.state.dungeons[warren.id].clears;
+    game.drainEvents();
+    runUntil(game, () => !(c.dungeon?.choiceLeft > 0), DUNGEON_CHOICE_MS + 1000);
+    assert.equal(c.mode, 'dungeon');
+    assert.equal(c.dungeon.repeat, true);
+    assert.deepEqual(game.drainEvents().filter(e => e.type === 'dungeonChosen').map(e => [e.keep, e.auto]), [[true, true]]);
+    runUntil(game, () => game.state.dungeons[warren.id].clears > clears);
+    assert.equal(c.mode, 'dungeon', 'and runs on');
+});
+
+test('leaving while waiting at the chest ends the dungeon without a failure; a save keeps the wait', () => {
+    const game = newGame({ bestStage: 20, tokens: 20000 });
+    game.enterDungeon(warren.id);
+    const c = game.state.combat;
+    runUntil(game, () => c.dungeon?.choiceLeft > 0);
+    const saved = JSON.parse(game.serialize(T0));
+    const loaded = migrateState(saved, T0);
+    assert.ok(loaded.combat.dungeon.choiceLeft > 0, 'still waiting after a reload');
+    assert.equal(loaded.combat.enemy, null);
+    assert.equal(loaded.combat.dungeon.index, warren.monsters.length + 1);
+    saved.combat.autoRepeat = false;                // the old switch, from before the choice
+    assert.equal(migrateState(saved, T0).combat.autoRepeat, undefined);
+
+    game.drainEvents();
+    game.toggleCombat();                            // Retreat, while waiting
+    assert.equal(c.mode, 'stages');
+    assert.equal(c.active, false);
+    const ev = game.drainEvents();
+    assert.equal(ev.filter(e => e.type === 'dungeonFail').length, 0);
+    assert.equal(ev.filter(e => e.type === 'dungeonChosen' && !e.keep).length, 1);
 });
 
 test('a clear tells what the chest held, and the 25th clear brings its lasting bonus', () => {

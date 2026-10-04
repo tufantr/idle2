@@ -13,7 +13,7 @@ import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, d
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
-import { enterDungeon, returnToStages, setDungeonRepeat, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
+import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
@@ -196,6 +196,10 @@ export class Game {
     enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
     leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }
     setDungeonRepeat(on) { return setDungeonRepeat(this, on); }
+    /** After a clear: run the dungeon again and again, until the hero leaves. */
+    dungeonKeepGoing() { return this._act(() => keepGoing(this)); }
+    /** After a clear: end the dungeon, back to the stages. */
+    dungeonEnd() { return this._act(() => endDungeon(this)); }
     assembleUnique(id) { return this._act(() => assembleUnique(this, id)); }
     titanReady() { return titanReady(this.state, this.now); }
     challengeTitan() { return this._act(() => challengeTitan(this)); }

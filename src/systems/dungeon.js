@@ -4,7 +4,7 @@
 import {
     DUNGEONS, dungeonById, UNIQUES, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, DIRECT_UNIQUE_CHANCE,
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE,
-    ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS,
+    ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS,
     TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES
 } from '../data/dungeons.js';
 import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, BALANCE } from '../core/formulas.js';
@@ -97,7 +97,7 @@ export function enterDungeon(game, id) {
         failDungeon(game, `you left for ${d.name}`);
     }
     c.mode = 'dungeon';
-    c.dungeon = { id, index: 0 };
+    c.dungeon = { id, index: 0, repeat: false, choiceLeft: 0 };   // the first clear asks whether to keep going
     c.regroupLeft = 0;
     spawnEnemy(game);
     enterCombat(game);
@@ -116,8 +116,59 @@ export function returnToStages(game) {
     game.markDirty();
 }
 
+/** Is the hero waiting at the chest after a clear, for the player to keep going or end the dungeon? */
+export function choosingAfterClear(state) {
+    const c = state.combat;
+    return c.mode === 'dungeon' && !!c.dungeon && (c.dungeon.choiceLeft || 0) > 0;
+}
+
+/** A run from its first room, rested. */
+function startRun(game) {
+    const c = game.state.combat;
+    c.dungeon.index = 0;
+    c.dungeon.choiceLeft = 0;
+    c.hp = game.derived.maxHp;
+    spawnEnemy(game);
+    game.markDirty();
+}
+
+/** Whether this visit runs the dungeon again after each clear (for the simulator and the tests; players choose after the first clear). */
 export function setDungeonRepeat(game, on) {
-    game.state.combat.autoRepeat = !!on;
+    const c = game.state.combat;
+    if (c.mode === 'dungeon' && c.dungeon) c.dungeon.repeat = !!on;
+}
+
+/** After a clear: run the dungeon again and again, until the hero leaves. */
+export function keepGoing(game) {
+    const c = game.state.combat;
+    if (c.mode !== 'dungeon' || !c.dungeon) return false;
+    c.dungeon.repeat = true;
+    if (c.dungeon.choiceLeft > 0) {
+        startRun(game);
+        game.emit({ type: 'dungeonChosen', keep: true });
+    }
+    return true;
+}
+
+/** After a clear: the dungeon is done, and the hero goes back to the stages, fighting on. */
+export function endDungeon(game) {
+    const state = game.state;
+    if (!choosingAfterClear(state)) return false;
+    const d = dungeonById(state.combat.dungeon.id);
+    log(game, `${d.icon} Left ${d.name}, cleared (${state.dungeons[d.id].clears} clears in all).`, 'combat');
+    returnToStages(game);
+    game.emit({ type: 'dungeonChosen', keep: false });
+    return true;
+}
+
+/** The hero waits at the chest; no answer in time means keep going. */
+export function tickDungeonChoice(game, dt) {
+    const c = game.state.combat;
+    c.dungeon.choiceLeft = Math.max(0, c.dungeon.choiceLeft - dt);
+    if (c.dungeon.choiceLeft > 0) return;
+    c.dungeon.repeat = true;
+    startRun(game);
+    game.emit({ type: 'dungeonChosen', keep: true, auto: true });
 }
 
 /** True if a copy of this unique is worn or in the bag. */
@@ -153,8 +204,13 @@ export function onDungeonKill(game) {
     c.dungeon.index += 1;
     if (c.dungeon.index > d.monsters.length) {
         completeDungeon(game, d);
-        if (c.autoRepeat) { c.dungeon.index = 0; c.hp = game.derived.maxHp; } // every run starts rested
-        else { returnToStages(game); return; }
+        if (c.dungeon.repeat) { startRun(game); return; }   // kept going: every run starts rested
+        // the first clear of this visit: the hero waits at the open chest for the player's choice
+        c.dungeon.choiceLeft = DUNGEON_CHOICE_MS;
+        c.enemy = null;
+        game.emit({ type: 'dungeonChoice', dungeon: d.id, clears: state.dungeons[d.id].clears, waitMs: DUNGEON_CHOICE_MS });
+        game.markDirty();
+        return;
     }
     spawnEnemy(game);
 }
@@ -228,6 +284,10 @@ export function assembleUnique(game, dungeonId) {
 /** Called by combat when the player dies or a dungeon boss outlasts its timer. */
 export function failDungeon(game, reason) {
     const c = game.state.combat;
+    if (choosingAfterClear(game.state)) {   // the run is already won: leaving now loses nothing
+        endDungeon(game);
+        return;
+    }
     const d = dungeonById(c.dungeon?.id);
     log(game, `${d?.icon || '🕳️'} ${d?.name || 'Dungeon'} run failed: ${reason}. Progress in the run is lost.`, 'death');
     game.emit({ type: 'dungeonFail', dungeon: d?.id, reason });

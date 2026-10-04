@@ -68,6 +68,9 @@ function chestLoot(ev, state) {
     return `<span class="chest-loot">${bits.map((b, i) => `<span class="cl ${b.cls || ''}" style="--i:${i}${b.style || ''}" title="${esc(b.title || '')}">${b.pic}${b.count ? `<b>${b.count}</b>` : ''}</span>`).join('')}</span>`;
 }
 
+// What stands in the monster's place while the hero waits at a cleared dungeon's chest.
+const CHEST = Object.freeze({ chest: true, name: 'The chest', hp: 1, maxHp: 1, interval: 1000 });
+
 // Deterministic scatter for the ambient particles (positions, delays, sizes), so the markup is stable.
 const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
     `<i style="--x:${(i * 53 + 7) % 100}%;--y:${(i * 37 + 11) % 90}%;--d:${((i * 0.73) % 7).toFixed(2)}s;--s:${(0.6 + ((i * 7) % 5) / 5).toFixed(2)};--t:${(0.8 + ((i * 3) % 5) / 10).toFixed(2)}"></i>`
@@ -280,6 +283,7 @@ export function createScene(root, actions) {
 
     function currentEnemy(state) {
         const c = state.combat;
+        if (c.mode === 'dungeon' && !c.enemy && c.dungeon?.choiceLeft > 0) return CHEST;   // the run won: its chest stands there
         if (c.enemy && (c.mode !== 'stages' || c.enemy.stage === c.stage)) return c.enemy;
         if (!preview || preview.stage !== c.stage) preview = enemyForStage(c.stage);
         return preview;
@@ -351,6 +355,17 @@ export function createScene(root, actions) {
     function showEnemy(game, enemy, silent) {
         const c = game.state.combat;
         lastFoeScale = fighterScale();
+        el.foe.classList.toggle('chest', !!enemy.chest);
+        if (enemy.chest) {   // after a clear: the open chest where the boss fell, a tap away from the choice
+            el.foeIcon.innerHTML = sprite('crate', { scale: Math.max(2, lastFoeScale - 2), fallback: '📦' });   // a box fills its cell: smaller than a monster
+            setText(el.foeName, 'Cleared!');
+            el.foe.classList.remove('boss', 'elite', 'gilded');
+            el.foe.setAttribute('aria-label', 'The chest: keep going, or end the dungeon');
+            el.foe.title = 'Keep going, or end the dungeon';
+            setMarkup(el.foeMeta, '');
+            if (!silent) move(el.foeSprite, 'spawn');
+            return;
+        }
         el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: lastFoeScale + (enemy.boss ? 1 : 0), fallback: esc(enemy.icon || '👾') });
         setText(el.foeName, enemy.name.replace(' (Boss)', ''));
         el.foe.classList.toggle('boss', !!enemy.boss);
@@ -377,6 +392,7 @@ export function createScene(root, actions) {
     // ---------- the player's hands ----------
 
     el.foe.addEventListener('click', event => {
+        if (lastEnemy?.chest) { actions.chest?.(); return; }   // the chest after a clear: the choice again
         if (!actions.strike()) return;
         move(el.foeSprite, 'hurt');
         if (event.clientX === undefined || (event.clientX === 0 && event.clientY === 0)) return; // keyboard
@@ -430,7 +446,7 @@ export function createScene(root, actions) {
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);
                 setMarkup(el.zone, esc(dg ? dg.name : 'Dungeon'));
-                setText(el.stage, dg ? `Room ${Math.min((c.dungeon?.index || 0) + 1, dg.monsters.length + 1)} of ${dg.monsters.length + 1}` : '');
+                setText(el.stage, dg ? (c.dungeon?.choiceLeft > 0 ? 'Cleared' : `Room ${Math.min((c.dungeon?.index || 0) + 1, dg.monsters.length + 1)} of ${dg.monsters.length + 1}`) : '');
             } else if (c.mode === 'titan') {
                 setMarkup(el.zone, `${sprite('titan/0', { scale: 0.75, cls: 'soft res-spr' })} Titan challenge`);
                 setText(el.stage, `Level ${titanLevel(state)}`);
@@ -448,7 +464,7 @@ export function createScene(root, actions) {
             if (el.heroName.__html !== nameHtml) { el.heroName.innerHTML = nameHtml; el.heroName.__html = nameHtml; }
             setMarkup(el.heroMeta, heroKit(state));
             const enemy = currentEnemy(state);
-            if (enemy === lastEnemy) setMarkup(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
+            if (enemy === lastEnemy && !enemy.chest) setMarkup(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
             const scale = fighterScale();
             const layers = `${scale}|${heroLayers(state).join(',')}`;
             // A pet keeps him company: Fang, the fighting pet, or else the first pet he found.

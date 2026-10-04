@@ -7,7 +7,7 @@ import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MA
 import { PERKS } from '../data/perks.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
-import { DUNGEONS, UNIQUES } from '../data/dungeons.js';
+import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS } from '../data/dungeons.js';
 import { TOOLS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
@@ -50,7 +50,6 @@ export function createDefaultState(now = Date.now()) {
             regroupLeft: 0,    // ms left farming the previous stage after a boss escaped
             mode: 'stages',    // 'stages' | 'dungeon' | 'titan'
             dungeon: null,     // { id, index } while in a dungeon run
-            autoRepeat: true,  // start the dungeon again after each clear
             recovering: false  // fallen: resting to full health, then back into the fight by himself
         },
         dungeons: {},          // id -> { clears, fragments }
@@ -329,8 +328,13 @@ function normalise(data, now) {
         state.combat.mode = 'stages';
         state.combat.dungeon = null;
     } else {
-        run.index = Math.max(0, Math.min(runDungeon.monsters.length, Math.floor(Number(run.index) || 0)));
+        // the room reached; whether the player chose to keep going; the wait at the chest after a clear
+        const choiceLeft = Math.max(0, Math.min(DUNGEON_CHOICE_MS, finite(Number(run.choiceLeft), 0)));
+        const index = choiceLeft > 0 ? runDungeon.monsters.length + 1 : Math.max(0, Math.min(runDungeon.monsters.length, Math.floor(Number(run.index) || 0)));
+        state.combat.dungeon = { id: run.id, index, repeat: run.repeat === true, choiceLeft };
+        if (choiceLeft > 0) state.combat.enemy = null;
     }
+    delete state.combat.autoRepeat;   // the old switch for every visit: now each visit asks after its first clear
     if (!state.dungeons || typeof state.dungeons !== 'object') state.dungeons = {};
     for (const d of DUNGEONS) {
         if (!state.dungeons[d.id] || typeof state.dungeons[d.id] !== 'object') state.dungeons[d.id] = { clears: 0, fragments: 0 };
