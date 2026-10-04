@@ -1704,15 +1704,43 @@ function renderLeaderboard(social) {
 export function renderPrestigeModal(game) {
     const p = game.prestigePreview();
     const state = game.state;
-    return `<div class="modal-content about-card">
+    const count = state.prestige.count;
+    const rank = rankFor(count + 1);
+    const newRank = rank !== rankFor(count);
+    const campLevels = Object.values(state.camp).reduce((a, b) => a + b, 0);
+    // What stays, as pictures of the things this player has met (each with its name on hover).
+    const has = id => isUnlocked(state, id);
+    const owned = [...state.inventory, ...Object.values(state.equipped)].filter(Boolean);
+    const keep = [
+        [tabIcon('mining', 1), 'Every skill and level'],
+        owned.length ? [sprite(itemSpriteKey(owned[0]) || 'item/Body/1', { scale: 1 }), 'All your gear, its upgrades and your tools'] : null,
+        [resIcon('iron_bar', { scale: 1 }), 'Materials, essence, food and potions'],
+        has('achievements') ? [sprite('crown', { scale: 1 }), 'Medals'] : null,
+        [sprite('perk/knight', { scale: 1 }), 'Perks and tokens'],
+        Object.keys(state.pets || {}).some(id => state.pets[id]) ? [sprite('pet/fang', { scale: 1 }), 'Pets'] : null,
+        owned.some(i => i.uniqueId) ? [sprite('uniq/goblin_crown', { scale: 1 }), 'Uniques'] : null,
+        has('dungeons') ? [sprite('crate', { scale: 1 }), 'Dungeon clears and fragments'] : null,
+        titanUnlocked(state) ? [sprite('titan/0', { scale: 1 }), 'Titans defeated'] : null,
+        has('agility') ? [sprite('obstacle/rope_swing', { scale: 1 }), 'The agility course'] : null,
+        has('farming') ? [sprite('farm/growing', { scale: 1 }), 'The farm'] : null
+    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
+    const nextSp = Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage);
+    return `<div class="modal-content about-card prestige-modal">
         <div class="about-art" style="${artStyle('prestige')}" aria-hidden="true"></div>
         <div class="modal-header">Prestige</div>
         <div class="modal-body">
-            <div class="prestige-box"><h4>You keep</h4><span>All skills and levels · all equipment, upgrades and tools · all materials, essence and potions · achievements, perks and tokens · pets, uniques, dungeon clears, Titans · the agility course and farm</span></div>
-            <div class="prestige-box"><h4>You lose</h4><span>Stage progress (restart at stage ${p.startStage}) · ${fmt(state.gold)} gold · camp upgrades (${Object.values(state.camp).reduce((a, b) => a + b, 0)} levels)</span>
-                ${state.gold > 0 ? `<div class="muted small">Gold is run currency: spend it first — agility obstacles and upgrades, seeds, gear upgrades, or an Essence Cache in the Shop.</div>` : ''}</div>
-            <div class="prestige-box highlight"><h4>You gain</h4><span class="prestige-reward">+${p.tokens} tokens</span> <span class="muted">(→ ${fmt(p.tokensAfter)} total, +${Math.round(p.tokensAfter * 0.5)}% ATK/DEF)</span><span class="sp-text">+${p.skillPoints} skill points</span>
-                ${p.fullRun ? '' : `<div class="muted small">No skill point for this run: it takes a run that reaches half your best stage (${Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage)}).</div>`}</div>
+            <div class="pg-gain">
+                <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${Math.round(p.tokensAfter * 0.5)}% attack and defence</small></div>
+                ${p.skillPoints > 0 ? `<div class="pg-get sp"><i class="coin-dot sp" aria-hidden="true"></i><b>+${p.skillPoints} <span>skill point${p.skillPoints === 1 ? '' : 's'}</span></b><small>for perks that last forever</small></div>` : ''}
+                ${newRank ? `<div class="pg-rank">${heroSprite({ ...state, prestige: { ...state.prestige, count: count + 1 } }, { scale: 2 })}<span><small>A new rank</small><b>${esc(rank.name)}</b><small>and a ${esc(rank.cloak)} cloak</small></span></div>` : ''}
+                ${p.fullRun ? '' : `<div class="pg-note muted small">A skill point comes with a run that reaches stage ${nextSp}</div>`}
+            </div>
+            <div class="pg-row"><h4>Starts over</h4>
+                <span class="pg-item"><span class="pg-pip">${p.startStage}</span> back to stage ${p.startStage}</span>
+                <span class="pg-item">${coinIcon(1)} ${fmt(state.gold)} gold</span>
+                ${campLevels ? `<span class="pg-item">${sprite('campfire', { scale: 1 })} the camp (${campLevels} level${campLevels === 1 ? '' : 's'})</span>` : ''}
+            </div>
+            <div class="pg-row"><h4>Everything else stays</h4><span class="pg-keep">${keep}</span></div>
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmPrestige()">Prestige now</button></div>
     </div>`;

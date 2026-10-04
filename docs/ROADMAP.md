@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The prestige dialog in pictures**: what is gained leads, big (the tokens and skill points as
+      their coins, and a new rank with the hero already in its cloak); then what starts over (a stage
+      pip, the gold, the camp) and what stays, as a row of pictures of what this player has met,
+      instead of three paragraphs
 - [x] **A shorter header on a phone**: the purse, then one row for the rest: the fight's pill says
       just "Stage 59", the event's its picture and time, the cloud button is its icon. Content starts
       about 70 px higher on every tab
