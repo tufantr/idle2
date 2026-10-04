@@ -20,7 +20,7 @@ python3 tools/serve.py   # or: npx serve .   (or python3 -m http.server 8000, th
 ```
 
 Then open the printed URL. Add `?dev=1` to unlock every tab and mini-game immediately, and
-`?dev=1&event=guild_fair` (or `harvest_festival`, `titans_fury`, `miners_rush`) to run a weekend event
+`?dev=1&event=guild_fair` (or `harvest_festival`, `titans_fury`, `miners_rush`, `gold_fever`) to run a weekend event
 now. Without the API the game runs as a guest with a local save, and the login dialog says cloud
 saves aren't available on that server.
 

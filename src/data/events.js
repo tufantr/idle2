@@ -1,5 +1,5 @@
 // Weekend events: a template for timed content that needs no server. Every weekend (Friday 00:00 to
-// Monday 00:00 UTC) one of four themed events runs, in rotation by ISO week. While it runs:
+// Monday 00:00 UTC) one of five themed events runs, in rotation by ISO week. While it runs:
 // - its modifiers apply (through the pipeline, like everything else);
 // - every EVENT_ACTIONS_PER_TOKEN actions or kills earn a Festival Token, up to EVENT_DAILY_CAP a day;
 // - milestones pay out at 50 / 100 / 150 tokens earned in that event;
@@ -31,6 +31,12 @@ export const EVENTS = [
         id: 'guild_fair', name: 'Guild Fair', icon: '⚒️', color: '#e879f9',
         desc: 'The guilds compete: +20% workshop and firemaking speed, +5% quality on crafted gear.',
         mods: { skillSpeed: { smithing: 0.20, crafting: 0.20, firemaking: 0.20 }, craftQuality: 0.05 }
+    },
+    {
+        // gildedChance is how much more often gilded monsters come (BALANCE.rewards.gildedChance): +2 = three times
+        id: 'gold_fever', name: 'Gold Fever', icon: '🪙', color: '#facc15',
+        desc: 'The monsters glitter: gilded monsters come three times as often, and +10% gold from combat.',
+        mods: { gildedChance: 2, goldMult: 0.10 }
     }
 ];
 

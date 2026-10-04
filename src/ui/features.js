@@ -66,8 +66,8 @@ export const FEATURES = {
         points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Skipping costs nothing.'] }
 };
 
-// Each weekend event's sprite: the harvest, the Titan, a pickaxe, a bar from the guild halls.
-export const EVENT_ART = { harvest_festival: 'res/pumpkin', titans_fury: 'titan/0', miners_rush: 'tool/pickaxe', guild_fair: 'res/mithril_bar' };
+// Each weekend event's sprite: the harvest, the Titan, a pickaxe, a bar from the guild halls, gold.
+export const EVENT_ART = { harvest_festival: 'res/pumpkin', titans_fury: 'titan/0', miners_rush: 'tool/pickaxe', guild_fair: 'res/mithril_bar', gold_fever: 'gold' };
 
 // Each dungeon's painting (assets/paint): on its card, and behind its fight (src/ui/scene.js).
 export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair', void_citadel: 'citadel' };

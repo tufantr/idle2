@@ -25,7 +25,7 @@ test('an event runs from Friday to Monday (UTC), and the four rotate week by wee
     assert.equal(eventStatus(state, FRIDAY + 72 * H).active, false, 'over on Monday');
     const seen = new Set();
     for (let w = 0; w < EVENTS.length; w++) seen.add(eventStatus(state, FRIDAY + w * 7 * 24 * H + H).event.id);
-    assert.equal(seen.size, EVENTS.length, 'four weekends, four events');
+    assert.equal(seen.size, EVENTS.length, 'as many weekends as events, each once');
 });
 
 test('Festival Tokens: one per 20 actions, capped per day, milestones once per event', () => {
