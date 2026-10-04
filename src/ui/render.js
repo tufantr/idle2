@@ -232,7 +232,7 @@ export function renderHeader(game, ui, cloud) {
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')
-        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.desc)}">${eventIcon(ev.event)} ${esc(ev.event.name)} · ${duration(ev.endsAt - game.now)} left</button>`
+        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></button>`
         : '';
     const focusPill = game.derived.focused
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">Focused +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
@@ -243,7 +243,9 @@ export function renderHeader(game, ui, cloud) {
     if (action) {
         if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</button>`;
     } else if (state.combat.active) {
-        if (ui.tab !== 'combat') status = `<button class="status-pill fighting" onclick="FI.switchTab('combat')">${tabIcon('combat', 0.625)} ${esc(fightingWhere(state))}</button>`;
+        // on a phone the ladder's pill is just the stage, so it shares a row with the others
+        const where = state.combat.mode === 'stages' ? `<span class="pill-long">${esc(fightingWhere(state))}</span><span class="pill-short">Stage ${state.combat.stage}</span>` : esc(fightingWhere(state));
+        if (ui.tab !== 'combat') status = `<button class="status-pill fighting" onclick="FI.switchTab('combat')">${tabIcon('combat', 0.625)} ${where}</button>`;
     } else if (!here) {
         status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }

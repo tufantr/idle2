@@ -305,6 +305,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .focus-pill { border-color: rgba(125, 211, 252, 0.5); color: #bae6fd; background: rgba(56, 189, 248, 0.08); }
 .bonfire-pill { border-color: rgba(249, 115, 22, 0.5); color: #fdba74; background: rgba(249, 115, 22, 0.1); }
 .event-pill { font: inherit; font-size: 0.8rem; color: inherit; cursor: pointer; border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.pill-short { display: none; }  /* a pill's phone wording */
 .daily-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.85rem 0.4rem 0.6rem; border-radius: 999px; font-size: 0.8rem; }
 .daily-btn .spr { margin: -6px 0; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
 .daily-btn.ready { color: #1f1406; font-weight: 800; border-color: #f7d88a; background: linear-gradient(180deg, #e2b95f, #9c7127); animation: liveBadgePulse 1.3s ease-in-out infinite; }
@@ -859,6 +860,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     #header { padding: 0.75rem 0.85rem; }
     .header-row { gap: 0.4rem; }
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
+    .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */
+    .pills .pill-short { display: inline; }
     .chip span, .chip i:not(.spr) { display: none; }
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
     .chip b { font-size: 0.9rem; }
