@@ -15,6 +15,7 @@ import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions }
 import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 import { heroName } from './text.js';
 import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
+import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 
 export const SAVE_VERSION = 3;
 
@@ -64,6 +65,7 @@ export function createDefaultState(now = Date.now()) {
         perks: {},
         achievements: {},
         codex: {},             // "<type>/<tier>" -> true: the gear codex (data/items.js), pages filled
+        chronicle: [{ t: now, kind: 'start', id: '' }],   // the hero's firsts, with their dates (systems/chronicle.js)
         unlocks: {},
         seen: {},              // pieces of the interface that have opened (systems/disclosure.js)
         hero: { name: '', look: DEFAULT_LOOK, pet: '' },    // the name the player gave the hero ('' is "You"), the look (data/looks.js), the pet at their side ('' for the default)
@@ -289,6 +291,10 @@ function normalise(data, now) {
         state[group] = {};
         for (const [key, value] of Object.entries(saved)) if (value === true && /^[a-z0-9_]{1,40}$/.test(key)) state[group][key] = true;
     }
+    // The chronicle: known kinds, with times; a save from before it begins at the save's creation.
+    const story = Array.isArray(data?.chronicle) ? data.chronicle : [{ t: finite(state.meta.createdAt, now), kind: 'start', id: '' }];
+    state.chronicle = story.filter(e => isPlainObject(e) && CHRONICLE_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))
+        .slice(-CHRONICLE_MAX).map(e => ({ t: Number(e.t), kind: e.kind, id: String(e.id ?? '').slice(0, 40) }));
     // The gear codex: known pages only, and every piece worn or carried counts (saves from before it).
     const pages = isPlainObject(state.codex) ? state.codex : {};
     state.codex = {};

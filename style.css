@@ -2066,6 +2066,22 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .codex-cell .spr.silhouette { opacity: 0.55; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.6)); }
 @media (max-width: 600px) { .codex-row { grid-template-columns: 3.6rem repeat(7, minmax(0, 1fr)); gap: 0.2rem; } .codex-type { font-size: 0.7rem; } .codex-cell { width: 100%; height: auto; aspect-ratio: 1; } .codex-cell .spr { --k: 0.75 !important; image-rendering: auto; } }
 
+/* the chronicle: the hero's firsts, newest first, as a timeline */
+.chronicle { list-style: none; margin: 0; padding: 0 0 0 0.2rem; max-height: 440px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; }
+.chronicle li { position: relative; display: grid; grid-template-columns: 4.6rem 40px 1fr; align-items: center; gap: 0.6rem; padding: 0.3rem 0; }
+.chronicle li + li::before { content: ""; position: absolute; left: calc(4.6rem + 0.6rem + 19px); top: -12px; height: 18px; width: 2px; background: rgba(214, 170, 92, 0.3); }
+.chronicle time { font-size: 0.78rem; font-variant-numeric: tabular-nums; color: var(--text-muted); text-align: right; }
+.ch-art { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #3a2c1c, #120d08 75%); border: 1px solid rgba(214, 170, 92, 0.45); }
+.ch-art .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.ch-text { font-size: 0.92rem; color: var(--text-main); }
+.chronicle li:first-child .ch-text { color: var(--heading); font-weight: 700; }
+@media (max-width: 600px) {
+    .chronicle li { grid-template-columns: 3.3rem 36px 1fr; gap: 0.5rem; }
+    .chronicle li + li::before { left: calc(3.3rem + 0.5rem + 17px); }
+    .ch-art { width: 36px; height: 36px; }
+    .ch-text { font-size: 0.86rem; }
+}
+
 /* a tap's bubble on a touch screen: what a picture's title says */
 .tap-tip { position: fixed; z-index: 400; max-width: min(260px, calc(100vw - 16px)); padding: 0.4rem 0.65rem; border-radius: 9px; font-size: 0.8rem; line-height: 1.3; color: var(--text-main); background: rgba(14, 10, 7, 0.96); border: 1px solid rgba(214, 170, 92, 0.55); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); pointer-events: none; animation: fadeIn 0.15s ease-out; }
 

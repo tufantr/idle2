@@ -39,7 +39,7 @@ import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey, glyph, coinIcon } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
-import { rankFor, nextRank } from '../data/ranks.js';
+import { rankFor, nextRank, RANKS } from '../data/ranks.js';
 import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
@@ -1288,7 +1288,40 @@ function renderRecords(game) {
             <b class="record-value">${value}</b>
             <span class="record-label">${esc(label)}</span>
         </div>`).join('')}</div>
-    </section>`;
+    </section>
+    ${renderChronicle(state)}`;
+}
+
+/** What a chronicle entry (systems/chronicle.js) shows: [sprite key, line], or null for one no longer known. */
+function chronicleLine(e) {
+    switch (e.kind) {
+        case 'start': return ['campfire', 'The adventure began'];
+        case 'zone': { const z = ZONES.find(x => x.id === e.id); return z ? [`mon/${z.boss}`, `Reached ${z.name}`] : null; }
+        case 'pet': { const p = PETS.find(x => x.id === e.id); return p ? [`pet/${p.id}`, `${p.name} joined the hero`] : null; }
+        case 'unique': { const u = UNIQUES[e.id]; return u ? [`uniq/${e.id}`, `Won the ${u.name}`] : null; }
+        case 'dungeon': { const d = dungeonById(e.id); return d ? [`mon/${d.boss.name}`, `First clear of the ${d.name}`] : null; }
+        case 'titan': return ['titan/0', 'Felled the first Titan'];
+        case 'prestige': return ['res/essence', 'The first prestige'];
+        case 'rank': { const r = RANKS.find(x => x.name === e.id); return r ? [`hero/cloaks/${r.cloak}`, `Rose to ${r.name}`] : null; }
+        case 'skill99': return SKILLS[e.id] ? [FEATURES[e.id]?.icon || 'crown', `${SKILLS[e.id].name} 99`] : null;
+        default: return null;
+    }
+}
+
+/** The hero's story, newest first: a date, a picture and a line for each first. */
+function renderChronicle(state) {
+    const year = new Date().getFullYear();
+    const rows = [...(state.chronicle || [])].reverse().map(e => {
+        const line = chronicleLine(e);
+        if (!line) return '';
+        const d = new Date(e.t);
+        const date = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(d.getFullYear() === year ? {} : { year: 'numeric' }) });
+        return `<li><time datetime="${d.toISOString()}">${esc(date)}</time><span class="ch-art">${sprite(line[0], { scale: 1 })}</span><span class="ch-text">${esc(line[1])}</span></li>`;
+    }).join('');
+    return rows ? `<section class="glass-panel ${painted('study', 'center 40%')}">
+        <div class="panel-header"><h2>Chronicle</h2></div>
+        <ol class="chronicle">${rows}</ol>
+    </section>` : '';
 }
 
 export function renderAchievements(game) {

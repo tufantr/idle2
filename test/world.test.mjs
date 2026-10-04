@@ -131,3 +131,48 @@ test('the gear codex fills a page for each kind and tier found, kept or salvaged
     assert.deepEqual(Object.keys(state.codex).sort(), ['Head/3', 'Ring/5', 'Weapon/2', 'Weapon/4']);
     assert.equal(state.stats.codexFound, 4);
 });
+
+test('the chronicle notes each first once, with its date, while away too; old saves begin at their creation', async () => {
+    const { chronicleEntry, noteChronicle } = await import('../src/systems/chronicle.js');
+    const { migrateState } = await import('../src/core/state.js');
+    const game = new Game(null, T0);
+    assert.deepEqual(game.state.chronicle, [{ t: T0, kind: 'start', id: '' }]);
+
+    // a new land, from the fight itself
+    const hero = heroAt(STAGES_PER_ZONE);
+    beat(hero);
+    assert.deepEqual(hero.state.chronicle.slice(1).map(e => [e.kind, e.id]), [['zone', ZONES[1].id]]);
+
+    // each first once; spares and later clears are not firsts
+    const s = game.state;
+    noteChronicle(s, { type: 'pet', pet: { id: 'fang' } }, T0 + 1);
+    noteChronicle(s, { type: 'pet', pet: { id: 'fang' } }, T0 + 2);
+    noteChronicle(s, { type: 'unique', item: { uniqueId: 'goblin_crown', locked: false } }, T0 + 3);
+    noteChronicle(s, { type: 'dungeonClear', dungeon: 'goblin_warren', clears: 1 }, T0 + 4);
+    noteChronicle(s, { type: 'dungeonClear', dungeon: 'goblin_warren', clears: 2 }, T0 + 5);
+    noteChronicle(s, { type: 'levelUp', skill: 'mining', level: 99, from: 98 }, T0 + 6);
+    noteChronicle(s, { type: 'hit', dmg: 5 }, T0 + 7);
+    assert.deepEqual(s.chronicle.slice(1).map(e => [e.t, e.kind, e.id]), [[T0 + 1, 'pet', 'fang'], [T0 + 4, 'dungeon', 'goblin_warren'], [T0 + 6, 'skill99', 'mining']]);
+
+    // prestiges: the first, then only the ranks
+    s.prestige.count = 1; assert.deepEqual(chronicleEntry(s, { type: 'prestige' }), { kind: 'prestige', id: '1' });
+    s.prestige.count = 2; assert.equal(chronicleEntry(s, { type: 'prestige' }), null);
+    s.prestige.count = 5; assert.deepEqual(chronicleEntry(s, { type: 'prestige' }), { kind: 'rank', id: 'Veteran' });
+
+    // while away: a pet found during the replay is noted at its time
+    const away = new Game(null, T0);
+    away.state.chronicle = [];
+    away.silent = true;
+    away.now = T0 + 3600e3;
+    away.emit({ type: 'pet', pet: { id: 'pebble' } });
+    assert.deepEqual(away.state.chronicle, [{ t: T0 + 3600e3, kind: 'pet', id: 'pebble' }]);
+
+    // saves
+    const saved = JSON.parse(game.serialize(T0));
+    assert.equal(migrateState(saved, T0).chronicle.length, s.chronicle.length);
+    saved.chronicle.push({ t: 'soon', kind: 'pet', id: 'x' }, { t: T0, kind: 'nonsense', id: 'y' });
+    assert.equal(migrateState(saved, T0).chronicle.length, s.chronicle.length, 'bad entries are dropped');
+    delete saved.chronicle;
+    saved.meta.createdAt = T0 - 86400e3;
+    assert.deepEqual(migrateState(saved, T0).chronicle, [{ t: T0 - 86400e3, kind: 'start', id: '' }]);
+});

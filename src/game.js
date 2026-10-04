@@ -20,6 +20,7 @@ import { applyReward } from './systems/social.js';
 import { eventStatus, buyEventItem } from './systems/events.js';
 import { heroName } from './core/text.js';
 import { lookById, lookOpen } from './data/looks.js';
+import { noteChronicle } from './systems/chronicle.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
 const OFFLINE_GAP_MS = 60000;    // gaps longer than this are replayed as offline progress
@@ -43,6 +44,7 @@ export class Game {
 
     // ----- infrastructure -----
     emit(event) {
+        noteChronicle(this.state, event, this.now);   // the hero's story is kept while away too
         if (this.silent) return;
         this.events.push(event);
         if (!QUIET_EVENTS.has(event.type)) this.revision++;

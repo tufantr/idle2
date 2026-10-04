@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The chronicle**: the Hall's Records end with the hero's story, newest first: each first with
+      its date and picture (the adventure begun, every new land, each pet joining, uniques won, a
+      dungeon's first clear, the first Titan, the first prestige and each rank, a skill at 99), noted as
+      it happens, also while away. Old saves begin it at their creation date
 - [x] **A sixth weekend event, Lucky Paws**: pets are three times as likely to find you, and +10% XP.
       It joins the rotation from 16 October 2026 as a new era (`ROTATION_ERAS`), so no weekend already
       run, nor the one running, changes its event
