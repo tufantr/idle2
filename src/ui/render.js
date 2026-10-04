@@ -1729,7 +1729,7 @@ export function renderClan(game, ui, cloud) {
                 <div><b>${sprite('mon/Elder Dragon', { scale: 0.75, cls: 'soft res-spr', fallback: '🐉' })} This week's boss</b> <span class="muted small">(${esc(boss.week)} · ${boss.killed ? `defeated${boss.lastHit ? ` — last hit by ${esc(boss.lastHit)}` : ''}` : `ends in ${duration(boss.endsInMs)}`})</span></div>
                 <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
                 <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
-                <div class="btn-row"><button class="prestige-btn" onclick="FI.clanAttack()" ${social.attacksLeft > 0 && !boss.killed && !social.attacking ? '' : 'disabled'}>⚔️ Attack (${social.attacksLeft}/${social.attacksPerDay} left today)</button>
+                <div class="btn-row"><button class="prestige-btn" onclick="FI.clanAttack()" ${social.attacksLeft > 0 && !boss.killed && !social.attacking ? '' : 'disabled'}>${ATK_ICON} Attack (${social.attacksLeft}/${social.attacksPerDay} left today)</button>
                     <span class="muted small">Your hero hits for about ${fmt((social.members || []).find(m => m.you)?.attackDamage || 0)} per attack.</span></div>
             </div>` : ''}
             <div class="two-col">
