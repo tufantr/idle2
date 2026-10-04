@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The welcome-back report** also counts the gilded monsters defeated and the bestiary stars
+      earned while away
 - [x] **What waits, on its tab**: a badge in the sidebar when something is ready in a place: the
       count of ripe plots on Farming, a gold "!" on Dungeons when the Titan is awake and can be
       beaten or a unique can be assembled, a ▲ on Inventory for better gear. The browser tab's title

@@ -26,6 +26,8 @@ function snapshot(state) {
         dungeons: Object.fromEntries(DUNGEONS.map(d => [d.id, { ...state.dungeons[d.id] }])),
         pets: { ...state.pets },
         uniques: state.stats.uniquesFound || 0,
+        gilded: state.stats.gildedKills || 0,
+        stars: state.stats.bestiaryStars || 0,
         combatMode: state.combat.mode
     };
 }
@@ -54,6 +56,8 @@ function diff(before, state) {
         pets: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => `${p.icon} ${p.name}`),
         petIds: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => p.id),
         uniques: (state.stats.uniquesFound || 0) - before.uniques,
+        gilded: (state.stats.gildedKills || 0) - before.gilded,        // gilded monsters defeated
+        stars: (state.stats.bestiaryStars || 0) - before.stars,        // bestiary stars earned
         startedInDungeon: before.combatMode === 'dungeon'
     };
 }

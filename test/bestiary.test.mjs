@@ -79,3 +79,19 @@ test('25 stars earn the Naturalist medal', () => {
     checkAchievements(game);
     assert.ok(game.state.achievements.naturalist);
 });
+
+test('the welcome-back report counts the bestiary stars earned while away', () => {
+    const game = new Game(null, T0);
+    game.state.prestige.tokens = 500;      // strong enough not to fall
+    game.state.combat.farmMode = true;     // and staying on stage 1: one kind, falling again and again
+    game.recompute();
+    game.enterCombat();
+    const saved = JSON.parse(game.serialize(T0));
+    const later = T0 + 2 * 3600 * 1000;
+    const back = new Game(saved, later);
+    const summary = back.resumeFromSave(later);
+    assert.ok(summary.kills > 20, `${summary.kills} kills`);
+    assert.ok(summary.stars >= 1);
+    assert.equal(summary.stars, back.state.stats.bestiaryStars);
+    assert.equal(summary.gilded, back.state.stats.gildedKills);
+});
