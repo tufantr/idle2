@@ -511,7 +511,8 @@ progress as motion, art before words, one stage with a HUD around it.
 - [x] **The monster's line in pictures**: its attack, the time between its blows and its gold show
       a sword, an hourglass and coins instead of emoji; the Titan's title wears the Titan
 - [x] **A new land**: the first step ever into a zone is a card on its painting, with its ruler as a
-      silhouette (met at its tenth stage), its stages and what drops there. Once per zone in the
+      silhouette (met at its tenth stage), its stages, what drops there and one line about the place
+      (`ZONE_LINES` in `src/ui/features.js`). Once per zone in the
       whole game (not again after a prestige, not for the Abyss's deeper depths)
 - [x] **What the chest held**: a dungeon clear's banner names the dungeon and shows the chest's
       contents as pictures that pop out one after another (gear in its rarity's glow, the unique's

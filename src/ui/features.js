@@ -69,6 +69,20 @@ export const FEATURES = {
 // Each weekend event's sprite: the harvest, the Titan, a pickaxe, a bar from the guild halls, gold.
 export const EVENT_ART = { harvest_festival: 'res/pumpkin', titans_fury: 'titan/0', miners_rush: 'tool/pickaxe', guild_fair: 'res/mithril_bar', gold_fever: 'gold' };
 
+// Each land's one line, said once: on the card that greets the hero's first step into it.
+export const ZONE_LINES = {
+    meadow: 'Wildflowers, a windmill, and slimes in the long grass.',
+    forest: 'Old trees that whisper, and wolves that listen.',
+    caves: 'Crystals glow in the dark, and something is mining them.',
+    marsh: 'Warm mud, thick air, and a hydra in the reeds.',
+    highland: 'Thunder on the peaks, where the orcs keep their warbands.',
+    ruins: 'A sunken city where the drowned still keep watch.',
+    volcano: 'The mountain breathes fire, and a drake sleeps inside it.',
+    frost: 'Endless ice, and a titan frozen at its heart.',
+    skyreach: 'A spire above the clouds, where the storms are born.',
+    abyss: 'The edge of the world, falling forever into the dark.'
+};
+
 // Each dungeon's painting (assets/paint): on its card, and behind its fight (src/ui/scene.js).
 export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair', void_citadel: 'citadel' };
 
