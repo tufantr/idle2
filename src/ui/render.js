@@ -1264,6 +1264,8 @@ function renderRecords(game) {
         ['titan/0', fmt(state.titan?.kills || 0), 'Titans felled'],
         ['crate', fmt(clears), 'dungeons cleared'],
         ['item/Body/4', fmt(s.itemsCrafted || 0), 'pieces of gear made'],
+        ['item/Head/5', `${fmt(Object.keys(state.codex || {}).length)}/${CODEX_SIZE}`, 'codex pages'],
+        ['crate', fmt(state.daily?.claimed || 0), 'daily crates opened'],
         ['res/raw_trout', fmt(s.fishCaught || 0), 'fish caught'],
         ['res/pumpkin', fmt(s.cropsHarvested || 0), 'crops harvested'],
         ['res/diamond', fmt(s.masteryLevels || 0), 'mastery levels'],
