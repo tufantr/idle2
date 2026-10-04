@@ -798,10 +798,8 @@ export function renderSmithing(game, ui) {
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
             onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
         }, state)).join('');
-        const picker = metals.length > 1
-            ? `<select class="material-select" aria-label="Metal" onchange="FI.selectSmithMetal(this.value)">${metals.map(m => `<option value="${m.bar}" ${m.bar === metal.bar ? 'selected' : ''}>${m.name}</option>`).join('')}</select>`
-            : '';
-        body = `<div class="forge-bar">${picker}<span class="tool-badge" title="${esc(res(metal.bar).name)}s to forge with">${resIcon(metal.bar)} ${fmt(state.resources[metal.bar])} ${esc(metal.name.toLowerCase())} bars</span>
+        const picker = materialPicks('Metal', metals.map(m => ({ id: m.bar, name: `${m.name} bars`, have: state.resources[m.bar] })), metal.bar, 'FI.selectSmithMetal');
+        body = `<div class="forge-bar">${picker}
                 ${masteryRow(state, 'smithing', resolveAction(state, { kind: 'smith', type: SMITHING_TYPES[0], bar: metal.bar }).mastery, `${metal.name} forging`)}</div>
             <div class="node-grid">${cards}</div>`;
     } else {
@@ -813,6 +811,16 @@ export function renderSmithing(game, ui) {
         ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
         ${body}
     </section>`;
+}
+
+/**
+ * Picture tiles to pick a material for the anvil or the bench (a metal, a setting, a gem): each with
+ * how many you hold, the picked one lit. Its small label says what is being picked.
+ */
+function materialPicks(label, options, picked, handler) {
+    if (!options.length) return '';
+    const tiles = options.map(o => `<button class="pick${o.id === picked ? ' on' : ''}${o.have > 0 ? '' : ' empty'}" onclick="${handler}('${o.id}')" title="${esc(o.name)}: ${fmt(o.have)}" aria-label="${esc(o.name)}: ${fmt(o.have)}" aria-pressed="${o.id === picked}">${resIcon(o.id, { scale: 1.25 })}<span class="pick-sub">${shortQty(o.have)}</span></button>`).join('');
+    return `<div class="material-picks"><span class="loadout-label">${label}</span><div class="pick-row" role="group" aria-label="${label}">${tiles}</div></div>`;
 }
 
 function renderToolCard(game, toolId) {
@@ -840,7 +848,7 @@ export function renderCrafting(game, ui) {
     const action = state.action;
     const bars = JEWEL_BARS.filter(b => level >= b.levelReq);
     const gems = GEM_TIERS.filter(g => level >= g.levelReq);
-    const bar = bars.find(b => b.bar === ui.craftBar) || bars[0] || JEWEL_BARS[0];
+    const bar = bars.find(b => b.bar === ui.craftBar) || [...bars].reverse().find(b => state.resources[b.bar] > 0) || bars[0] || JEWEL_BARS[0];
     const gem = gems.find(g => g.gem === ui.craftGem) || [...gems].reverse().find(g => state.resources[g.gem] > 0) || gems[gems.length - 1] || GEM_TIERS[0];
     const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gem.gem }) }));
     const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
@@ -849,16 +857,12 @@ export function renderCrafting(game, ui) {
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
-    const pick = (list, value, handler, label, text) => (list.length > 1
-        ? `<select class="material-select" aria-label="${label}" onchange="${handler}(this.value)">${list.map(o => `<option value="${text(o).id}" ${text(o).id === value ? 'selected' : ''}>${esc(text(o).name)}</option>`).join('')}</select>`
-        : '');
     const tools = ['bow', 'rod'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
     return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
         ${xpHeader(game, 'crafting')}
         <div class="forge-bar">
-            ${pick(bars, bar.bar, 'FI.selectCraftBar', 'Setting', b => ({ id: b.bar, name: `${b.name} setting` }))}
-            ${pick(gems, gem.gem, 'FI.selectCraftGem', 'Gem', g => ({ id: g.gem, name: res(g.gem).name }))}
-            <span class="tool-badge">${resIcon(bar.bar)} ${fmt(state.resources[bar.bar])}</span><span class="tool-badge">${resIcon(gem.gem)} ${fmt(state.resources[gem.gem])}</span>
+            ${materialPicks('Setting', bars.map(b => ({ id: b.bar, name: `${b.name} setting`, have: state.resources[b.bar] })), bar.bar, 'FI.selectCraftBar')}
+            ${materialPicks('Gem', gems.map(g => ({ id: g.gem, name: res(g.gem).name, have: state.resources[g.gem] })), gem.gem, 'FI.selectCraftGem')}
             ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gem.gem }).mastery, `${res(gem.gem).name} jewellery`)}
         </div>
         <div class="node-grid">${cards}</div>
