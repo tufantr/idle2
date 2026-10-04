@@ -493,6 +493,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 @media (min-width: 1440px) {
     .armory { grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(260px, 300px); grid-template-areas: "doll bag detail"; }
     .detail-panel { position: sticky; top: 1rem; }
+    .armory.bare { grid-template-columns: minmax(300px, 340px) minmax(0, 1fr); grid-template-areas: "doll bag"; }  /* no gear yet: no table for it */
 }
 .doll-panel { grid-area: doll; }
 .detail-panel { grid-area: detail; }
