@@ -488,6 +488,7 @@ export function createScene(root, actions) {
             setText(el.heroText, `${fmt(Math.max(0, c.hp))} / ${fmt(d.maxHp)}`);
             el.hero.classList.toggle('low', heroPct < 30);
             el.battle.classList.toggle('danger', c.active && heroPct < 30);
+            el.battle.classList.toggle('boss-fight', c.active && !!c.enemy?.boss);   // the place darkens while a boss stands
             el.heroAtk.style.width = c.active ? `${Math.min(100, c.playerTimer / d.attackInterval * 100)}%` : '0%';
 
             const foePct = Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));

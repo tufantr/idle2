@@ -972,6 +972,10 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
     background: radial-gradient(ellipse at 50% 58%, transparent 52%, rgba(0, 0, 0, 0.6) 100%);
 }
+/* a boss fight: the place dims and a deep crimson closes in at the edges (danger's red pulse wins) */
+.battle .battle-sky, .battle .battle-far, .battle .battle-near { transition: filter 0.8s ease; }
+.battle.boss-fight .battle-sky, .battle.boss-fight .battle-far, .battle.boss-fight .battle-near { filter: brightness(0.78) saturate(1.15) contrast(1.06); }
+.battle.boss-fight::after { background: radial-gradient(ellipse at 50% 58%, transparent 46%, rgba(70, 6, 22, 0.66) 100%); }
 .battle.danger::after { background: radial-gradient(ellipse at 50% 58%, transparent 42%, rgba(185, 28, 28, 0.55) 100%); animation: dangerPulse 1s ease-in-out infinite; }
 .battle.idle .battle-sky, .battle.idle .battle-far, .battle.idle .battle-near { filter: saturate(0.55) brightness(0.78); }
 

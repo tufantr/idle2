@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A boss changes the light**: while a boss stands the place dims and a deep crimson closes in at
+      the edges (the low-health red pulse still wins)
 - [x] **The gear codex**: the Hall's Collection gains a page for every kind of gear at every tier (ten
       kinds, seven tiers), a silhouette until one has been found, forged or crafted (a drop salvaged as it
       lands counts; old saves count what they carry and wear). A new medal, Armourer, at 40 pages
