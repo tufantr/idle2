@@ -251,6 +251,8 @@ export function createScene(root, actions) {
         }
     }
 
+    let sceneDrawn = false;   // the first draw sets the place without fading it in
+
     // Near a zone's boss, fetch the next land's painting, so stepping into it shows it at once.
     const preloaded = new Set();
     function preloadNextLand(state) {
@@ -394,9 +396,13 @@ export function createScene(root, actions) {
             const scene = sceneFor(state);
             preloadNextLand(state);
             if (el.battle.dataset.scene !== scene) {
+                const arriving = sceneDrawn && !quietNow();   // not on the first draw
                 el.battle.dataset.scene = scene;
                 el.battle.dataset.particles = PARTICLES[scene] || 'motes';
+                // a new place fades in out of the dark, like arriving there
+                if (arriving) el.battle.querySelector('.battle-sky')?.animate?.([{ opacity: 0, filter: 'brightness(0.3)' }, { opacity: 1, filter: 'none' }], { duration: 700, easing: 'ease-out' });
             }
+            sceneDrawn = true;
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);
                 setMarkup(el.zone, esc(dg ? dg.name : 'Dungeon'));

@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Arriving somewhere fades in**: a new zone, a dungeon or the Titan's ground comes up out of the
+      dark instead of swapping at once (not on the first draw, not with reduced motion)
 - [x] **The great crate**: every seventh daily crate opened is a great one (three times the gold,
       twice the rest, a better gem), in a golden dialog; seven little crates in the dialog show the way
       to the next. A count, not a streak: a missed day still costs nothing. When the crate waiting is the
