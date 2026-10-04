@@ -50,6 +50,7 @@ export function paceList(skill, list, { key = 'xp', levelOf = a => a.levelReq } 
         a.baseXp = base;
         a[key] = pacedXp(skill, base, levelOf(a));
     }
+    if ((PACE[skill] ?? 1) === 1) return list;   // not slowed, so nothing to put back in order (farming's XP also comes per crop, not per hour)
     // Each kind in level order: an action pays at least the best XP per hour of those opening before it.
     const best = {};
     const byLevel = [...list].sort((x, y) => levelOf(x) - levelOf(y));

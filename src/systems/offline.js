@@ -99,8 +99,9 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             if (!completeAction(game, def, { offline: true })) break;
             remaining -= interval;
             if (!state.action) break; // one-off actions (tools)
-            // A mastery level, Focus, the bonfire or an event changing makes the next action different.
-            const stale = (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level)
+            // A mastery level, Focus, the bonfire or an event changing makes the next action different;
+            // so does anything that marked the game dirty (a level-up, say 99 with its cape, or a pet).
+            const stale = game.dirty || (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level)
                 || isFocused(state, game.now) !== game.derived.focused || bonfireLit(state, game.now) !== game.derived.bonfire
                 || game.eventId(game.now) !== game.derived.event;
             if (stale) { game.recompute(); def = resolveAction(state); interval = intervalFor(def, game.derived); }

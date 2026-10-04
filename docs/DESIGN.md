@@ -818,8 +818,8 @@ and achievements): with them, 99 comes sooner.
 
 Where the division would make a newer action pay less XP per hour than an older one of its kind
 (the same first input: raw meat and fish, crops, herbs, ore; or gathering), the newer one is raised
-to match, so the old one is never the better choice: emerald jewellery pays what sapphire does, and
-pumpkins (a dip that predates the pace) what the crop before them does.
+to match, so the old one is never the better choice: emerald jewellery pays what sapphire does.
+A skill that is not slowed (farming) keeps its XP as authored.
 
 **Combat** is paced by the hero's combat level (`BALANCE.rewards.xpPace` in `src/core/formulas.js`):
 up to level 60 a kill pays its full XP, from level 95 a twenty-fifth, evenly in between. A first try

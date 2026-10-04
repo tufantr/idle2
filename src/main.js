@@ -506,7 +506,7 @@ function handleEvents(events) {
                 const rank = rankFor(count);
                 const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
                 if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
-                    rewards.celebrate({ kind: 'legend', icon: heroSprite(game.state, { scale: 3 }), kicker: 'A new rank', title: rank.name,
+                    rewards.celebrate({ kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: '' } }, { scale: 3 }), kicker: 'A new rank', title: rank.name,   // the new cloak, even over a cape
                         lines: [`A ${rank.cloak} cloak, for ${count} prestiges`, paid] });
                 } else {
                     rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,

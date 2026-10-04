@@ -1939,7 +1939,7 @@ export function renderPrestigeModal(game) {
             <div class="pg-gain">
                 <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${Math.round(p.tokensAfter * 0.5)}% attack and defence</small></div>
                 ${p.skillPoints > 0 ? `<div class="pg-get sp"><i class="coin-dot sp" aria-hidden="true"></i><b>+${p.skillPoints} <span>skill point${p.skillPoints === 1 ? '' : 's'}</span></b><small>for perks that last forever</small></div>` : ''}
-                ${newRank ? `<div class="pg-rank">${heroSprite({ ...state, prestige: { ...state.prestige, count: count + 1 } }, { scale: 2 })}<span><small>A new rank</small><b>${esc(rank.name)}</b><small>and a ${esc(rank.cloak)} cloak</small></span></div>` : ''}
+                ${newRank ? `<div class="pg-rank">${heroSprite({ ...state, prestige: { ...state.prestige, count: count + 1 }, hero: { ...state.hero, cape: '' } }, { scale: 2 })}<span><small>A new rank</small><b>${esc(rank.name)}</b><small>and a ${esc(rank.cloak)} cloak</small></span></div>` : ''}
                 ${p.fullRun ? '' : `<div class="pg-note muted small">A skill point comes with a run that reaches stage ${nextSp}</div>`}
             </div>
             <div class="pg-row"><h4>Starts over</h4>

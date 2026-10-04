@@ -38,7 +38,8 @@ test('actions opening by level 20 keep their base XP; later ones give less, neve
 test('a newer action never pays less XP per hour than an older one of its kind', () => {
     const lists = [
         ...Object.entries(SKILLS).map(([id, s]) => [id, s.nodes || []]),
-        ['smelting', SMELTING_RECIPES], ['jewellery', GEM_TIERS], ['crops', CROPS],
+        ['smelting', SMELTING_RECIPES], ['jewellery', GEM_TIERS],
+        ['crops', CROPS.map(c => ({ ...c, xp: c.xp * (c.yield[0] + c.yield[1]) / 2 }))],   // farming pays its XP per crop harvested
         ['forging', METALS.map(m => ({ ...m, xp: m.xpPerBar }))]
     ];
     for (const [name, list] of lists) {

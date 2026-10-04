@@ -14,6 +14,7 @@ import { grantXp } from '../src/systems/progress.js';
 import { heroLayers } from '../src/ui/sprites.js';
 import { SPRITES } from '../src/data/sprites.js';
 import { migrateState } from '../src/core/state.js';
+import { MASTERY_XP_DIVISOR } from '../src/data/mastery.js';
 
 rng.setSource(seededRandom(3));
 const T0 = 1_700_000_000_000;
@@ -54,6 +55,28 @@ test('reaching 99 puts the new cape on; the worn cape shows on the hero', () => 
     s.hero.cape = '';
     grantXp(game, 'fishing', 1000);
     assert.equal(s.hero.cape, '', 'only the first time a skill reaches 99');
+});
+
+test('a cape earned while away counts for the rest of the time away', () => {
+    // Mining copper for 8 hours away, with mastery 98 (its next level a few hours off): once level 99
+    // arrives (a few minutes in, after Focus has set in), its cape's doubles count from then on.
+    const away = shortOf99 => {
+        rng.setSource(seededRandom(21));
+        const game = new Game(null, T0);
+        const s = game.state;
+        s.skills.mining.xp = xpForLevel(99) - shortOf99;
+        s.mastery.mining.copper_ore = Math.ceil(xpForLevel(98) / MASTERY_XP_DIVISOR) + 1;
+        game.startNodeAction('mining', 'copper_ore');
+        const later = T0 + 8 * 3600 * 1000;
+        const back = new Game(JSON.parse(game.serialize(T0)), later);
+        const before = back.state.resources.copper_ore;
+        back.resumeFromSave(later);
+        return back.state.resources.copper_ore - before;
+    };
+    const atOnce = away(0);
+    const soon = away(400);
+    rng.setSource(seededRandom(3));
+    assert.ok(soon > atOnce * 0.97, `${soon} ore against ${atOnce} for a hero who already had the cape`);
 });
 
 test('the hero can wear any earned cape or the rank\'s cloak, never one not earned', () => {
