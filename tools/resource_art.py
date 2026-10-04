@@ -950,7 +950,7 @@ PERK_BADGES = {
 
 def build_icons(tiles):
     """Cells for the game's own things: perk/<id>, tool/<id>, obstacle/<id>, the crate, the gear, the
-    campfire, the crown (a medal), the festival token and the hero's hoe."""
+    campfire, the crown (a medal), the festival token, the hero's hoe and his cloaks by rank."""
     tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
     out = {}
     for pid, how in PERK_BADGES.items():
@@ -967,6 +967,10 @@ def build_icons(tiles):
         'hero/tool/farming': hoe_in_hand(tiles), 'campfire': campfire(),
         'crown': from_image(tile('item/armour/artefact/urand_crown_of_vainglory')),
         'token': from_image(rehue(tile('item/misc/misc_voucher'), '#e9b54a', sat=0.75, val=1.05)),   # a festival token
+        # the hero's cloak by rank (src/data/ranks.js): DCSS cloaks, the gold one recoloured from the red
+        **{f'hero/cloaks/{name}': from_image(tile(f'player/cloak/{src}')) for name, src in
+           (('red', 'red'), ('green', 'green'), ('blue', 'blue'), ('purple', 'magenta'), ('white', 'white'), ('black', 'black'))},
+        'hero/cloaks/gold': from_image(rehue(tile('player/cloak/red'), '#efb43c', sat=0.9, val=1.3)),
     })
     out.update(build_obstacles(tiles))
     return {key: to_image(a) for key, a in out.items()}

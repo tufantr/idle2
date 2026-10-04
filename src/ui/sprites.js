@@ -5,6 +5,7 @@ import { ATLAS, SPRITES } from '../data/sprites.js';
 import { TITAN_NAMES } from '../data/dungeons.js';
 import { RESOURCES } from '../data/resources.js';
 import { TOOLS } from '../data/workshop.js';
+import { rankFor } from '../data/ranks.js';
 import { escapeHtml as esc } from './format.js';
 
 const TIERS = 7;
@@ -67,14 +68,16 @@ export function slotSpriteKey(type) {
 }
 
 /**
- * The hero, as atlas keys from the back layer to the front, dressed in what is equipped.
+ * The hero, as atlas keys from the back layer to the front, dressed in what is equipped; his cloak
+ * is his rank's colour (data/ranks.js).
  * `tool` (a skill id) puts that skill's tool in the hand instead of the weapon; `bare` leaves both
  * hands empty (on the agility course).
  */
 export function heroLayers(state, { tool = null, bare = false } = {}) {
     const eq = state.equipped || {};
     const tierOf = slot => (eq[slot] ? clampTier(eq[slot].tier) : 0);
-    const layers = ['hero/cloak', 'hero/base'];
+    const cloak = `hero/cloaks/${rankFor(state.prestige?.count || 0).cloak}`;
+    const layers = [hasSprite(cloak) ? cloak : 'hero/cloak', 'hero/base'];
     const boots = tierOf('Boots');
     if (boots) layers.push(`hero/boots/${boots}`);
     const legs = tierOf('Legs');

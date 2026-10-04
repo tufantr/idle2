@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Ranks and cloaks**: prestiges earn the hero a rank, worn as his cloak's colour (red, then
+      green, blue, purple, gold, white and black at 1, 5, 15, 40, 100 and 250 prestiges); a badge by
+      the hero and on the Prestige panel shows it and the count to the next, and a new rank is a card
+      with the hero in his new cloak
 - [x] **Gilded monsters**: one regular monster in 150 comes gilded, for five times the gold, twice
       the XP and a sure gem and essence. It turns gold on the scene, with a banner, a chime and a
       shower of coins; a new medal, Gold Rush (25 of them), makes them come more often

@@ -39,6 +39,7 @@ import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
+import { rankFor, nextRank } from '../data/ranks.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
@@ -961,7 +962,7 @@ export function renderInventory(game, ui) {
     const stat = (icon, value, label, title) => `<span title="${title}">${icon} <b>${value}</b> ${label}</span>`;
     return `<div class="armory${hasGear ? '' : ' bare'}">
         <section class="glass-panel doll-panel ${painted('armory', 'center 62%')}">
-            <div class="panel-header"><h2>Your hero</h2><span class="muted small">Combat level ${d.combatLevel}</span></div>
+            <div class="panel-header"><h2>Your hero</h2>${rankBadge(state)}<span class="muted small">Combat level ${d.combatLevel}</span></div>
             <div class="doll">
                 <div class="doll-col">${doll.left.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
                 <div class="doll-figure">${heroSprite(state, { scale: 6 })}</div>
@@ -1003,6 +1004,20 @@ export function renderInventory(game, ui) {
         ${picked ? bankDetail(picked, state) : '<p class="muted small bank-hint">Tap a material to see it and sell it.</p>'}`
         : '<div class="empty-state">Nothing here yet. What you mine, cut, hunt and win in fights lands here.</div>'}
     </section>`;
+}
+
+// ---------- ranks ----------
+
+// The cloak's colour as a dot (the rank names it; the colour is what the hero wears).
+const CLOAK_COLORS = { red: '#c0362c', green: '#3fa34d', blue: '#3b6fd8', purple: '#a35ad6', gold: '#e9b23a', white: '#e8e4da', black: '#26222b' };
+
+/** The hero's rank (data/ranks.js), with how far the next one is: a small badge in his cloak's colour. */
+function rankBadge(state) {
+    const count = state.prestige.count;
+    const rank = rankFor(count);
+    const next = nextRank(count);
+    const tip = `${rank.name}: ${count} prestige${count === 1 ? '' : 's'}${next ? `. ${next.name} at ${next.prestiges}, in a ${next.cloak} cloak` : '. The highest rank'}`;
+    return `<span class="rank-badge" style="--cloak:${CLOAK_COLORS[rank.cloak] || '#c0362c'}" title="${esc(tip)}"><i aria-hidden="true"></i>${esc(rank.name)}${next ? ` <span class="rank-next">${count}/${next.prestiges}</span>` : ''}</span>`;
 }
 
 // ---------- shop ----------
@@ -1064,7 +1079,7 @@ export function renderShop(game, ui) {
     </section>
     <div class="two-col">
         <section class="glass-panel prestige-panel" style="${artStyle('prestige')}">
-            <div class="panel-header"><h2>Prestige ${aboutButton('prestige')}</h2><span class="muted small">${state.prestige.count} so far</span></div>
+            <div class="panel-header"><h2>Prestige ${aboutButton('prestige')}</h2>${rankBadge(state)}</div>
             <div class="prestige-stats">
                 <div><b>${fmt(state.prestige.tokens)}</b><span>tokens held: +${d.tokenPowerPct}% attack and defence</span></div>
                 <div><b>${state.prestige.skillPoints}</b><span>skill points to spend</span></div>

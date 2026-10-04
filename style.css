@@ -1778,6 +1778,16 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .hall-seg { display: flex; }
 .hall-seg .seg { margin-bottom: 0; }
 
+/* the hero's rank (data/ranks.js): a badge with a dot in his cloak's colour */
+.rank-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.6rem 0.15rem 0.4rem; border-radius: 999px;
+    font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; color: var(--heading);
+    border: 1px solid color-mix(in srgb, var(--cloak) 60%, transparent); background: color-mix(in srgb, var(--cloak) 16%, rgba(0, 0, 0, 0.45));
+}
+.rank-badge i { width: 10px; height: 10px; border-radius: 50%; background: var(--cloak); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 6px color-mix(in srgb, var(--cloak) 70%, transparent); }
+.rank-next { font-family: var(--font-body); font-size: 0.7rem; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.doll-panel .panel-header { flex-wrap: wrap; }
+
 /* the bestiary: a portrait per kind of monster, its stars and how many have fallen */
 .bestiary-summary { display: flex; flex-wrap: wrap; gap: 0.8rem 2rem; align-items: center; padding: 1rem 1.25rem; }
 .beast-total { display: flex; align-items: baseline; gap: 0.5rem; }

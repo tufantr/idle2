@@ -307,6 +307,12 @@ the Abyss repeats with a depth counter and steeper growth.
   and food healing), Fortune (+5% gold and drop chance), and Paragon (+1% ATK, DEF and HP, 200 levels)
   so skill points always have a use once the others are full.
 - **Why polynomial tokens:** see §6.1 — an exponential token formula ran away in the simulator.
+- **Ranks** (`src/data/ranks.js`): prestiges earn the hero a title worn as his cloak's colour, the
+  gear rarities' colours and then past them: Recruit (red), Adventurer (1, green), Veteran (5, blue),
+  Champion (15, purple), Hero (40, gold), Legend (100, white), Mythic (250, black), at about 1, 5,
+  12, 30, 60 and 150 hours of play in the simulator. No bonus: a mark of how far he has come. A rank
+  badge sits by the hero in the Inventory and on the Prestige panel (with the count to the next), and
+  a prestige that earns one is a card of its own with the hero in his new cloak.
 
 ### 3.10 Fishing, Firemaking, Farming and Agility
 

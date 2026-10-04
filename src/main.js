@@ -13,7 +13,8 @@ import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } 
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
-import { ATLAS, sprite, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
+import { ATLAS, sprite, heroSprite, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
+import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
@@ -402,11 +403,20 @@ function handleEvents(events) {
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
             case 'death': if (!onCombat) toast(`Defeated at stage ${ev.stage} — retreating`, 'death'); break;
             case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
-            case 'prestige':
-                rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
-                    lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
+            case 'prestige': {
+                const count = game.state.prestige.count;
+                const rank = rankFor(count);
+                const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
+                if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
+                    rewards.celebrate({ kind: 'legend', icon: heroSprite(game.state, { scale: 3 }), kicker: 'A new rank', title: rank.name,
+                        lines: [`A ${rank.cloak} cloak, for ${count} prestiges`, paid] });
+                } else {
+                    rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
+                        lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
+                }
                 save(Date.now());
                 break;
+            }
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
