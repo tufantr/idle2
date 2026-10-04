@@ -424,7 +424,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   under the scene. It was taken out to keep the screen simple. What is ready shows where it lives
   instead: the next unlock in the sidebar's Next card, a ▲ on gear that beats what you wear (and
   a one-tap Equip in the fight), a lit camp upgrade you can afford, a glowing Perks button when
-  there are skill points, a crate button when one is ripe.
+  there are skill points, a crate button when one is ripe, and a badge on a place's tab in the
+  sidebar when something waits there: the count of ripe plots on Farming, a gold "!" on Dungeons
+  when the Titan is awake or a unique can be assembled, a ▲ on Inventory for better gear.
 
 ### 3.15 Active play: mini-games and Focus
 

@@ -105,6 +105,27 @@ export function tabIcon(id, scale = 0.75) {
         : `<span class="nav-emoji" aria-hidden="true">${key || tab?.icon || ''}</span>`;
 }
 
+/**
+ * What is waiting in a place, shown on its tab (show what is ready where it lives, never as advice):
+ * ripe plots on the farm, an awake Titan or a unique ready to assemble in the dungeons, and better
+ * gear in the bag.
+ */
+function readyBadge(game, id) {
+    const state = game.state;
+    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}">${text}</span>`;
+    if (id === 'farming') {
+        const n = state.farming.plots.filter(p => p.crop && plotReady(p, game.now)).length;
+        return n ? pill(n, `${n} plot${n > 1 ? 's' : ''} ready to harvest`) : '';
+    }
+    if (id === 'dungeons') {
+        if (titanUnlocked(state) && titanReady(state, game.now)) return pill('!', 'The Titan is awake', 'gold');
+        const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique));
+        return whole ? pill('!', `${UNIQUES[whole.unique]?.name || 'A unique'} is ready to assemble`, 'gold') : '';
+    }
+    if (id === 'inventory') return state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
+    return '';
+}
+
 // The sidebar lists the places the player has opened, and nothing else: no padlocks. One slot at
 // the end shows the next place to open, with its picture and how far along it is. Group headings
 // arrive once the list is long enough to need them.
@@ -133,7 +154,7 @@ export function renderNav(game, ui) {
                 xpBar = lp.level >= MAX_LEVEL ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
-            html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span class="nav-icon">${tabIcon(tab.id)}</span><span class="nav-name">${tab.name}</span>${fresh || badge}${xpBar}</button>`;
+            html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span class="nav-icon">${tabIcon(tab.id)}</span><span class="nav-name">${tab.name}</span>${readyBadge(game, tab.id)}${fresh || badge}${xpBar}</button>`;
         }
     }
     return html;

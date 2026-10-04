@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **What waits, on its tab**: a badge in the sidebar when something is ready in a place: the
+      count of ripe plots on Farming, a gold "!" on Dungeons when the Titan is awake or a unique can
+      be assembled, a ▲ on Inventory for better gear
 - [x] **Pets at the hero's side**: a pet found follows him, Fang (or the first pet found) into the
       fight, standing at his feet, and each skill's pet onto its stage
 - [x] **A fifth dungeon, the Void Citadel**: a fortress adrift in the void (a new Gemini painting),
