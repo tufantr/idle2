@@ -321,8 +321,12 @@ the Abyss repeats with a depth counter and steeper growth.
   a prestige that earns one is a card of its own with the hero in his new cloak.
 - **Looks and name** (`src/data/looks.js`, `state.hero`): the player names the hero and picks one of
   ten looks (DCSS player bases and hairstyles: men and women of three skin tones, an elf pair, a
-  dwarf), on the title card (arrows beside the hero) or in Settings (portraits). Cosmetic only; the
-  gear and the rank's cloak go on top. Text addresses "your hero", never a pronoun.
+  dwarf), on the title card (arrows beside the hero) or in Settings (portraits). Six more are earned
+  with medals (an orc for Dungeon Delver, a gold djinni for Gold Rush, a gargoyle for Titan Slayer,
+  a mummy for Monster Scholar, a demonspawn for Abyss Walker, a ghoul for the secret Unbroken): the
+  medal's card shows the hero in it, and Settings shows the next one as a silhouette naming its medal
+  (never a secret one's). Cosmetic only; the gear and the rank's cloak go on top. Text addresses
+  "your hero", never a pronoun.
 
 ### 3.10 Fishing, Firemaking, Farming and Agility
 

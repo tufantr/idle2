@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Looks earned with medals**: six more bodies for the hero (an orc, a gold djinni, a winged
+      gargoyle, a mummy, a horned demonspawn, a ghoul), each won with a medal; its card shows the hero
+      in the new look, and Settings shows the next to earn as a silhouette
 - [x] **No blank page after an update**: when a browser keeps an old copy of one of the game's files
       (a plain local server lets it), the game used to stop with an error in the console; it now says
       so, with a Reload button that fetches every file fresh

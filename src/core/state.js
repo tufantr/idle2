@@ -14,7 +14,7 @@ import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions } from '../data/mastery.js';
 import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 import { heroName } from './text.js';
-import { DEFAULT_LOOK, lookById } from '../data/looks.js';
+import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
 
 export const SAVE_VERSION = 3;
 
@@ -302,7 +302,8 @@ function normalise(data, now) {
     const volume = Number(state.settings.volume);
     state.settings.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
     const hero = isPlainObject(state.hero) ? state.hero : {};
-    state.hero = { name: heroName(hero.name || ''), look: lookById(hero.look).id };
+    const look = lookById(hero.look);
+    state.hero = { name: heroName(hero.name || ''), look: lookOpen(state, look) ? look.id : DEFAULT_LOOK };
     if (!Array.isArray(state.log)) state.log = [];
     state.gold = Math.max(0, Number(state.gold) || 0);
     state.combat.enemy = null; // always respawned on load

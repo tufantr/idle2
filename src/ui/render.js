@@ -8,7 +8,7 @@ import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
-import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown } from '../data/achievements.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
@@ -40,7 +40,7 @@ import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, mo
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank } from '../data/ranks.js';
-import { LOOKS } from '../data/looks.js';
+import { LOOKS, lookOpen } from '../data/looks.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
@@ -1629,6 +1629,23 @@ function renderCodex(state) {
 
 // ---------- settings / clan ----------
 
+/**
+ * The looks in Settings: a portrait of each the hero can wear, the worn one lit, and the next earned
+ * look as a silhouette (its medal named on hover or a tap): a ladder shows its next rung only.
+ */
+function lookPicks(state) {
+    const worn = state.hero?.look || LOOKS[0].id;
+    const dressed = (id, cls = '') => heroSprite({ ...state, hero: { ...state.hero, look: id } }, { scale: 3, cls });
+    const open = LOOKS.filter(l => lookOpen(state, l)).map((l, i) => {
+        const on = worn === l.id;
+        return `<button class="look-pick${on ? ' on' : ''}" onclick="FI.setHeroLook('${l.id}')" aria-label="${esc(l.name || `Look ${i + 1}`)}" aria-pressed="${on}">${dressed(l.id)}</button>`;
+    });
+    const next = LOOKS.find(l => !lookOpen(state, l) && !achievementById(l.medal)?.secret);   // a secret medal's look stays a surprise
+    const medal = next && achievementById(next.medal);
+    if (medal) open.push(`<span class="look-pick locked" title="${esc(`A look earned with the medal ${medal.name}: ${medal.desc}`)}">${dressed(next.id, 'silhouette')}</span>`);
+    return open.join('');
+}
+
 export function renderSettings(game, ui, cloud) {
     const state = game.state;
     const played = duration(state.meta.playtimeMs);
@@ -1650,10 +1667,7 @@ export function renderSettings(game, ui, cloud) {
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
         <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
-        <div class="look-picks" role="group" aria-label="Your hero's look">${LOOKS.map((l, i) => {
-            const on = (state.hero?.look || LOOKS[0].id) === l.id;
-            return `<button class="look-pick${on ? ' on' : ''}" onclick="FI.setHeroLook('${l.id}')" aria-label="Look ${i + 1}" aria-pressed="${on}">${heroSprite({ ...state, hero: { ...state.hero, look: l.id } }, { scale: 3 })}</button>`;
-        }).join('')}</div>
+        <div class="look-picks" role="group" aria-label="Your hero's look">${lookPicks(state)}</div>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>

@@ -24,7 +24,7 @@ import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
-import { nextLook } from './data/looks.js';
+import { nextLook, lookForMedal } from './data/looks.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 
 const TICK_MS = 100;
@@ -221,7 +221,7 @@ for (const type of ['pointerup', 'pointercancel']) document.addEventListener(typ
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
 // bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way';
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked';
 let tipNode = null;
 let tipTimer = 0;
 function showTip(el, text) {
@@ -461,7 +461,10 @@ function handleEvents(events) {
             case 'achievement': { // a medal: a card with its picture, the reward it brings for good
                 const a = achievementById(ev.id);
                 if (ui.tab !== 'achievements' && isUnlocked(game.state, 'achievements')) markFresh('achievements', true);   // "New" on the Hall until visited
-                if (a) rewards.celebrate({ key: `medal:${a.id}`, kind: 'medal', icon: `<span class="cel-medal">${medalArt(a, 2)}</span>`, kicker: ev.secret ? 'A secret medal' : 'A new medal', title: a.name, lines: [escapeHtml(a.reward)], ms: 3600 });
+                const look = lookForMedal(ev.id);   // some medals bring a look for the hero
+                const lines = [escapeHtml(a?.reward || '')];
+                if (look) lines.push(`<span class="cel-look">${heroSprite({ ...game.state, hero: { ...game.state.hero, look: look.id } }, { scale: 1 })}</span> A new look: ${escapeHtml(look.name)}`);
+                if (a) rewards.celebrate({ key: `medal:${a.id}`, kind: 'medal', icon: `<span class="cel-medal">${medalArt(a, 2)}</span>`, kicker: ev.secret ? 'A secret medal' : 'A new medal', title: a.name, lines, ms: look ? 4800 : 3600 });
                 else toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625));
                 break;
             }
@@ -905,7 +908,7 @@ window.FI = {
     collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
     /** The title card's arrows: the next or the previous look, tried on at once. */
     turnLook(step) {
-        game.setHeroLook(nextLook(game.state.hero.look, step));
+        game.setHeroLook(nextLook(game.state.hero.look, step, game.state));
         const hero = document.querySelector('.intro-hero');
         if (hero) hero.innerHTML = heroSprite(game.state, { scale: 5 });
         flourish('.intro-hero .hero-doll');

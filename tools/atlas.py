@@ -129,7 +129,7 @@ def hero_looks():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     with open(os.path.join(root, 'src', 'data', 'looks.js')) as f:
         text = f.read()
-    return re.findall(r"\{ id: '(\w+)',\s*base: '(\w+)',\s*hair: (?:'(\w+)'|null) \}", text)
+    return re.findall(r"\{ id: '(\w+)',\s*base: '(\w+)',\s*hair: (?:'(\w+)'|null)[^}]*\}", text)
 
 
 def main(rltiles):
