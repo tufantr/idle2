@@ -2132,6 +2132,17 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 @media (max-width: 900px) {
     body.battle-full #header { top: auto; }
 }
+/* a phone on its side: a short scene, so a compact title and smaller fighters that still stand in it */
+@media (max-height: 560px) {
+    body.battle-full .battle-top { padding: 0.3rem 0.8rem 0.35rem; gap: 0.2rem 0.8rem; }
+    body.battle-full .battle-zone { font-size: 1.05rem; }
+    body.battle-full .battle-field { padding-bottom: 0.35rem; gap: 0.5rem; }
+    body.battle-full .fighter { gap: 0.1rem; }
+    body.battle-full .fighter-stand { height: clamp(60px, calc(100cqh - 160px), 140px); }
+    body.battle-full .fighter-stand::after { width: 100px; height: 14px; }
+    body.battle-full .fbar { height: 10px; }
+    body.battle-full .fighter-name { font-size: 0.78rem; }
+}
 @media (max-width: 600px) {
     body.battle-full #header { padding: 0.35rem 0.6rem; }
     body.battle-full .battle-top { padding: 0.5rem 0.7rem 0.8rem; }

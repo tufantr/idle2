@@ -178,10 +178,11 @@ export function createScene(root, actions) {
      */
     function fighterScale() {
         const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
-        if (!document.body.classList.contains('battle-full')) return phone ? 3 : 4;
+        const short = !!window.matchMedia?.('(max-height: 560px)').matches;   // a phone on its side
+        if (!document.body.classList.contains('battle-full')) return phone || short ? 3 : 4;
         // The stand's height follows the scene's (style.css); a boss is one size up and must fit it too.
         const fit = Math.floor((el.foeStand.clientHeight || 0) / ATLAS_CELL) - 1;
-        return Math.max(phone ? 3 : 4, Math.min(phone ? 4 : 6, fit));
+        return Math.max(short ? 2 : phone ? 3 : 4, Math.min(phone ? 4 : 6, fit));
     }
 
     function trailFor(t, pct, now, dt) {

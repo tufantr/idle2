@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A phone on its side**: on a short screen the full-screen fight has a compact title and smaller
+      fighters, so they stand inside the scene with their names and stats instead of under the dock
 - [x] **The way to the next bestiary star**: a thin gold bar under each met monster's count
 - [x] **Who waits in each dungeon**: a dungeon's card shows its lineup as little portraits, room by
       room (an elite never met a silhouette), the boss last in a red ring
