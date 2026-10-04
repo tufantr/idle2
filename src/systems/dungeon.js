@@ -224,8 +224,9 @@ function completeDungeon(game, d) {
 
     const parts = [];
     let kept = null;
+    const zone = zoneForStage(d.stage);
     if (rng.chance(CHEST_GEAR_CHANCE * dropMult)) {
-        const item = generateDrop(d.chestTier, true, state.idCounter++);
+        const item = generateDrop(d.chestTier, true, state.idCounter++, zone.depth);   // as strong as the dungeon's depth in the Abyss, like its monsters' drops
         bumpStat(game, 'itemsDropped');
         const result = addItem(game, item);
         if (result.kept) kept = item;
@@ -234,7 +235,6 @@ function completeDungeon(game, d) {
     const fragments = rng.chance(0.03) ? 3 : 1;
     record.fragments += fragments;
     parts.push(`${fragments} fragment${fragments > 1 ? 's' : ''}`);
-    const zone = zoneForStage(d.stage);
     const essence = Math.round(CHEST_ESSENCE_PER_TIER * zone.tier);
     state.resources.essence += essence;
     bumpStat(game, 'essenceFound', essence);

@@ -389,6 +389,7 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 | Orc Stronghold | 80 | 85–93 | 87,243 / 2,625 | 4 | Warlord's Cleaver (Weapon, tier 4) |
 | Dragon's Lair | 120 | 125–135 | 2,515,540 / 51,285 | 6 | Dragonheart Plate (Body, tier 6) |
 | Void Citadel | 160 | 165–175 | 65,738,659 / 925,413 | 7 | Void King's Aegis (Shield, tier 7) |
+| Abyssal Maw | 210 | 215–227 | 4,572,642,334 / 39,771,879 | 7 (at depth 12) | Starless Band (Ring, tier 7) |
 
 - **Worn, a unique shows on the hero:** the Goblin King's Crown as a gold crown, the Warlord's
   Cleaver as an executioner's axe, the Dragonheart Plate as red dragon armour and the Void King's
@@ -398,13 +399,20 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
   so a unique rewards farming a little early instead of skipping tiers.
 - **Monsters pay like ladder monsters of the same health** (the boss too, §3.6), so the chest is the
   whole bonus: one **fragment** (3% chance of three), `0.5 × zone tier` essence, three material
-  picks from the zone, a gem 50% of the time, and boss-quality gear of the chest tier 4% of the time.
-  A strong hero clears a run in well under a minute, so a chest is never a jackpot.
+  picks from the zone, a gem 50% of the time, and boss-quality gear of the chest tier 4% of the time,
+  as strong as the dungeon's depth in the Abyss makes it (like its monsters' own drops: ×3.2 in the
+  Citadel, ×61 in the Maw; before, chest gear ignored the depth and was weaker than the drops beside
+  it). A strong hero clears a run in well under a minute, so a chest is never a jackpot.
 - **Uniques:** 50 fragments assemble the dungeon's unique; a chest holds it outright 0.2% of the time.
   Uniques are Legendary with fixed affixes (the Crown: +15% gold find, +4% crit, +5% HP) and 10% more
   base power than their tier — the best piece of that tier, not a tier skip. The first copy starts
   locked; a spare (assembled or found again) arrives unlocked, to salvage for essence. Uniques cannot
   be reforged.
+- **The Abyssal Maw** is the long game's dungeon: it opens at stage 210, about 83 hours into the
+  simulator's play at Melvor pace, and its careful player first clears it at about 177: twelve horrors of the deep Abyss and the Devourer. Its unique, the Starless Band, is
+  worth its affixes rather than its power, since gear dropped that deep is dozens of times stronger
+  than any tier's base: +8% prestige tokens, +15% combat XP, +10% drop chance, +30% crit damage. Its
+  painting is still to come (`maw`, docs/art/gemini.md); until then it borrows the Abyss's.
 - **Clear milestones** per dungeon, permanent: 25 clears +2% ATK and DEF, 100 clears +3% gold and drop
   chance, 250 clears +3% max HP.
 - **Readiness:** the Dungeons tab estimates the boss fight (time to kill vs the timer, and how long you

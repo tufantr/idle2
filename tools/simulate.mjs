@@ -561,6 +561,7 @@ while (now < totalMs) {
         if (VERBOSE) console.log(`  [${fmtH(now)}] -> ${task.why}`);
     }
     for (const m of STAGE_MARKS) if (S.combat.bestStage >= m) milestone('stage', m);
+    for (const d of DUNGEONS) if (S.combat.bestStage >= d.unlockStage) milestone('dungeon opens', d.id);
     if (S.equipped.Weapon) milestone('weapon tier', S.equipped.Weapon.tier);
     for (const id of ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'combat', 'farming', 'agility']) for (const m of LEVEL_MARKS) if (lvl(id) >= m) milestone(`${id} lv`, m);
     if (H(now) - lastSnapshot >= SNAPSHOT_HOURS) {

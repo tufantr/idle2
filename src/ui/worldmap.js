@@ -25,9 +25,10 @@ export const ZONE_PINS = {
 
 // And each dungeon's gate, by its home on the painting: the Warren in the deep woods, the Depths in
 // the crystal mountain, the Stronghold on the storm tower, the Lair in the volcano's mouth, the
-// Citadel at the edge of the rift.
+// Citadel at the edge of the rift, the Maw in the rift's eye.
 export const DUNGEON_PINS = {
-    goblin_warren: [37, 21], crystal_depths: [37, 47], orc_stronghold: [51, 23], dragons_lair: [66, 26], void_citadel: [86, 12]
+    goblin_warren: [37, 21], crystal_depths: [37, 47], orc_stronghold: [51, 23], dragons_lair: [66, 26], void_citadel: [83, 9],
+    abyssal_maw: [93, 13]   // the rift holds three pins (with the Abyss's): spaced so none covers another, on a phone too
 };
 
 /**

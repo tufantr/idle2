@@ -148,6 +148,31 @@ test('a clear tells what the chest held, and the 25th clear brings its lasting b
     assert.deepEqual(milestones[0], { type: 'dungeonMilestone', dungeon: warren.id, clears: DUNGEON_MILESTONES[0].clears, desc: DUNGEON_MILESTONES[0].desc });
 });
 
+test('a chest deep in the Abyss holds gear as strong as its depth; the Maw can give the Starless Band', () => {
+    const game = newGame({ bestStage: 400, tokens: 20000 });
+    const maw = dungeonById('abyssal_maw');
+    assert.equal(game.enterDungeon(maw.id), true);
+    const c = game.state.combat;
+    c.dungeon.index = maw.monsters.length;   // the Devourer
+    spawnEnemy(game);
+    assert.equal(c.enemy.boss, true);
+    game.drainEvents();
+    rng.setSource(() => 0);   // every roll comes up: gear in the chest, and the unique outright
+    try {
+        c.enemy.hp = 0;
+        onEnemyDeath(game);
+    } finally {
+        rng.setSource(seededRandom(7));
+    }
+    const clear = game.drainEvents().find(e => e.type === 'dungeonClear');
+    assert.ok(clear?.item, 'the chest held gear');
+    assert.equal(clear.item.depth, 12, "as deep as the Maw's monsters");
+    const band = [...game.state.inventory, ...Object.values(game.state.equipped)].find(i => i?.uniqueId === 'starless_band');
+    assert.ok(band, 'the Starless Band');
+    assert.equal(band.type, 'Ring');
+    assert.deepEqual(band.affixes.map(a => a.stat), ['tokenMult', 'combatXpMult', 'dropMult', 'critDmg']);
+});
+
 test('dying in a dungeon ends the run with nothing and returns to the stage ladder', () => {
     const game = newGame({ bestStage: 200 });
     const lair = dungeonById('dragons_lair');

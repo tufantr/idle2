@@ -102,6 +102,14 @@ PETS = {
 }
 UNIQUES = { 'goblin_crown': 'armour/headgear/helmet_art2', 'crystal_heart': 'amulet/fluorescent', 'warlord_cleaver': 'weapon/executioner_axe1', 'dragonheart_plate': 'armour/fire_dragon_armour',
             'void_aegis': 'armour/shields/tower_shield_dd_dk' }
+# Added after the first release, and packed after every other cell so the earlier ones keep their place:
+# the Abyssal Maw's monsters (src/data/dungeons.js) and its unique.
+LATE_MONSTERS = {
+    'Starspawn': 'abyss/tentacled_starspawn', 'Thrashing Horror': 'abyss/thrashing_horror', 'Ancient Zyme': 'abyss/ancient_zyme',
+    'Executioner': 'demons/executioner', 'Green Death': 'demons/green_death', 'Worldbinder': 'abyss/worldbinder',
+    'Star Skull': 'demons/tzitzimitl', 'Devourer': 'unique/mnoleg',
+}
+LATE_UNIQUES = { 'starless_band': 'ring/randarts/dark' }
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------
@@ -180,6 +188,10 @@ def main(rltiles):
             add(f'hero/look/{look}/hair', f'player/hair/{hair}')
     for key, img in build_capes(rltiles).items():   # the skill capes (src/data/capes.js), last of all
         add(key, img)
+    for name, tile in LATE_MONSTERS.items():
+        add(f'mon/{name}', f'mon/{tile}')
+    for uid, tile in LATE_UNIQUES.items():
+        add(f'uniq/{uid}', f'item/{tile}')
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

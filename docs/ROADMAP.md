@@ -428,6 +428,14 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A sixth dungeon, the Abyssal Maw**, for the long game: it opens at stage 210 (about 83 hours
+      into the simulator's play; first cleared at about 177), twelve horrors of the deep Abyss (DCSS starspawn, horrors, a zyme, an
+      executioner, the green death, a worldbinder, a star-skull) and the Devourer. Its unique, the
+      Starless Band (a ring), is worth its affixes: +8% prestige tokens, +15% combat XP, +10% drops,
+      +30% crit damage. A gate in the rift's eye on the world map. Its painting is logged in
+      `docs/art/gemini.md` for the next session; until then it borrows the Abyss's. Also fixed: chest
+      gear ignored the dungeon's depth in the Abyss, so the Void Citadel's chests held gear three times
+      weaker than its monsters' drops
 - [x] **Skill capes**: level 99 in a skill now earns its cape, as in Melvor: a DCSS cloak in the
       cape's own cloth with a gold hem, which the hero puts on at once, and a small bonus to its skill
       for good (a second ore, fish, dish or bar 10% more often; +10% crops; +10% quality for crafting;

@@ -89,6 +89,20 @@ export const DUNGEONS = [
         ],
         boss: { name: 'Void King', icon: '👑' },
         unique: 'void_aegis'
+    },
+    {
+        // The deepest: a cavern like an open maw at the bottom of the Abyss, for the long game (stage
+        // 210 comes about 83 hours in at Melvor pace, tools/simulate.mjs). Its unique is worth its
+        // affixes, not its power, since gear dropped this deep is far stronger than any tier's base.
+        id: 'abyssal_maw', name: 'Abyssal Maw', icon: '🕳️', unlockStage: 210, stage: 215, chestTier: 7,
+        monsters: [
+            { name: 'Starspawn', icon: '🦑' }, { name: 'Thrashing Horror', icon: '👾' }, { name: 'Ancient Zyme', icon: '🦠' },
+            { name: 'Executioner', icon: '🌀' }, { name: 'Starspawn', icon: '🦑' }, { name: 'Green Death', icon: '☠️' },
+            { name: 'Worldbinder', icon: '🌀' }, { name: 'Thrashing Horror', icon: '👾' }, { name: 'Star Skull', icon: '💀' },
+            { name: 'Executioner', icon: '🌀' }, { name: 'Green Death', icon: '☠️' }, { name: 'Worldbinder', icon: '🌀' }
+        ],
+        boss: { name: 'Devourer', icon: '🐙' },
+        unique: 'starless_band'
     }
 ];
 
@@ -110,6 +124,10 @@ export const UNIQUES = {
     void_aegis: {
         id: 'void_aegis', name: "Void King's Aegis", type: 'Shield', tier: 7, power: 123,
         affixes: [ { stat: 'hpMult', name: 'Max HP', value: 0.12 }, { stat: 'dodge', name: 'Dodge', value: 0.06 }, { stat: 'lifesteal', name: 'Lifesteal', value: 0.04 }, { stat: 'attackSpeed', name: 'Attack Speed', value: 0.06 } ]
+    },
+    starless_band: {
+        id: 'starless_band', name: 'Starless Band', type: 'Ring', tier: 7, power: 123,
+        affixes: [ { stat: 'tokenMult', name: 'Token Gain', value: 0.08 }, { stat: 'combatXpMult', name: 'Combat XP', value: 0.15 }, { stat: 'dropMult', name: 'Drop Chance', value: 0.1 }, { stat: 'critDmg', name: 'Crit Damage', value: 0.3 } ]
     },
     dragonheart_plate: {
         id: 'dragonheart_plate', name: 'Dragonheart Plate', type: 'Body', tier: 6, power: 56,
