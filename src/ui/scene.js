@@ -27,6 +27,7 @@ const MAX_COINS_IN_FLIGHT = 14;
 const SKULL = glyph('skull');
 const CLOCK = glyph('time');
 const CAMPFIRE = sprite('campfire', { scale: 0.5, cls: 'soft res-spr' });
+const CTA_ICON = sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' });
 
 // One-shot motions, played with the Web Animations API so they layer over the idle loops in
 // style.css (which run on an inner element) instead of replacing them. A higher `rank` isn't
@@ -434,6 +435,7 @@ export function createScene(root, actions) {
             if (lastEnemy && scale !== lastFoeScale) showEnemy(game, lastEnemy, true); // the stage changed size: redraw the monster to match
             el.battle.classList.toggle('idle', !c.active);
             el.cta.hidden = c.active;
+            if (!c.active) setMarkup(el.cta, `${CTA_ICON} ${c.recovering ? 'Fight now' : 'Enter combat'}`);   // resting after a fall: go back in at once
         },
 
         /** Every animation frame: bars, timers, combo and a newly arrived monster. */
