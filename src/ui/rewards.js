@@ -55,7 +55,8 @@ export function levelCelebration(ev) {
     return {
         key: `level:${ev.skill}`,
         kind: ev.level >= 99 ? 'legend' : 'level',
-        icon: skill.icon,
+        icon: sprite(feature(ev.skill).icon, { scale: 2, fallback: skill.icon }),
+        art: artStyle(ev.skill),   // the skill's place, painted
         kicker: ev.level >= 99 ? 'Mastered' : 'Level up',
         title: `${skill.name} ${ev.level}`,
         lines: opened.slice(0, 4).map(o => `${o.icon} ${esc(o.name)}`)
