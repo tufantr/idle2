@@ -2017,6 +2017,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     body.battle-full .battle-combo b { font-size: 1.7rem; }
     body.battle-full #tab { max-height: 46dvh; padding: 0.5rem 0.6rem 0.6rem; }
     body.battle-full .zone-facts { display: none; } /* the map's zone card has the drops */
+    body.battle-full .dock-main:not(:has(.combat-controls)) { display: none; } /* a new player's first fights: no food or potions yet, so nothing to show */
     .menu-word { display: none; }
     .perks-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
     .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }

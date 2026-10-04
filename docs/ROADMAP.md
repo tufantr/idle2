@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **No empty strip in a new player's first fight on a phone**: the dock's supplies group, which
+      held only the zone's drops (hidden on a phone), is left out until there is food or a potion
 - [x] **Glyphs instead of emoji beside numbers**: thirteen small pixel icons (`icon/*` in the atlas,
       `glyph()` in `src/ui/sprites.js`): DCSS status icons blown up crisp (a heart, an hourglass, a
       star, a burst, wind, an up-arrow, a flame, a spark, Zz) and four drawn the same way (a skull,

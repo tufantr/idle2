@@ -953,7 +953,7 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
                       worldmap.js (the zones and the dungeons as pins on the painted map) ·
-                      sprites.js (atlas cells for monsters, items, perks, tools and the hero's layers) · sound.js (synthesized
+                      sprites.js (atlas cells for monsters, items, perks, tools, glyphs and the hero's layers) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
