@@ -97,7 +97,8 @@ const scene = createScene(document.getElementById('scene'), {
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },
     map: () => window.FI.openMap(),
-    sound: name => sound.play(name)
+    sound: name => sound.play(name),
+    pat: () => game.patPet()
 });
 
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
@@ -115,7 +116,7 @@ document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.co
 document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.rows}px`);
 
 // The skill stage above each skill tab: the hero at work (src/ui/stage.js).
-const stage = createStage(document.getElementById('stage'), { sound: name => sound.play(name) });
+const stage = createStage(document.getElementById('stage'), { sound: name => sound.play(name), pat: () => game.patPet() });
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
@@ -414,7 +415,7 @@ function handleEvents(events) {
                 else toast(`${SKILLS[ev.skill].name} level ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
                 break;
             }
-            case 'achievement': toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625)); break;
+            case 'achievement': toast(`${ev.secret ? 'A secret medal! ' : ''}${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625)); break;
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;

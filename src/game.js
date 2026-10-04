@@ -7,7 +7,7 @@ import { tickAction, startNodeAction, startSmelting, startSmithing, startCraftin
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
-import { checkAchievements, checkUnlocks, checkDisclosures } from './systems/progress.js';
+import { checkAchievements, checkUnlocks, checkDisclosures, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue } from './systems/minigame.js';
 import { applyOffline } from './systems/offline.js';
@@ -125,6 +125,8 @@ export class Game {
 
     /** Name the hero (one line of plain text; '' makes him "You" again). */
     setHeroName(name) { return this._act(() => { this.state.hero.name = heroName(name); this.markDirty(); return true; }); }
+    /** A pat for the pet (the scene's and the stage's); counted for a secret medal. */
+    patPet() { return this._act(() => { if (!Object.values(this.state.pets).some(Boolean)) return false; bumpStat(this, 'petPats'); this.markDirty(); return true; }); }
     /** Dress the hero in look `id` (data/looks.js); an unknown id is the first look. */
     setHeroLook(id) { return this._act(() => { this.state.hero.look = lookById(id).id; this.markDirty(); return true; }); }
     startNodeAction(skill, node) { return this._act(() => startNodeAction(this, skill, node)); }

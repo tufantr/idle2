@@ -1,12 +1,13 @@
 // The world: the first step ever into a zone is announced once (not again after a prestige, not
-// for the Abyss's deeper depths, not while away); and every seventh daily crate is a great one.
+// for the Abyss's deeper depths, not while away); every seventh daily crate is a great one; and the
+// secret medals.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { ZONES, STAGES_PER_ZONE } from '../src/data/zones.js';
-import { onEnemyDeath } from '../src/systems/combat.js';
+import { onEnemyDeath, onPlayerDeath } from '../src/systems/combat.js';
 
 rng.setSource(seededRandom(11));
 const T0 = 1_700_000_000_000;
@@ -67,4 +68,36 @@ test('every seventh crate opened is a great crate, whenever it is opened', async
     assert.equal(gems(plain).length, 1);
     assert.equal(gems(big).length, 2, 'and a gem of the next tier');
     assert.equal(cratesTowardGreat(game.state), 0);
+});
+
+test('secret medals: hidden until earned, for patting the pet, a great crate and getting back up', async () => {
+    const { ACHIEVEMENTS, medalShown } = await import('../src/data/achievements.js');
+    const { checkAchievements } = await import('../src/systems/progress.js');
+    const game = new Game(null, T0);
+    const secret = ACHIEVEMENTS.filter(a => a.secret);
+    assert.deepEqual(secret.map(a => a.id), ['companion', 'great_crate', 'unbroken']);
+    for (const a of secret) assert.equal(medalShown(game.state, a), false);
+
+    assert.equal(game.patPet(), false, 'no pet, no pat');
+    game.state.pets.fang = true;
+    for (let i = 0; i < 25; i++) game.patPet();
+    assert.equal(game.state.stats.petPats, 25);
+
+    game.state.daily.claimed = 6;
+    game.state.daily.banked = 1;
+    assert.ok(game.claimDaily().great);
+    assert.equal(game.state.stats.greatCrates, 1);
+
+    game.state.stats.recoveries = 99;
+    game.enterCombat();
+    game.state.combat.hp = 0;
+    onPlayerDeath(game);   // a fall, staged
+    game.state.combat.hp = game.derived.maxHp;
+    game.tick(game.now + 1000);
+    assert.equal(game.state.stats.recoveries, 100);
+
+    checkAchievements(game);
+    const events = game.drainEvents().filter(e => e.type === 'achievement' && e.secret).map(e => e.id).sort();
+    assert.deepEqual(events, ['companion', 'great_crate', 'unbroken']);
+    for (const a of secret) assert.equal(medalShown(game.state, a), true);
 });

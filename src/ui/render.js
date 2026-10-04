@@ -8,7 +8,7 @@ import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS } from '../data/items.js';
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
-import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { levelProgress, MAX_LEVEL } from '../core/xp.js';
@@ -1166,7 +1166,7 @@ const MEDAL_ART = {
     kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
     titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
     prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin', gildedKills: 'gold',
-    masteries99: 'uniq/crystal_heart', skills99: 'crown'
+    masteries99: 'uniq/crystal_heart', skills99: 'crown', petPats: 'pet/fang', greatCrates: 'crate', recoveries: 'campfire'
 };
 const SKILL_MEDAL = {
     mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', fishing: 'res/raw_shark', firemaking: 'campfire',
@@ -1191,7 +1191,8 @@ export function renderHall(game, ui) {
 
 function hallBanner(game) {
     const done = ACHIEVEMENTS.filter(a => game.state.achievements[a.id]).length;
-    return banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${ACHIEVEMENTS.length}</span>` });
+    const shown = ACHIEVEMENTS.filter(a => medalShown(game.state, a)).length;   // a secret medal counts once found
+    return banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${shown}</span>` });
 }
 
 // A bestiary star: filled once the kind has fallen 10, 100 or 1,000 times.
@@ -1279,7 +1280,7 @@ function renderRecords(game) {
 
 export function renderAchievements(game) {
     const state = game.state;
-    const medals = ACHIEVEMENTS.map(a => {
+    const medals = ACHIEVEMENTS.filter(a => medalShown(state, a)).map(a => {
         const won = !!state.achievements[a.id];
         const { have, need } = achievementProgress(state, a.req);
         const pct = Math.min(100, (have / Math.max(1, need)) * 100);

@@ -45,8 +45,15 @@ export const ACHIEVEMENTS = [
     { id: 'titan_slayer', name: 'Titan Slayer',      desc: 'Defeat a Titan',                  req: stat('titanKills', 1),       reward: '+5% ATK',                 mods: { atkMult: 0.05 } },
     { id: 'pet_friend',   name: 'Best Friends',      desc: 'Find a pet',                      req: stat('petsFound', 1),        reward: '+5% XP from all skills',  mods: { xpMult: 0.05 } },
     { id: 'collector',    name: 'Collector',         desc: 'Obtain a unique item',            req: stat('uniquesFound', 1),     reward: '+5% drop chance',         mods: { dropMult: 0.05 } },
-    { id: 'completionist',name: 'Completionist',     desc: 'Reach level 99 in any skill',     req: stat('skills99', 1),         reward: '+10% XP from all skills', mods: { xpMult: 0.10 } }
+    { id: 'completionist',name: 'Completionist',     desc: 'Reach level 99 in any skill',     req: stat('skills99', 1),         reward: '+10% XP from all skills', mods: { xpMult: 0.10 } },
+    // Secret medals: not shown (nor counted) until earned, for little things found by playing.
+    { id: 'companion',    name: 'Good Companion',    desc: 'Pat your pet 25 times',           req: stat('petPats', 25),         reward: '+5% gold from combat',    mods: { goldMult: 0.05 }, secret: true },
+    { id: 'great_crate',  name: 'Great Expectations',desc: 'Open a great crate',              req: stat('greatCrates', 1),      reward: '+5% drop chance',         mods: { dropMult: 0.05 }, secret: true },
+    { id: 'unbroken',     name: 'Unbroken',          desc: 'Get back up after 100 falls',     req: stat('recoveries', 100),     reward: '+5% Max HP',              mods: { hpMult: 0.05 }, secret: true }
 ];
+
+/** Is medal `a` shown in the Hall? Every open medal, and a secret one once it is earned. */
+export const medalShown = (state, a) => !a.secret || !!state.achievements[a.id];
 
 export function achievementById(id) {
     return ACHIEVEMENTS.find(a => a.id === id) || null;

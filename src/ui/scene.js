@@ -379,6 +379,7 @@ export function createScene(root, actions) {
     el.petFigure.addEventListener('click', () => {
         const pet = el.petFigure.firstElementChild;
         if (!pet) return;
+        actions.pat?.();
         actions.sound?.('pet');
         if (quietNow()) return;
         pet.animate?.([{ transform: 'none' }, { transform: 'translateY(-14px) scale(1.12)', offset: 0.4 }, { transform: 'none' }], { duration: 480, easing: 'cubic-bezier(.3,1.4,.6,1)' });

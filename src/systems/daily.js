@@ -60,6 +60,7 @@ export function claimDaily(game) {
     state.resources.essence += essence;
     for (const [id, qty] of Object.entries(materials)) state.resources[id] += qty;
     state.daily.claimed = (state.daily.claimed || 0) + 1;
+    if (great) bumpStat(game, 'greatCrates');
 
     const summary = Object.entries(materials).map(([id, qty]) => `${qty}× ${RESOURCES[id].name}`).join(', ');
     log(game, `📦 ${great ? 'A great crate' : 'Daily crate'}: +${gold.toLocaleString()} gold, +${essence} essence, ${summary}.`, 'daily');

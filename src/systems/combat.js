@@ -384,6 +384,7 @@ export function tickCombat(game, dt) {
         // Fallen and rested: back on his feet and into the fight, unless he was given work meanwhile.
         if (c.recovering && !state.action && c.hp >= d.maxHp) {
             enterCombat(game);
+            bumpStat(game, 'recoveries');
             game.emit({ type: 'recovered', stage: c.stage });
         }
         return;

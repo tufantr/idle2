@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Secret medals**: three medals not shown (nor counted) until earned: Good Companion (pat
+      your pet 25 times), Great Expectations (open a great crate) and Unbroken (get back up after 100
+      falls); "A secret medal!" says the toast
 - [x] **A pat for the pet**: tapping the pet at the hero's feet in the fight makes it hop, a heart
       float up, and its chirp play
 - [x] **The hero's look**: ten looks from DCSS's player tiles (men and women of three skin tones, an

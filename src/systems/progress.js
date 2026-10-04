@@ -56,7 +56,7 @@ export function checkAchievements(game) {
         if (meetsRequirement(state, ach.req)) {
             state.achievements[ach.id] = true;
             unlocked++;
-            game.emit({ type: 'achievement', id: ach.id, name: ach.name, reward: ach.reward });
+            game.emit({ type: 'achievement', id: ach.id, name: ach.name, reward: ach.reward, secret: !!ach.secret });
             log(game, `🏆 Achievement: ${ach.name} — ${ach.reward}`, 'achievement');
         }
     }
