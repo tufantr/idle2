@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A pat for the pet**: tapping the pet at the hero's feet in the fight makes it hop, a heart
+      float up, and its chirp play
 - [x] **The hero's look**: ten looks from DCSS's player tiles (men and women of three skin tones, an
       elf pair, a dwarf), tried on with arrows beside the hero on the title card or picked from a row of
       portraits in Settings; gear goes on top, a helmet hides the hair (`src/data/looks.js`, packed by

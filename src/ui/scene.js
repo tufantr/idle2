@@ -375,6 +375,19 @@ export function createScene(root, actions) {
         spawnFx('click-spark', '✦', (event.clientX - box.left) / box.width * 100, (event.clientY - box.top) / box.height * 100, 450);
     });
     el.cta.addEventListener('click', () => actions.toggle());
+    // A pat for the pet at the hero's feet: it hops, a heart floats up, and it chirps.
+    el.petFigure.addEventListener('click', () => {
+        const pet = el.petFigure.firstElementChild;
+        if (!pet) return;
+        actions.sound?.('pet');
+        if (quietNow()) return;
+        pet.animate?.([{ transform: 'none' }, { transform: 'translateY(-14px) scale(1.12)', offset: 0.4 }, { transform: 'none' }], { duration: 480, easing: 'cubic-bezier(.3,1.4,.6,1)' });
+        const box = el.fx.getBoundingClientRect();
+        const at = el.petFigure.getBoundingClientRect();
+        if (!box.width || !at.width) return;
+        fxBudget = Math.max(fxBudget, 1);
+        spawnFx('dmg heart', '♥', (at.left + at.width / 2 - box.left) / box.width * 100, (at.top - box.top) / box.height * 100, 1100);
+    });
     el.zone.addEventListener('click', () => actions.map?.());
     el.path.addEventListener('click', event => {
         const node = event.target.closest?.('button[data-stage]');
