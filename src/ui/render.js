@@ -39,6 +39,7 @@ import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
+import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 
@@ -708,9 +709,10 @@ function recipeCard({ title, icon, pic = null, color, inputs, note = '', have, h
 }
 
 /** The steps of a workshop as a row of tabs: one step on screen at a time. */
+// A view may carry a picture (HTML) to show instead of its step number, when the views are not steps.
 function segments(views, current, handler, label) {
-    return `<div class="seg" role="group" aria-label="${esc(label)}">${views.map(([id, text], i) =>
-        `<button class="seg-btn${current === id ? ' on' : ''}" onclick="${handler}('${id}')" aria-pressed="${current === id}"><b>${i + 1}</b>${esc(text)}</button>`).join('')}</div>`;
+    return `<div class="seg" role="group" aria-label="${esc(label)}">${views.map(([id, text, pic], i) =>
+        `<button class="seg-btn${current === id ? ' on' : ''}" onclick="${handler}('${id}')" aria-pressed="${current === id}">${pic ? `<span class="seg-pic">${pic}</span>` : `<b>${i + 1}</b>`}${esc(text)}</button>`).join('')}</div>`;
 }
 
 export function renderSmithing(game, ui) {
@@ -1085,7 +1087,7 @@ export function renderShop(game, ui) {
 const MEDAL_ART = {
     kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
     titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
-    prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond',
+    prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin',
     masteries99: 'uniq/crystal_heart', skills99: 'crown'
 };
 const SKILL_MEDAL = {
@@ -1100,9 +1102,72 @@ function medalArt(a) {
     return sprite(key || 'crown', { scale: 1.5, fallback: '🏆' });
 }
 
+/** The hall of trophies: the medals, the bestiary and the collection (pets, unique items), one at a time. */
+export function renderHall(game, ui) {
+    const view = ['medals', 'bestiary', 'collection'].includes(ui.hallView) ? ui.hallView : 'medals';
+    const pic = key => sprite(key, { scale: 0.75, cls: 'soft' });
+    const seg = segments([['medals', 'Medals', pic('crown')], ['bestiary', 'Bestiary', pic('mon/Griffin')], ['collection', 'Collection', pic('pet/scout')]], view, 'FI.hallView', 'Hall of trophies');
+    const body = view === 'bestiary' ? renderBestiary(game) : view === 'collection' ? renderCollection(game) : renderAchievements(game);
+    return `${hallBanner(game)}<div class="hall-seg">${seg}</div>${body}`;
+}
+
+function hallBanner(game) {
+    const done = ACHIEVEMENTS.filter(a => game.state.achievements[a.id]).length;
+    return banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${ACHIEVEMENTS.length}</span>` });
+}
+
+// A bestiary star: filled once the kind has fallen 10, 100 or 1,000 times.
+const ICON_STAR = '<svg class="star" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2l2.05 4.3 4.7.55-3.47 3.2.95 4.65L8 11.55 3.77 13.9l.95-4.65L1.25 6.05l4.7-.55z"/></svg>';
+const starRow = n => `<span class="beast-stars" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
+
+/**
+ * The bestiary: every kind of monster met, by place, with how many have fallen and its stars. The
+ * places reached are shown, and the next one as silhouettes; a kind not met yet is a silhouette.
+ */
+function renderBestiary(game) {
+    const state = game.state;
+    const best = Math.max(state.combat.bestStage || 1, state.stats.maxStage || 1);
+    const kills = state.stats.killsByMonster || {};
+    const zonesReached = BESTIARY.filter(g => g.kind === 'zone' && best > g.index * STAGES_PER_ZONE).length;
+    const open = DUNGEONS.filter(d => dungeonUnlocked(state, d)).length;
+    const shown = BESTIARY.filter(g => (g.kind === 'zone' ? g.index <= zonesReached : DUNGEONS.findIndex(d => d.id === g.id) <= open));
+    // Met: one has fallen, or (for saves from before the counts) the hero has stood on its stage.
+    const met = (g, m) => (kills[m.name] || 0) > 0 || (g.kind === 'zone'
+        ? best >= g.index * STAGES_PER_ZONE + m.at
+        : (state.dungeons[g.id]?.clears || 0) > 0);
+    let metCount = 0;
+    const groups = shown.map(g => {
+        const reached = g.kind === 'zone' ? g.index < zonesReached : DUNGEONS.findIndex(d => d.id === g.id) < open;
+        let stars = 0;
+        const tiles = g.monsters.map(m => {
+            const k = kills[m.name] || 0;
+            const seen = reached && met(g, m);
+            if (seen) metCount++;
+            const s = starsFor(k);
+            stars += s;
+            const next = nextStarAt(k);
+            const tip = seen ? `${m.name}: ${fmt(k)} defeated${next ? ` · the next star at ${fmt(next)}` : ' · every star earned'}` : 'Not met yet';
+            return `<div class="beast${seen ? '' : ' unmet'}${m.boss ? ' boss' : ''}${s === KILL_STARS.length ? ' gold' : ''}" title="${esc(tip)}">
+                <span class="beast-art">${sprite(`mon/${m.name}`, { scale: 2, cls: seen ? '' : 'silhouette', fallback: '👾' })}</span>
+                <b class="beast-name">${seen ? esc(m.name) : '???'}</b>
+                ${seen ? `${starRow(s)}<span class="beast-kills">${fmt(k)}</span>` : ''}
+            </div>`;
+        }).join('');
+        const art = g.kind === 'zone' ? g.id : DUNGEON_ART[g.id] || 'dungeon';
+        return `<section class="glass-panel bestiary-group${reached ? '' : ' unreached'} ${painted(art, 'center 60%')}">
+            <div class="panel-header"><h2>${esc(g.name)}</h2>${reached ? `<span class="beast-sum">${ICON_STAR} ${stars} / ${g.monsters.length * KILL_STARS.length}</span>` : '<span class="muted small">Not reached yet</span>'}</div>
+            <div class="beast-grid">${tiles}</div>
+        </section>`;
+    }).join('');
+    const total = bestiaryStars(kills);
+    return `<section class="glass-panel bestiary-summary ${painted('library', 'center 45%')}">
+        <div class="beast-total"><b>${metCount}</b><span>of ${BESTIARY_SIZE} kinds met</span></div>
+        <div class="beast-total"><b>${ICON_STAR} ${total}</b><span>of ${BESTIARY_MAX_STARS} stars: one for 10, 100 and 1,000 of a kind</span></div>
+    </section>${groups}`;
+}
+
 export function renderAchievements(game) {
     const state = game.state;
-    const done = ACHIEVEMENTS.filter(a => state.achievements[a.id]).length;
     const medals = ACHIEVEMENTS.map(a => {
         const won = !!state.achievements[a.id];
         const { have, need } = achievementProgress(state, a.req);
@@ -1115,8 +1180,7 @@ export function renderAchievements(game) {
                 : `<div class="medal-bar"><i style="--p:${pct.toFixed(1)}%"></i></div><div class="medal-count">${fmt(Math.min(have, need))} / ${fmt(need)}</div>`}
         </div>`;
     }).join('');
-    return `${banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${ACHIEVEMENTS.length}</span>` })}
-    <section class="glass-panel ${painted('hall', 'center 40%')}">
+    return `<section class="glass-panel ${painted('hall', 'center 40%')}">
         <div class="medal-grid">${medals}</div>
     </section>`;
 }
@@ -1678,7 +1742,7 @@ export function renderTab(game, ui, cloud) {
         case 'crafting': return renderCrafting(game, ui);
         case 'inventory': return renderInventory(game, ui);
         case 'shop': return renderShop(game, ui);
-        case 'achievements': return renderAchievements(game) + renderCollection(game);
+        case 'achievements': return renderHall(game, ui);
         case 'dungeons': return renderDungeons(game);
         case 'farming': return renderFarming(game, ui);
         case 'events': return renderEvents(game);

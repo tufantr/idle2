@@ -13,6 +13,9 @@ export const ACHIEVEMENTS = [
     { id: 'first_blood',  name: 'First Blood',       desc: 'Defeat 10 monsters',              req: stat('kills', 10),           reward: '+5% Max HP',              mods: { hpMult: 0.05 } },
     { id: 'slayer_1',     name: 'Monster Hunter I',  desc: 'Defeat 500 monsters',             req: stat('kills', 500),          reward: '+5% ATK',                 mods: { atkMult: 0.05 } },
     { id: 'slayer_2',     name: 'Monster Hunter II', desc: 'Defeat 5,000 monsters',           req: stat('kills', 5000),         reward: '+10% ATK',                mods: { atkMult: 0.10 } },
+    // The bestiary (data/bestiary.js): a star for 10, 100 and 1,000 defeats of each kind.
+    { id: 'naturalist',   name: 'Naturalist',        desc: 'Earn 25 bestiary stars',          req: stat('bestiaryStars', 25),   reward: '+5% gold from combat',    mods: { goldMult: 0.05 } },
+    { id: 'monster_lore', name: 'Monster Scholar',   desc: 'Earn 100 bestiary stars',         req: stat('bestiaryStars', 100),  reward: '+5% drop chance',         mods: { dropMult: 0.05 } },
     { id: 'boss_1',       name: 'Chieftain Slayer',  desc: 'Defeat the Stage 10 boss',        req: stat('maxStage', 11),        reward: '+10% Max HP',             mods: { hpMult: 0.10 } },
     { id: 'boss_5',       name: 'Highland Conqueror',desc: 'Reach Stage 50',                  req: stat('maxStage', 50),        reward: '+10% DEF',                mods: { defMult: 0.10 } },
     { id: 'boss_10',      name: 'Abyss Walker',      desc: 'Reach Stage 100',                 req: stat('maxStage', 100),       reward: '+10% ATK, +10% DEF',      mods: { atkMult: 0.10, defMult: 0.10 } },

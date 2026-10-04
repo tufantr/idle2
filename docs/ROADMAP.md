@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The bestiary**: the Achievements tab is a hall in three views (Medals, Bestiary,
+      Collection). The bestiary has a portrait of every kind of monster by place, with its count and
+      three stars (10, 100 and 1,000 defeats); unmet kinds are silhouettes. Two new medals,
+      Naturalist and Monster Scholar, for 25 and 100 stars
 - [x] **The event as a reward track**: the three milestones are medals on a bar that fills with
       the event's tokens (the next one lit, with how far there is to go); the event shop's goods are
       item cards with their picture; a festival token (a DCSS voucher, gilded) stands on the count

@@ -11,6 +11,7 @@ import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan } from './dungeon.js';
 import { COMBAT_PET_SECONDS } from '../data/pets.js';
 import { eventProgress } from './events.js';
+import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 
 /** Spawn the next enemy for the current mode: the stage ladder, a dungeon run, or the Titan. */
 export function spawnEnemy(game) {
@@ -214,6 +215,19 @@ function rollLoot(game, enemy, payout) {
     return drops;
 }
 
+/** The bestiary: one more of this kind defeated, and a star when it reaches 10, 100 or 1,000. */
+function countKind(game, enemy) {
+    if (enemy.titan || !BESTIARY_NAMES.has(enemy.baseName)) return;
+    const stats = game.state.stats;
+    const before = stats.killsByMonster[enemy.baseName] || 0;
+    stats.killsByMonster[enemy.baseName] = before + 1;
+    const stars = starsFor(before + 1);
+    if (stars > starsFor(before)) {
+        stats.bestiaryStars += 1;
+        game.emit({ type: 'bestiaryStar', name: enemy.baseName, stars, kills: before + 1 });
+    }
+}
+
 export function onEnemyDeath(game) {
     const state = game.state;
     const c = state.combat;
@@ -228,6 +242,7 @@ export function onEnemyDeath(game) {
     bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'kills');
     if (enemy.boss) bumpStat(game, 'bossKills');
+    countKind(game, enemy);
     grantXp(game, 'combat', xp);
     const drops = rollLoot(game, enemy, payout);
 

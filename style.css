@@ -1755,6 +1755,38 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .forge-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.9rem; }
 .forge-bar .mastery-row { flex: 1 1 200px; width: auto; }
 @media (max-width: 600px) { .seg { display: flex; } .seg-btn { flex: 1; justify-content: center; padding: 0.5rem 0.4rem; } }
+.seg-pic { display: inline-grid; place-items: center; width: 22px; height: 22px; line-height: 0; }
+.seg-pic .spr { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
+.hall-seg { display: flex; }
+.hall-seg .seg { margin-bottom: 0; }
+
+/* the bestiary: a portrait per kind of monster, its stars and how many have fallen */
+.bestiary-summary { display: flex; flex-wrap: wrap; gap: 0.8rem 2rem; align-items: center; padding: 1rem 1.25rem; }
+.beast-total { display: flex; align-items: baseline; gap: 0.5rem; }
+.beast-total b { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--font-display); font-size: 1.5rem; color: var(--gold-color); }
+.beast-total span { font-size: 0.82rem; color: var(--text-muted); }
+.beast-total .star, .beast-sum .star { width: 18px; height: 18px; fill: var(--gold-color); filter: drop-shadow(0 0 4px rgba(252, 211, 77, 0.45)); }
+.beast-sum { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #fde68a; text-shadow: 0 1px 3px #000; }
+.beast-sum .star { width: 15px; height: 15px; }
+.bestiary-group.unreached { opacity: 0.85; }
+.beast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 0.6rem; }
+.beast {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding: 0.6rem 0.4rem 0.55rem; text-align: center;
+    border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(33, 26, 19, 0.8), rgba(18, 13, 9, 0.86));
+}
+.beast.boss { border-color: rgba(239, 68, 68, 0.45); }
+.beast.gold { border-color: #e2b95f; box-shadow: 0 0 14px rgba(252, 211, 77, 0.25), inset 0 0 0 1px rgba(252, 211, 77, 0.2); }
+.beast-art { width: 64px; height: 64px; display: grid; place-items: center; line-height: 0; }
+.beast-art .spr { filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.7)); }
+.beast-art .spr.silhouette { opacity: 1; filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.8)); }  /* not met yet: no spoilers */
+.beast-name { font-family: var(--font-display); font-size: 0.8rem; line-height: 1.2; color: var(--heading); text-wrap: balance; }
+.beast.unmet .beast-name { color: var(--text-muted); letter-spacing: 0.1em; }
+.beast-stars { display: inline-flex; gap: 2px; }
+.beast-stars i { line-height: 0; }
+.beast-stars .star { width: 14px; height: 14px; fill: rgba(0, 0, 0, 0.55); stroke: rgba(214, 170, 92, 0.45); stroke-width: 1; }
+.beast-stars i.on .star { fill: var(--gold-color); stroke: #8a6423; filter: drop-shadow(0 0 3px rgba(252, 211, 77, 0.5)); }
+.beast-kills { font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+@media (max-width: 600px) { .beast-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.45rem; } }
 
 /* the armory's second line of numbers; shop goods with their picture; drawers */
 .doll-stats.minor { margin-top: 0.45rem; padding-top: 0; border-top: 0; font-size: 0.74rem; }

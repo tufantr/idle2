@@ -376,6 +376,16 @@ action's speed; combat rolls once per kill as a 4-second action and farming once
 action as long as the crop's growing time. Each pet gives +3% speed to its skill (Fang, the combat
 pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievements tab lists pets and uniques as a collection.
 
+**The bestiary** (`src/data/bestiary.js`). Every kind of monster (76: the ten zones' five each, then
+the dungeons' own, each listed once where it is first met; the Titans are left out, as each falls
+only once) has a portrait in the Achievements tab's Bestiary, with how many have fallen and up to three
+stars: one at 10 defeats, two at 100, three at 1,000 (228 in all). Defeats are counted per kind in
+`stats.killsByMonster` (dungeon elites count too), and the stars total is `stats.bestiaryStars`,
+recounted from the table when a save loads; old saves start with an empty table and see the kinds
+they have stood beside as met. A star is a toast with the monster's sprite. Two medals ride on it:
+Naturalist (25 stars, +5% gold) and Monster Scholar (100 stars, +5% drop chance). The places reached
+are shown, the next as silhouettes; a kind not met yet is a black shape and "???".
+
 ### 3.14 Achievements, unlocks and the daily crate
 
 - **Achievements** (`src/data/achievements.js`): 32, each with a named reward applied through the
@@ -890,7 +900,8 @@ src/core/             xp · rng · state (defaults, migration) · modifiers · f
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
-                      · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
+                      · bestiary (every kind of monster, its stars) · sprites, cardart (generated: the atlas's cells,
+                      the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
@@ -906,7 +917,7 @@ assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
-test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, saves, API; the API suite runs on an
+test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
                       atlas.py (packs assets/sprites.png and src/data/sprites.js from the DCSS tiles) ·

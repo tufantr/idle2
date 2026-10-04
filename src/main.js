@@ -38,6 +38,7 @@ const ui = {
     tab: prefs.get('fantasyIdle.tab') || 'combat',
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
     smithView: 'smelt',  // the step of Smithing on screen: smelt, forge or tools
+    hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
     smithMetal: null,    // null: the best metal there are bars for
     craftBar: null,
     craftGem: null,
@@ -357,6 +358,7 @@ function soundFor(ev, onCombat) {
         case 'minigameWin': return ['gold'];
         case 'harvest': return ['drop'];
         case 'obstacleBuilt': return ['unlock'];
+        case 'bestiaryStar': return isUnlocked(game.state, 'achievements') ? ['gold'] : null;
         case 'error': return ['error'];
         default: return null;
     }
@@ -417,6 +419,9 @@ function handleEvents(events) {
                 else toast(`A spare ${ev.item.name}: salvage it for essence`, 'achievement', pic(itemSpriteKey(ev.item)));
                 break;
             case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;
+            case 'bestiaryStar': // a kind of monster fell for the 10th, 100th or 1,000th time (once the bestiary can be seen)
+                if (isUnlocked(game.state, 'achievements')) toast(`${ev.name} ${'★'.repeat(ev.stars)} — ${fmt(ev.kills)} defeated`, 'level', pic(`mon/${ev.name}`));
+                break;
             case 'eventMilestone': rewards.celebrate({ kind: 'unlock', icon: sprite(EVENT_ART[ev.event.id], { scale: 2, fallback: ev.event.icon }), kicker: ev.event.name, title: ev.milestone.desc }); break;
             case 'masteryLevel':
                 if (ev.from < 99 && ev.level >= 99) rewards.celebrate({ key: `mastery:${ev.skill}:${ev.key}`, kind: 'legend', icon: tabIcon(ev.skill, 2), kicker: 'Mastery 99', title: ev.name });
@@ -627,6 +632,7 @@ window.FI = {
     craft(type, bar, gem) { game.startCrafting(type, bar, gem); render(); },
     makeTool(tool, tier) { game.startToolCraft(tool, tier); render(); },
     smithView(view) { ui.smithView = view; render(); },
+    hallView(view) { ui.hallView = view; render(); },
     selectSmithMetal(bar) { ui.smithMetal = bar; render(); },
     selectCraftBar(bar) { ui.craftBar = bar; render(); },
     selectCraftGem(gem) { ui.craftGem = gem; render(); },

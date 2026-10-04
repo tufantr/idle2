@@ -12,6 +12,7 @@ import { TOOLS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions } from '../data/mastery.js';
+import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 
 export const SAVE_VERSION = 3;
 
@@ -69,7 +70,8 @@ export function createDefaultState(now = Date.now()) {
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
             masteryLevels: 0, masteryBest: 1, masteries99: 0, ingredientsSaved: 0, campLevels: 0,
-            actionsBySkill: {}
+            actionsBySkill: {},
+            killsByMonster: {}, bestiaryStars: 0   // the bestiary (data/bestiary.js): defeats per kind, and its stars
         },
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
@@ -263,6 +265,14 @@ function normalise(data, now) {
         .map(e => ({ t: finite(e.t, now), type: LOG_TYPES.has(e.type) ? e.type : 'info', text: e.text.slice(0, 300) }));
     for (const key of Object.keys(state.stats.actionsBySkill)) if (!SKILL_IDS.includes(key)) delete state.stats.actionsBySkill[key];
     for (const id of SKILL_IDS) state.stats.actionsBySkill[id] = Math.max(0, finite(state.stats.actionsBySkill[id]));
+    // The bestiary: known kinds only, whole numbers; its stars follow from the counts.
+    const kills = isPlainObject(state.stats.killsByMonster) ? state.stats.killsByMonster : {};
+    state.stats.killsByMonster = {};
+    for (const [name, n] of Object.entries(kills)) {
+        const v = Math.floor(finite(n));
+        if (BESTIARY_NAMES.has(name) && v > 0) state.stats.killsByMonster[name] = v;
+    }
+    state.stats.bestiaryStars = bestiaryStars(state.stats.killsByMonster);
     for (const group of ['resources', 'skills', 'perks', 'tools', 'camp', 'dungeons', 'minigame']) {
         for (const key of Object.keys(state[group])) if (!Object.hasOwn(known[group], key)) delete state[group][key];
     }
