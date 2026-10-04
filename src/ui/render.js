@@ -704,6 +704,9 @@ export function renderSkill(game, ui, skillId) {
     </section>`;
 }
 
+// What rides the mini-game's track: the skill's tool, or what it chases (the fox, a fish).
+const MINIGAME_MARKER = { mining: 'tool/pickaxe', woodcutting: 'tool/axe', hunting: 'pet/scout', fishing: 'res/raw_trout' };
+
 /** The mini-game. It arrives with the first chance to play; between chances it is one quiet line. */
 export function renderMinigame(game, skillId) {
     const state = game.state;
@@ -719,33 +722,35 @@ export function renderMinigame(game, skillId) {
         if (boostLeft > 0) return `<div class="minigame-line live" style="--minigame-accent:${conf.accent}">${glyph('spark')} ${conf.label}: <b>+${Math.round(mg.bonus * 100)}% speed</b> · ${Math.ceil(boostLeft / 1000)}s</div>`;
         if (!training) return '';
         const wait = Math.max(0, (mg.nextOpportunityAt || now) - now);
-        return `<div class="minigame-line" style="--minigame-accent:${conf.accent}">${conf.icon} ${conf.label} <span class="muted">· next chance in about ${duration(wait)}</span> ${aboutButton('minigames')}</div>`;
+        return `<div class="minigame-line" style="--minigame-accent:${conf.accent}">${tabIcon(skillId, 0.625)} ${conf.label} <span class="muted">· next chance in about ${duration(wait)}</span> ${aboutButton('minigames')}</div>`;
     }
     let body;
     if (ch) {
-        const expires = Math.max(0, Math.ceil((ch.expiresAt - now) / 1000));
+        // the time left, as a bar draining under the prompt
+        const left = ch.expiresAt > ch.startedAt ? Math.max(0, Math.min(1, (ch.expiresAt - now) / (ch.expiresAt - ch.startedAt))) : 0;
+        const timer = `<i class="mg-time" style="--p:${(left * 100).toFixed(1)}%" aria-label="${Math.max(0, Math.ceil((ch.expiresAt - now) / 1000))} seconds left"></i>`;
         if (ch.type === 'timing' || ch.type === 'moving-target') {
-            body = `<div class="minigame-prompt">${ch.type === 'timing' ? 'Tap when the marker is inside the glowing zone.' : 'Fire when the prey crosses the kill zone.'} <span class="muted">(${expires}s)</span></div>
+            body = `<div class="minigame-prompt">${ch.type === 'timing' ? 'Tap when the marker is inside the glowing zone.' : conf.desc}</div>${timer}
                 <div class="minigame-timing-track"><div class="minigame-timing-zone" style="left:${ch.zoneStart * 100}%; width:${ch.zoneWidth * 100}%; background:${conf.accent}"></div>
-                <div class="minigame-timing-marker" id="mg-marker-${skillId}" style="left:${animatedPosition(ch, now) * 100}%; background:${conf.accent}">${ch.type === 'moving-target' ? sprite('pet/scout', { scale: 0.75, cls: 'soft', fallback: '🦊' }) : ''}</div></div>
-                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">${ch.type === 'timing' ? 'Tap now' : 'Loose arrow'}</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Skip</button></div>`;
+                <div class="minigame-timing-marker" id="mg-marker-${skillId}" style="left:${animatedPosition(ch, now) * 100}%; background:${conf.accent}">${MINIGAME_MARKER[skillId] ? sprite(MINIGAME_MARKER[skillId], { scale: 0.75, cls: 'soft' }) : ''}</div></div>
+                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">${ch.type === 'timing' ? 'Tap now' : skillId === 'fishing' ? 'Strike' : 'Loose arrow'}</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Skip</button></div>`;
         } else if (ch.type === 'heat') {
-            body = `<div class="minigame-prompt">Tap the flame to keep the heat inside the band, then plate it. <span class="muted">(${expires}s)</span></div>
+            body = `<div class="minigame-prompt">Tap the flame to keep the heat inside the band, then plate it.</div>${timer}
                 <div class="minigame-heat-track"><div class="minigame-timing-zone" style="left:${ch.targetStart * 100}%; width:${ch.targetWidth * 100}%; background:${conf.accent}"></div><div class="minigame-heat-fill" id="mg-heat-${skillId}" style="width:${ch.heat * 100}%; background:${conf.accent}"></div></div>
                 <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.pumpHeat('${skillId}')">${glyph('flame')} Tap heat</button><button class="minigame-start-btn" onclick="FI.resolveMinigame('${skillId}')">Plate it</button></div>`;
         } else {
-            body = `<div class="minigame-prompt">Drag the stabiliser into the glowing channel, then lock the brew. <span class="muted">(${expires}s)</span></div>
+            body = `<div class="minigame-prompt">Drag the stabiliser into the glowing channel, then lock the brew.</div>${timer}
                 <div class="minigame-drag-shell"><div class="minigame-drag-zone" style="left:${ch.targetStart * 100}%; width:${ch.targetWidth * 100}%; background:${conf.accent}"></div>
                 <input type="range" min="0" max="1" step="0.01" value="${ch.dragValue.toFixed(2)}" class="minigame-drag-slider" oninput="FI.setDragValue('${skillId}', this.value)"></div>
                 <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">Stabilise</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Vent</button></div>`;
         }
     } else {
-        body = `<div class="minigame-prompt pulse">A chance appears! <span class="muted">(${Math.ceil((mg.opportunityUntil - now) / 1000)}s)</span></div>
+        body = `<div class="minigame-prompt pulse">A chance appears! <span class="muted">${esc(conf.desc)} (${Math.ceil((mg.opportunityUntil - now) / 1000)}s)</span></div>
             <button class="minigame-action-btn" onclick="FI.startMinigame('${skillId}')">${conf.actionText}</button>`;
     }
     return `<div class="minigame-panel" style="--minigame-accent:${conf.accent}">
         <div class="minigame-header">
-            <div><div class="minigame-title">${conf.icon} ${conf.label} ${aboutButton('minigames')}</div><div class="minigame-desc">${conf.desc}</div></div>
+            <div class="minigame-title">${tabIcon(skillId, 0.75)} ${conf.label} ${aboutButton('minigames')}</div>
             <div class="minigame-boost-pill ${boostLeft > 0 ? 'live' : ''}">${boostLeft > 0 ? `+${Math.round(mg.bonus * 100)}% speed · ${Math.ceil(boostLeft / 1000)}s` : `Win: +${Math.round(BALANCE.minigame.baseBonus * 100)}–${Math.round(BALANCE.minigame.maxBonus * 100)}% speed`}${mg.streak > 1 ? ` · streak ${mg.streak}` : ''}</div>
         </div>
         ${body}

@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The mini-games in pictures**: the skill's sprite in the title instead of an emoji, the tool or
+      the quarry riding the track's marker (a pickaxe, an axe, the fox, a trout), the time left as a bar
+      draining under the prompt, the offer glowing instead of shaking, and fishing strikes instead of
+      loosing an arrow
 - [x] **A phone on its side**: on a short screen the full-screen fight has a compact title and smaller
       fighters, so they stand inside the scene with their names and stats instead of under the dock
 - [x] **The way to the next bestiary star**: a thin gold bar under each met monster's count
