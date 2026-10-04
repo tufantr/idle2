@@ -307,6 +307,9 @@ the Abyss repeats with a depth counter and steeper growth.
   and food healing), Fortune (+5% gold and drop chance), and Paragon (+1% ATK, DEF and HP, 200 levels)
   so skill points always have a use once the others are full.
 - **Why polynomial tokens:** see §6.1 — an exponential token formula ran away in the simulator.
+- **A name** (`state.hero.name`, set in Settings, sanitised by `heroName` in `src/core/text.js`:
+  one line of plain text, up to 20 characters; empty is "You") shows over the hero in the fight and
+  on his panel in the Inventory.
 - **Ranks** (`src/data/ranks.js`): prestiges earn the hero a title worn as his cloak's colour, the
   gear rarities' colours and then past them: Recruit (red), Adventurer (1, green), Veteran (5, blue),
   Champion (15, purple), Hero (40, gold), Legend (100, white), Mythic (250, black), at about 1, 5,

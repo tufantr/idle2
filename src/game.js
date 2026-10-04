@@ -18,6 +18,7 @@ import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
 import { eventStatus, buyEventItem } from './systems/events.js';
+import { heroName } from './core/text.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
 const OFFLINE_GAP_MS = 60000;    // gaps longer than this are replayed as offline progress
@@ -121,6 +122,8 @@ export class Game {
     // Each action recomputes derived stats immediately, so callers can read game.derived right after.
     _act(fn) { const result = fn(); if (this.dirty) this.recompute(); return result; }
 
+    /** Name the hero (one line of plain text; '' makes him "You" again). */
+    setHeroName(name) { return this._act(() => { this.state.hero.name = heroName(name); this.markDirty(); return true; }); }
     startNodeAction(skill, node) { return this._act(() => startNodeAction(this, skill, node)); }
     startSmelting(recipe) { return this._act(() => startSmelting(this, recipe)); }
     startSmithing(type, bar) { return this._act(() => startSmithing(this, type, bar)); }

@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A name for the hero**: set in Settings (one line, up to 20 characters, kept in the save),
+      shown over him in the fight ("Aldric · Combat Lv 62", "Lv" on a phone) and on his panel in
+      the Inventory
 - [x] **A fifth weekend event, Gold Fever**: gilded monsters come three times as often, and +10%
       gold from combat
 - [x] **Uniques worn show on the hero**: a gold crown, red dragon armour and a violet tower shield

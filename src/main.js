@@ -761,6 +761,7 @@ window.FI = {
     mapTravel(stage) { closeModal(); game.setStage(stage); if (ui.tab !== 'combat') window.FI.switchTab('combat'); else render(); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    setHeroName(name) { game.setHeroName(name); render(); },
     toggleSound() {
         game.state.settings.sound = game.state.settings.sound === false;
         game.markDirty();

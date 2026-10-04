@@ -40,6 +40,7 @@ import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, mo
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank } from '../data/ranks.js';
+import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
@@ -998,7 +999,7 @@ export function renderInventory(game, ui) {
     const stat = (icon, value, label, title) => `<span title="${title}">${icon} <b>${value}</b> ${label}</span>`;
     return `<div class="armory${hasGear ? '' : ' bare'}">
         <section class="glass-panel doll-panel ${painted('armory', 'center 62%')}">
-            <div class="panel-header"><h2>Your hero</h2>${rankBadge(state)}<span class="muted small">Combat level ${d.combatLevel}</span></div>
+            <div class="panel-header"><h2>${esc(state.hero?.name || 'Your hero')}</h2>${rankBadge(state)}<span class="muted small">Combat level ${d.combatLevel}</span></div>
             <div class="doll">
                 <div class="doll-col">${doll.left.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
                 <div class="doll-figure">${heroSprite(state, { scale: 6 })}</div>
@@ -1547,6 +1548,7 @@ export function renderSettings(game, ui, cloud) {
     </div>
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
+        <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" ${state.settings.devUnlockAll ? 'checked' : ''}> Developer mode: unlock every tab and mini-game</label>

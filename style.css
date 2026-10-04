@@ -1806,6 +1806,10 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
     border: 1px solid color-mix(in srgb, var(--cloak) 60%, transparent); background: color-mix(in srgb, var(--cloak) 16%, rgba(0, 0, 0, 0.45));
 }
 .rank-badge i { width: 10px; height: 10px; border-radius: 50%; background: var(--cloak); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 6px color-mix(in srgb, var(--cloak) 70%, transparent); }
+.fighter-name .lv-short { display: none; }
+@media (max-width: 600px) { .fighter-name .lv-long { display: none; } .fighter-name .lv-short { display: inline; } }
+.hero-name-field { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; margin-bottom: 0.6rem; font-size: 0.9rem; font-weight: 600; }
+.hero-name-field .text-input { flex: 1 1 180px; max-width: 260px; font-family: var(--font-display); font-weight: 700; }
 .rank-next { font-family: var(--font-body); font-size: 0.7rem; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .doll-panel .panel-header { flex-wrap: wrap; }
 

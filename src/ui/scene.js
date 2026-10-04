@@ -371,7 +371,9 @@ export function createScene(root, actions) {
             el.zone.disabled = !mapped;
             el.zone.title = mapped ? 'Open the world map' : '';
             renderPath(state);
-            setText(el.heroName, `You · Combat Lv ${d.combatLevel}`);
+            // his name and level ("Combat Lv" on a wide screen, "Lv" on a phone, so a long name still fits)
+            const nameHtml = `${esc(state.hero?.name || 'You')}<span class="lv-long"> · Combat Lv ${d.combatLevel}</span><span class="lv-short"> · Lv ${d.combatLevel}</span>`;
+            if (el.heroName.__html !== nameHtml) { el.heroName.innerHTML = nameHtml; el.heroName.__html = nameHtml; }
             setMarkup(el.heroMeta, heroKit(state));
             const enemy = currentEnemy(state);
             if (enemy === lastEnemy) setText(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
