@@ -305,7 +305,8 @@ function renderLoadout(game) {
     const showFood = seen(state, 'food');
     const showPotions = seen(state, 'potions');
     if (!showFood && !showPotions) return '';
-    const pick = (on, onclick, inner, title) => `<button class="pick${on ? ' on' : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
+    // `state`: '' or 'in-play' (Auto eats it: lit softly) or 'idle' (it won't be used: dimmed)
+    const pick = (on, onclick, inner, title, state = '') => `<button class="pick${on ? ' on' : ''}${state ? ` ${state}` : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
     const word = w => `<span class="pick-word">${w}</span>`;
     const foods = foodsByHealing().filter(f => state.resources[f.id] > 0 || c.autoEat === f.id);
     const potions = orderedByTier('potion').filter(p => state.resources[p.id] > 0 || c.potion === p.id);
@@ -315,19 +316,23 @@ function renderLoadout(game) {
         : '');
     const noFood = !foods.some(f => state.resources[f.id] > 0);
     const noPotions = !potions.some(p => state.resources[p.id] > 0);
+    // Auto eats from every food carried, so those tiles light up with it; food that won't be eaten
+    // (None picked, or another food) is dimmed, and so is a potion that isn't the one picked.
+    const foodState = f => (c.autoEat === 'auto' ? (state.resources[f.id] > 0 ? 'in-play' : '') : c.autoEat === f.id ? '' : 'idle');
     const foodRow = [
-        pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat whatever best fits the missing health'),
+        pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat from all your food, whichever best fits the missing health'),
         pick(c.autoEat === 'none', "FI.setAutoEat('none')", word('None'), 'Never eat automatically'),
         ...foods.map(f => pick(c.autoEat === f.id, `FI.setAutoEat('${f.id}')`,
             `${resIcon(f.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[f.id] || 0)}</span><span class="pick-sub">+${Math.round(f.heals * d.foodMult)}</span>`,
-            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)`)),
+            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)${c.autoEat === 'auto' ? '. Auto eats it when it fits best' : '. Pick it to eat only this'}`,
+            foodState(f))),
         noFood ? goTile('cooking', 'Cook', 'No food left: cook some') : ''
     ].join('');
     const potionRow = [
         pick(c.potion === 'none', "FI.setPotion('none')", word('None'), 'No potion'),
         ...potions.map(p => pick(c.potion === p.id, `FI.setPotion('${p.id}')`,
             `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
-            `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`)),
+            `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`, c.potion === p.id ? '' : 'idle')),
         noPotions ? goTile('alchemy', 'Brew', 'No potions left: brew some') : ''
     ].join('');
     const potionNote = c.potion !== 'none' ? (c.potionCharges > 0 ? `${c.potionCharges} attacks left` : (state.resources[c.potion] > 0 ? 'drinks on the next attack' : 'none left')) : '';

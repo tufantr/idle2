@@ -429,6 +429,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Auto lights up the food it eats**: the owner asked whether eating was automatic, since the
+      food sat in its own unlit box beside a lit Auto. It is: Auto eats from all the food carried.
+      Now, under Auto, every food tile in the bag is lit softly with it; under None, or with one food
+      picked, the food that won't be eaten is dimmed, and so is a potion that isn't the one picked
 - [x] **A livelier sidebar**: the owner found it dull. It now stands on a painting of its own (the
       hall's red banner behind the mark, its trophy cabinet behind the places) instead of plain glass;
       each place is a round medallion ringed in its skill's colour with a crisp full-size sprite, its
