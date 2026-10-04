@@ -434,7 +434,7 @@ progress as motion, art before words, one stage with a HUD around it.
       +3% speed everywhere for agility; +5% attack and defence for combat). The 99 card shows the hero
       in it on a gold medallion; Settings gains a row of cloaks once one is earned (the rank's cloak,
       each cape, the next one as a silhouette); each skill's "?" says what its cape gives; the
-      chronicle's 99 wears it
+      chronicle's 99 wears it; the Hall's Records count the capes and the total level (out of 1,188)
 - [x] **Melvor pace**: the owner chose a long game. Level 99 in a skill now takes 190–290 hours of
       training with no boosts (it was 60–130), and combat 99 160–210 hours of the simulator's mixed
       play (it was 20–40). The first levels come as quickly as ever: actions that open by level 20

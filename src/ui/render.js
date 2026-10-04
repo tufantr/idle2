@@ -2,7 +2,7 @@
 // active tab is re-rendered on a short interval, and a few live elements (progress bars, HP)
 // are patched every frame. Nothing in here mutates game state — handlers call window.FI.
 
-import { SKILLS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
+import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, sellValue } from '../data/resources.js';
 import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
@@ -11,7 +11,7 @@ import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { levelProgress, MAX_LEVEL } from '../core/xp.js';
+import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
@@ -1332,8 +1332,12 @@ function renderRecords(game) {
     const zone = zoneForStage(best);
     const clears = Object.values(state.dungeons || {}).reduce((sum, d) => sum + (d.clears || 0), 0);
     const hours = (state.meta.playtimeMs || 0) / 3600000;
+    const totalLevel = SKILL_IDS.reduce((sum, id) => sum + levelForXp(state.skills[id]?.xp || 0), 0);
+    const capes = capesEarned(state);
     const records = [
         [`mon/${zone.boss}`, fmt(best), 'best stage'],
+        ['perk/scholar', `${fmt(totalLevel)}/${fmt(SKILL_IDS.length * MAX_LEVEL)}`, 'total level'],
+        [`hero/capes/${capeWorn(state)?.skill || capes[0]?.skill || 'combat'}`, `${capes.length}/${CAPES.length}`, 'skill capes'],
         ['item/Weapon/3', fmt(s.kills || 0), 'monsters defeated'],
         ['mon/Goblin Chieftain', fmt(s.bossKills || 0), 'bosses defeated'],
         ['gold', fmt(s.gildedKills || 0), 'gilded monsters'],
