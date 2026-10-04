@@ -89,3 +89,22 @@ test('event bonuses apply only while it runs', () => {
     const after = collectModifiers(game.state);
     assert.notDeepEqual(during, after);
 });
+
+test('Lucky Paws joins the rotation without moving a weekend already run, and makes pets three times as likely', () => {
+    const state = new Game(null, TUESDAY).state;
+    const WEEK = 7 * 24 * H;
+    const before = t => EVENTS[(((Math.floor((t - Date.UTC(2024, 0, 5)) / WEEK)) % 5) + 5) % 5].id;   // the rotation of five
+    for (let t = Date.UTC(2024, 0, 5) + H; t < Date.UTC(2026, 9, 16); t += WEEK) assert.equal(eventStatus(state, t).event.id, before(t), new Date(t).toISOString());
+    const from = Date.UTC(2026, 9, 16) + H;
+    assert.equal(eventStatus(state, from).event.id, 'lucky_paws');
+    const six = new Set();
+    for (let w = 0; w < 6; w++) six.add(eventStatus(state, from + w * WEEK).event.id);
+    assert.equal(six.size, 6, 'then all six, each once in six weekends');
+
+    const game = new Game(null, from);
+    game.recompute();
+    assert.equal(game.derived.petMult, 3);
+    const quiet = new Game(null, from + 4 * 24 * H);   // Tuesday: no event
+    quiet.recompute();
+    assert.equal(quiet.derived.petMult, 1);
+});

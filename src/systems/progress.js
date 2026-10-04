@@ -89,7 +89,7 @@ export function rollPet(game, skill, actionMs) {
     const pet = petForSkill(skill);
     if (!pet || game.state.pets[pet.id]) return null;
     const level = levelForXp(game.state.skills[skill]?.xp || 0);
-    if (!rng.chance(petChance(actionMs, level))) return null;
+    if (!rng.chance(petChance(actionMs, level) * (game.derived?.petMult || 1))) return null;
     game.state.pets[pet.id] = true;
     bumpStat(game, 'petsFound');
     log(game, `🐾 A pet found you: ${pet.icon} ${pet.name} (${pet.desc}).`, 'achievement');

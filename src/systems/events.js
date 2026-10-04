@@ -7,7 +7,13 @@ import { log } from './progress.js';
 
 const DAY = 24 * 3600 * 1000;
 const WEEK = 7 * DAY;
-const ROTATION_EPOCH = Date.UTC(2024, 0, 5); // a Friday: the rotation counts weekends from here
+// The rotation counts weekends (from a Friday) through the first `count` events, starting at `offset`.
+// When an event joins, a new era begins at a future weekend, so the weekends already run (and the one
+// running) keep their events.
+export const ROTATION_ERAS = [
+    { from: Date.UTC(2024, 0, 5), count: 5, offset: 0 },
+    { from: Date.UTC(2026, 9, 16), count: 6, offset: 5 }    // Lucky Paws joins, after Gold Fever
+];
 
 /** 00:00 UTC of the most recent event start day at or before `now`. */
 function windowStart(now) {
@@ -17,8 +23,10 @@ function windowStart(now) {
 }
 
 function eventForWindow(start) {
-    const n = Math.floor((start - ROTATION_EPOCH) / WEEK);
-    return EVENTS[((n % EVENTS.length) + EVENTS.length) % EVENTS.length];
+    let era = ROTATION_ERAS[0];
+    for (const e of ROTATION_ERAS) if (start >= e.from) era = e;
+    const n = Math.floor((start - era.from) / WEEK) + era.offset;
+    return EVENTS[((n % era.count) + era.count) % era.count];
 }
 
 /**

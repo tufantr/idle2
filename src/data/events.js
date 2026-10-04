@@ -1,10 +1,11 @@
 // Weekend events: a template for timed content that needs no server. Every weekend (Friday 00:00 to
-// Monday 00:00 UTC) one of five themed events runs, in rotation by ISO week. While it runs:
+// Monday 00:00 UTC) one of the themed events runs, in rotation by week (systems/events.js). While it runs:
 // - its modifiers apply (through the pipeline, like everything else);
 // - every EVENT_ACTIONS_PER_TOKEN actions or kills earn a Festival Token, up to EVENT_DAILY_CAP a day;
 // - milestones pay out at 50 / 100 / 150 tokens earned in that event;
 // - the event shop sells rewards for tokens. Tokens keep between events, so nothing is lost.
-// A new event is a new entry in EVENTS (the "S per event" in the roadmap).
+// A new event is a new entry at the end of EVENTS and a new era in ROTATION_ERAS (systems/events.js),
+// so the weekends already run keep their events.
 
 export const EVENT_ACTIONS_PER_TOKEN = 20;
 export const EVENT_DAILY_CAP = 60;
@@ -37,6 +38,12 @@ export const EVENTS = [
         id: 'gold_fever', name: 'Gold Fever', icon: '🪙', color: '#facc15',
         desc: 'The monsters glitter: gilded monsters come three times as often, and +10% gold from combat.',
         mods: { gildedChance: 2, goldMult: 0.10 }
+    },
+    {
+        // petChance is how much likelier a pet is to find you: +2 = three times
+        id: 'lucky_paws', name: 'Lucky Paws', icon: '🐾', color: '#f472b6',
+        desc: 'Little friends are about: pets are three times as likely to find you, and +10% XP from every skill.',
+        mods: { petChance: 2, xpMult: 0.10 }
     }
 ];
 

@@ -546,11 +546,14 @@ with the game's own stat code; the client never submits damage or scores.
 `src/data/events.js` (content), `src/systems/events.js` (logic). A template for timed content that
 needs no server: the schedule is the UTC calendar, so events run offline too.
 
-- **When:** every weekend, Friday 00:00 to Monday 00:00 UTC. Five events rotate week by week:
+- **When:** every weekend, Friday 00:00 to Monday 00:00 UTC. Six events rotate week by week:
   **Harvest Festival** (+25% farming yield, +15% cooking and fishing speed), **Titan's Fury** (+20%
   combat XP and gold, +10% drop chance), **Miner's Rush** (+20% gathering speed, +10% XP in every
   skill), **Guild Fair** (+20% smithing, crafting and firemaking speed, +5% crafted quality) and
-  **Gold Fever** (gilded monsters three times as often, +10% gold from combat). The
+  **Gold Fever** (gilded monsters three times as often, +10% gold from combat), and from 16 October
+  2026 **Lucky Paws** (pets three times as likely, +10% XP in every skill). An event joins as a new era
+  of the rotation (`ROTATION_ERAS` in `src/systems/events.js`) starting at a future weekend, so no
+  weekend already run changes its event and nobody loses a running event's milestones. The
   bonuses go through the modifier pipeline like any other source. None of them touch combat stats, so
   clan damage is the same during an event.
 - **Festival Tokens:** every 20 skill actions or kills earn one (a harvest counts as 5), up to 60 a
