@@ -281,8 +281,11 @@ export function assembleUnique(game, dungeonId) {
     return item;
 }
 
-/** Called by combat when the player dies or a dungeon boss outlasts its timer. */
-export function failDungeon(game, reason) {
+/**
+ * A run ends unfinished: the hero fell or the boss outlasted its timer (`lost`), or the hero left
+ * (`lost` false: for a stage, another dungeon, the Titan, a prestige, work, or by Leave dungeon).
+ */
+export function failDungeon(game, reason, { lost = false } = {}) {
     const c = game.state.combat;
     if (choosingAfterClear(game.state)) {   // the run is already won: leaving now loses nothing
         endDungeon(game);
@@ -290,7 +293,7 @@ export function failDungeon(game, reason) {
     }
     const d = dungeonById(c.dungeon?.id);
     log(game, `${d?.icon || '🕳️'} ${d?.name || 'Dungeon'} run failed: ${reason}. Progress in the run is lost.`, 'death');
-    game.emit({ type: 'dungeonFail', dungeon: d?.id, reason });
+    game.emit({ type: 'dungeonFail', dungeon: d?.id, reason, lost });
     returnToStages(game);
 }
 

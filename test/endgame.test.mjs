@@ -160,7 +160,9 @@ test('dying in a dungeon ends the run with nothing and returns to the stage ladd
     assert.equal(game.state.stats.deaths, 1);
     assert.equal(game.state.dungeons[lair.id].clears, 0);
     assert.equal(game.state.combat.stage, 1, 'a dungeon death does not move you on the ladder');
-    assert.equal(events(game, 'dungeonFail').length, 1);
+    const fails = events(game, 'dungeonFail');
+    assert.equal(fails.length, 1);
+    assert.equal(fails[0].lost, true, 'a fall loses the run');
 });
 
 test('a dungeon boss that outlasts its timer fails the run, but combat carries on', () => {
@@ -178,6 +180,7 @@ test('a dungeon boss that outlasts its timer fails the run, but combat carries o
     const fails = events(game, 'dungeonFail');
     assert.equal(fails.length, 1);
     assert.match(fails[0].reason, /timer/);
+    assert.equal(fails[0].lost, true, 'so does the timer');
 });
 
 test('gear is locked inside a dungeon; leaving abandons the run', () => {
@@ -187,8 +190,10 @@ test('gear is locked inside a dungeon; leaving abandons the run', () => {
     game.enterDungeon(warren.id);
     assert.equal(game.equipItem(9001), false);
     assert.ok(game.drainEvents().some(e => e.type === 'error' && /locked/.test(e.text)));
+    game.drainEvents();
     game.leaveDungeon();
     const c = game.state.combat;
+    assert.equal(game.drainEvents().find(e => e.type === 'dungeonFail')?.lost, false, 'leaving is not a loss to report');
     assert.equal(c.mode, 'stages');
     assert.equal(c.active, false);
     assert.equal(game.equipItem(9001), true, 'gear can be changed again outside');

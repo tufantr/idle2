@@ -428,6 +428,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **After a dungeon, back to the Dungeons tab**: ending a dungeon, leaving one, or losing a run
+      (after the defeat has shown) returns a watching player to the Dungeons tab instead of the stage
+      fight; the hero fights on at the stages in the background (the header's pill shows where). Map
+      Travel, the Titan and a prestige still keep the fight on screen
 - [x] **Keep going, or end the dungeon**: the owner asked how to win a dungeon that "goes on forever"
       (it was winning, then repeating behind a switch). The switch is gone. After the first clear of a
       visit the hero waits at the open chest, which stands in the boss's place, and a dialog over the

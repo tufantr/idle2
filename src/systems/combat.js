@@ -315,7 +315,7 @@ export function onPlayerDeath(game) {
     bumpStat(game, 'deaths');
     const mode = c.mode;
     if (mode !== 'stages') {
-        if (mode === 'dungeon') failDungeon(game, 'you were defeated');
+        if (mode === 'dungeon') failDungeon(game, 'you were defeated', { lost: true });
         else endTitan(game, false);
         game.emit({ type: 'death', stage: c.stage, mode });
         c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
@@ -345,7 +345,7 @@ export function onPlayerDeath(game) {
 /** The boss outlasted its timer: step back one stage and farm there for a minute before retrying. */
 export function onBossTimeout(game) {
     const c = game.state.combat;
-    if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`); return; }
+    if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`, { lost: true }); return; }
     if (c.mode === 'titan') { endTitan(game, false); return; }
     bumpStat(game, 'bossEscapes');
     const back = Math.max(1, c.stage - 1);

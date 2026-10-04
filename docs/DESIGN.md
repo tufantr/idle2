@@ -363,7 +363,9 @@ health. Dying, leaving or running out of time loses the run; clearing it (the bo
 that opens a chest. **After the first clear of a visit the hero waits at the open chest** (it stands in
 the boss's place on the scene) and a dialog offers **Keep going** (the run starts again after every
 clear, until the hero leaves; an ∞ marks it) or **End the dungeon** (back to the stage the hero left,
-fighting on). With no answer in `DUNGEON_CHOICE_MS` (30 s), or with nobody there while away, the hero
+fighting on). A player watching goes back to the Dungeons tab when a visit is over: after End the
+dungeon, Leave dungeon, or a lost run (a fall or the boss's timer, once the defeat has shown); map
+Travel, the Titan and a prestige keep the fight on screen, and a player on another tab stays there. With no answer in `DUNGEON_CHOICE_MS` (30 s), or with nobody there while away, the hero
 keeps going, so idle time is never lost; leaving while waiting is not a failure, as the run is won.
 There is no standing repeat switch any more (old saves drop `combat.autoRepeat`). During a run the
 fight's dock leads with a panel of its own: the clears, the unique's fragments (Assemble once there are

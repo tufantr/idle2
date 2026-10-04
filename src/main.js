@@ -377,6 +377,12 @@ const ARRIVALS = {
 };
 const arrivals = new Set();
 
+/** A dungeon visit is over: a player watching it goes back to the Dungeons tab (one elsewhere stays there). */
+function backToDungeons() {
+    if (ui.tab === 'combat' && isUnlocked(game.state, 'dungeons')) window.FI.switchTab('dungeons');
+    else render();
+}
+
 /** A quick pop with a glow on something just drawn: the answer to a press on the armory's buttons. */
 function flourish(selector, glow = 'rgba(253, 230, 138, 0.9)') {
     if (document.body.classList.contains('reduced-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
@@ -499,7 +505,11 @@ function handleEvents(events) {
                 setTimeout(() => window.FI.openRunChoice(), 1500);
                 break;
             case 'dungeonChosen': if (ui.modalOpen === 'runChoice') closeModal(); break;
-            case 'dungeonFail': toast('The dungeon run failed', 'death'); break;
+            case 'dungeonFail':
+                toast('The dungeon run failed', 'death');
+                // lost (a fall, or the boss's timer): once the defeat has shown, back to the dungeons
+                if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, 2400);
+                break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
                 const zone = ZONES.find(z => z.id === ev.zone);
                 if (!zone) break;
@@ -742,9 +752,12 @@ window.FI = {
 
     /** Enter or leave the fight. Entering it lets it fill the screen. */
     toggleCombat() {
-        const fighting = game.state.combat.active;
+        const c = game.state.combat;
+        const fighting = c.active;
+        const inDungeon = c.mode === 'dungeon';
         game.toggleCombat();
-        if (!fighting && game.state.combat.active) setBattleFull(true);
+        if (!fighting && c.active) setBattleFull(true);
+        if (inDungeon && c.mode !== 'dungeon') { backToDungeons(); return; }   // Leave dungeon: back to the list of them
         render();
     },
     /** After a fall: rest without going back into the fight. */
@@ -767,7 +780,11 @@ window.FI = {
     /** After the first clear of a visit: the choice, in a dialog over whatever is on screen. */
     openRunChoice() { if (choosingAfterClear(game.state) && !ui.modalOpen) openModal(renderRunChoiceModal(game), 'runChoice'); },
     dungeonKeepGoing() { if (game.dungeonKeepGoing()) sound.play('unlock'); if (ui.modalOpen === 'runChoice') closeModal(); render(); },
-    dungeonEnd() { game.dungeonEnd(); if (ui.modalOpen === 'runChoice') closeModal(); render(); },
+    dungeonEnd() {
+        const ended = game.dungeonEnd();
+        if (ui.modalOpen === 'runChoice') closeModal();
+        if (ended) backToDungeons(); else render();
+    },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
     challengeTitan() { if (game.challengeTitan()) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
 

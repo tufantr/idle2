@@ -503,7 +503,7 @@ function runChoiceButtons(game) {
     const back = `${zoneForStage(c.stage).name}, stage ${c.stage}`;
     return `<div class="run-choice-btns">
         <button class="prestige-btn run-keep" onclick="FI.dungeonKeepGoing()"><b>Keep going</b><span>Again and again, until you leave</span></button>
-        <button class="modal-btn btn-cancel run-end" onclick="FI.dungeonEnd()"><b>End the dungeon</b><span>Back to ${esc(back)}</span></button>
+        <button class="modal-btn btn-cancel run-end" onclick="FI.dungeonEnd()"><b>End the dungeon</b><span>Your hero fights on at ${esc(back)}</span></button>
     </div>`;
 }
 
@@ -1629,7 +1629,7 @@ export function dungeonVerdict(game, d) {
     const limit = DUNGEON_BOSS_TIME_MS / 1000;
     const fight = dungeonPreview(game.derived, d).bossFight;
     const cls = readinessClass(fight.killSeconds, limit, fight.surviveSeconds);
-    const text = cls === 'ready-good' ? `You are ready: the boss falls in ~${fmtSeconds(fight.killSeconds)}`
+    const text = cls === 'ready-good' ? (fight.killSeconds < 1 ? 'You are ready: the boss falls in under a second' : `You are ready: the boss falls in ~${fmtSeconds(fight.killSeconds)}`)
         : cls === 'ready-close' ? `It will be close: the boss takes ~${fmtSeconds(fight.killSeconds)} of your ${limit} s`
         : fight.surviveSeconds < limit ? `Too strong for now: you would last ~${fmtSeconds(fight.surviveSeconds)}`
         : `Too tough for now: the boss needs ~${fmtSeconds(fight.killSeconds)}, and you have ${limit} s`;
