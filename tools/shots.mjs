@@ -5,7 +5,8 @@
 //
 //   node tools/shots.mjs                          # the default tabs
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
-//                                                 # 'battle' is the fight filling the screen)
+//                                                 # 'battle' is the fight filling the screen; 'map' and
+//                                                 # 'prestige' are those dialogs over the game)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -24,7 +25,12 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/ja
     '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
 const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
 // 'battle' is not a tab: it is the combat tab with the fight on, which fills the screen.
-const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons'];
+const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons', 'map'];
+// Dialogs over the game, shot like tabs.
+const DIALOGS = {
+    map: () => { FI.switchTab('combat'); FI.openMap(); },
+    prestige: () => { FI.game().state.prestige.runStartedAt = 0; FI.openPrestige(); }
+};
 
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
@@ -131,6 +137,14 @@ for (const viewport of VIEWPORTS) {
     await quiet(page);
     await page.waitForTimeout(1600); // everything this save has earned opens at once and glows: let that pass
     for (const tab of tabs) {
+        if (DIALOGS[tab]) {
+            await page.evaluate(DIALOGS[tab]);
+            await page.waitForTimeout(700);
+            if (!(await page.$('#modal-root .modal-content'))) problems.push(`the ${tab} dialog did not open at ${viewport.width}px`);
+            await shoot(page, tab, viewport.width);
+            await page.evaluate(() => FI.closeModal());
+            continue;
+        }
         await page.evaluate(t => {
             const fighting = FI.game().state.combat.active;
             FI.switchTab(t === 'battle' ? 'combat' : t);
