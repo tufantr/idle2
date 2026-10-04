@@ -143,7 +143,7 @@ export function describeOffline(summary) {
     const mins = Math.floor(summary.simulated / 60000);
     const hours = Math.floor(mins / 60);
     lines.push(`You were away for ${hours ? `${hours}h ${mins % 60}m` : `${mins}m`}${summary.capped ? ' (offline progress is capped — Endurance perks extend it)' : ''}.`);
-    if (summary.mode === 'rest') lines.push('Your hero rested at camp. Start a skill or enter combat before leaving to keep progressing.');
+    if (summary.mode === 'rest') lines.push('Your hero rested at camp the whole time: nothing was under way when you left.');
     if (summary.mode === 'skill') lines.push(summary.stalledReason ? `Work stopped early: ${summary.stalledReason}.` : 'Your hero kept working the whole time.');
     if (summary.mode === 'combat') {
         const fell = summary.deaths ? ` — ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}you fell ${summary.deaths === 1 ? 'once' : `${summary.deaths} times`} and got up again` : '';

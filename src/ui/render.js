@@ -1769,7 +1769,7 @@ export function renderConfirmModal(title, text, confirmLabel) {
 export function renderWelcomeBack(summary, state) {
     const mins = Math.floor(summary.simulated / 60000);
     const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
-    const story = summary.mode === 'rest' ? 'Your hero rested at camp. Start a skill or enter combat before you leave to keep progressing.'
+    const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'
         : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
         : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}he fell ${summary.deaths === 1 ? 'once' : `${fmt(summary.deaths)} times`} and got up again` : ''}.`;
     let i = 0;
