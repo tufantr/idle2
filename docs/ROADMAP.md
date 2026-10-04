@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **An app icon, and the game on a home screen**: the hero in his plumed helm on the painted
+      meadow (`tools/icons.py`) in the browser tab and on a phone's home screen; `manifest.json`
+      lets the game be installed and open full screen like an app
 - [x] **The bestiary**: the Achievements tab is a hall in three views (Medals, Bestiary,
       Collection). The bestiary has a portrait of every kind of monster by place, with its count and
       three stars (10, 100 and 1,000 defeats); unmet kinds are silhouettes. Two new medals,
