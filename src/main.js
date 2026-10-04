@@ -23,6 +23,7 @@ import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
+import { seen } from './systems/disclosure.js';
 import { nextLook } from './data/looks.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 
@@ -276,6 +277,14 @@ document.addEventListener('keydown', event => {
     }
     if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'conflict') closeModal(); // a conflict needs a choice
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
+    // Two keys for the fight: M opens the map, Space strikes the monster (a press each: holding it does nothing more).
+    if (ui.modalOpen || event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    const c = game.state.combat;
+    if ((event.key === 'm' || event.key === 'M') && c.mode === 'stages' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
+    else if (event.key === ' ' && ui.tab === 'combat' && c.active && !target?.closest?.('button, a, [role="button"]')) {
+        event.preventDefault();
+        if (!event.repeat) document.querySelector('#scene .foe')?.click();
+    }
 }, { capture: true });
 
 // ---------- rendering ----------
