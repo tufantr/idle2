@@ -1493,7 +1493,7 @@ body.reduced-motion .nav-ready { animation: none; }
    drawn behind him, with a little bob of its own */
 .pet-figure { position: absolute; bottom: 0; left: calc(50% + var(--hk, 4) * 9px); z-index: 0; line-height: 0; cursor: pointer; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6)); animation: petBob 1.9s ease-in-out infinite; transform-origin: 50% 100%; }
 .hero .fighter-sprite { z-index: 1; }
-.stage-pet { align-self: flex-end; margin: 0 -0.6rem 0 -2.2rem; line-height: 0; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6)); animation: petBob 1.9s ease-in-out infinite; transform-origin: 50% 100%; }
+.stage-pet { align-self: flex-end; margin: 0 -0.6rem 0 -2.2rem; line-height: 0; cursor: pointer; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6)); animation: petBob 1.9s ease-in-out infinite; transform-origin: 50% 100%; }
 .stage-pet:empty { display: none; }
 @keyframes petBob { 0%, 100% { transform: none; } 50% { transform: translateY(-3px) scaleY(1.03); } }
 body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: none; }

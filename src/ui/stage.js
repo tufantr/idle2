@@ -51,7 +51,7 @@ function stride(p, t) {
     return `translateX(${(Math.sin(t / 900) * 6).toFixed(1)}px) translateY(${y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg)`;
 }
 
-export function createStage(root) {
+export function createStage(root, { sound = () => {} } = {}) {
     root.innerHTML = `
     <section class="stage" data-skill="mining">
         <div class="stage-sky"></div><div class="stage-far"></div><div class="stage-ground"></div>
@@ -78,6 +78,13 @@ export function createStage(root) {
     const phone = () => !!window.matchMedia?.('(max-width: 600px)').matches;
     const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
     const fill = p => { el.ring.style.strokeDashoffset = `${RING * (1 - p)}`; };
+    // a pat for the pet keeping the hero company at work: it hops and chirps
+    el.pet.addEventListener('click', () => {
+        const pet = el.pet.firstElementChild;
+        if (!pet) return;
+        sound('pet');
+        if (!reduced()) pet.animate?.([{ transform: 'none' }, { transform: 'translateY(-12px) scale(1.12)', offset: 0.4 }, { transform: 'none' }], { duration: 480, easing: 'cubic-bezier(.3,1.4,.6,1)' });
+    });
 
     /** The thing being worked on (as HTML): a resource, a piece of gear, a tool, the fire or the course. */
     function targetFor(action, skill) {

@@ -115,7 +115,7 @@ document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.co
 document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.rows}px`);
 
 // The skill stage above each skill tab: the hero at work (src/ui/stage.js).
-const stage = createStage(document.getElementById('stage'));
+const stage = createStage(document.getElementById('stage'), { sound: name => sound.play(name) });
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
