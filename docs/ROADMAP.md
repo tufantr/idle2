@@ -33,7 +33,8 @@ reward moments, a dark fantasy theme, an armory, sprites, sound and a phone hotb
 player instead of showing everything at once, there are no suggestion notes, and the fight fills the
 screen with everything a run needs; everything the player handles is a sprite or a pixel glyph, not
 an emoji. Its list below keeps growing as polish lands (the hero's looks and name, the codex, the
-chronicle, secret medals, great crates, a sixth weekend event). What is left is content and the
+chronicle, secret medals, great crates, a sixth weekend event, skill capes, a sixth dungeon). The
+owner chose Melvor pace: level 99 takes hundreds of hours. What is left is content and the
 owner's decisions: a new weekend event is one entry in `src/data/events.js` plus a new era in
 `ROTATION_ERAS` (`src/systems/events.js`), a new dungeon one entry in
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
