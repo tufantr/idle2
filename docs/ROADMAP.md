@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Tap to see, on a touch screen**: pictures that explain themselves on hover (the prestige
+      dialog's keeps, codex pages, a dungeon's lineup, bestiary cards, records, the path's rooms) show
+      their words in a bubble when tapped on a phone
 - [x] **The mini-games in pictures**: the skill's sprite in the title instead of an emoji, the tool or
       the quarry riding the track's marker (a pickaxe, an axe, the fox, a trout), the time left as a bar
       draining under the prompt, the offer glowing instead of shaking, and fishing strikes instead of

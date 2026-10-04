@@ -217,6 +217,37 @@ document.addEventListener('pointerdown', event => {
     if (button && !button.disabled && !button.classList.contains('foe') && !button.closest('.foe')) sound.play('click');
 }, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
+
+// A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
+// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .chest-loot .cl, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way';
+let tipNode = null;
+let tipTimer = 0;
+function showTip(el, text) {
+    tipNode?.remove();
+    clearTimeout(tipTimer);
+    const node = document.createElement('div');
+    node.className = 'tap-tip';
+    node.setAttribute('role', 'tooltip');
+    node.textContent = text;
+    document.body.appendChild(node);
+    const box = el.getBoundingClientRect();
+    const w = node.offsetWidth;
+    const h = node.offsetHeight;
+    const x = Math.max(8 + w / 2, Math.min(window.innerWidth - 8 - w / 2, box.left + box.width / 2));
+    const above = box.top - h - 8 >= 8;
+    node.style.left = `${x}px`;
+    node.style.top = `${above ? box.top - h - 8 : box.bottom + 8}px`;
+    tipNode = node;
+    tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
+}
+document.addEventListener('click', event => {
+    if (!window.matchMedia?.('(hover: none)').matches) return;
+    const el = event.target?.closest?.(TIP_TARGETS);
+    if (!el || (el.closest('button, a') && !el.matches('.pg-keep-item'))) { tipNode?.remove(); tipNode = null; return; }
+    const text = el.getAttribute('title') || el.dataset.tip || el.getAttribute('aria-label');
+    if (text) showTip(el, text);
+});
 // A choice made in a dropdown or checkbox is done: let the tab refresh right away.
 document.addEventListener('change', event => {
     if (event.target?.matches?.('select, input[type="checkbox"], input[type="radio"]')) { event.target.blur(); render(); }

@@ -2047,6 +2047,9 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .codex-cell .spr.silhouette { opacity: 0.55; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.6)); }
 @media (max-width: 600px) { .codex-row { grid-template-columns: 3.6rem repeat(7, minmax(0, 1fr)); gap: 0.2rem; } .codex-type { font-size: 0.7rem; } .codex-cell { width: 100%; height: auto; aspect-ratio: 1; } .codex-cell .spr { --k: 0.75 !important; image-rendering: auto; } }
 
+/* a tap's bubble on a touch screen: what a picture's title says */
+.tap-tip { position: fixed; z-index: 400; max-width: min(260px, calc(100vw - 16px)); padding: 0.4rem 0.65rem; border-radius: 9px; font-size: 0.8rem; line-height: 1.3; color: var(--text-main); background: rgba(14, 10, 7, 0.96); border: 1px solid rgba(214, 170, 92, 0.55); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); pointer-events: none; animation: fadeIn 0.15s ease-out; }
+
 /* the clan before signing in: what it is, in three pictures */
 .clan-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
 .clan-tile { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.9rem 0.5rem 0.8rem; text-align: center; border-radius: 12px; background: rgba(12, 9, 6, 0.72); border: 1px solid var(--line); }
