@@ -450,8 +450,9 @@ progress as motion, art before words, one stage with a HUD around it.
       keep their XP, and those opening later give less, down to their skill's factor at level 75
       (`src/data/pace.js`), though never less per hour than an older action of the same kind. Combat
       slows with the hero's level, from 60 (full XP) to 95 (a twenty-fifth), so a deeper stage always
-      pays more. The 100 stages still take about 5–6 hours; tier 6 and 7 gear wait for combat 75 and
-      90 (about 30 and 85–95 hours). Old saves keep their levels; only the XP still to come is slower.
+      pays more (the combat "?" says so). The 100 stages still take about 5–6 hours; tier 6 and 7 gear
+      wait for combat 75 and 90 (about 30 and 85–95 hours). Old saves keep their levels; only the XP
+      still to come is slower.
       Also fixed in the simulator: a ladder-farming bot that met the Titan farmed one stage for good
 - [x] **The game's mark**: the sidebar's plain title became a logo: a gold-rimmed seal looking onto the
       painted meadow with the player's own hero in it, as they are now (look, gear, the rank's cloak),

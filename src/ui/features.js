@@ -16,13 +16,15 @@ import { CAPES } from '../data/capes.js';
 import { escapeHtml as esc } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
+const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;   // 25th, 21st
 const secs = ms => Math.round(ms / 1000);
 
 // `art` is the painting, `focus` where its crop looks (CSS background-position), `icon` a sprite key
 // or an emoji for small places, `blurb` one line, `points` the rules in a few short lines.
 export const FEATURES = {
     combat: { name: 'Combat', art: 'meadow', icon: 'item/Weapon/3', blurb: SKILLS.combat.desc,
-        points: ['Your hero fights automatically. Click the monster (or press Space) to strike as well: half damage, and it builds a combo.', 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.'] },
+        points: ['Your hero fights automatically. Click the monster (or press Space) to strike as well: half damage, and it builds a combo.', 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.',
+            `Deeper stages teach more. Past combat level ${BALANCE.rewards.xpPace.from}, each kill teaches less the higher you rise (from ${BALANCE.rewards.xpPace.to}, a ${ordinal(BALANCE.rewards.xpPace.slow)} as much), so level 99 is a long road.`] },
     mining: { name: 'Mining', art: 'caves', icon: 'res/copper_ore', blurb: SKILLS.mining.desc,
         points: ['Pick a vein and your hero keeps digging, even while you are away.', 'Ore becomes bars in Smithing. Now and then a gem turns up.'] },
     smithing: { name: 'Smithing', art: 'forge', icon: 'res/copper_bar', blurb: SKILLS.smithing.desc,
