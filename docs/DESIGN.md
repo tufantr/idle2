@@ -700,8 +700,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   pictures, and nine rooms (`ROOMS` in `tools/paint.py`: the guild hall behind the page, the
   armory, chest, storeroom and vault of the inventory, the perks' library, the settings' study, the
   fight's supply table and war table) cover the rest. A shade lighter at the top keeps titles on the
-  painting and cards readable; cards let a little of it through. Panels without a painting (the
-  sidebar, the header) are smoked glass over the guild hall.
+  painting and cards readable; cards let a little of it through. The sidebar stands on the hall's
+  own painting (its red banner behind the mark, its trophy cabinet behind the places); only the
+  header is smoked glass over the guild hall. In the sidebar each place is a medallion ringed in its
+  skill's colour (gold for the rest) with its XP bar in that colour and its level on a gold-rimmed
+  badge (solid gold at 99); the place being worked breathes, its tool bobs and its bar shines.
 - **Places have pictures; rules live behind a "?".** `src/ui/features.js` holds, for every place,
   its painting, one line and the rules in a few short points. That one entry is the card shown when
   the place opens, the banner on tabs without a scene or a skill stage (shop, achievements, events,

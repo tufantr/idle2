@@ -163,11 +163,12 @@ export function renderNav(game, ui) {
             const levelled = tab.skill || (tab.id === 'combat' ? 'combat' : null);
             if (levelled) {
                 const lp = levelProgress(state.skills[levelled].xp);
-                badge = `<span class="nav-level" title="${lp.level >= MAX_LEVEL ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
+                badge = `<span class="nav-level${lp.level >= MAX_LEVEL ? ' max' : ''}" title="${lp.level >= MAX_LEVEL ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
                 xpBar = lp.level >= MAX_LEVEL ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
-            html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}" onclick="FI.switchTab('${tab.id}')"><span class="nav-icon">${tabIcon(tab.id)}</span><span class="nav-name">${tab.name}</span>${readyBadge(game, tab.id)}${fresh || badge}${xpBar}</button>`;
+            const color = levelled ? SKILLS[levelled]?.color : null;   // the medallion's ring and the XP bar wear the skill's colour
+            html += `<button id="nav-${tab.id}" class="nav-btn ${active} ${working}${fresh ? ' fresh' : ''}"${color ? ` style="--c:${color}"` : ''} onclick="FI.switchTab('${tab.id}')"><span class="nav-icon">${tabIcon(tab.id, 1)}</span><span class="nav-name">${tab.name}</span>${readyBadge(game, tab.id)}${fresh || badge}${xpBar}</button>`;
         }
     }
     return html;

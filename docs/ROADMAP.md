@@ -429,6 +429,13 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A livelier sidebar**: the owner found it dull. It now stands on a painting of its own (the
+      hall's red banner behind the mark, its trophy cabinet behind the places) instead of plain glass;
+      each place is a round medallion ringed in its skill's colour with a crisp full-size sprite, its
+      XP bar in that colour under the name, and its level on a gold-rimmed badge in the title type
+      (solid gold at 99); group headings carry a small gem. The place the hero is working breathes,
+      its tool bobs and its bar shines; the open tab keeps its gold frame. On a phone the strip gets the
+      same rings and bars
 - [x] **A sixth dungeon, the Abyssal Maw**, for the long game: it opens at stage 210 (about 83 hours
       into the simulator's play; first cleared at about 177), twelve horrors of the deep Abyss (DCSS starspawn, horrors, a zyme, an
       executioner, the green death, a worldbinder, a star-skull) and the Devourer. Its unique, the
