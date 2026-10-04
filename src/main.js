@@ -277,8 +277,10 @@ document.addEventListener('keydown', event => {
     }
     if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'conflict') closeModal(); // a conflict needs a choice
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
-    // Two keys for the fight: M opens the map, Space strikes the monster (a press each: holding it does nothing more).
-    if (ui.modalOpen || event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
+    // holding it does nothing more).
+    if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
     const c = game.state.combat;
     if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
     else if (event.key === ' ' && ui.tab === 'combat' && c.active && !target?.closest?.('button, a, [role="button"]')) {
