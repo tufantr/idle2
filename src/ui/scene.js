@@ -10,7 +10,7 @@ import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { PETS } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
-import { titanLevel } from '../systems/dungeon.js';
+import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon } from './sprites.js';
@@ -43,6 +43,25 @@ const MOVES = {
     wounded:   { ms: 700, rank: 1, frames: [{ boxShadow: 'inset 0 0 0 rgba(220, 38, 38, 0)' }, { boxShadow: 'inset 0 0 90px rgba(220, 38, 38, 0.75)', offset: 0.2 }, { boxShadow: 'inset 0 0 0 rgba(220, 38, 38, 0)' }] }
 };
 
+
+/**
+ * What came out of a dungeon chest, as pictures with their counts that pop out one after another:
+ * the gear kept, the unique's fragments (a silhouette until the unique is owned), essence, the rest.
+ */
+function chestLoot(ev, state) {
+    const d = dungeonById(ev.dungeon);
+    const loot = ev.loot;
+    if (!d || !loot) return ev.item ? `<span>${esc(ev.item.name)}</span>` : '';
+    const bits = [];
+    if (ev.item) {
+        const color = ev.item.color || RARITIES.find(r => r.id === ev.item.rarity)?.color || '#e2e8f0';
+        bits.push({ pic: sprite(itemSpriteKey(ev.item), { scale: 1, fallback: esc(ev.item.icon || '') }), cls: 'gear', style: `;--r:${esc(color)}`, title: ev.item.name });
+    }
+    bits.push({ pic: sprite(`uniq/${d.unique}`, { scale: 1, cls: ownsUnique(state, d.unique) ? '' : 'silhouette' }), count: `×${loot.fragments}`, title: 'Fragments' });
+    if (loot.essence) bits.push({ pic: resIcon('essence', { scale: 1 }), count: `+${fmt(loot.essence)}`, title: RESOURCES.essence?.name });
+    for (const [id, qty] of Object.entries(loot.materials || {})) bits.push({ pic: resIcon(id, { scale: 1 }), count: `×${fmt(qty)}`, title: RESOURCES[id]?.name });
+    return `<span class="chest-loot">${bits.map((b, i) => `<span class="cl ${b.cls || ''}" style="--i:${i}${b.style || ''}" title="${esc(b.title || '')}">${b.pic}${b.count ? `<b>${b.count}</b>` : ''}</span>`).join('')}</span>`;
+}
 
 // Deterministic scatter for the ambient particles (positions, delays, sizes), so the markup is stable.
 const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
@@ -520,7 +539,7 @@ export function createScene(root, actions) {
                     if (ev.won) banner('<small>Titan defeated</small><strong>+2% ATK and HP, forever</strong>', 'victory', 2400);
                     break;
                 case 'dungeonClear':
-                    banner(`<small>Dungeon cleared${ev.clears > 1 ? ` · ${ev.clears}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest is yours</strong>${ev.item ? `<span>${esc(ev.item.name)}</span>` : ''}`, 'victory', 2200);
+                    banner(`<small>${esc(dungeonById(ev.dungeon)?.name || 'Dungeon')} cleared${ev.clears > 1 ? ` · ${fmt(ev.clears)}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest</strong>${chestLoot(ev, game.state)}`, 'victory', 2600);
                     break;
                 case 'prestige':
                     banner(`<small>Prestige</small><strong>+${fmt(ev.tokens)} tokens</strong>`, 'victory', 2400);

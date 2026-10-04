@@ -77,6 +77,24 @@ test('dungeons open at their stage and a strong hero clears one for a chest and 
     assert.equal(c.active, true);
 });
 
+test('a clear tells what the chest held, and the 25th clear brings its lasting bonus', () => {
+    const game = newGame({ bestStage: 20, tokens: 20000 });
+    const record = game.state.dungeons[warren.id];
+    record.clears = DUNGEON_MILESTONES[0].clears - 1;
+    game.enterDungeon(warren.id);
+    game.drainEvents();
+    const before = { ...game.state.resources };
+    runUntil(game, () => record.clears >= DUNGEON_MILESTONES[0].clears);
+    const all = game.drainEvents();
+    const clear = all.find(e => e.type === 'dungeonClear');
+    assert.ok(clear.loot.fragments >= 1);
+    assert.ok(clear.loot.essence > 0 && game.state.resources.essence - before.essence >= clear.loot.essence, 'the elites drop some too');
+    for (const [id, qty] of Object.entries(clear.loot.materials)) assert.ok(qty > 0 && game.state.resources[id] >= before[id] + qty, id);
+    const milestones = all.filter(e => e.type === 'dungeonMilestone');
+    assert.equal(milestones.length, 1);
+    assert.deepEqual(milestones[0], { type: 'dungeonMilestone', dungeon: warren.id, clears: DUNGEON_MILESTONES[0].clears, desc: DUNGEON_MILESTONES[0].desc });
+});
+
 test('dying in a dungeon ends the run with nothing and returns to the stage ladder', () => {
     const game = newGame({ bestStage: 200 });
     const lair = dungeonById('dragons_lair');

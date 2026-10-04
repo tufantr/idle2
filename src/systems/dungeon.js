@@ -201,9 +201,12 @@ function completeDungeon(game, d) {
 
     log(game, `🎁 ${d.name} cleared (${record.clears}): ${parts.join(', ')}.`, 'loot');
     for (const m of DUNGEON_MILESTONES) {
-        if (record.clears === m.clears) log(game, `🏅 ${d.name}: ${m.clears} clears — ${m.desc} (permanent).`, 'achievement');
+        if (record.clears !== m.clears) continue;
+        log(game, `🏅 ${d.name}: ${m.clears} clears — ${m.desc} (permanent).`, 'achievement');
+        game.emit({ type: 'dungeonMilestone', dungeon: d.id, clears: m.clears, desc: m.desc });
     }
-    game.emit({ type: 'dungeonClear', dungeon: d.id, clears: record.clears, item: kept });
+    // what the chest held, for the scene to show (the gear kept, if any, is `item`)
+    game.emit({ type: 'dungeonClear', dungeon: d.id, clears: record.clears, item: kept, loot: { fragments, essence, materials } });
     game.markDirty();
 }
 

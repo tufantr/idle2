@@ -6,7 +6,7 @@ import {
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, pageTitle, TABS } from './ui/render.js';
-import { renderAboutCard, FEATURES, EVENT_ART } from './ui/features.js';
+import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, paintStyle } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
@@ -20,6 +20,7 @@ import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
+import { dungeonById } from './data/dungeons.js';
 
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
@@ -350,7 +351,7 @@ function soundFor(ev, onCombat) {
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
         case 'unlock': return ['unlock'];
-        case 'achievement': case 'eventMilestone': return ['achievement'];
+        case 'achievement': case 'eventMilestone': case 'dungeonMilestone': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
         case 'death': case 'bossTimeout': case 'dungeonFail': return ['defeat'];
         case 'prestige': return ['prestige'];
@@ -424,6 +425,12 @@ function handleEvents(events) {
             case 'error': toast(ev.text, 'error'); break;
             case 'dungeonClear': if (ev.clears <= 3 || ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate')); break;
             case 'dungeonFail': toast('The dungeon run failed', 'death'); break;
+            case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting
+                const d = dungeonById(ev.dungeon);
+                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
+                    kicker: `${d.name} · ${fmt(ev.clears)} clears`, title: ev.desc, lines: ['Yours for good, through every prestige'] });
+                break;
+            }
             case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'unique':

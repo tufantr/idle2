@@ -1191,6 +1191,17 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .battle-banner.victory { --banner: #fcd34d; --banner-glow: rgba(251, 191, 36, 0.65); }
 .battle-banner.defeat { --banner: #cbd5e1; --banner-glow: rgba(100, 116, 139, 0.5); border-color: rgba(148, 163, 184, 0.4); }
 .battle-banner.gilded { --banner: #fde68a; --banner-glow: rgba(252, 211, 77, 0.8); border-color: rgba(252, 211, 77, 0.7); }
+/* a dungeon chest's contents under its banner: each picture pops out in turn */
+.battle-banner .chest-loot { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.3rem 0.75rem; margin-top: 0.25rem; }
+.chest-loot .cl { display: inline-flex; align-items: center; gap: 0.15rem; opacity: 0; }
+.battle-banner.show .chest-loot .cl { animation: chestPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.3s + var(--i) * 0.12s) both; }
+.chest-loot .cl b { font-size: 0.82rem; font-weight: 800; color: #fde68a; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.chest-loot .cl .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.chest-loot .cl .spr.silhouette { filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.95)) drop-shadow(0 0 4px rgba(240, 198, 116, 0.5)); }
+.chest-loot .cl.gear .spr { filter: drop-shadow(0 0 6px var(--r)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+@keyframes chestPop { from { opacity: 0; transform: translateY(10px) scale(0.3); } to { opacity: 1; transform: none; } }
+body.reduced-motion .battle-banner.show .chest-loot .cl { animation: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .battle-banner.show .chest-loot .cl { animation: none; opacity: 1; } }
 
 /* a gilded monster: its sprite turned to gold, a slow shine across it and a golden aura */
 .foe.gilded .foe-icon .spr { filter: grayscale(1) sepia(1) saturate(5.5) hue-rotate(8deg) brightness(1.4) contrast(1.15); }  /* grey first, so every monster turns the same gold */

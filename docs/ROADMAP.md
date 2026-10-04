@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **What the chest held**: a dungeon clear's banner names the dungeon and shows the chest's
+      contents as pictures that pop out one after another (gear in its rarity's glow, the unique's
+      fragments, essence, materials, a gem) instead of "The chest is yours". The bonuses at 25, 100
+      and 250 clears are a card on the dungeon's painting with its boss, not just a log line
 - [x] **The dungeons on the world map**: each stands on the painting as an arched gate with its boss
       inside (the Warren in the deep woods, the Depths in the crystal mountain, the Stronghold on the
       storm tower, the Lair in the volcano's mouth, the Citadel at the rift), the open ones and the
