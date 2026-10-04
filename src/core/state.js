@@ -14,6 +14,7 @@ import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions } from '../data/mastery.js';
 import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 import { heroName } from './text.js';
+import { DEFAULT_LOOK, lookById } from '../data/looks.js';
 
 export const SAVE_VERSION = 3;
 
@@ -64,7 +65,7 @@ export function createDefaultState(now = Date.now()) {
         achievements: {},
         unlocks: {},
         seen: {},              // pieces of the interface that have opened (systems/disclosure.js)
-        hero: { name: '' },    // the name the player gave him ('' is "You")
+        hero: { name: '', look: DEFAULT_LOOK },    // the name the player gave the hero ('' is "You"), and the look (data/looks.js)
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
@@ -289,7 +290,8 @@ function normalise(data, now) {
     if (state.combat.potion !== 'none' && !Object.hasOwn(RESOURCES, state.combat.potion)) state.combat.potion = 'none';
     if (state.action !== null && !(isPlainObject(state.action) && typeof state.action.kind === 'string')) state.action = null;
     if (typeof state.settings.forceEvent !== 'string') state.settings.forceEvent = null;
-    state.hero = { name: heroName(isPlainObject(state.hero) ? state.hero.name : '') };
+    const hero = isPlainObject(state.hero) ? state.hero : {};
+    state.hero = { name: heroName(hero.name || ''), look: lookById(hero.look).id };
     if (!Array.isArray(state.log)) state.log = [];
     state.gold = Math.max(0, Number(state.gold) || 0);
     state.combat.enemy = null; // always respawned on load

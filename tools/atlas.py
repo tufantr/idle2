@@ -14,6 +14,7 @@ badges, the tools, the daily crate, the settings gear and the hero's hoe (build_
 import hashlib
 import json
 import os
+import re
 import sys
 
 from PIL import Image
@@ -123,6 +124,14 @@ HERO = {
 }
 
 
+def hero_looks():
+    """The hero's looks as (id, base, hair or ''), read from src/data/looks.js: one list for the game and the atlas."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, 'src', 'data', 'looks.js')) as f:
+        text = f.read()
+    return re.findall(r"\{ id: '(\w+)',\s*base: '(\w+)',\s*hair: (?:'(\w+)'|null) \}", text)
+
+
 def main(rltiles):
     cells = []        # list of (key, [image paths])
     index = {}
@@ -165,6 +174,10 @@ def main(rltiles):
                 add(f'hero/{layer}/{sub}', f'player/{tile}')
     for key, img in build_icons(rltiles).items():   # perks, tools, obstacles, the crate, the gear, the campfire, the hero's hoe
         add(key, img)
+    for look, base, hair in hero_looks():          # the hero's looks (src/data/looks.js): a body and a hairstyle each
+        add(f'hero/look/{look}/base', f'player/base/{base}')
+        if hair:
+            add(f'hero/look/{look}/hair', f'player/hair/{hair}')
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

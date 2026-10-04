@@ -21,7 +21,7 @@ const secs = ms => Math.round(ms / 1000);
 // or an emoji for small places, `blurb` one line, `points` the rules in a few short lines.
 export const FEATURES = {
     combat: { name: 'Combat', art: 'meadow', icon: 'item/Weapon/3', blurb: SKILLS.combat.desc,
-        points: ['Your hero fights on his own. Click the monster to strike as well: half damage, and it builds a combo.', 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on by yourself.'] },
+        points: ['Your hero fights automatically. Click the monster to strike as well: half damage, and it builds a combo.', 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.'] },
     mining: { name: 'Mining', art: 'caves', icon: 'res/copper_ore', blurb: SKILLS.mining.desc,
         points: ['Pick a vein and your hero keeps digging, even while you are away.', 'Ore becomes bars in Smithing. Now and then a gem turns up.'] },
     smithing: { name: 'Smithing', art: 'forge', icon: 'res/copper_bar', blurb: SKILLS.smithing.desc,
@@ -29,7 +29,7 @@ export const FEATURES = {
     woodcutting: { name: 'Woodcutting', art: 'forest', icon: 'res/oak_log', blurb: SKILLS.woodcutting.desc, points: ['Logs feed the kitchen fire, tool handles and bows.'] },
     hunting: { name: 'Hunting', art: 'meadow', focus: 'center 62%', icon: 'res/raw_rabbit', blurb: SKILLS.hunting.desc, points: ['Raw meat is cooked into food, and food keeps you alive in long fights.'] },
     cooking: { name: 'Cooking', art: 'camp', icon: 'res/cabbage_soup', blurb: 'Turns raw meat and fish into food that keeps you alive in combat.',
-        points: ['Every dish burns one log.', 'In a fight your hero eats on his own when his health runs low.'] },
+        points: ['Every dish burns one log.', 'In a fight your hero eats when health runs low.'] },
     fishing: { name: 'Fishing', art: 'river', icon: 'res/raw_trout', blurb: 'Fish for the kitchen: they cook into the best food for their level.',
         points: [`Each catch uses one bait, if you have any, for a ${pc(BAIT_EXTRA_CHANCE)} chance of a second fish.`, 'Bait drops in the Fever Marsh, the Drowned Ruins and the Frozen Wastes. The Shop sells it too.'] },
     firemaking: { name: 'Firemaking', art: 'camp', focus: 'right 70%', icon: 'mon/Magma Slime', blurb: 'Burn logs to light the bonfire.',
@@ -42,7 +42,7 @@ export const FEATURES = {
         points: ['Seeds are bought with gold when you plant.', 'Herbs go to Alchemy; potatoes, cabbages, pumpkins and starfruit to Cooking.', 'A hoe makes crops grow faster.'] },
     agility: { name: 'Agility', art: 'course', icon: 'item/Boots/3', blurb: 'Build an obstacle course, then run it to train.',
         points: ['Every obstacle is a permanent bonus that survives prestige.', `Each can be upgraded to level ${MAX_OBSTACLE_LEVEL}; its bonus counts once per level.`, 'Replacing one tears the old one down without a refund.'] },
-    inventory: { name: 'Inventory', art: 'workshop', icon: 'item/Body/3', blurb: 'Your hero, his gear and everything you carry.', points: ['Tap a piece of gear to see it, wear it, upgrade it or sell it.', 'A green arrow marks gear that beats what you wear.'] },
+    inventory: { name: 'Inventory', art: 'workshop', icon: 'item/Body/3', blurb: 'Your hero, the gear and everything you carry.', points: ['Tap a piece of gear to see it, wear it, upgrade it or sell it.', 'A green arrow marks gear that beats what you wear.'] },
     shop: { name: 'Shop', art: 'market', icon: 'gold', blurb: 'Supplies for gold, perks for skill points.',
         points: ['Supplies are priced by your best stage, so gathering always stays worth it.', 'Perks cost one skill point each and last forever.'] },
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',

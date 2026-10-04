@@ -22,6 +22,7 @@ import { CLAN_POLL_MS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
+import { nextLook } from './data/looks.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 
 const TICK_MS = 100;
@@ -847,6 +848,14 @@ window.FI = {
 
     openAuth() { if (ui.modalOpen === 'intro') closeModal(); openModal(renderAuthModal(), 'auth'); },
     collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
+    /** The title card's arrows: the next or the previous look, tried on at once. */
+    turnLook(step) {
+        game.setHeroLook(nextLook(game.state.hero.look, step));
+        const hero = document.querySelector('.intro-hero');
+        if (hero) hero.innerHTML = heroSprite(game.state, { scale: 5 });
+        flourish('.intro-hero .hero-doll');
+    },
+    setHeroLook(id) { game.setHeroLook(id); sound.play('equip'); render(); },
     beginAdventure() {
         const name = document.getElementById('intro-name')?.value || '';
         if (name.trim()) game.setHeroName(name);   // optional: without one he is "You"

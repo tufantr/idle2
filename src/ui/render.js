@@ -40,6 +40,7 @@ import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, mo
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank } from '../data/ranks.js';
+import { LOOKS } from '../data/looks.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
@@ -1612,6 +1613,10 @@ export function renderSettings(game, ui, cloud) {
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
         <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
+        <div class="look-picks" role="group" aria-label="Your hero's look">${LOOKS.map((l, i) => {
+            const on = (state.hero?.look || LOOKS[0].id) === l.id;
+            return `<button class="look-pick${on ? ' on' : ''}" onclick="FI.setHeroLook('${l.id}')" aria-label="Look ${i + 1}" aria-pressed="${on}">${heroSprite({ ...state, hero: { ...state.hero, look: l.id } }, { scale: 3 })}</button>`;
+        }).join('')}</div>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" ${state.settings.devUnlockAll ? 'checked' : ''}> Developer mode: unlock every tab and mini-game</label>
@@ -1780,7 +1785,7 @@ export function renderWelcomeBack(summary, state) {
     const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'
         : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
-        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}he fell ${summary.deaths === 1 ? 'once' : `${fmt(summary.deaths)} times`} and got up again` : ''}.`;
+        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}${summary.deaths === 1 ? 'one fall' : `${fmt(summary.deaths)} falls`}, and up again each time` : ''}.`;
     let i = 0;
     const next = () => i++;
     const skills = Object.entries(summary.skills).map(([id, s]) => {
@@ -1825,11 +1830,13 @@ export function renderWelcomeBack(summary, state) {
 export function renderIntroModal(state) {
     const motes = Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 53 + 7) % 100}%;--y:${(i * 31 + 11) % 70}%;--d:${(i * 0.7) % 5}s"></i>`).join('');
     return `<div class="intro" aria-labelledby="intro-title">
-        <div class="intro-scene" aria-hidden="true">
-            <div class="intro-layer sky"></div><div class="intro-layer far"></div><div class="intro-layer near"></div>
-            <div class="intro-motes">${motes}</div>
-            <div class="intro-hero">${heroSprite(state, { scale: 5 })}</div>
-            <div class="intro-foe">${sprite('mon/Slime', { scale: 4 })}</div>
+        <div class="intro-scene">
+            <div class="intro-layer sky" aria-hidden="true"></div><div class="intro-layer far" aria-hidden="true"></div><div class="intro-layer near" aria-hidden="true"></div>
+            <div class="intro-motes" aria-hidden="true">${motes}</div>
+            <div class="intro-hero" aria-hidden="true">${heroSprite(state, { scale: 5 })}</div>
+            <button type="button" class="look-turn prev" onclick="FI.turnLook(-1)" aria-label="Another look for your hero">‹</button>
+            <button type="button" class="look-turn next" onclick="FI.turnLook(1)" aria-label="Another look for your hero">›</button>
+            <div class="intro-foe" aria-hidden="true">${sprite('mon/Slime', { scale: 4 })}</div>
         </div>
         <h1 id="intro-title" class="intro-logo">Fantasy Idle</h1>
         <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>

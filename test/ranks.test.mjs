@@ -1,4 +1,5 @@
-// The hero's rank (data/ranks.js): a title and a cloak earned by prestiging, worn on every sprite of him.
+// The hero's rank (data/ranks.js): a title and a cloak earned by prestiging, worn on every sprite of the
+// hero; and the hero's own name and look.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -41,4 +42,33 @@ test('the hero can be named: one short line of plain text, kept in the save', as
     assert.equal(migrateState(saved, T0).hero.name, '', 'an old save loads with no name');
     saved.hero = { name: { evil: true } };
     assert.equal(migrateState(saved, T0).hero.name, '');
+});
+
+test('the hero has a look: saved, checked on load, and drawn from its own body and hair', async () => {
+    const { LOOKS, DEFAULT_LOOK, nextLook } = await import('../src/data/looks.js');
+    const { heroLayers, hasSprite } = await import('../src/ui/sprites.js');
+    const { Game } = await import('../src/game.js');
+    const { migrateState } = await import('../src/core/state.js');
+    const T0 = 1_700_000_000_000;
+    const game = new Game(null, T0);
+    assert.equal(game.state.hero.look, DEFAULT_LOOK);
+    assert.ok(game.setHeroLook('raven'));
+    const saved = JSON.parse(game.serialize(T0));
+    assert.equal(migrateState(saved, T0).hero.look, 'raven');
+    saved.hero.look = 'goblin';
+    assert.equal(migrateState(saved, T0).hero.look, DEFAULT_LOOK, 'an unknown look is the first');
+    delete saved.hero.look;
+    assert.equal(migrateState(saved, T0).hero.look, DEFAULT_LOOK, 'an old save has the first look');
+    // the arrows go round
+    assert.equal(nextLook(LOOKS[LOOKS.length - 1].id, 1), LOOKS[0].id);
+    assert.equal(nextLook(LOOKS[0].id, -1), LOOKS[LOOKS.length - 1].id);
+    // every look is in the atlas, and the hero is drawn from it (a helmet hides the hair)
+    for (const l of LOOKS) {
+        assert.ok(hasSprite(`hero/look/${l.id}/base`), l.id);
+        if (l.hair) assert.ok(hasSprite(`hero/look/${l.id}/hair`), l.id);
+    }
+    const layers = heroLayers(game.state);
+    assert.ok(layers.includes('hero/look/raven/base') && layers.includes('hero/look/raven/hair'));
+    game.state.equipped.Head = { type: 'Head', tier: 2 };
+    assert.ok(!heroLayers(game.state).includes('hero/look/raven/hair'));
 });

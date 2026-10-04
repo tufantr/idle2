@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The hero's look**: ten looks from DCSS's player tiles (men and women of three skin tones, an
+      elf pair, a dwarf), tried on with arrows beside the hero on the title card or picked from a row of
+      portraits in Settings; gear goes on top, a helmet hides the hair (`src/data/looks.js`, packed by
+      `tools/atlas.py`). The text that called the hero "he" says "your hero" now
 - [x] **Arriving somewhere fades in**: a new zone, a dungeon or the Titan's ground comes up out of the
       dark instead of swapping at once (not on the first draw, not with reduced motion)
 - [x] **The great crate**: every seventh daily crate opened is a great one (three times the gold,

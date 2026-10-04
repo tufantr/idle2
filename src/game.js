@@ -19,6 +19,7 @@ import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
 import { eventStatus, buyEventItem } from './systems/events.js';
 import { heroName } from './core/text.js';
+import { lookById } from './data/looks.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
 const OFFLINE_GAP_MS = 60000;    // gaps longer than this are replayed as offline progress
@@ -124,6 +125,8 @@ export class Game {
 
     /** Name the hero (one line of plain text; '' makes him "You" again). */
     setHeroName(name) { return this._act(() => { this.state.hero.name = heroName(name); this.markDirty(); return true; }); }
+    /** Dress the hero in look `id` (data/looks.js); an unknown id is the first look. */
+    setHeroLook(id) { return this._act(() => { this.state.hero.look = lookById(id).id; this.markDirty(); return true; }); }
     startNodeAction(skill, node) { return this._act(() => startNodeAction(this, skill, node)); }
     startSmelting(recipe) { return this._act(() => startSmelting(this, recipe)); }
     startSmithing(type, bar) { return this._act(() => startSmithing(this, type, bar)); }

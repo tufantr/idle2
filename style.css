@@ -1705,6 +1705,17 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .intro-motes i { position: absolute; left: var(--x); top: var(--y); width: 4px; height: 4px; border-radius: 50%; background: #fff3c4; box-shadow: 0 0 8px #ffe08a; opacity: 0; animation: firefly 5s ease-in-out calc(var(--d) * -1) infinite; }
 .intro-hero, .intro-foe { position: absolute; bottom: 10px; z-index: 1; line-height: 0; filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.6)); }
 .intro-hero { left: 16%; animation: heroBreathe 2.8s ease-in-out infinite; transform-origin: 50% 100%; }
+/* arrows either side of the hero on the title card: another look */
+.look-turn { position: absolute; z-index: 2; bottom: 52px; width: 34px; height: 34px; padding: 0; display: grid; place-items: center; border-radius: 50%; font-size: 1.4rem; font-weight: 800; line-height: 1; color: #fde68a; background: rgba(12, 9, 6, 0.6); border: 1px solid rgba(214, 170, 92, 0.6); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+.look-turn:hover { background: rgba(40, 28, 14, 0.85); border-color: #fde68a; }
+.look-turn.prev { left: calc(16% - 44px); }
+.look-turn.next { left: calc(16% + 168px); }
+/* the looks in Settings: a portrait each, the worn one lit */
+.look-picks { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+.look-pick { width: 64px; height: 64px; padding: 0; display: grid; place-items: start center; border-radius: 12px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #3a2c1c, #120d08 75%); border: 1px solid var(--line); box-shadow: none; }
+.look-pick .hero-doll { margin-top: 4px; }  /* head and shoulders: what differs between the looks */
+.look-pick:hover { border-color: rgba(240, 198, 116, 0.75); transform: translateY(-2px); }
+.look-pick.on { border-color: #f0c674; box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.35), 0 0 14px rgba(240, 198, 116, 0.35); }
 .intro-foe { right: 18%; bottom: 14px; animation: introSlime 1.4s ease-in-out infinite; transform-origin: 50% 100%; }
 .intro-logo {
     margin: 0.4rem 1rem 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(2.1rem, 7vw, 3.2rem); letter-spacing: 0.06em; line-height: 1.05;
@@ -1726,6 +1737,9 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
     .intro-foe { right: 6%; }
     .intro-hero .hero-doll { transform: scale(0.72); transform-origin: 50% 100%; }
     .intro-foe .spr { transform: scale(0.78); transform-origin: 50% 100%; }
+    .look-turn { bottom: 40px; width: 30px; height: 30px; font-size: 1.2rem; }
+    .look-turn.prev { left: 2px; }
+    .look-turn.next { left: calc(4% + 136px); }
 }
 
 /* ===== Welcome back: the haul from the time away ===== */

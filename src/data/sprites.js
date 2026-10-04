@@ -5,7 +5,7 @@
 // hero/cloaks/<rank cloak>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=9bc98f80b1', cell: 32, cols: 16, rows: 24 };
+export const ATLAS = { url: 'assets/sprites.png?v=d1cfb7310b', cell: 32, cols: 16, rows: 25 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -386,5 +386,24 @@ export const SPRITES = {
     "icon/skull": [7, 23],
     "icon/lock": [8, 23],
     "icon/dice": [9, 23],
-    "icon/keep": [10, 23]
+    "icon/keep": [10, 23],
+    "hero/look/brown/base": [11, 23],
+    "hero/look/brown/hair": [12, 23],
+    "hero/look/red/base": [13, 23],
+    "hero/look/red/hair": [14, 23],
+    "hero/look/gold/base": [15, 23],
+    "hero/look/gold/hair": [0, 24],
+    "hero/look/dusk/base": [1, 24],
+    "hero/look/dusk/hair": [2, 24],
+    "hero/look/raven/base": [3, 24],
+    "hero/look/raven/hair": [4, 24],
+    "hero/look/umber/base": [5, 24],
+    "hero/look/umber/hair": [6, 24],
+    "hero/look/braids/base": [7, 24],
+    "hero/look/braids/hair": [8, 24],
+    "hero/look/elf/base": [9, 24],
+    "hero/look/elf/hair": [10, 24],
+    "hero/look/snow/base": [11, 24],
+    "hero/look/snow/hair": [12, 24],
+    "hero/look/dwarf/base": [13, 24]
 };

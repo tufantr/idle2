@@ -27,6 +27,9 @@ recolored), the gap leap (the Seven-League Boots), and the textures of the mud p
 crossing (DCSS floor tiles) come from DCSS; the other obstacles and the campfire are drawn by
 `tools/resource_art.py` and are original to this project.
 
+The hero's looks (`hero/look/*`) are DCSS player bases and hairstyles (CC0, as above), listed in
+`src/data/looks.js`.
+
 The small glyphs beside numbers (`icon/*`) are DCSS status icons (CC0, as above: the heart, Slowed's
 hourglass, the new-stair star, Vengeance, Still Winds, Strong Willed, Sticky Flame, Dazed and
 Sleeping) blown up at whole scales; the skull, the padlock, the die and the turning arrow are drawn

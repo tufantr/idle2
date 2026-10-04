@@ -6,6 +6,7 @@ import { TITAN_NAMES } from '../data/dungeons.js';
 import { RESOURCES } from '../data/resources.js';
 import { TOOLS } from '../data/workshop.js';
 import { rankFor } from '../data/ranks.js';
+import { lookById } from '../data/looks.js';
 import { escapeHtml as esc } from './format.js';
 
 const TIERS = 7;
@@ -79,8 +80,8 @@ export function slotSpriteKey(type) {
 }
 
 /**
- * The hero, as atlas keys from the back layer to the front, dressed in what is equipped; his cloak
- * is his rank's colour (data/ranks.js).
+ * The hero, as atlas keys from the back layer to the front: the look picked (data/looks.js), dressed
+ * in what is equipped, the cloak in the rank's colour (data/ranks.js).
  * `tool` (a skill id) puts that skill's tool in the hand instead of the weapon; `bare` leaves both
  * hands empty (on the agility course).
  */
@@ -88,7 +89,9 @@ export function heroLayers(state, { tool = null, bare = false } = {}) {
     const eq = state.equipped || {};
     const tierOf = slot => (eq[slot] ? clampTier(eq[slot].tier) : 0);
     const cloak = `hero/cloaks/${rankFor(state.prestige?.count || 0).cloak}`;
-    const layers = [hasSprite(cloak) ? cloak : 'hero/cloak', 'hero/base'];
+    const look = lookById(state.hero?.look);   // the body and hair the player picked (data/looks.js)
+    const base = `hero/look/${look.id}/base`;
+    const layers = [hasSprite(cloak) ? cloak : 'hero/cloak', hasSprite(base) ? base : 'hero/base'];
     const boots = tierOf('Boots');
     if (boots) layers.push(`hero/boots/${boots}`);
     const legs = tierOf('Legs');
@@ -100,7 +103,8 @@ export function heroLayers(state, { tool = null, bare = false } = {}) {
     const gloves = tierOf('Gloves');
     if (gloves) layers.push(`hero/gloves/${gloves}`);
     const head = tierOf('Head');
-    if (head) layers.push(uniq('Head', 'head') || `hero/head/${head}`); else layers.push('hero/hair');
+    if (head) layers.push(uniq('Head', 'head') || `hero/head/${head}`);
+    else if (look.hair) layers.push(hasSprite(`hero/look/${look.id}/hair`) ? `hero/look/${look.id}/hair` : 'hero/hair');
     if (bare) return layers.filter(hasSprite);
     if (tool && hasSprite(`hero/tool/${tool}`)) layers.push(`hero/tool/${tool}`);
     else if (eq.Weapon) layers.push(eq.Weapon.uniqueId && hasSprite(`hero/weapon_unique/${eq.Weapon.uniqueId}`) ? `hero/weapon_unique/${eq.Weapon.uniqueId}` : `hero/weapon/${clampTier(eq.Weapon.tier)}`);
