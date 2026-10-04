@@ -15,7 +15,7 @@ import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } 
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
-import { ATLAS, sprite, heroSprite, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
+import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
@@ -320,6 +320,18 @@ function focusFinder(el) {
 
 // The purse's chips bump when their number changes (gold rolls instead, see paintGold).
 let lastPurse = null;
+/** The seal in the game's mark: the hero as they are now (look, gear, rank's cloak), redrawn only when that changes. */
+let brandKey = '';
+function paintBrand() {
+    const seal = document.querySelector('.brand-seal');
+    if (!seal) return;
+    const phone = !!window.matchMedia?.('(max-width: 900px)').matches;
+    const key = `${phone}|${heroLayers(game.state).join(',')}`;
+    if (key === brandKey) return;
+    brandKey = key;
+    seal.innerHTML = heroSprite(game.state, { scale: phone ? 1 : 2 });   // whole-number scales: a bust on a desktop, the whole hero on a phone
+}
+
 function bumpPurse() {
     const s = game.state;
     const purse = { tokens: s.prestige.tokens, sp: s.prestige.skillPoints, essence: s.resources.essence };
@@ -353,6 +365,7 @@ function render() {
     scene.sync(game, ui);
     stage.sync(game, ui);
     paintGold();
+    paintBrand();
     glowArrivals();
     refreshPerks();
 }

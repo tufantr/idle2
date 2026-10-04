@@ -428,6 +428,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The game's mark**: the sidebar's plain title became a logo: a gold-rimmed seal looking onto the
+      painted meadow with the player's own hero in it, as they are now (look, gear, the rank's cloak),
+      beside "FANTASY" in polished gold with a light that passes over it now and then and "IDLE"
+      between rules, over a filigree line with a gem. On a phone it is a compact seal and name in the
+      top bar. No new painting: the seal echoes the app icon, and type stays crisp at this size
 - [x] **After a dungeon, back to the Dungeons tab**: ending a dungeon, leaving one, or losing a run
       (after the defeat has shown) returns a watching player to the Dungeons tab instead of the stage
       fight; the hero fights on at the stages in the background (the header's pill shows where). Map

@@ -203,14 +203,48 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
     overflow-y: auto; height: calc(100vh - 4rem); position: sticky; top: 2rem; padding: 1.4rem 0.9rem;
     scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent;
 }
+/* the game's mark: the hero as they are now in a gold-rimmed seal on the meadow, and the name in beveled gold */
 .brand {
-    padding-bottom: 0.9rem; margin-bottom: 0.3rem; text-align: center;
-    font-family: var(--font-display); font-size: 1.45rem; font-weight: 800; letter-spacing: 0.05em;
-    border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--line-strong), transparent) 1;
-    background: linear-gradient(180deg, #fff1c9 10%, #d6aa5c 60%, #8a6423);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+    position: relative; display: flex; align-items: center; justify-content: center; gap: 0.8rem;
+    margin: 0 0 0.4rem; padding: 0.15rem 0 1.15rem; font-size: inherit; font-weight: inherit;
 }
+.brand::before { /* a filigree rule under the mark, fading both ways */
+    content: ""; position: absolute; left: 6%; right: 6%; bottom: 4px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(214, 170, 92, 0.55) 25%, rgba(214, 170, 92, 0.55) 75%, transparent);
+}
+.brand::after { /* and a small gem at its middle */
+    content: ""; position: absolute; left: 50%; bottom: 1px; width: 7px; height: 7px; transform: translateX(-50%) rotate(45deg);
+    background: linear-gradient(135deg, #fde68a, #b07a1c); box-shadow: 0 0 0 1px #2a1a08, 0 0 8px rgba(252, 211, 77, 0.55);
+}
+.brand-seal {
+    position: relative; flex: 0 0 auto; width: 58px; height: 58px; border-radius: 50%; overflow: hidden;
+    background: url(assets/paint/meadow.webp) 55% 72% / 330% auto no-repeat, #3a5a2a;   /* a window onto the meadow */
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.55), 0 0 0 2px #2a1a08, 0 0 0 4px #c9a45c, 0 0 0 5px #5c4318, 0 5px 14px rgba(0, 0, 0, 0.65);
+}
+.brand-seal::after { /* the glass: a soft light from above */
+    content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(120% 70% at 50% 0%, rgba(255, 244, 214, 0.28), transparent 55%);
+}
+.brand-seal .hero-doll { position: absolute; left: 50%; top: 3px; transform: translateX(-50%); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55)); }
+.brand-name { display: flex; flex-direction: column; align-items: stretch; line-height: 1; }
+.brand-fantasy {
+    font-family: var(--font-display); font-size: 1.62rem; font-weight: 800; letter-spacing: 0.035em;
+    background: linear-gradient(110deg, transparent 42%, rgba(255, 251, 235, 0.9) 50%, transparent 58%) 160% 0 / 260% 100% no-repeat,
+                linear-gradient(180deg, #fff8dc 0%, #ffe593 36%, #e8ad3c 50%, #ffd76e 63%, #c58a2a 100%);   /* polished gold: a bright top, a sharp horizon, a warm lower band */
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+    filter: drop-shadow(0 1px 0 #4a2f0c) drop-shadow(0 2px 1px rgba(10, 6, 2, 0.85)) drop-shadow(0 0 12px rgba(240, 190, 90, 0.3));
+    animation: brandSheen 9s ease-in-out 2s infinite;
+}
+.brand-idle {
+    display: flex; align-items: center; gap: 0.45rem; margin-top: 0.32rem;
+    font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.55em; text-indent: 0.55em; color: #e5c271;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.brand-idle::before, .brand-idle::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(229, 194, 113, 0.75)); }
+.brand-idle::after { background: linear-gradient(90deg, rgba(229, 194, 113, 0.75), transparent); }
+/* now and then a light passes over the name */
+@keyframes brandSheen { 0%, 84% { background-position: 160% 0, 0 0; } 100% { background-position: -60% 0, 0 0; } }
+body.reduced-motion .brand-fantasy { animation: none; }
 #nav { order: 1; display: flex; flex-direction: column; gap: 0.3rem; }
 #nav-next { order: 2; display: flex; flex-direction: column; } /* under the tabs on a desktop */
 #nav-next:empty { display: none; }
@@ -875,7 +909,13 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     body { padding: 0.75rem 1rem; }
     #app.layout-sidebar { flex-direction: column; }
     #sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
-    .brand { flex: 1 0 auto; font-size: 1.05rem; padding-bottom: 0.3rem; margin-bottom: 0.2rem; text-align: left; }
+    /* the top bar: the seal and the name on one line, no rule */
+    .brand { flex: 1 0 auto; justify-content: flex-start; gap: 0.55rem; padding: 0; margin: 0; }
+    .brand::before, .brand::after { display: none; }
+    .brand-seal { width: 38px; height: 38px; box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.55), 0 0 0 1px #2a1a08, 0 0 0 3px #c9a45c, 0 0 0 4px #5c4318, 0 3px 8px rgba(0, 0, 0, 0.6); }
+    .brand-seal .hero-doll { top: 4px; }
+    .brand-fantasy { font-size: 1.12rem; }
+    .brand-idle { font-size: 0.56rem; margin-top: 0.22rem; }
     #nav { order: 3; flex: 1 1 100%; min-width: 0; }
     /* the next place sits beside the title: in view, where the end of the tab strip is not */
     #nav-next { order: 1; flex: 0 1 auto; min-width: 0; max-width: 62%; }
@@ -917,7 +957,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .chip span, .chip i:not(.spr) { display: none; }
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
     .chip b { font-size: 0.9rem; }
-    .brand { font-size: 0.95rem; }
+    .brand-fantasy { font-size: 1.02rem; }
     .minigame-header { flex-direction: column; gap: 0.5rem; }
     .daily-btn { font-size: 0.74rem; padding: 0.3rem 0.6rem; }
     .modal-content { width: 100%; padding: 1.2rem; }
