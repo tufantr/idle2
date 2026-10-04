@@ -662,6 +662,9 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 - **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from
   the zone's name on the scene or the Map button. A pin puts its zone under the map (stages, drops,
   gear tier) with a Travel button; on a phone the pins lose their labels and the zone card names them.
+  Once the Dungeons tab has opened, the dungeons stand on it too as arched gates (`DUNGEON_PINS`):
+  the open ones and the next as a silhouette, as on the tab. A gate's card has the run's estimate,
+  the unique's fragments and Enter. Travel leaves a dungeon run (`travelTo`), but not the Titan.
 
 ### 3.23 Presentation: the fight on the whole screen
 
@@ -945,7 +948,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inv
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
-                      worldmap.js (the zones as pins on the painted map) ·
+                      worldmap.js (the zones and the dungeons as pins on the painted map) ·
                       sprites.js (atlas cells for monsters, items, perks, tools and the hero's layers) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · format.js

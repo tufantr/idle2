@@ -66,6 +66,18 @@ export function setStage(game, stage) {
     game.markDirty();
 }
 
+/**
+ * The world map's Travel: to `stage` on the ladder. A dungeon run under way is given up on the way
+ * out (as leaving it would); the Titan fight has to end first.
+ */
+export function travelTo(game, stage) {
+    const c = game.state.combat;
+    if (c.mode === 'titan') { game.emit({ type: 'error', text: 'Finish the Titan fight first.' }); return false; }
+    if (c.mode === 'dungeon') failDungeon(game, 'you left for the stages');
+    setStage(game, stage);
+    return true;
+}
+
 function chooseFood(state, missing, foodMult) {
     const rule = state.combat.autoEat;
     if (rule === 'none') return null;

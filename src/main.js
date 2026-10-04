@@ -7,7 +7,7 @@ import {
 } from './core/save.js';
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, pageTitle, TABS } from './ui/render.js';
 import { renderAboutCard, FEATURES, EVENT_ART } from './ui/features.js';
-import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
+import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -751,14 +751,15 @@ window.FI = {
     /** A drawer was opened or closed; remember it, so a re-render keeps it that way. */
     setOpen(key, open) { ui.open[key] = !!open; },
     openMap() { openModal(renderWorldMapModal(game), 'map'); },
-    /** A pin on the map was tapped: show that zone under the map (the map itself stays put). */
-    mapSelect(index) {
+    /** A pin on the map was tapped (a zone's index or a dungeon's id): show it under the map, which stays put. */
+    mapSelect(key) {
         const info = document.querySelector('.map-info');
         if (!info) return;
-        info.innerHTML = renderZoneInfo(game, index);
-        for (const pin of document.querySelectorAll('.map-pin')) pin.classList.toggle('picked', Number(pin.dataset.zone) === index);
+        info.innerHTML = typeof key === 'number' ? renderZoneInfo(game, key) : renderDungeonInfo(game, key);
+        for (const pin of document.querySelectorAll('.map-pin')) pin.classList.toggle('picked', pin.dataset.pick === String(key));
     },
-    mapTravel(stage) { closeModal(); game.setStage(stage); if (ui.tab !== 'combat') window.FI.switchTab('combat'); else render(); },
+    mapTravel(stage) { closeModal(); game.travel(stage); if (ui.tab !== 'combat') window.FI.switchTab('combat'); else render(); },
+    mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
     setHeroName(name) { game.setHeroName(name); render(); },

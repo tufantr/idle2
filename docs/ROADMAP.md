@@ -425,6 +425,12 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The dungeons on the world map**: each stands on the painting as an arched gate with its boss
+      inside (the Warren in the deep woods, the Depths in the crystal mountain, the Stronghold on the
+      storm tower, the Lair in the volcano's mouth, the Citadel at the rift), the open ones and the
+      next as a silhouette. A gate puts its dungeon under the map (how a run would go, the unique's
+      fragments) with Enter; inside a run the map opens on its gate. Also fixed: Travel on the map
+      did nothing during a dungeon run; it now leaves the run for the stages
 - [x] **The battle log in pictures**: each line starts with a sprite for its kind (a sword, a chest,
       a skeleton, essence), and the emoji saved at the start of old lines is left out
 - [x] **Level-up cards on their painting**: a milestone level opens on its skill's place (the cave

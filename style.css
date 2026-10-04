@@ -1884,6 +1884,17 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .map-pin.done .zone-emblem::after { content: "✓"; position: absolute; right: -4px; bottom: -4px; width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center; font-size: 0.6rem; font-weight: 800; color: #052e16; background: #4ade80; box-shadow: 0 0 0 2px #140f0a; }
 .map-pin-name { padding: 1px 7px; border-radius: 999px; white-space: nowrap; font-family: var(--font-display); font-size: 0.66rem; font-weight: 700; color: #fbe7b5; background: rgba(13, 10, 7, 0.78); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
 .map-pin.locked .map-pin-name { color: #b5a68f; }
+/* a dungeon on the map: an arched stone gate with firelight inside (zones are round) */
+.dungeon-gate { position: relative; width: 40px; height: 46px; flex: 0 0 auto; display: grid; place-items: center; font-size: 1.2rem; border-radius: 20px 20px 5px 5px; background: radial-gradient(ellipse 70% 45% at 50% 100%, rgba(234, 108, 40, 0.6), transparent), linear-gradient(#2a1f16, #0e0a07); border: 2px solid #b9a78c; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.55), inset 0 0 12px rgba(0, 0, 0, 0.7), 0 0 0 3px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.6); transition: transform 0.15s, border-color 0.15s; }
+.dungeon-gate .spr { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)); }
+.dungeon-gate .spr.silhouette { opacity: 1; filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.95)) drop-shadow(0 0 3px rgba(240, 198, 116, 0.35)); }
+.map-pin:hover .dungeon-gate { transform: scale(1.12); border-color: #fde68a; }
+.map-pin.locked .dungeon-gate, .dungeon-gate.locked { border-color: rgba(120, 100, 70, 0.8); background: linear-gradient(#221b15, #0c0907); }
+.map-pin.gate.here .dungeon-gate { border-color: #fde68a; animation: nodePulse 1.6s ease-in-out infinite; }
+.map-pin.gate.picked .dungeon-gate { box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.55), inset 0 0 12px rgba(0, 0, 0, 0.7), 0 0 0 3px #fde68a, 0 0 18px rgba(252, 211, 77, 0.7); }
+.map-pin.gate .map-pin-name { color: #fcd9b0; background: rgba(40, 14, 8, 0.82); }
+.zone-card .dungeon-gate { width: 50px; height: 56px; border-width: 2px; border-radius: 25px 25px 6px 6px; }
+.map-info .frag-row { gap: 0.4rem; max-width: 16rem; }
 .map-info { margin-top: 0.8rem; }
 .zone-card { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem 0.9rem; padding: 0.7rem 0.9rem; border-radius: 12px; background: var(--well); border: 1px solid var(--line); }
 .zone-card-text { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
@@ -1894,7 +1905,8 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 @media (max-width: 600px) {
     .map-modal { padding: 0.8rem 0.7rem 1rem; }
     .zone-emblem { width: 34px; height: 34px; border-width: 1px; }
-    .map-pin .zone-emblem .spr { --k: 0.75 !important; image-rendering: auto; }
+    .dungeon-gate { width: 30px; height: 35px; border-width: 1px; border-radius: 15px 15px 4px 4px; }
+    .map-pin .zone-emblem .spr, .map-pin .dungeon-gate .spr { --k: 0.75 !important; image-rendering: auto; }
     .map-pin-name { display: none; }
     .zone-card .zone-emblem { width: 46px; height: 46px; }
 }

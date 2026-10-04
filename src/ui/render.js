@@ -1479,6 +1479,18 @@ function fmtSeconds(value) {
     return value < 10 ? `${value.toFixed(1)} s` : `${Math.round(value)} s`;
 }
 
+/** How a run at dungeon `d` would end at its boss, in words and a colour (an estimate without food). */
+export function dungeonVerdict(game, d) {
+    const limit = DUNGEON_BOSS_TIME_MS / 1000;
+    const fight = dungeonPreview(game.derived, d).bossFight;
+    const cls = readinessClass(fight.killSeconds, limit, fight.surviveSeconds);
+    const text = cls === 'ready-good' ? `You are ready: the boss falls in ~${fmtSeconds(fight.killSeconds)}`
+        : cls === 'ready-close' ? `It will be close: the boss takes ~${fmtSeconds(fight.killSeconds)} of your ${limit} s`
+        : fight.surviveSeconds < limit ? `Too strong for now: you would last ~${fmtSeconds(fight.surviveSeconds)}`
+        : `Too tough for now: the boss needs ~${fmtSeconds(fight.killSeconds)}, and you have ${limit} s`;
+    return { cls, text };
+}
+
 export function renderDungeons(game) {
     const state = game.state;
     const c = state.combat;
@@ -1503,14 +1515,7 @@ export function renderDungeons(game) {
         const next = DUNGEON_MILESTONES.find(m => record.clears < m.clears);
         const done = DUNGEON_MILESTONES.filter(m => record.clears >= m.clears).map(m => m.desc);
         const unique = UNIQUES[d.unique];
-        const preview = dungeonPreview(game.derived, d);
-        const limit = DUNGEON_BOSS_TIME_MS / 1000;
-        const fight = preview.bossFight;
-        const ready = readinessClass(fight.killSeconds, limit, fight.surviveSeconds);
-        const verdict = ready === 'ready-good' ? `You are ready: the boss falls in ~${fmtSeconds(fight.killSeconds)}`
-            : ready === 'ready-close' ? `It will be close: the boss takes ~${fmtSeconds(fight.killSeconds)} of your ${limit} s`
-            : fight.surviveSeconds < limit ? `Too strong for now: you would last ~${fmtSeconds(fight.surviveSeconds)}`
-            : `Too tough for now: the boss needs ~${fmtSeconds(fight.killSeconds)}, and you have ${limit} s`;
+        const { cls: ready, text: verdict } = dungeonVerdict(game, d);
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
             <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}">
                 <span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 2, cls: open ? '' : 'silhouette', fallback: d.icon })}</span>

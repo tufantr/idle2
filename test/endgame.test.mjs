@@ -137,6 +137,30 @@ test('switching activities fails the current run cleanly; the Titan fight blocks
     assert.equal(game.state.combat.mode, 'titan');
 });
 
+test("the map's Travel leaves a dungeon run for the ladder, but waits for the Titan", () => {
+    const game = newGame({ bestStage: 60, tokens: 20000 });
+    game.state.combat.stage = 12;
+    game.enterDungeon('goblin_warren');
+    assert.equal(game.travel(41), true);
+    const c = game.state.combat;
+    assert.equal(c.mode, 'stages');
+    assert.equal(c.dungeon, null);
+    assert.equal(c.stage, 41);
+    assert.equal(c.enemy.stage, 41);
+    assert.equal(c.active, true, 'still fighting, now on the ladder');
+    assert.equal(events(game, 'dungeonFail').length, 1, 'the run was given up');
+
+    assert.equal(game.travel(500), true);
+    assert.equal(c.stage, 60, 'no further than reached this run');
+
+    game.challengeTitan();
+    game.drainEvents();
+    assert.equal(game.travel(5), false);
+    assert.equal(c.mode, 'titan');
+    assert.equal(c.stage, 60);
+    assert.equal(events(game, 'error').length, 1);
+});
+
 test('fragments assemble the unique; uniques are legendary, locked and cannot be reforged; spares are unlocked', () => {
     const game = newGame({ bestStage: 20 });
     const record = game.state.dungeons[warren.id];

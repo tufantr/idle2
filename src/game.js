@@ -4,7 +4,7 @@
 import { createDefaultState, migrateState } from './core/state.js';
 import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, startAgility, stopAction, resolveAction } from './systems/skilling.js';
-import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, spawnEnemy } from './systems/combat.js';
+import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures } from './systems/progress.js';
@@ -140,6 +140,7 @@ export class Game {
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
     setStage(stage) { return this._act(() => setStage(this, stage)); }
+    travel(stage) { return this._act(() => travelTo(this, stage)); }
     setFarmMode(on) { this.state.combat.farmMode = !!on; }
 
     equipItem(id, slot) { return this._act(() => equipItem(this, id, slot)); }
