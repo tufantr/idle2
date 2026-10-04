@@ -26,6 +26,7 @@ import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
 import { nextLook, lookForMedal } from './data/looks.js';
+import { capeFor } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 
 const TICK_MS = 100;
@@ -223,7 +224,7 @@ for (const type of ['pointerup', 'pointercancel']) document.addEventListener(typ
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
 // bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked';
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked';
 let tipNode = null;
 let tipTimer = 0;
 function showTip(el, text) {
@@ -475,6 +476,12 @@ function handleEvents(events) {
             case 'actionComplete': actionFx.actionComplete(ev, ui.tab, stage.anchor()); break;
             case 'levelUp': {
                 const card = levelCelebration(ev);
+                const cape = ev.level >= 99 && ev.from < 99 ? capeFor(ev.skill) : null;   // 99 brings the skill's cape, worn at once
+                if (card && cape) {   // the picture is the hero in it
+                    card.icon = `<span class="cel-hero">${heroSprite(game.state, { scale: 2 })}</span>`;
+                    card.lines.unshift(`The ${escapeHtml(SKILLS[ev.skill].name)} cape: ${escapeHtml(cape.perk.charAt(0).toLowerCase() + cape.perk.slice(1))}`);
+                    card.ms = 5200;
+                }
                 if (card) rewards.celebrate(card);
                 else toast(`${SKILLS[ev.skill].name} level ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
                 break;
@@ -955,6 +962,7 @@ window.FI = {
         flourish('.intro-hero .hero-doll');
     },
     setHeroLook(id) { game.setHeroLook(id); sound.play('equip'); render(); },
+    setHeroCape(skill) { if (game.setHeroCape(skill)) { sound.play('equip'); render(); } },
     setCompanion(id) { if (game.setCompanion(id)) sound.play('pet'); render(); },
     beginAdventure() {
         const name = document.getElementById('intro-name')?.value || '';

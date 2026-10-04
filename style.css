@@ -1427,6 +1427,8 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
 .celebration.legend { --cel: #fb923c; --cel-glow: rgba(249, 115, 22, 0.55); border-color: rgba(249, 115, 22, 0.85); }
 .celebration.medal { --cel: #fcd34d; --cel-glow: rgba(252, 211, 77, 0.5); border-color: rgba(252, 211, 77, 0.75); }
 .cel-look { display: inline-block; vertical-align: -0.55em; margin: -6px 0; line-height: 0; }
+/* a skill at 99: the hero in the new cape, on a gold-rimmed ground like a medal's */
+.cel-hero { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; line-height: 0; background: radial-gradient(circle at 50% 38%, #4a3818, #140e07 72%); border: 3px solid #e2b95f; box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(0, 0, 0, 0.4), 0 0 26px rgba(252, 211, 77, 0.45); }
 .cel-medal { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4a3818, #140e07 72%); border: 3px solid #e2b95f; box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(0, 0, 0, 0.4), 0 0 26px rgba(252, 211, 77, 0.45); }
 .celebration.prestige { --cel: #e879f9; --cel-glow: rgba(217, 70, 239, 0.55); border-color: rgba(217, 70, 239, 0.75); }
 .cel-rays {
@@ -1801,6 +1803,13 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .look-pick.locked { cursor: help; border-style: dashed; }
 .look-pick.locked .hero-doll { filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.75)); opacity: 0.75; }
 .look-pick.on { border-color: #f0c674; box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.35), 0 0 14px rgba(240, 198, 116, 0.35); }
+/* the cloaks in Settings, once a skill cape is earned: the rank's cloak and each cape, the worn one lit */
+.cape-picks { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: -0.3rem 0 0.8rem; }
+.cape-pick { width: 64px; height: 64px; padding: 0; display: grid; place-items: center; border-radius: 12px; background: radial-gradient(circle at 50% 40%, #3a2c1c, #120d08 75%); border: 1px solid var(--line); box-shadow: none; }
+.cape-pick:hover { border-color: rgba(240, 198, 116, 0.75); transform: translateY(-2px); }
+.cape-pick.on { border-color: #f0c674; box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.35), 0 0 14px rgba(240, 198, 116, 0.35); }
+.cape-pick.locked { cursor: help; border-style: dashed; }
+.cape-pick .spr.silhouette { opacity: 0.75; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.75)); }
 .intro-foe { right: 18%; bottom: 14px; animation: introSlime 1.4s ease-in-out infinite; transform-origin: 50% 100%; }
 .intro-logo {
     margin: 0.4rem 1rem 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(2.1rem, 7vw, 3.2rem); letter-spacing: 0.06em; line-height: 1.05;

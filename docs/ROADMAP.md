@@ -428,6 +428,13 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Skill capes**: level 99 in a skill now earns its cape, as in Melvor: a DCSS cloak in the
+      cape's own cloth with a gold hem, which the hero puts on at once, and a small bonus to its skill
+      for good (a second ore, fish, dish or bar 10% more often; +10% crops; +10% quality for crafting;
+      +3% speed everywhere for agility; +5% attack and defence for combat). The 99 card shows the hero
+      in it on a gold medallion; Settings gains a row of cloaks once one is earned (the rank's cloak,
+      each cape, the next one as a silhouette); each skill's "?" says what its cape gives; the
+      chronicle's 99 wears it
 - [x] **Melvor pace**: the owner chose a long game. Level 99 in a skill now takes 190–290 hours of
       training with no boosts (it was 60–130), and combat 99 160–210 hours of the simulator's mixed
       play (it was 20–40). The first levels come as quickly as ever: actions that open by level 20

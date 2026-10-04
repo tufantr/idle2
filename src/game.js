@@ -20,6 +20,7 @@ import { applyReward } from './systems/social.js';
 import { eventStatus, buyEventItem } from './systems/events.js';
 import { heroName } from './core/text.js';
 import { lookById, lookOpen } from './data/looks.js';
+import { capeEarned } from './data/capes.js';
 import { noteChronicle } from './systems/chronicle.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
@@ -138,6 +139,15 @@ export class Game {
     }
     /** A pat for the pet (the scene's and the stage's); counted for a secret medal. */
     patPet() { return this._act(() => { if (!Object.values(this.state.pets).some(Boolean)) return false; bumpStat(this, 'petPats'); this.markDirty(); return true; }); }
+    /** Wear the cape of skill `skill` (data/capes.js), once earned; '' wears the rank's cloak again. */
+    setHeroCape(skill) {
+        return this._act(() => {
+            if (skill && !capeEarned(this.state, skill)) return false;
+            this.state.hero.cape = skill || '';
+            this.markDirty();
+            return true;
+        });
+    }
     /** Dress the hero in look `id` (data/looks.js); an unknown id is the first look. */
     setHeroLook(id) {
         return this._act(() => {

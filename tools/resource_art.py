@@ -998,6 +998,35 @@ def build_glyphs(tiles):
     return out
 
 
+# Skill capes (src/data/capes.js): the DCSS cloak in each skill's own cloth, with a gold hem. Their own
+# colours rather than the skills' (four of those are greens and one is white).
+CAPE_CLOTH = {
+    'combat': '#b3141c', 'mining': '#6b7a99', 'smithing': '#3c3c46', 'woodcutting': '#2f8a3a',
+    'farming': '#93bd28', 'alchemy': '#14a39a', 'fishing': '#2a6fdb', 'hunting': '#8a5a2c',
+    'cooking': '#e6dfcb', 'firemaking': '#ea5a12', 'agility': '#4f46e5', 'crafting': '#c43fd8'}
+CAPE_HEM = (233, 181, 74)
+
+
+def skill_cape(cloak, cloth):
+    """The red cloak re-dyed `cloth`, its shading kept, and its lowest two rows of cloth gold: the hem
+    that shows at the hero's feet and marks a cape from a rank's cloak."""
+    a = from_image(cloak).astype(float)
+    r, g, b, al = a[..., 0], a[..., 1], a[..., 2], a[..., 3]
+    fabric = (al > 0) & (r > g + 25)
+    v = np.maximum(np.maximum(r, g), b)
+    shade = np.zeros_like(v)
+    shade[fabric] = v[fabric] / v[fabric].max()
+    c = np.array(rgb(cloth), float)
+    for k in range(3):
+        a[..., k][fabric] = np.clip(c[k] * (0.25 + shade[fabric]), 0, 255)
+    ys, xs = np.nonzero(fabric)
+    for x in np.unique(xs):
+        for y in sorted(ys[xs == x])[-2:]:
+            for k in range(3):
+                a[y, x, k] = min(255, CAPE_HEM[k] * (0.45 + 0.75 * shade[y, x]))
+    return a.astype(np.uint8)
+
+
 def build_icons(tiles):
     """Cells for the game's own things: perk/<id>, tool/<id>, obstacle/<id>, icon/<id> (the glyphs beside
     numbers), the crate, the gear, the campfire, the crown (a medal), the festival token, the hero's hoe
@@ -1027,6 +1056,12 @@ def build_icons(tiles):
     out.update(build_obstacles(tiles))
     out.update(build_glyphs(tiles))
     return {key: to_image(a) for key, a in out.items()}
+
+
+def build_capes(tiles):
+    """The skill capes, hero/capes/<skill> (packed last, so the cells before them keep their place)."""
+    cloak = Image.open(f'{tiles}/player/cloak/red.png').convert('RGBA')
+    return {f'hero/capes/{skill}': to_image(skill_cape(cloak, cloth)) for skill, cloth in CAPE_CLOTH.items()}
 
 
 # ---------- the art direction: resource id -> how its cell is made ----------

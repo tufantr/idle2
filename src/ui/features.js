@@ -12,6 +12,7 @@ import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { MASTERY_PER_LEVEL } from '../data/mastery.js';
+import { CAPES } from '../data/capes.js';
 import { escapeHtml as esc } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
@@ -65,6 +66,9 @@ export const FEATURES = {
     minigames: { name: 'A chance to play', art: 'forest', icon: 'res/topaz', blurb: 'Every few minutes of work, a short game appears.',
         points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Skipping costs nothing.'] }
 };
+
+// Every skill's card ends with what its 99 brings: its cape (data/capes.js), worn by the hero.
+for (const cape of CAPES) FEATURES[cape.skill]?.points?.push(`At level 99, the ${SKILLS[cape.skill].name} cape: ${cape.perk.charAt(0).toLowerCase()}${cape.perk.slice(1)}, for good.`);
 
 // Each weekend event's sprite: the harvest, the Titan, a pickaxe, a bar from the guild halls, gold, a fox.
 export const EVENT_ART = { harvest_festival: 'res/pumpkin', titans_fury: 'titan/0', miners_rush: 'tool/pickaxe', guild_fair: 'res/mithril_bar', gold_fever: 'gold', lucky_paws: 'pet/scout' };

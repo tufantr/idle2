@@ -70,7 +70,8 @@ test('preservation keeps ingredients and fuel; doubling adds output', () => {
     assert.equal(5000 - s.resources.normal_log, used, 'the log is kept with the rabbit');
     assert.ok(saved / cooks > 0.15 && saved / cooks < 0.25, `kept ${saved} of ${cooks}`);
     const extra = s.resources.cooked_rabbit - cooks;
-    assert.ok(extra / cooks > 0.18 && extra / cooks < 0.31, `doubled ${extra} of ${cooks}`);
+    // mastery 99 doubles 24.5% of the dishes, and cooking 99's cape 10% more (data/capes.js)
+    assert.ok(extra / cooks > 0.28 && extra / cooks < 0.41, `doubled ${extra} of ${cooks}`);
 });
 
 test('forging mastery is shared by every piece of a metal; jewellery by gem', () => {

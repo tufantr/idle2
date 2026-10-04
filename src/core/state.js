@@ -15,6 +15,7 @@ import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions }
 import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 import { heroName } from './text.js';
 import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
+import { capeEarned } from '../data/capes.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 
 export const SAVE_VERSION = 3;
@@ -67,7 +68,7 @@ export function createDefaultState(now = Date.now()) {
         chronicle: [{ t: now, kind: 'start', id: '' }],   // the hero's firsts, with their dates (systems/chronicle.js)
         unlocks: {},
         seen: {},              // pieces of the interface that have opened (systems/disclosure.js)
-        hero: { name: '', look: DEFAULT_LOOK, pet: '' },    // the name the player gave the hero ('' is "You"), the look (data/looks.js), the pet at their side ('' for the default)
+        hero: { name: '', look: DEFAULT_LOOK, pet: '', cape: '' },    // the name the player gave the hero ('' is "You"), the look (data/looks.js), the pet at their side ('' for the default), the skill cape worn ('' for the rank's cloak)
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
@@ -308,7 +309,8 @@ function normalise(data, now) {
     state.settings.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
     const hero = isPlainObject(state.hero) ? state.hero : {};
     const look = lookById(hero.look);
-    state.hero = { name: heroName(hero.name || ''), look: lookOpen(state, look) ? look.id : DEFAULT_LOOK, pet: typeof hero.pet === 'string' && state.pets[hero.pet] ? hero.pet : '' };
+    state.hero = { name: heroName(hero.name || ''), look: lookOpen(state, look) ? look.id : DEFAULT_LOOK, pet: typeof hero.pet === 'string' && state.pets[hero.pet] ? hero.pet : '',
+        cape: typeof hero.cape === 'string' && capeEarned(state, hero.cape) ? hero.cape : '' };   // a skill's cape worn (data/capes.js), '' for the rank's cloak
     if (!Array.isArray(state.log)) state.log = [];
     state.gold = Math.max(0, Number(state.gold) || 0);
     state.combat.enemy = null; // always respawned on load

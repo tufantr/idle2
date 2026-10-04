@@ -87,8 +87,10 @@ let offline progress run overnight.
   (production); Farming (parallel, on the clock); Agility (a course you build); Smithing, Crafting
   (workshop); Combat (earned by fighting). Every skill's level matters — workshop levels gate recipes,
   farming levels open plots, agility levels open course slots, combat level gates wearing gear.
-- **Nodes** (`src/data/skills.js`): XP per action grows ~15× across a skill while intervals grow
-  only 1.4–2×, so XP/hour roughly doubles every 15 levels. Example (mining):
+- **Nodes** (`src/data/skills.js`): base XP per action grows ~15× across a skill while intervals
+  grow only 1.4–2×, so base XP/hour roughly doubles every 15 levels. At Melvor pace an action opening
+  past level 20 gives less than its base (runite 62 instead of 130; `src/data/pace.js`, §5.1).
+  Example (mining, base XP):
 
 | Node | Level | Interval | XP | | Node | Level | Interval | XP |
 |---|---|---|---|---|---|---|---|---|
@@ -102,6 +104,15 @@ let offline progress run overnight.
   achievements, pets, agility obstacles, weekend events, mini-game boosts and Focus, plus the
   action's own mastery (§3.20).
 - **Gems:** every mining action has a 2% chance to also yield a gem of roughly the rock's tier.
+- **Skill capes** (`src/data/capes.js`, Melvor's skillcapes): level 99 in a skill earns its cape
+  for good. Each gives a small bonus to its own skill, counted whichever cape is worn: a second ore,
+  log, fish, catch, dish, bar, herb or potion 10% more often (a log burning twice, for firemaking),
+  +10% crops a harvest, +10% quality on everything made (crafting), +3% speed in every skill
+  (agility), +5% attack and defence (combat). The hero puts the new cape on as it is earned (a DCSS
+  cloak in the cape's own cloth with a gold hem, `hero/capes/<skill>`); in Settings, once one is
+  earned, any earned cape or the rank's cloak can be worn, with the next cape (the skill nearest 99)
+  as a silhouette. Capes are worked out from the levels; the save keeps only the one worn
+  (`hero.cape`). The 99 card shows the hero in it, and the chronicle's line wears it too.
 
 ### 3.2 Resources and dependencies
 
@@ -738,8 +749,8 @@ needs another screen: fight, spend, prestige and fight on.
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
-level, perks, achievements, pets, dungeon milestones, Titans defeated, agility obstacles (× their
-level), potions, tools, mini-game boosts, the bonfire, a running weekend event and Focus — into one
+level, perks, achievements, pets, skill capes, dungeon milestones, Titans defeated, agility obstacles
+(× their level), potions, tools, mini-game boosts, the bonfire, a running weekend event and Focus — into one
 object; `deriveStats` turns it into the numbers combat and skilling use. Mastery is the one bonus
 that belongs to a single action rather than a skill: `resolveAction` attaches it to the action, and
 `intervalFor` and `completeAction` add it on top of the skill's numbers.
@@ -1016,6 +1027,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
                       · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
+                      · capes (skill capes at 99)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily

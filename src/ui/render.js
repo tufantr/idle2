@@ -41,6 +41,7 @@ import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank, RANKS } from '../data/ranks.js';
 import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
+import { CAPES, capeFor, capeEarned, capesEarned, capeWorn } from '../data/capes.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
@@ -1370,7 +1371,7 @@ function chronicleLine(e) {
         case 'titan': return ['titan/0', 'Felled the first Titan'];
         case 'prestige': return ['res/essence', 'The first prestige'];
         case 'rank': { const r = RANKS.find(x => x.name === e.id); return r ? [`hero/cloaks/${r.cloak}`, `Rose to ${r.name}`] : null; }
-        case 'skill99': return SKILLS[e.id] ? [FEATURES[e.id]?.icon || 'crown', `${SKILLS[e.id].name} 99`] : null;
+        case 'skill99': return SKILLS[e.id] ? [capeFor(e.id) ? `hero/capes/${e.id}` : FEATURES[e.id]?.icon || 'crown', `${SKILLS[e.id].name} 99, and its cape`] : null;
         default: return null;
     }
 }
@@ -1744,6 +1745,23 @@ function renderCodex(state) {
  * The looks in Settings: a portrait of each the hero can wear, the worn one lit, and the next earned
  * look as a silhouette (its medal named on hover or a tap): a ladder shows its next rung only.
  */
+/**
+ * The cloaks in Settings, once a skill cape is earned: the rank's cloak and each cape earned, the worn
+ * one lit, and the next cape (the skill nearest 99) as a silhouette.
+ */
+function capePicks(state) {
+    const earned = capesEarned(state);
+    if (!earned.length) return '';
+    const worn = capeWorn(state)?.skill || '';
+    const rank = rankFor(state.prestige?.count || 0);
+    const pick = (skill, key, name, tip) => `<button class="cape-pick${worn === skill ? ' on' : ''}" onclick="FI.setHeroCape('${skill}')" aria-label="${esc(name)}" aria-pressed="${worn === skill}" title="${esc(tip)}">${sprite(key, { scale: 2 })}</button>`;
+    const picks = [pick('', `hero/cloaks/${rank.cloak}`, `${rank.name}'s cloak`, `The ${rank.cloak} cloak of a ${rank.name}`)];
+    for (const c of earned) picks.push(pick(c.skill, `hero/capes/${c.skill}`, `${SKILLS[c.skill].name} cape`, `${SKILLS[c.skill].name} cape: ${c.perk}`));
+    const next = CAPES.filter(c => !capeEarned(state, c.skill)).sort((a, b) => state.skills[b.skill].xp - state.skills[a.skill].xp)[0];
+    if (next) picks.push(`<span class="cape-pick locked" title="${esc(`${SKILLS[next.skill].name} cape, at level 99 in ${SKILLS[next.skill].name}: ${next.perk}`)}">${sprite(`hero/capes/${next.skill}`, { scale: 2, cls: 'silhouette' })}</span>`);
+    return `<div class="cape-picks" role="group" aria-label="Your hero's cloak">${picks.join('')}</div>`;
+}
+
 function lookPicks(state) {
     const worn = state.hero?.look || LOOKS[0].id;
     const dressed = (id, cls = '') => heroSprite({ ...state, hero: { ...state.hero, look: id } }, { scale: 3, cls });
@@ -1779,6 +1797,7 @@ export function renderSettings(game, ui, cloud) {
         <div class="panel-header"><h2>Options</h2></div>
         <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
         <div class="look-picks" role="group" aria-label="Your hero's look">${lookPicks(state)}</div>
+        ${capePicks(state)}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>

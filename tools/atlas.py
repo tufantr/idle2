@@ -19,7 +19,7 @@ import sys
 
 from PIL import Image
 
-from resource_art import build as build_resources, build_extras, build_icons
+from resource_art import build as build_resources, build_extras, build_icons, build_capes
 
 CELL = 32
 COLS = 16
@@ -178,6 +178,8 @@ def main(rltiles):
         add(f'hero/look/{look}/base', f'player/base/{base}')
         if hair:
             add(f'hero/look/{look}/hair', f'player/hair/{hair}')
+    for key, img in build_capes(rltiles).items():   # the skill capes (src/data/capes.js), last of all
+        add(key, img)
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))
@@ -215,7 +217,7 @@ def main(rltiles):
         '// assets/sprites.png holds each sprite. Keys: mon/<monster name>, titan/<n>, item/<Type>/<tier>,\n'
         '// uniq/<uniqueId>, hero/<layer>[/<tier or kind>], gold, res/<resource id>, pet/<pet id>, farm/<stage>,\n'
         '// perk/<perk id>, tool/<tool id>, obstacle/<obstacle id>, crate, gear, campfire, crown, token,\n'
-        '// hero/cloaks/<rank cloak>.\n'
+        '// hero/cloaks/<rank cloak>, hero/capes/<skill>.\n'
         '// See assets/CREDITS.md.\n\n'
         f'export const ATLAS = {{ url: \'assets/sprites.png?v={version}\', cell: {CELL}, cols: {COLS}, rows: {rows} }};\n\n'
         f'export const SPRITES = {{\n{entries}\n}};\n'

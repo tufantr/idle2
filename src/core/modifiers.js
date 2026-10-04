@@ -1,5 +1,5 @@
 // The modifier pipeline. Every bonus source (gear, combat level, prestige tokens, perks,
-// achievements, potions, tools, mini-game boosts) is folded into one object, and the
+// achievements, skill capes, potions, tools, mini-game boosts) is folded into one object, and the
 // derived combat numbers are computed from it. Nothing else in the game should apply a
 // bonus by hand — if it isn't here, it isn't real (the old game's achievement rewards).
 //
@@ -16,6 +16,7 @@ import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS } from '../data/dungeons.js';
 import { obstacleById } from '../data/agility.js';
+import { capesEarned } from '../data/capes.js';
 import { eventStatus } from '../systems/events.js';
 import { levelForXp } from './xp.js';
 
@@ -137,6 +138,9 @@ export function collectModifiers(state) {
 
     // Pets (permanent, one per skill).
     for (const pet of PETS) if (state.pets?.[pet.id]) addMods(mods, pet.mods);
+
+    // Skill capes (level 99, permanent, whichever one is worn).
+    for (const cape of capesEarned(state)) addMods(mods, cape.mods);
 
     // Dungeon clear milestones and Titans defeated (permanent).
     for (const d of DUNGEONS) {

@@ -7,6 +7,7 @@ import { RESOURCES } from '../data/resources.js';
 import { TOOLS } from '../data/workshop.js';
 import { rankFor } from '../data/ranks.js';
 import { lookById } from '../data/looks.js';
+import { capeWorn } from '../data/capes.js';
 import { escapeHtml as esc } from './format.js';
 
 const TIERS = 7;
@@ -81,14 +82,15 @@ export function slotSpriteKey(type) {
 
 /**
  * The hero, as atlas keys from the back layer to the front: the look picked (data/looks.js), dressed
- * in what is equipped, the cloak in the rank's colour (data/ranks.js).
+ * in what is equipped, the cloak in the rank's colour (data/ranks.js) or the skill cape worn instead.
  * `tool` (a skill id) puts that skill's tool in the hand instead of the weapon; `bare` leaves both
  * hands empty (on the agility course).
  */
 export function heroLayers(state, { tool = null, bare = false } = {}) {
     const eq = state.equipped || {};
     const tierOf = slot => (eq[slot] ? clampTier(eq[slot].tier) : 0);
-    const cloak = `hero/cloaks/${rankFor(state.prestige?.count || 0).cloak}`;
+    const cape = capeWorn(state);   // a skill's cape (data/capes.js), or the rank's cloak
+    const cloak = cape && hasSprite(`hero/capes/${cape.skill}`) ? `hero/capes/${cape.skill}` : `hero/cloaks/${rankFor(state.prestige?.count || 0).cloak}`;
     const look = lookById(state.hero?.look);   // the body and hair the player picked (data/looks.js)
     const base = `hero/look/${look.id}/base`;
     const layers = [hasSprite(cloak) ? cloak : 'hero/cloak', hasSprite(base) ? base : 'hero/base'];

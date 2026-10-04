@@ -6,6 +6,7 @@ import { evaluateUnlocks } from '../data/unlocks.js';
 import { evaluateDisclosures } from './disclosure.js';
 import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
 import { petForSkill, petChance } from '../data/pets.js';
+import { capeFor } from '../data/capes.js';
 import { rng } from '../core/rng.js';
 
 const LOG_LIMIT = 60;
@@ -29,6 +30,7 @@ export function grantXp(game, skillId, amount) {
         log(game, `${SKILLS[skillId].icon} ${SKILLS[skillId].name} level ${after}!`, 'level');
         if (after >= MAX_LEVEL) {
             game.state.stats.skills99 = Object.values(game.state.skills).filter(s => levelForXp(s.xp) >= MAX_LEVEL).length;
+            if (before < MAX_LEVEL && capeFor(skillId) && game.state.hero) game.state.hero.cape = skillId;   // the hero puts on the new cape
         }
         game.markDirty();
     }

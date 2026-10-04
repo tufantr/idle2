@@ -2,10 +2,10 @@
 // assets/sprites.png holds each sprite. Keys: mon/<monster name>, titan/<n>, item/<Type>/<tier>,
 // uniq/<uniqueId>, hero/<layer>[/<tier or kind>], gold, res/<resource id>, pet/<pet id>, farm/<stage>,
 // perk/<perk id>, tool/<tool id>, obstacle/<obstacle id>, crate, gear, campfire, crown, token,
-// hero/cloaks/<rank cloak>.
+// hero/cloaks/<rank cloak>, hero/capes/<skill>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=4702fd6d51', cell: 32, cols: 16, rows: 26 };
+export const ATLAS = { url: 'assets/sprites.png?v=ce32bed526', cell: 32, cols: 16, rows: 26 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -411,5 +411,17 @@ export const SPRITES = {
     "hero/look/gargoyle/base": [0, 25],
     "hero/look/mummy/base": [1, 25],
     "hero/look/demon/base": [2, 25],
-    "hero/look/ghoul/base": [3, 25]
+    "hero/look/ghoul/base": [3, 25],
+    "hero/capes/combat": [4, 25],
+    "hero/capes/mining": [5, 25],
+    "hero/capes/smithing": [6, 25],
+    "hero/capes/woodcutting": [7, 25],
+    "hero/capes/farming": [8, 25],
+    "hero/capes/alchemy": [9, 25],
+    "hero/capes/fishing": [10, 25],
+    "hero/capes/hunting": [11, 25],
+    "hero/capes/cooking": [12, 25],
+    "hero/capes/firemaking": [13, 25],
+    "hero/capes/agility": [14, 25],
+    "hero/capes/crafting": [15, 25]
 };
