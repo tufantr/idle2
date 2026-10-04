@@ -253,6 +253,7 @@ export function createScene(root, actions) {
     }
 
     let sceneDrawn = false;   // the first draw sets the place without fading it in
+    let lastTick = 0;         // the boss clock's last second ticked
 
     // Near a zone's boss, fetch the next land's painting, so stepping into it shows it at once.
     const preloaded = new Set();
@@ -504,9 +505,13 @@ export function createScene(root, actions) {
             if (timed) {
                 const limit = enemy.timeLimit || BALANCE.combat.bossTimeMs;
                 el.clockBar.style.width = `${Math.max(0, c.bossTimeLeft / limit * 100)}%`;
-                setMarkup(el.clockText, `${CLOCK} ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`);
+                const secs = Math.ceil(Math.max(0, c.bossTimeLeft) / 1000);
+                setMarkup(el.clockText, `${CLOCK} ${secs}s`);
                 el.clock.classList.toggle('urgent', c.bossTimeLeft < 8000);
-            }
+                // the last five seconds tick, one soft tick each
+                if (secs <= 5 && secs > 0 && secs !== lastTick) actions.sound?.('tick');
+                lastTick = secs;
+            } else lastTick = 0;
 
             const regroup = c.mode === 'stages' && c.regroupLeft > 0;
             // fallen: he rests at the campfire, and is back in the fight when his health is full
