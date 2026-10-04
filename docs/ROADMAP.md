@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The hero greets you back**: the welcome-back report opens with the hero holding the tool of
+      the work done while away (the sword after a fight) and the pet beside them
 - [x] **Pick the pet at your side**: a found pet's card in the Collection is a button; the one tapped
       follows the hero into the fight (Fang, or the first found, until one is picked), and to work where the
       skill's own pet hasn't been found yet

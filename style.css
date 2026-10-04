@@ -1790,6 +1790,9 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 /* ===== Welcome back: the haul from the time away ===== */
 .welcome-back { max-width: 560px; text-align: center; }
 .welcome-back .modal-header { margin-bottom: 0.6rem; }
+.wb-hero { display: flex; justify-content: center; align-items: flex-end; gap: 2px; margin: -0.3rem 0 0.1rem; line-height: 0; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.65)); }
+.wb-hero .hero-doll { animation: heroBreathe 2.8s ease-in-out infinite; transform-origin: 50% 100%; }
+.wb-hero .wb-pet { margin-left: -6px; animation: petBob 1.9s ease-in-out infinite; transform-origin: 50% 100%; }
 .wb-away { margin: 0; font-size: 1.02rem; }
 .wb-story { margin: 0.2rem 0 0.9rem; color: var(--text-muted); font-size: 0.88rem; text-wrap: balance; }
 .wb-gold, .wb-skill, .wb-tile, .wb-find { opacity: 0; animation: wbIn 0.45s cubic-bezier(.2, 1.4, .4, 1) calc(0.25s + var(--i) * 0.09s) both; }

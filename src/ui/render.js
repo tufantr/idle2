@@ -1876,7 +1876,11 @@ export function renderWelcomeBack(summary, state) {
         summary.plotsReady ? `<div class="wb-find" style="--i:${next()}">${sprite('farm/growing', { scale: 1, fallback: '🌾' })}<span><b>${summary.plotsReady}</b> farm plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest</span></div>` : '',
         summary.mastery && summary.mastery.to > summary.mastery.from ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.mastery.icon, { scale: 1 })}<span>${esc(summary.mastery.name)} mastery ${summary.mastery.from} → <b>${summary.mastery.to}</b></span></div>` : ''
     ].filter(Boolean).join('');
+    // the hero who did the work, with the tool of it in hand (the sword after a fight), and the pet
+    const pet = companionPet(state);
+    const hero = `<div class="wb-hero" aria-hidden="true">${heroSprite(state, { scale: 2, tool: summary.mode === 'skill' ? state.action?.skill || null : null })}${pet ? sprite(`pet/${pet}`, { scale: 1, cls: 'wb-pet' }) : ''}</div>`;
     return `<div class="modal-content welcome-back ${painted('guildhall', 'center 45%')}">
+        ${hero}
         <div class="modal-header">Welcome back</div>
         <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
         <p class="wb-story">${story}</p>
