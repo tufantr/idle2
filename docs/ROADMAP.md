@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A volume slider**: under Sound and vibration in Settings (heard at once, saved when let go;
+      old saves play at full volume)
 - [x] **No developer switch for players**: Settings showed every player a "Developer mode: unlock
       every tab" box (a cheat that also opened the Void Citadel at stage 1); it shows only while it is
       on, as `?dev=1` turns it on

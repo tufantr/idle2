@@ -1741,6 +1741,10 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .look-turn.next { left: calc(16% + 168px); }
 /* the looks in Settings: a portrait each, the worn one lit */
 .look-picks { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+/* the volume: a gold slider beside the speaker */
+.volume-row { display: flex; align-items: center; gap: 0.6rem; max-width: 300px; margin: 0.1rem 0 0.6rem 1.7rem; color: var(--text-muted); }
+.volume-row .ico { width: 18px; height: 18px; flex: 0 0 auto; }
+.volume-row input[type="range"] { flex: 1; accent-color: var(--gold-color); cursor: pointer; }
 .look-pick { width: 64px; height: 64px; padding: 0; display: grid; place-items: start center; border-radius: 12px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #3a2c1c, #120d08 75%); border: 1px solid var(--line); box-shadow: none; }
 .look-pick .hero-doll { margin-top: 4px; }  /* head and shoulders: what differs between the looks */
 .look-pick:hover { border-color: rgba(240, 198, 116, 0.75); transform: translateY(-2px); }

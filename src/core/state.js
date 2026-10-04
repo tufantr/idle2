@@ -84,7 +84,7 @@ export function createDefaultState(now = Date.now()) {
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
         log: [],
-        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, cloudSync: true, autoSalvage: 'common', forceEvent: null },
+        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null },
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -299,6 +299,8 @@ function normalise(data, now) {
     if (state.combat.potion !== 'none' && !Object.hasOwn(RESOURCES, state.combat.potion)) state.combat.potion = 'none';
     if (state.action !== null && !(isPlainObject(state.action) && typeof state.action.kind === 'string')) state.action = null;
     if (typeof state.settings.forceEvent !== 'string') state.settings.forceEvent = null;
+    const volume = Number(state.settings.volume);
+    state.settings.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
     const hero = isPlainObject(state.hero) ? state.hero : {};
     state.hero = { name: heroName(hero.name || ''), look: lookById(hero.look).id };
     if (!Array.isArray(state.log)) state.log = [];

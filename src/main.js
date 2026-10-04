@@ -111,7 +111,7 @@ const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
 // Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
-const sound = createSound(() => game.state.settings.sound !== false);
+const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1);
 // The sprite atlas (its versioned URL and its size), for the CSS that cuts cells out of it.
 document.documentElement.style.setProperty('--atlas', `url(${ATLAS.url})`); // versioned, so a new layout never meets an old cached sheet
 document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
@@ -842,6 +842,11 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** The volume slider: heard at once, saved when let go. */
+    setVolume(value, done = false) {
+        game.state.settings.volume = Math.max(0, Math.min(1, Number(value) || 0));
+        if (done) { game.markDirty(); sound.play('coin'); }
+    },
     setHeroName(name) { game.setHeroName(name); render(); },
     toggleSound() {
         game.state.settings.sound = game.state.settings.sound === false;

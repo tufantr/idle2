@@ -72,3 +72,19 @@ test('the hero has a look: saved, checked on load, and drawn from its own body a
     game.state.equipped.Head = { type: 'Head', tier: 2 };
     assert.ok(!heroLayers(game.state).includes('hero/look/raven/hair'));
 });
+
+test('the volume setting is kept between 0 and 1, and old saves are at full volume', async () => {
+    const { Game } = await import('../src/game.js');
+    const { migrateState } = await import('../src/core/state.js');
+    const T0 = 1_700_000_000_000;
+    const saved = JSON.parse(new Game(null, T0).serialize(T0));
+    assert.equal(migrateState(saved, T0).settings.volume, 1);
+    saved.settings.volume = 0.35;
+    assert.equal(migrateState(saved, T0).settings.volume, 0.35);
+    saved.settings.volume = 7;
+    assert.equal(migrateState(saved, T0).settings.volume, 1);
+    saved.settings.volume = 'loud';
+    assert.equal(migrateState(saved, T0).settings.volume, 1);
+    delete saved.settings.volume;
+    assert.equal(migrateState(saved, T0).settings.volume, 1);
+});

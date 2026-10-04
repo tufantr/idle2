@@ -7,7 +7,7 @@ const MAX_PER_WINDOW = 5;     // a background tab catching up can fire hundreds 
 const WINDOW_MS = 120;
 const MASTER_VOLUME = 0.42;
 
-export function createSound(isOn) {
+export function createSound(isOn, volume = () => 1) {
     let ctx = null;
     let master = null;
     let noiseBuffer = null;
@@ -20,7 +20,7 @@ export function createSound(isOn) {
         if (!AC) return null;
         ctx = new AC();
         master = ctx.createGain();
-        master.gain.value = MASTER_VOLUME;
+        master.gain.value = MASTER_VOLUME * volume();
         // A gentle high shelf keeps the synth sounds from being shrill on phone speakers.
         const shelf = ctx.createBiquadFilter();
         shelf.type = 'highshelf';
@@ -136,6 +136,7 @@ export function createSound(isOn) {
         play(name, arg) {
             const fn = SOUNDS[name];
             if (!fn || !allowed()) return;
+            master.gain.value = MASTER_VOLUME * Math.max(0, Math.min(1, volume()));   // the Settings slider
             try { fn(arg); } catch { /* an odd browser state is not worth a crash */ }
             const pattern = HAPTICS[name];
             if (pattern && navigator.vibrate && window.matchMedia?.('(hover: none)').matches) { try { navigator.vibrate(pattern); } catch { /* not supported */ } }

@@ -1657,6 +1657,7 @@ export function renderSettings(game, ui, cloud) {
             return `<button class="look-pick${on ? ' on' : ''}" onclick="FI.setHeroLook('${l.id}')" aria-label="Look ${i + 1}" aria-pressed="${on}">${heroSprite({ ...state, hero: { ...state.hero, look: l.id } }, { scale: 3 })}</button>`;
         }).join('')}</div>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
+        ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
         ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
         <p class="muted small">Save version ${state.version}</p>
