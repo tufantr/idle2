@@ -1658,7 +1658,7 @@ export function renderSettings(game, ui, cloud) {
         }).join('')}</div>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
-        <label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" ${state.settings.devUnlockAll ? 'checked' : ''}> Developer mode: unlock every tab and mini-game</label>
+        ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
         <p class="muted small">Save version ${state.version}</p>
     </section>`;
 }
