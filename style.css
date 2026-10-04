@@ -1986,6 +1986,7 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .zone-card { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem 0.9rem; padding: 0.7rem 0.9rem; border-radius: 12px; background: var(--well); border: 1px solid var(--line); }
 .zone-card-text { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
 .zone-card-name { font-family: var(--font-display); font-size: 1.05rem; color: var(--heading); }
+.map-stars { margin-left: 0.55rem; padding: 0.05rem 0.5rem; border-radius: 999px; vertical-align: 0.1em; font-family: var(--font-body, inherit); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; color: #fcd34d; background: rgba(252, 211, 77, 0.1); border: 1px solid rgba(252, 211, 77, 0.35); }
 .zone-card .prestige-btn { padding: 0.6rem 1.4rem; }
 .map-modal .modal-footer { margin-top: 0.9rem; }
 .map-modal .modal-btn { padding: 0.6rem; font-size: 0.95rem; }

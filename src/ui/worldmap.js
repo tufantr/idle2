@@ -11,6 +11,7 @@ import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES } from '../data/du
 import { isUnlocked } from '../data/unlocks.js';
 import { dungeonUnlocked, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
+import { BESTIARY, KILL_STARS, starsFor } from '../data/bestiary.js';
 import { sprite, resIcon, heroSprite } from './sprites.js';
 import { dungeonVerdict } from './render.js';
 import { escapeHtml as esc } from './format.js';
@@ -56,6 +57,15 @@ function mapDungeons(state) {
 
 const inDungeon = (state, id) => state.combat.mode === 'dungeon' && state.combat.dungeon?.id === id;
 
+/** A place's bestiary stars, as a pill (once the Hall is open): earned of all there are to earn. */
+function starsPill(state, id) {
+    const group = BESTIARY.find(g => g.id === id);
+    if (!group || !isUnlocked(state, 'achievements')) return '';
+    const kills = state.stats.killsByMonster || {};
+    const earned = group.monsters.reduce((sum, m) => sum + starsFor(kills[m.name] || 0), 0);
+    return `<span class="map-stars" title="Bestiary stars here: one for 10, 100 and 1,000 of each kind">★ ${earned}/${group.monsters.length * KILL_STARS.length}</span>`;
+}
+
 /** The zone under the map: who rules it, its stages, its loot, and the way there. */
 export function renderZoneInfo(game, index) {
     const state = game.state;
@@ -68,7 +78,7 @@ export function renderZoneInfo(game, index) {
     return `<div class="zone-card">
         <span class="zone-emblem${v.open ? '' : ' locked'}">${boss}</span>
         <div class="zone-card-text">
-            <b class="zone-card-name">${esc(v.zone.name)}</b>
+            <b class="zone-card-name">${esc(v.zone.name)}${v.open ? starsPill(state, v.zone.id) : ''}</b>
             <span class="muted small">Stages ${v.range}${v.open ? ` · ruled by the ${esc(v.zone.boss)}` : ''}</span>
             ${v.open ? `<span class="zone-facts"><span class="muted small">Drops</span>${loot}${seen(state, 'gear') ? `<span class="muted small">· gear tier <b>${v.zone.gearTier}</b></span>` : ''}</span>` : ''}
         </div>
@@ -91,7 +101,7 @@ export function renderDungeonInfo(game, id) {
     return `<div class="zone-card">
         <span class="dungeon-gate${open ? '' : ' locked'}">${sprite(`mon/${d.boss.name}`, { scale: 1.5, cls: open ? '' : 'silhouette', fallback: esc(d.icon) })}</span>
         <div class="zone-card-text">
-            <b class="zone-card-name">${esc(d.name)}</b>
+            <b class="zone-card-name">${esc(d.name)}${open ? starsPill(state, d.id) : ''}</b>
             <span class="muted small">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span>
             ${open ? `<span class="small ${verdict.cls}">${verdict.text}</span>
             <span class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 0.75, cls: `soft${ownsUnique(state, d.unique) ? '' : ' silhouette'}`, fallback: '🌟' })}
