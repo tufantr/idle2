@@ -396,6 +396,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .minigame-timing-track { position: relative; height: 18px; margin-bottom: 0.85rem; border-radius: 999px; overflow: hidden; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--line); }
 .minigame-timing-zone { position: absolute; top: 0; bottom: 0; border-radius: 999px; opacity: 0.8; box-shadow: 0 0 18px color-mix(in srgb, var(--minigame-accent) 45%, transparent); }
 .minigame-timing-marker { position: absolute; top: -4px; width: 12px; height: 24px; margin-left: -6px; border: 2px solid #fff; border-radius: 999px; background: rgba(255, 255, 255, 0.18); }
+.minigame-timing-marker .spr, .minigame-timing-marker .sp-fallback { position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translateX(-50%); }
 .minigame-heat-track { position: relative; height: 20px; margin-bottom: 0.85rem; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), rgba(239, 68, 68, 0.2)); border: 1px solid var(--line); }
 .minigame-heat-fill { position: absolute; top: 0; left: 0; bottom: 0; opacity: 0.85; transition: width 0.12s linear; }
 .minigame-drag-shell { position: relative; padding: 0.7rem 0 0.4rem; }

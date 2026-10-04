@@ -948,9 +948,60 @@ PERK_BADGES = {
 }
 
 
+# ---------- glyphs: the small pictures beside numbers ----------
+
+# icon/<id> from DCSS's status icons (misc/icons), blown up crisp: a heart for health, an hourglass for
+# time, a star for experience, a burst for critical hits, wind for dodging, an arrow for an upgrade, a
+# flame, a spark for a burst of speed, and Zz for the hours away
+GLYPHS = {'heart': 'heart', 'time': 'slowed', 'xp': 'new_stair', 'crit': 'vengeance', 'dodge': 'still_winds',
+          'up': 'strong_willed', 'flame': 'sticky_flame', 'spark': 'dazed', 'away': 'sleeping'}
+
+# and the few DCSS has no icon for, drawn pixel by pixel in the same manner: a skull (a boss), a padlock,
+# a die showing two (a double) and a green arrow turning back on itself (ingredients kept)
+GLYPH_INKS = {'#': (16, 11, 8, 255), 'w': (238, 232, 216, 255), 'g': (160, 152, 140, 255), 'k': (30, 22, 16, 255),
+              'y': (242, 192, 72, 255), 'o': (176, 116, 36, 255), 'e': (110, 214, 120, 255), 'd': (44, 136, 72, 255)}
+DRAWN_GLYPHS = {
+    'skull': ['..#######..', '.#wwwwwww#.', '#wwwwwwwww#', '#wwwwwwwwg#', '#wkkwwwkkg#', '#wkkwwwkkg#',
+              '#wwwwkwwwg#', '.#wwwkwwg#.', '..#wwwwg#..', '..#wkwkg#..', '...#####...'],
+    'lock': ['..#####..', '.#ggggg#.', '.#g###g#.', '.#g#.#g#.', '#########', '#yyyyyyy#',
+             '#yyy#yyy#', '#yyy#yyy#', '#yyyyyyy#', '#ooooooo#', '#########'],
+    'dice': ['.########.', '#wwwwwwww#', '#wkkwwwww#', '#wkkwwwww#', '#wwwwwwww#', '#wwwwwwww#',
+             '#wwwwwkkw#', '#wwwwwkkw#', '#gggggggg#', '.########.'],
+    'keep': ['......#e#....', '....###ee#...', '...#eeeeee#..', '..#eeeeeeee#.', '.#eee##ee##..', '#eee#.#e#....', '#ee#...#..##.',
+             '#ee#.....#ee#', '#ee#.....#ee#', '#dee#...#eed#', '.#dee###eed#.', '..#deeeeed#..', '...#ddddd#...', '....#####....'],
+}
+
+
+def blow_up(img):
+    """A tiny icon cropped to its pixels, scaled up by the largest whole number that fits, centred."""
+    img = img.convert('RGBA')
+    img = img.crop(img.getbbox())
+    k = max(1, min((CELL - 4) // img.width, (CELL - 4) // img.height))
+    img = img.resize((img.width * k, img.height * k), Image.NEAREST)
+    cell = Image.new('RGBA', (CELL, CELL), (0, 0, 0, 0))
+    cell.paste(img, ((CELL - img.width) // 2, (CELL - img.height) // 2), img)
+    return from_image(cell)
+
+
+def bitmap(rows):
+    img = Image.new('RGBA', (max(len(r) for r in rows), len(rows)), (0, 0, 0, 0))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch in GLYPH_INKS:
+                img.putpixel((x, y), GLYPH_INKS[ch])
+    return img
+
+
+def build_glyphs(tiles):
+    out = {f'icon/{key}': blow_up(Image.open(f'{tiles}/misc/icons/{name}.png')) for key, name in GLYPHS.items()}
+    out.update({f'icon/{key}': blow_up(bitmap(rows)) for key, rows in DRAWN_GLYPHS.items()})
+    return out
+
+
 def build_icons(tiles):
-    """Cells for the game's own things: perk/<id>, tool/<id>, obstacle/<id>, the crate, the gear, the
-    campfire, the crown (a medal), the festival token, the hero's hoe and his cloaks by rank."""
+    """Cells for the game's own things: perk/<id>, tool/<id>, obstacle/<id>, icon/<id> (the glyphs beside
+    numbers), the crate, the gear, the campfire, the crown (a medal), the festival token, the hero's hoe
+    and his cloaks by rank."""
     tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
     out = {}
     for pid, how in PERK_BADGES.items():
@@ -974,6 +1025,7 @@ def build_icons(tiles):
         'hero/shield_unique/void_aegis': from_image(rehue(tile('player/hand2/tower_shield_teal'), '#8b5cf6', sat=0.9, val=0.85)),
     })
     out.update(build_obstacles(tiles))
+    out.update(build_glyphs(tiles))
     return {key: to_image(a) for key, a in out.items()}
 
 

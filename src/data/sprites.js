@@ -5,7 +5,7 @@
 // hero/cloaks/<rank cloak>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=74db44c7ec', cell: 32, cols: 16, rows: 23 };
+export const ATLAS = { url: 'assets/sprites.png?v=9bc98f80b1', cell: 32, cols: 16, rows: 24 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -373,5 +373,18 @@ export const SPRITES = {
     "obstacle/rock_wall": [10, 22],
     "obstacle/sky_bridge": [11, 22],
     "obstacle/lava_crossing": [12, 22],
-    "obstacle/cloud_walk": [13, 22]
+    "obstacle/cloud_walk": [13, 22],
+    "icon/heart": [14, 22],
+    "icon/time": [15, 22],
+    "icon/xp": [0, 23],
+    "icon/crit": [1, 23],
+    "icon/dodge": [2, 23],
+    "icon/up": [3, 23],
+    "icon/flame": [4, 23],
+    "icon/spark": [5, 23],
+    "icon/away": [6, 23],
+    "icon/skull": [7, 23],
+    "icon/lock": [8, 23],
+    "icon/dice": [9, 23],
+    "icon/keep": [10, 23]
 };

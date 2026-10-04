@@ -27,6 +27,11 @@ recolored), the gap leap (the Seven-League Boots), and the textures of the mud p
 crossing (DCSS floor tiles) come from DCSS; the other obstacles and the campfire are drawn by
 `tools/resource_art.py` and are original to this project.
 
+The small glyphs beside numbers (`icon/*`) are DCSS status icons (CC0, as above: the heart, Slowed's
+hourglass, the new-stair star, Vengeance, Still Winds, Strong Willed, Sticky Flame, Dazed and
+Sleeping) blown up at whole scales; the skull, the padlock, the die and the turning arrow are drawn
+pixel by pixel in `tools/resource_art.py` and are original to this project.
+
 `backdrops/*.webp` are painted by `tools/backdrops.py` from noise, gradients and glow; the interiors
 (caves, volcano, frost, abyss, dungeon, workshop) also tile DCSS floor and wall tiles (CC0, as above).
 

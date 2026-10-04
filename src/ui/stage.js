@@ -14,7 +14,7 @@ import { resolveAction, intervalFor } from '../systems/skilling.js';
 import { plotReady } from '../systems/farming.js';
 import { courseDef } from '../systems/agility.js';
 import { fmt, seconds, duration } from './format.js';
-import { heroSprite, heroLayers, sprite, resIcon } from './sprites.js';
+import { heroSprite, heroLayers, sprite, resIcon, glyph } from './sprites.js';
 import { FEATURES } from './features.js';
 
 export const STAGE_SKILLS = [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS, 'farming', 'agility'];
@@ -91,7 +91,7 @@ export function createStage(root) {
         }
         if (action.bonfireLog) return { icon: sprite(FEATURES.firemaking.icon, { scale, fallback: '🔥' }), title: action.label, sub: '' };
         const res = RESOURCES[action.output];
-        return { icon: res ? resIcon(action.output, { scale }) : '✨', title: action.label, sub: '', color: res?.color };
+        return { icon: res ? resIcon(action.output, { scale }) : glyph('xp', { scale }), title: action.label, sub: '', color: res?.color };
     }
 
     /** The farm: what waits to be harvested, or the crop nearest to ready. The hero hoes while anything grows. */

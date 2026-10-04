@@ -44,6 +44,17 @@ export function toolIcon(id, { scale = 0.625, cls = '' } = {}) {
     return sprite(`tool/${id}`, { scale, cls: classes, fallback: esc(TOOLS[id]?.icon || '🛠️') });
 }
 
+/**
+ * A small picture beside a number, sized like resIcon (tools/resource_art.py build_glyphs): heart,
+ * time, xp, crit, dodge, up, flame, spark, away, skull, lock, dice, keep.
+ */
+export function glyph(id, { scale = 0.5, title = '' } = {}) {
+    return sprite(`icon/${id}`, { scale, cls: `res-spr glyph${scale < 1 ? ' soft' : ''}`, title });
+}
+
+/** Gold's coins, sized like resIcon. */
+export const coinIcon = (scale = 0.5) => sprite('gold', { scale, cls: `res-spr${scale < 1 ? ' soft' : ''}`, fallback: '🪙' });
+
 export function monsterSpriteKey(enemy) {
     if (!enemy) return null;
     if (enemy.titan) {

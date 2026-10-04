@@ -13,7 +13,7 @@ import { killPayout } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
-import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon } from './sprites.js';
+import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART } from './features.js';
 
 // Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
@@ -23,6 +23,10 @@ const PARTICLE_COUNT = 18;
 const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
 const MAX_COINS_IN_FLIGHT = 14;
+// the boss's pip on the path, the boss clock and the regroup line
+const SKULL = glyph('skull');
+const CLOCK = glyph('time');
+const CAMPFIRE = sprite('campfire', { scale: 0.5, cls: 'soft res-spr' });
 
 // One-shot motions, played with the Web Animations API so they layer over the idle loops in
 // style.css (which run on an inner element) instead of replacing them. A higher `rank` isn't
@@ -283,7 +287,7 @@ export function createScene(root, actions) {
         if (key === lastPathKey) return;
         lastPathKey = key;
         el.path.innerHTML = nodes.map(n => {
-            const face = n.boss ? '💀' : `<span>${n.label}</span>`;
+            const face = n.boss ? SKULL : `<span>${n.label}</span>`;
             return `<li class="${n.state}${n.boss ? ' boss' : ''}">${n.go
                 ? `<button type="button" data-stage="${n.label}" title="Go to ${n.title}" aria-label="Go to ${n.title}">${face}</button>`
                 : `<b title="${n.title}${n.state === 'now' ? ' (here)' : n.state === 'next' ? ' (not reached yet)' : ''}">${face}</b>`}</li>`;
@@ -452,14 +456,14 @@ export function createScene(root, actions) {
             if (timed) {
                 const limit = enemy.timeLimit || BALANCE.combat.bossTimeMs;
                 el.clockBar.style.width = `${Math.max(0, c.bossTimeLeft / limit * 100)}%`;
-                setText(el.clockText, `⏳ ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`);
+                setMarkup(el.clockText, `${CLOCK} ${Math.ceil(Math.max(0, c.bossTimeLeft) / 1000)}s`);
                 el.clock.classList.toggle('urgent', c.bossTimeLeft < 8000);
             }
 
             const regroup = c.mode === 'stages' && c.regroupLeft > 0;
             el.battle.classList.toggle('regroup', regroup);
             el.regroup.hidden = !regroup;
-            if (regroup) setText(el.regroup, `⛺ Regrouping · boss in ${Math.ceil(c.regroupLeft / 1000)}s`);
+            if (regroup) setMarkup(el.regroup, `${CAMPFIRE} Regrouping · boss in ${Math.ceil(c.regroupLeft / 1000)}s`);
 
             const combo = Math.floor(c.combo || 0);
             el.combo.hidden = combo <= 0;
