@@ -1174,10 +1174,11 @@ const SKILL_MEDAL = {
     smithing: 'res/runite_bar', crafting: 'item/Ring/6', combat: 'item/Weapon/7'
 };
 
-function medalArt(a) {
+/** A medal's picture: its deed's sprite (`scale` 1.5 in the Hall, 2 on the card that announces it). */
+export function medalArt(a, scale = 1.5) {
     let key = a.req.type === 'skillLevel' ? SKILL_MEDAL[a.req.skill] : MEDAL_ART[a.req.key];
     if (a.req.key === 'maxStage') key = `mon/${ZONES[Math.min(ZONES.length - 1, Math.floor((a.req.value - 2) / STAGES_PER_ZONE))]?.boss}`;
-    return sprite(key || 'crown', { scale: 1.5, fallback: '🏆' });
+    return sprite(key || 'crown', { scale, fallback: '🏆' });
 }
 
 /** The hall of trophies: the medals, the bestiary and the collection (pets, unique items), one at a time. */

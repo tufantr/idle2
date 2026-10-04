@@ -5,7 +5,8 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, pageTitle, TABS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
+import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, paintStyle } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
@@ -415,7 +416,12 @@ function handleEvents(events) {
                 else toast(`${SKILLS[ev.skill].name} level ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
                 break;
             }
-            case 'achievement': toast(`${ev.secret ? 'A secret medal! ' : ''}${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625)); break;
+            case 'achievement': { // a medal: a card with its picture, the reward it brings for good
+                const a = achievementById(ev.id);
+                if (a) rewards.celebrate({ key: `medal:${a.id}`, kind: 'medal', icon: `<span class="cel-medal">${medalArt(a, 2)}</span>`, kicker: ev.secret ? 'A secret medal' : 'A new medal', title: a.name, lines: [escapeHtml(a.reward)], ms: 3600 });
+                else toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625));
+                break;
+            }
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;

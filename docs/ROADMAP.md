@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A medal is a card**: earning one shows its picture in a gold disc with its name and lasting
+      reward ("A secret medal" for the hidden three), instead of a toast; medals earned while away wait
+      until the welcome-back report is closed
 - [x] **A dungeon run as a row of portraits**: the scene's path shows each room as the monster
       waiting in it (beaten ones grey, a kind never met a silhouette, the boss ringed in red) instead of
       numbers
