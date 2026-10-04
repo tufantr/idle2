@@ -388,6 +388,8 @@ expected wait is about `25,000,000 / level` seconds of training (~70 h at level 
 action's speed; combat rolls once per kill as a 4-second action and farming once per harvest as an
 action as long as the crop's growing time. Each pet gives +3% speed to its skill (Fang, the combat
 pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievements tab lists pets and uniques as a collection.
+A pet found also keeps the hero company: Fang (or, until he comes, the first pet found) stands at his
+feet in the fight, and each skill's pet beside him on that skill's stage, bobbing gently.
 
 **The bestiary** (`src/data/bestiary.js`). Every kind of monster (76: the ten zones' five each, then
 the dungeons' own, each listed once where it is first met; the Titans are left out, as each falls

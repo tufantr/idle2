@@ -7,6 +7,7 @@ import { zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { dungeonById } from '../data/dungeons.js';
 import { RARITIES } from '../data/items.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
+import { PETS } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
 import { titanLevel } from '../systems/dungeon.js';
@@ -69,7 +70,7 @@ export function createScene(root, actions) {
         <div class="battle-field">
             <div class="fighter hero">
                 <div class="fighter-bars"><span class="fbar-text"></span><div class="fbar"><i class="trail"></i><i class="fill"></i></div></div>
-                <div class="fighter-stand"><span class="campfire" aria-hidden="true">${sprite('campfire', { scale: 1, fallback: '🔥' })}</span><div class="fighter-sprite"><span class="hero-figure"></span></div></div>
+                <div class="fighter-stand"><span class="campfire" aria-hidden="true">${sprite('campfire', { scale: 1, fallback: '🔥' })}</span><span class="pet-figure" aria-hidden="true"></span><div class="fighter-sprite"><span class="hero-figure"></span></div></div>
                 <div class="fighter-name"></div>
                 <div class="fighter-meta"></div>
                 <div class="attack-bar" aria-hidden="true"><i></i></div>
@@ -92,7 +93,7 @@ export function createScene(root, actions) {
     const $ = sel => root.querySelector(sel);
     const el = {
         battle: $('.battle'), zone: $('.battle-zone'), stage: $('.battle-stage'), regroup: $('.battle-regroup'), path: $('.stage-path'),
-        hero: $('.hero'), heroStand: $('.hero .fighter-stand'), heroSprite: $('.hero .fighter-sprite'), heroFigure: $('.hero-figure'), heroBar: $('.hero .fill'), heroTrail: $('.hero .trail'), heroText: $('.hero .fbar-text'),
+        hero: $('.hero'), heroStand: $('.hero .fighter-stand'), heroSprite: $('.hero .fighter-sprite'), petFigure: $('.hero .pet-figure'), heroFigure: $('.hero-figure'), heroBar: $('.hero .fill'), heroTrail: $('.hero .trail'), heroText: $('.hero .fbar-text'),
         heroName: $('.hero .fighter-name'), heroMeta: $('.hero .fighter-meta'), heroAtk: $('.hero .attack-bar i'),
         foe: $('.foe'), foeStand: $('.foe .fighter-stand'), foeSprite: $('.foe .fighter-sprite'), foeBar: $('.foe .fill'), foeTrail: $('.foe .trail'), foeText: $('.foe .fbar-text'),
         foeName: $('.foe .fighter-name'), foeMeta: $('.foe .fighter-meta'), foeIcon: $('.foe-icon'), foeAtkBar: $('.foe .attack-bar'), foeAtk: $('.foe .attack-bar i'),
@@ -104,6 +105,7 @@ export function createScene(root, actions) {
     let quiet = true;         // the next monster appears without an entrance (first frame, back from another tab)
     let lastPathKey = '';
     let lastHeroLayers = '';  // the hero is redrawn only when his gear (or the size of the stage) changes
+    let lastPet = '';         // and his pet only when it changes
     let lastFoeScale = 0;     // the monster is redrawn when the stage changes size
     let bannerTimer = 0;
     let fxBudget = MAX_FX_PER_FRAME;
@@ -375,6 +377,13 @@ export function createScene(root, actions) {
             if (enemy === lastEnemy) setText(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
             const scale = fighterScale();
             const layers = `${scale}|${heroLayers(state).join(',')}`;
+            // A pet keeps him company: Fang, the fighting pet, or else the first pet he found.
+            const pet = state.pets?.fang ? 'fang' : PETS.find(p => state.pets?.[p.id])?.id || '';
+            if (`${scale}|${pet}` !== lastPet) {
+                lastPet = `${scale}|${pet}`;
+                el.petFigure.innerHTML = pet ? sprite(`pet/${pet}`, { scale: Math.max(1, Math.floor(scale / 2)) }) : '';
+                el.petFigure.style.setProperty('--hk', scale);
+            }
             if (layers !== lastHeroLayers) {
                 lastHeroLayers = layers;
                 el.heroFigure.innerHTML = heroSprite(state, { scale });

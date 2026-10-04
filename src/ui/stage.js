@@ -9,6 +9,7 @@ import { SKILLS, NON_COMBAT_SKILLS, WORKSHOP_SKILLS } from '../data/skills.js';
 import { RESOURCES } from '../data/resources.js';
 import { TYPE_ICONS } from '../data/items.js';
 import { cropById } from '../data/farming.js';
+import { petForSkill } from '../data/pets.js';
 import { resolveAction, intervalFor } from '../systems/skilling.js';
 import { plotReady } from '../systems/farming.js';
 import { courseDef } from '../systems/agility.js';
@@ -57,6 +58,7 @@ export function createStage(root) {
         <div class="stage-particles" aria-hidden="true">${Array.from({ length: 12 }, (_, i) => `<i style="--x:${(i * 61 + 9) % 100}%;--y:${(i * 29 + 7) % 80}%;--d:${((i * 0.83) % 6).toFixed(2)}s;--s:${(0.6 + ((i * 5) % 5) / 5).toFixed(2)};--t:${(0.8 + ((i * 3) % 5) / 10).toFixed(2)}"></i>`).join('')}</div>
         <div class="stage-field">
             <div class="stage-hero"><span class="stage-figure"></span></div>
+            <span class="stage-pet" aria-hidden="true"></span>
             <div class="stage-target">
                 <svg class="stage-ring" viewBox="0 0 76 76" aria-hidden="true"><circle class="ring-track" cx="38" cy="38" r="34"/><circle class="ring-fill" cx="38" cy="38" r="34"/></svg>
                 <span class="stage-icon"></span>
@@ -65,7 +67,7 @@ export function createStage(root) {
         </div>
     </section>`;
     const $ = sel => root.querySelector(sel);
-    const el = { stage: $('.stage'), hero: $('.stage-hero'), figure: $('.stage-figure'), target: $('.stage-target'), icon: $('.stage-icon'), ring: $('.ring-fill'), title: $('.stage-title'), sub: $('.stage-sub') };
+    const el = { stage: $('.stage'), hero: $('.stage-hero'), figure: $('.stage-figure'), pet: $('.stage-pet'), target: $('.stage-target'), icon: $('.stage-icon'), ring: $('.ring-fill'), title: $('.stage-title'), sub: $('.stage-sub') };
     el.ring.style.strokeDasharray = `${RING}`;
     let shownSkill = null;
     let heroKey = '';
@@ -122,6 +124,10 @@ export function createStage(root) {
             const look = skill === 'agility' ? { bare: true } : { tool: skill };
             const hk = `${skill}|${heroLayers(state, look).join(',')}`;
             if (hk !== heroKey) { heroKey = hk; el.figure.innerHTML = heroSprite(state, { scale: phone() ? 3 : 4, ...look }); }
+            // the skill's own pet, once found, keeps him company at work
+            const pet = petForSkill(skill);
+            const petKey = pet && state.pets?.[pet.id] ? `${pet.id}|${phone()}` : '';
+            if (petKey !== el.pet.dataset.key) { el.pet.dataset.key = petKey; el.pet.innerHTML = petKey ? sprite(`pet/${pet.id}`, { scale: phone() ? 1 : 2 }) : ''; }
             let view;
             if (skill === 'farming') view = farmView(game);
             else {

@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Pets at the hero's side**: a pet found follows him, Fang (or the first pet found) into the
+      fight, standing at his feet, and each skill's pet onto its stage
 - [x] **A fifth dungeon, the Void Citadel**: a fortress adrift in the void (a new Gemini painting),
       open from stage 160: ten elites from the Abyss (Void Acolytes, Starcursed Masses, a Rift Crab,
       Wretched Stars, a Soul Reaper, a Tormentor, a Citadel Sentinel, a Soul Eater) and the Void
