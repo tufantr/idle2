@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Records**: a fourth view in the Hall: the hero's lifetime numbers as big figures with a
+      picture each (best stage, monsters, bosses and gilded monsters defeated, gold earned,
+      prestiges, Titans, dungeon clears, gear made, fish, crops, mastery, time played, falls)
 - [x] **A name for the hero**: set in Settings (one line, up to 20 characters, kept in the save),
       shown over him in the fight ("Aldric · Combat Lv 62", "Lv" on a phone) and on his panel in
       the Inventory

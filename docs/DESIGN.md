@@ -400,7 +400,8 @@ feet in the fight, and each skill's pet beside him on that skill's stage, bobbin
 
 **The bestiary** (`src/data/bestiary.js`). Every kind of monster (76: the ten zones' five each, then
 the dungeons' own, each listed once where it is first met; the Titans are left out, as each falls
-only once) has a portrait in the Achievements tab's Bestiary, with how many have fallen and up to three
+only once) has a portrait in the Achievements tab's Bestiary (beside the Medals, the Collection and the
+hero's Records: lifetime numbers as big figures), with how many have fallen and up to three
 stars: one at 10 defeats, two at 100, three at 1,000 (228 in all). Defeats are counted per kind in
 `stats.killsByMonster` (dungeon elites count too), and the stars total is `stats.bestiaryStars`,
 recounted from the table when a save loads; old saves start with an empty table and see the kinds

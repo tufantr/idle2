@@ -1156,10 +1156,10 @@ function medalArt(a) {
 
 /** The hall of trophies: the medals, the bestiary and the collection (pets, unique items), one at a time. */
 export function renderHall(game, ui) {
-    const view = ['medals', 'bestiary', 'collection'].includes(ui.hallView) ? ui.hallView : 'medals';
+    const view = ['medals', 'bestiary', 'collection', 'records'].includes(ui.hallView) ? ui.hallView : 'medals';
     const pic = key => sprite(key, { scale: 0.75, cls: 'soft' });
-    const seg = segments([['medals', 'Medals', pic('crown')], ['bestiary', 'Bestiary', pic('mon/Griffin')], ['collection', 'Collection', pic('pet/scout')]], view, 'FI.hallView', 'Hall of trophies');
-    const body = view === 'bestiary' ? renderBestiary(game) : view === 'collection' ? renderCollection(game) : renderAchievements(game);
+    const seg = segments([['medals', 'Medals', pic('crown')], ['bestiary', 'Bestiary', pic('mon/Griffin')], ['collection', 'Collection', pic('pet/scout')], ['records', 'Records', pic('perk/scholar')]], view, 'FI.hallView', 'Hall of trophies');
+    const body = view === 'bestiary' ? renderBestiary(game) : view === 'collection' ? renderCollection(game) : view === 'records' ? renderRecords(game) : renderAchievements(game);
     return `${hallBanner(game)}<div class="hall-seg">${seg}</div>${body}`;
 }
 
@@ -1216,6 +1216,39 @@ function renderBestiary(game) {
         <div class="beast-total"><b>${metCount}</b><span>of ${BESTIARY_SIZE} kinds met</span></div>
         <div class="beast-total"><b>${ICON_STAR} ${total}</b><span>of ${BESTIARY_MAX_STARS} stars: one for 10, 100 and 1,000 of a kind</span></div>
     </section>${groups}`;
+}
+
+/** The hero's records: what he has done in all his runs, as big numbers with a picture each. */
+function renderRecords(game) {
+    const state = game.state;
+    const s = state.stats;
+    const best = Math.max(s.maxStage || 1, state.combat.bestStage || 1);
+    const zone = zoneForStage(best);
+    const clears = Object.values(state.dungeons || {}).reduce((sum, d) => sum + (d.clears || 0), 0);
+    const hours = (state.meta.playtimeMs || 0) / 3600000;
+    const records = [
+        [`mon/${zone.boss}`, fmt(best), 'best stage'],
+        ['item/Weapon/3', fmt(s.kills || 0), 'monsters defeated'],
+        ['mon/Goblin Chieftain', fmt(s.bossKills || 0), 'bosses defeated'],
+        ['gold', fmt(s.gildedKills || 0), 'gilded monsters'],
+        ['res/gold_bar', fmt(s.goldEarned || 0), 'gold earned'],
+        ['res/essence', fmt(state.prestige.count || 0), 'prestiges'],
+        ['titan/0', fmt(state.titan?.kills || 0), 'Titans felled'],
+        ['crate', fmt(clears), 'dungeons cleared'],
+        ['item/Body/4', fmt(s.itemsCrafted || 0), 'pieces of gear made'],
+        ['res/raw_trout', fmt(s.fishCaught || 0), 'fish caught'],
+        ['res/pumpkin', fmt(s.cropsHarvested || 0), 'crops harvested'],
+        ['res/diamond', fmt(s.masteryLevels || 0), 'mastery levels'],
+        ['perk/endurance', hours >= 1 ? `${fmt(Math.floor(hours))} h` : `${Math.floor(hours * 60)} min`, 'played'],
+        ['mon/Skeleton', fmt(s.deaths || 0), 'falls']
+    ];
+    return `<section class="glass-panel ${painted('library', 'center 50%')}">
+        <div class="record-grid">${records.map(([art, value, label]) => `<div class="record">
+            <span class="record-art">${sprite(art, { scale: 1.5 })}</span>
+            <b class="record-value">${value}</b>
+            <span class="record-label">${esc(label)}</span>
+        </div>`).join('')}</div>
+    </section>`;
 }
 
 export function renderAchievements(game) {
