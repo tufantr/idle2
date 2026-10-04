@@ -33,6 +33,25 @@
     </div>
     <div id="toast-area"></div>
     <div id="modal-root"></div>
+    <script>
+        // If the game can't start because the browser kept an old copy of one of its files (a plain
+        // local server lets it; a hosted game revalidates), offer a reload that fetches each file fresh.
+        window.addEventListener('error', function (e) {
+            if (window.FI || !/export named|imported module|module script failed/i.test(String(e && e.message))) return;
+            if (document.getElementById('boot-fail')) return;
+            var box = document.createElement('div');
+            box.id = 'boot-fail';
+            box.setAttribute('role', 'alert');
+            box.style.cssText = 'position:fixed;inset:auto 16px 24px 16px;z-index:9999;max-width:420px;margin:0 auto;padding:16px 18px;border-radius:14px;background:#1a130c;border:1px solid #b08a4a;color:#f3e6cc;font:15px/1.4 system-ui,sans-serif;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.6)';
+            box.innerHTML = '<p style="margin:0 0 12px">The game was updated, but your browser kept an older copy of part of it.</p><button type="button" style="padding:10px 18px;border-radius:10px;border:1px solid #f7d88a;background:linear-gradient(#e2b95f,#9c7127);color:#1f1406;font-weight:800;cursor:pointer">Reload the game</button>';
+            box.querySelector('button').onclick = function () {
+                var urls = performance.getEntriesByType('resource').map(function (r) { return r.name; }).concat([location.href])
+                    .filter(function (u) { return u.indexOf(location.origin) === 0 && u.indexOf('/api/') < 0; });
+                Promise.all(urls.map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}); })).then(function () { location.reload(); });
+            };
+            document.body.appendChild(box);
+        });
+    </script>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

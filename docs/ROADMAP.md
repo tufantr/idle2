@@ -425,6 +425,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **No blank page after an update**: when a browser keeps an old copy of one of the game's files
+      (a plain local server lets it), the game used to stop with an error in the console; it now says
+      so, with a Reload button that fetches every file fresh
 - [x] **The boss clock ticks**: a soft tick for each of its last five seconds, with the red pulse
 - [x] **A volume slider**: under Sound and vibration in Settings (heard at once, saved when let go;
       old saves play at full volume)
