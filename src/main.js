@@ -914,6 +914,7 @@ window.FI = {
         flourish('.intro-hero .hero-doll');
     },
     setHeroLook(id) { game.setHeroLook(id); sound.play('equip'); render(); },
+    setCompanion(id) { if (game.setCompanion(id)) sound.play('pet'); render(); },
     beginAdventure() {
         const name = document.getElementById('intro-name')?.value || '';
         if (name.trim()) game.setHeroName(name);   // optional: without one he is "You"

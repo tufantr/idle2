@@ -125,6 +125,15 @@ export class Game {
 
     /** Name the hero (one line of plain text; '' makes him "You" again). */
     setHeroName(name) { return this._act(() => { this.state.hero.name = heroName(name); this.markDirty(); return true; }); }
+    /** Pick the pet that follows the hero into the fight (one found); '' goes back to the default. */
+    setCompanion(id) {
+        return this._act(() => {
+            if (id && !this.state.pets[id]) return false;
+            this.state.hero.pet = id || '';
+            this.markDirty();
+            return true;
+        });
+    }
     /** A pat for the pet (the scene's and the stage's); counted for a secret medal. */
     patPet() { return this._act(() => { if (!Object.values(this.state.pets).some(Boolean)) return false; bumpStat(this, 'petPats'); this.markDirty(); return true; }); }
     /** Dress the hero in look `id` (data/looks.js); an unknown id is the first look. */

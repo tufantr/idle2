@@ -66,7 +66,7 @@ export function createDefaultState(now = Date.now()) {
         codex: {},             // "<type>/<tier>" -> true: the gear codex (data/items.js), pages filled
         unlocks: {},
         seen: {},              // pieces of the interface that have opened (systems/disclosure.js)
-        hero: { name: '', look: DEFAULT_LOOK },    // the name the player gave the hero ('' is "You"), and the look (data/looks.js)
+        hero: { name: '', look: DEFAULT_LOOK, pet: '' },    // the name the player gave the hero ('' is "You"), the look (data/looks.js), the pet at their side ('' for the default)
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
@@ -303,7 +303,7 @@ function normalise(data, now) {
     state.settings.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
     const hero = isPlainObject(state.hero) ? state.hero : {};
     const look = lookById(hero.look);
-    state.hero = { name: heroName(hero.name || ''), look: lookOpen(state, look) ? look.id : DEFAULT_LOOK };
+    state.hero = { name: heroName(hero.name || ''), look: lookOpen(state, look) ? look.id : DEFAULT_LOOK, pet: typeof hero.pet === 'string' && state.pets[hero.pet] ? hero.pet : '' };
     if (!Array.isArray(state.log)) state.log = [];
     state.gold = Math.max(0, Number(state.gold) || 0);
     state.combat.enemy = null; // always respawned on load

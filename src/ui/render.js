@@ -23,7 +23,7 @@ import { nextCampCost } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS } from '../data/dungeons.js';
 import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique } from '../systems/dungeon.js';
-import { PETS, PET_BASE } from '../data/pets.js';
+import { PETS, PET_BASE, companionPet } from '../data/pets.js';
 import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
@@ -1591,13 +1591,17 @@ export function renderDungeons(game) {
 
 function renderCollection(game) {
     const state = game.state;
+    const companion = companionPet(state);
     const pets = PETS.map(p => {
         const found = !!state.pets[p.id];
         const level = Math.max(1, skillLevel(state, p.skill));
         const hours = Math.round(PET_BASE / level / 3600);
         const hint = `~${fmt(hours)} h of ${p.skill} at level ${level} on average; the chance grows with your level (~${Math.round(PET_BASE / 99 / 3600)} h at 99)`;
-        return `<div class="pet-card ${found ? 'found' : ''}" title="${found ? esc(p.desc) : esc(hint)}">
-            <span class="pet-icon">${sprite(`pet/${p.id}`, { scale: 1.5, cls: found ? '' : 'silhouette', fallback: found ? p.icon : '❔' })}</span><div><b>${found ? esc(p.name) : 'Unknown pet'}</b><div class="muted small">${esc(p.skill)} · ${found ? esc(p.desc) : `~${fmt(hours)} h at Lv ${level}`}</div></div></div>`;
+        const body = `<span class="pet-icon">${sprite(`pet/${p.id}`, { scale: 1.5, cls: found ? '' : 'silhouette', fallback: found ? p.icon : '❔' })}</span><div><b>${found ? esc(p.name) : 'Unknown pet'}</b><div class="muted small">${esc(p.skill)} · ${found ? esc(p.desc) : `~${fmt(hours)} h at Lv ${level}`}</div></div>`;
+        if (!found) return `<div class="pet-card" title="${esc(hint)}">${body}</div>`;
+        // a found pet is a button: the one tapped follows the hero into the fight
+        const at = companion === p.id;
+        return `<button type="button" class="pet-card found${at ? ' companion' : ''}" onclick="FI.setCompanion('${p.id}')" aria-pressed="${at}" title="${at ? 'At your side in the fight' : 'Tap to take into the fight'}">${body}${at ? `<span class="pet-at">${glyph('heart')}</span>` : ''}</button>`;
     }).join('');
     const uniques = DUNGEONS.map(d => {
         const u = UNIQUES[d.unique];

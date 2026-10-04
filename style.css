@@ -716,6 +716,10 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
 .pet-card { display: flex; gap: 0.6rem; align-items: center; padding: 0.6rem 0.8rem; border-radius: 12px; opacity: 0.7; }
 .pet-card.found { opacity: 1; border-color: rgba(252, 211, 77, 0.45); background: linear-gradient(90deg, rgba(252, 211, 77, 0.08), rgba(0, 0, 0, 0.2)); }
+button.pet-card { position: relative; width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; box-shadow: none; }
+button.pet-card:hover { transform: translateY(-1px); border-color: rgba(252, 211, 77, 0.75); }
+.pet-card.companion { border-color: #f0c674; box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.3), 0 0 14px rgba(240, 198, 116, 0.3); }
+.pet-at { position: absolute; top: 6px; right: 8px; line-height: 0; }
 .pet-icon { font-size: 1.6rem; }
 .ready-good { color: #4ade80; }
 .ready-close { color: #fbbf24; }

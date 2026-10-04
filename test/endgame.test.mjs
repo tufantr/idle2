@@ -384,3 +384,23 @@ test('deep in the Abyss, drops keep getting stronger with depth', async () => {
     assert.equal(deep.type, shallow.type);
     assert.ok(itemScore(deep) > 5 * itemScore(shallow), `${itemScore(deep)} vs ${itemScore(shallow)}`);
 });
+
+test('the pet at the hero\'s side: the one picked, among those found; else Fang, else the first found', async () => {
+    const { companionPet } = await import('../src/data/pets.js');
+    const { migrateState } = await import('../src/core/state.js');
+    const game = newGame();
+    assert.equal(companionPet(game.state), '');
+    game.state.pets.pebble = true;
+    assert.equal(companionPet(game.state), 'pebble');
+    game.state.pets.fang = true;
+    assert.equal(companionPet(game.state), 'fang', 'Fang, the fighting pet, by default');
+    assert.equal(game.setCompanion('ember'), false, 'not a pet not found');
+    assert.ok(game.setCompanion('pebble'));
+    assert.equal(companionPet(game.state), 'pebble');
+    const saved = JSON.parse(game.serialize(T0));
+    assert.equal(migrateState(saved, T0).hero.pet, 'pebble');
+    saved.hero.pet = 'ember';
+    assert.equal(migrateState(saved, T0).hero.pet, '', 'a pet not found is not kept');
+    assert.ok(game.setCompanion(''));
+    assert.equal(companionPet(game.state), 'fang');
+});

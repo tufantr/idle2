@@ -7,7 +7,7 @@ import { zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { dungeonById } from '../data/dungeons.js';
 import { RARITIES } from '../data/items.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
-import { PETS } from '../data/pets.js';
+import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
@@ -452,7 +452,7 @@ export function createScene(root, actions) {
             const scale = fighterScale();
             const layers = `${scale}|${heroLayers(state).join(',')}`;
             // A pet keeps him company: Fang, the fighting pet, or else the first pet he found.
-            const pet = state.pets?.fang ? 'fang' : PETS.find(p => state.pets?.[p.id])?.id || '';
+            const pet = companionPet(state);
             if (`${scale}|${pet}` !== lastPet) {
                 lastPet = `${scale}|${pet}`;
                 el.petFigure.innerHTML = pet ? sprite(`pet/${pet}`, { scale: Math.max(1, Math.floor(scale / 2)) }) : '';

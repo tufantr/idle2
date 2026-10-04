@@ -21,6 +21,13 @@ export const PETS = [
     { id: 'hopper',  skill: 'agility',     name: 'Hopper',  icon: '🐇', desc: '+3% Agility speed',     mods: { skillSpeed: { agility: 0.03 } } }
 ];
 
+/** The pet at the hero's side in the fight: the one picked in the Collection, else Fang, else the first found. */
+export function companionPet(state) {
+    const picked = state.hero?.pet;
+    if (picked && state.pets?.[picked]) return picked;
+    return state.pets?.fang ? 'fang' : PETS.find(p => state.pets?.[p.id])?.id || '';
+}
+
 export function petForSkill(skill) {
     return PETS.find(p => p.skill === skill) || null;
 }
