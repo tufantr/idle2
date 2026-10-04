@@ -107,8 +107,8 @@ export function tabIcon(id, scale = 0.75) {
 
 /**
  * What is waiting in a place, shown on its tab (show what is ready where it lives, never as advice):
- * ripe plots on the farm, an awake Titan or a unique ready to assemble in the dungeons, and better
- * gear in the bag.
+ * ripe plots on the farm, an awake Titan the hero can beat or a unique ready to assemble in the
+ * dungeons, and better gear in the bag.
  */
 function readyBadge(game, id) {
     const state = game.state;
@@ -118,7 +118,10 @@ function readyBadge(game, id) {
         return n ? pill(n, `${n} plot${n > 1 ? 's' : ''} ready to harvest`) : '';
     }
     if (id === 'dungeons') {
-        if (titanUnlocked(state) && titanReady(state, game.now)) return pill('!', 'The Titan is awake', 'gold');
+        if (titanUnlocked(state) && titanReady(state, game.now)) {   // only when he can be beaten: a badge always on would say nothing
+            const f = fightPreview(game.derived, titanEnemy(state));
+            if (f.killSeconds <= Math.min(TITAN_TIME_MS / 1000, f.surviveSeconds)) return pill('!', 'The Titan is awake, and you can beat him', 'gold');
+        }
         const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique));
         return whole ? pill('!', `${UNIQUES[whole.unique]?.name || 'A unique'} is ready to assemble`, 'gold') : '';
     }
@@ -261,6 +264,18 @@ export function renderHeader(game, ui, cloud) {
 }
 
 // ---------- combat ----------
+
+/**
+ * The browser tab's title: what the hero is doing, for a player who keeps the game in a background
+ * tab, with a ★ when something waits for them (a ripe crate, ripe crops, an awake Titan).
+ */
+export function pageTitle(game) {
+    const state = game.state;
+    const action = resolveAction(state);
+    const doing = state.combat.active ? fightingWhere(state) : action ? action.label : '';
+    const waits = state.daily.banked > 0 || ['farming', 'dungeons'].some(id => isUnlocked(state, id) && readyBadge(game, id));
+    return `${waits ? '★ ' : ''}${doing ? `${doing} · ` : ''}Fantasy Idle`;
+}
 
 function fightingWhere(state) {
     const c = state.combat;

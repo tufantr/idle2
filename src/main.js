@@ -5,7 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, TABS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, battleMode, tabIcon, pageTitle, TABS } from './ui/render.js';
 import { renderAboutCard, FEATURES, EVENT_ART } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
@@ -295,6 +295,8 @@ function render() {
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
     setHtml(hotbar, renderHotbar(game, ui));
+    const title = pageTitle(game);
+    if (document.title !== title) document.title = title;
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);

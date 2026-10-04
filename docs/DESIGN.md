@@ -426,7 +426,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   a one-tap Equip in the fight), a lit camp upgrade you can afford, a glowing Perks button when
   there are skill points, a crate button when one is ripe, and a badge on a place's tab in the
   sidebar when something waits there: the count of ripe plots on Farming, a gold "!" on Dungeons
-  when the Titan is awake or a unique can be assembled, a ▲ on Inventory for better gear.
+  when the Titan is awake and the hero can beat him (a badge always on would say nothing) or a
+  unique can be assembled, a ▲ on Inventory for better gear. The browser tab's title says what the
+  hero is doing ("Ember Volcano stage 64", "Copper Vein"), with a ★ when a crate or crops wait.
 
 ### 3.15 Active play: mini-games and Focus
 
