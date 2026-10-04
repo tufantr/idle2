@@ -115,6 +115,9 @@ HERO = {
     'head': ['head/cap_black1', 'head/chain', 'head/iron1', 'head/fhelm_gray3', 'head/helm_plume', 'head/full_gold', 'head/full_black'],
     'weapon': ['hand1/short_sword', 'hand1/long_sword_slant', 'hand1/broadsword', 'hand1/heavy_sword', 'hand1/great_sword', 'hand1/double_sword', 'hand1/demonblade'],
     'weapon_unique': { 'warlord_cleaver': 'hand1/axe_executioner' },
+    # uniques worn show on him too (the Void King's Aegis is recoloured in resource_art.build_icons)
+    'head_unique': { 'goblin_crown': 'head/crown_gold1' },
+    'body_unique': { 'dragonheart_plate': 'body/dragonarm_red' },
     'shield': ['hand2/buckler_round', 'hand2/buckler_round2', 'hand2/kite_shield_knight_gray', 'hand2/kite_shield_knight_blue', 'hand2/kite_shield_kite1', 'hand2/tower_shield_gold', 'hand2/tower_shield_green'],
     'tool': { 'mining': 'hand1/pick_axe', 'woodcutting': 'hand1/hand_axe', 'fishing': 'hand1/quarterstaff', 'hunting': 'hand1/bow', 'smithing': 'hand1/hammer', 'alchemy': 'hand1/staff_mage', 'firemaking': 'hand1/club', 'cooking': 'hand1/club_slant' },
 }

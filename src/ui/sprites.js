@@ -82,16 +82,18 @@ export function heroLayers(state, { tool = null, bare = false } = {}) {
     if (boots) layers.push(`hero/boots/${boots}`);
     const legs = tierOf('Legs');
     layers.push(legs ? `hero/legs/${legs}` : 'hero/legs_none');
+    // a unique worn shows as itself where the atlas has a layer for it (hero/<layer>_unique/<id>)
+    const uniq = (slot, layer) => (eq[slot]?.uniqueId && hasSprite(`hero/${layer}_unique/${eq[slot].uniqueId}`) ? `hero/${layer}_unique/${eq[slot].uniqueId}` : null);
     const body = tierOf('Body');
-    layers.push(body ? `hero/body/${body}` : 'hero/body_none');
+    layers.push(uniq('Body', 'body') || (body ? `hero/body/${body}` : 'hero/body_none'));
     const gloves = tierOf('Gloves');
     if (gloves) layers.push(`hero/gloves/${gloves}`);
     const head = tierOf('Head');
-    if (head) layers.push(`hero/head/${head}`); else layers.push('hero/hair');
+    if (head) layers.push(uniq('Head', 'head') || `hero/head/${head}`); else layers.push('hero/hair');
     if (bare) return layers.filter(hasSprite);
     if (tool && hasSprite(`hero/tool/${tool}`)) layers.push(`hero/tool/${tool}`);
     else if (eq.Weapon) layers.push(eq.Weapon.uniqueId && hasSprite(`hero/weapon_unique/${eq.Weapon.uniqueId}`) ? `hero/weapon_unique/${eq.Weapon.uniqueId}` : `hero/weapon/${clampTier(eq.Weapon.tier)}`);
-    if (!tool && eq.Shield) layers.push(`hero/shield/${tierOf('Shield')}`);
+    if (!tool && eq.Shield) layers.push(uniq('Shield', 'shield') || `hero/shield/${tierOf('Shield')}`);
     return layers.filter(hasSprite);
 }
 

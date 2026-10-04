@@ -356,6 +356,10 @@ health. Dying, leaving or running out of time loses the run; clearing it opens a
 | Dragon's Lair | 120 | 125–135 | 2,515,540 / 51,285 | 6 | Dragonheart Plate (Body, tier 6) |
 | Void Citadel | 160 | 165–175 | 65,738,659 / 925,413 | 7 | Void King's Aegis (Shield, tier 7) |
 
+- **Worn, a unique shows on the hero:** the Goblin King's Crown as a gold crown, the Warlord's
+  Cleaver as an executioner's axe, the Dragonheart Plate as red dragon armour and the Void King's
+  Aegis as a violet tower shield (`hero/<layer>_unique/<id>` in the atlas; the Crystal Heart, an
+  amulet, has no layer of its own).
 - **Placement:** each dungeon sits about where a typical player reaches its unique's tier by crafting,
   so a unique rewards farming a little early instead of skipping tiers.
 - **Monsters pay like ladder monsters of the same health** (the boss too, §3.6), so the chest is the

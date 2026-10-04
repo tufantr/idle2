@@ -971,6 +971,7 @@ def build_icons(tiles):
         **{f'hero/cloaks/{name}': from_image(tile(f'player/cloak/{src}')) for name, src in
            (('red', 'red'), ('green', 'green'), ('blue', 'blue'), ('purple', 'magenta'), ('white', 'white'), ('black', 'black'))},
         'hero/cloaks/gold': from_image(rehue(tile('player/cloak/red'), '#efb43c', sat=0.9, val=1.3)),
+        'hero/shield_unique/void_aegis': from_image(rehue(tile('player/hand2/tower_shield_teal'), '#8b5cf6', sat=0.9, val=0.85)),
     })
     out.update(build_obstacles(tiles))
     return {key: to_image(a) for key, a in out.items()}
