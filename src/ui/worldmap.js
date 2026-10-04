@@ -30,6 +30,26 @@ export const DUNGEON_PINS = {
     goblin_warren: [37, 21], crystal_depths: [37, 47], orc_stronghold: [51, 23], dragons_lair: [66, 26], void_citadel: [86, 12]
 };
 
+/**
+ * The road through the zones, in order, as a smooth path (Catmull-Rom through the pins, in % of the
+ * painting), inked: dashes as far as this run has reached, dots beyond.
+ */
+function routeSvg(state) {
+    const points = ZONES.map(z => ZONE_PINS[z.id] || [50, 50]);
+    const reached = ZONES.reduce((n, z, i) => (i * STAGES_PER_ZONE + 1 <= state.combat.maxStage ? i : n), 0);
+    const seg = (a, b) => {   // the curve from point a to point b, shaped by their neighbours
+        const p0 = points[Math.max(0, a - 1)], p1 = points[a], p2 = points[b], p3 = points[Math.min(points.length - 1, b + 1)];
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        return `C${c1.map(v => v.toFixed(2)).join(' ')} ${c2.map(v => v.toFixed(2)).join(' ')} ${p2.join(' ')}`;
+    };
+    const path = (from, to) => (to > from ? `M${points[from].join(' ')}${Array.from({ length: to - from }, (_, k) => seg(from + k, from + k + 1)).join('')}` : '');
+    return `<svg class="map-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <path class="route-ahead" d="${path(reached, points.length - 1)}"/>
+        <path class="route-done" d="${path(0, reached)}"/>
+    </svg>`;
+}
+
 /** What the player can do with zone `index` right now. */
 function zoneView(state, index) {
     const c = state.combat;
@@ -144,7 +164,7 @@ export function renderWorldMapModal(game) {
     const hero = spot ? `<span class="map-hero" style="left:${spot[0]}%;top:${spot[1]}%" aria-hidden="true">${heroSprite(state, { scale: 1 })}</span>` : '';
     return `<div class="modal-content map-modal">
         <div class="modal-header">The world</div>
-        <div class="map-board" role="group" aria-label="World map">${pins.join('')}${gates.join('')}${hero}</div>
+        <div class="map-board" role="group" aria-label="World map">${routeSvg(state)}${pins.join('')}${gates.join('')}${hero}</div>
         <div class="map-info" aria-live="polite">${info}</div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" data-autofocus onclick="FI.closeModal()">Close</button></div>
     </div>`;
