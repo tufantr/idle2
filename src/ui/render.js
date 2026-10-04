@@ -1131,22 +1131,43 @@ export function renderEvents(game) {
     const sameInstance = status.active && ev.instance === status.instance;
     const earned = sameInstance ? ev.instanceEarned : 0;
     const today = ev.day === new Date(game.now).toISOString().slice(0, 10) ? ev.earnedToday : 0;
-    const milestones = EVENT_MILESTONES.map(m => {
+    const token = scale => sprite('token', { scale, cls: scale < 1 ? 'soft' : '', fallback: '🎟️' });
+    // The milestones as a reward track: three medals on a bar that fills with this event's tokens,
+    // the next one lit with how far there is to go.
+    const ms = EVENT_MILESTONES;
+    const at = ms.findIndex(m => earned < m.tokens);   // the next milestone (-1: all reached)
+    const last = at < 0 ? ms.length - 1 : at - 1;      // the last one reached (-1: none yet)
+    const fill = last < 0 ? 0 : last >= ms.length - 1 ? 1 : (last + (earned - ms[last].tokens) / (ms[last + 1].tokens - ms[last].tokens)) / (ms.length - 1);
+    const nodes = ms.map((m, i) => {
         const done = sameInstance && ev.milestones.includes(m.tokens);
-        return `<div class="ach-item ${done ? 'done' : ''}"><div><div class="ach-name">${done ? ICON_CHECK : ''} ${m.tokens} tokens this event</div></div><div class="ach-reward">${esc(m.desc)}</div></div>`;
+        const next = i === at;
+        const from = i ? ms[i - 1].tokens : 0;
+        return `<div class="ms-node${done ? ' done' : next ? ' next' : ''}" role="listitem" title="${m.tokens} tokens this event: ${esc(m.desc)}">
+            <span class="ms-medal">${Object.keys(m.reward).map(id => resIcon(id, { scale: 1 })).join('')}${done ? `<i class="ms-check">${ICON_CHECK}</i>` : ''}</span>
+            <b class="ms-at">${token(0.5)} ${m.tokens}</b>
+            <span class="ms-desc">${esc(m.desc)}</span>
+            ${next && sameInstance ? `<span class="ms-left"><i style="width:${Math.round((earned - from) / (m.tokens - from) * 100)}%"></i></span>` : ''}
+        </div>`;
     }).join('');
-    const shop = EVENT_SHOP.map(item => `<div class="event-shop-item"><div><b>${esc(item.name)}</b><div class="muted small">${esc(item.desc)}</div></div>
-        <button class="gold-btn" onclick="FI.buyEventItem('${item.id}')" ${status.active && ev.tokens >= item.cost ? '' : 'disabled'}>🎟️ ${item.cost}</button></div>`).join('');
+    const milestones = `<div class="ms-track" role="list" aria-label="Milestones: ${earned} tokens earned this event" style="--f:${fill.toFixed(3)}">${nodes}</div>`;
+    const shop = EVENT_SHOP.map(item => {
+        const [resId] = Object.keys(item.gives);
+        return `<div class="shop-item">
+            <div class="shop-art">${resIcon(resId, { scale: 1.5 })}</div>
+            <div class="shop-item-info"><span class="shop-item-name">${esc(item.name)}</span><span class="shop-item-desc">${esc(item.desc)}</span></div>
+            <button class="gold-btn token-btn" onclick="FI.buyEventItem('${item.id}')" ${status.active && ev.tokens >= item.cost ? '' : 'disabled'} aria-label="Buy ${esc(item.name)} for ${item.cost} tokens">${token(0.75)} ${item.cost}</button>
+        </div>`;
+    }).join('');
     const rotation = EVENTS.map(x => `<span class="${x.id === e.id ? 'b' : 'muted'}">${eventIcon(x)} ${esc(x.name)}</span>`).join(' → ');
     return `${banner('events', { title: `${eventIcon(e, 1)} ${esc(e.name)}`, sub: status.active ? `Running now: ends in ${duration(status.endsAt - game.now)}` : `The next event: starts in ${duration(status.startsAt - game.now)}`,
-        extra: `<div class="chip tokens" title="Festival tokens${status.active ? `: ${today} of ${EVENT_DAILY_CAP} earned today` : ''}"><span>Tokens</span><b>${fmt(ev.tokens)}</b></div>` })}
+        extra: `<div class="chip festival" title="Festival tokens${status.active ? `: ${today} of ${EVENT_DAILY_CAP} earned today` : ''}">${token(0.75)}<span>Tokens</span><b>${fmt(ev.tokens)}</b></div>` })}
     <section class="glass-panel event-panel painted" style="--accent:${e.color};${paintStyle('festival', 'center 30%')}">
         <p>${esc(e.desc)}</p>
         <p class="muted small event-rotation">${rotation}</p>
     </section>
     <div class="two-col">
-        <section class="glass-panel ${painted('festival', 'left 60%')}"><div class="panel-header"><h2>Milestones</h2><span class="muted small">${earned} earned this event</span></div><div class="ach-list">${milestones}</div></section>
-        <section class="glass-panel ${painted('festival', 'right 60%')}"><div class="panel-header"><h2>Event shop</h2><span class="muted small">${status.active ? 'Open' : 'Opens with the next event'}</span></div><div class="event-shop">${shop}</div></section>
+        <section class="glass-panel ${painted('festival', 'left 60%')}"><div class="panel-header"><h2>Milestones</h2><span class="muted small">${token(0.5)} ${earned} earned this event</span></div>${milestones}</section>
+        <section class="glass-panel ${painted('festival', 'right 60%')}"><div class="panel-header"><h2>Event shop</h2><span class="muted small">${status.active ? 'Open' : 'Opens with the next event'}</span></div><div class="shop-list">${shop}</div></section>
     </div>`;
 }
 

@@ -425,6 +425,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The event as a reward track**: the three milestones are medals on a bar that fills with
+      the event's tokens (the next one lit, with how far there is to go); the event shop's goods are
+      item cards with their picture; a festival token (a DCSS voucher, gilded) stands on the count
+      and the prices. Also fixed: on a phone the currency chips hid their sprites
 - [x] **A picture on every action card**: ninety small Gemini paintings, one per action, across
       the top of its card: each ore in its vein, each tree, each fire, each fish and animal in the
       wild, herbs and crops, potions on the alchemist's table, ingots, the piece on the anvil, each

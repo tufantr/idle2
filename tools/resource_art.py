@@ -950,7 +950,7 @@ PERK_BADGES = {
 
 def build_icons(tiles):
     """Cells for the game's own things: perk/<id>, tool/<id>, obstacle/<id>, the crate, the gear, the
-    campfire, the crown (a medal) and the hero's hoe."""
+    campfire, the crown (a medal), the festival token and the hero's hoe."""
     tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
     out = {}
     for pid, how in PERK_BADGES.items():
@@ -966,6 +966,7 @@ def build_icons(tiles):
         'crate': from_image(tile('item/misc/misc_box_of_beasts_inert')), 'gear': gear(tiles),
         'hero/tool/farming': hoe_in_hand(tiles), 'campfire': campfire(),
         'crown': from_image(tile('item/armour/artefact/urand_crown_of_vainglory')),
+        'token': from_image(rehue(tile('item/misc/misc_voucher'), '#e9b54a', sat=0.75, val=1.05)),   # a festival token
     })
     out.update(build_obstacles(tiles))
     return {key: to_image(a) for key, a in out.items()}

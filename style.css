@@ -95,7 +95,7 @@ body::before { /* the guild hall (assets/paint/guildhall.webp) behind everything
     -webkit-backdrop-filter: none; backdrop-filter: none; /* nothing shows through a painting */
 }
 .painted :is(.node-card, .shop-item, .medal, .ach-item, .plot-card, .course-slot, .course-run, .pet-card, .dungeon-body, .backup-row,
-    .event-shop-item, .info-strip, .clan-boss, .bank-tile, .seed-bag, .forge-bar) {
+    .info-strip, .clan-boss, .bank-tile, .seed-bag, .forge-bar) {
     background: linear-gradient(180deg, rgba(33, 26, 19, 0.8), rgba(18, 13, 9, 0.86));
 }
 .painted .node-card.active { background: linear-gradient(180deg, rgba(33, 26, 19, 0.82) 0%, color-mix(in srgb, var(--accent, var(--verdigris)) 18%, rgba(18, 13, 9, 0.88)) 100%); }
@@ -317,7 +317,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 
 /* ---------- cards: one family of recessed tiles ---------- */
 .node-card, .dungeon-card, .plot-card, .course-slot, .pet-card, .ach-item, .shop-item,
-.backup-row, .course-run, .clan-boss, .info-strip, .prestige-box, .event-shop-item, .inv-item, .slot {
+.backup-row, .course-run, .clan-boss, .info-strip, .prestige-box, .inv-item, .slot {
     border: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(255, 236, 200, 0.03), rgba(0, 0, 0, 0.22));
 }
@@ -724,8 +724,37 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .data-table .you-row { background: rgba(214, 170, 92, 0.12); }
 .clan-boss { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; border-color: rgba(239, 68, 68, 0.4); }
 .event-panel { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-.event-shop { display: flex; flex-direction: column; gap: 0.5rem; }
-.event-shop-item { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 10px; }
+.chip.festival::before { display: none; }  /* the token sprite is its coin */
+.chip.festival b { color: #fde68a; }
+.chip.festival .spr { margin: -4px 0 -4px -2px; }
+.token-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.8rem; }
+.token-btn .spr { margin: -6px -2px; }
+
+/* the event's milestones: three medals on a bar that fills with this event's tokens */
+.ms-track { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin-top: 0.7rem; padding-top: 0.2rem; }
+.ms-track::before, .ms-track::after { /* the bar, from the first medal's middle to the last's */
+    content: ""; position: absolute; top: calc(0.2rem + 27px); left: calc(100% / 6); height: 6px; margin-top: -3px; border-radius: 3px;
+}
+.ms-track::before { right: calc(100% / 6); background: rgba(0, 0, 0, 0.55); box-shadow: inset 0 0 0 1px rgba(214, 170, 92, 0.25); }
+.ms-track::after { width: calc(100% * 2 / 3 * var(--f, 0)); background: linear-gradient(90deg, #9c7127, #fcd34d); box-shadow: 0 0 10px rgba(252, 211, 77, 0.45); }
+.ms-node { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; text-align: center; min-width: 0; }
+.ms-medal {
+    position: relative; width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; gap: 0;
+    background: radial-gradient(circle at 35% 30%, #3a2e22, #140f0a 72%); border: 2px solid rgba(214, 170, 92, 0.35);
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7), 0 0 0 4px rgba(13, 10, 7, 0.85);
+}
+.ms-medal .spr { margin: 0 -5px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.ms-node:not(.done):not(.next) .ms-medal .spr { filter: grayscale(0.7) brightness(0.7); }
+.ms-node.next .ms-medal { border-color: #fcd34d; box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7), 0 0 0 4px rgba(13, 10, 7, 0.85), 0 0 16px rgba(252, 211, 77, 0.45); }
+.ms-node.done .ms-medal { border-color: #e2b95f; background: radial-gradient(circle at 35% 30%, #6a4f22, #2a1c0a 72%); }
+.ms-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; color: #14290f; background: #86efac; box-shadow: 0 0 0 2px #140f0a; }
+.ms-check .ico { width: 13px; height: 13px; stroke-width: 2.6; }
+.ms-at { display: inline-flex; align-items: center; gap: 0.2rem; font-family: var(--font-display); font-size: 0.95rem; color: var(--heading); }
+.ms-at .spr { margin: -4px 0; }
+.ms-desc { font-size: 0.74rem; line-height: 1.3; color: var(--text-muted); text-wrap: balance; }
+.ms-node.done .ms-desc { color: #fde68a; }
+.ms-left { width: 70%; height: 5px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
+.ms-left i { display: block; height: 100%; background: linear-gradient(90deg, #9c7127, #e2b95f); }
 .backup-list { display: flex; flex-direction: column; gap: 0.4rem; }
 .backup-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem; border-radius: 10px; }
 
@@ -829,7 +858,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     #header { padding: 0.75rem 0.85rem; }
     .header-row { gap: 0.4rem; }
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
-    .chip span, .chip i { display: none; }
+    .chip span, .chip i:not(.spr) { display: none; }
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
     .chip b { font-size: 0.9rem; }
     .brand { font-size: 0.95rem; }
