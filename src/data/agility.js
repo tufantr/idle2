@@ -11,6 +11,8 @@
 // five times the bonus) and 25% more XP per run. An upgrade costs gold only — the slot's price times
 // 2^level — and needs 7 more agility levels per obstacle level. This is the long, bounded late-game
 // gold sink: the last upgrade of the last slot costs 4.8 billion.
+
+import { paceList } from './pace.js';
 export const MAX_OBSTACLE_LEVEL = 5;
 export const OBSTACLE_LEVEL_STEP = 7;
 export function obstacleUpgradeGold(slot, level) {
@@ -74,6 +76,9 @@ export const AGILITY_SLOTS = [
         ]
     }
 ];
+
+// Melvor pace: a slot's obstacles give less than their base XP the later the slot opens (data/pace.js).
+for (const slot of AGILITY_SLOTS) paceList('agility', slot.obstacles, { levelOf: () => slot.levelReq });
 
 export function obstacleById(id) {
     for (let slot = 0; slot < AGILITY_SLOTS.length; slot++) {

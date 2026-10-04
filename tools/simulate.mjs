@@ -515,7 +515,7 @@ function milestone(key, value) {
     if (VERBOSE) console.log(`  [${fmtH(now)}] ${key} ${value}`);
 }
 const STAGE_MARKS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200];
-const LEVEL_MARKS = [25, 50, 75, 99];
+const LEVEL_MARKS = [25, 50, 60, 75, 90, 99];
 
 // ---------- main loop ----------
 let task = apply(decide());
@@ -550,6 +550,8 @@ while (now < totalMs) {
     // The Titan: a sensible player tries it whenever it is awake (it only costs a minute).
     if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages') {
         game.challengeTitan();
+        // Leaving a ladder farm for the Titan ends the farm too (or the hero farms that stage for good).
+        if (task.kind === 'farm' && task.stage) game.setFarmMode(false);
         if (task.kind !== 'combat') task = combatTask();
     }
     if (S.combat.mode === 'titan') continue;

@@ -761,26 +761,51 @@ Rules:
 
 | Skill | Lv 10 | Lv 20 | Lv 30 | Lv 50 | Lv 75 | Lv 90 | Lv 99 |
 |---|---|---|---|---|---|---|---|
-| Mining | 7m | 17m | 42m | 2.6h | 17h | 54h | 123h |
-| Mining + tools | 7m | 16m | 39m | 2.3h | 14h | 44h | 99h |
-| Woodcutting | 6m | 18m | 43m | 2.9h | 18h | 57h | 129h |
-| Fishing | 6m | 19m | 45m | 3.0h | 20h | 62h | 121h |
-| Fishing + tools | 6m | 18m | 41m | 2.7h | 16h | 49h | 94h |
-| Hunting | 6m | 20m | 47m | 3.2h | 21h | 65h | 126h |
-| Cooking | 3m | 10m | 22m | 1.7h | 11h | 37h | 72h |
-| Firemaking | 2m | 8m | 18m | 1.3h | 8.4h | 26h | 58h |
-| Alchemy (foraging only) | 7m | 20m | 43m | 3.2h | 23h | 93h | 224h |
-| Smithing (smelting only) | 4m | 10m | 24m | 1.8h | 14h | 48h | 109h |
-| Smithing (mine → smelt → forge) | 4m | 15m | 43m | 4.6h | 34h | 119h | 275h |
+| Mining | 7m | 17m | 42m | 3.3h | 28h | 105h | 250h |
+| Mining + tools | 7m | 16m | 39m | 2.9h | 23h | 86h | 202h |
+| Woodcutting | 6m | 18m | 43m | 3.5h | 29h | 106h | 248h |
+| Woodcutting + tools | 6m | 17m | 39m | 3.1h | 25h | 87h | 200h |
+| Fishing | 6m | 19m | 45m | 3.8h | 33h | 125h | 252h |
+| Fishing + tools | 6m | 18m | 41m | 3.3h | 27h | 98h | 195h |
+| Hunting | 6m | 20m | 47m | 3.9h | 34h | 124h | 250h |
+| Hunting + tools | 6m | 19m | 43m | 3.4h | 27h | 97h | 194h |
+| Cooking | 3m | 10m | 23m | 2.4h | 26h | 109h | 223h |
+| Firemaking | 2m | 8m | 18m | 2.0h | 21h | 80h | 191h |
+| Firemaking + tools | 2m | 7m | 17m | 1.7h | 17h | 65h | 154h |
+| Alchemy (foraging only) | 7m | 20m | 43m | 3.2h | 24h | 98h | 237h |
+| Smithing (smelting only) | 4m | 10m | 24m | 2.4h | 25h | 102h | 244h |
+| Smithing (forging, bars in the bank) | 1m | 3m | 6m | 30m | 4.4h | 17h | 39h |
+| Crafting (jewellery, bars and gems in the bank) | 3m | 8m | 19m | 2.0h | 21h | 85h | 204h |
+| Smithing (mine → smelt → forge) | 4m | 15m | 43m | 5.1h | 55h | 248h | 606h |
 | Farming (every plot, harvested on time) | 31m | 1.4h | 2.9h | 9.4h | 39h | 125h | 286h |
-| Agility (a full course at each level) | 6m | 18m | 44m | 3.7h | 25h | 89h | 208h |
+| Agility (a full course at each level) | 6m | 18m | 44m | 3.8h | 27h | 99h | 233h |
 
 Targets from the research: Lv 20 ≤ 15 min (close: 10–20 min), Lv 50 in 2–4 h (met), Lv 99 in
-150–400 h (**faster** for most skills: 72–129 h — raise node XP less steeply if 99 should take
-longer). The full smithing pipeline, Farming and Agility are on target; Firemaking is quick because
-it is limited by how fast you can cut the logs it burns. The table leaves out mastery, which makes an
-action up to ~10% faster the longer it is trained (§3.20): with it, the late levels come a few
-percent sooner.
+150–400 h (met: 190–290 h, the owner's choice of **Melvor pace**). Before it, 99 took 58–129 h for
+most skills. Each skill's late actions give less than their base XP: an action opening at level 20
+or below keeps it all, one opening at 75 or above gives it divided by the skill's factor in
+`PACE` (`src/data/pace.js`: mining 2.1, woodcutting 2.0, fishing 2.15, hunting 2.05, cooking 3.2,
+firemaking 3.4, alchemy 1.1, smithing 2.3, crafting 4, agility 1.2, farming 1), and the division grows
+evenly in between. The factors are applied once as the data loads, so every card, pop, the simulator
+and this tool see the same XP; old saves keep their levels. Farming and Agility were already on
+target. Forging from banked bars is the quick way to smithing 99 (39 h), but the bars come from
+smelting or mining, which is the long part (the whole pipeline is ~600 h, mining 99 on the way).
+The table leaves out mastery, which makes an action up to ~10% faster the longer it is trained
+(§3.20), and the XP boosts a player earns (the simulator's player has +60% XP by 150 h from perks
+and achievements): with them, 99 comes sooner.
+
+Where the division would make a newer action pay less XP per hour than an older one of its kind
+(the same first input: raw meat and fish, crops, herbs, ore; or gathering), the newer one is raised
+to match, so the old one is never the better choice: emerald jewellery pays what sapphire does, and
+pumpkins (a dip that predates the pace) what the crop before them does.
+
+**Combat** is paced by the hero's combat level (`BALANCE.rewards.xpPace` in `src/core/formulas.js`):
+up to level 60 a kill pays its full XP, from level 95 a twenty-fifth, evenly in between. A first try
+paced it by the monster's stage instead, and that made stage 30 pay the most XP per kill of any
+stage, so farming a shallow stage beat pushing; by level, a deeper stage always pays more. The
+levels up to 60 (which open tier 5 gear) come as quickly as ever; combat 75 comes at ~30 h of the
+simulator's play, 90 at ~88 h, 99 at 161–209 h (before, 99 came at 20–40 h). The simulator's player
+fights about a third of the time, so a player who mostly fights gets there sooner.
 
 ### 5.2 Whole-game simulation
 
@@ -795,22 +820,25 @@ tokens). Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|
-| First prestige | 1.2 h (stage 40, +18 tokens) | 1.6 h (stage 49, +26) | 1.2 h (stage 46, +23) |
-| Stage 50 / 100 / 120 | 1.6 / 5.6 / 7.8 h | 1.8 / 5.9 / 7.3 h | 1.5 / 5.4 / 7.7 h |
-| Stage 150 / 200 · best at 150 h | 19.9 / 43.5 h · 264 | 16.1 / 39.3 h · 234 | 16.4 / 46.8 h · 238 |
-| Weapon tier 4 / 5 / 6 / 7 | 6.9 / — / 19.1 / 22.9 h | 7.3 / 12.2 / 15.8 / 16.4 h | 5.3 / 12.3 / 16.3 / 18.3 h |
-| Crown / Heart / Cleaver / Plate | 2.2 / 3.9 / 6.8 / 19.7 h | 2.4 / 4.0 / 7.3 / 17.2 h | 2.2 / 3.8 / 6.2 / 18.2 h |
-| Titans defeated by 12 h · by 150 h | 9 · 22 | 10 · 20 | 9 · 20 |
-| Agility obstacles 1 / 4 / 6 | 1.9 / 18.3 / 42.5 h | 2.1 / 19.0 / 40.8 h | 1.8 / 17.7 / 41.3 h |
-| Mining 50 · Smithing 50 / 75 | 15.8 · 13.9 / 35.1 h | 15.6 · 14.2 / 32.2 h | 14.3 · 14.6 / 31.8 h |
-| Farming 50 / 75 · Agility 50 / 75 | 9.6 / 30.9 · 23.2 / 48.8 h | 10.0 / 32.3 · 21.0 / 44.8 h | 10.1 / 31.1 · 21.8 / 48.9 h |
-| Combat 99 | 20.7 h | 33.0 h | 32.0 h |
-| Prestiges in 150 h | 250 | 193 | 198 |
-| Deaths on non-boss stages | 44% | 58% | 34% |
+| First prestige | 1.1 h (stage 40, +18 tokens) | 1.2 h (stage 40, +18) | 1.2 h (stage 40, +18) |
+| Stage 50 / 100 / 120 | 1.8 / 5.0 / 8.4 h | 1.8 / 5.8 / 10.7 h | 1.6 / 5.0 / 9.0 h |
+| Stage 150 / 200 · best at 150 h | 22.5 / 55.9 h · 238 | 22.0 / 60.1 h · 270 | 19.9 / 53.7 h · 250 |
+| Weapon tier 4 / 5 / 6 / 7 | 8.1 / 20.9 / 31.6 / 94.0 h | 8.1 / 20.9 / 34.6 / 83.9 h | 9.0 / — / 28.8 / 87.7 h |
+| Crown / Heart / Cleaver / Plate / Aegis | 2.5 / 4.2 / 8.0 / 25.0 / 72.0 h | 2.5 / 5.0 / 8.1 / 35.1 / 57.4 h | 2.2 / 4.0 / 8.9 / 28.8 / 55.5 h |
+| Titans defeated by 12 h · by 150 h | 10 · 20 | 9 · 21 | 9 · 20 |
+| Agility obstacles 1 / 4 / 6 | 2.2 / 27.0 / 56.7 h | 2.2 / 27.6 / 56.9 h | 1.9 / 24.5 / 56.8 h |
+| Mining 50 · Smithing 50 / 75 | 20.8 · 23.6 / 48.7 h | 18.9 · 23.8 / 49.8 h | 19.2 · 21.4 / 47.6 h |
+| Farming 50 / 75 · Agility 50 / 75 | 9.6 / 31.4 · 29.8 / 60.9 h | 10.0 / 32.1 · 28.8 / 62.9 h | 9.7 / 29.8 · 26.2 / 61.6 h |
+| Combat 60 / 75 / 90 / 99 | 3.7 / 31.5 / 93.9 / 161 h | 4.1 / 34.6 / 83.7 / 209 h | 3.5 / 28.6 / 87.5 / 184 h |
+| Prestiges in 150 h | 227 | 256 | 243 |
+| Deaths on non-boss stages | 35% | 45% | 37% |
 
-Past stage 200 the climb continues: roughly 5–10 stages every 10 hours, with the odd 20-hour
-plateau at a boss. Two 300-hour runs end at stages 327 and 321. Mining stops at about 50 because
-Abyss drops outpace forging from about 16 hours on, so the bot stops needing ore.
+Measured at Melvor pace (§5.1); combat 99 comes from 300-hour runs of the same seeds. Tier 6 and 7
+gear wait for combat 75 and 90, so they arrive with those levels (before the pace: 16–23 h for tier
+7), and stage 200 moved from ~40–47 h to ~54–60 h. Past stage 200 the climb continues: roughly 5–10
+stages every 10 hours, with the odd 20-hour plateau at a boss. The three 300-hour runs end at stages
+328, 336 and 327 (before the pace: 327 and 321). Mining stops in the 60s because Abyss drops
+outpace forging, so the bot stops needing ore.
 
 These runs include every fix from the code review (prestige needs a 10-minute run; kills keep the
 rest of a time step; prices follow regular monsters) and the Abyss drop scaling. Earlier fixes found
@@ -824,17 +852,20 @@ Titan; `--farm-ladder=push` = an AFK player who keeps fighting at the wall inste
 
 | Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Stage 200 | Best at 150 h | Weapon tier 5+ |
 |---|---|---|---|---|---|---|
-| Skiller | 12.8–20.4 h | 49–126 h | — | — | 120–130 | 35–47 h |
-| Skiller with the Titan | 8.9–9.9 h | 27–41 h | 106 h, or never | — | 140–150 | 27–51 h |
-| Ladder farmer | 10.5–14.7 h | 22–37 h | 73–76 h, or never | — | 130–170 | 34–58 h |
-| AFK pusher | 6.2–9.2 h | 12.3–13.9 h | 20–23 h | 49 h | 271–285 | 14–20 h |
-| Sensible (dungeons + Titan) | 5.4–5.9 h | 7.3–7.8 h | 16–20 h | 39–47 h | 234–264 | 12–19 h |
+| Skiller | 14.8–17.1 h | 52–97 h | — | — | 129–137 | 77–132 h |
+| Skiller with the Titan | 9.9–10.9 h | 24–30 h | 82–117 h | — | 160–170 | 31–96 h |
+| Ladder farmer | 7.7–10.7 h | 10.5–37 h | 26–117 h | 71–76 h, or never | 188–230 | 16–109 h |
+| AFK pusher | 7.0–9.5 h | 10.5–14.7 h | 20–25 h | 57–65 h | 226–239 | 17–22 h |
+| Sensible (dungeons + Titan) | 5.0–5.8 h | 8.4–10.7 h | 20–23 h | 54–60 h | 238–270 | 21–29 h |
 
-Dungeons and the Titan put the sensible player ahead through stage 200 (dungeons were tuned to about
-1.5× the progress of pushing for the same time). Past that, steady pushing does better, because the
-deep Abyss drops are the late-game gear and the sensible bot still splits its time with outgrown
-dungeons and skilling. The Titan alone moves a skiller's stage 100 forward by 3–10 hours. Farming a
-comfortable stage is weaker than pushing, because each boss's first fall is worth the risk.
+Dungeons and the Titan put the sensible player ahead (dungeons were tuned to about 1.5× the
+progress of pushing for the same time): stage 200 a few hours sooner and a higher best stage at
+150 h than the AFK pusher. The Titan alone moves a skiller's stage 100 forward
+by 4–7 hours. Farming a comfortable stage is weaker than pushing, because each boss's first fall is
+worth the risk. Melvor pace hit the skiller hardest: its runite waits for smithing 75 and mining for
+its ore, which now take twice as long. (The ladder farmer used to stall for good: when the Titan woke
+during a farm, the bot left farm mode on and farmed one stage for the rest of the run. Fixed in the
+simulator; the game was not at fault.)
 
 The fifth dungeon, the Void Citadel (stage 160, chests of the top tier), changed the bot: it farmed a
 dungeon while its chests could hold gear *at least as good as* its weapon, and a top-tier chest
@@ -848,22 +879,26 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 
 - **The Abyss is a slow climb on purpose.** Tokens grow polynomially and monsters ×2.26 per depth,
   so late power comes mostly from deeper drops (×1.8 per depth). The climb slows as it goes: stage
-  ~200 at 40–47 h, 234–264 at 150 h, 321–327 at 300 h. `BALANCE.abyss.dropGrowth` sets the pace: at
+  ~200 at 54–60 h, 238–270 at 150 h, 327–336 at 300 h. `BALANCE.abyss.dropGrowth` sets the pace: at
   2.0 the seeds spread from 250 to 334 at 150 h, and at 2.2 it runs away (390–470). A player who
   stops prestiging stops moving; the simulator prestiges after an hour stuck at the wall.
 - **Late-game gold piles up.** Sinks keep pace while the agility course is being built (finished at
-  about 41–43 h in the simulator); after that income dwarfs the bounded sinks, and over 150 hours only
-  6–16% of all gold earned is spent. Most of the rest resets with the run. That is what run
+  about 57 h in the simulator); after that income dwarfs the bounded sinks, and over 150 hours only
+  7–14% of all gold earned is spent. Most of the rest resets with the run. That is what run
   currency does; the Essence Cache (Shop) is the open-ended place for it, and the prestige screen
   says so.
-- **Drop-only tiers arrive with combat time.** The AFK pusher wears Dragonbone (tier 6) at 14–25 h
-  and Abyssal (tier 7) at 28–33 h, before a skiller forges runite (35–47 h). That is the combat
-  route's reward, but watch it.
+- **Gear waits for combat levels.** At Melvor pace the wear levels (60, 75 and 90 for tiers 5, 6
+  and 7; `TIER_WEAR_LEVEL` in `src/data/items.js`) are the gates for drop-only gear. The sensible
+  player wears Abyssal (tier 7) at 84–94 h; the AFK pusher, who kills slowly at the wall, wears
+  Dragonbone at 36–39 h but reaches combat 90 only at ~150 h. A player carries tier 7 drops for
+  dozens of hours before wearing them, as in Melvor (gear above your level is a goal), but watch it:
+  lowering the two top wear levels is the knob if it feels like a wall.
 - **Bosses and regular stages share the walls.** Bosses are the DPS checks (a 30-second timer, and a
-  boss that outlasts it is not a death), while regular stages test survival: 34–58% of the sensible
+  boss that outlasts it is not a death), while regular stages test survival: 35–45% of the sensible
   player's deaths happen on regular stages, close to the Phase 1 target of half. In the deep Abyss the
-  pusher dies more on regular stages (44–66%), as monsters' attack outgrows its defence.
-- **Level 99 is fast** relative to Melvor (see §5.1).
+  pusher dies more on regular stages (38–62%), as monsters' attack outgrows its defence.
+- **Melvor pace is long** (§5.1), and it applies to old saves too: they keep their levels, but the
+  XP still to come is slower, most of all for combat past level 60.
 - **The simulator's player is simple.** It never uses mini-games, clicks or potions, buys perks in a
   fixed order, and only enters dungeons it clears comfortably. Treat its numbers as a floor for an
   engaged player.
@@ -873,6 +908,8 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | What you want | Change | File |
 |---|---|---|
 | Faster/slower skills | node `xp` / `interval` | `src/data/skills.js` |
+| How long the late game is (Melvor pace) | `PACE` (a factor per skill), `PACE_FROM`, `PACE_TO`; combat: `BALANCE.rewards.xpPace` (`from`, `to`, `slow`) | `src/data/pace.js`, `src/core/formulas.js` |
+| When gear can be worn | `TIER_WEAR_LEVEL` (combat level per tier) | `src/data/items.js` |
 | Walls earlier/later | `BALANCE.enemy.hpGrowth`, `atkGrowth`, boss multipliers, `bossTimeMs` | `src/core/formulas.js` |
 | Bigger gear jumps | `GEAR_TIERS` power | `src/data/items.js` |
 | More/fewer gear drops | `GEAR_DROP_CHANCE`, `DROP_*` weights; zone `gearTier` | `src/data/items.js`, `src/data/zones.js` |
@@ -978,8 +1015,8 @@ src/core/             xp · rng · state (defaults, migration) · modifiers · f
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
-                      · bestiary (every kind of monster, its stars) · sprites, cardart (generated: the atlas's cells,
-                      the cards that have a picture)
+                      · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
+                      · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)

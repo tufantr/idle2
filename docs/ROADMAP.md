@@ -428,6 +428,15 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Melvor pace**: the owner chose a long game. Level 99 in a skill now takes 190–290 hours of
+      training with no boosts (it was 60–130), and combat 99 160–210 hours of the simulator's mixed
+      play (it was 20–40). The first levels come as quickly as ever: actions that open by level 20
+      keep their XP, and those opening later give less, down to their skill's factor at level 75
+      (`src/data/pace.js`), though never less per hour than an older action of the same kind. Combat
+      slows with the hero's level, from 60 (full XP) to 95 (a twenty-fifth), so a deeper stage always
+      pays more. The 100 stages still take about 5–6 hours; tier 6 and 7 gear wait for combat 75 and
+      90 (about 30 and 85–95 hours). Old saves keep their levels; only the XP still to come is slower.
+      Also fixed in the simulator: a ladder-farming bot that met the Titan farmed one stage for good
 - [x] **The game's mark**: the sidebar's plain title became a logo: a gold-rimmed seal looking onto the
       painted meadow with the player's own hero in it, as they are now (look, gear, the rank's cloak),
       beside "FANTASY" in polished gold with a light that passes over it now and then and "IDLE"
@@ -639,7 +648,8 @@ screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` pa
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;
-real-time chat; synchronous party content; gacha pets; any purchasable power.
+real-time chat; synchronous party content; gacha pets; purchasable power (the owner means it for
+the online guild side, later: see [Decisions for the owner](#decisions-for-the-owner), 2).
 
 ---
 
@@ -649,19 +659,25 @@ real-time chat; synchronous party content; gacha pets; any purchasable power.
    without it (the old code silently used a public hard-coded secret). Accounts created with the old
    API keep working — passwords are unchanged, players just log in again, and an old cloud save is
    migrated on load like a local one.
-2. **Monetization and hosting — decided:** the game stays free with nothing for sale, which fits
-   Vercel's Hobby plan (non-commercial). If that changes, the research's warning stands: pay-for-power
-   plus social features is the combination that forces a server-authoritative rewrite. Clans and
-   leaderboards also need `POSTGRES_URL` (Vercel Postgres) — tables are created on the first request.
+2. **Monetization and hosting.** For now the game is free with nothing for sale, which fits Vercel's
+   Hobby plan (non-commercial). The owner's intent for later (October 2026): players will be able to
+   spend money to get stronger for the guild side of the game, which will be online. Not built yet,
+   and deferred with the rest. When it comes, the research's warning stands: paid power plus an online
+   guild side needs that side to be server-authoritative (the server decides fights and rewards, since
+   a browser save can be edited), and selling anything needs a commercial hosting plan (Vercel Pro or
+   another host). Clans and leaderboards also need `POSTGRES_URL` (Vercel Postgres); tables are
+   created on the first request.
 3. **`api/node_modules` is still committed** (1,099 files). `.gitignore` keeps it tracked until a
    preview deployment confirms Vercel installs dependencies from `api/package.json`; then remove it
    with `git rm -r --cached api/node_modules`.
 4. **Old database row in git history.** `api/fantasy-idle.db` (removed in this change) held a username
    and a bcrypt password hash; it is still in the repository's history. If that password is used
    anywhere else, change it.
-5. **Balance intent.** The simulator puts level 99 at ~60–130 h for most skills (Farming ~290 h,
-   Agility ~210 h) and the 100 authored stages at ~5–12 h depending on play style. If the game should
-   be longer (Melvor-like 99s at 150–400 h), lower late-node XP; the knobs are listed in DESIGN §5.4.
+5. **Balance intent — decided: Melvor pace** (October 2026). Level 99 takes 190–290 h of training
+   for each skill (no boosts) and 160–210 h of mixed play for combat; the 100 authored stages
+   still take ~5–6 h, and the Abyss goes on from there. One table of factors per skill
+   (`src/data/pace.js`) and one for combat (`BALANCE.rewards.xpPace`) set it; DESIGN §5 has the
+   numbers.
 
 ## Working on the roadmap
 

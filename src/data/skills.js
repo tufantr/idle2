@@ -2,6 +2,8 @@
 // Intervals are milliseconds at level 1 with no tool; XP is per completed action.
 // XP per hour roughly doubles every ~15 levels through new nodes and tools (see docs/DESIGN.md §3.2).
 
+import { paceList } from './pace.js';
+
 export const SKILL_IDS = ['mining', 'woodcutting', 'fishing', 'hunting', 'cooking', 'firemaking', 'alchemy', 'farming', 'agility', 'smithing', 'crafting', 'combat'];
 export const GATHERING_SKILLS = ['mining', 'woodcutting', 'fishing', 'hunting'];
 export const PRODUCTION_SKILLS = ['cooking', 'firemaking', 'alchemy'];
@@ -141,6 +143,9 @@ export const SKILLS = {
         nodes: []
     }
 };
+
+// Melvor pace: nodes that open late give less than their base XP above (data/pace.js).
+for (const [id, skill] of Object.entries(SKILLS)) paceList(id, skill.nodes);
 
 export function skillNode(skillId, nodeId) {
     const skill = SKILLS[skillId];

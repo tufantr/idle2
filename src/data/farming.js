@@ -5,6 +5,8 @@
 // XP per plot-hour roughly doubles every ~15 levels, like the other skills' nodes. A plot is worth
 // about an eighth of an active skill's XP per hour, which suits a skill you only check on.
 
+import { paceList } from './pace.js';
+
 // Plots open with farming level.
 export const FARMING_PLOTS = [1, 1, 15, 30, 50, 70];
 
@@ -18,6 +20,8 @@ export const CROPS = [
     { id: 'harralander', name: 'Harralander', icon: '🌿', levelReq: 55, growMs: 60 * 60000, yield: [4, 8],  produces: 'harralander_leaf', xp: 1000, seedGold: 2000 },
     { id: 'starfruit',   name: 'Starfruit',   icon: '⭐', levelReq: 65, growMs: 90 * 60000, yield: [5, 9],  produces: 'starfruit',        xp: 1714, seedGold: 4000 }
 ];
+
+paceList('farming', CROPS);   // Melvor pace (data/pace.js)
 
 export function cropById(id) {
     return CROPS.find(c => c.id === id) || null;

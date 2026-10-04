@@ -1,7 +1,7 @@
 // Auto-battler: player and enemy attack on their own timers; food, potions, loot, death, clicks.
 
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, BALANCE } from '../core/formulas.js';
-import { BASE } from '../core/modifiers.js';
+import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
 import { addItem } from './inventory.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
@@ -272,7 +272,7 @@ export function onEnemyDeath(game) {
     const paidAs = payout.full ? enemy : { ...enemy, boss: false };
     const r = BALANCE.rewards;
     const gold = goldForKill(paidAs, d.goldMult) * (enemy.gilded ? r.gildedGoldMult : 1);
-    const xp = combatXpForKill(paidAs, d.combatXpMult) * payout.rolls * (enemy.gilded ? r.gildedXpMult : 1);
+    const xp = combatXpForKill(paidAs, d.combatXpMult, skillLevel(state, 'combat')) * payout.rolls * (enemy.gilded ? r.gildedXpMult : 1);
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'kills');

@@ -25,6 +25,12 @@ export const BALANCE = {
         xpBase: 3,              // combat XP per kill = xpBase * stage^xpExp
         xpExp: 1.05,
         bossXpMult: 5,
+        // Melvor pace for Combat: up to combat level `from` a kill gives its full XP, from level `to`
+        // on its XP divided by `slow`, evenly in between. By the hero's level, not the monster's
+        // stage, so a deeper stage always pays more (paced by stage, stage 30 paid the most per kill),
+        // and the levels that open tier 5 gear (60) come as quickly as ever. The skills are paced
+        // by their actions instead (data/pace.js).
+        xpPace: { from: 60, to: 95, slow: 25 },
         materialDropChance: 0.35,
         gemDropChance: 0.03,
         essenceDropChance: 0.10,
@@ -138,10 +144,17 @@ export function goldForKill(enemy, goldMult = 1) {
     return Math.max(1, Math.round(base * goldMult));
 }
 
-export function combatXpForKill(enemy, xpMult = 1) {
+/** How much combat XP is divided at combat level `level` (Melvor pace; 1 = not at all). */
+export function combatXpPace(level) {
+    const p = BALANCE.rewards.xpPace;
+    return 1 + (p.slow - 1) * Math.max(0, Math.min(1, (level - p.from) / (p.to - p.from)));
+}
+
+/** Combat XP for defeating `enemy`, for a hero of combat level `level`. */
+export function combatXpForKill(enemy, xpMult = 1, level = 1) {
     const r = BALANCE.rewards;
     const base = r.xpBase * Math.pow(enemy.stage, r.xpExp) * (enemy.boss ? r.bossXpMult : 1);
-    return Math.max(1, Math.round(base * xpMult));
+    return Math.max(1, Math.round(base * xpMult / combatXpPace(level)));
 }
 
 // ---------- Prestige ----------

@@ -1,5 +1,7 @@
 // Smithing and crafting recipes, and the tool ladder that ties gathering to production.
 
+import { paceList } from './pace.js';
+
 // Smelting: ore (+ coal) -> bar. Coal demand rises with tier so early rocks stay useful.
 export const SMELTING_RECIPES = [
     { id: 'copper_bar',  name: 'Copper Bar',  levelReq: 1,  interval: 2000, xp: 10,  consumes: { copper_ore: 1 },                 produces: 'copper_bar' },
@@ -14,7 +16,7 @@ export const SMELTING_RECIPES = [
 
 // Armour/weapon metals in ladder order. Smithing level to forge each tier; XP per bar used.
 // XP per bar was raised 1.5x after tools/pacing.mjs showed a self-sufficient smith (mine -> smelt -> forge)
-// needed ~48 h for level 75; it is now ~34 h, with 99 at ~275 h.
+// needed ~48 h for level 75 (then ~34 h). At Melvor pace (data/pace.js) it takes ~55 h, and ~600 h to 99.
 export const METALS = [
     { bar: 'copper_bar',  name: 'Copper',  tier: 1, levelReq: 1,  xpPerBar: 18 },
     { bar: 'iron_bar',    name: 'Iron',    tier: 2, levelReq: 10, xpPerBar: 30 },
@@ -119,6 +121,12 @@ export const TOOLS = {
     }
 };
 export const TOOL_INTERVAL = 4000;
+
+// Melvor pace: smelting, forging, jewellery and tools that open late give less than their base XP (data/pace.js).
+paceList('smithing', SMELTING_RECIPES);
+paceList('smithing', METALS, { key: 'xpPerBar' });
+paceList('crafting', GEM_TIERS);
+for (const tool of Object.values(TOOLS)) paceList(tool.madeBy, tool.tiers);
 
 export function toolTierDef(toolId, tier) {
     const tool = TOOLS[toolId];
