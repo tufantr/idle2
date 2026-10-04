@@ -123,14 +123,16 @@ test('combat: kills pay gold and combat XP and advance the stage', () => {
     assert.ok(game.state.combat.maxStage > 1);
 });
 
-test('combat: death retreats to the start of the zone and stops combat', () => {
+test('combat: death retreats to the start of the zone, and the hero rests before going on', () => {
     const game = new Game(null, T0);
     game.state.combat.stage = 20;
     game.state.combat.maxStage = 20;
     game.enterCombat();
-    run(game, 120_000);
-    assert.equal(game.state.combat.active, false);
+    let now = T0;
+    while (game.state.stats.deaths === 0 && now < T0 + 120_000) { now += 100; game.tick(now); }
     assert.equal(game.state.stats.deaths, 1);
+    assert.equal(game.state.combat.active, false);
+    assert.equal(game.state.combat.recovering, true, 'resting, to go on by himself (test/fall.test.mjs)');
     assert.equal(game.state.combat.stage, 11);
 });
 

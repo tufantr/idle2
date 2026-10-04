@@ -213,9 +213,12 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   60 seconds before it is retried automatically; beating it sooner (by stepping forward) ends the
   wait. Bosses are the DPS checks; regular stages test survival.
 - **Death** retreats to the start of the zone (from a zone's first stage, one stage back, never onto
-  the previous zone's boss) with half HP.
+  the previous zone's boss) with half HP. The hero then rests at the campfire until his health is full
+  (about 25 s) and goes back into the fight by himself (`combat.recovering`); "Stay at camp", starting
+  work or entering the fight at once call that off. Offline replay does the same, so a fall early in a
+  long absence costs a rest, not the absence.
 - **Death:** retreat to the start of the zone (a boss death sends you back 9 stages), HP set to 50%,
-  combat stops. **Farm mode** ("Stay on this stage") keeps you on the current stage; the map, and the stones on
+  a rest to full health, then the fight goes on from there. **Farm mode** ("Stay on this stage") keeps you on the current stage; the map, and the stones on
   the scene's stage path, take you back to any stage reached this run.
 - **Boss payouts:** a boss pays its bonus (gold ×3, XP ×5, its loot table) only on its **first fall
   in a run** — the kill that moves you on — and the Titan always does. A boss you farm after beating

@@ -673,6 +673,8 @@ window.FI = {
         if (!fighting && game.state.combat.active) setBattleFull(true);
         render();
     },
+    /** After a fall: rest without going back into the fight. */
+    stayAtCamp() { game.leaveCombat(); render(); },
     /** Fold the full-screen fight back into the page (it goes on), or let it fill the screen again. */
     battleFull(on) { setBattleFull(on); render(); },
     /** Perks in a dialog over the fight: skill points are spent without leaving it. */

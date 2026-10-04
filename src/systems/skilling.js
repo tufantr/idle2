@@ -113,7 +113,7 @@ function setAction(game, action, def) {
         stopAction(game);
         return true;
     }
-    if (state.combat.active) leaveCombat(game);
+    if (state.combat.active || state.combat.recovering) leaveCombat(game);
     state.action = { ...action, progress: 0, stalled: false };
     game.emit({ type: 'actionStart', label: def.label, skill: def.skill });
     game.markDirty();

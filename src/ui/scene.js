@@ -477,9 +477,12 @@ export function createScene(root, actions) {
             }
 
             const regroup = c.mode === 'stages' && c.regroupLeft > 0;
+            // fallen: he rests at the campfire, and is back in the fight when his health is full
+            const resting = !c.active && c.recovering;
             el.battle.classList.toggle('regroup', regroup);
-            el.regroup.hidden = !regroup;
+            el.regroup.hidden = !regroup && !resting;
             if (regroup) setMarkup(el.regroup, `${CAMPFIRE} Regrouping · boss in ${Math.ceil(c.regroupLeft / 1000)}s`);
+            else if (resting) setMarkup(el.regroup, `${CAMPFIRE} Resting · back in the fight in ${Math.max(1, Math.ceil((game.derived.maxHp - c.hp) / (game.derived.maxHp * BALANCE.combat.regenResting)))}s`);
 
             const combo = Math.floor(c.combo || 0);
             el.combo.hidden = combo <= 0;
@@ -551,8 +554,11 @@ export function createScene(root, actions) {
                     move(el.heroSprite, 'fallen');
                     move(el.battle, 'wounded');
                     banner(ev.mode === 'stages'
-                        ? `<small>Defeated at stage ${ev.stage}</small><strong>You fall back</strong><span>Rest, then fight on</span>`
+                        ? `<small>Defeated at stage ${ev.stage}</small><strong>You fall back</strong><span>A rest at the campfire, then on again</span>`
                         : `<small>Defeated</small><strong>${ev.mode === 'titan' ? 'The Titan stands' : 'The run is lost'}</strong>`, 'defeat', 2400);
+                    break;
+                case 'recovered':
+                    move(el.heroSprite, 'cheer');
                     break;
                 case 'bossTimeout':
                     banner('<small>Out of time</small><strong>The boss holds out</strong><span>Regroup, then try again</span>', 'defeat', 2200);

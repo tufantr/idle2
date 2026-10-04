@@ -39,6 +39,7 @@ export function enterCombat(game) {
     if (c.active) return;
     if (state.action) { state.action = null; game.emit({ type: 'actionStop' }); }
     c.active = true;
+    c.recovering = false;
     c.combo = 0;
     if (c.hp <= 0) c.hp = game.derived.maxHp;
     if (!c.enemy || (c.mode === 'stages' && c.enemy.stage !== c.stage)) spawnEnemy(game);
@@ -48,6 +49,7 @@ export function enterCombat(game) {
 /** Stop fighting. Leaving mid-dungeon abandons the run; leaving the Titan ends the attempt. */
 export function leaveCombat(game) {
     const c = game.state.combat;
+    c.recovering = false;
     if (!c.active) return;
     if (c.mode === 'dungeon') failDungeon(game, 'you left');
     else if (c.mode === 'titan') endTitan(game, false);
@@ -319,6 +321,7 @@ export function onPlayerDeath(game) {
         c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
         c.combo = 0;
         c.active = false;
+        c.recovering = true;
         game.markDirty();
         return;
     }
@@ -334,6 +337,7 @@ export function onPlayerDeath(game) {
     c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
     c.combo = 0;
     c.active = false;
+    c.recovering = true;   // he rests to full health, then fights on from here by himself
     spawnEnemy(game);
     game.markDirty();
 }
@@ -377,6 +381,11 @@ export function tickCombat(game, dt) {
     if (c.hp > 0 && c.hp < d.maxHp) c.hp = Math.min(d.maxHp, c.hp + d.maxHp * regen * dt / 1000);
     if (!c.active) {
         if (c.combo > 0) c.combo = 0;
+        // Fallen and rested: back on his feet and into the fight, unless he was given work meanwhile.
+        if (c.recovering && !state.action && c.hp >= d.maxHp) {
+            enterCombat(game);
+            game.emit({ type: 'recovered', stage: c.stage });
+        }
         return;
     }
     if (!c.enemy) spawnEnemy(game);

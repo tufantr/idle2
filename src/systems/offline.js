@@ -51,6 +51,7 @@ function diff(before, state) {
         items: state.inventory.length - before.items,
         salvaged: (state.stats.itemsSalvaged || 0) - before.salvaged, // auto-salvages count here too
         died: state.stats.deaths > before.deaths,
+        deaths: state.stats.deaths - before.deaths,
         dungeonClears: DUNGEONS.map(d => ({ id: d.id, name: d.name, clears: state.dungeons[d.id].clears - before.dungeons[d.id].clears, fragments: state.dungeons[d.id].fragments - before.dungeons[d.id].fragments }))
             .filter(d => d.clears > 0),
         pets: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => `${p.icon} ${p.name}`),
@@ -108,15 +109,16 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
         game.recompute();
         if (state.action) state.action.progress = 0;
         if (mastery) mastery.to = masteryLevel(state, def.skill, def.mastery.key);
-    } else if (state.combat.active) {
+    } else if (state.combat.active || state.combat.recovering) {
         mode = 'combat';
         // Replay in 1 s steps: tickCombat resolves every attack inside a step in time order, so bigger
-        // steps give the same fight with a tenth of the work. Combat stops on its own if the player dies.
+        // steps give the same fight with a tenth of the work. A fall is not the end: the hero rests to
+        // full health and fights on (combat stops only if something else ends it).
         const step = 1000;
         let remaining = simulated;
         const savedNow = game.now;
         game.now = now - simulated;
-        while (remaining > 0 && state.combat.active) {
+        while (remaining > 0 && (state.combat.active || state.combat.recovering)) {
             const dt = Math.min(step, remaining);
             tickCombat(game, dt);
             remaining -= dt;
@@ -124,7 +126,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             if (game.dirty) game.recompute(); // level-ups and potion charges take effect mid-replay
         }
         game.now = savedNow;
-        if (!state.combat.active) stalledReason = state.stats.deaths > before.deaths ? 'you were defeated' : 'combat stopped';
+        if (!state.combat.active && !state.combat.recovering) stalledReason = 'combat stopped';
     }
     game.silent = wasSilent;
 
@@ -144,7 +146,7 @@ export function describeOffline(summary) {
     if (summary.mode === 'rest') lines.push('Your hero rested at camp. Start a skill or enter combat before leaving to keep progressing.');
     if (summary.mode === 'skill') lines.push(summary.stalledReason ? `Work stopped early: ${summary.stalledReason}.` : 'Your hero kept working the whole time.');
     if (summary.mode === 'combat') {
-        const fell = summary.died ? (summary.startedInDungeon ? ' — then a dungeon run failed and you left the fight' : ' — then you were defeated and retreated') : '';
+        const fell = summary.deaths ? ` — ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}you fell ${summary.deaths === 1 ? 'once' : `${summary.deaths} times`} and got up again` : '';
         lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stages gained` : ''}${fell}.`);
         for (const d of summary.dungeonClears || []) lines.push(`${d.clears.toLocaleString()} ${d.name} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)`);
     }

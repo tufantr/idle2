@@ -48,7 +48,8 @@ export function createDefaultState(now = Date.now()) {
             regroupLeft: 0,    // ms left farming the previous stage after a boss escaped
             mode: 'stages',    // 'stages' | 'dungeon' | 'titan'
             dungeon: null,     // { id, index } while in a dungeon run
-            autoRepeat: true   // start the dungeon again after each clear
+            autoRepeat: true,  // start the dungeon again after each clear
+            recovering: false  // fallen: resting to full health, then back into the fight by himself
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
@@ -297,6 +298,7 @@ function normalise(data, now) {
     state.combat.maxStage = Math.max(state.combat.stage, Math.floor(Number(state.combat.maxStage) || 1));
     state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
     state.combat.combo = 0;
+    state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;
     state.prestige.runStartedAt = Math.min(state.prestige.runStartedAt, now);

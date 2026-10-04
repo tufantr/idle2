@@ -93,9 +93,13 @@ const DEF_ICON = sprite('item/Shield/3', { scale: 0.5, cls: 'soft res-spr' });
 /** A weekend event's picture (src/ui/features.js EVENT_ART), small enough for a pill or a line. */
 const eventIcon = (e, scale = 0.5) => sprite(EVENT_ART[e.id], { scale, cls: scale < 1 ? 'soft res-spr' : '', fallback: e.icon });
 
-/** Is the fight filling the screen? On the combat tab, while fighting, unless the player folded it away. */
+/**
+ * Is the fight filling the screen? On the combat tab, while fighting (or resting after a fall, before
+ * going on), unless the player folded it away.
+ */
 export function battleMode(game, ui) {
-    return ui.tab === 'combat' && game.state.combat.active && ui.battleFull !== false;
+    const c = game.state.combat;
+    return ui.tab === 'combat' && (c.active || c.recovering) && ui.battleFull !== false;
 }
 
 // ---------- sidebar ----------
@@ -430,6 +434,8 @@ function combatOrders(game, ui) {
     const leave = c.mode === 'dungeon' ? 'Abandon run' : c.mode === 'titan' ? 'Give up' : 'Retreat';
     const orders = [
         c.active ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">${ICON_FLAG} ${leave}</button>` : '',
+        // fallen and resting: he goes back in by himself, unless told to stay
+        !c.active && c.recovering ? `<button class="mini-btn retreat-btn" onclick="FI.stayAtCamp()" title="Rest without going back into the fight">${ICON_MOON} Stay at camp</button>` : '',
         // Folded away mid-fight: one button brings the full screen back.
         c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '',
         c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">${ICON_MAP} Map</button>` : '',
@@ -1765,7 +1771,7 @@ export function renderWelcomeBack(summary, state) {
     const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp. Start a skill or enter combat before you leave to keep progressing.'
         : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
-        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.died ? (summary.startedInDungeon ? ', then a dungeon run failed' : ', then your hero fell and retreated') : ''}.`;
+        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}he fell ${summary.deaths === 1 ? 'once' : `${fmt(summary.deaths)} times`} and got up again` : ''}.`;
     let i = 0;
     const next = () => i++;
     const skills = Object.entries(summary.skills).map(([id, s]) => {

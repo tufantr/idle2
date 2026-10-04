@@ -425,6 +425,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A fall is not the end of the fight**: after a death the hero rests at the campfire until his
+      health is full (the scene counts it down) and goes back in by himself from where he retreated;
+      the dock's Retreat becomes "Stay at camp" meanwhile, and the fight keeps the screen. The time
+      away is replayed the same way: a hero who fell early in a six-hour absence used to come back to
+      "0 monsters defeated"; now he fought on (the report says how often he fell and got up)
 - [x] **The next land is ready before the hero gets there**: from a zone's eighth stage the next
       zone's painting is fetched, so beating the boss never shows an empty backdrop on a slow line
 - [x] **The prestige dialog in pictures**: what is gained leads, big (the tokens and skill points as
