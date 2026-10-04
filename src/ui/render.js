@@ -1048,9 +1048,13 @@ export function renderInventory(game, ui) {
             </div>
             <div class="bag-grid">${bag}</div>
             ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Bosses drop some, and a smith can forge it.</p>'}
-            ${seen(state, 'auto_salvage') ? `<label class="muted small auto-salvage" title="Dropped gear up to this quality is salvaged for essence as it lands: never an upgrade, never a locked item. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">Auto-salvage drops up to
-                <select class="material-select" onchange="FI.setAutoSalvage(this.value)">${AUTO_SALVAGE_OPTIONS.map(o => `<option value="${o}" ${o === auto ? 'selected' : ''}>${o === 'off' ? 'off' : RARITIES.find(r => r.id === o).name}</option>`).join('')}</select>
-            </label>` : ''}
+            ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality is salvaged for essence as it lands: never an upgrade, never a locked item. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
+                <span>${resIcon('essence')} Auto-salvage drops up to</span>
+                <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
+                    const r = RARITIES.find(x => x.id === o);
+                    return `<button class="rarity-pill${o === auto ? ' on' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}">${o === 'off' ? 'Off' : esc(r.name)}</button>`;
+                }).join('')}</span>
+            </div>` : ''}
         </section>
     </div>
     <section class="glass-panel ${painted('storeroom', 'center 45%')}">

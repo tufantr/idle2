@@ -427,7 +427,8 @@ progress as motion, art before words, one stage with a HUD around it.
       is a sprite too
 - [x] **Metals, settings and gems as picture tiles**: the Forge's metal and Crafting's setting and gem
       are rows of tiles with how many you hold (the picked one lit, an empty one grey) instead of
-      dropdowns; Crafting starts on the best setting you have
+      dropdowns; Crafting starts on the best setting you have; the bag's auto-salvage level is a row of
+      pills in each rarity's colour
 - [x] **The armory answers**: Upgrade rings the anvil and the piece pops with a glow, Reforge chimes
       with a violet glow, Sell commons pours coins, Salvage drops, and putting on gear makes the hero on
       his dais hop (all still with reduced motion, sounds aside)

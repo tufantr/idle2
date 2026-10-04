@@ -606,6 +606,11 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .locked-item { box-shadow: inset 0 0 0 1px rgba(252, 211, 77, 0.25); }
 .badge-upgrade { padding: 0 0.3rem; border-radius: 6px; font-size: 0.65rem; font-weight: 800; color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); }
 .auto-salvage { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; }
+/* the auto-salvage level as pills in each rarity's colour (the picked one filled) */
+.rarity-pills { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.rarity-pill { padding: 0.22rem 0.65rem; border-radius: 999px; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--r); background: rgba(0, 0, 0, 0.35); border: 1px solid color-mix(in srgb, var(--r) 45%, transparent); box-shadow: none; cursor: pointer; }
+.rarity-pill:hover { transform: none; border-color: var(--r); background: color-mix(in srgb, var(--r) 12%, rgba(0, 0, 0, 0.35)); }
+.rarity-pill.on { color: #120d08; background: var(--r); border-color: var(--r); box-shadow: 0 0 10px color-mix(in srgb, var(--r) 45%, transparent); }
 
 /* ---------- shop, prestige, achievements ---------- */
 .shop-list { display: flex; flex-direction: column; gap: 0.6rem; }
