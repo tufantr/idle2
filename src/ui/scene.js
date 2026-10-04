@@ -308,10 +308,12 @@ export function createScene(root, actions) {
         return parts.join('');
     }
 
+    // the monster's line: its attack, the time between its blows, and the gold it is worth
+    const META_ICON = { atk: sprite('item/Weapon/3', { scale: 0.5, cls: 'soft res-spr' }), time: sprite('perk/endurance', { scale: 0.5, cls: 'soft res-spr' }), gold: sprite('gold', { scale: 0.5, cls: 'soft res-spr' }) };
     function foeMeta(state, d, enemy) {
         const payout = killPayout(state, enemy);
         const gold = goldForKill(payout.full ? enemy : { ...enemy, boss: false }, d.goldMult) * (enemy.gilded ? BALANCE.rewards.gildedGoldMult : 1);
-        return `⚔️ ${fmt(enemy.atk)} · ⏱ ${seconds(enemy.interval)} · 🪙 ${fmt(gold)}`;
+        return `<span title="Attack">${META_ICON.atk} ${fmt(enemy.atk)}</span><span title="Time between its attacks">${META_ICON.time} ${seconds(enemy.interval)}</span><span title="Gold for the kill">${META_ICON.gold} ${fmt(gold)}</span>`;
     }
 
     function showEnemy(game, enemy, silent) {
@@ -324,7 +326,7 @@ export function createScene(root, actions) {
         el.foe.classList.toggle('gilded', !!enemy.gilded);
         el.foe.setAttribute('aria-label', `Strike ${enemy.name}: half damage, builds your combo`);
         el.foe.title = `Click to strike ${enemy.name}: half damage, builds your combo`;
-        setText(el.foeMeta, foeMeta(game.state, game.derived, enemy));
+        setMarkup(el.foeMeta, foeMeta(game.state, game.derived, enemy));
         resetTrail(trails.foe, Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100))); // a fresh monster has no damage trail
         if (silent) return;
         move(el.foeSprite, enemy.boss ? 'bossSpawn' : 'spawn');
@@ -376,13 +378,13 @@ export function createScene(root, actions) {
             }
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);
-                setText(el.zone, dg ? dg.name : 'Dungeon');
+                setMarkup(el.zone, esc(dg ? dg.name : 'Dungeon'));
                 setText(el.stage, dg ? `Room ${Math.min((c.dungeon?.index || 0) + 1, dg.monsters.length + 1)} of ${dg.monsters.length + 1}` : '');
             } else if (c.mode === 'titan') {
-                setText(el.zone, '🗿 Titan challenge');
+                setMarkup(el.zone, `${sprite('titan/0', { scale: 0.75, cls: 'soft res-spr' })} Titan challenge`);
                 setText(el.stage, `Level ${titanLevel(state)}`);
             } else {
-                setText(el.zone, zoneForStage(c.stage).name);
+                setMarkup(el.zone, esc(zoneForStage(c.stage).name));
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
             }
             // The zone's name opens the world map, once there is a second zone to travel to.
@@ -395,7 +397,7 @@ export function createScene(root, actions) {
             if (el.heroName.__html !== nameHtml) { el.heroName.innerHTML = nameHtml; el.heroName.__html = nameHtml; }
             setMarkup(el.heroMeta, heroKit(state));
             const enemy = currentEnemy(state);
-            if (enemy === lastEnemy) setText(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
+            if (enemy === lastEnemy) setMarkup(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
             const scale = fighterScale();
             const layers = `${scale}|${heroLayers(state).join(',')}`;
             // A pet keeps him company: Fang, the fighting pet, or else the first pet he found.

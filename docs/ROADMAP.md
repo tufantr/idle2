@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The monster's line in pictures**: its attack, the time between its blows and its gold show
+      a sword, an hourglass and coins instead of emoji; the Titan's title wears the Titan
 - [x] **A new land**: the first step ever into a zone is a card on its painting, with its ruler as a
       silhouette (met at its tenth stage), its stages and what drops there. Once per zone in the
       whole game (not again after a prestige, not for the Abyss's deeper depths)
