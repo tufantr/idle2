@@ -669,6 +669,7 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   Once the Dungeons tab has opened, the dungeons stand on it too as arched gates (`DUNGEON_PINS`):
   the open ones and the next as a silhouette, as on the tab. A gate's card has the run's estimate,
   the unique's fragments and Enter. Travel leaves a dungeon run (`travelTo`), but not the Titan.
+  The hero himself, dressed as in the fight, stands beside the pin of where he is.
 
 ### 3.23 Presentation: the fight on the whole screen
 

@@ -11,7 +11,7 @@ import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES } from '../data/du
 import { isUnlocked } from '../data/unlocks.js';
 import { dungeonUnlocked, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
-import { sprite, resIcon } from './sprites.js';
+import { sprite, resIcon, heroSprite } from './sprites.js';
 import { dungeonVerdict } from './render.js';
 import { escapeHtml as esc } from './format.js';
 
@@ -129,9 +129,12 @@ export function renderWorldMapModal(game) {
         </button>`;
     });
     const info = typeof picked === 'string' ? renderDungeonInfo(game, picked) : renderZoneInfo(game, picked);
+    // the hero himself stands beside the pin of where he is (nowhere, while he faces the Titan)
+    const spot = c.mode === 'dungeon' ? DUNGEON_PINS[c.dungeon?.id] : c.mode === 'stages' ? ZONE_PINS[ZONES[here].id] : null;
+    const hero = spot ? `<span class="map-hero" style="left:${spot[0]}%;top:${spot[1]}%" aria-hidden="true">${heroSprite(state, { scale: 1 })}</span>` : '';
     return `<div class="modal-content map-modal">
         <div class="modal-header">The world</div>
-        <div class="map-board" role="group" aria-label="World map">${pins.join('')}${gates.join('')}</div>
+        <div class="map-board" role="group" aria-label="World map">${pins.join('')}${gates.join('')}${hero}</div>
         <div class="map-info" aria-live="polite">${info}</div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" data-autofocus onclick="FI.closeModal()">Close</button></div>
     </div>`;

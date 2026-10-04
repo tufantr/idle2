@@ -1906,6 +1906,13 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .map-pin.gate.picked .dungeon-gate { box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.55), inset 0 0 12px rgba(0, 0, 0, 0.7), 0 0 0 3px #fde68a, 0 0 18px rgba(252, 211, 77, 0.7); }
 .map-pin.gate .map-pin-name { color: #fcd9b0; background: rgba(40, 14, 8, 0.82); }
 .zone-card .dungeon-gate { width: 50px; height: 56px; border-width: 2px; border-radius: 25px 25px 6px 6px; }
+/* the hero on the map, standing beside the pin of where he is */
+.map-hero { position: absolute; z-index: 2; pointer-events: none; transform: translate(calc(-100% - 15px), -80%); filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.75)); }
+.map-hero::before { content: ""; position: absolute; left: 50%; bottom: -2px; width: 30px; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(253, 230, 138, 0.75), rgba(253, 230, 138, 0)); }
+.map-hero .hero-doll { animation: mapHeroBob 1.8s ease-in-out infinite; }
+@keyframes mapHeroBob { 0%, 100% { transform: none; } 50% { transform: translateY(-3px); } }
+body.reduced-motion .map-hero .hero-doll { animation: none; }
+@media (prefers-reduced-motion: reduce) { .map-hero .hero-doll { animation: none; } }
 .map-info .frag-row { gap: 0.4rem; max-width: 16rem; }
 .map-info { margin-top: 0.8rem; }
 .zone-card { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem 0.9rem; padding: 0.7rem 0.9rem; border-radius: 12px; background: var(--well); border: 1px solid var(--line); }
@@ -1919,6 +1926,9 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
     .zone-emblem { width: 34px; height: 34px; border-width: 1px; }
     .dungeon-gate { width: 30px; height: 35px; border-width: 1px; border-radius: 15px 15px 4px 4px; }
     .map-pin .zone-emblem .spr, .map-pin .dungeon-gate .spr { --k: 0.75 !important; image-rendering: auto; }
+    .map-hero { transform: translate(calc(-100% - 11px), -75%); }
+    .map-hero .hero-doll { --k: 0.75 !important; }
+    .map-hero .hero-doll .spr { image-rendering: auto; }
     .map-pin-name { display: none; }
     .zone-card .zone-emblem { width: 46px; height: 46px; }
 }

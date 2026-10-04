@@ -425,6 +425,8 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The hero on the world map**: he stands, bobbing, beside the pin of where he is (his zone, or
+      the gate of the dungeon he is in), dressed as he is in the fight
 - [x] **No empty strip in a new player's first fight on a phone**: the dock's supplies group, which
       held only the zone's drops (hidden on a phone), is left out until there is food or a potion
 - [x] **Glyphs instead of emoji beside numbers**: thirteen small pixel icons (`icon/*` in the atlas,
