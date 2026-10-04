@@ -1,9 +1,11 @@
 # Fantasy Idle
 
-A browser idle RPG in the spirit of Melvor Idle: train twelve skills and master every action in them,
-forge your own gear, fight through ten zones and an endless Abyss, clear dungeons, face the hourly
-Titan, build an agility course, and prestige for permanent power. Weekend events bring bonuses,
-Festival Tokens and an event shop. Optional accounts add cloud saves, clans with a weekly shared boss,
+A browser idle RPG in the spirit of Melvor Idle: name your hero and pick a look, train twelve skills
+and master every action in them, forge your own gear, fight through ten zones and an endless Abyss,
+clear five dungeons, face the hourly Titan, build an agility course, fill a bestiary, and prestige for
+permanent power and a rank worn as the hero's cloak. Daily crates (every seventh a great one) and
+weekend events bring bonuses, Festival Tokens and an event shop. Painted places, pixel sprites,
+synthesized sound; it plays on a phone too. Optional accounts add cloud saves, clans with a weekly shared boss,
 and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
 Postgres API.
 
