@@ -249,9 +249,7 @@ export function renderHeader(game, ui, cloud) {
     if (action) {
         if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</button>`;
     } else if (state.combat.active) {
-        // on a phone the ladder's pill is just the stage, so it shares a row with the others
-        const where = state.combat.mode === 'stages' ? `<span class="pill-long">${esc(fightingWhere(state))}</span><span class="pill-short">Stage ${state.combat.stage}</span>` : esc(fightingWhere(state));
-        if (ui.tab !== 'combat') status = `<button class="status-pill fighting" onclick="FI.switchTab('combat')">${tabIcon('combat', 0.625)} ${where}</button>`;
+        if (ui.tab !== 'combat') status = `<button class="status-pill fighting" onclick="FI.switchTab('combat')">${tabIcon('combat', 0.625)} ${esc(fightingWhere(state))}</button>`;
     } else if (!here) {
         status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }
@@ -440,7 +438,7 @@ function combatOrders(game, ui) {
         !c.active && c.recovering ? `<button class="mini-btn retreat-btn" onclick="FI.stayAtCamp()" title="Rest without going back into the fight">${ICON_MOON} Stay at camp</button>` : '',
         // Folded away mid-fight: one button brings the full screen back.
         c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '',
-        c.mode === 'stages' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">${ICON_MAP} Map</button>` : '',
+        c.mode !== 'titan' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">${ICON_MAP} Map</button>` : '',
         c.mode === 'stages' && seen(state, 'stage_nav') ? `<label class="toggle stay-toggle" title="Stay on this stage instead of moving on: for gathering its loot"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Stay on this stage</label>` : ''
     ].filter(Boolean);
     return orders.length ? `<div class="combat-side">${orders.join('')}</div>` : '';

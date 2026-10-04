@@ -305,7 +305,6 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .focus-pill { border-color: rgba(125, 211, 252, 0.5); color: #bae6fd; background: rgba(56, 189, 248, 0.08); }
 .bonfire-pill { border-color: rgba(249, 115, 22, 0.5); color: #fdba74; background: rgba(249, 115, 22, 0.1); }
 .event-pill { font: inherit; font-size: 0.8rem; color: inherit; cursor: pointer; border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
-.pill-short { display: none; }  /* a pill's phone wording */
 .daily-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.85rem 0.4rem 0.6rem; border-radius: 999px; font-size: 0.8rem; }
 .daily-btn .spr { margin: -6px 0; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
 .daily-btn.ready { color: #1f1406; font-weight: 800; border-color: #f7d88a; background: linear-gradient(180deg, #e2b95f, #9c7127); animation: liveBadgePulse 1.3s ease-in-out infinite; }
@@ -905,7 +904,6 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .header-row { gap: 0.4rem; }
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
     .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */
-    .pills .pill-short { display: inline; }
     .pills .status-pill { display: none; }  /* the hotbar's Battle and work buttons already show what the hero is doing */
     .chip span, .chip i:not(.spr) { display: none; }
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
@@ -2060,8 +2058,7 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .clan-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
 .clan-tile { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.9rem 0.5rem 0.8rem; text-align: center; border-radius: 12px; background: rgba(12, 9, 6, 0.72); border: 1px solid var(--line); }
 .clan-tile b { font-family: var(--font-display); color: var(--heading); font-size: 0.95rem; line-height: 1.2; }
-.clan-tile-art { display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7)); }
-.clan-tile-art { min-height: 100px; }
+.clan-tile-art { display: flex; align-items: flex-end; justify-content: center; min-height: 100px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7)); }
 @media (max-width: 600px) { .clan-tiles { gap: 0.4rem; } .clan-tile { padding: 0.7rem 0.3rem; } .clan-tile b { font-size: 0.8rem; } .clan-tile-art { min-height: 68px; } .clan-tile-art .spr, .clan-tile-art .hero-doll { --k: 2 !important; } .clan-tile-art .res-spr { --k: 1.25 !important; } }
 
 /* shop goods as a grid of item cards; a dungeon's unique as a bar of fragments */

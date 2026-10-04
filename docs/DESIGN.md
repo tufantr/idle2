@@ -684,7 +684,8 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   gear tier) with a Travel button; on a phone the pins lose their labels and the zone card names them.
   Once the Dungeons tab has opened, the dungeons stand on it too as arched gates (`DUNGEON_PINS`):
   the open ones and the next as a silhouette, as on the tab. A gate's card has the run's estimate,
-  the unique's fragments and Enter. Travel leaves a dungeon run (`travelTo`), but not the Titan.
+  the unique's fragments and Enter. The map opens in a dungeon run too (from the dock, the title or M),
+  on that dungeon's gate; Travel from there gives the run up (`travelTo`). Not during the Titan's fight.
   The hero himself, dressed as in the fight, stands beside the pin of where he is.
 
 ### 3.23 Presentation: the fight on the whole screen

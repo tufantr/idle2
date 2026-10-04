@@ -439,7 +439,7 @@ export function createScene(root, actions) {
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
             }
             // The zone's name opens the world map, once there is a second zone to travel to.
-            const mapped = c.mode === 'stages' && seen(state, 'world_map');
+            const mapped = c.mode !== 'titan' && seen(state, 'world_map');   // in a dungeon too: its gate is on the map
             el.zone.disabled = !mapped;
             el.zone.title = mapped ? 'Open the world map' : '';
             renderPath(state);

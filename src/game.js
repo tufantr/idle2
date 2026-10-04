@@ -183,10 +183,10 @@ export class Game {
 
     canPrestige() { return canPrestige(this.state, this.now); }
     prestigePreview() { return prestigePreview(this); }
-    /** Prestige. With `resume`, a hero who was fighting walks straight into the new run's first fight. */
+    /** Prestige. With `resume`, a hero who was fighting (or resting to fight on) walks straight into the new run's first fight. */
     prestige({ resume = false } = {}) {
         return this._act(() => {
-            const fighting = this.state.combat.active;
+            const fighting = this.state.combat.active || this.state.combat.recovering;
             const done = doPrestige(this);
             if (done && resume && fighting) enterCombat(this);
             return done;

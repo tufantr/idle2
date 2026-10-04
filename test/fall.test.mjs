@@ -102,3 +102,20 @@ test('a hero who falls early while away fights on through the absence', () => {
     assert.equal(summary.stalledReason, null);
     assert.ok(back.state.combat.active || back.state.combat.recovering, 'still at it on return');
 });
+
+test('a prestige while resting after a fall walks the hero into the new run, as from the fight', () => {
+    const game = fighter(15);
+    game.state.prestige.runStartedAt = 0;          // the ten-minute rule is met
+    fall(game);
+    assert.equal(game.state.combat.recovering, true);
+    assert.ok(game.canPrestige());
+    assert.ok(game.prestige({ resume: true }));
+    assert.equal(game.state.combat.active, true, 'into the first fight of the new run');
+    assert.equal(game.state.combat.recovering, false);
+
+    const resting = fighter(15);                  // a hero sent to rest by the player stays there
+    resting.state.prestige.runStartedAt = 0;
+    resting.leaveCombat();
+    assert.ok(resting.prestige({ resume: true }));
+    assert.equal(resting.state.combat.active, false);
+});

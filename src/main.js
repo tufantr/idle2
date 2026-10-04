@@ -221,7 +221,7 @@ for (const type of ['pointerup', 'pointercancel']) document.addEventListener(typ
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
 // bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .chest-loot .cl, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way';
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way';
 let tipNode = null;
 let tipTimer = 0;
 function showTip(el, text) {
@@ -237,7 +237,7 @@ function showTip(el, text) {
     const h = node.offsetHeight;
     const x = Math.max(8 + w / 2, Math.min(window.innerWidth - 8 - w / 2, box.left + box.width / 2));
     const above = box.top - h - 8 >= 8;
-    node.style.left = `${x}px`;
+    node.style.left = `${x - w / 2}px`;   // x is the bubble's centre
     node.style.top = `${above ? box.top - h - 8 : box.bottom + 8}px`;
     tipNode = node;
     tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
@@ -280,7 +280,7 @@ document.addEventListener('keydown', event => {
     // Two keys for the fight: M opens the map, Space strikes the monster (a press each: holding it does nothing more).
     if (ui.modalOpen || event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     const c = game.state.combat;
-    if ((event.key === 'm' || event.key === 'M') && c.mode === 'stages' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
+    if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
     else if (event.key === ' ' && ui.tab === 'combat' && c.active && !target?.closest?.('button, a, [role="button"]')) {
         event.preventDefault();
         if (!event.repeat) document.querySelector('#scene .foe')?.click();
