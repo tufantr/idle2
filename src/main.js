@@ -771,7 +771,7 @@ window.FI = {
     claimDaily() {
         const crate = game.claimDaily();
         if (crate) {
-            sound.play('chest');
+            sound.play(crate.great ? 'legendary' : 'chest');
             if (ui.modalOpen === 'crate') closeModal(); // "open the next": the new crate replaces this one
             openModal(renderCrateModal(crate, game.state.daily.banked, cratesTowardGreat(game.state)), 'crate');
         }
