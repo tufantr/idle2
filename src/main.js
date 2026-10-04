@@ -418,6 +418,7 @@ function handleEvents(events) {
             }
             case 'achievement': { // a medal: a card with its picture, the reward it brings for good
                 const a = achievementById(ev.id);
+                if (ui.tab !== 'achievements' && isUnlocked(game.state, 'achievements')) markFresh('achievements', true);   // "New" on the Hall until visited
                 if (a) rewards.celebrate({ key: `medal:${a.id}`, kind: 'medal', icon: `<span class="cel-medal">${medalArt(a, 2)}</span>`, kicker: ev.secret ? 'A secret medal' : 'A new medal', title: a.name, lines: [escapeHtml(a.reward)], ms: 3600 });
                 else toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625));
                 break;
