@@ -40,7 +40,9 @@ Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.m
 
 - Sprites: `assets/sprites.png` and `src/data/sprites.js` are generated, never hand-edited.
   `tools/atlas.py` packs Dungeon Crawl Stone Soup tiles (CC0) and `tools/resource_art.py` draws or
-  recolors the resource icons, pets and farm plots. To rebuild:
+  recolors the resource icons, pets, farm plots, perk badges, tools, obstacles and the small glyphs
+  beside numbers (`icon/*`, drawn with `glyph()` in `src/ui/sprites.js` instead of emoji); the hero's
+  looks come from `src/data/looks.js`. New cells go at the end so old ones keep their place. To rebuild:
   `git clone --depth 1 https://github.com/crawl/crawl.git ../crawl`, `pip install pillow numpy`,
   `python3 tools/atlas.py ../crawl/crawl-ref/source/rltiles`.
 - Backdrops: `assets/paint/*.webp` are Gemini paintings (AI-made, credited), imported with
