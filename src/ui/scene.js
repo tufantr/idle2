@@ -300,7 +300,7 @@ export function createScene(root, actions) {
                 return { label: i + 1, state: st, boss, portrait: name ? sprite(`mon/${name}`, { scale: 0.75, cls: `soft${met ? '' : ' silhouette'}` }) : '', title: `${boss ? 'The boss' : `Room ${i + 1}`}${met && name ? `: ${name}` : ''}` };
             });
         } else if (c.mode === 'titan') {
-            nodes = [{ label: 'T', state: 'now', boss: true, title: 'The Titan' }];
+            nodes = [{ label: 'T', state: 'now', boss: true, title: 'The Titan', portrait: sprite(monsterSpriteKey(c.enemy) || 'titan/0', { scale: 0.75, cls: 'soft' }) }];
         } else {
             const start = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
             nodes = Array.from({ length: STAGES_PER_ZONE }, (_, i) => {
