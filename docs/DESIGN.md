@@ -418,7 +418,7 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 
 ### 3.14 Achievements, unlocks and the daily crate
 
-- **Achievements** (`src/data/achievements.js`): 32, each with a named reward applied through the
+- **Achievements** (`src/data/achievements.js`): 35 open and 3 secret, each with a named reward applied through the
   pipeline **plus** +1% ATK, DEF and skill speed per achievement (Antimatter Dimensions / Cookie
   Clicker "milk" pattern). Dungeon clears, Titans, pets, uniques, the new skills, a finished agility
   course and mastery (500 and 2,500 levels, a first 99) have their own. A test checks that every bonus in the data is well-formed (the Forager perk
