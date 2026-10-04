@@ -426,7 +426,8 @@ progress as motion, art before words, one stage with a HUD around it.
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
 - [x] **Pick the pet at your side**: a found pet's card in the Collection is a button; the one tapped
-      follows the hero into the fight (Fang, or the first found, until one is picked)
+      follows the hero into the fight (Fang, or the first found, until one is picked), and to work where the
+      skill's own pet hasn't been found yet
 - [x] **Looks earned with medals**: six more bodies for the hero (an orc, a gold djinni, a winged
       gargoyle, a mummy, a horned demonspawn, a ghoul), each won with a medal; its card shows the hero
       in the new look, Settings shows the next to earn as a silhouette, and in the Hall such a medal has

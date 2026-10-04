@@ -9,7 +9,7 @@ import { SKILLS, NON_COMBAT_SKILLS, WORKSHOP_SKILLS } from '../data/skills.js';
 import { RESOURCES } from '../data/resources.js';
 import { TYPE_ICONS } from '../data/items.js';
 import { cropById } from '../data/farming.js';
-import { petForSkill } from '../data/pets.js';
+import { petForSkill, companionPet } from '../data/pets.js';
 import { resolveAction, intervalFor } from '../systems/skilling.js';
 import { plotReady } from '../systems/farming.js';
 import { courseDef } from '../systems/agility.js';
@@ -133,9 +133,11 @@ export function createStage(root, { sound = () => {}, pat = () => {} } = {}) {
             const hk = `${skill}|${heroLayers(state, look).join(',')}`;
             if (hk !== heroKey) { heroKey = hk; el.figure.innerHTML = heroSprite(state, { scale: phone() ? 3 : 4, ...look }); }
             // the skill's own pet, once found, keeps him company at work
-            const pet = petForSkill(skill);
-            const petKey = pet && state.pets?.[pet.id] ? `${pet.id}|${phone()}` : '';
-            if (petKey !== el.pet.dataset.key) { el.pet.dataset.key = petKey; el.pet.innerHTML = petKey ? sprite(`pet/${pet.id}`, { scale: phone() ? 1 : 2 }) : ''; }
+            // the skill's own pet keeps the hero company at work, or else the pet picked for the fight
+            const own = petForSkill(skill);
+            const petId = own && state.pets?.[own.id] ? own.id : companionPet(state);
+            const petKey = petId ? `${petId}|${phone()}` : '';
+            if (petKey !== el.pet.dataset.key) { el.pet.dataset.key = petKey; el.pet.innerHTML = petKey ? sprite(`pet/${petId}`, { scale: phone() ? 1 : 2 }) : ''; }
             let view;
             if (skill === 'farming') view = farmView(game);
             else {
