@@ -427,7 +427,8 @@ progress as motion, art before words, one stage with a HUD around it.
       is a sprite too
 - [x] **The great crate**: every seventh daily crate opened is a great one (three times the gold,
       twice the rest, a better gem), in a golden dialog; seven little crates in the dialog show the way
-      to the next. A count, not a streak: a missed day still costs nothing
+      to the next. A count, not a streak: a missed day still costs nothing. When the crate waiting is the
+      great one, the header's button says "Great crate" in brighter gold ("Great!" on a phone's hotbar)
 - [x] **Name your hero on the title card**: an optional field above Begin your adventure (Enter
       starts too); the name is over him in his first fight. The button keeps the focus, so a phone's
       keyboard doesn't jump up

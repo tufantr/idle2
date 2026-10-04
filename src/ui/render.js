@@ -32,7 +32,7 @@ import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { DISCORD_INVITE } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
-import { DAILY_MAX_BANKED } from '../systems/daily.js';
+import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
@@ -208,7 +208,7 @@ export function renderHotbar(game, ui) {
         button(tabIcon('combat', 1), fighting ? 'Fighting' : 'Battle', "FI.switchTab('combat')", { active: ui.tab === 'combat', live: fighting }),
         work,
         button(tabIcon('inventory', 1), 'Inventory', "FI.switchTab('inventory')", { active: ui.tab === 'inventory', badge: upgrade ? '▲' : '' }),
-        button(sprite('crate', { scale: 1, fallback: '📦' }), banked > 0 ? 'Crate' : duration(state.daily.nextAt - game.now), 'FI.claimDaily()', { badge: banked > 0 ? String(banked) : '', disabled: banked < 1 })
+        button(sprite('crate', { scale: 1, fallback: '📦' }), banked > 0 ? (cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1 ? 'Great!' : 'Crate') : duration(state.daily.nextAt - game.now), 'FI.claimDaily()', { badge: banked > 0 ? String(banked) : '', disabled: banked < 1 })
     ].join('');
 }
 
@@ -228,8 +228,9 @@ export function renderHeader(game, ui, cloud) {
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill points: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
     const banked = state.daily.banked;
+    const greatNext = cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1;   // the crate waiting is a great one
     const daily = banked > 0
-        ? `<button class="daily-btn ready" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">Daily crate</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
+        ? `<button class="daily-btn ready${greatNext ? ' great' : ''}" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">${greatNext ? 'Great crate' : 'Daily crate'}</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
         : '';
     const bonfirePill = bonfireLit(state, game.now)
         ? `<span class="bonfire-pill" title="Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP · ${duration(state.bonfire.until - game.now)}</span>`
