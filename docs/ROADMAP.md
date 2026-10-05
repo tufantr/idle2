@@ -429,6 +429,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The menu starts with the Clan**, then the Shop and the Inventory (the owner's order), above the
+      Combat and Skills headings; the rest keeps its order. On a phone the strip of places begins the
+      same way and slides to the place opened
 - [x] **A bug sweep** (four reviews: combat, skills, saves and the server, the screens). Fixed: a
       reload while the hero waited at a dungeon's chest brought the boss back, for endless extra clears
       and fragments; away from the game, medals earned on the way, a mini-game boost (which used to

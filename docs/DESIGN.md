@@ -693,6 +693,8 @@ screen from the first second. Now the same rule holds inside the screens. The ru
 
 - **Hidden, not locked.** The sidebar lists the places that are open and one "next" slot (the
   place's painting, its name, the task and a bar). Group headings come when the list is seven long.
+  The clan, the shop and the bag come first, above the headings (the owner's order: the clan is the
+  online heart of the game); then Combat, the skills, and the Hall, Events and Settings.
   Inside a screen, a piece opens the first time it means something (`src/systems/disclosure.js`):
   a currency when you hold some, the camp with the gold for its first upgrade, the food row with
   Cooking, the potion row with Alchemy, "Stay on this stage" after the first defeat, the world map

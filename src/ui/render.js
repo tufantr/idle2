@@ -47,7 +47,12 @@ import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, next
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 
+// The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
+// the bag (the owner's order), in a group of their own above the headings; the rest follow by group.
 export const TABS = [
+    { id: 'clan', name: 'Clan', icon: '🛡️', group: 'TOP' },
+    { id: 'shop', name: 'Shop', icon: '🔮', group: 'TOP' },
+    { id: 'inventory', name: 'Inventory', icon: '🎒', group: 'TOP' },
     { id: 'combat', name: 'Combat', icon: '⚔️', group: 'COMBAT' },
     { id: 'dungeons', name: 'Dungeons', icon: '🏰', group: 'COMBAT' },
     { id: 'mining', name: 'Mining', icon: '⛏️', group: 'SKILLS', skill: 'mining' },
@@ -61,12 +66,9 @@ export const TABS = [
     { id: 'smithing', name: 'Smithing', icon: '⚒️', group: 'SKILLS', skill: 'smithing' },
     { id: 'crafting', name: 'Crafting', icon: '💍', group: 'SKILLS', skill: 'crafting' },
     { id: 'agility', name: 'Agility', icon: '🤸', group: 'SKILLS', skill: 'agility' },
-    { id: 'inventory', name: 'Inventory', icon: '🎒', group: 'MANAGEMENT' },
-    { id: 'shop', name: 'Shop', icon: '🔮', group: 'MANAGEMENT' },
     { id: 'achievements', name: 'Achievements', icon: '🏆', group: 'MANAGEMENT' },
     { id: 'events', name: 'Events', icon: '🎉', group: 'MANAGEMENT' },
-    { id: 'settings', name: 'Settings', icon: '⚙️', group: 'MANAGEMENT' },
-    { id: 'clan', name: 'Clan', icon: '🛡️', group: 'SOCIAL' }
+    { id: 'settings', name: 'Settings', icon: '⚙️', group: 'MANAGEMENT' }
 ];
 
 const rarityColor = id => RARITIES.find(r => r.id === id)?.color || '#e2e8f0';
@@ -146,7 +148,7 @@ const NAV_HEADINGS_FROM = 7;
 
 export function renderNav(game, ui) {
     const state = game.state;
-    const groups = ['COMBAT', 'SKILLS', 'MANAGEMENT', 'SOCIAL'];
+    const groups = ['TOP', 'COMBAT', 'SKILLS', 'MANAGEMENT'];
     const action = resolveAction(state);
     const open = TABS.filter(tab => isUnlocked(state, tab.id) || tab.id === 'settings');
     const headings = open.length >= NAV_HEADINGS_FROM;
@@ -154,7 +156,7 @@ export function renderNav(game, ui) {
     for (const group of groups) {
         const tabs = open.filter(t => t.group === group);
         if (!tabs.length) continue;
-        if (headings) html += `<h3>${group}</h3>`;
+        if (headings && group !== 'TOP') html += `<h3>${group}</h3>`;   // the top three need no heading
         for (const tab of tabs) {
             const active = ui.tab === tab.id ? 'active' : '';
             const working = (action && (action.skill === tab.skill)) || (tab.id === 'combat' && state.combat.active) ? 'action-active' : '';
