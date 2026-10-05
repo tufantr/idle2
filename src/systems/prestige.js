@@ -54,6 +54,7 @@ export function doPrestige(game) {
     state.combat.maxStage = preview.startStage;
     state.combat.combo = 0;
     state.combat.regroupLeft = 0;
+    state.combat.farmMode = false;   // "stay on this stage" was for the old run: the new one climbs
     state.gold = 0;          // combat gold is run-scoped, like the camp it buys
     resetCamp(state);
     game.recompute();

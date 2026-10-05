@@ -9,7 +9,7 @@ import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResour
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
-import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue } from './systems/minigame.js';
+import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue, expireMinigames } from './systems/minigame.js';
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
@@ -24,7 +24,9 @@ import { capeEarned } from './data/capes.js';
 import { noteChronicle } from './systems/chronicle.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
-const OFFLINE_GAP_MS = 60000;    // gaps longer than this are replayed as offline progress
+// Gaps longer than this are replayed as offline progress (with its welcome-back report). A background
+// tab ticks about once a minute, so this sits well above that: those minutes run as ordinary play.
+const OFFLINE_GAP_MS = 5 * 60000;
 // Events that happen many times a second in combat; they don't warrant re-rendering a tab.
 const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge']);
 
@@ -87,6 +89,7 @@ export class Game {
             dt -= step;
             this.now = now - dt;
             this.state.meta.playtimeMs += step;
+            expireMinigames(this);
             if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || this.eventId(this.now) !== this.derived.event) this.recompute();
             this.state.meta.lastActiveAt = this.now;
             accrueDaily(this.state, this.now);

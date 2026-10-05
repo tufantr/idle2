@@ -338,6 +338,7 @@ export function endTitan(game, won) {
     const dealt = Math.max(0, Math.min(1, 1 - Math.max(0, enemy.hp) / enemy.maxHp));
     if (won) {
         state.titan.kills += 1;
+        state.titan.bestPct = 0;   // the next Titan is stronger: no best try against it yet
         bumpStat(game, 'titanKills');
         const essence = 8 * level;
         const gold = 30 * goldPerKillAtStage(state.combat.bestStage, game.derived.goldMult);

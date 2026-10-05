@@ -301,8 +301,8 @@ function normalise(data, now) {
     for (const [key, value] of Object.entries(pages)) if (value === true && isCodexKey(key)) state.codex[key] = true;
     for (const item of [...state.inventory, ...Object.values(state.equipped)]) if (item?.type && isCodexKey(codexKey(item))) state.codex[codexKey(item)] = true;
     state.stats.codexFound = Object.keys(state.codex).length;
-    if (!['auto', 'none'].includes(state.combat.autoEat) && !Object.hasOwn(RESOURCES, state.combat.autoEat)) state.combat.autoEat = 'auto';
-    if (state.combat.potion !== 'none' && !Object.hasOwn(RESOURCES, state.combat.potion)) state.combat.potion = 'none';
+    if (!['auto', 'none'].includes(state.combat.autoEat) && !(RESOURCES[state.combat.autoEat]?.heals > 0)) state.combat.autoEat = 'auto';
+    if (state.combat.potion !== 'none' && RESOURCES[state.combat.potion]?.category !== 'potion') state.combat.potion = 'none';
     if (state.action !== null && !(isPlainObject(state.action) && typeof state.action.kind === 'string')) state.action = null;
     if (typeof state.settings.forceEvent !== 'string') state.settings.forceEvent = null;
     const volume = Number(state.settings.volume);

@@ -500,15 +500,18 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 
 ### 3.16 Offline progress
 
-`src/systems/offline.js`. On load (and when a tab wakes after a minute or more) the game replays the
-time away with **the same code as online play**, silently: skill actions complete one by one
-(consuming inputs, stopping when they run out), workshop actions forge real items, and combat —
-including a dungeon run on repeat — is replayed in 1-second steps with food, potions, the boss timer
-and death (after a fall the hero rests to full health and fights on, as online, so one early fall
-doesn't waste the absence). The replay runs on the clock, so the bonfire burns out, Focus starts and a weekend event
-begins or ends when it really did. Farming plots run on timestamps and need no replay. A tab that
-ticks less often (browsers slow hidden tabs to once a minute) is simulated in 5-second steps, and a
-kill hands the rest of a step to the next monster, so the step size never changes the result. Capped at
+`src/systems/offline.js`. On load (and when a tab wakes after five minutes or more) the game replays
+the time away with **the same code as online play**, silently: skill actions complete one by one
+(consuming inputs, stopping when they run out, and going on from the progress the action had), workshop
+actions forge real items, and combat — including a dungeon run on repeat — is replayed in 1-second
+steps with food, potions, the boss timer and death (after a fall the hero rests to full health and
+fights on, as online, so one early fall doesn't waste the absence). The replay runs on the clock, so
+the bonfire burns out, Focus starts, a mini-game boost ends and a weekend event begins or ends when it
+really did, and a medal, a level, a cape or a pet earned on the way counts from that moment (the
+medals' cards show once the player is back). Farming plots run on timestamps and need no replay. A
+tab that ticks less often (browsers slow hidden tabs to once a minute) is plain play, simulated in
+5-second steps; a kill hands the rest of a step to the next monster, and a step is split where a
+boss's clock runs out, so the step size never changes the result. Capped at
 **12 hours** (+2 h per Endurance perk, up to 24 h, +1 h from the Zipline). Absences under a minute
 are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
 plots ready to harvest, how often the hero fell and got up, and why work stopped early.

@@ -9,6 +9,9 @@ import { RESOURCES } from '../data/resources.js';
 import { SKILLS } from '../data/skills.js';
 import { levelForXp } from '../core/xp.js';
 import { DUNGEONS } from '../data/dungeons.js';
+import { ACHIEVEMENTS } from '../data/achievements.js';
+import { checkAchievements } from './progress.js';
+import { expireMinigames } from './minigame.js';
 import { PETS } from '../data/pets.js';
 
 export const OFFLINE_MIN_MS = 60 * 1000;
@@ -79,6 +82,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     // Replay silently: hours of per-hit events would only be thrown away; the summary reports instead.
     const wasSilent = game.silent;
     game.silent = true;
+    const medalsBefore = new Set(Object.keys(state.achievements || {}).filter(id => state.achievements[id]));
 
     let def = resolveAction(state);
     let mastery = null;
@@ -91,14 +95,16 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
         game.now = now - simulated;
         game.recompute();
         let interval = intervalFor(def, game.derived);
-        let remaining = simulated;
+        let remaining = simulated + (state.action?.progress || 0);   // the action under way when the game left off goes on
         let guard = 0;
         while (remaining >= interval && guard++ < 200000) {
             if (!canComplete(state, def).ok) { stalledReason = `ran out of materials for ${def.label}`; break; }
             game.now += interval;
             if (!completeAction(game, def, { offline: true })) break;
             remaining -= interval;
-            if (!state.action) break; // one-off actions (tools)
+            if (!state.action) { stalledReason = 'the tool was finished'; break; } // one-off actions (tools)
+            expireMinigames(game);    // a mini-game boost lasts its own time, not the whole absence
+            checkAchievements(game);  // and a medal earned on the way counts from then on, as it would online
             // A mastery level, Focus, the bonfire or an event changing makes the next action different;
             // so does anything that marked the game dirty (a level-up, say 99 with its cape, or a pet).
             const stale = game.dirty || (def.mastery && masteryLevel(state, def.skill, def.mastery.key) !== def.mastery.level)
@@ -108,7 +114,8 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
         }
         game.now = savedNow;
         game.recompute();
-        if (state.action) state.action.progress = 0;
+        // What was left over is progress toward the next action, as it would be online.
+        if (state.action) state.action.progress = !stalledReason && remaining < interval ? Math.max(0, remaining) : 0;
         if (mastery) mastery.to = masteryLevel(state, def.skill, def.mastery.key);
     } else if (state.combat.active || state.combat.recovering) {
         mode = 'combat';
@@ -124,12 +131,17 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             tickCombat(game, dt);
             remaining -= dt;
             game.now += dt;
-            if (game.dirty) game.recompute(); // level-ups and potion charges take effect mid-replay
+            checkAchievements(game);  // a medal earned on the way counts from then on
+            if (game.dirty) game.recompute(); // level-ups, medals and potion charges take effect mid-replay
         }
         game.now = savedNow;
         if (!state.combat.active && !state.combat.recovering) stalledReason = 'combat stopped';
     }
     game.silent = wasSilent;
+    // Medals earned while away took effect as they came; their cards show now.
+    for (const ach of ACHIEVEMENTS) {
+        if (state.achievements?.[ach.id] && !medalsBefore.has(ach.id)) game.emit({ type: 'achievement', id: ach.id, name: ach.name, reward: ach.reward, secret: !!ach.secret });
+    }
 
     const summary = { elapsed, simulated, capped: elapsed > cap, mode, stalledReason, ...diff(before, state) };
     if (mastery && mastery.to > mastery.from) summary.mastery = mastery;

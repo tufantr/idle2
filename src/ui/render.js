@@ -558,7 +558,7 @@ function renderLoopActions(game) {
         const sp = state.prestige.skillPoints;
         parts.push(`<button class="shop-btn dock-perks${sp > 0 ? ' ready' : ''}" onclick="FI.openPerks()" title="Spend skill points on perks that last forever"><b>Perks</b><span>${sp > 0 ? `${sp} SP to spend` : 'no SP now'}</span></button>`);
     }
-    const upgrade = findUpgrade(state);
+    const upgrade = c.mode === 'dungeon' && c.active ? null : findUpgrade(state);   // gear is locked inside a dungeon
     if (upgrade) {
         parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span></span></button>`);
     }
@@ -661,7 +661,7 @@ function toolEffect(toolId, tier) {
     const dbl = Math.round(TOOL_DOUBLE_PER_TIER * tier * 100);
     if (toolId === 'hoe') return `+${speed}% crop growth speed, +${dbl}% chance of a double harvest`;
     if (toolId === 'tinderbox') return `+${speed}% firemaking speed, +${dbl}% chance a log burns twice`;
-    return `−${speed}% ${SKILLS[tool.skill].name} time, +${dbl}% double yield`;
+    return `+${speed}% ${SKILLS[tool.skill].name} speed, +${dbl}% double yield`;   // a speed bonus, as for the hoe and tinderbox (the time falls by less)
 }
 
 /** The tool in hand, once there is one (Smithing's Tools step shows what can be made). */
@@ -1123,7 +1123,7 @@ export function renderInventory(game, ui) {
     const bag = items.map(i => itemTile(state, i, { selected: i.id === selectedId })).join('')
         + Array.from({ length: Math.max(0, cells - items.length) }, () => '<div class="tile empty" aria-hidden="true"></div>').join('');
     const owned = Object.keys(RESOURCES).filter(id => state.resources[id] > 0);
-    const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'herb', 'potion', 'material'].filter(c => owned.some(id => RESOURCES[id].category === c));
+    const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'crop', 'herb', 'potion', 'material'].filter(c => owned.some(id => RESOURCES[id].category === c));
     const filters = owned.length > 12 && categories.length > 1;   // a handful of materials needs no sorting
     const filter = filters && categories.includes(ui.invFilter) ? ui.invFilter : 'all';
     const resources = owned.filter(id => filter === 'all' || RESOURCES[id].category === filter);
@@ -1527,7 +1527,7 @@ export function renderFarming(game, ui) {
         if (c.levelReq > level) {
             return `<div class="pick seed locked" title="${esc(c.name)} opens at Farming ${c.levelReq}" aria-label="${esc(c.name)} opens at Farming ${c.levelReq}">${resIcon(c.produces, { scale: 1.25, cls: 'silhouette' })}<span class="pick-sub">Lv ${c.levelReq}</span></div>`;
         }
-        const tip = `${c.name}: grows in ${duration(growTime(d, c))}, ${c.yield[0]}–${c.yield[1]} a harvest, seeds ${fmt(seedCost(state, c))} gold`;
+        const tip = `${c.name}: grows in ${duration(growTime(d, c))}, ${Math.round(c.yield[0] * d.farmYield)}–${Math.round(c.yield[1] * d.farmYield)} a harvest, seeds ${fmt(seedCost(state, c))} gold`;
         return `<button class="pick seed${c === seed ? ' on' : ''}" onclick="FI.pickSeed('${c.id}')" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${c === seed}">${resIcon(c.produces, { scale: 1.25 })}<span class="pick-sub">${fmt(seedCost(state, c))}</span></button>`;
     }).join('');
     const plots = state.farming.plots.map((plot, i) => {
@@ -1564,7 +1564,7 @@ export function renderFarming(game, ui) {
         const unlocked = level >= c.levelReq;
         const avg = (c.yield[0] + c.yield[1]) / 2 * d.farmYield;
         return `<tr class="${unlocked ? '' : 'locked-row'}"><td>${resIcon(c.produces)} ${esc(c.name)}</td><td>${c.levelReq}</td><td>${duration(growTime(d, c))}</td>
-            <td>${c.yield[0]}–${c.yield[1]}× ${esc(res(c.produces).name)}</td><td>${fmt(Math.round(c.xp * avg * d.xpMult))}</td><td>${fmt(seedCost(state, c))}</td></tr>`;
+            <td>${Math.round(c.yield[0] * d.farmYield)}–${Math.round(c.yield[1] * d.farmYield)}× ${esc(res(c.produces).name)}</td><td>${fmt(Math.round(c.xp * avg * d.xpMult))}</td><td>${fmt(seedCost(state, c))}</td></tr>`;
     }).join('');
     const quick = [
         ready ? `<button class="prestige-btn" onclick="FI.harvestAll()">Harvest ${ready} and replant</button>` : '',

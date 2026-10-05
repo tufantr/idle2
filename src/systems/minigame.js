@@ -43,6 +43,20 @@ export function tickMinigame(game, skillId) {
     }
 }
 
+/**
+ * Every skill's mini-game on the clock, whatever is being trained (the game's tick and the offline
+ * replay): a boost that has run out ends, and a challenge left open past its time is lost.
+ */
+export function expireMinigames(game) {
+    const now = game.now;
+    for (const id of NON_COMBAT_SKILLS) {
+        const mg = game.state.minigame[id];
+        if (!mg) continue;
+        if (mg.boostUntil && mg.boostUntil <= now) { mg.boostUntil = 0; mg.bonus = 0; game.markDirty(); }
+        if (mg.challenge && mg.challenge.expiresAt <= now) failMinigame(game, id, { silent: true });
+    }
+}
+
 export function hasOpportunity(state, skillId, now) {
     const mg = state.minigame[skillId];
     return !!mg && mg.opportunityUntil > now && !mg.challenge;
@@ -95,6 +109,7 @@ export function resolveMinigame(game, skillId) {
     const mg = game.state.minigame[skillId];
     const ch = mg?.challenge;
     if (!ch) return false;
+    if (ch.expiresAt <= game.now) { failMinigame(game, skillId); return false; }   // too late: it can't be won at leisure
     let success = false;
     if (ch.type === 'timing' || ch.type === 'moving-target') {
         const pos = animatedPosition(ch, game.now);
@@ -113,11 +128,12 @@ function rewardMinigame(game, skillId) {
     const mg = game.state.minigame[skillId];
     mg.streak = Math.min(5, mg.streak + 1);
     mg.bonus = Math.min(b.maxBonus, b.baseBonus + (mg.streak - 1) * b.streakBonus);
-    mg.boostUntil = game.now + Math.round(b.boostMs * game.derived.boostDurationMult);
+    const boostMs = Math.round(b.boostMs * game.derived.boostDurationMult);
+    mg.boostUntil = game.now + boostMs;
     mg.challenge = null;
     bumpStat(game, 'minigameWins');
     scheduleNext(mg, game.now);
-    log(game, `${MINIGAME_CONFIG[skillId].icon} Perfect! +${Math.round(mg.bonus * 100)}% ${skillId} speed for ${Math.round(b.boostMs / 1000)}s.`, 'minigame');
+    log(game, `${MINIGAME_CONFIG[skillId].icon} Perfect! +${Math.round(mg.bonus * 100)}% ${skillId} speed for ${Math.round(boostMs / 1000)}s.`, 'minigame');
     game.emit({ type: 'minigameWin', skill: skillId, bonus: mg.bonus });
     game.markDirty();
 }

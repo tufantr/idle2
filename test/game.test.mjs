@@ -81,8 +81,8 @@ test('offline progress is capped (12h base) and speeds up with mastery as it goe
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 30 * 24 * 3600 * 1000;
     const g2 = new Game(saved, later);
-    // The player was away, so focus (+15%) applies. Achievements earned during the replay only take
-    // effect afterwards, so read the speed first.
+    // The player was away, so focus (+15%) applies. Read the speed first: medals earned during the
+    // replay count from then on, so the replay can only be faster than this timeline.
     assert.ok(g2.derived.focused);
     const derived = g2.derived;
     const summary = g2.resumeFromSave(later);
@@ -95,10 +95,11 @@ test('offline progress is capped (12h base) and speeds up with mastery as it goe
         if (t + interval > summary.simulated) break;
         t += interval; actions++; practice += 3;
     }
-    assert.ok(Math.abs(g2.state.stats.actionsBySkill.mining - actions) <= 1, `${g2.state.stats.actionsBySkill.mining} vs ${actions}`);
+    const done = g2.state.stats.actionsBySkill.mining;
+    assert.ok(done >= actions - 1 && done < actions * 1.25, `${done} actions against ${actions} without the medals earned on the way`);
     assert.ok(actions > Math.floor(summary.simulated / actionInterval(3000, derived, 'mining')), 'mastery made it faster');
     const ore = g2.state.resources.copper_ore;
-    assert.ok(ore > actions * 1.1 && ore < actions * 1.3, `mastery doubles some ore: ${ore} from ${actions}`);
+    assert.ok(ore > done * 1.1 && ore < done * 1.3, `mastery doubles some ore: ${ore} from ${done}`);
 });
 
 test('achievements apply real bonuses through the modifier pipeline', () => {

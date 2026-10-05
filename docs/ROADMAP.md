@@ -429,6 +429,18 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A bug sweep** (four reviews: combat, skills, saves and the server, the screens). Fixed: a
+      reload while the hero waited at a dungeon's chest brought the boss back, for endless extra clears
+      and fragments; away from the game, medals earned on the way, a mini-game boost (which used to
+      last the whole night) and a background tab's minute ticks (which lost up to a tenth of the work)
+      now count as they would online, and a replay goes on from the action's progress; the potion after
+      the last one is drunk at once (a Health Potion cut the hero's health at every refill); a prestige
+      ends "stay on this stage"; boss clocks give the same result whatever the step; a beaten Titan
+      leaves no best try against the next; only food can be auto-eaten and only potions drunk; a
+      mini-game left open can't be won later; a tool made counts at once; the dock offers no Equip
+      inside a dungeon; the tools' cards say "+X% speed" (they claimed a bigger time cut); the farm
+      shows yields with their bonuses; "Salvage commons" is no longer counted as automatic; a fall in a
+      dungeon or to the Titan says so. Ten regression tests (`test/sweep.test.mjs`)
 - [x] **Gear no longer waits days for a level**: a balance pass found that at Melvor pace the first
       Abyssal (tier 7) drop sat in the bag 57–65 hours before combat 90 let the hero wear it, and the
       first Dragonbone 14–21 hours. Tier 6 is now worn from combat 70 and tier 7 from 80 (were 75 and

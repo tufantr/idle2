@@ -125,7 +125,7 @@ export function salvagePreview(item) {
     return { essence: salvageEssence(item), materials: {} };
 }
 
-function salvageObject(game, item, { auto = false } = {}) {
+function salvageObject(game, item, { auto = false, quiet = auto } = {}) {
     const state = game.state;
     const preview = salvagePreview(item);
     const gained = { essence: preview.essence, materials: {} };
@@ -137,7 +137,7 @@ function salvageObject(game, item, { auto = false } = {}) {
     state.resources.essence += gained.essence;
     bumpStat(game, 'itemsSalvaged');
     if (auto) bumpStat(game, 'itemsAutoSalvaged');
-    if (!auto || rarityIndex(item.rarity) >= 2) {
+    if (!quiet || rarityIndex(item.rarity) >= 2) {
         const parts = [gained.essence ? `${gained.essence} essence` : '', ...Object.entries(gained.materials).map(([id, q]) => `${q}× ${RESOURCES[id].name}`)].filter(Boolean);
         log(game, `♻️ Salvaged ${item.name}${parts.length ? ` for ${parts.join(', ')}` : ''}.`, 'loot');
     }
@@ -162,7 +162,7 @@ export function salvageAll(game, maxRarity = 'common') {
     let essence = 0;
     for (const item of doomed) {
         state.inventory.splice(state.inventory.indexOf(item), 1);
-        essence += salvageObject(game, item, { auto: true }).essence;
+        essence += salvageObject(game, item, { quiet: true }).essence;   // one line for them all; not automatic
     }
     if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} items (+${essence} essence).`, 'loot');
     return { count: doomed.length, essence };

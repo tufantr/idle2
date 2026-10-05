@@ -260,12 +260,13 @@ export function completeAction(game, def, { offline = false } = {}) {
         log(game, `${TOOLS[def.tool].icon} Made ${withArticle(TOOLS[def.tool].tiers.find(t => t.tier === def.tier).name)}!`, 'craft');
         game.emit({ type: 'toolMade', tool: def.tool, tier: def.tier });
         state.action = null; // one-off
+        game.markDirty();    // its speed and doubles count from now (the hoe's too, with no action to start)
     }
 
     grantXp(game, skill, def.xp * derived.xpMult);
     if (mastery) addMasteryXp(game, skill, mastery.key, def.interval / 1000);
     rollPet(game, skill, def.interval);
     eventProgress(game, 1);
-    game.emit({ type: 'actionComplete', skill, made, xp: def.xp * derived.xpMult });
+    game.emit({ type: 'actionComplete', skill, made, xp: def.xp * derived.xpMult * (def.bonfireLog ? made.qty : 1) });   // a log burnt twice paid twice
     return true;
 }

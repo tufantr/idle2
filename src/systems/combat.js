@@ -17,6 +17,8 @@ import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 export function spawnEnemy(game) {
     const state = game.state;
     const c = state.combat;
+    // Waiting at the chest after a clear there is no monster (a reload used to bring the boss back for another clear).
+    if (choosingAfterClear(state)) { c.enemy = null; return; }
     if (c.mode === 'dungeon' && c.dungeon) c.enemy = dungeonEnemy(c.dungeon);
     else if (c.mode === 'titan') c.enemy = titanEnemy(state);
     else {
@@ -126,7 +128,7 @@ export function ensurePotion(game) {
 
 export function setPotion(game, id) {
     const state = game.state;
-    if (id !== 'none' && !RESOURCES[id]) return;
+    if (id !== 'none' && RESOURCES[id]?.category !== 'potion') return;
     if (state.combat.potion !== id) {
         state.combat.potion = id;
         state.combat.potionCharges = 0;
@@ -135,6 +137,7 @@ export function setPotion(game, id) {
 }
 
 export function setAutoEat(game, rule) {
+    if (rule !== 'auto' && rule !== 'none' && !(RESOURCES[rule]?.heals > 0)) return;   // only food is eaten
     game.state.combat.autoEat = rule;
 }
 
@@ -163,7 +166,8 @@ export function playerAttack(game, { manual = false } = {}) {
 
     if (potionActive && !manual) {
         c.potionCharges -= 1;
-        if (c.potionCharges <= 0) { c.potionCharges = 0; game.markDirty(); }
+        // The next potion at once, so no attack (and none of a Health Potion's health) is lost between two.
+        if (c.potionCharges <= 0) { c.potionCharges = 0; ensurePotion(game); game.markDirty(); }
     }
 
     game.emit({ type: 'hit', dmg, crit: isCrit, manual });
@@ -361,7 +365,7 @@ export function onBossTimeout(game) {
 export function clickAttack(game) {
     const state = game.state;
     const c = state.combat;
-    if (!c.active || !c.enemy) return false;
+    if (!c.active || !c.enemy || choosingAfterClear(state)) return false;
     if (game.now - (c.lastClickAt || 0) < 120) return false; // no benefit from auto-clickers
     c.lastClickAt = game.now;
     c.combo = Math.min(BALANCE.combat.comboMax, (c.combo || 0) + 1 / (1 + (c.combo || 0) / 40));
@@ -376,6 +380,14 @@ export function clickAttack(game) {
 export function tickCombat(game, dt) {
     const state = game.state;
     const c = state.combat;
+    // A boss's clock running out inside a long step (a background tab, the offline replay): fight up to
+    // the deadline, let it run out there, then fight on, so the step size never changes the result.
+    if (c.active && c.enemy?.boss && c.bossTimeLeft > 0 && dt > c.bossTimeLeft && !choosingAfterClear(state)) {
+        const first = c.bossTimeLeft;
+        tickCombat(game, first);
+        tickCombat(game, dt - first);
+        return;
+    }
     const d = game.derived;
     const regen = c.active ? BALANCE.combat.regenInCombat : BALANCE.combat.regenResting;
     if (c.hp > 0 && c.hp < d.maxHp) c.hp = Math.min(d.maxHp, c.hp + d.maxHp * regen * dt / 1000);
