@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The Abyssal Maw's painting**: Gemini painted it in the backdrop set's own chat (the prompt
+      logged on 4 October): a cavern like an open maw, black stone fangs at the left and right edges,
+      motes of pale light like dying stars and a ring of cold teal light around the bottomless chasm,
+      over a flat ledge of cracked basalt with teal veins. A tiny hooded figure on its horizon was
+      painted out by hand. It stands behind the Maw's card and its fight, with the void's motes
 - [x] **The figures that name themselves**: the owner asked for the same on the card being worked.
       Hovered, its XP says what it is and what the XP bonuses add to the base; its time, the base and
       how much quicker the tools, mastery and bonuses make it; its double chance, what doubles (a
@@ -455,8 +460,7 @@ progress as motion, art before words, one stage with a HUD around it.
       into the simulator's play; first cleared at about 177), twelve horrors of the deep Abyss (DCSS starspawn, horrors, a zyme, an
       executioner, the green death, a worldbinder, a star-skull) and the Devourer. Its unique, the
       Starless Band (a ring), is worth its affixes: +8% prestige tokens, +15% combat XP, +10% drops,
-      +30% crit damage. A gate in the rift's eye on the world map. Its painting is logged in
-      `docs/art/gemini.md` for the next session; until then it borrows the Abyss's. Also fixed: chest
+      +30% crit damage. A gate in the rift's eye on the world map. Also fixed: chest
       gear ignored the dungeon's depth in the Abyss, so the Void Citadel's chests held gear three times
       weaker than its monsters' drops
 - [x] **Skill capes**: level 99 in a skill now earns its cape, as in Melvor: a DCSS cloak in the

@@ -412,7 +412,8 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
   simulator's play at Melvor pace, and its careful player first clears it at about 177: twelve horrors of the deep Abyss and the Devourer. Its unique, the Starless Band, is
   worth its affixes rather than its power, since gear dropped that deep is dozens of times stronger
   than any tier's base: +8% prestige tokens, +15% combat XP, +10% drop chance, +30% crit damage. Its
-  painting is still to come (`maw`, docs/art/gemini.md); until then it borrows the Abyss's.
+  painting (`maw`) is a cavern like an open maw: black stone fangs at the edges, motes of dying light
+  and a ring of cold teal light around the chasm, over a ledge of cracked basalt.
 - **Clear milestones** per dungeon, permanent: 25 clears +2% ATK and DEF, 100 clears +3% gold and drop
   chance, 250 clears +3% max HP.
 - **Readiness:** the Dungeons tab estimates the boss fight (time to kill vs the timer, and how long you

@@ -196,14 +196,13 @@ Same style and rules. Next, Dragon's Lair: a vast cavern deep inside a volcano, 
 Back to the backdrop set: same style and rules as the place backdrops (side view at eye level, wide 16:9, the bottom quarter flat open ground running straight across with nothing standing on it in the middle, the scenery in the distance and at the left and right edges, no people, no creatures, no text). Next, Void Citadel: the inner courtyard of a black obsidian fortress adrift in the violet void, jagged dark towers and broken battlements at the left and right edges lit by cold violet fire in iron braziers, a great sealed gate in the back wall, floating shards of rock and a starry violet nebula in the sky, thin glowing violet cracks in the walls; dark polished flagstones with a faint violet glow across the bottom.
 ```
 
-`maw.png` (the Abyssal Maw). **Not painted yet** (logged on 4 October 2026 while the owner was away;
-until it is imported the Maw borrows `abyss`):
+`maw.png` (the Abyssal Maw), painted on 5 October 2026 in the same chat. The first reply was only a
+description ("Please create this image now" brought the picture), and the picture had a tiny hooded
+figure on the horizon left of centre; asked to remove it, Gemini repainted the Citadel instead, so
+the figure was painted out by hand (filled row by row from the haze beside it) before the import:
 ```text
 Back to the backdrop set: same style and rules as the place backdrops (side view at eye level, wide 16:9, the bottom quarter flat open ground running straight across with nothing standing on it in the middle, the scenery in the distance and at the left and right edges, no people, no creatures, no text). Next, Abyssal Maw: the deepest pit of the Abyss, a colossal cavern shaped like an open maw, curved black stone fangs the size of towers rising from below and hanging from above at the left and right edges, a vast starless dark in the back with a faint ring of cold teal light around a bottomless chasm, drifting motes of pale light like dying stars, thin strands of dark mist; a flat ledge of cracked black basalt with faint teal veins across the bottom.
 ```
-Once it is in `art/`: add `'maw'` after `'citadel'` in `BATTLE` (`tools/paint.py`) and import it, then
-set `abyssal_maw: 'maw'` in `DUNGEON_ART` (`src/ui/features.js`) and give `maw` the `void` particles in
-`PARTICLES` (`src/ui/scene.js`).
 
 ## Cards, banners and the world map
 
