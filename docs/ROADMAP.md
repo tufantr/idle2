@@ -429,6 +429,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Gear no longer waits days for a level**: a balance pass found that at Melvor pace the first
+      Abyssal (tier 7) drop sat in the bag 57–65 hours before combat 90 let the hero wear it, and the
+      first Dragonbone 14–21 hours. Tier 6 is now worn from combat 70 and tier 7 from 80 (were 75 and
+      90): the waits are 3–7 hours and about 30, so the best gear is still a goal, not a wall
 - [x] **The Abyssal Maw's painting**: Gemini painted it in the backdrop set's own chat (the prompt
       logged on 4 October): a cavern like an open maw, black stone fangs at the left and right edges,
       motes of pale light like dying stars and a ring of cold teal light around the bottomless chasm,
@@ -477,8 +481,8 @@ progress as motion, art before words, one stage with a HUD around it.
       (`src/data/pace.js`), though never less per hour than an older action of the same kind. Combat
       slows with the hero's level, from 60 (full XP) to 95 (a twenty-fifth), so a deeper stage always
       pays more (the combat "?" says so). The 100 stages still take about 5–6 hours; tier 6 and 7 gear
-      wait for combat 75 and 90 (about 30 and 85–95 hours). Old saves keep their levels; only the XP
-      still to come is slower.
+      wait for combat 70 and 80 (worn at about 17 and 52 hours; first 75 and 90, lowered after the
+      balance pass below). Old saves keep their levels; only the XP still to come is slower.
       Also fixed in the simulator: a ladder-farming bot that met the Titan farmed one stage for good
 - [x] **The game's mark**: the sidebar's plain title became a logo: a gold-rimmed seal looking onto the
       painted meadow with the player's own hero in it, as they are now (look, gear, the rank's cloak),

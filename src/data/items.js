@@ -77,8 +77,12 @@ export function upgradeCost(item, goldPerKill = 10) {
     };
 }
 
-/** Item level requirement to wear: combat level by material tier (1, 10, 25, 40, 60). */
-export const TIER_WEAR_LEVEL = { 1: 1, 2: 10, 3: 25, 4: 40, 5: 60, 6: 75, 7: 90 };
+/**
+ * The combat level to wear each tier. At Melvor pace the top two came down (from 75 and 90), so
+ * drop-only gear waits hours, not days: Dragonbone is worn a few hours after the first one drops,
+ * Abyssal about a day and a half of play after (tools/simulate.mjs; DESIGN §5.3).
+ */
+export const TIER_WEAR_LEVEL = { 1: 1, 2: 10, 3: 25, 4: 40, 5: 60, 6: 70, 7: 80 };
 
 // ---------- Drops ----------
 

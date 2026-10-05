@@ -178,8 +178,8 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 | Mithril | 96 | 120 / 269 | 168 / 376 | 25 |
 | Adamant | 212 | 265 / 594 | 371 / 831 | 40 |
 | Runite | 468 | 585 / 1,310 | 819 / 1,835 | 60 |
-| Dragonbone (drop only) | 1,020 | 1,275 / 2,856 | 1,785 / 3,998 | 75 |
-| Abyssal (drop only) | 2,240 | 2,800 / 6,272 | 3,920 / 8,781 | 90 |
+| Dragonbone (drop only) | 1,020 | 1,275 / 2,856 | 1,785 / 3,998 | 70 |
+| Abyssal (drop only) | 2,240 | 2,800 / 6,272 | 3,920 / 8,781 | 80 |
 
 - **Rarity = quality + affixes**, never a raw multiplier: Common ×1.00 / 0 affixes, Uncommon ×1.08 / 1,
   Rare ×1.16 / 2, Epic ×1.25 / 3, Legendary ×1.40 / 4. Because tiers are ×2.2 apart, **a common of
@@ -864,9 +864,10 @@ tokens). Three seeds, 150 hours each:
 | Prestiges in 150 h | 227 | 256 | 243 |
 | Deaths on non-boss stages | 35% | 45% | 37% |
 
-Measured at Melvor pace (§5.1); combat 99 comes from 300-hour runs of the same seeds. Tier 6 and 7
-gear wait for combat 75 and 90, so they arrive with those levels (before the pace: 16–23 h for tier
-7), and stage 200 moved from ~40–47 h to ~54–60 h. Past stage 200 the climb continues: roughly 5–10
+Measured at Melvor pace (§5.1), with tier 6 and 7 gear worn from combat 75 and 90 (since lowered to
+70 and 80, below); combat 99 comes from 300-hour runs of the same seeds. Tier 6 and 7 gear arrived
+with those levels (before the pace: 16–23 h for tier 7), and stage 200 moved from ~40–47 h to
+~54–60 h. Past stage 200 the climb continues: roughly 5–10
 stages every 10 hours, with the odd 20-hour plateau at a boss. The three 300-hour runs end at stages
 328, 336 and 327 (before the pace: 327 and 321). Mining stops in the 60s because Abyss drops
 outpace forging, so the bot stops needing ore.
@@ -918,12 +919,12 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
   7–14% of all gold earned is spent. Most of the rest resets with the run. That is what run
   currency does; the Essence Cache (Shop) is the open-ended place for it, and the prestige screen
   says so.
-- **Gear waits for combat levels.** At Melvor pace the wear levels (60, 75 and 90 for tiers 5, 6
-  and 7; `TIER_WEAR_LEVEL` in `src/data/items.js`) are the gates for drop-only gear. The sensible
-  player wears Abyssal (tier 7) at 84–94 h; the AFK pusher, who kills slowly at the wall, wears
-  Dragonbone at 36–39 h but reaches combat 90 only at ~150 h. A player carries tier 7 drops for
-  dozens of hours before wearing them, as in Melvor (gear above your level is a goal), but watch it:
-  lowering the two top wear levels is the knob if it feels like a wall.
+- **Gear waits for combat levels.** The wear levels (`TIER_WEAR_LEVEL` in `src/data/items.js`) are
+  the gates for drop-only gear. At Melvor pace with the old levels (75 and 90 for tiers 6 and 7) the
+  sensible player carried its first Dragonbone 14–21 h and its first Abyssal 57–65 h before it could
+  wear them (first in the bag at 10–15 h and 24–27 h, worn at 28–31 h and 81–92 h). Lowered to 70 and
+  80 (October 2026), the waits are 3–7 h and ~30 h: Dragonbone at 17–18 h, Abyssal at 52–54 h, still a
+  goal as in Melvor but not a wall; stage 200 comes a few hours sooner (53–55 h).
 - **Bosses and regular stages share the walls.** Bosses are the DPS checks (a 30-second timer, and a
   boss that outlasts it is not a death), while regular stages test survival: 35–45% of the sensible
   player's deaths happen on regular stages, close to the Phase 1 target of half. In the deep Abyss the
