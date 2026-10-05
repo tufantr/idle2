@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
+import { CAMP_UPGRADES } from '../src/data/camp.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { migrateState } from '../src/core/state.js';
@@ -25,10 +26,11 @@ test('each piece opens when it first means something, and says so once', () => {
     const game = new Game(null, T0);
     const s = game.state;
     const reveals = () => game.drainEvents().filter(e => e.type === 'reveal').map(e => e.id);
-    s.gold = 49;
+    const cheapest = Math.min(...CAMP_UPGRADES.map(u => u.baseCost));
+    s.gold = cheapest - 1;
     game.tick(T0 + 100);
     assert.deepEqual(reveals(), [], 'not enough gold for the camp yet');
-    s.gold = 50;
+    s.gold = cheapest;
     game.tick(T0 + 200);
     assert.deepEqual(reveals(), ['camp']);
     s.gold = 0; // spent elsewhere: the camp stays

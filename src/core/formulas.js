@@ -17,7 +17,12 @@ export const BALANCE = {
         bossAtkMult: 1.6,
         baseInterval: 2200,     // ms between enemy attacks at stage 1
         intervalPerStage: 8,    // ms faster per stage
-        minInterval: 1300
+        minInterval: 1300,
+        // A gentle start (docs/research_notes/first-session.md): on the first stages the monsters hit at
+        // `atk` and have `hp` of their figures at stage 1, rising evenly to the full figures after stage
+        // `to`. A new hero, unarmed at level 1, wins his first fights while the player only watches,
+        // meets the first boss within the first minute and beats it. Gold is paid on the full figures.
+        ease: { to: 30, atk: 0.3, hp: 0.6 }
     },
     rewards: {
         goldPerHp: 0.25,        // gold per kill = enemy max HP * this (Clicker Heroes uses HP/15 on a steeper curve)
@@ -25,6 +30,9 @@ export const BALANCE = {
         xpBase: 3,              // combat XP per kill = xpBase * stage^xpExp
         xpExp: 1.05,
         bossXpMult: 5,
+        // The first combat levels come quickly: a kill's XP is tripled at level 1, the bonus shrinking
+        // evenly to none at level `below` (a level-up every 10-20 s in the first minutes).
+        fastStart: { below: 10, extra: 2 },
         // Melvor pace for Combat: up to combat level `from` a kill gives its full XP, from level `to`
         // on its XP divided by `slow`, evenly in between. By the hero's level, not the monster's
         // stage, so a deeper stage always pays more (paced by stage, stage 30 paid the most per kill),
@@ -109,6 +117,10 @@ export function enemyForStage(stage) {
     const e = BALANCE.enemy;
     let { hp, atk, interval } = enemyBaseStats(stage);
     if (boss) { hp *= e.bossHpMult; atk *= e.bossAtkMult; }
+    const worth = Math.floor(hp);   // what it pays for (gold, a farmed boss's loot): its full health
+    const t = Math.min(1, (stage - 1) / e.ease.to);
+    hp *= e.ease.hp + (1 - e.ease.hp) * t;
+    atk *= e.ease.atk + (1 - e.ease.atk) * t;
     const name = boss ? zone.boss : zone.monsters[(stage - 1) % zone.monsters.length];
     return {
         name: boss ? `${name} (Boss)` : name,
@@ -120,7 +132,8 @@ export function enemyForStage(stage) {
         boss,
         hp: Math.floor(hp),
         maxHp: Math.floor(hp),
-        atk: Math.floor(atk),
+        ...(worth > Math.floor(hp) ? { worth } : {}),
+        atk: Math.max(1, Math.floor(atk)),
         interval
     };
 }
@@ -140,7 +153,7 @@ export function enemyDamage(enemyAtk, playerDef) {
 
 export function goldForKill(enemy, goldMult = 1) {
     const r = BALANCE.rewards;
-    const base = enemy.maxHp * r.goldPerHp * (enemy.boss ? r.bossGoldMult : 1);
+    const base = (enemy.worth || enemy.maxHp) * r.goldPerHp * (enemy.boss ? r.bossGoldMult : 1);
     return Math.max(1, Math.round(base * goldMult));
 }
 
@@ -154,7 +167,8 @@ export function combatXpPace(level) {
 export function combatXpForKill(enemy, xpMult = 1, level = 1) {
     const r = BALANCE.rewards;
     const base = r.xpBase * Math.pow(enemy.stage, r.xpExp) * (enemy.boss ? r.bossXpMult : 1);
-    return Math.max(1, Math.round(base * xpMult / combatXpPace(level)));
+    const fast = 1 + r.fastStart.extra * Math.max(0, r.fastStart.below - level) / (r.fastStart.below - 1);
+    return Math.max(1, Math.round(base * xpMult * fast / combatXpPace(level)));
 }
 
 // ---------- Prestige ----------
@@ -257,10 +271,10 @@ export function abyssDropMult(depth = 0) {
  * Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): usually one
  * tier below, rarer than crafted. `depth` (the Abyss depth) scales its power past depth 5.
  */
-export function generateDrop(zoneTier, boss, nextId, depth = 0) {
+export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS) {
     const tier = Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
     const gearTier = GEAR_TIERS[tier - 1];
-    const type = rng.weighted(DROP_TYPE_WEIGHTS).type;
+    const type = rng.weighted(types).type;
     const jewel = CRAFTING_TYPES.includes(type);
     const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (zoneTier - 1);
     const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));

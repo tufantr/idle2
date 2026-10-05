@@ -1,6 +1,6 @@
 // Auto-battler: player and enemy attack on their own timers; food, potions, loot, death, clicks.
 
-import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, BALANCE } from '../core/formulas.js';
+import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
 import { addItem } from './inventory.js';
@@ -13,6 +13,8 @@ import { COMBAT_PET_SECONDS } from '../data/pets.js';
 import { eventProgress } from './events.js';
 import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 
+const FIRST_GILDED_STAGE = 7;
+
 /** Spawn the next enemy for the current mode: the stage ladder, a dungeon run, or the Titan. */
 export function spawnEnemy(game) {
     const state = game.state;
@@ -24,8 +26,10 @@ export function spawnEnemy(game) {
     else {
         c.mode = 'stages';
         c.enemy = enemyForStage(c.stage);
-        // Now and then a regular monster comes gilded: the same fight, a far better payout.
-        if (!c.enemy.boss && rng.chance(BALANCE.rewards.gildedChance * (game.derived?.gildedMult || 1))) {
+        // Now and then a regular monster comes gilded: the same fight, a far better payout. A new hero
+        // meets his first at stage 7 (one in 150 is too rare for the first minutes).
+        const firstGilded = c.stage === FIRST_GILDED_STAGE && c.stage === c.maxStage && !c.farmMode && !state.stats.gildedKills && !state.prestige.count;
+        if (!c.enemy.boss && (firstGilded || rng.chance(BALANCE.rewards.gildedChance * (game.derived?.gildedMult || 1)))) {
             c.enemy = { ...c.enemy, gilded: true, name: `Gilded ${c.enemy.name}` };
             game.emit({ type: 'gilded', enemy: c.enemy });
         }
@@ -198,9 +202,12 @@ export function enemyAttack(game) {
 export function killPayout(state, enemy) {
     const c = state.combat;
     const full = !!enemy.boss && (!!enemy.titan || (c.mode === 'stages' && !c.farmMode && enemy.stage === c.maxStage));
-    const rolls = enemy.boss && !full ? Math.max(1, Math.round(enemy.maxHp / Math.max(1, enemyBaseStats(enemy.stage).hp))) : 1;
+    const rolls = enemy.boss && !full ? Math.max(1, Math.round((enemy.worth || enemy.maxHp) / Math.max(1, enemyBaseStats(enemy.stage).hp))) : 1;
     return { full, rolls };
 }
+
+const STARTER_SWORD_POWER = 0.25;   // a quarter of a Copper Sword: +5 attack, doubling a new hero's
+const FIRST_ARMOUR = [{ type: 'Head', weight: 1 }, { type: 'Body', weight: 1 }, { type: 'Shield', weight: 1 }];   // the first boss's piece: one the hero is seen to wear
 
 function rollLoot(game, enemy, payout) {
     const state = game.state;
@@ -226,9 +233,11 @@ function rollLoot(game, enemy, payout) {
         if (essence) { add('essence', essence); bumpStat(game, 'essenceFound', essence); }
 
         // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone.
-        const gearChance = (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
+        // The first boss a hero ever beats always leaves a piece (his first armour, as a rule).
+        const firstBoss = boss && !enemy.titan && state.combat.mode === 'stages' && state.stats.bossKills === 1 && roll === 0;
+        const gearChance = firstBoss ? 1 : (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
         if (rng.chance(gearChance)) {
-            const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth);
+            const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth, firstBoss ? FIRST_ARMOUR : undefined);
             const result = addItem(game, item);
             bumpStat(game, 'itemsDropped');
             drops.push({ item, kept: result.kept });
@@ -236,6 +245,14 @@ function rollLoot(game, enemy, payout) {
             if (result.kept && rank >= 2) log(game, `${item.icon} ${RARITIES[rank].name} ${item.name} dropped!`, 'loot');
             if (result.kept) game.emit({ type: 'itemDropped', item });
         }
+    }
+    // A new hero fights with his fists: the first monster he ever beats leaves him a sword.
+    if (state.stats.kills === 1 && !state.prestige.count && !state.equipped.Weapon && !state.inventory.some(i => i.type === 'Weapon')) {
+        const item = generateEquipment({ type: 'Weapon', tier: 1, power: STARTER_SWORD_POWER, materialName: 'Rusty', rarity: RARITIES[0], source: 'drop' }, state.idCounter++);
+        const result = addItem(game, item);
+        bumpStat(game, 'itemsDropped');
+        drops.push({ item, kept: result.kept });
+        if (result.kept) game.emit({ type: 'itemDropped', item, first: true });
     }
     if (enemy.gilded) {   // a gilded monster always leaves a gem and some essence
         add(pickGem(zone), 1);
@@ -368,6 +385,7 @@ export function clickAttack(game) {
     if (!c.active || !c.enemy || choosingAfterClear(state)) return false;
     if (game.now - (c.lastClickAt || 0) < 120) return false; // no benefit from auto-clickers
     c.lastClickAt = game.now;
+    bumpStat(game, 'strikes');   // the player's own strikes (the guide's hand leaves the monster after three)
     c.combo = Math.min(BALANCE.combat.comboMax, (c.combo || 0) + 1 / (1 + (c.combo || 0) / 40));
     c.lastComboAt = game.now;
     playerAttack(game, { manual: true });

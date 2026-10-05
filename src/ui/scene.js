@@ -35,6 +35,7 @@ const CTA_ICON = sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' });
 const MOVES = {
     lunge:     { ms: 260, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(26px) rotate(7deg)', offset: 0.35 }, { transform: 'none' }] },
     lungeLeft: { ms: 260, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(-26px) rotate(-7deg)', offset: 0.35 }, { transform: 'none' }] },
+    jab:       { ms: 150, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(12px) rotate(4deg)', offset: 0.4 }, { transform: 'none' }] },   // the hero's answer to a strike: quick, so taps can follow fast
     hurt:      { ms: 240, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(9px) scale(0.96)', filter: 'brightness(2.4) saturate(0.3)', offset: 0.2 }, { transform: 'none', filter: 'none' }] },
     crit:      { ms: 360, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(16px) rotate(8deg) scale(0.9)', filter: 'brightness(3) saturate(0)', offset: 0.18 }, { transform: 'translateX(-4px) rotate(-3deg)', offset: 0.55 }, { transform: 'none', filter: 'none' }] },
     heroHurt:  { ms: 280, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(-9px)', filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.95)) brightness(1.3)', offset: 0.2 }, { transform: 'none', filter: 'none' }] },
@@ -563,7 +564,9 @@ export function createScene(root, actions) {
             switch (ev.type) {
                 case 'hit': {
                     const { foe } = anchor();
-                    if (ev.manual) {
+                    if (ev.manual) {   // the player's strike: the hero swings with it, a light slash
+                        move(el.heroSprite, 'jab');
+                        spawnFx('slash light', '', foe.x + jitter(14), foe.mid + jitter(18), 220);
                         spawnFx('dmg manual', fmt(ev.dmg), foe.x + jitter(30), foe.top + 6 + Math.random() * 16, 800);
                         break;
                     }
@@ -601,10 +604,11 @@ export function createScene(root, actions) {
                 }
                 case 'itemDropped': {
                     const rarity = RARITIES.find(r => r.id === ev.item.rarity);
-                    if (!rarity || RARITIES.indexOf(rarity) < 2) break;
+                    if (!rarity || (RARITIES.indexOf(rarity) < 2 && !ev.first)) break;   // the first sword rises like a rare find
                     const { foe } = anchor();
-                    const beam = spawnFx(`loot-beam r-${rarity.id}`, `<span>${sprite(itemSpriteKey(ev.item), { scale: 1, fallback: esc(ev.item.icon) })}</span>`, foe.x + jitter(16), Math.max(0, foe.bottom - 64), 2400);
-                    if (beam) beam.style.setProperty('--beam', rarity.color);
+                    fxBudget = Math.max(fxBudget, 1);
+                    const beam = spawnFx(`loot-beam r-${rarity.id}`, `<span>${sprite(itemSpriteKey(ev.item), { scale: ev.first ? 1.5 : 1, fallback: esc(ev.item.icon) })}</span>`, foe.x + jitter(16), Math.max(0, foe.bottom - 64), ev.first ? 3200 : 2400);
+                    if (beam) beam.style.setProperty('--beam', ev.first ? '#fcd34d' : rarity.color);
                     break;
                 }
                 case 'levelUp': {

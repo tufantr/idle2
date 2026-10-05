@@ -429,6 +429,20 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A first session worth the first impression** (the owner found the start dull; research on Tap
+      Titans 2 and other idle games in `docs/research_notes/first-session.md`, DESIGN §3.24). Measured
+      first: a player who only watched fell at stage 5 within a minute and was below stage 10 after
+      five, with nothing new for 80 s at a time. Now the first stages are gentle (monsters hit at 30%
+      and have 60% of their health at stage 1, full from stage 30, still paying full gold); the first
+      monster leaves a Rusty Sword in a gold beam and the first boss a piece of armour the hero is seen
+      to wear; the first combat levels come three times as fast and each one restores his health; the
+      camp's first levels cost 20 and 15 gold (the Armour Rack waits for defence to raise); places open
+      one beat at a time (none as the first boss appears, whose fight no card covers any more); and a
+      white glove points, without words and only after a pause, at the one thing to do: the monster,
+      the sword's Equip, the first camp upgrade, the boss's skull while regrouping (it now pulses: a
+      tap fights the boss again at once), the first vein. A new hero meets his first gilded monster
+      at stage 7. Strikes swing the hero and flash a slash. One who only watches now beats the first
+      boss at 48 s and reaches stage 30 in five minutes; `node tools/opening.mjs` measures it
 - [x] **The menu starts with the Clan**, then the Shop and the Inventory (the owner's order), above the
       Combat and Skills headings; the rest keeps its order. On a phone the strip of places begins the
       same way and slides to the place opened

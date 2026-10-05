@@ -1268,6 +1268,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path .boss b, .stage-path .boss button { font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.65); }
 .stage-path .next.boss b { background: rgba(60, 10, 10, 0.9); }
 .stage-path .now.boss b { background: radial-gradient(circle, #f87171, #7f1d1d); animation-name: bossNodePulse; }
+.battle.regroup .stage-path .boss button { background: radial-gradient(circle, #f87171, #7f1d1d); animation: bossNodePulse 1.3s ease-in-out infinite; }   /* while regrouping, the boss waits a tap away */
 /* a dungeon run: each room a round portrait of who waits there */
 .stage-path .portrait b { width: 28px; min-width: 28px; height: 28px; padding: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #2a2016, #0c0906 75%); }
 .stage-path .portrait.now b { width: 32px; min-width: 32px; height: 32px; background: radial-gradient(circle at 50% 40%, #6b4a17, #1a1205 75%); }
@@ -1331,12 +1332,13 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .fx-layer > div { position: absolute; transform: translate(-50%, -50%); pointer-events: none; will-change: transform, opacity; }
 .dmg { font-weight: 900; font-size: 1.15rem; line-height: 1; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 #000, 0 0 6px rgba(0, 0, 0, 0.9); animation: dmgFloat 0.9s ease-out forwards; }
 .dmg.crit { font-size: 1.8rem; color: #fcd34d; text-shadow: 0 2px 0 #7c2d12, 0 0 14px rgba(245, 158, 11, 0.9); animation: dmgCrit 1.1s ease-out forwards; }
-.dmg.manual { font-size: 0.95rem; color: #bae6fd; }
+.dmg.manual { font-size: 1.15rem; color: #e0f2fe; text-shadow: 0 2px 0 #0c4a6e, 0 0 10px rgba(125, 211, 252, 0.9); }
 .dmg.taken { color: #fca5a5; }
 .dmg.dodge { font-size: 1rem; font-style: italic; color: #e2e8f0; }
 .dmg.heart { font-size: 1.5rem; color: #fb7185; text-shadow: 0 2px 0 #4c0519, 0 0 12px rgba(251, 113, 133, 0.85); animation: dmgRise 1.1s ease-out forwards; }
 .dmg.levelup { font-family: var(--font-display); font-size: 1.25rem; color: #86efac; text-shadow: 0 2px 0 #052e16, 0 0 14px rgba(74, 222, 128, 0.9); animation: dmgRise 1.5s ease-out forwards; }
 .slash { width: 124px; height: 5px; border-radius: 50%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95) 45%, #fde68a 60%, transparent); box-shadow: 0 0 12px rgba(255, 255, 255, 0.8); animation: slash 0.32s ease-out forwards; }
+.slash.light { width: 82px; height: 4px; background: linear-gradient(90deg, transparent, rgba(224, 242, 254, 0.95) 45%, #7dd3fc 60%, transparent); box-shadow: 0 0 10px rgba(125, 211, 252, 0.8); animation-duration: 0.22s; }   /* the player's own strike */
 .corpse { font-size: clamp(66px, 7.5vw, 94px); line-height: 1; animation: corpse 0.7s ease-in forwards; }
 .corpse.boss { font-size: clamp(86px, 10vw, 126px); }
 .puff { width: 96px; height: 96px; border-radius: 50%; background: radial-gradient(circle, rgba(226, 232, 240, 0.7), rgba(148, 163, 184, 0.25) 50%, transparent 70%); animation: puff 0.65s ease-out forwards; }
@@ -2220,6 +2222,23 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .frag-row { display: flex; align-items: center; gap: 0.5rem; }
 .frag-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
 .frag-bar i { display: block; width: var(--p, 0%); height: 100%; background: linear-gradient(90deg, #c2410c, #f97316); }
+
+/* ===== The guide's hand (src/ui/guide.js): a glove on the one thing to do in a new hero's first minutes ===== */
+.guide-hand { position: fixed; left: 0; top: 0; z-index: 90; width: 96px; height: 96px; pointer-events: none; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.7)); will-change: transform; }
+.guide-hand[hidden] { display: none; }
+.guide-glove { position: absolute; inset: 0; }
+.guide-hand.down .guide-glove { transform: scaleY(-1); }   /* above its target, finger down */
+.guide-hand .spr { position: relative; animation: guidePress 1.2s ease-in-out infinite; }
+.guide-ring { position: absolute; left: var(--tip-x, 42px); top: 18px; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; border: 3px solid rgba(255, 228, 150, 0.95); box-shadow: 0 0 14px rgba(255, 206, 102, 0.85), inset 0 0 8px rgba(255, 206, 102, 0.5); opacity: 0; animation: guideRing 1.2s ease-out infinite; }
+.guide-hand.down .guide-ring { top: 78px; }
+@keyframes guidePress { 0%, 100% { transform: translate(10px, 14px); } 38% { transform: translate(0, 0) scale(0.93); } 52% { transform: translate(0, 0); } }
+@keyframes guideRing { 0%, 36% { opacity: 0; transform: scale(0.25); } 40% { opacity: 1; transform: scale(0.3); } 100% { opacity: 0; transform: scale(1.35); } }
+body.reduced-motion .guide-hand .spr, body.reduced-motion .guide-ring { animation: none; }
+body.reduced-motion .guide-ring { opacity: 0.85; transform: scale(0.8); }
+@media (prefers-reduced-motion: reduce) {
+    .guide-hand .spr, .guide-ring { animation: none; }
+    .guide-ring { opacity: 0.85; transform: scale(0.8); }
+}
 
 /* ===== The fight on the whole screen (body.battle-full, set by main.js while battleMode) =====
    Entering combat hides the sidebar and the phone hotbar. The header becomes a thin bar with the way

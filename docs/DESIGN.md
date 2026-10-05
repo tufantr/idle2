@@ -464,8 +464,10 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   shown in the Hall's Collection. The Armourer medal comes at 40 pages.
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true —
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
-  first hunt, Fishing after 5 dishes, Firemaking after 20 logs, Alchemy / Shop / Prestige /
-  Achievements at stage 10, Dungeons at stage 20, Agility at stage 30, Farming after 10 Alchemy actions
+  first hunt, Fishing after 5 dishes, Firemaking after 20 logs, the Shop and the Hall when the first
+  boss falls (none as it appears: its fight is the moment), Alchemy at stage 15, Events at 18,
+  Dungeons at 20, the Clan at 25 (on its own), Prestige at 30 and Agility at 35, one beat at a time
+  through a new player's first minutes (§3.24); Farming after 10 Alchemy actions
   or Cooking 15, Crafting with the first silver (or gold) bar once a gem has been found: its first
   piece of jewellery can be made at once (it used to open at Mining 20 or the first gem, hours before
   anything in it could be made, since its bows and rods want Crafting 5). Each goal
@@ -789,6 +791,56 @@ needs another screen: fight, spend, prestige and fight on.
   list and each row's button says what it does: Learn, then Upgrade, lit only while there are points.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
   fight; toasts move under the top bar so they never cover the dock.
+
+### 3.24 The first session
+
+A new player's first minutes were measured with a script that plays them three ways (never touching
+the monster, taking only what the screen offers, or striking five times a second) and the findings
+are in `docs/research_notes/first-session.md`, beside what Tap Titans 2 and other idle games do. One
+who only watched met a kill every 7–10 s, fell at stage 5 within a minute, rested 25 s, and fell
+again; after five minutes he was below stage 10 with no upgrade, no gear and nothing new for 80 s at a
+time. One who struck reached stage 30 in two minutes and had ten places open in seventy seconds. Now:
+
+- **A gentle start.** On the stage ladder the monsters hit at 30% and have 60% of their health at
+  stage 1, rising evenly to their full figures after stage 30 (`BALANCE.enemy.ease`); gold and a
+  farmed boss's loot are paid on the full figures (`enemy.worth`). Dungeons and the Titan are not
+  eased.
+- **The first monster leaves a sword.** A hero who has never had a weapon gets a Rusty Sword from
+  his first kill (+5 attack, doubling his), rising out of the monster in a gold beam; the dock offers
+  it at once. The first boss he beats always leaves a piece of armour he is seen to wear (a helm, a
+  body or a shield).
+- **Levels carry him.** The first combat levels come quickly (a kill's XP is tripled at level 1, the
+  bonus fading to none at level 10: `BALANCE.rewards.fastStart`), and a combat level-up restores his
+  health; the health a Hearth adds is health he has at once. Attack and defence are rounded, not cut,
+  so a first +5% shows (10 becomes 11).
+- **The camp from the first minute.** Its first levels cost 20 and 15 gold, growing ×1.36 (the last
+  levels cost what they did), and the Armour Rack waits until the hero has defence for it to raise.
+- **One place at a time.** Hunting at stage 5; the Shop and the Hall when the first boss falls (none
+  as it appears); Alchemy at 15, Events at 18, Dungeons at 20, the Clan at 25, Prestige at 30, Agility
+  at 35. Celebration cards wait while a boss fight is on screen, so the first boss is seen.
+- **A hand on the thing itself, for those who need it.** `src/systems/guide.js` (pure, from stats the
+  game keeps) names the one thing to do, and `src/ui/guide.js` points a white glove at it, pressing,
+  with a ring where it presses: the monster until the player has struck three times, the sword's
+  Equip, the cheapest camp upgrade the first time one is affordable, the boss's skull on the stage
+  path while the hero regroups after it held out (a tap fights it again at once; the skull pulses
+  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. No
+  words. It comes only after a pause in which a player who would do the thing anyway has done it
+  (3 s on the monster, 4 s on the camp, about a second elsewhere), never takes a click, hides under
+  dialogs and cards, points down from above where there is no room below, gives up on the monster
+  after 15 s if the player would rather watch (and comes back for the first boss), and only ever
+  shows to a hero with no prestige in the first three zones.
+- **A visitor early.** A new hero meets his first gilded monster at stage 7 (one in 150 kills, the
+  usual chance, is too rare for the first minutes).
+- **Strikes feel like strikes.** The hero swings with each one, a light slash crosses the monster,
+  and the number is bigger.
+
+Measured over five seeds (`node tools/opening.mjs`): one who only watches but takes what is offered
+gets his sword at 4.5 s and his first camp level at 10.5 s, meets the first boss at 35 s and beats it
+at 48 s, is at stage 30 after five minutes and first falls after about four; a new place opens every
+20–60 s through the first four minutes. One who strikes beats the first boss in 8 s. The long game is
+unchanged: over seeds 1–4 the 150-hour simulation ends at stage 255 on average (259 before; most of
+the spread is the simulator farming the Void Citadel for hours on some seeds, old code and new alike),
+a little ahead in the first hours.
 
 ## 4. The modifier pipeline
 

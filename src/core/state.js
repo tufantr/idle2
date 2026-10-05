@@ -82,6 +82,7 @@ export function createDefaultState(now = Date.now()) {
             killsByMonster: {}, bestiaryStars: 0,  // the bestiary (data/bestiary.js): defeats per kind, and its stars
             gildedKills: 0,
             petPats: 0, greatCrates: 0, recoveries: 0, // for the secret medals: pats for the pet, great crates opened, falls got up from
+            strikes: 0,            // the player's own strikes on monsters (systems/guide.js)
             codexFound: 0          // pages of the gear codex filled
         },
         minigame: {},

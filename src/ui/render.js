@@ -46,6 +46,7 @@ import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
+import { campOnOffer } from '../systems/guide.js';
 
 // The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
 // the bag (the owner's order), in a group of their own above the headings; the rest follow by group.
@@ -355,13 +356,13 @@ function renderLoadout(game) {
  */
 function campTokens(game) {
     const state = game.state;
-    return CAMP_UPGRADES.map(u => {
+    return campOnOffer(state, game.derived).map(u => {   // the Armour Rack once there is defence to raise
         const level = state.camp[u.id] || 0;
         const cost = nextCampCost(state, u.id);
         const can = cost !== null && state.gold >= cost;
         const canTwo = can && level + 1 < u.max && state.gold >= cost + campCost(u, level + 1);
         const total = Math.round((Math.pow(1 + u.bonus, level) - 1) * 100);
-        return `<div class="camp-token${can ? ' can' : ''}">
+        return `<div class="camp-token${can ? ' can' : ''}" data-camp="${u.id}">
             <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now +${total}%)` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
                 <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
                 <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>

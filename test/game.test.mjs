@@ -152,7 +152,7 @@ test('HP regenerates quickly out of combat and slowly in it', () => {
 });
 
 test('enemy HP roughly doubles per zone inside the authored stages', () => {
-    const ratio = enemyForStage(21).maxHp / enemyForStage(11).maxHp;
+    const ratio = enemyForStage(51).maxHp / enemyForStage(41).maxHp;   // past the gentle first stages
     assert.ok(ratio > 1.9 && ratio < 2.2, `ratio ${ratio}`);
     assert.ok(enemyForStage(10).boss && !enemyForStage(11).boss);
 });
@@ -241,15 +241,15 @@ test('smithing unlocks armour piece by piece', () => {
 
 test('a boss that survives 30 s of fighting escapes; the player regroups one stage back', () => {
     const game = new Game(null, T0);
-    game.state.combat.stage = 10;
-    game.state.combat.maxStage = 10;
-    // Unarmed, the player cannot kill the stage-10 boss within 30 s; plenty of food keeps them alive.
+    game.state.combat.stage = 20;
+    game.state.combat.maxStage = 20;
+    // Unarmed, the player cannot kill the stage-20 boss within 30 s; plenty of food keeps them alive.
     game.state.resources.cooked_dragon = 500;
-    game.setStage(10);
+    game.setStage(20);
     game.enterCombat();
     run(game, 31_000);
     assert.equal(game.state.stats.bossEscapes, 1);
-    assert.equal(game.state.combat.stage, 9);
+    assert.equal(game.state.combat.stage, 19);
     assert.ok(game.state.combat.regroupLeft > 0);
     run(game, 61_000);
     assert.equal(game.state.combat.regroupLeft, 0, 'the regroup window ends');

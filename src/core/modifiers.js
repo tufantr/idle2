@@ -209,8 +209,8 @@ export function deriveStats(state, mods = collectModifiers(state)) {
 
     return {
         combatLevel,
-        atk: Math.floor(atk),
-        def: Math.floor(def),
+        atk: Math.round(atk),   // rounded, not cut: a new hero's first +5% (10 -> 10.5) shows as 11
+        def: Math.round(def),
         maxHp: Math.floor(maxHp),
         critChance: Math.min(BASE.caps.critChance, BASE.baseCritChance + mods.critChance),
         critDmg: BASE.baseCritDmg + mods.critDmg,

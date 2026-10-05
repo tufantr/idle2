@@ -15,9 +15,10 @@ const T0 = 1_700_000_000_000;
 const always = () => 0;          // every roll succeeds
 const never = () => 0.999999;    // every roll fails
 
-/** A new hero fighting at `stage`, its first monster spawned with every roll coming from `source`. */
+/** A hero fighting at `stage` (not his first fight: the first monster ever leaves a sword), its monster spawned with every roll coming from `source`. */
 function fight(stage, source) {
     const game = new Game(null, T0);
+    game.state.stats.kills = 10;
     Object.assign(game.state.combat, { stage, maxStage: stage, bestStage: stage });
     rng.setSource(source);
     game.enterCombat();

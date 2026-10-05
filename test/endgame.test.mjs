@@ -419,7 +419,7 @@ test('a boss pays its bonus the first time it falls in a run; farming it afterwa
     assert.equal(killPayout(game.state, boss).full, false);
 
     // Farming the beaten boss: gold in proportion to its health, no boss bonus.
-    const byHealth = Math.round(boss.maxHp * BALANCE.rewards.goldPerHp * game.derived.goldMult);
+    const byHealth = Math.round((boss.worth || boss.maxHp) * BALANCE.rewards.goldPerHp * game.derived.goldMult);   // its full health (a first stage is eased)
     let gold = game.state.gold;
     onEnemyDeath(game);
     assert.equal(game.state.gold - gold, byHealth);

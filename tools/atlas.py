@@ -19,7 +19,7 @@ import sys
 
 from PIL import Image
 
-from resource_art import build as build_resources, build_extras, build_icons, build_capes
+from resource_art import build as build_resources, build_extras, build_icons, build_capes, build_late
 
 CELL = 32
 COLS = 16
@@ -192,6 +192,8 @@ def main(rltiles):
         add(f'mon/{name}', f'mon/{tile}')
     for uid, tile in LATE_UNIQUES.items():
         add(f'uniq/{uid}', f'item/{tile}')
+    for key, img in build_late(rltiles).items():   # the guide's hand
+        add(key, img)
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

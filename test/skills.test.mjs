@@ -317,7 +317,7 @@ test('new skills unlock from play', () => {
     const s = game.state;
     s.stats.actionsBySkill.cooking = 5;
     s.stats.actionsBySkill.woodcutting = 20;
-    s.combat.bestStage = 30;
+    s.combat.bestStage = 35;   // agility's stage
     game.tick(T0 + 100);
     for (const id of ['fishing', 'firemaking', 'agility']) assert.ok(s.unlocks[id], id);
     assert.ok(!s.unlocks.farming);

@@ -19,7 +19,8 @@ node tools/shots.mjs combat,battle    # chosen tabs ('battle' is the fight filli
 `tools/shots.mjs` needs Playwright once: `npm i --no-save playwright && npx playwright install chromium`.
 After any visible change, run it and look at the pictures. With Claude in Chrome (`claude --chrome`)
 you can also open the local game and play it. `?dev=1&event=guild_fair` runs a weekend event now.
-Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.mjs`.
+Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.mjs`; a new player's first
+minutes: `node tools/opening.mjs` (docs/research_notes/first-session.md).
 
 ## Where things are
 

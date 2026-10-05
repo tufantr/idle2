@@ -1058,6 +1058,19 @@ def build_icons(tiles):
     return {key: to_image(a) for key, a in out.items()}
 
 
+# The guide's hand (src/ui/guide.js): a white glove with a gold cuff, the finger up, pointing at the one
+# thing to do in a new hero's first minutes. Packed after everything else (tools/atlas.py).
+TAP_HAND = ['.....##........', '....#ww#.......', '....#ww#.......', '....#ww#.......', '....#ww###.....',
+            '....#ww#ww##...', '....#ww#ww#w##.', '.##.#ww#ww#ww#.', '#ww##ww#ww#ww#.', '#www#wwwwwwwww#',
+            '.#wwwwwwwwwwww#', '..#wwwwwwwwwwg#', '..#wwwwwwwwwgg#', '...#wwwwwwwggg#', '....#wwwwwggg#.',
+            '....##########.', '....#yyyyyyyy#.', '....#oooooooo#.', '....##########.']
+
+
+def build_late(tiles):
+    """Cells added after the first release, packed after every other cell: the guide's hand."""
+    return {'icon/tap': to_image(blow_up(bitmap(TAP_HAND)))}
+
+
 def build_capes(tiles):
     """The skill capes, hero/capes/<skill> (packed last, so the cells before them keep their place)."""
     cloak = Image.open(f'{tiles}/player/cloak/red.png').convert('RGBA')

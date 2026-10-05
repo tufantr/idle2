@@ -27,6 +27,9 @@ export function grantXp(game, skillId, amount) {
     const after = levelForXp(skill.xp);
     if (after > before) {
         game.emit({ type: 'levelUp', skill: skillId, level: after, from: before });
+        // A combat level-up restores the hero's health (each level adds to it): the first levels, which
+        // come every few kills, carry a new hero through his first fights.
+        if (skillId === 'combat' && game.state.combat.hp > 0 && game.recompute) { game.recompute(); game.state.combat.hp = game.derived.maxHp; }
         log(game, `${SKILLS[skillId].icon} ${SKILLS[skillId].name} level ${after}!`, 'level');
         if (after >= MAX_LEVEL) {
             game.state.stats.skills99 = Object.values(game.state.skills).filter(s => levelForXp(s.xp) >= MAX_LEVEL).length;

@@ -15,6 +15,7 @@ import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } 
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
+import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
@@ -109,7 +110,9 @@ const scene = createScene(document.getElementById('scene'), {
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
 // skill cards (src/ui/actionfx.js), and the phone hotbar.
 const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
-const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen, go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs
+// A boss fight in view: its clock and its health are what the player watches, so cards wait until it ends.
+const bossOnScreen = () => { const c = game.state.combat; return ui.tab === 'combat' && c.active && !!c.enemy?.boss && !c.farmMode; };
+const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs and boss fights
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
@@ -122,6 +125,8 @@ document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.ro
 
 // The skill stage above each skill tab: the hero at work (src/ui/stage.js).
 const stage = createStage(document.getElementById('stage'), { sound: name => sound.play(name), pat: () => game.patPet() });
+// A new hero's first minutes: a hand on the one thing to do (src/ui/guide.js).
+const guide = createGuide(document.body);
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
 function withDevFlags(g) {
@@ -178,6 +183,7 @@ function frame(now) {
     patchLive(game, ui);
     scene.frame(game);
     stage.frame(game);
+    guide.frame(!!ui.modalOpen || !!document.querySelector('#celebrate .celebration'));
     paintGold(now);
     requestAnimationFrame(frame);
 }
@@ -405,6 +411,8 @@ function render() {
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
     scene.sync(game, ui);
     stage.sync(game, ui);
+    guide.sync(game, { battle: ui.tab === 'combat', tab: ui.tab });
+    rewards.resume();   // cards held back by a boss fight show once it is over
     paintGold();
     paintBrand();
     glowArrivals();
