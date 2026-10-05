@@ -2005,6 +2005,8 @@ body:has(#modal-root .modal-overlay.active) #toast-area, body:has(#modal-root .m
 .need.missing { box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.4); }
 .need i { font-style: normal; color: var(--text-muted); }
 .need:hover { background: rgba(214, 170, 92, 0.16); }
+.node-stats [data-tip], .mastery-row[data-tip] { cursor: help; }
+.node-stats [data-tip]:hover { color: var(--text-main); }
 .node-time { font-variant-numeric: tabular-nums; }
 .node-have { display: flex; align-items: center; gap: 0.3rem; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--heading); }
 .node-card.locked { filter: none; opacity: 0.6; border-style: dashed; }

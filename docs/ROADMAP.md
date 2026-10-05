@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The figures that name themselves**: the owner asked for the same on the card being worked.
+      Hovered, its XP says what it is and what the XP bonuses add to the base; its time, the base and
+      how much quicker the tools, mastery and bonuses make it; its double chance, what doubles (a
+      second Raw Fox, the log burning twice) split into tools-and-bonuses and mastery; its keep
+      chance, what is kept; and the mastery bar, what each level gives and when the next comes
 - [x] **Requirements that name themselves**: the owner found what an action needs unclear (tiny
       icons, "1× (0)"). Each requirement is now a chip: the item's icon and how many you hold of how
       many it takes ("0/1", red when short, green when met); hovered with the mouse it shows at once

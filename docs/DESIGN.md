@@ -690,7 +690,10 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
   What an action needs is a row of chips, each the item's icon and how many you hold of how many it
   takes ("0/1", red when short); hovered (tapped on a phone), a chip names its item in the game's own
-  tooltip, with where it comes from ("Raw Fox · needs 1, you have 11 · from Hunting"). Anything with
+  tooltip, with where it comes from ("Raw Fox · needs 1, you have 11 · from Hunting"). The figures
+  of the card being worked name themselves the same way: XP and time (with what the bonuses make of
+  the base), the double chance (what doubles, and how much comes from tools and from mastery), the
+  keep chance and the mastery bar. Anything with
   a `data-tip` gets that tooltip at once on a mouse (`tipAttrs` in render.js, main.js), and holds
   back the browser's slower one of the card beneath.
 - **Every action card has its own picture.** A small painting runs across the card's top, the

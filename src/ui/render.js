@@ -625,17 +625,33 @@ function masteryRow(state, skillId, mastery, label = 'Mastery') {
     const maxed = p.level >= MASTERY_MAX_LEVEL;
     const gives = [`+${pct(mastery.speed, 1)} speed`];
     if (mastery.double) gives.push(`+${pct(mastery.double, 1)} double chance`);
-    if (mastery.preserve) gives.push(`${pct(mastery.preserve, 1)} chance to keep the ingredients`);
-    const title = `${label} ${p.level}: ${p.level > 1 ? gives.join(', ') : 'no bonus yet — every level adds a little'}. `
+    if (mastery.preserve) gives.push(`${pct(mastery.preserve, 1)} chance to keep ${skillId === 'firemaking' ? 'the log' : skillId === 'cooking' ? 'the ingredients and the log' : 'the ingredients'}`);
+    const line = `${p.level > 1 ? gives.join(', ') : 'No bonus yet: every level adds a little'}. `
         + (maxed ? 'Mastered!' : `Next level after ${duration((p.xpNeeded - p.xpInto) * 1000)} more practice (at base speed).`);
-    return `<div class="mastery-row" title="${esc(title)}"><span class="mastery-lvl ${maxed ? 'max' : ''}">${esc(label)} ${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div></div>`;
+    return `<div class="mastery-row" ${tipAttrs(`${label} ${p.level}`, line)}><span class="mastery-lvl ${maxed ? 'max' : ''}">${esc(label)} ${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div></div>`;
+}
+
+/** XP and time in an action's card, each naming itself on hover: what it is, and what your bonuses make of it. */
+function xpTimeStats(skill, xp, baseXp, interval, baseInterval) {
+    const more = baseXp > 0 ? xp / baseXp - 1 : 0;
+    const quicker = baseInterval > 0 ? 1 - interval / baseInterval : 0;
+    const xpTip = tipAttrs('Experience', `${fmt(xp)} ${SKILLS[skill].name} XP each time${more > 0.005 ? ` (${fmt(baseXp)} at base, +${pct(more)} from your XP bonuses)` : ''}`);
+    const timeTip = tipAttrs('Time', `${seconds(interval)} each time${quicker > 0.005 ? ` (${seconds(baseInterval)} at base, ${pct(quicker)} quicker with your tools, mastery and bonuses)` : ''}`);
+    return `<span ${xpTip}>${glyph('xp')} ${fmt(xp)} XP</span><span ${timeTip}>${glyph('time')} ${seconds(interval)}</span>`;
 }
 
 /** The chance line for an action's stats: doubling (skill + mastery) and keeping ingredients. */
 function luckStats(d, def) {
-    const dbl = (def.kind === 'smith' || def.kind === 'craft') ? 0 : (d.doubleChance[def.skill] || 0) + (def.mastery?.double || 0);
+    const doubles = def.kind !== 'smith' && def.kind !== 'craft';
+    const fromSkill = doubles ? d.doubleChance[def.skill] || 0 : 0;
+    const fromMastery = doubles ? def.mastery?.double || 0 : 0;
+    const dbl = fromSkill + fromMastery;
     const keep = def.mastery?.preserve || 0;
-    return `${dbl ? `<span title="Chance of a double">${glyph('dice')} ${pct(dbl)}</span>` : ''}${keep ? `<span title="Chance to keep the ingredients">${glyph('keep')} ${pct(keep)}</span>` : ''}`;
+    const what = def.output ? `a second ${res(def.output).name}` : def.bonfireLog ? 'the log burning twice' : 'a double';
+    const parts = [fromSkill > 0 && `${pct(fromSkill)} from your tools and bonuses`, fromMastery > 0 && `${pct(fromMastery, 1)} from mastery`].filter(Boolean).join(', ');
+    const kept = def.bonfireLog ? 'the log' : def.fuel ? 'the ingredients and the log' : 'the ingredients';
+    return `${dbl ? `<span ${tipAttrs('Double chance', `${pct(dbl)} chance of ${what}${parts ? ` (${parts})` : ''}`)}>${glyph('dice')} ${pct(dbl)}</span>` : ''}`
+        + `${keep ? `<span ${tipAttrs('Keep chance', `${pct(keep, 1)} chance to keep ${kept} (from mastery)`)}>${glyph('keep')} ${pct(keep)}</span>` : ''}`;
 }
 
 /** What a tool tier does, in words (the "double" means something different per skill). */
@@ -781,7 +797,7 @@ export function renderSkill(game, ui, skillId) {
                 tip: `${gives} · +${xp} XP · ${seconds(interval)}`,
                 active, stalled: active && (action.stalled || !check.ok), onclick: `FI.startNode('${skillId}','${node.id}')`,
                 have: node.produces ? state.resources[node.produces] : undefined, haveIcon: node.produces ? resIcon(node.produces) : '', haveName: node.produces ? res(node.produces).name : '',
-                stats: `<span>${glyph('xp')} ${xp} XP</span><span>${glyph('time')} ${seconds(interval)}</span>${luckStats(d, def)}`,
+                stats: `${xpTimeStats(skillId, xp, node.xp, interval, node.interval)}${luckStats(d, def)}`,
                 mastery: masteryRow(state, skillId, def.mastery),
                 progressId: `progress-${skillId}-${node.id}`, progress: active ? Math.min(100, action.progress / interval * 100) : 0
             });
@@ -852,12 +868,12 @@ export function renderMinigame(game, skillId) {
 // ---------- smithing & crafting ----------
 
 /** A recipe (smelting, forging, jewellery, a tool) as an action card. */
-function recipeCard({ title, icon, pic = null, color, inputs, note = '', have, haveIcon, haveName = '', xp, interval, active, stalled, onclick, disabled, reqText, luck = '', mastery = '', tip = '' }, state) {
+function recipeCard({ title, icon, pic = null, color, inputs, note = '', have, haveIcon, haveName = '', skill, xp, baseXp, interval, baseInterval, active, stalled, onclick, disabled, reqText, luck = '', mastery = '', tip = '' }, state) {
     if (disabled) return actionCard({ locked: reqText, art: icon, pic, title, color });
     return actionCard({
         id: `card-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, art: icon, pic, title, color, note, inputs: needChips(state, Object.fromEntries(inputs)), time: interval,
         tip: tip || `+${xp} XP · ${seconds(interval)}`, active, stalled: active && stalled, onclick, have, haveIcon, haveName,
-        stats: `<span>${glyph('xp')} ${xp} XP</span><span>${glyph('time')} ${seconds(interval)}</span>${luck}`, mastery
+        stats: `${xpTimeStats(skill, xp, baseXp ?? xp, interval, baseInterval ?? interval)}${luck}`, mastery
     });
 }
 
@@ -881,7 +897,7 @@ export function renderSmithing(game, ui) {
             return recipeCard({
                 title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), pic: cardPic(r.id, 'smithy'), color: res(r.produces).color, inputs: Object.entries(r.consumes),
                 have: state.resources[r.produces], haveIcon: resIcon(r.produces), haveName: res(r.produces).name,
-                xp: Math.round(r.xp * d.xpMult), interval: intervalFor(def, d), luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
+                skill: 'smithing', xp: Math.round(r.xp * d.xpMult), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
                 active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
                 onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: `Level ${r.levelReq}`
             }, state);
@@ -893,7 +909,7 @@ export function renderSmithing(game, ui) {
         const recipes = SMITHING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'smith', type, bar: metal.bar }) }));
         const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
             title: `${metal.name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${metal.tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`forge_${type}`, 'smithy'), color: res(metal.bar).color,
-            inputs: Object.entries(recipe.consumes), xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
+            inputs: Object.entries(recipe.consumes), skill: 'smithing', xp: Math.round(recipe.xp * d.xpMult), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
             onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
         }, state)).join('');
@@ -934,7 +950,7 @@ function renderToolCard(game, toolId) {
     const level = skillLevel(state, tool.madeBy);
     return recipeCard({
         title: next.name, icon, pic: cardPic(`tool_${toolId}`, tool.madeBy === 'crafting' ? 'jeweller' : 'smithy'), color: '#facc15', inputs: Object.entries(next.consumes), note: toolEffect(toolId, next.tier),
-        xp: Math.round(next.xp * d.xpMult), interval: actionInterval(4000, d, tool.madeBy),
+        skill: tool.madeBy, xp: Math.round(next.xp * d.xpMult), baseXp: next.xp, interval: actionInterval(4000, d, tool.madeBy), baseInterval: 4000,
         active: state.action?.kind === 'tool' && state.action.tool === toolId, stalled: state.action?.stalled,
         onclick: `FI.makeTool('${toolId}', ${next.tier})`, disabled: level < next.levelReq, reqText: `${SKILLS[tool.madeBy].name} ${next.levelReq}`
     }, state);
@@ -952,7 +968,7 @@ export function renderCrafting(game, ui) {
     const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gem.gem }) }));
     const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
         title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(gem.gem).color,
-        inputs: Object.entries(recipe.consumes), xp: Math.round(recipe.xp * d.xpMult), interval: intervalFor(recipe, d), luck: luckStats(d, recipe),
+        inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(recipe.xp * d.xpMult), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
