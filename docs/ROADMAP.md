@@ -691,8 +691,9 @@ screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` pa
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;
-real-time chat; synchronous party content; gacha pets; purchasable power (the owner means it for
-the online guild side, later: see [Decisions for the owner](#decisions-for-the-owner), 2).
+real-time chat; synchronous party content; gacha pets; purchasable power (the owner plans it for
+later, not only for the online clan side, the game's most important part: see
+[Decisions for the owner](#decisions-for-the-owner), 2).
 
 ---
 
@@ -704,11 +705,12 @@ the online guild side, later: see [Decisions for the owner](#decisions-for-the-o
    migrated on load like a local one.
 2. **Monetization and hosting.** For now the game is free with nothing for sale, which fits Vercel's
    Hobby plan (non-commercial). The owner's intent for later (October 2026): players will be able to
-   spend money to get stronger for the guild side of the game, which will be online. Not built yet,
-   and deferred with the rest. When it comes, the research's warning stands: paid power plus an online
-   guild side needs that side to be server-authoritative (the server decides fights and rewards, since
-   a browser save can be edited), and selling anything needs a commercial hosting plan (Vercel Pro or
-   another host). Clans and leaderboards also need `POSTGRES_URL` (Vercel Postgres); tables are
+   spend money to get stronger. The clan (guild) section is the most important part of the game,
+   because it is online, but what is sold is not limited to it. Not built yet, and deferred with the
+   rest; shipping comes first, later. When it comes, the research's warning stands: paid power plus an
+   online side needs that side to be server-authoritative (the server decides fights and rewards,
+   since a browser save can be edited), and selling anything needs a commercial hosting plan (Vercel
+   Pro or another host). Clans and leaderboards also need `POSTGRES_URL` (Vercel Postgres); tables are
    created on the first request.
 3. **`api/node_modules` is still committed** (1,099 files). `.gitignore` keeps it tracked until a
    preview deployment confirms Vercel installs dependencies from `api/package.json`; then remove it
