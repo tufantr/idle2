@@ -155,7 +155,7 @@ export function endDungeon(game) {
     const state = game.state;
     if (!choosingAfterClear(state)) return false;
     const d = dungeonById(state.combat.dungeon.id);
-    log(game, `${d.icon} Left ${d.name}, cleared (${state.dungeons[d.id].clears} clears in all).`, 'combat');
+    log(game, `${d.icon} Left ${d.name}, cleared (${state.dungeons[d.id].clears} clear${state.dungeons[d.id].clears === 1 ? '' : 's'} in all).`, 'combat');
     returnToStages(game);
     game.emit({ type: 'dungeonChosen', keep: false });
     return true;

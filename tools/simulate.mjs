@@ -216,7 +216,8 @@ function foodTask() {
 }
 
 function jewelTask() {
-    if (!S.unlocks.crafting || lvl('mining') < 30) return null;
+    if (lvl('mining') < 30) return null;
+    if (!S.unlocks.crafting) return lvl('smithing') >= 20 ? obtain('silver_bar', 1) : null;   // the first silver bar opens Crafting
     const bar = [...JEWEL_BARS].reverse().find(b => lvl('crafting') >= b.levelReq && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === b.bar).levelReq);
     if (!bar) return null;
     const gemTier = [...GEM_TIERS].reverse().find(g => lvl('crafting') >= g.levelReq && S.resources[g.gem] > 0);

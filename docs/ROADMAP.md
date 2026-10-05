@@ -449,7 +449,21 @@ progress as motion, art before words, one stage with a HUD around it.
       could overwrite local progress without asking; a clock turned back froze the game, and timers
       from a clock set ahead stuck for weeks; a deleted clan handed out fresh attacks; the prototype's
       gear was dropped when its save was migrated, and a damaged save with no version was read as the
-      prototype
+      prototype. The screens: the boss's and the Titan's clock fell off the bottom of the full-screen
+      fight on any window under about 810 px tall (most laptops): the scene now keeps room for it, a
+      short scene puts its title and stage path on one line and draws the fighters smaller rather than
+      over their bars, and a boss is one size up only where it fits; on a phone, a tap on an item chip
+      or a figure in a card names it without starting or stopping the card's work (the bubble also
+      landed in the corner); a Prestige waits for the end of a Titan fight (it spent the hour's
+      attempt) or a dungeon run, and says so; the inventory offers no Equip, and no ▲ badge, while gear
+      is locked in a dungeon; Crafting opens with the first silver bar once a gem is found (it opened
+      hours before anything in it could be made); the looks in Settings and on a medal's card are drawn
+      without the gear (a helmet hid what tells them apart); the timing mini-game's marker moves
+      smoothly and a tap is judged where it was drawn; a held key presses once; a tall dialog opens at
+      its top on a phone, without raising the keyboard; Enter logs in; the phone's tab strip slides to
+      the tab opened; the Hall's unique items show the next dungeon's only, unnamed; leaving a dungeon
+      by choice no longer says "failed"; "1 prestiges", "+1 skill points", "Salvaged 1 items" and
+      "999.7M" reading "1000M" are put right
 - [x] **Gear no longer waits days for a level**: a balance pass found that at Melvor pace the first
       Abyssal (tier 7) drop sat in the bag 57–65 hours before combat 90 let the hero wear it, and the
       first Dragonbone 14–21 hours. Tier 6 is now worn from combat 70 and tier 7 from 80 (were 75 and

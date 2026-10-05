@@ -134,6 +134,7 @@ export function createScene(root, actions) {
     let lastHeroLayers = '';  // the hero is redrawn only when his gear (or the size of the stage) changes
     let lastPet = '';         // and his pet only when it changes
     let lastFoeScale = 0;     // the monster is redrawn when the stage changes size
+    let lastBossScale = 0;    // (a boss when its room does)
     let bannerTimer = 0;
     let fxBudget = MAX_FX_PER_FRAME;
     let coinsInFlight = 0;
@@ -183,9 +184,17 @@ export function createScene(root, actions) {
         const phone = !!window.matchMedia?.('(max-width: 600px)').matches;
         const short = !!window.matchMedia?.('(max-height: 560px)').matches;   // a phone on its side
         if (!document.body.classList.contains('battle-full')) return phone || short ? 3 : 4;
-        // The stand's height follows the scene's (style.css); a boss is one size up and must fit it too.
+        // The stand's height follows the scene's (style.css); a boss is one size up and should fit it too.
+        // A short window draws them smaller rather than over their health bars.
         const fit = Math.floor((el.foeStand.clientHeight || 0) / ATLAS_CELL) - 1;
-        return Math.max(short ? 2 : phone ? 3 : 4, Math.min(phone ? 4 : 6, fit));
+        return Math.max(Math.min(short ? 2 : phone ? 3 : 4, standRoom()), 2, Math.min(phone ? 4 : 6, fit));
+    }
+    /** How many sprite cells the stand holds, one on another (half a cell may stick out: sprites have bare edges). */
+    const standRoom = () => Math.floor(((el.foeStand.clientHeight || 0) + ATLAS_CELL / 2) / ATLAS_CELL);
+    /** A boss is drawn one size up, where the stand has room for it (a short window keeps it at the others' size). */
+    function bossScale(scale) {
+        if (!document.body.classList.contains('battle-full')) return scale + 1;
+        return Math.max(scale, Math.min(scale + 1, standRoom()));
     }
 
     function trailFor(t, pct, now, dt) {
@@ -355,6 +364,7 @@ export function createScene(root, actions) {
     function showEnemy(game, enemy, silent) {
         const c = game.state.combat;
         lastFoeScale = fighterScale();
+        lastBossScale = 0;
         el.foe.classList.toggle('chest', !!enemy.chest);
         if (enemy.chest) {   // after a clear: the open chest where the boss fell, a tap away from the choice
             el.foeIcon.innerHTML = sprite('crate', { scale: Math.max(2, lastFoeScale - 2), fallback: '📦' });   // a box fills its cell: smaller than a monster
@@ -366,7 +376,8 @@ export function createScene(root, actions) {
             if (!silent) move(el.foeSprite, 'spawn');
             return;
         }
-        el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: lastFoeScale + (enemy.boss ? 1 : 0), fallback: esc(enemy.icon || '👾') });
+        if (enemy.boss) lastBossScale = bossScale(lastFoeScale);
+        el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: lastBossScale || lastFoeScale, fallback: esc(enemy.icon || '👾') });
         setText(el.foeName, enemy.name.replace(' (Boss)', ''));
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
@@ -478,7 +489,7 @@ export function createScene(root, actions) {
                 lastHeroLayers = layers;
                 el.heroFigure.innerHTML = heroSprite(state, { scale });
             }
-            if (lastEnemy && scale !== lastFoeScale) showEnemy(game, lastEnemy, true); // the stage changed size: redraw the monster to match
+            if (lastEnemy && (scale !== lastFoeScale || (lastBossScale && bossScale(scale) !== lastBossScale))) showEnemy(game, lastEnemy, true); // the stage changed size: redraw the monster to match
             el.battle.classList.toggle('idle', !c.active);
             el.cta.hidden = c.active;
             if (!c.active) setMarkup(el.cta, `${CTA_ICON} ${c.recovering ? 'Fight now' : 'Enter combat'}`);   // resting after a fall: go back in at once
@@ -578,7 +589,7 @@ export function createScene(root, actions) {
                 case 'kill': {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;
-                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: fighterScale() + (ev.enemy.boss ? 1 : 0), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
+                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: ev.enemy.boss ? bossScale(fighterScale()) : fighterScale(), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
                     coinBurst(ev.enemy.boss ? 7 : ev.enemy.gilded ? 6 : 1);
                     if (ev.enemy.gilded) spawnFx('dmg gilded-gold', `+${fmt(ev.gold)}`, foe.x, foe.top - 6, 1400);

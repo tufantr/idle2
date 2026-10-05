@@ -11,11 +11,14 @@ export function prestigeWaitMs(state, now) {
     return Math.max(0, (state.prestige.runStartedAt || 0) + BALANCE.prestige.minRunMs - now);
 }
 
+/** What a prestige would end, so it waits: the Titan fight (the hour's attempt would be lost) or a dungeon run. */
+export const prestigeBlockedBy = state => (state.combat.mode === 'titan' || state.combat.mode === 'dungeon' ? state.combat.mode : null);
+
 // A run must reach stage 10 and last ten minutes. Without the time rule a run that starts past
 // stage 10 (anyone whose best is 100+) could be prestiged again at once, for tokens and a skill point
 // each time, forever.
 export function canPrestige(state, now) {
-    return state.combat.maxStage >= BALANCE.prestige.minStage && prestigeWaitMs(state, now) === 0;
+    return state.combat.maxStage >= BALANCE.prestige.minStage && prestigeWaitMs(state, now) === 0 && !prestigeBlockedBy(state);
 }
 
 /** The per-prestige skill point is for a real run: one that got at least halfway to your best. */
@@ -30,6 +33,7 @@ export function prestigePreview(game) {
     return {
         allowed: canPrestige(state, game.now),
         waitMs: prestigeWaitMs(state, game.now),
+        blockedBy: prestigeBlockedBy(state),   // 'titan' or 'dungeon' while one is under way
         fullRun: fullRun(state),
         tokens,
         skillPoints: sp,
@@ -60,7 +64,7 @@ export function doPrestige(game) {
     game.recompute();
     state.combat.hp = game.derived.maxHp;
     spawnEnemy(game);
-    log(game, `✨ Prestige ${state.prestige.count}: +${preview.tokens} tokens, +${preview.skillPoints} skill points. Starting at stage ${preview.startStage}.`, 'prestige');
+    log(game, `✨ Prestige ${state.prestige.count}: +${preview.tokens} tokens, +${preview.skillPoints} skill point${preview.skillPoints === 1 ? '' : 's'}. Starting at stage ${preview.startStage}.`, 'prestige');
     game.emit({ type: 'prestige', ...preview });
     game.markDirty();
     return true;

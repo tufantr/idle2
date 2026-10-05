@@ -221,3 +221,22 @@ test('a tool made counts at once, and "Salvage commons" is not counted as automa
     game.salvageAll('common');
     assert.equal(game.state.stats.itemsAutoSalvaged || 0, before);
 });
+
+test('a prestige waits for the end of a Titan fight or a dungeon run, and wastes neither', () => {
+    rng.setSource(seededRandom(10));
+    const game = strong({ bestStage: 40, tokens: 20000 });
+    game.state.prestige.runStartedAt = T0 - 3600 * 1000;
+    game.state.combat.maxStage = 40;
+    game.state.titan.readyAt = 0;
+    assert.ok(game.canPrestige());
+    assert.ok(game.challengeTitan());
+    assert.equal(game.canPrestige(), false);
+    assert.equal(game.prestigePreview().blockedBy, 'titan');
+    assert.equal(game.prestige(), false);
+    assert.equal(game.state.combat.mode, 'titan', 'the Titan fight goes on');
+    tickUntil(game, () => game.state.combat.mode !== 'titan', 120000);
+    assert.ok(game.canPrestige(), 'after the fight it may');
+    game.enterDungeon('goblin_warren');
+    assert.equal(game.prestige(), false);
+    assert.equal(game.state.combat.mode, 'dungeon');
+});

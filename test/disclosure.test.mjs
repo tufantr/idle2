@@ -92,25 +92,25 @@ test('developer mode shows every piece', () => {
     for (const rule of DISCLOSURES) assert.ok(seen(game.state, rule.id), rule.id);
 });
 
-test('a lucky gem waits for the smithy: Crafting never opens before the first bar', () => {
+test('Crafting opens when its first piece can be made: a silver bar and a gem', () => {
     const game = new Game(null, T0);
     const s = game.state;
     s.stats.gemsFound = 1;
     s.resources.amethyst = 1;
+    s.stats.barsSmelted = 40;
+    s.resources.copper_bar = 20;
+    s.skills.mining.xp = xpForLevel(25);
     game.tick(T0 + 100);
-    assert.ok(!s.unlocks.crafting, 'a gem alone does not open Crafting');
-    s.stats.actionsBySkill.mining = 5;
+    assert.ok(!s.unlocks.crafting, 'copper bars and a gem make nothing in Crafting');
+    s.resources.silver_bar = 1;
     game.tick(T0 + 200);
-    assert.ok(s.unlocks.smithing && !s.unlocks.crafting, 'Smithing first');
-    s.stats.barsSmelted = 1;
-    game.tick(T0 + 300);
-    assert.ok(s.unlocks.woodcutting && s.unlocks.crafting, 'the first bar opens Crafting for the gem already found');
-    // without a gem, Mining 20 still opens it (after the first bar)
+    assert.ok(s.unlocks.crafting, 'the first silver bar opens it for the gem already found');
+    // a silver bar alone waits for a gem
     const other = new Game(null, T0);
-    other.state.skills.mining.xp = xpForLevel(20);
+    other.state.resources.gold_bar = 1;
     other.tick(T0 + 100);
     assert.ok(!other.state.unlocks.crafting);
-    other.state.stats.barsSmelted = 1;
+    other.state.stats.gemsFound = 1;
     other.tick(T0 + 200);
     assert.ok(other.state.unlocks.crafting);
 });

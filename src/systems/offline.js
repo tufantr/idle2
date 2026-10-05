@@ -160,8 +160,8 @@ export function describeOffline(summary) {
     if (summary.mode === 'skill') lines.push(summary.stalledReason ? `Work stopped early: ${summary.stalledReason}.` : 'Your hero kept working the whole time.');
     if (summary.mode === 'combat') {
         const fell = summary.deaths ? ` — ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}you fell ${summary.deaths === 1 ? 'once' : `${summary.deaths} times`} and got up again` : '';
-        lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stages gained` : ''}${fell}.`);
-        for (const d of summary.dungeonClears || []) lines.push(`${d.clears.toLocaleString()} ${d.name} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)`);
+        lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stage${summary.stages === 1 ? '' : 's'} gained` : ''}${fell}.`);
+        for (const d of summary.dungeonClears || []) lines.push(`${d.clears.toLocaleString()} ${d.name} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragment${d.fragments === 1 ? '' : 's'})`);
     }
     if (summary.plotsReady) lines.push(`🌾 ${summary.plotsReady} farming plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest.`);
     for (const pet of summary.pets || []) lines.push(`🐾 A pet found you: ${pet}!`);
@@ -173,8 +173,8 @@ export function describeOffline(summary) {
         if (delta < 0) lines.push(`−${(-delta).toLocaleString()} ${RESOURCES[id]?.name || id} used`);
     }
     if (summary.gold > 0) lines.push(`+${summary.gold.toLocaleString()} gold`);
-    if (summary.items > 0) lines.push(`+${summary.items} ${summary.mode === 'combat' ? 'items found' : 'items made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}`);
-    else if (summary.salvaged > 0) lines.push(`${summary.salvaged} items salvaged for essence and bars`);
+    if (summary.items > 0) lines.push(`+${summary.items} ${summary.items === 1 ? 'item' : 'items'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}`);
+    else if (summary.salvaged > 0) lines.push(`${summary.salvaged} item${summary.salvaged === 1 ? '' : 's'} salvaged for essence and bars`);
     for (const [id, s] of Object.entries(summary.skills)) {
         lines.push(`+${s.xp.toLocaleString()} ${SKILLS[id]?.name || id} XP${s.to > s.from ? ` (level ${s.from} → ${s.to})` : ''}`);
     }

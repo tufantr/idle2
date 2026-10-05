@@ -248,6 +248,16 @@ function showTip(el, text, { title = '', stay = false } = {}) {
     tipNode = node;
     if (!stay) tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
 }
+// A tap on a chip or figure inside a card (an item a recipe needs, its XP or time) names it, and does not
+// also start or stop the card's action; the bubble is placed before anything is drawn again.
+document.addEventListener('click', event => {
+    if (!window.matchMedia?.('(hover: none)').matches) return;
+    const el = event.target?.closest?.('[data-tip]');
+    if (!el || !el.parentElement?.closest('[role="button"]') || el.closest('button, a')) return;
+    event.stopPropagation();
+    event.preventDefault();
+    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '' });
+}, { capture: true });
 document.addEventListener('click', event => {
     if (!window.matchMedia?.('(hover: none)').matches) return;
     const el = event.target?.closest?.(TIP_TARGETS);
@@ -298,9 +308,12 @@ document.addEventListener('keydown', event => {
     noteInput();
     sound.unlock();
     pointer.keyAt = Date.now();
-    // Keyboard access for the clickable cards (role="button").
+    // Keyboard access for the clickable cards (role="button"). A key held down presses once: held, it
+    // would start and stop an action over and over, or buy again and again.
     const target = event.target;
-    if ((event.key === 'Enter' || event.key === ' ') && target?.getAttribute?.('role') === 'button') {
+    const press = event.key === 'Enter' || event.key === ' ';
+    if (press && event.repeat && target?.closest?.('button, [role="button"]')) { event.preventDefault(); return; }
+    if (press && target?.getAttribute?.('role') === 'button') {
         event.preventDefault();
         target.click();
     }
@@ -380,6 +393,7 @@ function render() {
     const tab = document.getElementById('tab');
     document.body.classList.toggle('battle-full', battleMode(game, ui)); // before the scene syncs: it sizes the fighters by it
     setHtml(document.getElementById('nav'), renderNav(game, ui));
+    if (ui.tab !== navShownTab) { navShownTab = ui.tab; revealNavTab(); }
     setHtml(document.getElementById('nav-next'), renderNavNext(game));
     setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
@@ -395,6 +409,20 @@ function render() {
     paintBrand();
     glowArrivals();
     refreshPerks();
+}
+
+// On a phone the tabs are a strip that scrolls sideways: a tab opened from elsewhere (the hotbar, a
+// card) slides into sight.
+let navShownTab = null;
+function revealNavTab() {
+    const nav = document.getElementById('nav');
+    const btn = document.getElementById(`nav-${ui.tab}`);
+    if (!nav || !btn || nav.scrollWidth <= nav.clientWidth + 1) return;
+    const strip = nav.getBoundingClientRect();
+    const tab = btn.getBoundingClientRect();
+    if (tab.left >= strip.left && tab.right <= strip.right) return;
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    nav.scrollBy({ left: tab.left - strip.left - (strip.width - tab.width) / 2, behavior: still ? 'auto' : 'smooth' });
 }
 
 /** The perks dialog stays current while it is open (a perk bought, a skill point spent). */
@@ -459,7 +487,8 @@ function soundFor(ev, onCombat) {
         case 'unlock': case 'zoneReached': return ['unlock'];
         case 'achievement': case 'eventMilestone': case 'dungeonMilestone': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
-        case 'death': case 'bossTimeout': case 'dungeonFail': return ['defeat'];
+        case 'death': case 'bossTimeout': return ['defeat'];
+        case 'dungeonFail': return ev.lost ? ['defeat'] : null;   // leaving by choice is no defeat
         case 'prestige': return ['prestige'];
         case 'pet': return ['pet'];
         case 'unique': return ['legendary'];
@@ -517,7 +546,7 @@ function handleEvents(events) {
                 if (ui.tab !== 'achievements' && isUnlocked(game.state, 'achievements')) markFresh('achievements', true);   // "New" on the Hall until visited
                 const look = lookForMedal(ev.id);   // some medals bring a look for the hero
                 const lines = [escapeHtml(a?.reward || '')];
-                if (look) lines.push(`<span class="cel-look">${heroSprite({ ...game.state, hero: { ...game.state.hero, look: look.id } }, { scale: 1 })}</span> A new look: ${escapeHtml(look.name)}`);
+                if (look) lines.push(`<span class="cel-look">${heroSprite({ ...game.state, equipped: {}, hero: { ...game.state.hero, look: look.id } }, { scale: 1 })}</span> A new look: ${escapeHtml(look.name)}`);
                 if (a) rewards.celebrate({ key: `medal:${a.id}`, kind: 'medal', icon: `<span class="cel-medal">${medalArt(a, 2)}</span>`, kicker: ev.secret ? 'A secret medal' : 'A new medal', title: a.name, lines, ms: look ? 4800 : 3600 });
                 else toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625));
                 break;
@@ -533,7 +562,7 @@ function handleEvents(events) {
                 const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
                 if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
                     rewards.celebrate({ kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: '' } }, { scale: 3 }), kicker: 'A new rank', title: rank.name,   // the new cloak, even over a cape
-                        lines: [`A ${rank.cloak} cloak, for ${count} prestiges`, paid] });
+                        lines: [`A ${rank.cloak} cloak, for ${count} prestige${count === 1 ? '' : 's'}`, paid] });
                 } else {
                     rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
                         lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
@@ -552,7 +581,7 @@ function handleEvents(events) {
                 break;
             case 'dungeonChosen': if (ui.modalOpen === 'runChoice') closeModal(); break;
             case 'dungeonFail':
-                toast('The dungeon run failed', 'death');
+                toast(ev.lost ? 'The dungeon run failed' : 'You left the dungeon: the run ends here', ev.lost ? 'death' : 'info');
                 // lost (a fall, or the boss's timer): once the defeat has shown, back to the dungeons
                 if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, 2400);
                 break;
@@ -621,8 +650,12 @@ function showModal(html, key) {
     const root = document.getElementById('modal-root');
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
-    const marked = root.querySelector('[data-autofocus]'); // the map opens on its Close button, not on its first pin
-    if (marked) marked.focus({ preventScroll: true }); else root.querySelector('input, button.btn-confirm, button')?.focus();
+    // The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
+    // scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
+    const touch = !!window.matchMedia?.('(hover: none)').matches;
+    const first = root.querySelector('[data-autofocus]') || root.querySelector(touch ? 'button.btn-confirm, button' : 'input, button.btn-confirm, button');
+    first?.focus({ preventScroll: true });
+    for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
 }
 let pendingConfirm = null;
 /** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
@@ -863,7 +896,7 @@ window.FI = {
     upgrade(id) { const ok = game.upgradeItem(id); if (ok) sound.play('craft'); render(); if (ok) flourish('#item-detail .detail-art'); },
     reforge(id) { const ok = game.reforgeItem(id); if (ok) sound.play('rare'); render(); if (ok) flourish('#item-detail .detail-art', 'rgba(196, 165, 255, 0.95)'); },
     salvage(id) { const g = game.salvageItem(id); if (g) { sound.play('drop'); toast(`+${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info', resIcon('essence')); } render(); },
-    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} items (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
+    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },
@@ -893,7 +926,7 @@ window.FI = {
     closeModal() { closeModal(); },
 
     startMinigame(skill) { game.startMinigame(skill); render(); },
-    resolveMinigame(skill) { game.resolveMinigame(skill); render(); },
+    resolveMinigame(skill) { advance(Date.now()); game.resolveMinigame(skill); render(); },   // judged at the moment of the tap, as the marker was drawn
     failMinigame(skill) { game.failMinigame(skill); render(); },
     pumpHeat(skill) { game.pumpHeat(skill); },
     setDragValue(skill, value) { game.setDragValue(skill, value); },

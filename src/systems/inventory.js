@@ -164,18 +164,21 @@ export function salvageAll(game, maxRarity = 'common') {
         state.inventory.splice(state.inventory.indexOf(item), 1);
         essence += salvageObject(game, item, { quiet: true }).essence;   // one line for them all; not automatic
     }
-    if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} items (+${essence} essence).`, 'loot');
+    if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'} (+${essence} essence).`, 'loot');
     return { count: doomed.length, essence };
 }
 
 // ---------- equip ----------
 
-/** Equip an inventory item into a slot (auto-picks an empty matching slot if none given). */
+/** Gear can't be changed during a dungeon run. */
+export const gearIsLocked = state => !!(state.combat.active && state.combat.mode === 'dungeon');
+
 function gearLocked(game) {
-    const c = game.state.combat;
-    if (c.active && c.mode === 'dungeon') { game.emit({ type: 'error', text: 'Gear is locked inside a dungeon.' }); return true; }
+    if (gearIsLocked(game.state)) { game.emit({ type: 'error', text: 'Gear is locked inside a dungeon.' }); return true; }
     return false;
 }
+
+/** Equip an inventory item into a slot (auto-picks an empty matching slot if none given). */
 
 export function equipItem(game, id, requestedSlot = null) {
     const state = game.state;
@@ -241,7 +244,7 @@ export function sellAllItems(game, maxRarity = 'common') {
     });
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
-    if (count) { log(game, `Sold ${count} items for ${gold} gold.`, 'info'); game.markDirty(); }
+    if (count) { log(game, `Sold ${count} item${count === 1 ? '' : 's'} for ${gold} gold.`, 'info'); game.markDirty(); }
     return { count, gold };
 }
 

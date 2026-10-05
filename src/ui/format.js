@@ -8,9 +8,11 @@ export function fmt(n, { short = true } = {}) {
     const abs = Math.abs(n);
     if (!short || abs < 1e6) return Math.round(n).toLocaleString('en-US');
     let tier = Math.floor(Math.log10(abs) / 3);
+    let scaled = n / Math.pow(10, tier * 3);
+    if (Math.abs(Number(scaled.toPrecision(3))) >= 1000) { tier += 1; scaled /= 1000; }   // 999.7M reads 1.00B, not 1000M
     if (tier >= SUFFIXES.length) return n.toExponential(2);
-    const scaled = n / Math.pow(10, tier * 3);
-    return `${scaled.toFixed(scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2)}${SUFFIXES[tier]}`;
+    const shown = Math.abs(Number(scaled.toPrecision(3)));   // the digits after the point follow the rounded value: 99.97M reads 100M
+    return `${scaled.toFixed(shown >= 100 ? 0 : shown >= 10 ? 1 : 2)}${SUFFIXES[tier]}`;
 }
 
 export function pct(x, digits = 0) {

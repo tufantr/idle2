@@ -466,8 +466,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
   first hunt, Fishing after 5 dishes, Firemaking after 20 logs, Alchemy / Shop / Prestige /
   Achievements at stage 10, Dungeons at stage 20, Agility at stage 30, Farming after 10 Alchemy actions
-  or Cooking 15, Crafting at mining 20 or the first gem (but never before the first bar: jewellery
-  needs bars, and a lucky gem in the first minute used to open Crafting ahead of Smithing). Each goal
+  or Cooking 15, Crafting with the first silver (or gold) bar once a gem has been found: its first
+  piece of jewellery can be made at once (it used to open at Mining 20 or the first gem, hours before
+  anything in it could be made, since its bows and rods want Crafting 5). Each goal
   carries a `task` in a few words and the `tab` where the work happens; the sidebar's Next card
   shows it with its progress. Settings has a developer switch (and `?dev=1`) that unlocks all.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for

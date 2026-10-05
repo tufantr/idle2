@@ -18,7 +18,7 @@ import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/ski
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
 import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
-import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade } from '../systems/inventory.js';
+import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked } from '../systems/inventory.js';
 import { nextCampCost } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS } from '../data/dungeons.js';
@@ -135,7 +135,7 @@ function readyBadge(game, id) {
         const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique));
         return whole ? pill('!', `${UNIQUES[whole.unique]?.name || 'A unique'} is ready to assemble`, 'gold') : '';
     }
-    if (id === 'inventory') return state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
+    if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
     return '';
 }
 
@@ -201,7 +201,7 @@ export function renderHotbar(game, ui) {
     const action = resolveAction(state);
     const fighting = state.combat.active;
     const banked = state.daily.banked;
-    const upgrade = state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
+    const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
     const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
         `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge" aria-label="${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}">${badge}</b>` : ''}</button>`;
     const work = action && SKILLS[action.skill]
@@ -228,7 +228,7 @@ export function renderHeader(game, ui, cloud) {
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
         seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +0.5% ATK/DEF each"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
-        seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill points: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
+        seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
     const banked = state.daily.banked;
     const greatNext = cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1;   // the crate waiting is a great one
@@ -378,6 +378,9 @@ function renderCamp(game) {
     </section>`;
 }
 
+/** What a prestige waits for (a prestige would end it): "Titan fight" or "dungeon run". */
+const afterWhat = preview => (preview.blockedBy === 'titan' ? 'Titan fight' : 'dungeon run');
+
 /** Prestige, in one line: what a prestige would pay now, and the button. The rules are behind the "?". */
 function renderPrestigeStrip(game) {
     const state = game.state;
@@ -386,6 +389,7 @@ function renderPrestigeStrip(game) {
     const preview = game.prestigePreview();
     const line = preview.allowed ? `<b>+${preview.tokens}</b> tokens if you prestige now`
         : c.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} first`
+        : preview.blockedBy ? `After the ${afterWhat(preview)}`
         : `Ready in ${duration(preview.waitMs)}`;
     return `<section class="glass-panel prestige-strip" style="${artStyle('prestige')}">
         <div class="prestige-strip-text">
@@ -551,6 +555,7 @@ function renderLoopActions(game) {
         const preview = game.prestigePreview();
         const line = preview.allowed ? `+${fmt(preview.tokens)} tokens${preview.skillPoints ? `, +${preview.skillPoints} SP` : ''}`
             : c.maxStage < BALANCE.prestige.minStage ? `at stage ${BALANCE.prestige.minStage}`
+            : preview.blockedBy ? `after the ${afterWhat(preview)}`
             : `ready in ${duration(preview.waitMs)}`;
         parts.push(`<button class="prestige-btn arcane dock-prestige" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>`);
     }
@@ -558,7 +563,7 @@ function renderLoopActions(game) {
         const sp = state.prestige.skillPoints;
         parts.push(`<button class="shop-btn dock-perks${sp > 0 ? ' ready' : ''}" onclick="FI.openPerks()" title="Spend skill points on perks that last forever"><b>Perks</b><span>${sp > 0 ? `${sp} SP to spend` : 'no SP now'}</span></button>`);
     }
-    const upgrade = c.mode === 'dungeon' && c.active ? null : findUpgrade(state);   // gear is locked inside a dungeon
+    const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
     if (upgrade) {
         parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span></span></button>`);
     }
@@ -627,7 +632,7 @@ function masteryRow(state, skillId, mastery, label = 'Mastery') {
     if (mastery.double) gives.push(`+${pct(mastery.double, 1)} double chance`);
     if (mastery.preserve) gives.push(`${pct(mastery.preserve, 1)} chance to keep ${skillId === 'firemaking' ? 'the log' : skillId === 'cooking' ? 'the ingredients and the log' : 'the ingredients'}`);
     const line = `${p.level > 1 ? gives.join(', ') : 'No bonus yet: every level adds a little'}. `
-        + (maxed ? 'Mastered!' : `Next level after ${duration((p.xpNeeded - p.xpInto) * 1000)} more practice (at base speed).`);
+        + (maxed ? 'Mastered!' : p.xpNeeded - p.xpInto < 1 ? 'Next level with the next one.' : `Next level after ${duration((p.xpNeeded - p.xpInto) * 1000)} more practice (at base speed).`);
     return `<div class="mastery-row" ${tipAttrs(`${label} ${p.level}`, line)}><span class="mastery-lvl ${maxed ? 'max' : ''}">${esc(label)} ${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div></div>`;
 }
 
@@ -830,7 +835,7 @@ export function renderMinigame(game, skillId) {
         if (boostLeft > 0) return `<div class="minigame-line live" style="--minigame-accent:${conf.accent}">${glyph('spark')} ${conf.label}: <b>+${Math.round(mg.bonus * 100)}% speed</b> · ${Math.ceil(boostLeft / 1000)}s</div>`;
         if (!training) return '';
         const wait = Math.max(0, (mg.nextOpportunityAt || now) - now);
-        return `<div class="minigame-line" style="--minigame-accent:${conf.accent}">${tabIcon(skillId, 0.625)} ${conf.label} <span class="muted">· next chance in about ${duration(wait)}</span> ${aboutButton('minigames')}</div>`;
+        return `<div class="minigame-line" style="--minigame-accent:${conf.accent}">${tabIcon(skillId, 0.625)} ${conf.label} <span class="muted">· next chance ${wait < 1000 ? 'in a moment' : `in about ${duration(wait)}`}</span> ${aboutButton('minigames')}</div>`;
     }
     let body;
     if (ch) {
@@ -1064,6 +1069,7 @@ export function renderItemDetail(game, id) {
     const mult = 1 + UPGRADE_STEP * up;
     const rarity = RARITIES.find(r => r.id === item.rarity);
     const wearable = canWear(state, item);
+    const locked = gearIsLocked(state);   // inside a dungeon run
     const afford = c => state.resources.essence >= c.essence && state.gold >= c.gold;
     const atk = Math.round((item.atk || 0) * mult);
     const def = Math.round((item.def || 0) * mult);
@@ -1102,8 +1108,9 @@ export function renderItemDetail(game, id) {
         ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}</li>`).join('')}</ul>` : ''}
         ${compare}
         ${wearable ? '' : `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>`}
+        ${locked ? '<div class="req">Gear is locked until the dungeon run ends</div>' : ''}
         <div class="detail-actions">
-            ${slot ? `<button class="mini-btn" onclick="FI.unequip('${slot}')">Take off</button>` : `<button class="prestige-btn" onclick="FI.equip(${itemId})" ${wearable ? '' : 'disabled'}>Equip</button>`}
+            ${slot ? `<button class="mini-btn" onclick="FI.unequip('${slot}')" ${locked ? 'disabled' : ''}>Take off</button>` : `<button class="prestige-btn" onclick="FI.equip(${itemId})" ${wearable && !locked ? '' : 'disabled'}>Equip</button>`}
             ${upgradeBtn}${reforgeBtn}
             ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">${resIcon('essence')} Salvage</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell for ${fmt(itemSellValue(item))}</button>`}
         </div>
@@ -1262,7 +1269,7 @@ export function renderShop(game, ui) {
                 <div><b>+${preview.tokens}</b><span>tokens for this run (best stage ${state.combat.maxStage})</span></div>
                 <div><b>${preview.startStage}</b><span>is the stage the next run starts at</span></div>
             </div>
-            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
+            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : preview.blockedBy ? `Prestige after the ${afterWhat(preview)}` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>
         <section class="glass-panel ${painted('library', 'center 40%')}">
             <div class="panel-header"><h2>Perks</h2></div>
@@ -1750,10 +1757,14 @@ function renderCollection(game) {
         const at = companion === p.id;
         return `<button type="button" class="pet-card found${at ? ' companion' : ''}" onclick="FI.setCompanion('${p.id}')" aria-pressed="${at}" title="${at ? 'At your side in the fight' : 'Tap to take into the fight'}">${body}${at ? `<span class="pet-at">${glyph('heart')}</span>` : ''}</button>`;
     }).join('');
+    // the uniques of the dungeons met, and the next dungeon's as an unnamed silhouette: a ladder shows its next rung only
+    const nextDungeon = DUNGEONS.find(d => !dungeonUnlocked(state, d));
     const uniques = DUNGEONS.map(d => {
         const u = UNIQUES[d.unique];
         const owned = [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === u.id);
-        return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${u.id}`, { scale: 1.5, cls: owned ? '' : 'silhouette', fallback: owned ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${esc(u.name)}</b><div class="muted small">${d.name} · ${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}</div></div></div>`;
+        const known = owned || dungeonUnlocked(state, d);
+        if (!known && d !== nextDungeon) return '';
+        return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${u.id}`, { scale: 1.5, cls: owned ? '' : 'silhouette', fallback: owned ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${known ? esc(u.name) : 'Unknown unique'}</b><div class="muted small">${d.name} · ${known ? `${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}` : `opens at stage ${d.unlockStage}`}</div></div></div>`;
     }).join('');
     return `<section class="glass-panel ${painted('forest', 'center 45%')}">
         <div class="panel-header"><h2>Pets</h2><span class="muted small">${PETS.filter(p => state.pets[p.id]).length}/${PETS.length} · rare finds while training, kept forever</span></div>
@@ -1810,7 +1821,8 @@ function capePicks(state) {
 
 function lookPicks(state) {
     const worn = state.hero?.look || LOOKS[0].id;
-    const dressed = (id, cls = '') => heroSprite({ ...state, hero: { ...state.hero, look: id } }, { scale: 3, cls });
+    // each look as itself, without the gear worn over it (a helmet would hide the hair that tells them apart)
+    const dressed = (id, cls = '') => heroSprite({ ...state, equipped: {}, hero: { ...state.hero, look: id } }, { scale: 3, cls });
     const open = LOOKS.filter(l => lookOpen(state, l)).map((l, i) => {
         const on = worn === l.id;
         return `<button class="look-pick${on ? ' on' : ''}" onclick="FI.setHeroLook('${l.id}')" aria-label="${esc(l.name || `Look ${i + 1}`)}" aria-pressed="${on}">${dressed(l.id)}</button>`;
@@ -2013,7 +2025,7 @@ export function renderWelcomeBack(summary, state) {
     const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'
         : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
-        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stages gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}${summary.deaths === 1 ? 'one fall' : `${fmt(summary.deaths)} falls`}, and up again each time` : ''}.`;
+        : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stage${summary.stages === 1 ? '' : 's'} gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}${summary.deaths === 1 ? 'one fall' : `${fmt(summary.deaths)} falls`}, and up again each time` : ''}.`;
     let i = 0;
     const next = () => i++;
     const skills = Object.entries(summary.skills).map(([id, s]) => {
@@ -2035,7 +2047,7 @@ export function renderWelcomeBack(summary, state) {
         summary.uniques > 0 ? `<div class="wb-find unique" style="--i:${next()}">${sprite(FEATURES.achievements.icon, { scale: 1 })}<span><b>${summary.uniques}</b> unique item${summary.uniques > 1 ? 's' : ''} found</span></div>` : '',
         summary.items > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.inventory.icon, { scale: 1 })}<span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
             : summary.salvaged > 0 ? `<div class="wb-find" style="--i:${next()}">${resIcon('essence', { scale: 1 })}<span><b>${summary.salvaged}</b> items salvaged for essence and bars</span></div>` : '',
-        ...(summary.dungeonClears || []).map(d => `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.dungeons.icon, { scale: 1 })}<span><b>${fmt(d.clears)}</b> ${esc(d.name)} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragments)</span></div>`),
+        ...(summary.dungeonClears || []).map(d => `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.dungeons.icon, { scale: 1 })}<span><b>${fmt(d.clears)}</b> ${esc(d.name)} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragment${d.fragments === 1 ? '' : 's'})</span></div>`),
         summary.gilded > 0 ? `<div class="wb-find gilded" style="--i:${next()}">${sprite('gold', { scale: 1 })}<span><b>${summary.gilded}</b> gilded monster${summary.gilded > 1 ? 's' : ''} defeated</span></div>` : '',
         summary.stars > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.achievements.icon, { scale: 1 })}<span><b>${summary.stars}</b> new bestiary star${summary.stars > 1 ? 's' : ''}</span></div>` : '',
         summary.plotsReady ? `<div class="wb-find" style="--i:${next()}">${sprite('farm/growing', { scale: 1, fallback: '🌾' })}<span><b>${summary.plotsReady}</b> farm plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest</span></div>` : '',
@@ -2084,9 +2096,11 @@ export function renderAuthModal(message = '') {
         <div class="modal-body">
             <p class="muted small">Create an account to sync your save across devices, or keep playing as a guest with a local save.</p>
             <div class="auth-error" id="auth-error">${esc(message)}</div>
-            <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input">
-            <input type="password" id="auth-pass" placeholder="Password" autocomplete="current-password" class="text-input">
-            <div class="btn-row"><button class="modal-btn btn-confirm" onclick="FI.auth('login')">Log in</button><button class="modal-btn btn-register" onclick="FI.auth('register')">Register</button></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('login')">
+                <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input">
+                <input type="password" id="auth-pass" placeholder="Password" autocomplete="current-password" class="text-input">
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Log in</button><button type="button" class="modal-btn btn-register" onclick="FI.auth('register')">Register</button></div>
+            </form>
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Play as guest</button></div>
     </div>`;
@@ -2131,7 +2145,7 @@ export function patchLive(game, ui) {
         const ch = state.minigame[id]?.challenge;
         if (!ch) continue;
         const marker = document.getElementById(`mg-marker-${id}`);
-        if (marker && (ch.type === 'timing' || ch.type === 'moving-target')) marker.style.left = `${animatedPosition(ch, game.now) * 100}%`;
+        if (marker && (ch.type === 'timing' || ch.type === 'moving-target')) marker.style.left = `${animatedPosition(ch, Date.now()) * 100}%`;   // smooth: the clock of this frame, not the last tick's
         const heat = document.getElementById(`mg-heat-${id}`);
         if (heat && ch.type === 'heat') heat.style.width = `${ch.heat * 100}%`;
     }
