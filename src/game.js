@@ -1,7 +1,7 @@
 // The Game facade: owns the state, drives the tick, and exposes every player action.
 // It never touches the DOM, so tools/simulate.mjs and the tests drive it the same way the UI does.
 
-import { createDefaultState, migrateState } from './core/state.js';
+import { createDefaultState, migrateState, clampTimers } from './core/state.js';
 import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
@@ -73,6 +73,12 @@ export class Game {
     tick(now) {
         let offlineSummary = null;
         let dt = now - this.now;
+        if (dt < -5000) {   // the clock was turned back: carry on from the new time (it used to freeze until it caught up)
+            clampTimers(this.state, now);
+            this.now = now;
+            this.markDirty();
+            return null;
+        }
         if (dt <= 0) return null;
         if (dt > OFFLINE_GAP_MS) {
             // Tab was suspended or the machine slept: replay as offline progress from the last active moment.

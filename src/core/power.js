@@ -5,6 +5,7 @@
 import { migrateState } from './state.js';
 import { deriveStats } from './modifiers.js';
 import { levelForXp } from './xp.js';
+import { enemyBaseStats, BALANCE } from './formulas.js';
 
 export const CLAN_ATTACK_SECONDS = 60;
 
@@ -30,9 +31,23 @@ export function powerSummary(rawState, now = Date.now()) {
         attackDamage: Math.floor(expectedDps(derived) * CLAN_ATTACK_SECONDS),
         bestStage: state.combat.bestStage,
         totalLevel,
+        totalXp: Object.values(state.skills).reduce((sum, s) => sum + (s.xp || 0), 0),
+        tokens: state.prestige.tokens,
         combatLevel: derived.combatLevel,
         titanKills: state.titan.kills,
         dungeonClears: state.stats.dungeonClears || 0,
         prestiges: state.prestige.count
     };
+}
+
+/**
+ * The most damage a clan attack can plausibly deal for a hero whose best stage is `bestStage`: felling
+ * a boss 40 stages beyond it in 5 seconds, for the whole minute. Honest heroes stay far below it (at
+ * most ~12% of it over 150 simulated hours), so only a save whose gear no play could have made goes
+ * past it. The server flags such saves and never sizes a clan boss beyond it.
+ */
+export function plausibleAttackDamage(bestStage) {
+    const stage = Math.max(1, Math.min(3000, Math.floor(Number(bestStage) || 1))) + 40;
+    const bossHp = enemyBaseStats(stage).hp * BALANCE.enemy.bossHpMult;
+    return Math.floor(bossHp / 5 * CLAN_ATTACK_SECONDS);
 }

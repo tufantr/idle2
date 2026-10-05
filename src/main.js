@@ -139,6 +139,7 @@ if (cloud.loggedIn) syncFromCloud();
 // A new player meets the game first, not a login form: a title card, then straight into a fight.
 // Signing in stays one click away (on the card, and in the header once there is progress to keep).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
+if (!cloud.loggedIn) bootSavedAt = null;   // no boot sync: a later login compares the cloud with the live save
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -706,10 +707,11 @@ async function socialAction(fn, success) {
 let pendingConflict = null;
 async function syncFromCloud() {
     try {
+        const boot = bootSavedAt;
+        bootSavedAt = null;   // used once, by the boot sync: a failed or later sync compares with the live save
         const { state: remote } = await cloud.pull(Date.now());
         const live = game.state;
-        const local = bootSavedAt ? { ...live, meta: { ...live.meta, savedAt: bootSavedAt } } : live;
-        bootSavedAt = null;
+        const local = boot ? { ...live, meta: { ...live.meta, savedAt: boot } } : live;
         const choice = chooseSave(live.stats.kills || live.meta.playtimeMs > 60000 ? local : null, remote);
         if (choice.conflict && remote) {
             pendingConflict = { remote };

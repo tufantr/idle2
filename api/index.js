@@ -102,6 +102,18 @@ function msToWeekEnd(ms) {
 
 // ---------- accounts and saves ----------
 
+// Rate limits: password guessing stops after a few tries per name and per address, and one address
+// cannot make accounts by the hundred. A name with no account still costs a bcrypt check, so the time
+// a wrong guess takes doesn't tell whether the name exists.
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const MAX_NAME_FAILURES = 10;
+const MAX_IP_FAILURES = 50;
+const REGISTER_WINDOW_MS = 60 * 60 * 1000;
+const MAX_REGISTRATIONS = 10;
+const DUMMY_HASH = '$2b$10$ZMk5iy8eHTrQrJ0rEb/AOeTQMn3zrYOomc0x/UMLwi242hMY5Ytoe';
+const clientIp = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
+const TOO_MANY = { error: 'Too many attempts. Try again in a few minutes.' };
+
 app.post('/api/register', async (req, res) => {
     if (!requireSecret(res)) return;
     const invalid = validateCredentials(req.body);
@@ -109,6 +121,9 @@ app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
 
     try {
+        const regKey = `register:${clientIp(req)}`;
+        if (await store.authFailures(regKey, Date.now(), REGISTER_WINDOW_MS) >= MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
+        await store.noteAuthFailure(regKey, Date.now(), REGISTER_WINDOW_MS);   // every registration counts
         const hash = await bcrypt.hash(password, 10);
         const id = await store.createUser(username, hash);
         res.json({ token: signToken({ id, username }), message: 'Registration successful' });
@@ -125,10 +140,20 @@ app.post('/api/login', route('login', async (req, res) => {
     if (!requireSecret(res)) return;
     const { username, password } = req.body || {};
     if (typeof username !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Invalid credentials' });
+    const now = Date.now();
+    const nameKey = `login:name:${username.toLowerCase().slice(0, 64)}`;
+    const ipKey = `login:ip:${clientIp(req)}`;
+    if (await store.authFailures(nameKey, now, AUTH_WINDOW_MS) >= MAX_NAME_FAILURES || await store.authFailures(ipKey, now, AUTH_WINDOW_MS) >= MAX_IP_FAILURES) {
+        return res.status(429).json(TOO_MANY);
+    }
     const user = await store.findUserByName(username);
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) return res.status(400).json({ error: 'Invalid credentials' });
+    const validPassword = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
+    if (!user || !validPassword) {
+        await store.noteAuthFailure(nameKey, now, AUTH_WINDOW_MS);
+        await store.noteAuthFailure(ipKey, now, AUTH_WINDOW_MS);
+        return res.status(400).json({ error: 'Invalid credentials' });
+    }
+    await store.clearAuthFailures(nameKey);
     res.json({ token: signToken(user), message: 'Login successful' });
 }));
 
@@ -146,29 +171,37 @@ const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
 // Tokens one prestige can pay at a stage (BALANCE.prestige in src/core/formulas.js).
 const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 
-// Ranked numbers: how fast each can honestly grow per hour of real time (plus a flat allowance), and
-// a ceiling no save reaches at all, checked on every upload including the first.
+// Ranked numbers, read from the server's own reading of the save (powerSummary on the migrated save,
+// the numbers the boards show; a raw field can't be dressed up): how fast each can honestly grow per
+// hour of real time (plus a flat allowance), and a ceiling no save reaches at all, checked on every
+// upload including the first. Growth is measured from each number's highest value so far and when it
+// was reached, so restoring a backup and coming forward again is never flagged.
 const RANKED = [
-    { label: 'best stage', value: s => num(s.combat?.bestStage), perHour: 60, flat: 30, ceiling: 3000 },
-    { label: 'Titans defeated', value: s => num(s.titan?.kills), perHour: 1, flat: 2, ceiling: 20000 },
-    { label: 'dungeon clears', value: s => num(s.stats?.dungeonClears), perHour: 3600, flat: 200, ceiling: 1e8 },
-    { label: 'total XP', value: totalXp, perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
-    { label: 'prestige tokens', value: s => num(s.prestige?.tokens), perHour: null, flat: 0, ceiling: 1e9 }
+    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 3000 },
+    { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 2, ceiling: 20000 },
+    { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
+    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
+    { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e9 }
 ];
 
-/** Reasons a new save looks impossible next to the previous one (empty when it looks fine). */
-function plausibilityFlags(prev, next, elapsedMs) {
+/** Reasons a save's numbers look impossible next to their highest so far, and the new highs. */
+function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage) {
     const flags = [];
-    const hours = (Math.max(0, elapsedMs) + SLACK_MS) / HOUR;
+    const next = {};
     for (const r of RANKED) {
-        const value = r.value(next);
-        if (value > r.ceiling) { flags.push(`${r.label} beyond any possible save`); continue; }
-        if (!prev) continue;
-        // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached.
-        const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(next.combat?.bestStage)));
-        if (value - r.value(prev) > r.flat + perHour * hours) flags.push(`${r.label} grew faster than any play could`);
+        const value = num(metrics[r.key]);
+        const peak = peaks && peaks[r.key];
+        if (value > r.ceiling) { flags.push(`${r.label} beyond any possible save`); if (peak) next[r.key] = peak; continue; }
+        if (peak && Number.isFinite(peak.v)) {
+            const hours = (Math.max(0, now - num(peak.at)) + SLACK_MS) / HOUR;
+            // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached.
+            const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(metrics.bestStage)));
+            if (value - peak.v > r.flat + perHour * hours) flags.push(`${r.label} grew faster than any play could`);
+        }
+        next[r.key] = peak && peak.v >= value ? peak : { v: value, at: now };
     }
-    return flags;
+    if (num(metrics.attackDamage) > plausibleAttackDamage(metrics.bestStage)) flags.push('attack beyond what its best stage allows');
+    return { flags, peaks: next };
 }
 
 function recentlyFlagged(flagsJson, now) {
@@ -183,16 +216,20 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     }
     const savedAt = Date.now();
     const current = await store.getSave(req.user.id);
-    let prev = null;
-    try { prev = current && current.state ? JSON.parse(current.state) : null; } catch { prev = null; }
-    const newFlags = plausibilityFlags(prev, state, savedAt - ((current && current.lastSaved) || savedAt));
+    // The numbers other players see (boards, clan damage) are computed here, once per upload.
+    const eng = await engine();
+    let metrics = null;
+    try { metrics = eng.powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
+    let newFlags = [];
+    if (metrics) {
+        const checked = plausibilityFlags(parseMetrics(current && current.metrics)?.peaks, metrics, savedAt, eng.plausibleAttackDamage);
+        newFlags = checked.flags;
+        metrics.peaks = checked.peaks;
+    }
     let flags = [];
     try { flags = JSON.parse((current && current.flags) || '[]'); } catch { flags = []; }
     if (!Array.isArray(flags)) flags = [];
     if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason }))].slice(-20);
-    // The numbers other players see (boards, clan damage) are computed here, once per upload.
-    let metrics = null;
-    try { metrics = (await engine()).powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
     await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null);
     // "This week" leaderboards count from each player's first save of the week.
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(metrics));
@@ -254,10 +291,18 @@ async function currentBoss(clanId, now) {
     const week = isoWeek(now);
     let boss = await store.getBoss(clanId, week);
     if (!boss) {
-        // Flagged members don't count, so one implausible save can't make the boss unbeatable.
+        // Flagged members don't count, and no member counts for more than their best stage allows, so
+        // one implausible save can't make the boss unbeatable. Each share is kept: a member who leaves
+        // (or is removed) before fighting takes theirs away again.
+        const { plausibleAttackDamage } = await engine();
         const members = (await store.clanMembers(clanId)).filter(m => !recentlyFlagged(m.flags, now));
-        const total = members.reduce((sum, m) => sum + safeDamage(parseMetrics(m.metrics)?.attackDamage), 0);
-        boss = await store.createBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total * BOSS_ATTACKS_TO_KILL)));
+        const shares = members.map(m => {
+            const metrics = parseMetrics(m.metrics);
+            const damage = Math.min(safeDamage(metrics?.attackDamage), safeDamage(plausibleAttackDamage(metrics?.bestStage)));
+            return { userId: m.userId, share: Math.min(MAX_BOSS_HP, damage * BOSS_ATTACKS_TO_KILL) };
+        }).filter(s => s.share > 0);
+        const total = shares.reduce((sum, s) => sum + s.share, 0);
+        boss = await store.createBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total)), shares);
     }
     return boss;
 }
@@ -311,11 +356,13 @@ app.post('/api/clan/kick', authenticateToken, route('kick', async (req, res) => 
     const membership = await store.membershipOf(req.user.id);
     if (!membership) return res.status(400).json({ error: 'You are not in a clan.' });
     const clan = await store.getClan(membership.clanId);
-    if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ error: 'Only the clan owner can remove members.' });
+    // 409, not 403: the client reads 401 and 403 as a lost session and would log the player out.
+    if (!clan || clan.ownerId !== req.user.id) return res.status(409).json({ error: 'Only the clan owner can remove members.' });
     const username = String((req.body || {}).username || '');
     const target = (await store.clanMembers(membership.clanId)).find(m => m.username === username);
     if (!target) return res.status(404).json({ error: 'No such member.' });
     if (target.userId === req.user.id) return res.status(400).json({ error: 'Leave the clan instead.' });
+    await store.removeShare(membership.clanId, isoWeek(Date.now()), target.userId, MIN_BOSS_HP);   // their part of this week's boss goes with them, if they never fought it
     await store.removeMember(target.userId);
     res.json({ removed: username });
 }));
@@ -324,6 +371,7 @@ app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, 
     const membership = await store.membershipOf(req.user.id);
     if (!membership) return res.status(400).json({ error: 'You are not in a clan.' });
     const clan = await store.getClan(membership.clanId);
+    await store.removeShare(membership.clanId, isoWeek(Date.now()), req.user.id, MIN_BOSS_HP);   // their part of this week's boss goes with them, if they never fought it
     await store.removeMember(req.user.id);
     const rest = await store.clanMembers(membership.clanId);
     if (!rest.length) await store.deleteClan(membership.clanId);

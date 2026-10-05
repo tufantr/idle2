@@ -520,7 +520,13 @@ plots ready to harvest, how often the hero fell and got up, and why work stopped
 
 - **Local save** (`src/core/save.js`): `localStorage['fantasyIdle.save.v2']`, versioned
   (`state.version = 3`), autosaved every 15 s and when the tab is hidden or closed. Prototype saves
-  (`fantasyIdleSaveLocal`) are migrated on first load; v2 saves gain the banked daily crate.
+  (`fantasyIdleSaveLocal`) are migrated on first load, known by their own marks (per-skill levels,
+  their flags, their resource ids), not by a version number a damaged save may have lost; their gear
+  is made again in this game by type, metal or gem and rarity, read from the name. v2 saves gain the
+  banked daily crate. Item ids stay below 2^31 (an id near 2^53 used to spin the loader forever), and
+  timers pointing further ahead than they ever can (a clock that was set ahead, a device that
+  disagrees) are brought back within reach on load, as they are when the clock is turned back while
+  playing.
   Broken records (an unknown dungeon, a missing Titan or pet record) load as defaults. Loading also
   takes each value only if it has the default's type, drops keys the game doesn't know (including
   `__proto__`, which could otherwise reach every object on the page or the server), and rebuilds
@@ -541,12 +547,21 @@ plots ready to harvest, how often the hero fell and got up, and why work stopped
 - **Time away is measured on the server's clock** for cloud saves: `/api/load` returns the time of the
   last upload and the server's current time, and the client replays exactly that gap, so changing the
   device clock doesn't buy offline progress.
-- **Plausibility flags:** every ranked number (best stage, Titans, dungeon clears, total XP, tokens)
-  may grow only as fast as play could in the real time since the previous upload, and none may pass
-  a ceiling no save reaches (checked on the first upload too). Going back, as when restoring a
-  backup, is not flagged. Nothing is rejected (the save belongs to the player), but flagged accounts
-  are left out of leaderboards and of clan boss sizing for 30 days. A determined cheat can still
-  fake a save that grows plausibly; that is the limit of a client-side game.
+- **Plausibility flags:** every ranked number (best stage, Titans, dungeon clears, total XP, tokens),
+  read from the server's own reading of the save (the migrated save the boards use, so a raw field
+  can't be dressed up), may grow only as fast as play could in the real time since that number's
+  highest value so far, and none may pass a ceiling no save reaches (checked on the first upload too).
+  Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
+  boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
+  when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
+  belongs to the player), but flagged accounts are left out of leaderboards and of clan boss sizing
+  for 30 days. A determined cheat can still fake a save that grows plausibly, or a first upload just
+  under the ceilings; that is the limit of a client-side game, until the online side decides fights
+  and rewards itself.
+- **Rate limits:** ten wrong passwords for a name (or fifty from an address) in 15 minutes and logins
+  wait; an address makes at most ten accounts an hour. A name with no account still costs a bcrypt
+  check, so the time a guess takes doesn't tell whether the name exists. A business-rule refusal
+  answers 409, never 403, which the client reads as a lost session.
 
 ### 3.18 Clans and leaderboards
 
@@ -558,7 +573,10 @@ with the game's own stat code; the client never submits damage or scores.
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
   places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
 - **The weekly clan boss** (ISO weeks, UTC). Its health is set when the week's boss first appears:
-  12 × the combined attack of members who aren't flagged, capped so no save can overflow it. Every
+  12 × the combined attack of members who aren't flagged, each member's counted no higher than their
+  best stage allows, capped so no save can overflow it. Each member's share is kept: one who leaves or
+  is removed before fighting that week takes it away again (a stranger could join just before Monday
+  with a huge save, size the boss and leave). Every
   member has **three attacks a day** (enforced by a unique
   per-player-per-day slot, so parallel requests or switching clans don't add more); an attack uploads
   the save and deals what that hero does in 60 seconds (`expectedDps × 60`, no dice, Focus, potions or

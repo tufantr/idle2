@@ -57,6 +57,24 @@ async function ensureSchema() {
             PRIMARY KEY (clan_id, week)
         );
     `;
+    // Each member's part of the week's boss, as it was sized: taken back if they leave before fighting.
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_boss_shares (
+            clan_id INTEGER NOT NULL,
+            week VARCHAR(10) NOT NULL,
+            user_id INTEGER NOT NULL,
+            share BIGINT NOT NULL,
+            PRIMARY KEY (clan_id, week, user_id)
+        );
+    `;
+    // Failed logins and registrations per name or address, in a window (rate limiting).
+    await sql`
+        CREATE TABLE IF NOT EXISTS auth_attempts (
+            key VARCHAR(120) PRIMARY KEY,
+            count INTEGER NOT NULL,
+            since BIGINT NOT NULL
+        );
+    `;
     // One row per attack; (user, day, slot) is unique, so a player gets three a day even with
     // parallel requests or by switching clans.
     await sql`
@@ -176,7 +194,8 @@ async function setClanOwner(clanId, ownerId) {
 
 async function deleteClan(clanId) {
     await sql`DELETE FROM clan_bosses WHERE clan_id = ${clanId}`;
-    await sql`DELETE FROM clan_attacks WHERE clan_id = ${clanId}`;
+    await sql`DELETE FROM clan_boss_shares WHERE clan_id = ${clanId}`;
+    // The attacks stay: they are what counts a player's three a day (deleting them gave fresh ones).
     await sql`DELETE FROM clans WHERE id = ${clanId}`;
 }
 
@@ -235,9 +254,31 @@ async function getBoss(clanId, week) {
     return bossRow(rows[0]);
 }
 
-async function createBoss(clanId, week, maxHp) {
-    await sql`INSERT INTO clan_bosses (clan_id, week, max_hp, hp) VALUES (${clanId}, ${week}, ${maxHp}, ${maxHp}) ON CONFLICT (clan_id, week) DO NOTHING`;
+/** Create the week's boss (once) with each member's share of its health: [{ userId, share }]. */
+async function createBoss(clanId, week, maxHp, shares = []) {
+    const { rows } = await sql`INSERT INTO clan_bosses (clan_id, week, max_hp, hp) VALUES (${clanId}, ${week}, ${maxHp}, ${maxHp}) ON CONFLICT (clan_id, week) DO NOTHING RETURNING clan_id`;
+    if (rows.length) {
+        for (const s of shares) await sql`INSERT INTO clan_boss_shares (clan_id, week, user_id, share) VALUES (${clanId}, ${week}, ${s.userId}, ${s.share}) ON CONFLICT DO NOTHING`;
+    }
     return getBoss(clanId, week);
+}
+
+/**
+ * A member leaves the clan (or is removed): if they have not fought this week's boss, their share of
+ * its health goes with them. Returns the health taken off.
+ */
+async function removeShare(clanId, week, userId, minHp) {
+    const { rows } = await sql`
+        DELETE FROM clan_boss_shares
+        WHERE clan_id = ${clanId} AND week = ${week} AND user_id = ${userId}
+          AND NOT EXISTS (SELECT 1 FROM clan_attacks a WHERE a.clan_id = ${clanId} AND a.week = ${week} AND a.user_id = ${userId})
+        RETURNING share
+    `;
+    const share = int(rows[0] && rows[0].share);
+    if (share > 0) {
+        await sql`UPDATE clan_bosses SET max_hp = GREATEST(${minHp}::bigint, max_hp - ${share}::bigint), hp = GREATEST(1::bigint, hp - ${share}::bigint) WHERE clan_id = ${clanId} AND week = ${week} AND hp > 0`;
+    }
+    return share;
 }
 
 /** Apply damage atomically; returns the boss after the hit. */
@@ -302,6 +343,28 @@ async function weeklyDamage(clanId, week) {
     return rows.map(r => ({ userId: r.user_id, username: r.username, damage: int(r.damage), attacks: int(r.attacks) }));
 }
 
+// ---------- rate limiting ----------
+
+/** Failures counted under `key` within the window (0 once it has passed). */
+async function authFailures(key, now, windowMs) {
+    const { rows } = await sql`SELECT count, since FROM auth_attempts WHERE key = ${key}`;
+    return rows[0] && now - int(rows[0].since) < windowMs ? int(rows[0].count) : 0;
+}
+
+/** Count one more failure under `key` (a window that has passed starts again at one). */
+async function noteAuthFailure(key, now, windowMs) {
+    await sql`
+        INSERT INTO auth_attempts (key, count, since) VALUES (${key}, 1, ${now})
+        ON CONFLICT (key) DO UPDATE SET
+            count = CASE WHEN ${now}::bigint - auth_attempts.since >= ${windowMs}::bigint THEN 1 ELSE auth_attempts.count + 1 END,
+            since = CASE WHEN ${now}::bigint - auth_attempts.since >= ${windowMs}::bigint THEN ${now}::bigint ELSE auth_attempts.since END
+    `;
+}
+
+async function clearAuthFailures(key) {
+    await sql`DELETE FROM auth_attempts WHERE key = ${key}`;
+}
+
 // ---------- rewards ----------
 
 /** Add a reward; with a `dedupe` key, a second reward with the same key is silently skipped. */
@@ -333,6 +396,7 @@ module.exports = {
     createUser, findUserByName, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
-    getBoss, createBoss, damageBoss, markBossKilled, unsettledBosses, claimSettlement, recordAttack, deleteAttack, attacksToday, weeklyDamage,
+    getBoss, createBoss, removeShare, damageBoss, markBossKilled, unsettledBosses, claimSettlement, recordAttack, deleteAttack, attacksToday, weeklyDamage,
+    authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards
 };

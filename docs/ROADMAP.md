@@ -440,7 +440,16 @@ progress as motion, art before words, one stage with a HUD around it.
       mini-game left open can't be won later; a tool made counts at once; the dock offers no Equip
       inside a dungeon; the tools' cards say "+X% speed" (they claimed a bigger time cut); the farm
       shows yields with their bonuses; "Salvage commons" is no longer counted as automatic; a fall in a
-      dungeon or to the Titan says so. Ten regression tests (`test/sweep.test.mjs`)
+      dungeon or to the Titan says so. Ten regression tests (`test/sweep.test.mjs`). Saves and the
+      server: a crafted 114-byte save froze the loader (and the API) for good; a stranger could make a
+      clan's weekly boss unbeatable by joining with a huge save just before Monday and leaving (shares
+      now leave with them, and no member counts beyond their best stage); logins had no limit on
+      guessing; the cheat check read raw fields (now the server's own numbers, against each number's
+      high so far, so restoring a backup no longer flags an honest player); a late first cloud sync
+      could overwrite local progress without asking; a clock turned back froze the game, and timers
+      from a clock set ahead stuck for weeks; a deleted clan handed out fresh attacks; the prototype's
+      gear was dropped when its save was migrated, and a damaged save with no version was read as the
+      prototype
 - [x] **Gear no longer waits days for a level**: a balance pass found that at Melvor pace the first
       Abyssal (tier 7) drop sat in the bag 57–65 hours before combat 90 let the hero wear it, and the
       first Dragonbone 14–21 hours. Tier 6 is now worn from combat 70 and tier 7 from 80 (were 75 and

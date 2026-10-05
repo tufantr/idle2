@@ -49,18 +49,21 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_attacks, rewards, weekly_snapshots');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
 });
 after(async () => { server.close(); Date.now = realNow; if (pool) await pool.end(); });
 
-const post = (p, body, token) => fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
+const post = (p, body, token, headers = {}) => fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, body: JSON.stringify(body) });
 const get = (p, token) => fetch(base + p, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
 
+// Each test player registers from an address of their own, as real players do (one address may only
+// make a few accounts an hour).
+let addresses = 0;
 async function register(username) {
-    const res = await post('/register', { username, password: 'correct horse' });
+    const res = await post('/register', { username, password: 'correct horse' }, null, { 'X-Forwarded-For': `10.0.${Math.floor(++addresses / 250)}.${addresses % 250}` });
     assert.equal(res.status, 200, `register ${username}`);
     return (await res.json()).token;
 }
@@ -117,12 +120,27 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     const fresh = await register('fresh_cheat');
     assert.equal((await (await post('/save', { state: heroSave({ bestStage: 1e9 }) }, fresh)).json()).flagged, true);
 
+    // The numbers checked are the server's own reading of the save: a raw field can't be dressed up.
+    const sneaky = await register('sneaky_stage');
+    const sneakySave = { ...heroSave(), combat: { stage: 999999, bestStage: 1, maxStage: 1 } };
+    assert.equal((await (await post('/save', { state: sneakySave }, sneaky)).json()).flagged, true, 'a far stage under a modest best stage');
+
+    // Growth is measured from each number's highest value and when it was reached.
     const { plausibilityFlags } = app;
+    const { plausibleAttackDamage } = await import('../src/core/power.js');
     const hour = 3600 * 1000;
-    assert.deepEqual(plausibilityFlags(heroSave({ bestStage: 40 }), heroSave({ bestStage: 90, xp: 2e6 }), hour), [], 'a good hour is fine');
-    assert.deepEqual(plausibilityFlags(heroSave({ bestStage: 90, tokens: 900 }), heroSave({ bestStage: 60, tokens: 10 }), hour), [], 'going back (a restored backup) is not cheating');
-    assert.deepEqual(plausibilityFlags(heroSave(), heroSave({ xp: 30e6 }), 12 * hour), [], 'a long absence allows a long replay');
-    assert.ok(plausibilityFlags(heroSave(), heroSave({ xp: 30e6 }), 60 * 1000).length, 'but not a minute later');
+    const t0 = clock;
+    const m = (o = {}) => ({ bestStage: 1, titanKills: 0, dungeonClears: 0, totalXp: 0, tokens: 0, attackDamage: 0, ...o });
+    const run = (peaks, metrics, at) => plausibilityFlags(peaks, metrics, at, plausibleAttackDamage);
+    const highs = metrics => run(null, metrics, t0).peaks;
+    assert.deepEqual(run(highs(m({ bestStage: 40 })), m({ bestStage: 90, totalXp: 2e6 }), t0 + hour).flags, [], 'a good hour is fine');
+    const today = m({ bestStage: 90, tokens: 900, titanKills: 10, totalXp: 9e6 });
+    const restored = run(highs(today), m({ bestStage: 60, tokens: 10, titanKills: 4, totalXp: 5e6 }), t0 + 2 * 60 * 1000);
+    assert.deepEqual(restored.flags, [], 'going back (a restored backup) is not cheating');
+    assert.deepEqual(run(restored.peaks, today, t0 + 4 * 60 * 1000).flags, [], 'nor is coming forward to the newer save again');
+    assert.deepEqual(run(highs(m()), m({ totalXp: 30e6 }), t0 + 12 * hour).flags, [], 'a long absence allows a long replay');
+    assert.ok(run(highs(m()), m({ totalXp: 30e6 }), t0 + 60 * 1000).flags.length, 'but not a minute later');
+    assert.ok(run(null, m({ bestStage: 5, attackDamage: 1e12 }), t0).flags.includes('attack beyond what its best stage allows'), 'a weapon no play could make');
 });
 
 test('a save cannot reach the server\'s own objects', async () => {
@@ -314,7 +332,7 @@ test('an absurd save cannot break its clan', async () => {
     assert.equal(hit.status, 200);
     assert.ok(Number.isSafeInteger((await hit.json()).damage));
     // The owner can remove them.
-    assert.equal((await post('/clan/kick', { username: 'giant_owner' }, giant)).status, 403, 'only the owner removes members');
+    assert.equal((await post('/clan/kick', { username: 'giant_owner' }, giant)).status, 409, 'only the owner removes members (409: a 403 would log the player out)');
     assert.equal((await post('/clan/kick', { username: 'giant' }, owner)).status, 200);
     assert.equal((await (await get('/clan', owner)).json()).members.length, 1);
     assert.equal((await (await get('/clan', giant)).json()).clan, null);
@@ -344,4 +362,47 @@ test('leaderboards ignore inherited metric names', async () => {
     const t = await register('curious');
     const res = await (await get('/leaderboard?metric=constructor', t)).json();
     assert.equal(res.metric, 'bestStage');
+});
+
+test('password guessing stops after ten tries per name, and one address makes only a few accounts an hour', async () => {
+    await register('guarded_hero');
+    const from = { 'X-Forwarded-For': '203.0.113.7' };
+    for (let i = 0; i < 10; i++) assert.equal((await post('/login', { username: 'guarded_hero', password: `wrong ${i}` }, null, from)).status, 400);
+    assert.equal((await post('/login', { username: 'guarded_hero', password: 'correct horse' }, null, from)).status, 429, 'even the right password waits');
+    clock += 16 * 60 * 1000;
+    assert.equal((await post('/login', { username: 'guarded_hero', password: 'correct horse' }, null, from)).status, 200, 'after the window it works again');
+    const farm = { 'X-Forwarded-For': '198.51.100.9' };
+    for (let i = 0; i < 10; i++) assert.equal((await post('/register', { username: `farm_${i}`, password: 'correct horse' }, null, farm)).status, 200);
+    assert.equal((await post('/register', { username: 'farm_10', password: 'correct horse' }, null, farm)).status, 429);
+});
+
+test("a member who leaves before fighting takes their part of the week's boss with them", async () => {
+    const owner = await register('honest_owner');
+    const griefer = await register('drive_by');
+    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, owner);
+    await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, griefer);
+    const { clanId } = await (await post('/clans', { name: 'Honest Folk', tag: 'HF' }, owner)).json();
+    await post('/clans/join', { clanId }, griefer);
+    const sized = (await (await get('/clan', owner)).json()).boss.maxHp;
+    await post('/clans/leave', {}, griefer);
+    const after = (await (await get('/clan', owner)).json());
+    const ownerShare = after.members.find(m => m.username === 'honest_owner').attackDamage * 12;
+    assert.ok(after.boss.maxHp < sized, `${after.boss.maxHp} < ${sized}`);
+    assert.equal(after.boss.maxHp, Math.max(1000, ownerShare), 'the boss is sized for the ones who stayed');
+});
+
+test('a deleted clan does not hand out fresh attacks, and a huge item id cannot freeze the server', async () => {
+    const solo = await register('solo_striker');
+    await post('/save', { state: heroSave({ tokens: 10, bestStage: 20 }) }, solo);
+    let landed = 0;
+    for (let round = 0; round < 2; round++) {
+        await post('/clans', { name: `Solo Band ${round}`, tag: `SB${round}` }, solo);
+        for (let i = 0; i < 3; i++) if ((await post('/clan/attack', {}, solo)).status === 200) landed++;
+        await post('/clans/leave', {}, solo);   // the last member: the clan is deleted
+    }
+    assert.equal(landed, 3, 'three a day, clan or no clan');
+    const started = realNow();
+    const res = await post('/save', { state: { version: 3, idCounter: Number.MAX_SAFE_INTEGER, inventory: [{ type: 'Ring' }, { type: 'Ring' }, { type: 'Ring' }] } }, solo);
+    assert.equal(res.status, 200);
+    assert.ok(realNow() - started < 5000, 'answered at once');
 });

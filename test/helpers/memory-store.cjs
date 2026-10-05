@@ -3,7 +3,7 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], attacks: [], rewards: [], snapshots: [] };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map() };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
@@ -71,8 +71,8 @@ function createMemoryStore() {
         },
         async deleteClan(clanId) {
             db.bosses = db.bosses.filter(b => b.clanId !== clanId);
-            db.attacks = db.attacks.filter(a => a.clanId !== clanId);
-            db.clans = db.clans.filter(c => c.id !== clanId);
+            db.shares = db.shares.filter(s => s.clanId !== clanId);
+            db.clans = db.clans.filter(c => c.id !== clanId);   // the attacks stay: they count a player's three a day
         },
         async membershipOf(userId) {
             const m = db.members.find(x => x.userId === userId);
@@ -103,12 +103,31 @@ function createMemoryStore() {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
             return b ? { ...b } : null;
         },
-        async createBoss(clanId, week, maxHp) {
+        async createBoss(clanId, week, maxHp, shares = []) {
             if (!db.bosses.some(x => x.clanId === clanId && x.week === week)) {
                 db.bosses.push({ clanId, week, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false });
+                for (const s of shares) db.shares.push({ clanId, week, userId: s.userId, share: s.share });
             }
             return store.getBoss(clanId, week);
         },
+        async removeShare(clanId, week, userId, minHp) {
+            if (db.attacks.some(a => a.clanId === clanId && a.week === week && a.userId === userId)) return 0;
+            const i = db.shares.findIndex(s => s.clanId === clanId && s.week === week && s.userId === userId);
+            if (i < 0) return 0;
+            const [{ share }] = db.shares.splice(i, 1);
+            const b = db.bosses.find(x => x.clanId === clanId && x.week === week && x.hp > 0);
+            if (b && share > 0) { b.maxHp = Math.max(minHp, b.maxHp - share); b.hp = Math.max(1, b.hp - share); }
+            return share;
+        },
+        async authFailures(key, now, windowMs) {
+            const r = db.auth.get(key);
+            return r && now - r.since < windowMs ? r.count : 0;
+        },
+        async noteAuthFailure(key, now, windowMs) {
+            const r = db.auth.get(key);
+            db.auth.set(key, r && now - r.since < windowMs ? { count: r.count + 1, since: r.since } : { count: 1, since: now });
+        },
+        async clearAuthFailures(key) { db.auth.delete(key); },
         async damageBoss(clanId, week, damage) {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week && x.hp > 0);
             if (!b) return null;

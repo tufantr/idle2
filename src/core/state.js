@@ -3,11 +3,12 @@
 
 import { RESOURCES } from '../data/resources.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
-import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey } from '../data/items.js';
+import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER } from '../data/items.js';
+import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
-import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS } from '../data/dungeons.js';
+import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
 import { TOOLS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
@@ -111,9 +112,22 @@ export function createDefaultState(now = Date.now()) {
 export function migrateState(raw, now = Date.now()) {
     if (!raw || typeof raw !== 'object') return createDefaultState(now);
     let data = raw;
-    if (!data.version || data.version < 2) data = migrateV1(data, now);
-    if (data.version < 3) data = migrateV2(data, now);
+    // Each old shape is known by its own marks, not by a version number a damaged save may have lost
+    // (a v3 save with no version used to be read as the prototype, and lost nearly everything).
+    if (isPrototypeSave(data)) data = migrateV1(data, now);
+    else if (Number(data.version) === 2 || (isPlainObject(data.daily) && 'lastClaim' in data.daily && !('nextAt' in data.daily))) data = migrateV2(data, now);
     return normalise(data, now);
+}
+
+/**
+ * The original single-file game's save: per-skill levels, its flags, or its own resource ids (gold
+ * among the resources, "copper", "normal_wood"), and none of this game's meta.
+ */
+function isPrototypeSave(data) {
+    if (isPlainObject(data.meta) || Number(data.version) >= 2) return false;
+    const skills = isPlainObject(data.skills) ? Object.values(data.skills) : [];
+    const oldIds = isPlainObject(data.resources) && Object.keys(data.resources).some(id => id === 'gold' || (Object.hasOwn(V1_RESOURCE_MAP, id) && !Object.hasOwn(RESOURCES, id)));
+    return isPlainObject(data.flags) || skills.some(s => isPlainObject(s) && 'level' in s) || oldIds || Number(data.version) === 1;
 }
 
 // v2 -> v3: the daily reward became a bank of up to three crates.
@@ -130,7 +144,8 @@ function migrateV2(data, now) {
 }
 
 // v1 = the original single-file game (localStorage key "fantasyIdleSaveLocal").
-// Levels were stored per-level with a 1.5x curve; resources had different ids; no items could exist.
+// Levels were stored per-level with a 1.5x curve and resources had other ids. Its forged and crafted
+// gear is made again here (by type, metal or gem, and rarity, read from the name).
 const V1_RESOURCE_MAP = {
     copper: 'copper_ore', iron: 'iron_ore', coal: 'coal', silver_ore: 'silver_ore', gold_ore: 'gold_ore',
     mithril: 'mithril_ore', adamant: 'adamant_ore', runite: 'runite_ore',
@@ -175,13 +190,63 @@ function migrateV1(old, now) {
         const map = { slayer1: 'slayer_1', miner1: 'excavator', prestige1: 'eternity' };
         for (const id of old.achievements) if (map[id]) state.achievements[map[id]] = true;
     }
+    // The prototype's gear: "[Rare] Runite Sword (Lv 9)" becomes a rare Runite Sword of this game, worn where it was.
+    const remake = it => {
+        if (!isPlainObject(it) || !TYPE_SLOTS[it.type]) return null;
+        const name = String(it.name || '');
+        const rarity = RARITIES.find(r => name.toLowerCase().includes(`[${r.name.toLowerCase()}]`)) || RARITIES[0];
+        const jewel = CRAFTING_TYPES.includes(it.type);
+        const tier = GEAR_TIERS.find(t => new RegExp(`\\b${jewel ? t.jewel : t.name}\\b`, 'i').test(name))?.tier || 1;
+        const g = GEAR_TIERS[tier - 1];
+        return generateEquipment({ type: it.type, tier, power: jewel ? g.power * JEWEL_POWER : g.power, materialName: jewel ? null : g.name, gemName: jewel ? g.jewel : null, rarity, source: 'crafted' }, state.idCounter++);
+    };
+    for (const slot of EQUIP_SLOTS) {
+        const item = remake(old.equipped?.[slot]);
+        if (item && TYPE_SLOTS[item.type].includes(slot)) state.equipped[slot] = item;
+    }
+    state.inventory = (Array.isArray(old.inventory) ? old.inventory : []).map(remake).filter(Boolean);
     state.meta.savedAt = Number(old.flags?.lastSaveTime) || now;
     state.meta.createdAt = state.meta.savedAt;
-    state.log.push({ t: now, type: 'system', text: 'Save migrated from the original prototype. Your resources, skill levels, tokens and best stage carried over.' });
+    state.log.push({ t: now, type: 'system', text: 'Save migrated from the original prototype. Your resources, skill levels, gear, tokens and best stage carried over.' });
     return state;
 }
 
 const RARITY_BY_ID = Object.fromEntries(RARITIES.map(r => [r.id, r]));
+const ITEM_ID_CAP = 2 ** 31;
+
+/**
+ * Timers that point further ahead than they ever can, put back in reach of `now`: a save made with the
+ * clock set ahead, a device whose clock disagrees, or the clock turned back while playing. Without
+ * this the crate, the Titan, a planted crop and a strike could wait weeks.
+ */
+export function clampTimers(state, now) {
+    const upTo = (v, max) => (Number.isFinite(v) ? Math.min(v, max) : v);
+    if (isPlainObject(state.daily)) state.daily.nextAt = upTo(state.daily.nextAt, now + DAILY_INTERVAL_MS);
+    if (isPlainObject(state.titan)) state.titan.readyAt = upTo(state.titan.readyAt, now + TITAN_COOLDOWN_MS);
+    for (const plot of state.farming?.plots || []) {
+        if (!isPlainObject(plot) || !plot.crop) continue;
+        plot.plantedAt = upTo(plot.plantedAt, now);
+        plot.readyAt = upTo(plot.readyAt, now + (cropById(plot.crop)?.growMs || 0));
+    }
+    if (isPlainObject(state.bonfire)) state.bonfire.until = upTo(state.bonfire.until, now + 60 * 60 * 1000);   // BASE.bonfireMaxMs
+    if (isPlainObject(state.combat)) {
+        state.combat.lastClickAt = upTo(state.combat.lastClickAt, now);
+        state.combat.lastComboAt = upTo(state.combat.lastComboAt, now);
+    }
+    const mgMax = BALANCE.minigame;
+    for (const mg of Object.values(state.minigame || {})) {
+        if (!isPlainObject(mg)) continue;
+        mg.nextOpportunityAt = upTo(mg.nextOpportunityAt, now + mgMax.opportunityEveryMs[1]);
+        mg.opportunityUntil = upTo(mg.opportunityUntil, now + mgMax.opportunityWindowMs);
+        mg.boostUntil = upTo(mg.boostUntil, now + mgMax.boostMs * 2);
+        if (mg.challenge && !(mg.challenge.expiresAt <= now + 10000)) mg.challenge = null;
+    }
+    if (isPlainObject(state.meta)) {
+        state.meta.lastInputAt = upTo(state.meta.lastInputAt, now);
+        state.meta.lastActiveAt = upTo(state.meta.lastActiveAt, now);
+    }
+    return state;
+}
 const UNIQUE_COLOR = '#f97316';
 // Every stat an item's affix may name: the random affixes and the uniques' fixed ones.
 const AFFIX_STATS = new Set([...AFFIXES.map(a => a.stat), ...Object.values(UNIQUES).flatMap(u => u.affixes.map(a => a.stat))]);
@@ -196,7 +261,7 @@ const intIn = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.floor(fini
 function sanitizeItem(raw, ids, nextId) {
     if (!isPlainObject(raw) || !Object.hasOwn(TYPE_SLOTS, raw.type)) return null;
     let id = raw.id;
-    if (!Number.isSafeInteger(id) || id <= 0 || ids.has(id)) id = nextId();
+    if (!Number.isSafeInteger(id) || id <= 0 || id > ITEM_ID_CAP || ids.has(id)) id = nextId();
     ids.add(id);
     const rarity = RARITY_BY_ID[raw.rarity] || RARITIES[0];
     const uniqueId = typeof raw.uniqueId === 'string' && Object.hasOwn(UNIQUES, raw.uniqueId) ? raw.uniqueId : undefined;
@@ -260,15 +325,22 @@ function normalise(data, now) {
     }
     Object.assign(state.stats, { masteryLevels, masteryBest, masteries99 });
     // Gear: rebuilt item by item (worn items first, so they keep their ids).
-    state.idCounter = Math.max(1, intIn(state.idCounter, 1, Number.MAX_SAFE_INTEGER, 1));
+    // Ids stay far below where a double stops counting (at 2^53 the loop below used to spin forever).
+    state.idCounter = intIn(state.idCounter, 1, ITEM_ID_CAP, 1);
     const ids = new Set();
-    const nextId = () => { while (ids.has(state.idCounter)) state.idCounter++; return state.idCounter++; };
+    const nextId = () => {
+        for (;;) {
+            if (state.idCounter > ITEM_ID_CAP) state.idCounter = 1;   // round again: a bag never holds two billion items
+            if (!ids.has(state.idCounter)) return state.idCounter++;
+            state.idCounter++;
+        }
+    };
     for (const slot of EQUIP_SLOTS) {
         const item = sanitizeItem(state.equipped[slot], ids, nextId);
         state.equipped[slot] = item && TYPE_SLOTS[item.type].includes(slot) ? item : null;
     }
     state.inventory = (Array.isArray(state.inventory) ? state.inventory : []).map(i => sanitizeItem(i, ids, nextId)).filter(Boolean);
-    state.idCounter = Math.max(state.idCounter, ...ids, 0) + 1;
+    for (const id of ids) if (id >= state.idCounter) state.idCounter = id + 1;
     state.log = (Array.isArray(state.log) ? state.log : [])
         .filter(e => isPlainObject(e) && typeof e.text === 'string')
         .slice(-60)
@@ -377,7 +449,7 @@ function normalise(data, now) {
         mg.challenge = null;
         if (mg.boostUntil < now) { mg.boostUntil = 0; mg.bonus = 0; }
     }
-    return state;
+    return clampTimers(state, now);
 }
 
 // Keys a save may never write: assigning them would change an object's prototype, or with
