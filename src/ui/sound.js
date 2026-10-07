@@ -123,6 +123,7 @@ export function createSound(isOn, volume = () => 1) {
         pet() { [0, 3, 7, 10, 12].forEach((n, i) => tone({ type: 'sine', f0: NOTE(84 + n), ms: 160, gain: 0.12, at: i * 0.06 })); },
         error() { tone({ type: 'square', f0: 160, f1: 120, ms: 160, gain: 0.08 }); },
         equip() { noise({ ms: 90, gain: 0.2, filter: 'bandpass', f0: 1800, f1: 900, q: 1.5 }); tone({ type: 'triangle', f0: 700, f1: 420, ms: 110, gain: 0.12 }); },
+        anvil() { noise({ ms: 35, gain: 0.32, filter: 'highpass', f0: 3200 }); tone({ type: 'sine', f0: vary(1650, 40), ms: 520, gain: 0.15 }); tone({ type: 'sine', f0: vary(2470, 60), ms: 340, gain: 0.08 }); tone({ type: 'sine', f0: vary(3950, 80), ms: 200, gain: 0.05 }); tone({ type: 'sine', f0: 110, f1: 70, ms: 90, gain: 0.3 }); },
         craft() { noise({ ms: 70, gain: 0.3, filter: 'highpass', f0: 2500 }); tone({ type: 'sine', f0: vary(2400, 100), f1: 1700, ms: 140, gain: 0.14 }); },
         buy() { SOUNDS.coin(); noise({ ms: 60, gain: 0.1, filter: 'bandpass', f0: 1200, q: 2, at: 0.08 }); }
     };

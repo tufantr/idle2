@@ -12,7 +12,7 @@ import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RARITIES } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
 import { rng } from '../core/rng.js';
-import { addItem } from './inventory.js';
+import { addItem, dropTypesFor } from './inventory.js';
 import { spawnEnemy, enterCombat } from './combat.js';
 import { log, bumpStat } from './progress.js';
 
@@ -226,7 +226,7 @@ function completeDungeon(game, d) {
     let kept = null;
     const zone = zoneForStage(d.stage);
     if (rng.chance(CHEST_GEAR_CHANCE * dropMult)) {
-        const item = generateDrop(d.chestTier, true, state.idCounter++, zone.depth);   // as strong as the dungeon's depth in the Abyss, like its monsters' drops
+        const item = generateDrop(d.chestTier, true, state.idCounter++, zone.depth, dropTypesFor(state, d.chestTier));   // as strong as the dungeon's depth in the Abyss, like its monsters' drops
         bumpStat(game, 'itemsDropped');
         const result = addItem(game, item);
         if (result.kept) kept = item;

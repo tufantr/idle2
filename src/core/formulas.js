@@ -2,7 +2,7 @@
 // change a constant here and re-run the simulator to see the pacing move.
 
 import { AUTHORED_STAGES, zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER } from '../data/items.js';
+import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER, JEWEL_DROP_MIN_RANK } from '../data/items.js';
 import { rng } from './rng.js';
 
 export const BALANCE = {
@@ -269,23 +269,26 @@ export function abyssDropMult(depth = 0) {
 }
 
 /**
- * Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): usually one
- * tier below, rarer than crafted. `depth` (the Abyss depth) scales its power past depth 5.
+ * Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): mostly of
+ * that tier, sometimes one below, rarely one above (`tier` fixes it). `types` weighs the kinds
+ * (systems/inventory.js dropTypesFor tilts them toward what the hero lacks); a ring, amulet or
+ * earring only comes epic or legendary. `depth` (the Abyss depth) scales its power past depth 5.
  */
-export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS) {
-    const tier = Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
+export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS, { tier: fixedTier = null } = {}) {
+    const tier = fixedTier ?? Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
     const gearTier = GEAR_TIERS[tier - 1];
-    const type = rng.weighted(types).type;
-    const jewel = CRAFTING_TYPES.includes(type);
     const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (zoneTier - 1);
     const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));
+    const rarity = rollRarity({ weights });
+    const kinds = RARITIES.findIndex(r => r.id === rarity.id) >= JEWEL_DROP_MIN_RANK ? types : types.filter(t => !CRAFTING_TYPES.includes(t.type));
+    const type = rng.weighted(kinds.length ? kinds : types).type;
+    const jewel = CRAFTING_TYPES.includes(type);
     const mult = abyssDropMult(depth);
     const item = generateEquipment({
-        type, tier,
+        type, tier, rarity,
         power: (jewel ? gearTier.power * JEWEL_POWER : gearTier.power) * mult,
         materialName: jewel ? null : gearTier.name,
         gemName: jewel ? gearTier.jewel : null,
-        rarityWeights: weights,
         source: 'drop'
     }, nextId);
     if (mult > 1) item.depth = depth;

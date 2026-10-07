@@ -2,10 +2,12 @@
 
 *Research note, 5 October 2026.*
 
-> **Since this note (7 October 2026).** Nothing here has been built yet: the proposal (weapons and
-> armour from drops only, Smithing given a new job, ordinary jewellery taken off the drop tables)
-> waits for the owner's decision (DESIGN §5.5). Two balance changes made since touch its numbers:
-> armour carries health, and the deep Abyss's drops grow ×1.6 a depth instead of ×1.8.
+> **Since this note (7 October 2026).** Built: the owner chose the proposal (option 1a), and DESIGN
+> §3.25 describes what shipped: weapons and armour past copper only drop (offsets 25/65/10, slot-aware
+> weights, a pity count of eight frontier bosses), ordinary jewellery left to Crafting, and Smithing's
+> anvil reinforcing and rerolling worn gear with bars of its metal, which salvage gives back. Not
+> built: a chest favouring named slots per dungeon. Two balance changes made before it touch the
+> numbers here: armour carries health, and the deep Abyss's drops grow ×1.6 a depth instead of ×1.8.
 
 
 This note builds on three earlier notes: `loot_and_itemization.md`, `skilling_and_economy.md`, and section KQ6 of `combat_scaling_and_prestige.md`. It adds to them rather than repeating them.

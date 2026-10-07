@@ -129,7 +129,7 @@ export const SKILLS = {
     },
     smithing: {
         id: 'smithing', name: 'Smithing', icon: '⚒️', color: '#f8fafc',
-        desc: 'Smelt ore into bars, then forge bars into armour, weapons and tools.',
+        desc: 'Smelt ore into bars, forge a copper set and tools, and work the gear you find at the anvil.',
         nodes: [] // recipes live in data/workshop.js
     },
     crafting: {

@@ -108,9 +108,19 @@ export const isCodexKey = key => /^(\w+)\/(\d+)$/.test(key) && CODEX_TYPES.inclu
 
 // Chance that a kill drops a piece of gear, and how its tier relates to the zone's gear tier.
 // Regular kills are a treat (an AFK fighter sees a few an hour, most of them salvage); a boss's
-// first fall in a run is a coin flip.
+// first fall in a run is a coin flip. Weapons and armour past copper only drop (DESIGN §3.25), so a
+// drop is mostly of the place's own tier.
 export const GEAR_DROP_CHANCE = { regular: 0.002, boss: 0.5 };
-export const DROP_TIER_OFFSETS = [ { offset: -1, weight: 60 }, { offset: 0, weight: 35 }, { offset: 1, weight: 5 } ];
+export const DROP_TIER_OFFSETS = [ { offset: -1, weight: 25 }, { offset: 0, weight: 65 }, { offset: 1, weight: 10 } ];
+// What the hero wears tilts what drops: a kind with an empty slot is four times as likely, one whose
+// piece is of a lower tier than the place's gear twice.
+export const DROP_EMPTY_SLOT_MULT = 4;
+export const DROP_BEHIND_SLOT_MULT = 2;
+// Ordinary jewellery is Crafting's: a ring, amulet or earring only drops epic or legendary.
+export const JEWEL_DROP_MIN_RANK = 3;
+// The pity count: a boss's first fall at the hero's frontier that leaves no upgrade marks one; the
+// eighth mark brings a sure piece of the place's tier for the weakest slot (DESIGN §3.25).
+export const PITY_MARKS = 8;
 export const DROP_TYPE_WEIGHTS = [
     { type: 'Weapon', weight: 12 }, { type: 'Shield', weight: 10 }, { type: 'Head', weight: 10 }, { type: 'Body', weight: 10 },
     { type: 'Legs', weight: 10 }, { type: 'Boots', weight: 10 }, { type: 'Gloves', weight: 10 },

@@ -6,6 +6,7 @@ import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/mod
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
+import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
@@ -33,6 +34,7 @@ const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge']);
 export class Game {
     constructor(state = null, now = Date.now()) {
         this.state = state ? migrateState(state, now) : createDefaultState(now);
+        if (this.state.action && !resolveAction(this.state)) this.state.action = null;   // an order the game no longer takes (forging iron, say)
         this.now = now;
         this.events = [];
         this.revision = 0;     // bumps whenever something visible changes; the UI re-renders on change
@@ -196,6 +198,8 @@ export class Game {
     salvageItem(id) { return this._act(() => salvageItem(this, id)); }
     salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
     reforgeItem(id) { return this._act(() => reforgeItem(this, id)); }
+    reinforceItem(id) { return this._act(() => reinforceItem(this, id)); }
+    rerollItem(id) { return this._act(() => rerollItem(this, id)); }
     toggleLock(id) { return this._act(() => toggleLock(this, id)); }
     setAutoSalvage(rarity) { return this._act(() => setAutoSalvage(this, rarity)); }
 

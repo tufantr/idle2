@@ -5,7 +5,8 @@
 
 import { zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { dungeonById } from '../data/dungeons.js';
-import { RARITIES } from '../data/items.js';
+import { RARITIES, PITY_MARKS } from '../data/items.js';
+import { weakestGearTier } from '../systems/inventory.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
@@ -319,10 +320,14 @@ export function createScene(root, actions) {
             nodes = [{ label: 'T', state: 'now', boss: true, title: 'The Titan', portrait: sprite(monsterSpriteKey(c.enemy) || 'titan/0', { scale: 0.75, cls: 'soft' }) }];
         } else {
             const start = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
+            // The bosses' due (data/items.js PITY_MARKS): a gold ring round the boss fills a mark with each
+            // boss at the hero's frontier that left no upgrade; it shows where the marks count.
+            const pity = seen(state, 'pity') && weakestGearTier(state) <= zoneForStage(c.stage).gearTier ? c.pity || 0 : null;
             nodes = Array.from({ length: STAGES_PER_ZONE }, (_, i) => {
                 const s = start + i;
                 const boss = isBossStage(s);
-                return { label: s, state: s === c.stage ? 'now' : s <= c.maxStage ? 'done' : 'next', boss, go: s !== c.stage && s <= c.maxStage, title: `${boss ? 'Boss · ' : ''}Stage ${s}` };
+                const due = boss && pity !== null ? ` · ${pity} of ${PITY_MARKS} marks toward a sure piece of gear` : '';
+                return { label: s, state: s === c.stage ? 'now' : s <= c.maxStage ? 'done' : 'next', boss, go: s !== c.stage && s <= c.maxStage, title: `${boss ? 'Boss · ' : ''}Stage ${s}${due}`, pity: boss && pity !== null ? pity : undefined };
             });
         }
         const key = JSON.stringify(nodes);
@@ -330,7 +335,8 @@ export function createScene(root, actions) {
         lastPathKey = key;
         el.path.innerHTML = nodes.map(n => {
             const face = n.portrait || (n.boss ? SKULL : `<span>${n.label}</span>`);
-            return `<li class="${n.state}${n.boss ? ' boss' : ''}${n.portrait ? ' portrait' : ''}">${n.go
+            const ring = n.pity !== undefined ? ` pity" style="--pity:${(n.pity / PITY_MARKS).toFixed(3)}` : '';
+            return `<li class="${n.state}${n.boss ? ' boss' : ''}${n.portrait ? ' portrait' : ''}${ring}">${n.go
                 ? `<button type="button" data-stage="${n.label}" title="Go to ${n.title}" aria-label="Go to ${n.title}">${face}</button>`
                 : `<b title="${n.title}${n.state === 'now' ? ' (here)' : n.state === 'next' ? ' (not reached yet)' : ''}">${face}</b>`}</li>`;
         }).join('');

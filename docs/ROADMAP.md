@@ -429,6 +429,21 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Weapons and armour from the fight** (the owner's choice, 1a; DESIGN §3.25): forging makes a
+      copper set and every stronger weapon and piece of armour drops, from bosses, regular monsters,
+      chests and the Abyss, which every prestige re-arms. Drops are mostly of the zone's own tier
+      (65%, one below 25%, one above 10%) and lean toward the slots the hero lacks (an empty one ×4, one
+      of a lower tier ×2); rings, amulets and earrings drop only epic or legendary, the rest is
+      Crafting's. A boss at the hero's frontier that leaves no upgrade fills a mark of a gold ring
+      round its node on the stage path, and the eighth brings a sure piece of the zone's tier for the
+      weakest slot. Smithing has a fourth step, the Anvil (from level 5): each worn weapon and piece of
+      armour as a card with Reinforce (+1 to +10) and Reroll, paid in bars of its own metal and essence,
+      with a hammer's ring and a flourish; each step needs 5 more Smithing levels and half as many bars
+      again, a metal's mastery takes bars off, and salvaging a piece gives its bars back with three
+      quarters of what reinforcing it took. Jewellery keeps its essence-and-gold upgrades in the bag;
+      a worn weapon there has an Anvil button. An old order to forge iron stops by itself. Simulated
+      over three seeds the pace holds (stage 200 at 47–52 h), and the smith wears Abyssal pieces at +4
+      to +10 by hour 150
 - [x] **Balanced against the mathematics of idle games** (the owner asked for the research to be
       expanded and the game balanced by it; `docs/research_notes/incremental-math.md` with its
       addendum, `docs/research_notes/gear-sources.md`, DESIGN §5.5). Measured first: gear carries ~60%

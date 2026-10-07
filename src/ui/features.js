@@ -13,6 +13,8 @@ import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { MASTERY_PER_LEVEL } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
+import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
+import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { escapeHtml as esc } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
@@ -24,11 +26,14 @@ const secs = ms => Math.round(ms / 1000);
 export const FEATURES = {
     combat: { name: 'Combat', art: 'meadow', icon: 'item/Weapon/3', blurb: SKILLS.combat.desc,
         points: ['Your hero fights automatically. Click the monster (or press Space) to strike as well: half damage, and it builds a combo.', 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.',
+            `Weapons and armour past copper only drop, mostly of the zone's own tier and for the slots you lack. A boss that leaves no upgrade fills a mark of the gold ring round the boss's node; the ${ordinal(PITY_MARKS)} brings a sure piece for your weakest slot.`,
             `Deeper stages teach more. Past combat level ${BALANCE.rewards.xpPace.from}, each kill teaches less the higher you rise (from ${BALANCE.rewards.xpPace.to}, a ${ordinal(BALANCE.rewards.xpPace.slow)} as much), so level 99 is a long road.`] },
     mining: { name: 'Mining', art: 'caves', icon: 'res/copper_ore', blurb: SKILLS.mining.desc,
         points: ['Pick a vein and your hero keeps digging, even while you are away.', 'Ore becomes bars in Smithing. Now and then a gem turns up.'] },
     smithing: { name: 'Smithing', art: 'forge', icon: 'res/copper_bar', blurb: SKILLS.smithing.desc,
-        points: ['Smelt: ore becomes bars.', 'Forge: bars become weapons and armour. Each piece opens a few levels after its metal.', 'Forged gear rolls up to Rare. Epic and legendary gear only drops in combat.', 'Tools make gathering faster.'] },
+        points: ['Smelt: ore becomes bars.', 'Forge: copper bars become a first set of weapons and armour. Everything stronger drops in the fight.',
+            `Anvil (from Smithing ${ANVIL_LEVEL_PER_UPGRADE}): bars of a piece's own metal reinforce what you wear, up to +${MAX_UPGRADE}, and reroll its bonuses. Each step takes more bars and ${ANVIL_LEVEL_PER_UPGRADE} more levels; mastery of a metal takes bars off.`,
+            'Salvaged weapons and armour give bars of their metal back, and most of what reinforcing them took.', 'Tools make gathering faster.'] },
     woodcutting: { name: 'Woodcutting', art: 'forest', icon: 'res/oak_log', blurb: SKILLS.woodcutting.desc, points: ['Logs feed the kitchen fire, tool handles and bows.'] },
     hunting: { name: 'Hunting', art: 'meadow', focus: 'center 62%', icon: 'res/raw_rabbit', blurb: SKILLS.hunting.desc, points: ['Raw meat is cooked into food, and food keeps you alive in long fights.'] },
     cooking: { name: 'Cooking', art: 'camp', icon: 'res/cabbage_soup', blurb: 'Turns raw meat and fish into food that keeps you alive in combat.',
@@ -45,7 +50,7 @@ export const FEATURES = {
         points: ['Seeds are bought with gold when you plant.', 'Herbs go to Alchemy; potatoes, cabbages, pumpkins and starfruit to Cooking.', 'A hoe makes crops grow faster.'] },
     agility: { name: 'Agility', art: 'course', icon: 'item/Boots/3', blurb: 'Build an obstacle course, then run it to train.',
         points: ['Every obstacle is a permanent bonus that survives prestige.', `Each can be upgraded to level ${MAX_OBSTACLE_LEVEL}; its bonus counts once per level.`, 'Replacing one tears the old one down without a refund.'] },
-    inventory: { name: 'Inventory', art: 'workshop', icon: 'item/Body/3', blurb: 'Your hero, the gear and everything you carry.', points: ['Tap a piece of gear to see it, wear it, upgrade it or sell it.', 'A green arrow marks gear that beats what you wear.'] },
+    inventory: { name: 'Inventory', art: 'workshop', icon: 'item/Body/3', blurb: 'Your hero, the gear and everything you carry.', points: ['Tap a piece of gear to see it, wear it, salvage it or sell it.', 'A green arrow marks gear that beats what you wear.', 'Weapons and armour are reinforced at the anvil in Smithing; jewellery is upgraded here, with essence and gold.'] },
     shop: { name: 'Shop', art: 'market', icon: 'gold', blurb: 'Supplies for gold, perks for skill points.',
         points: ['Supplies are priced by your best stage, so gathering always stays worth it.', 'Perks cost one skill point each and last forever.'] },
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',

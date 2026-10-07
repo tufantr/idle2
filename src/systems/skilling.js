@@ -2,7 +2,7 @@
 // The same `completeAction` runs online (from the tick loop) and offline (in a loop).
 
 import { SKILLS, skillNode } from '../data/skills.js';
-import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
+import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER } from '../data/items.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
 import { GEM_DROP_TABLE } from '../data/zones.js';
@@ -48,7 +48,7 @@ function resolveBase(state, action) {
             return { ...recipe, kind: 'smelt', skill: 'smithing', label: `Smelt ${recipe.name}`, output: recipe.produces, masteryKey: recipe.id };
         }
         case 'smith': {
-            const metal = METALS.find(m => m.bar === action.bar);
+            const metal = FORGE_METALS.find(m => m.bar === action.bar);   // copper only: stronger gear drops (an old iron order stops)
             if (!metal || !SMITHING_TYPES.includes(action.type)) return null;
             const cost = SMITHING_BAR_COST[action.type];
             return {

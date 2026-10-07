@@ -10,6 +10,9 @@ import { resolveAction, intervalFor } from '../src/systems/skilling.js';
 import { masteryBonus, masteryLevel, skillMastery } from '../src/systems/mastery.js';
 import { MASTERY_XP_DIVISOR, MASTERY_SKILLS, masteryActions, forgeKey } from '../src/data/mastery.js';
 import { RESOURCES } from '../src/data/resources.js';
+import { generateDrop } from '../src/core/formulas.js';
+import { reinforceCost } from '../src/data/workshop.js';
+import { anvilCost } from '../src/systems/anvil.js';
 
 rng.setSource(seededRandom(4242));
 const T0 = 1_700_000_000_000;
@@ -42,13 +45,13 @@ test('the bonuses: speed for all, doubling for resources, preservation for ingre
     const s = game.state;
     s.skills.smithing.xp = xpForLevel(99);
     s.skills.mining.xp = xpForLevel(99);
-    for (const [skill, key] of [['mining', 'copper_ore'], ['smithing', 'iron_bar'], ['smithing', forgeKey('iron_bar')]]) s.mastery[skill][key] = practiceFor(99);
+    for (const [skill, key] of [['mining', 'copper_ore'], ['smithing', 'iron_bar'], ['smithing', forgeKey('copper_bar')]]) s.mastery[skill][key] = practiceFor(99);
     const ore = resolveAction(s, { kind: 'node', skill: 'mining', id: 'copper_ore' });
     assert.ok(ore.mastery.double > 0.24 && ore.mastery.preserve === 0, 'gathering has nothing to keep');
     const bar = resolveAction(s, { kind: 'smelt', id: 'iron_bar' });
     assert.ok(bar.mastery.double > 0.24 && bar.mastery.preserve > 0.19);
-    const sword = resolveAction(s, { kind: 'smith', type: 'Weapon', bar: 'iron_bar' });
-    const body = resolveAction(s, { kind: 'smith', type: 'Body', bar: 'iron_bar' });
+    const sword = resolveAction(s, { kind: 'smith', type: 'Weapon', bar: 'copper_bar' });
+    const body = resolveAction(s, { kind: 'smith', type: 'Body', bar: 'copper_bar' });
     assert.equal(sword.mastery.key, body.mastery.key, 'one mastery per metal');
     assert.ok(sword.mastery.double === 0 && sword.mastery.preserve > 0.19, 'no double gear, but bars are kept');
     assert.ok(intervalFor(ore, game.derived) < intervalFor({ ...ore, mastery: null }, game.derived), 'faster with mastery');
@@ -78,14 +81,29 @@ test('forging mastery is shared by every piece of a metal; jewellery by gem', ()
     const game = new Game(null, T0);
     const s = game.state;
     s.skills.smithing.xp = xpForLevel(40);
-    s.resources.iron_bar = 500;
-    game.startSmithing('Weapon', 'iron_bar');
+    s.resources.copper_bar = 500;
+    game.startSmithing('Weapon', 'copper_bar');
     run(game, 30_000);
-    const practice = s.mastery.smithing[forgeKey('iron_bar')];
+    const practice = s.mastery.smithing[forgeKey('copper_bar')];
     assert.ok(practice > 0);
-    assert.ok(resolveAction(s, { kind: 'smith', type: 'Head', bar: 'iron_bar' }).mastery.level > 1);
-    assert.equal(resolveAction(s, { kind: 'smith', type: 'Head', bar: 'copper_bar' }).mastery.level, 1);
+    assert.ok(resolveAction(s, { kind: 'smith', type: 'Head', bar: 'copper_bar' }).mastery.level > 1);
     assert.equal(resolveAction(s, { kind: 'tool', tool: 'pickaxe', tier: 1 }).mastery, undefined, 'tools have none');
+});
+
+test('a metal past copper is practised at the anvil, and its mastery takes bars off the work', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.smithing.xp = xpForLevel(40);
+    s.resources.iron_bar = 500;
+    s.resources.essence = 500;
+    s.equipped.Body = generateDrop(2, true, s.idCounter++, 0, [{ type: 'Body', weight: 1 }], { tier: 2 });
+    const fresh = anvilCost(s, s.equipped.Body).bars;
+    assert.ok(game.reinforceItem(s.equipped.Body.id));
+    assert.equal(s.mastery.smithing[forgeKey('iron_bar')], fresh, 'a second of practice a bar');
+    s.mastery.smithing[forgeKey('iron_bar')] = practiceFor(99);
+    s.equipped.Body.upgrade = 6;
+    const practised = anvilCost(s, s.equipped.Body).bars;
+    assert.ok(practised < reinforceCost(s.equipped.Body).bars * 0.85, `${practised} bars at mastery 99`);
 });
 
 test('level-ups count toward stats and achievements; milestones are logged', () => {

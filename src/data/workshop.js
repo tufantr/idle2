@@ -1,6 +1,7 @@
 // Smithing and crafting recipes, and the tool ladder that ties gathering to production.
 
 import { paceList } from './pace.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, MAX_REFORGE_MULT, RARITIES } from './items.js';
 
 // Smelting: ore (+ coal) -> bar. Coal demand rises with tier so early rocks stay useful.
 export const SMELTING_RECIPES = [
@@ -25,6 +26,52 @@ export const METALS = [
     { bar: 'runite_bar',  name: 'Runite',  tier: 5, levelReq: 75, xpPerBar: 135 }
 ];
 export const SMITH_INTERVAL = 3000;
+
+// Forging makes copper gear only: every stronger weapon and piece of armour drops in the fight
+// (DESIGN §3.25). The smith's work on them is the anvil: reinforcing what the hero wears (+1 to +10)
+// and rerolling its bonuses, with bars of its own metal. Dragonbone and Abyssal gear takes runite,
+// two and three times as many. The anvil opens at Smithing 5; each step of reinforcing takes half as
+// many bars again as the last, needs 5 more levels, and pays the bars' forging XP. The bars are the
+// real gate: smelting each metal needs its level, or they come from salvaging gear of that metal.
+export const FORGE_METALS = METALS.filter(m => m.tier === 1);
+export const ANVIL_LEVEL_PER_UPGRADE = 5;
+export const ANVIL_BAR_GROWTH = 1.5;
+/** The metal whose bars work gear of a tier at the anvil. */
+export function anvilMetal(tier) {
+    return METALS[Math.max(1, Math.min(METALS.length, Math.round(tier) || 1)) - 1];
+}
+/** Bars past runite: Dragonbone takes twice as many runite bars, Abyssal three times. */
+export function anvilBarMult(tier) {
+    return Math.max(1, (Math.round(tier) || 1) - METALS.length + 1);
+}
+/** Reinforcing to the next level: { bar, bars, essence, level, xp, metal }. */
+export function reinforceCost(item) {
+    const next = (item.upgrade || 0) + 1;
+    const tier = item.tier || 1;
+    const metal = anvilMetal(tier);
+    const bars = Math.ceil((SMITHING_BAR_COST[item.type] || 1) * Math.pow(ANVIL_BAR_GROWTH, next - 1)) * anvilBarMult(tier);
+    return { bar: metal.bar, bars, essence: Math.ceil(2 * next * tier), level: ANVIL_LEVEL_PER_UPGRADE * next, xp: bars * metal.xpPerBar, metal };
+}
+/** Rerolling the bonuses: a piece's worth of bars, and essence that grows with each reroll (capped). */
+export function rerollCost(item) {
+    const tier = item.tier || 1;
+    const metal = anvilMetal(tier);
+    const bars = (SMITHING_BAR_COST[item.type] || 1) * anvilBarMult(tier);
+    const times = Math.min(MAX_REFORGE_MULT, 1 + (item.reforges || 0));
+    return { bar: metal.bar, bars, essence: 3 * tier * times, level: ANVIL_LEVEL_PER_UPGRADE, xp: bars * metal.xpPerBar, metal };
+}
+// Salvaging a weapon or a piece of armour gives bars of its metal back: one for a common piece, five
+// for a legendary (more past runite), and three quarters of the bars reinforcing it took.
+export const ANVIL_REFUND = 0.75;
+/** { bar, qty } for a weapon or armour (forged copper gives its own materials back instead), else null. */
+export function salvageBars(item) {
+    if (!SMITHING_TYPES.includes(item.type)) return null;
+    const tier = item.tier || 1;
+    const rank = Math.max(0, RARITIES.findIndex(r => r.id === item.rarity));
+    const found = item.source === 'crafted' && item.materials ? 0 : (1 + rank) * anvilBarMult(tier);
+    const qty = found + Math.floor(ANVIL_REFUND * (item.barsIn || 0));
+    return qty > 0 ? { bar: anvilMetal(tier).bar, qty } : null;
+}
 
 // Extra smithing levels per armour type on top of the metal's level (OSRS-style "tier base + slot
 // offset"), so each metal unlocks piece by piece and smithing gives something new most levels.

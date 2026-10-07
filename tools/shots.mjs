@@ -6,7 +6,8 @@
 //   node tools/shots.mjs                          # the default tabs
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
 //                                                 # 'battle' is the fight filling the screen; 'map' and
-//                                                 # 'prestige' are those dialogs over the game)
+//                                                 # 'prestige' are those dialogs over the game; 'anvil'
+//                                                 # is Smithing's anvil step)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -25,7 +26,9 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/ja
     '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
 const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
 // 'battle' is not a tab: it is the combat tab with the fight on, which fills the screen.
-const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons', 'map'];
+const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons', 'map'];
+// A step inside a tab, shot like a tab.
+const STEPS = { anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); } };
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
     map: () => { FI.switchTab('combat'); FI.openMap(); },
@@ -95,7 +98,9 @@ const lateGame = page => page.evaluate(async () => {
     s.prestige.tokens = 420; s.prestige.count = 6; s.prestige.skillPoints = 2;
     for (const r of Object.keys(s.resources)) s.resources[r] = 240;
     s.resources.essence = 3200; s.gold = 4.8e6;
-    for (const type of ['Weapon', 'Shield', 'Head', 'Body']) s.equipped[type] = generateEquipment({ type, tier: 3, power: 20, materialName: 'Mithril', source: 'crafted' }, s.idCounter++);
+    const { GEAR_TIERS, RARITIES } = await import('/src/data/items.js');
+    ['Weapon', 'Shield', 'Head', 'Body', 'Legs'].forEach((type, i) => { s.equipped[type] = generateEquipment({ type, tier: 3, power: GEAR_TIERS[2].power, materialName: 'Mithril', rarity: RARITIES[i % 4], source: 'drop' }, s.idCounter++); s.equipped[type].upgrade = [4, 0, 2, 7, 10][i]; });
+    s.combat.pity = 3;
     for (let i = 0; i < 12; i++) s.inventory.push(generateDrop(2 + (i % 3), i % 4 === 0, s.idCounter++));
     s.daily.banked = 1;
     g.markDirty(); g.recompute(); g.setStage(56);
@@ -143,6 +148,12 @@ for (const viewport of VIEWPORTS) {
             if (!(await page.$('#modal-root .modal-content'))) problems.push(`the ${tab} dialog did not open at ${viewport.width}px`);
             await shoot(page, tab, viewport.width);
             await page.evaluate(() => FI.closeModal());
+            continue;
+        }
+        if (STEPS[tab]) {
+            await page.evaluate(STEPS[tab]);
+            await page.waitForTimeout(700);
+            await shoot(page, tab, viewport.width);
             continue;
         }
         await page.evaluate(t => {

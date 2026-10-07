@@ -4,7 +4,8 @@
 
 import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, sellValue } from '../data/resources.js';
-import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
+import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
+import { anvilCost, onAnvil } from '../systems/anvil.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
@@ -897,7 +898,8 @@ export function renderSmithing(game, ui) {
     const d = game.derived;
     const level = skillLevel(state, 'smithing');
     const action = state.action;
-    const view = ['smelt', 'forge', 'tools'].includes(ui.smithView) ? ui.smithView : 'smelt';
+    const anvil = seen(state, 'anvil');
+    const view = ['smelt', 'forge', 'tools', ...(anvil ? ['anvil'] : [])].includes(ui.smithView) ? ui.smithView : 'smelt';
     let body = '';
     if (view === 'smelt') {
         body = `<div class="node-grid">${withNext(SMELTING_RECIPES, r => r.levelReq, level).map(r => {
@@ -911,9 +913,9 @@ export function renderSmithing(game, ui) {
             }, state);
         }).join('')}</div>`;
     } else if (view === 'forge') {
-        const metals = METALS.filter(m => level >= m.levelReq);
+        const metals = FORGE_METALS.filter(m => level >= m.levelReq);
         // The metal on the anvil: the one picked, else the best there are bars for, else the best known.
-        const metal = metals.find(m => m.bar === ui.smithMetal) || [...metals].reverse().find(m => state.resources[m.bar] > 0) || metals[metals.length - 1] || METALS[0];
+        const metal = metals.find(m => m.bar === ui.smithMetal) || [...metals].reverse().find(m => state.resources[m.bar] > 0) || metals[metals.length - 1] || FORGE_METALS[0];
         const recipes = SMITHING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'smith', type, bar: metal.bar }) }));
         const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
             title: `${metal.name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${metal.tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`forge_${type}`, 'smithy'), color: res(metal.bar).color,
@@ -921,19 +923,59 @@ export function renderSmithing(game, ui) {
             active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
             onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
         }, state)).join('');
-        const picker = materialPicks('Metal', metals.map(m => ({ id: m.bar, name: `${m.name} bars`, have: state.resources[m.bar] })), metal.bar, 'FI.selectSmithMetal');
-        body = `<div class="forge-bar">${picker}
-                ${masteryRow(state, 'smithing', resolveAction(state, { kind: 'smith', type: SMITHING_TYPES[0], bar: metal.bar }).mastery, `${metal.name} forging`)}</div>
+        const picker = metals.length > 1 ? materialPicks('Metal', metals.map(m => ({ id: m.bar, name: `${m.name} bars`, have: state.resources[m.bar] })), metal.bar, 'FI.selectSmithMetal') : '';
+        const mastery = masteryRow(state, 'smithing', resolveAction(state, { kind: 'smith', type: SMITHING_TYPES[0], bar: metal.bar }).mastery, `${metal.name} forging`);
+        body = `${picker || mastery ? `<div class="forge-bar">${picker}${mastery}</div>` : ''}
             <div class="node-grid">${cards}</div>`;
+    } else if (view === 'anvil') {
+        body = renderAnvil(state);
     } else {
         const tools = ['pickaxe', 'axe', 'tinderbox', 'hoe'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
         body = `<div class="node-grid">${tools.map(toolId => renderToolCard(game, toolId)).join('')}</div>`;
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
         ${xpHeader(game, 'smithing')}
-        ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
+        ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ...(anvil ? [['anvil', 'Anvil']] : []), ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
         ${body}
     </section>`;
+}
+
+/**
+ * The anvil (systems/anvil.js): every weapon and piece of armour the hero wears, with its two jobs,
+ * reinforcing (+1) and rerolling its bonuses, and the bars and essence each takes. A job that can be
+ * done now glows; one that waits on Smithing names the level.
+ */
+function renderAnvil(state) {
+    const worn = SMITHING_TYPES.map(type => state.equipped[type]).filter(Boolean);
+    if (!worn.length) return '<p class="muted small anvil-empty">Wear a weapon or a piece of armour to work it here.</p>';
+    return `<div class="anvil-grid">${worn.map(item => anvilCard(state, item)).join('')}</div>`;
+}
+
+function anvilCard(state, item) {
+    const id = Number(item.id);
+    const up = item.upgrade || 0;
+    const stat = (value, mult) => fmt(Math.round((value || 0) * mult));
+    const now = 1 + UPGRADE_STEP * up;
+    const next = 1 + UPGRADE_STEP * (up + 1);
+    const job = (kind, art, label, tip) => {
+        const cost = anvilCost(state, item, kind);
+        if (cost.why === 'none') return '';
+        if (cost.why === 'max') return '<span class="anvil-done">Fully reinforced</span>';
+        if (cost.why === 'level') return `<span class="req">Smithing ${cost.level}</span>`;
+        return `<button class="anvil-btn${cost.ok ? ' ready' : ''}" onclick="FI.${kind}(${id})" ${cost.ok ? '' : 'aria-disabled="true"'} title="${esc(tip)}">
+            <span class="anvil-job">${art}<b>${label}</b></span><span class="anvil-cost">${needChips(state, { [cost.bar]: cost.bars, essence: cost.essence })}</span></button>`;
+    };
+    const lines = [item.atk ? `${ATK_ICON} ${stat(item.atk, now)}${up < MAX_UPGRADE ? ` <i>→ ${stat(item.atk, next)}</i>` : ''}` : '', item.def ? `${DEF_ICON} ${stat(item.def, now)}${up < MAX_UPGRADE ? ` <i>→ ${stat(item.def, next)}</i>` : ''}` : ''].filter(Boolean);
+    const bonuses = item.affixes?.length ? item.affixes.map(describeAffix).join(', ') : '';
+    return `<div class="anvil-card" id="anvil-${id}" style="--r:${esc(item.color || '#e2e8f0')}">
+        <div class="anvil-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}${up ? `<span class="anvil-plus">+${up}</span>` : ''}</div>
+        <div class="anvil-name" title="${esc(bonuses)}">${esc(item.name)}</div>
+        <div class="anvil-stats small">${lines.join(' ')}</div>
+        <div class="anvil-jobs">
+            ${job('reinforce', glyph('up'), `+${up + 1}`, `Reinforce to +${up + 1}: +${Math.round(UPGRADE_STEP * 100)}% base stats`)}
+            ${job('reroll', glyph('dice'), 'Reroll', `New bonuses in place of ${bonuses || 'these'}`)}
+        </div>
+    </div>`;
 }
 
 /**
@@ -1077,9 +1119,12 @@ export function renderItemDetail(game, id) {
     const atk = Math.round((item.atk || 0) * mult);
     const def = Math.round((item.def || 0) * mult);
     const cost = itemUpgradeCost(game, item);
-    // Upgrading and reforging cost essence: they show once the player has met essence.
-    const essence = seen(state, 'essence');
-    const upgradeBtn = !essence ? '' : up < MAX_UPGRADE
+    // Upgrading and reforging cost essence: they show once the player has met essence. Weapons and
+    // armour are worked at the anvil instead (a step of Smithing): the worn ones say so.
+    const essence = seen(state, 'essence') && !onAnvil(item);
+    const anvilBtn = onAnvil(item) && slot && seen(state, 'anvil') && isUnlocked(state, 'smithing')
+        ? `<button class="mini-btn" onclick="FI.toAnvil(${itemId})" title="Reinforce it and reroll its bonuses with bars">${glyph('up')} Anvil</button>` : '';
+    const upgradeBtn = !essence ? anvilBtn : up < MAX_UPGRADE
         ? `<button class="mini-btn" onclick="FI.upgrade(${itemId})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">${glyph('up')} Upgrade to +${up + 1}: ${resIcon('essence')} ${cost.essence} ${coinIcon()} ${fmt(cost.gold)}</button>`
         : '<span class="muted small">Fully upgraded</span>';
     const reforge = itemReforgeCost(game, item);

@@ -7,6 +7,8 @@
 //                                    smelting, and a log burning twice in firemaking
 //   preserve  +0.2%  (+19.6% at 99)  actions with ingredients: the ingredients (and fuel) are kept
 // Forging and jewellery have one mastery per metal and per gem, shared by every piece made from it.
+// A metal's mastery grows with the work on its gear at the anvil too (a second of practice a bar),
+// and takes bars off that work instead of saving ingredients (systems/anvil.js).
 // Mastery is permanent (prestige keeps it). Tools, agility and farming have none.
 
 import { SKILLS } from './skills.js';
@@ -28,7 +30,7 @@ export function masteryActions(skillId) {
     if (skillId === 'smithing') {
         return [
             ...SMELTING_RECIPES.map(r => ({ key: r.id, name: `Smelt ${r.name}`, icon: RESOURCES[r.produces].icon, levelReq: r.levelReq })),
-            ...METALS.map(m => ({ key: forgeKey(m.bar), name: `Forge ${m.name}`, icon: '⚒️', levelReq: m.levelReq }))
+            ...METALS.map(m => ({ key: forgeKey(m.bar), name: m.tier === 1 ? `Forge ${m.name}` : `${m.name} at the anvil`, icon: '⚒️', levelReq: m.levelReq }))
         ];
     }
     if (skillId === 'crafting') {

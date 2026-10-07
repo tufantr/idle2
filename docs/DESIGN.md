@@ -48,21 +48,25 @@ flowchart LR
     Woodcutting -->|log handles| Tools
     Woodcutting -->|logs| Bows
     Hunting -->|raw meat| Cooking
-    Smelting -->|bars| Forging
+    Smelting -->|copper bars| Forging
+    Smelting -->|bars| Anvil["Anvil: reinforce, reroll"]
     Smelting -->|bars| Tools
     Smelting -->|silver/gold bars| Crafting
     Alchemy -->|potions| Combat
     Cooking -->|food| Combat
-    Forging -->|armour, weapons| Combat
+    Forging -->|a copper set| Combat
+    Anvil -->|stronger worn gear| Combat
     Crafting -->|jewellery| Combat
     Tools -->|pickaxe, axe| Mining & Woodcutting
     Bows -->|faster hunting| Hunting
     Combat -->|zone materials, gems| Mining & Woodcutting & Hunting
-    Combat -->|gear drops| Salvage["Salvage: essence, bars"]
+    Combat -->|weapons, armour, epic jewellery| Salvage["Salvage: essence, bars"]
+    Salvage -->|bars of their metal| Anvil
     Combat -->|gold| Camp["Camp, supplies, upgrades"]
     Combat -->|bait| Fishing
     Combat -->|gold, materials| Agility["Agility course: permanent bonuses"]
-    Combat -->|essence| Upgrades["Upgrades, reforges"]
+    Combat -->|essence| Anvil
+    Combat -->|essence| Upgrades["Jewellery upgrades, reforges"]
     Combat -->|best stage| Prestige
     Combat --> Dungeons["Dungeons: chests, fragments, uniques"]
     Combat --> Titan["Titan: permanent ATK/HP"]
@@ -70,9 +74,9 @@ flowchart LR
 ```
 
 **Minute to minute:** one action runs at a time — a skill node, a workshop recipe, or combat
-(starting one stops the other, like Melvor). **Hour to hour:** gather → smelt → forge the next
-armour piece → push a zone → when a boss stops you, farm a dungeon, train the skill that gates your
-next metal, or prestige. **Day to day:** prestige when a run stalls (the first one comes at about an
+(starting one stops the other, like Melvor). **Hour to hour:** push a zone for the next tier's drops →
+gather and smelt bars of the metal you wear → reinforce it at the anvil → when a boss stops you, farm
+a dungeon, train a skill, or prestige. **Day to day:** prestige when a run stalls (the first one comes at about an
 hour), spend skill points on perks, challenge the Titan when it wakes, claim banked daily crates,
 let offline progress run overnight.
 
@@ -122,7 +126,7 @@ consumes what:
 | Resource | Made by | Consumed by |
 |---|---|---|
 | Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite) |
-| Bars | Smelting, salvaging crafted gear | Forging (1–5 per piece), tools, bows, jewellery (silver/gold only) |
+| Bars | Smelting, salvaging weapons and armour | Forging copper (1–5 per piece), the anvil (reinforcing and rerolling worn gear), tools, bows, jewellery (silver/gold only) |
 | Gems | Mining (2%), zone drops, chests | Jewellery |
 | Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows and rods, agility obstacles, Defense potion (oak) |
 | Raw meat | Hunting, zone drops | Cooking; Evasion potion (raw fox) |
@@ -132,7 +136,7 @@ consumes what:
 | Herbs | Alchemy foraging, Farming, zone drops | Potions |
 | Fishing bait | Zone drops (Marsh, Ruins, Frozen Wastes), the Shop | Fishing: one per catch, 50% chance of a second fish |
 | Potions | Alchemy | Combat buffs (15 charges each) |
-| Essence | Combat, salvaging drops, dungeon chests, the Titan, daily crates | Gear upgrades and reforges |
+| Essence | Combat, salvaging drops, dungeon chests, the Titan, daily crates | The anvil, jewellery upgrades and reforges |
 
 Sell prices: `base[category] × 1.6^(tier−1)` with bases ore 3, bar 8, gem 25, log 2, raw 3, food 6,
 herb 4, crop 3, potion 30. Selling is a bootstrap; combat gold is the real economy (§3.8).
@@ -149,11 +153,20 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 
 - **Smelting:** 2.0–2.6 s per bar; smithing level 1 / 10 / 20 / 35 / 45 / 55 / 75 for copper / iron /
   silver / mithril / gold / adamant / runite; 10–90 XP per bar.
-- **Forging:** 3 s per piece. Each metal has a base level (1 / 10 / 35 / 55 / 75) and each piece adds
-  to it — Weapon +0, Boots +1, Gloves +2, Head +3, Shield +5, Legs +7, Body +9 — so a new metal starts
-  with a sword and ends with a platebody, the way RuneScape's smithing ladder works. Bars per piece:
-  Weapon 3, Shield 3, Head 2, Body 5, Legs 4, Boots 1, Gloves 1 (19 for a full set). XP = bars × 18 /
-  30 / 57 / 90 / 135 per metal.
+- **Forging:** copper only (§3.25): 3 s per piece, Weapon at level 1 and each piece a few levels on —
+  Boots +1, Gloves +2, Head +3, Shield +5, Legs +7, Body +9. Bars per piece: Weapon 3, Shield 3,
+  Head 2, Body 5, Legs 4, Boots 1, Gloves 1 (19 for a full set); 18 XP a bar. Every stronger weapon
+  and piece of armour drops in the fight. (Until October 2026 each metal forged its own set, from
+  levels 10 / 35 / 55 / 75.)
+- **The anvil** (`src/systems/anvil.js`, from Smithing 5): reinforces a worn weapon or piece of armour
+  (+5% base stats a step, to +10) and rerolls its bonuses, with bars of its metal — copper, iron,
+  mithril, adamant, runite for tiers 1–5; Dragonbone takes twice the runite, Abyssal three times — and
+  essence; no gold. Step n takes `ceil(bars per piece × 1.5^(n−1))` bars (a body: 5, 8, 12 … 193;
+  about 113 pieces' worth for +10) and `2 × n × tier` essence, needs Smithing `5n`, and pays the bars'
+  XP (as forging did: 18 / 30 / 57 / 90 / 135 a bar, paced). A reroll takes a piece's worth of bars
+  and the old reforge's essence. The metal's mastery grows a second a bar and takes up to 19.6% of
+  the bars off. Smelting a metal needs its level, so the bars are the real gate (runite at 75), or they
+  come from salvaging gear of that metal.
 - **Jewellery:** 1 silver or gold bar + 1 gem → Ring, Earring or Amulet. The gem sets the base level
   (1 / 10 / 25 / 40 / 55 / 70), the tier and the power (0.8 × the tier's power, like dropped
   jewellery); a gold setting adds 20%. Earrings add +2 and Amulets +4 levels; gold bars need crafting
@@ -187,13 +200,15 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   by up to 64× and let legendary copper beat runite.
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
-- **Upgrades:** +5% base stats per level, max +10. Cost: `2 × level × tier` essence plus
+- **Upgrades:** +5% base stats per level, max +10. Weapons and armour are reinforced at the anvil
+  with bars and essence (§3.4). Jewellery is upgraded with `2 × level × tier` essence plus
   `4 × level × (gold per kill at your best stage)` gold, so the price keeps pace with gold income.
 - **Reforge:** rerolls an item's affixes (not its rarity or base stats) for `3 × tier × min(10, 1 +
-  reforges so far)` essence and 10 kills of gold.
+  reforges so far)` essence and, for jewellery, 10 kills of gold (weapons and armour: bars, at the anvil).
 - **Salvage:** dropped gear → essence (`ceil(0.8 × tier × (rarity rank + 1))`), crafted gear → ~40% of
   its bars back (whole bars, fair on average). Either way, half of the essence spent upgrading the
-  item comes back.
+  item comes back. A dropped weapon or piece of armour also gives bars of its metal (1 common … 5
+  legendary, ×2 / ×3 past runite), and any of them three quarters of the bars reinforcing it took.
 - **Bag and lock:** 40 rolled items. Overflow auto-salvages the weakest unlocked item, but never the
   best upgrade for a slot — if nothing else can go, the bag overflows instead (a bag full of locked
   items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /
@@ -842,6 +857,36 @@ unchanged: over seeds 1–4 the 150-hour simulation ends at stage 255 on average
 the spread is the simulator farming the Void Citadel for hours on some seeds, old code and new alike),
 a little ahead in the first hours.
 
+### 3.25 Gear from the fight
+
+The research behind it is `docs/research_notes/gear-sources.md` and `incremental-math.md` A4: worn gear
+was all dropped by hour 5–10 anyway (forged sets lasted about four hours), and gear is about 60% of a
+late hero's log power, so where it comes from decides what a run is for. Since October 2026 (the
+owner's choice of option 1a):
+
+- **Weapons and armour past copper only drop.** Forging makes a copper set (§3.4); bosses, regular
+  monsters (one kill in 500), dungeon chests and the Abyss make the rest. Old forged pieces stay; an old
+  order to forge iron stops by itself when the save loads.
+- **Drops are mostly of the place's own tier:** one below 25%, the same 65%, one above 10% (it was
+  60 / 35 / 5 while forging carried the tiers). **What the hero lacks comes more often:** a kind with
+  an empty slot is four times as likely, one whose worn piece is of a lower tier than the place's
+  twice (`dropTypesFor` in `src/systems/inventory.js`; chests too).
+- **Ordinary jewellery is Crafting's:** a ring, amulet or earring drops only epic or legendary (the
+  rarity is rolled first; a lower one picks among weapons and armour).
+- **The bosses' due** (pity): a boss's first fall in a run, where the hero's weakest weapon or armour
+  is of the place's tier or below, marks one when it leaves no upgrade; the eighth mark leaves a sure
+  piece of the place's own tier for the weakest slot (empty first, then the lowest tier), and an
+  upgrade wipes the marks. Saved in `combat.pity`, kept through prestige; shown as eight marks of a
+  gold ring round the boss's node on the stage path, once there are two (disclosure `pity`).
+- **Smithing's job is the anvil** (§3.4): bars of the worn piece's own metal make it stronger, and
+  salvaging pieces gives their bars back. The anvil is a step of Smithing (Smelt · Forge · Anvil ·
+  Tools) from level 5; a worn piece in the bag's detail has an Anvil button instead of Upgrade.
+
+Simulated over seeds 1–3 for 150 hours (old figures in brackets, §5.2): stage 50 at 0.8 h (0.8), 100
+at 3.7–5.3 h (5.0–5.2), 150 at 13.2–16.5 h (16–18), 200 at 46.8–51.5 h (48.3–48.9); best 320–330
+(270–310). The simulated smith reaches 75 at 84–89 h and wears Abyssal pieces at +4 to +10 by the
+end. A new player's first minutes are unchanged (`tools/opening.mjs`).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -1040,7 +1085,8 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | When gear can be worn | `TIER_WEAR_LEVEL` (combat level per tier) | `src/data/items.js` |
 | Walls earlier/later | `BALANCE.enemy.hpGrowth`, `atkGrowth`, boss multipliers, `bossTimeMs` | `src/core/formulas.js` |
 | Bigger gear jumps | `GEAR_TIERS` power | `src/data/items.js` |
-| More/fewer gear drops | `GEAR_DROP_CHANCE`, `DROP_*` weights; zone `gearTier` | `src/data/items.js`, `src/data/zones.js` |
+| More/fewer gear drops | `GEAR_DROP_CHANCE`, `DROP_*` weights and slot multipliers, `PITY_MARKS`; zone `gearTier` | `src/data/items.js`, `src/data/zones.js` |
+| The anvil | `ANVIL_LEVEL_PER_UPGRADE`, `ANVIL_BAR_GROWTH`, `ANVIL_REFUND`, `anvilBarMult` | `src/data/workshop.js` |
 | Dungeon rewards | `CHEST_*`, `FRAGMENTS_PER_UNIQUE`, `DUNGEON_MILESTONES`, placement | `src/data/dungeons.js` |
 | The Titan | `TITAN_*` | `src/data/dungeons.js` |
 | Pet rarity | `PET_BASE` | `src/data/pets.js` |
@@ -1084,18 +1130,16 @@ The game, measured against it after the survival fix (seeds 1–3, 150 h):
 | 12 | Gear by source | worn gear is all dropped or unique by hour 5–10; forged weapons and armour last ~4 h, crafted jewellery is never worn in 60 h | each skill's products used | ✗ |
 
 **Done.** Armour carries health and the deep Abyss's drops grow ×1.6 a depth (§5.3): measures 3, 9.
+**Weapons and armour from the fight** (the owner's idea, option 1a; §3.25): forging makes copper only,
+drops lean on the zone's tier and the hero's empty slots, a pity count on frontier bosses, ordinary
+jewellery left to Crafting, and Smithing's anvil reinforces and rerolls worn gear with bars that
+salvage gives back. Measure 12. (A chest favouring named slots per dungeon was not built.)
 
-**Proposed, for the owner to decide** (each simulated in a scratch copy; none built):
+**Chosen by the owner, being built:** records that multiply the tokens with an earned auto-prestige
+(2), and camp prices that follow the best stage (3a); no brake on fast prestiging (4).
 
-- **Weapons and armour from the fight** (the owner's idea; `gear-sources.md` §5): stop forging weapons
-  and armour above copper, so they come from bosses' first falls, regular kills and dungeon chests,
-  which every prestige re-arms. Ship with it: Smithing reinforces dropped gear with bars (the +1…+10
-  upgrades move to the anvil), smelts unwanted drops back into bars and rerolls affixes; drops lean on
-  the zone's own tier (offsets 25/65/10), favour empty and lagging slots, with a visible pity count on
-  frontier bosses; each dungeon's chest favours named slots; ordinary jewellery leaves the drop tables
-  so Crafting's rings and amulets are the way to them. Simulated (copper forge kept, slot-aware drops,
-  offsets 25/65/10): stage 50 at 0.8 h, 100 at 4.4–4.7 h, 150 at 14–15 h, 200 at 46–49 h. Without the
-  copper forge the first two hours slow down (stage 50 at 1.6–2.1 h). Measures 12, 4.
+**Proposed earlier** (each simulated in a scratch copy):
+
 - **Late prestiges that count** (`incremental-math.md` §8.3 and the addendum A1.3): keep the held
   tokens, and add a rare compounding unit (×1.05 to the token effect for each new 25-stage record or
   dungeon unique), so a late record multiplies the whole stock instead of adding 0.7%; and once
@@ -1193,7 +1237,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · capes (skill capes at 99)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
-                      · farming · agility · prestige · camp · minigame · offline · daily
+                      · anvil (reinforcing and rerolling worn gear with bars) · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
                       · disclosure (which pieces of the screens have opened for the player)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the

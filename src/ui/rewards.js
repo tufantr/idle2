@@ -4,7 +4,7 @@
 
 import { SKILLS } from '../data/skills.js';
 import { RESOURCES } from '../data/resources.js';
-import { SMELTING_RECIPES, METALS, JEWEL_BARS, GEM_TIERS, TOOLS } from '../data/workshop.js';
+import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { CROPS } from '../data/farming.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
 import { fmt, escapeHtml as esc } from './format.js';
@@ -26,7 +26,7 @@ export function unlocksAtLevel(skill, level) {
     for (const n of SKILLS[skill]?.nodes || []) if (n.levelReq === level) add(n.produces ? resIcon(n.produces) : SKILLS[skill].icon, n.name);
     if (skill === 'smithing') {
         for (const r of SMELTING_RECIPES) if (r.levelReq === level) add(resIcon(r.produces), r.name);
-        for (const m of METALS) if (m.levelReq === level) add(sprite(`item/Weapon/${m.tier}`, { scale: 0.625, cls: 'soft res-spr', fallback: '⚒️' }), `${m.name} gear`);
+        if (level === ANVIL_LEVEL_PER_UPGRADE) add(sprite('item/Weapon/3', { scale: 0.625, cls: 'soft res-spr', fallback: '⚒️' }), 'The anvil');
     }
     if (skill === 'crafting') {
         for (const g of GEM_TIERS) if (g.levelReq === level) add(resIcon(g.gem), `${RESOURCES[g.gem]?.name || g.gem} jewellery`);

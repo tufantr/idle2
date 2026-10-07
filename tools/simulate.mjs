@@ -11,7 +11,8 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
-import { METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq } from '../src/data/workshop.js';
+import { FORGE_METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq, anvilMetal } from '../src/data/workshop.js';
+import { anvilCost } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS } from '../src/data/items.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { skillLevel } from '../src/core/modifiers.js';
@@ -60,9 +61,16 @@ const fmtH = ms => `${H(ms).toFixed(1)}h`;
 // ---------- policy helpers ----------
 const ARMOUR_PRIORITY = ['Weapon', 'Body', 'Shield', 'Legs', 'Head', 'Gloves', 'Boots'];
 
-function bestMetal() {
-    const sl = lvl('smithing');
-    return [...METALS].reverse().find(m => sl >= m.levelReq) || METALS[0];
+// The anvil's next job worth gathering for: the first worn piece (weapon first) whose next
+// reinforcing the Smithing level allows, with the essence for it. { item, cost } or null.
+function anvilJob() {
+    for (const slot of ARMOUR_PRIORITY) {
+        const item = S.equipped[slot];
+        if (!item) continue;
+        const cost = anvilCost(S, item);
+        if ((cost.ok || cost.why === 'short') && S.resources.essence >= cost.essence) return { item, cost };
+    }
+    return null;
 }
 function bestNode(skillId) {
     const l = lvl(skillId);
@@ -85,7 +93,7 @@ function equipBest() {
             if (score(item) > score(current)) { if (game.equipItem(item.id, slot)) break; }
         }
     }
-    game.sellAllItems('common');
+    game.salvageAll('common');   // bars of their metal for the anvil, and essence
 }
 
 // Returns a gathering task to obtain `qty` of resource `id`, or null if impossible right now.
@@ -136,8 +144,13 @@ function obtain(id, qty) {
 function train(skillId, minutes = 20) {
     const end = now + minutes * 60000;
     if (skillId === 'smithing') {
-        // Forge the most bar-efficient piece if bars are on hand, otherwise smelt the best bar we can source ore for.
-        const metal = [...METALS].reverse().find(m => lvl('smithing') >= m.levelReq && S.resources[m.bar] >= 5);
+        // Bars for the anvil's next job first, if we can smelt them (the reinforcing itself happens in
+        // spendPoints; bars we can't smelt yet only come from salvage).
+        const job = anvilJob();
+        const smeltable = job && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === job.cost.bar).levelReq;
+        if (smeltable) { const t = obtain(job.cost.bar, job.cost.bars); if (t) return t; }
+        // Then forge copper if bars are on hand, otherwise smelt the best bar we can source ore for.
+        const metal = [...FORGE_METALS].reverse().find(m => lvl('smithing') >= m.levelReq && S.resources[m.bar] >= 5);
         if (metal) {
             const piece = SMITHING_TYPES.filter(t => lvl('smithing') >= smithLevelReq(metal, t)).sort((a, b) => SMITHING_BAR_COST[b] - SMITHING_BAR_COST[a])[0];
             return { kind: 'smith', type: piece, bar: metal.bar, until: () => now >= end || S.resources[metal.bar] < SMITHING_BAR_COST[piece], why: `train smithing (forge ${metal.name} ${piece})` };
@@ -171,8 +184,8 @@ function forgedScore(metal, type) {
 const forgeAttempts = {};
 function gearTask() {
     for (const type of ARMOUR_PRIORITY) {
-        // The best metal this piece can be forged in at the current smithing level.
-        const metal = [...METALS].reverse().find(m => lvl('smithing') >= smithLevelReq(m, type));
+        // The best metal this piece can be forged in at the current smithing level (copper: the rest drops).
+        const metal = [...FORGE_METALS].reverse().find(m => lvl('smithing') >= smithLevelReq(m, type));
         if (!metal || equippedTier(type) >= metal.tier) continue;
         const worn = Math.min(...TYPE_SLOTS[type].map(slot => itemScore(S.equipped[slot])));
         if (worn >= forgedScore(metal, type)) continue;
@@ -248,16 +261,10 @@ function spendPoints() {
         const price = goldShopPrice(game, GOLD_SHOP.find(i => i.id === 'buy_essence'));
         if (S.gold - price < reserve + 20 * price || !game.buyGoldShopItem('buy_essence')) break;
     }
-    // Essence into the weapon, then body.
-    for (const slot of ['Weapon', 'Body', 'Shield']) {
+    // Bars and essence into the worn weapon and armour at the anvil, weapon first.
+    for (const slot of ARMOUR_PRIORITY) {
         const item = S.equipped[slot];
-        if (!item) continue;
-        let g = 0;
-        while ((item.upgrade || 0) < MAX_UPGRADE && g++ < 20) {
-            const cost = itemUpgradeCost(game, item);
-            if (S.resources.essence < cost.essence || S.gold < cost.gold) break;
-            game.upgradeItem(item.id);
-        }
+        for (let g = 0; item && g < MAX_UPGRADE && anvilCost(S, item).ok; g++) game.reinforceItem(item.id);
     }
     buyCamp();
 }
@@ -437,13 +444,15 @@ let needTraining = false;
 function trainWeakest() {
     if (!needTraining) return null;
     needTraining = false;
-    const nextMetal = METALS.find(m => m.tier === bestMetal().tier + 1);
-    if (nextMetal) {
-        const recipe = SMELTING_RECIPES.find(r => r.produces === nextMetal.bar);
+    // The metal the anvil needs for the weapon worn, while Mining or Smithing doesn't reach it yet.
+    const weapon = S.equipped.Weapon;
+    const target = weapon && (weapon.upgrade || 0) < MAX_UPGRADE ? anvilMetal(weapon.tier) : null;
+    if (target) {
+        const recipe = SMELTING_RECIPES.find(r => r.produces === target.bar);
         const oreId = Object.keys(recipe.consumes).find(id => RESOURCES[id].category === 'ore' && id !== 'coal');
         const oreNode = nodeFor('mining', oreId);
         if (lvl('mining') < oreNode.levelReq && lastTrainedSkill !== 'mining') { lastTrainedSkill = 'mining'; return train('mining', 60); }
-        if (lvl('smithing') < nextMetal.levelReq && lastTrainedSkill !== 'smithing') { lastTrainedSkill = 'smithing'; return train('smithing', 60); }
+        if (lvl('smithing') < target.levelReq && lastTrainedSkill !== 'smithing') { lastTrainedSkill = 'smithing'; return train('smithing', 60); }
     }
     const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)));
     candidates.sort((a, b) => lvl(a) - lvl(b));

@@ -2,8 +2,8 @@
 
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
-import { GEAR_DROP_CHANCE, RARITIES } from '../data/items.js';
-import { addItem } from './inventory.js';
+import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS } from '../data/items.js';
+import { addItem, dropTypesFor, isUpgrade, weakestGearTier, weakestGearSlot } from './inventory.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { rng } from '../core/rng.js';
@@ -232,12 +232,13 @@ function rollLoot(game, enemy, payout) {
         else if (rng.chance(r.essenceDropChance * d.dropMult)) essence = rng.int(1, 2);
         if (essence) { add('essence', essence); bumpStat(game, 'essenceFound', essence); }
 
-        // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone.
-        // The first boss a hero ever beats always leaves a piece (his first armour, as a rule).
+        // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone,
+        // and the kind leans toward what the hero lacks. The first boss a hero ever beats always leaves
+        // a piece (his first armour, as a rule).
         const firstBoss = boss && !enemy.titan && state.combat.mode === 'stages' && state.stats.bossKills === 1 && roll === 0;
         const gearChance = firstBoss ? 1 : (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
         if (rng.chance(gearChance)) {
-            const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth, firstBoss ? FIRST_ARMOUR : undefined);
+            const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth, firstBoss ? FIRST_ARMOUR : dropTypesFor(state, zone.gearTier));
             const result = addItem(game, item);
             bumpStat(game, 'itemsDropped');
             drops.push({ item, kept: result.kept });
@@ -246,6 +247,7 @@ function rollLoot(game, enemy, payout) {
             if (result.kept) game.emit({ type: 'itemDropped', item });
         }
     }
+    if (boss && !enemy.titan && state.combat.mode === 'stages') pityMark(game, zone, drops);
     // A new hero fights with his fists: the first monster he ever beats leaves him a sword.
     if (state.stats.kills === 1 && !state.prestige.count && !state.equipped.Weapon && !state.inventory.some(i => i.type === 'Weapon')) {
         const item = generateEquipment({ type: 'Weapon', tier: 1, power: STARTER_SWORD_POWER, materialName: 'Rusty', rarity: RARITIES[0], source: 'drop' }, state.idCounter++);
@@ -262,6 +264,30 @@ function rollLoot(game, enemy, payout) {
         bumpStat(game, 'essenceFound', essence);
     }
     return drops;
+}
+
+/**
+ * The pity count: a boss's first fall where the hero's gear could still improve (his weakest weapon or
+ * armour is of the place's tier or below) marks one when it leaves no upgrade, and the PITY_MARKS-th
+ * mark leaves a sure piece of the place's own tier for his weakest slot. An upgrade wipes the marks.
+ */
+function pityMark(game, zone, drops) {
+    const state = game.state;
+    const c = state.combat;
+    if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && isUpgrade(state, dr.item))) { c.pity = 0; return; }
+    if (weakestGearTier(state) > zone.gearTier) return;   // the hero has outgrown this place's gear
+    c.pity = (c.pity || 0) + 1;
+    if (c.pity < PITY_MARKS) return;
+    c.pity = 0;
+    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: weakestGearSlot(state), weight: 1 }], { tier: zone.gearTier });
+    const result = addItem(game, item);
+    bumpStat(game, 'itemsDropped');
+    bumpStat(game, 'pityDrops');
+    drops.push({ item, kept: result.kept });
+    if (result.kept) {
+        log(game, `${item.icon} ${item.name}: the bosses' due, at last.`, 'loot');
+        game.emit({ type: 'itemDropped', item, pity: true });
+    }
 }
 
 /** A gem of about the zone's tier (one either side, the lower ones three times as likely). */

@@ -3,7 +3,7 @@
 
 import { RESOURCES } from '../data/resources.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
-import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER } from '../data/items.js';
+import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS } from '../data/items.js';
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { xpForLevel, levelForXp } from './xp.js';
@@ -52,7 +52,8 @@ export function createDefaultState(now = Date.now()) {
             regroupLeft: 0,    // ms left farming the previous stage after a boss escaped
             mode: 'stages',    // 'stages' | 'dungeon' | 'titan'
             dungeon: null,     // { id, index } while in a dungeon run
-            recovering: false  // fallen: resting to full health, then back into the fight by himself
+            recovering: false, // fallen: resting to full health, then back into the fight by himself
+            pity: 0            // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
@@ -73,7 +74,7 @@ export function createDefaultState(now = Date.now()) {
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
-            itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0,
+            itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
@@ -285,6 +286,8 @@ function sanitizeItem(raw, ids, nextId) {
         locked: raw.locked === true, value: Math.max(0, finite(raw.value)), source, materials
     };
     if (uniqueId) item.uniqueId = uniqueId;
+    const barsIn = Math.floor(finite(raw.barsIn));   // bars spent reinforcing it at the anvil (systems/anvil.js)
+    if (barsIn > 0) item.barsIn = Math.min(barsIn, 1e7);
     if (Number.isSafeInteger(raw.depth) && raw.depth > 0) item.depth = raw.depth;
     return item;
 }
@@ -392,6 +395,7 @@ function normalise(data, now) {
     state.combat.maxStage = Math.max(state.combat.stage, Math.floor(Number(state.combat.maxStage) || 1));
     state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
     state.combat.combo = 0;
+    state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
     state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;

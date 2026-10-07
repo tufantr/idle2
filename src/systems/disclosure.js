@@ -8,6 +8,9 @@ import { CAMP_UPGRADES } from '../data/camp.js';
 import { RESOURCES } from '../data/resources.js';
 import { NON_COMBAT_SKILLS } from '../data/skills.js';
 import { STAGES_PER_ZONE } from '../data/zones.js';
+import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
+import { SMITHING_TYPES } from '../data/items.js';
+import { levelForXp } from '../core/xp.js';
 
 const CHEAPEST_CAMP = Math.min(...CAMP_UPGRADES.map(u => u.baseCost));
 const JEWELLERY = new Set(['Ring', 'Neck', 'Ear']);
@@ -27,11 +30,13 @@ export const DISCLOSURES = [
     { id: 'food',         when: s => !!s.unlocks.cooking || owns(s, 'food') },
     { id: 'potions',      when: s => !!s.unlocks.alchemy || owns(s, 'potion') },
     { id: 'gear',         when: s => s.stats.itemsDropped > 0 || s.stats.itemsCrafted > 0 || gear(s).length > 0 },
+    { id: 'pity',         when: s => (s.combat.pity || 0) >= 2 || (s.stats.pityDrops || 0) > 0 },   // the bosses' due: a ring round the boss's node, once it has marks worth seeing
     // the armory
     { id: 'jewellery',    when: s => !!s.unlocks.crafting || gear(s).some(item => JEWELLERY.has(item.type)) },
     { id: 'bag_tools',    when: s => s.stats.itemsDropped + s.stats.itemsCrafted >= 5 },
     { id: 'auto_salvage', when: s => s.stats.itemsDropped >= 10 },
     // the skill tabs
+    { id: 'anvil',        when: s => levelForXp(s.skills.smithing.xp) >= ANVIL_LEVEL_PER_UPGRADE || gear(s).some(i => SMITHING_TYPES.includes(i.type) && i.upgrade > 0) },   // Smithing's anvil: the first reinforcing a smith can do
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },
     { id: 'minigames',    when: s => s.stats.minigameWins > 0 || NON_COMBAT_SKILLS.some(id => s.minigame[id]?.opportunityUntil > 0 || !!s.minigame[id]?.challenge) }
 ];

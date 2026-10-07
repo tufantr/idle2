@@ -2,8 +2,10 @@
 
 import {
     TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, upgradeCost, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
-    BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey
+    BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
+    SMITHING_TYPES, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT
 } from '../data/items.js';
+import { salvageBars } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
 import { itemSellValue, goldPerKillAtStage, rerollAffixes } from '../core/formulas.js';
@@ -19,8 +21,33 @@ export function findItem(state, id) {
     return index === -1 ? null : { item: state.inventory[index], index };
 }
 
-function findAnywhere(state, id) {
+/** An item by id, in the bag or worn. */
+export function findGear(state, id) {
     return findItem(state, id)?.item || EQUIP_SLOTS.map(s => state.equipped[s]).find(i => i && i.id === id) || null;
+}
+
+/**
+ * The drop table's kinds, weighted for this hero where the gear tier is `zoneTier`: a kind with an
+ * empty slot is DROP_EMPTY_SLOT_MULT times as likely, one whose worn piece is of a lower tier
+ * DROP_BEHIND_SLOT_MULT times (core/formulas.js generateDrop).
+ */
+export function dropTypesFor(state, zoneTier) {
+    return DROP_TYPE_WEIGHTS.map(entry => {
+        const worn = (TYPE_SLOTS[entry.type] || []).map(slot => state.equipped[slot]);
+        const mult = worn.some(i => !i) ? DROP_EMPTY_SLOT_MULT : Math.min(...worn.map(i => i.tier || 1)) < zoneTier ? DROP_BEHIND_SLOT_MULT : 1;
+        return { type: entry.type, weight: entry.weight * mult };
+    });
+}
+
+/** The lowest tier among the worn weapon and armour (0 while a slot is empty). */
+export function weakestGearTier(state) {
+    return Math.min(...SMITHING_TYPES.map(type => state.equipped[type]?.tier || 0));
+}
+
+/** The weapon or armour slot most in need: an empty one, else the lowest tier, else the weakest piece. */
+export function weakestGearSlot(state) {
+    const rank = type => { const item = state.equipped[type]; return item ? [item.tier || 1, itemScore(item)] : [0, -1]; };
+    return [...SMITHING_TYPES].sort((a, b) => { const [ta, sa] = rank(a); const [tb, sb] = rank(b); return ta - tb || sa - sb; })[0];
 }
 
 export function canWear(state, item) {
@@ -115,14 +142,20 @@ export function addItem(game, item) {
 
 // ---------- salvage ----------
 
-/** What salvaging an item would give: essence for drops, part of the materials back for crafted gear. */
+/**
+ * What salvaging an item would give: essence for drops, part of the materials back for crafted gear,
+ * and for weapons and armour bars of their metal (data/workshop.js salvageBars).
+ */
 export function salvagePreview(item) {
+    const materials = {};
+    let essence = salvageEssence(item);
     if (item.source === 'crafted' && item.materials) {
-        const materials = {};
         for (const [id, qty] of Object.entries(item.materials)) materials[id] = qty * SALVAGE_MATERIAL_RETURN;
-        return { essence: upgradeEssenceRefund(item), materials };
+        essence = upgradeEssenceRefund(item);
     }
-    return { essence: salvageEssence(item), materials: {} };
+    const bars = salvageBars(item);
+    if (bars) materials[bars.bar] = (materials[bars.bar] || 0) + bars.qty;
+    return { essence, materials };
 }
 
 function salvageObject(game, item, { auto = false, quiet = auto } = {}) {
@@ -254,11 +287,12 @@ export function itemUpgradeCost(game, item) {
     return upgradeCost(item, goldPerKillAtStage(game.state.combat.bestStage));
 }
 
-/** Upgrade an item (equipped or in the bag) with essence + gold. */
+/** Upgrade a piece of jewellery (equipped or in the bag) with essence + gold; weapons and armour go to the anvil. */
 export function upgradeItem(game, id) {
     const state = game.state;
-    const item = findAnywhere(state, id);
+    const item = findGear(state, id);
     if (!item) return false;
+    if (SMITHING_TYPES.includes(item.type)) { game.emit({ type: 'error', text: 'Weapons and armour are reinforced at the anvil.' }); return false; }
     if ((item.upgrade || 0) >= MAX_UPGRADE) { game.emit({ type: 'error', text: 'That item is fully upgraded.' }); return false; }
     const cost = itemUpgradeCost(game, item);
     if (state.resources.essence < cost.essence || state.gold < cost.gold) {
@@ -281,8 +315,9 @@ export function itemReforgeCost(game, item) {
 /** Reroll an item's affixes (not its rarity or base stats). Cost grows with each reforge, capped. */
 export function reforgeItem(game, id) {
     const state = game.state;
-    const item = findAnywhere(state, id);
+    const item = findGear(state, id);
     if (!item) return false;
+    if (SMITHING_TYPES.includes(item.type)) { game.emit({ type: 'error', text: 'Weapons and armour are rerolled at the anvil.' }); return false; }
     if (!item.affixes?.length) { game.emit({ type: 'error', text: 'Common items have no affixes to reforge.' }); return false; }
     if (item.uniqueId) { game.emit({ type: 'error', text: 'Unique items have fixed bonuses and cannot be reforged.' }); return false; }
     const cost = itemReforgeCost(game, item);
@@ -302,7 +337,7 @@ export function reforgeItem(game, id) {
 }
 
 export function toggleLock(game, id) {
-    const item = findAnywhere(game.state, id);
+    const item = findGear(game.state, id);
     if (!item) return false;
     item.locked = !item.locked;
     game.markDirty();

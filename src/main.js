@@ -29,6 +29,7 @@ import { seen } from './systems/disclosure.js';
 import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
+import { RESOURCES } from './data/resources.js';
 
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
@@ -47,7 +48,7 @@ const prefs = {
 const ui = {
     tab: prefs.get('fantasyIdle.tab') || 'combat',
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
-    smithView: 'smelt',  // the step of Smithing on screen: smelt, forge or tools
+    smithView: 'smelt',  // the step of Smithing on screen: smelt, forge, anvil or tools
     hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
     smithMetal: null,    // null: the best metal there are bars for
     craftBar: null,
@@ -902,8 +903,19 @@ window.FI = {
     sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
     sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
     upgrade(id) { const ok = game.upgradeItem(id); if (ok) sound.play('craft'); render(); if (ok) flourish('#item-detail .detail-art'); },
+    reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
+    reroll(id) { const ok = game.rerollItem(id); sound.play(ok ? 'rare' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)'); },
+    toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },
     reforge(id) { const ok = game.reforgeItem(id); if (ok) sound.play('rare'); render(); if (ok) flourish('#item-detail .detail-art', 'rgba(196, 165, 255, 0.95)'); },
-    salvage(id) { const g = game.salvageItem(id); if (g) { sound.play('drop'); toast(`+${g.essence} essence${Object.keys(g.materials).length ? ' and materials' : ''}`, 'info', resIcon('essence')); } render(); },
+    salvage(id) {
+        const g = game.salvageItem(id);
+        if (g) {
+            sound.play('drop');
+            const got = [g.essence ? `${g.essence} essence` : '', ...Object.entries(g.materials).map(([res, qty]) => `${qty} ${RESOURCES[res].name}${qty === 1 ? '' : 's'}`)].filter(Boolean);
+            toast(got.length ? `+${got.join(', ')}` : 'Salvaged', 'info', resIcon(Object.keys(g.materials)[0] || 'essence'));
+        }
+        render();
+    },
     salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },

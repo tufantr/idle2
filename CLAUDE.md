@@ -13,7 +13,7 @@ Work on the branch `claude/intelligent-einstein-y5i5iq` (main holds the old game
 python3 tools/serve.py           # then http://localhost:8000 ; ?dev=1 unlocks every tab (a plain reload shows new code)
 node --test test/*.test.mjs test/*.test.cjs   # game logic, saves, API: all must pass
 node tools/shots.mjs             # screenshots at 1280 and 390 px into shots/, fails on sideways scroll or page errors
-node tools/shots.mjs combat,battle    # chosen tabs ('battle' is the fight filling the screen; 'map', 'prestige' the dialogs); --fresh plays a new player's first minutes
+node tools/shots.mjs combat,battle    # chosen tabs ('battle' is the fight filling the screen; 'map', 'prestige' the dialogs; 'anvil' Smithing's anvil); --fresh plays a new player's first minutes
 ```
 
 `tools/shots.mjs` needs Playwright once: `npm i --no-save playwright && npx playwright install chromium`.
