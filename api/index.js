@@ -173,11 +173,11 @@ const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 
 // Ranked numbers, read from the server's own reading of the save (powerSummary on the migrated save,
 // the numbers the boards show; a raw field can't be dressed up): how fast each can honestly grow per
-// hour of real time (plus a flat allowance), and a ceiling no save reaches at all, checked on every
-// upload including the first. Growth is measured from each number's highest value so far and when it
+// hour of real time (plus a flat allowance; the best stage by its depth, `honestClimb` in
+// src/core/power.js), and a ceiling no save reaches at all, checked on every upload including the first. Growth is measured from each number's highest value so far and when it
 // was reached, so restoring a backup and coming forward again is never flagged.
 const RANKED = [
-    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 3000 },
+    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 3000, byDepth: true },   // (perHour, flat: only without honestClimb)
     { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 2, ceiling: 20000 },
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
     { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
@@ -185,7 +185,7 @@ const RANKED = [
 ];
 
 /** Reasons a save's numbers look impossible next to their highest so far, and the new highs. */
-function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage) {
+function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestClimb = null) {
     const flags = [];
     const next = {};
     for (const r of RANKED) {
@@ -196,7 +196,8 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage) {
             const hours = (Math.max(0, now - num(peak.at)) + SLACK_MS) / HOUR;
             // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached.
             const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(metrics.bestStage)));
-            if (value - peak.v > r.flat + perHour * hours) flags.push(`${r.label} grew faster than any play could`);
+            const allowed = r.byDepth && honestClimb ? honestClimb(peak.v, hours) : r.flat + perHour * hours;
+            if (value - peak.v > allowed) flags.push(`${r.label} grew faster than any play could`);
         }
         next[r.key] = peak && peak.v >= value ? peak : { v: value, at: now };
     }
@@ -223,7 +224,7 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     try { metrics = eng.powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
     let newFlags = [];
     if (metrics) {
-        const checked = plausibilityFlags(parseMetrics(current && current.metrics)?.peaks, metrics, savedAt, eng.plausibleAttackDamage);
+        const checked = plausibilityFlags(parseMetrics(current && current.metrics)?.peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
         newFlags = checked.flags;
         metrics.peaks = checked.peaks;
     }

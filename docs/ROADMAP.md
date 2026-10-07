@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The boards' pace by depth** (the last fix of the robustness research's first step, its E11): the
+      server let a best stage grow 30 stages plus 60 an hour at any depth, 1,470 in a day where an honest
+      late hero gains 20 to 50. It now allows three times the fastest climb in 166 simulated runs from
+      each depth (`honestClimb`): from stage 200, 50 stages in an hour or 160 in a day; from 300, 88 in a
+      day
 - [x] **Trials** (the long-term research's first late-game item, `robust-and-fun/B_longterm_motivation.md`
       §8.2; DESIGN §3.26): from best stage 200 the prestige dialog lays out eight Trials as cards on
       their places' paintings; tick one and the prestige starts a run under its rule: monsters that hit

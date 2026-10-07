@@ -44,6 +44,31 @@ export function powerSummary(rawState, now = Date.now()) {
     };
 }
 
+// The fastest honest climb of the best stage, by depth: the most stages the simulator's players gained
+// from each depth in an hour, four hours and a day (166 runs of 150 to 400 hours, five play styles,
+// with and without Trials; docs/DESIGN.md §3.17) fit `burst + perHour × hours`, from these rows
+// ([stage, burst, perHour], straight lines between them). Early stages fall fast, late ones slowly:
+// about 13 stages in an hour and 50 in a day around stage 200, 10 and 22 past 300.
+const CLIMB = [[0, 60, 10], [50, 35, 6], [100, 25, 4], [150, 20, 2.5], [200, 15, 1.6], [250, 12, 1.2], [300, 10, 0.8]];
+export const CLIMB_MARGIN = 3;   // what the server allows over it: players who tap, and better plans than the bot's
+
+/** The most a best stage of `fromStage` can honestly grow in `hours`, times CLIMB_MARGIN. */
+export function honestClimb(fromStage, hours) {
+    const s = Math.max(0, Number(fromStage) || 0);
+    const next = CLIMB.findIndex(([at]) => at > s);
+    let burst, perHour;
+    if (next === -1) [, burst, perHour] = CLIMB[CLIMB.length - 1];
+    else if (next === 0) [, burst, perHour] = CLIMB[0];
+    else {
+        const [a, b0, r0] = CLIMB[next - 1];
+        const [b, b1, r1] = CLIMB[next];
+        const f = (s - a) / (b - a);
+        burst = b0 + (b1 - b0) * f;
+        perHour = r0 + (r1 - r0) * f;
+    }
+    return CLIMB_MARGIN * (burst + perHour * Math.max(0, Number(hours) || 0));
+}
+
 /**
  * The most damage a clan attack can plausibly deal for a hero whose best stage is `bestStage`: felling
  * a boss 40 stages beyond it in 5 seconds, for the whole minute. Honest heroes stay far below it (at

@@ -615,7 +615,11 @@ gear to wear; a place that waited opens on the return and is named there too.
   read from the server's own reading of the save (the migrated save the boards use, so a raw field
   can't be dressed up), may grow only as fast as play could in the real time since that number's
   highest value so far, and none may pass a ceiling no save reaches (checked on the first upload too).
-  Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
+  The best stage may grow by its depth (`honestClimb` in `src/core/power.js`): three times the fastest
+  climb in 166 simulated runs of 150 to 400 hours, as a burst plus a rate an hour from the earlier best
+  (from stage 200: 50 stages in an hour, 160 in a day; from 300: 88 in a day). It was 30 plus 60 an hour
+  at any depth, which let a late save gain 1,470 stages in a day against an honest 20 to 50. Trial tiers
+  a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
   belongs to the player), but flagged accounts are left out of leaderboards and of clan boss sizing

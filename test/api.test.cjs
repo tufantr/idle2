@@ -139,11 +139,11 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
 
     // Growth is measured from each number's highest value and when it was reached.
     const { plausibilityFlags } = app;
-    const { plausibleAttackDamage } = await import('../src/core/power.js');
+    const { plausibleAttackDamage, honestClimb } = await import('../src/core/power.js');
     const hour = 3600 * 1000;
     const t0 = clock;
     const m = (o = {}) => ({ bestStage: 1, titanKills: 0, dungeonClears: 0, totalXp: 0, tokens: 0, attackDamage: 0, ...o });
-    const run = (peaks, metrics, at) => plausibilityFlags(peaks, metrics, at, plausibleAttackDamage);
+    const run = (peaks, metrics, at) => plausibilityFlags(peaks, metrics, at, plausibleAttackDamage, honestClimb);
     const highs = metrics => run(null, metrics, t0).peaks;
     assert.deepEqual(run(highs(m({ bestStage: 40 })), m({ bestStage: 90, totalXp: 2e6 }), t0 + hour).flags, [], 'a good hour is fine');
     const today = m({ bestStage: 90, tokens: 900, titanKills: 10, totalXp: 9e6 });
@@ -153,6 +153,13 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.deepEqual(run(highs(m()), m({ totalXp: 30e6 }), t0 + 12 * hour).flags, [], 'a long absence allows a long replay');
     assert.ok(run(highs(m()), m({ totalXp: 30e6 }), t0 + 60 * 1000).flags.length, 'but not a minute later');
     assert.ok(run(null, m({ bestStage: 5, attackDamage: 1e12 }), t0).flags.includes('attack beyond what its best stage allows'), 'a weapon no play could make');
+    // The best stage may grow by what its depth allows: fast early, slowly late.
+    const climbed = (from, to, hours) => run(highs(m({ bestStage: from })), m({ bestStage: to }), t0 + hours * hour).flags.includes('best stage grew faster than any play could');
+    assert.equal(climbed(1, 120, 2), false, 'a new player\'s first hours');
+    assert.equal(climbed(250, 300, 24), false, 'a good day late in the game');
+    assert.equal(climbed(300, 400, 168), false, 'a week late in the game');
+    assert.equal(climbed(250, 450, 24), true, 'two hundred stages in a day, late');
+    assert.equal(climbed(300, 360, 1), true, 'sixty stages in an hour, late (the old allowance let it by)');
 });
 
 test('a save cannot reach the server\'s own objects', async () => {
