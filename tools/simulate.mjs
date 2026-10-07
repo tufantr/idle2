@@ -3,6 +3,13 @@
 // simple "sensible player" policy, and reports how long milestones take.
 //
 //   node tools/simulate.mjs --hours=100 --seed=1 [--step=500] [--verbose] [--snapshot=10]
+//   [--auto] [--player=checkin3] [--set=BALANCE.abyss.dropGrowth:1.5;BASE.tokenAtk:0.004] [--json=out.json]
+//
+// --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
+// sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
+// --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES; numbers
+// only), for sweeps. --json writes the run as JSON (milestones, a log of big moments by band, time by
+// task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
 // Nothing here touches the DOM. Change a constant in src/core/formulas.js or the data tables,
 // re-run, and compare the milestone table against the targets in docs/DESIGN.md §7.
@@ -30,6 +37,11 @@ import { AGILITY_SLOTS } from '../src/data/agility.js';
 import { canBuild, obstacleCost, upgradeInfo } from '../src/systems/agility.js';
 import { plotUnlocked, plotReady, bestCrop, seedCost } from '../src/systems/farming.js';
 import { enemyForStage, BALANCE } from '../src/core/formulas.js';
+import { BASE } from '../src/core/modifiers.js';
+import { GEAR_DROP_CHANCE } from '../src/data/items.js';
+import { rankFor } from '../src/data/ranks.js';
+import { writeFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
 const HOURS = Number(args.hours || 100);
@@ -46,6 +58,22 @@ const NO_TITAN = !!args['no-titan'];
 // --auto: once earned (BALANCE.prestige.autoAfter prestiges), turn on the dock's Auto switch, as a player
 // who has done twenty resets by hand would; the bot's own prestige rule stays for the runs it decides.
 const AUTO = !!args.auto;
+const PLAYER = String(args.player || 'online');
+const JSON_OUT = args.json ? String(args.json) : null;
+
+// --set=ROOT.path:value[;ROOT.path:value]: a constant changed before the game starts.
+const SET_ROOTS = { BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES };
+const overrides = {};
+if (args.set) for (const kv of String(args.set).split(';').filter(Boolean)) {
+    const [path, raw] = kv.split(':');
+    const keys = path.split('.');
+    let o = SET_ROOTS[keys[0]];
+    for (const k of keys.slice(1, -1)) o = o?.[k];
+    const value = Number(raw);
+    if (!o || !(keys.at(-1) in o) || typeof o[keys.at(-1)] !== 'number' || !Number.isFinite(value)) { console.error(`--set: unknown or non-numeric ${path}`); process.exit(2); }
+    o[keys.at(-1)] = value;
+    overrides[path] = value;
+}
 
 rng.setSource(seededRandom(SEED));
 let now = 0;
@@ -531,8 +559,123 @@ function milestone(key, value) {
     milestones.push({ key, value, at: now });
     if (VERBOSE) console.log(`  [${fmtH(now)}] ${key} ${value}`);
 }
-const STAGE_MARKS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200];
+const STAGE_MARKS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200, 250, 300, 350, 400];
 const LEVEL_MARKS = [25, 50, 60, 75, 90, 99];
+
+// ---------- big moments (docs/research_notes/robust-and-fun/B_longterm_motivation.md §7.1) ----------
+// Major: a new place or dungeon, a dungeon's first clear, a unique, a record, a rank, a medal, a pet, an
+// obstacle, a skill at 99, the first drop of a new tier of weapon or armour. Medium: a Titan defeated,
+// a dungeon milestone, a mastery 99, a skill level that is a multiple of ten. Online players only (the
+// offline replay is silent).
+const moments = [];
+const momentsSeen = { tier: 0, clears: new Set(), dungeons: new Set() };
+function moment(cls, what) { moments.push({ at: now, cls, what }); }
+function noteEvent(ev) {
+    switch (ev.type) {
+        case 'unlock': moment('major', `place ${ev.id}`); break;
+        case 'zoneReached': moment('major', `zone ${ev.zone}`); break;
+        case 'record': moment('major', `record ${ev.stage}`); break;
+        case 'unique': if (ev.item?.locked) moment('major', `unique ${ev.item.name}`); break;
+        case 'pet': moment('major', `pet ${ev.pet?.id}`); break;
+        case 'achievement': moment('major', `medal ${ev.name}`); break;
+        case 'obstacleBuilt': moment('major', `obstacle ${ev.obstacle?.id}`); break;
+        case 'levelUp': if (ev.level >= 99) moment('major', `${ev.skill} 99`); else if (ev.level % 10 === 0) moment('medium', `${ev.skill} ${ev.level}`); break;
+        case 'prestige': if (rankFor(S.prestige.count) !== rankFor(S.prestige.count - 1)) moment('major', `rank ${rankFor(S.prestige.count).name}`); break;
+        case 'dungeonClear': if (!momentsSeen.clears.has(ev.dungeon)) { momentsSeen.clears.add(ev.dungeon); moment('major', `first clear ${ev.dungeon}`); } break;
+        case 'itemDropped': if (SMITHING_TYPES.includes(ev.item?.type) && ev.item.tier > momentsSeen.tier) { momentsSeen.tier = ev.item.tier; moment('major', `tier ${ev.item.tier} drops`); } break;
+        case 'titan': if (ev.won) moment('medium', 'titan defeated'); break;
+        case 'dungeonMilestone': moment('medium', `${ev.dungeon} ${ev.clears} clears`); break;
+        case 'masteryLevel': if (ev.from < 99 && ev.level >= 99) moment('medium', `mastery 99 ${ev.key}`); break;
+    }
+}
+const BANDS = [[0, 1], [1, 10], [10, 50], [50, 150], [150, 300], [300, 500], [500, 1000], [1000, 2000]];
+/** Per band of hours: events an hour, median, 90th-percentile and longest gap (band edges count as ends). */
+function bandStats(events) {
+    const out = [];
+    for (const [a, b] of BANDS) {
+        if (a >= HOURS) break;
+        const end = Math.min(b, HOURS);
+        const times = events.map(e => H(e.at)).filter(h => h >= a && h < end).sort((x, y) => x - y);
+        const edges = [a, ...times, end];
+        const gaps = edges.slice(1).map((h, i) => h - edges[i]).sort((x, y) => x - y);
+        const q = f => gaps[Math.min(gaps.length - 1, Math.floor(f * gaps.length))];
+        out.push({ band: `${a}-${b}`, perHour: +(times.length / (end - a)).toFixed(3), n: times.length, p50: +q(0.5).toFixed(2), p90: +q(0.9).toFixed(2), max: +gaps[gaps.length - 1].toFixed(2) });
+    }
+    return out;
+}
+
+// ---------- login schedules (docs/research_notes/robust-and-fun/C_sessions_players.md §6) ----------
+// Sessions a day as [hour of the player's day, minutes]; day 0 starts when the player arrives at 08:00
+// (the first visit lasts at least 20 minutes). Between sessions the game runs by itself (its offline
+// replay, capped like a player's); on each return the bot claims crates, prestiges a run worth it (when
+// Auto is off), decides, and before leaving sets the fight running unless the run sits at its wall.
+const PLAYERS = {
+    online:   null,
+    tab16:    [[8, 16 * 60]],
+    evening:  [[7.5, 5], [12.5, 5], [19, 120]],
+    checkin5: [[8, 6], [11, 6], [14, 6], [17, 6], [21, 6]],
+    checkin3: [[8, 5], [13, 5], [21, 5]],
+    checkin2: [[8, 10], [20, 10]],
+    daily1:   [[20, 15]],
+    alt2:     'alt'
+};
+if (!(PLAYER in PLAYERS)) { console.error(`--player: one of ${Object.keys(PLAYERS).join(', ')}`); process.exit(2); }
+const DAY = 24 * 3600000;
+const ARRIVE = 8 * 3600000;   // the player's day: now + ARRIVE is the time of day
+function sessionsFor(day) {
+    const sched = PLAYERS[PLAYER];
+    if (sched === null) return null;
+    const list = sched === 'alt' ? (day % 2 === 0 ? [[20, 20]] : []) : sched;
+    if (day !== 0) return list;
+    const out = list.filter(([h]) => h >= 8).map(([h, m]) => (h === 8 ? [h, Math.max(m, 20)] : [h, m]));
+    if (!out.some(([h]) => h === 8)) out.unshift([8, 20]);
+    return out.sort((x, y) => x[0] - y[0]);
+}
+function sessionEndAt(t) {   // the end of the session `t` is in (Infinity when always online), or 0
+    const clock = t + ARRIVE;
+    const day = Math.floor(clock / DAY);
+    const list = sessionsFor(day);
+    if (list === null) return Infinity;
+    for (const [h, m] of list) { const a = day * DAY + h * 3600000; if (clock >= a && clock < a + m * 60000) return a + m * 60000 - ARRIVE; }
+    return 0;
+}
+function nextSessionStart(t) {
+    const clock = t + ARRIVE;
+    for (let day = Math.floor(clock / DAY); day < Math.floor(clock / DAY) + 4; day++) {
+        for (const [h] of sessionsFor(day) || []) { const a = day * DAY + h * 3600000; if (a > clock) return a - ARRIVE; }
+    }
+    return t + DAY;
+}
+const returns = { n: 0, something: 0, nothing: 0, crate: 0, titan: 0, prestige: 0, gear: 0, newBest: 0, medal: 0, autoPrestige: 0 };
+let bestAtLeave = 0;
+let offlineCappedMs = 0;
+function noteReturn(summary, evs) {
+    if (!summary) return;
+    returns.n++;
+    const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
+    const p = game.canPrestige() && !S.settings.autoPrestige ? game.prestigePreview() : null;
+    const f = {
+        crate: S.daily.banked > 0, titan: game.titanReady(), prestige: !!p && p.tokens >= Math.max(2, share * S.prestige.tokens),
+        gear: S.inventory.some(item => (TYPE_SLOTS[item.type] || []).some(slot => itemScore(item) > itemScore(S.equipped[slot]))),
+        newBest: S.combat.bestStage > bestAtLeave, medal: evs.some(e => e.type === 'achievement'), autoPrestige: (summary.prestiges || 0) > 0
+    };
+    for (const k of Object.keys(f)) if (f[k]) returns[k]++;
+    if (Object.values(f).some(Boolean)) returns.something++; else returns.nothing++;
+}
+function claimCrates() { for (let i = 0; i < 3; i++) if (!game.claimDaily()) break; }
+function sessionPrestige() {
+    if (!game.canPrestige() || S.settings.autoPrestige) return;
+    const p = game.prestigePreview();
+    const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
+    if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (S.combat.maxStage >= 0.9 * S.combat.bestStage && p.tokens >= 2)) {
+        runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
+        game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
+    }
+}
+function leaveBehind() {
+    const fightUseful = S.settings.autoPrestige || S.combat.maxStage < 0.9 * S.combat.bestStage;
+    if (fightUseful && S.combat.mode !== 'dungeon' && task.kind !== 'combat') task = apply(combatTask());
+}
 
 // ---------- main loop ----------
 let task = apply(decide());
@@ -546,10 +689,32 @@ const deathStages = { boss: 0, regular: 0 };
 let steady = null; // gold earned/spent at the halfway mark, for the steady-state sink ratio
 let dungeonFails = 0;
 let titanTries = 0;
+const taskMs = {};   // time by kind of task (the bot's own bookkeeping, for its QA)
+let awayFromFight = { since: null, longest: 0 };   // the longest stretch without fighting while a stage could be gained
+let curEnd = sessionEndAt(now);
 while (now < totalMs) {
+    if (curEnd !== Infinity && now >= curEnd) {
+        // Leave: set what runs while away, then come back at the next session.
+        leaveBehind();
+        const back = Math.min(nextSessionStart(now), totalMs);
+        if (back - now > game.derived.offlineMs) offlineCappedMs += back - now - game.derived.offlineMs;
+        bestAtLeave = S.combat.bestStage;
+        now = back;
+        const summary = game.tick(now);
+        const evs = game.drainEvents();
+        for (const ev of evs) if (ev.type === 'prestige' && ev.auto) { runLog.push({ run: S.prestige.count, hours: H(now - runStartedAt), reached: ev.reached, tokens: ev.tokens, auto: true }); runStartedAt = now; milestone('prestige', S.prestige.count); }
+        if (now < totalMs) noteReturn(summary, evs);
+        if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
+        if (now >= totalMs) break;
+        claimCrates();
+        sessionPrestige();
+        task = apply(decide()); lastDecision = now;
+        curEnd = sessionEndAt(now) || now + 60000;
+    }
     now += STEP;
     game.tick(now);
     for (const ev of game.drainEvents()) {
+        noteEvent(ev);
         if (ev.type === 'death' && ev.mode === 'stages') deathStages[ev.stage % 10 === 0 ? 'boss' : 'regular']++;
         if (ev.type === 'dungeonClear') { milestone(`${ev.dungeon} clears`, 1); if (ev.clears === 10 || ev.clears === 50) milestone(`${ev.dungeon} clears`, ev.clears); }
         if (ev.type === 'dungeonFail') dungeonFails++;
@@ -561,10 +726,15 @@ while (now < totalMs) {
     }
     if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
     if (task.budget === 'agility') agilityMs += STEP;
+    const kind = task.budget === 'agility' ? 'agility' : task.kind;
+    taskMs[kind] = (taskMs[kind] || 0) + STEP;
+    const fighting = S.combat.active || S.combat.recovering;
+    if (!fighting && S.combat.maxStage < S.combat.bestStage) { awayFromFight.since ??= now; awayFromFight.longest = Math.max(awayFromFight.longest, now - awayFromFight.since); } else awayFromFight.since = null;
     if (task.kind === 'combat' && !S.combat.active && S.combat.hp <= game.derived.maxHp * 0.5) needTraining = true;
     if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
 
     if (now % (5 * 60000) < STEP) { tendFarm(); buildObstacles(); }
+    if (now % 3600000 < STEP) claimCrates();   // the daily crate, as a player who drops by takes it
     if (now >= totalMs / 2 && !steady) steady = { earned: S.stats.goldEarned, spent: S.stats.goldSpent };
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
     if (task.kind === 'farm' && !task.stage && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
@@ -583,7 +753,7 @@ while (now < totalMs) {
         if (VERBOSE) console.log(`  [${fmtH(now)}] -> ${task.why}`);
     }
     for (const m of STAGE_MARKS) if (S.combat.bestStage >= m) milestone('stage', m);
-    for (const d of DUNGEONS) if (S.combat.bestStage >= d.unlockStage) milestone('dungeon opens', d.id);
+    for (const d of DUNGEONS) if (S.combat.bestStage >= d.unlockStage) { milestone('dungeon opens', d.id); if (!momentsSeen.dungeons.has(d.id)) { momentsSeen.dungeons.add(d.id); moment('major', `dungeon opens ${d.id}`); } }
     if (S.equipped.Weapon) milestone('weapon tier', S.equipped.Weapon.tier);
     for (const id of ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'combat', 'farming', 'agility']) for (const m of LEVEL_MARKS) if (lvl(id) >= m) milestone(`${id} lv`, m);
     if (H(now) - lastSnapshot >= SNAPSHOT_HOURS) {
@@ -593,7 +763,7 @@ while (now < totalMs) {
     }
 }
 
-console.log(`\nSimulated ${HOURS}h in ${((Date.now() - t0) / 1000).toFixed(1)}s (seed ${SEED}).`);
+console.log(`\nSimulated ${HOURS}h in ${((Date.now() - t0) / 1000).toFixed(1)}s (seed ${SEED}${PLAYER !== 'online' ? `, player ${PLAYER}` : ''}${Object.keys(overrides).length ? `, ${Object.entries(overrides).map(([k, v]) => `${k}=${v}`).join(', ')}` : ''}).`);
 console.log('\nMilestones:');
 const byKey = {};
 for (const m of milestones) (byKey[m.key] ||= []).push(`${m.value}@${fmtH(m.at)}`);
@@ -612,3 +782,35 @@ if (VERBOSE) for (const d of DUNGEONS) {
 console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}, pity drops ${S.stats.pityDrops || 0}`);
 console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.equipped[s].upgrade ? '+' + S.equipped[s].upgrade : ''}` : null).filter(Boolean).join(', ')}`);
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);
+const majors = moments.filter(m => m.cls === 'major');
+if (PLAYER === 'online') console.log(`Big moments by band (major: per hour, median / P90 / longest gap in hours): ${bandStats(majors).map(b => `${b.band} h ${b.perHour}/h ${b.p50}/${b.p90}/${b.max}`).join(' · ')}`);
+else console.log(`Returns: ${returns.n}, ${returns.nothing} with nothing to do; offline capped ${H(offlineCappedMs).toFixed(1)} h in all`);
+
+if (JSON_OUT) {
+    let commit = '';
+    try { commit = execSync('git rev-parse --short HEAD', { cwd: new URL('..', import.meta.url).pathname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* not a checkout */ }
+    const at = (key, value) => { const m = milestones.find(x => x.key === key && x.value === value); return m ? +H(m.at).toFixed(3) : null; };
+    const out = {
+        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER }, overrides,
+        stages: Object.fromEntries(STAGE_MARKS.map(m => [m, at('stage', m)])),
+        weaponTier: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(t => [t, at('weapon tier', t)])),
+        firstPrestige: at('prestige', 1), autoEarned: at('prestige', BALANCE.prestige.autoAfter),
+        uniques: Object.fromEntries(milestones.filter(m => m.key === 'unique').map(m => [m.value, +H(m.at).toFixed(2)])),
+        levels: Object.fromEntries(milestones.filter(m => m.key.endsWith(' lv')).map(m => [`${m.key.slice(0, -3)} ${m.value}`, +H(m.at).toFixed(2)])),
+        final: {
+            bestStage: S.combat.bestStage, prestiges: S.prestige.count, tokens: S.prestige.tokens, records: game.derived.records.count, kills: S.stats.kills, deaths: S.stats.deaths,
+            titanKills: S.titan.kills, titanTries, pityDrops: S.stats.pityDrops || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
+            gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
+            obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length
+        },
+        runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },
+        deaths: deathStages,
+        gold: { earned: S.stats.goldEarned, spent: S.stats.goldSpent, bySink: spentOn, lostToPrestige },
+        taskHours: Object.fromEntries(Object.entries(taskMs).map(([k, v]) => [k, +H(v).toFixed(2)])),
+        longestAwayFromFightHours: +H(awayFromFight.longest).toFixed(2),
+        moments: PLAYER === 'online' ? { major: bandStats(majors), majorAndMedium: bandStats(moments), list: majors.map(m => [+H(m.at).toFixed(2), m.what]) } : null,
+        returns: PLAYER !== 'online' ? { ...returns, offlineCappedHours: +H(offlineCappedMs).toFixed(1) } : null,
+        simSeconds: +((Date.now() - t0) / 1000).toFixed(1)
+    };
+    writeFileSync(JSON_OUT, JSON.stringify(out));
+}

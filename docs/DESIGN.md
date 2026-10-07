@@ -1021,8 +1021,12 @@ an hour) and training a skill (Mining and Smithing first while they can't yet ma
 weapon it wears); put bars and essence into its worn gear at the anvil; challenge the Titan whenever
 it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
 materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
-it holds (15% early, ~2% at 7,000 tokens). `--auto` also turns on the dock's Auto switch once earned.
-Three seeds, 150 hours each:
+it holds (15% early, ~2% at 7,000 tokens); claim the daily crate when it is ripe. `--auto` also turns on
+the dock's Auto switch once earned; `--player=<schedule>` plays a login schedule (online, tab16,
+evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay between sessions;
+`--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
+of hours. `node tools/batch.mjs --seeds=30` runs many seeds in parallel (about 7 runs of 150 h a
+minute on 8 cores) and reports medians with the 10th and 90th percentiles. Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|

@@ -21,3 +21,6 @@ __pycache__/
 
 # Screenshots from tools/shots.mjs
 /shots/
+
+# Simulator batches from tools/batch.mjs
+/runs/
