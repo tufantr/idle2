@@ -429,6 +429,16 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Records that make tokens stronger, and an Auto switch** (the owner's choice, 2; DESIGN §3.9):
+      every 25 stages of the best stage ever and every dungeon unique held multiply what the tokens
+      give by 1.05, so a late record lifts the whole stock instead of adding under 1%; a new record is
+      a card with the token, and the token chip's tip counts them. After 20 prestiges the dock's
+      Prestige button gets an Auto switch, which prestiges a run that has gone ten minutes without a
+      new best stage and walks the hero into the next run's first fight (a note says what it paid);
+      it says when it will go, keeps off while the hero stays on a stage, and works while away (the
+      welcome-back summary counts it). Tokens give 0.4% each (was 0.5%) and the deep Abyss's drops grow
+      ×1.45 a depth (×1.6) so the pace holds: simulated, stage 200 at 46–50 h and best 290–298 at
+      150 h; with Auto on, stage 200 at 38–40 h and best 310
 - [x] **Weapons and armour from the fight** (the owner's choice, 1a; DESIGN §3.25): forging makes a
       copper set and every stronger weapon and piece of armour drops, from bosses, regular monsters,
       chests and the Abyss, which every prestige re-arms. Drops are mostly of the zone's own tier

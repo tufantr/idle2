@@ -343,9 +343,11 @@ export function onEnemyDeath(game) {
     if (enemy.boss) c.regroupLeft = 0;
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
-        if (c.stage > c.maxStage) c.maxStage = c.stage;
+        if (c.stage > c.maxStage) { c.maxStage = c.stage; c.lastRiseAt = game.now; }
         if (c.stage > c.bestStage) {
             c.bestStage = c.stage;
+            // a record: every 25 stages of all-time best make the tokens stronger (core/modifiers.js recordsOf)
+            if (c.bestStage % BASE.recordStages === 0) { game.recompute(); game.emit({ type: 'record', stage: c.bestStage, records: game.derived.records }); }
             // the first step ever into a zone (the Abyss once, at its first depth)
             const zone = Math.floor((c.stage - 1) / STAGES_PER_ZONE);
             if ((c.stage - 1) % STAGES_PER_ZONE === 0 && zone >= 1 && zone < ZONES.length) game.emit({ type: 'zoneReached', zone: ZONES[zone].id, stage: c.stage });

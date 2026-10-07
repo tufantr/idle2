@@ -2,7 +2,7 @@
 
 import { tokensForStage, prestigeStartStage, skillPointsForStages, BALANCE } from '../core/formulas.js';
 import { PERKS } from '../data/perks.js';
-import { spawnEnemy, leaveCombat } from './combat.js';
+import { spawnEnemy, leaveCombat, enterCombat } from './combat.js';
 import { resetCamp } from './camp.js';
 import { log, bumpStat } from './progress.js';
 
@@ -43,10 +43,11 @@ export function prestigePreview(game) {
     };
 }
 
-export function doPrestige(game) {
+export function doPrestige(game, { auto = false } = {}) {
     const state = game.state;
     if (!canPrestige(state, game.now)) return false;
     const preview = prestigePreview(game);
+    const reached = state.combat.maxStage;
     leaveCombat(game);
     state.prestige.tokens += preview.tokens;
     state.prestige.skillPoints += preview.skillPoints;
@@ -59,13 +60,14 @@ export function doPrestige(game) {
     state.combat.combo = 0;
     state.combat.regroupLeft = 0;
     state.combat.farmMode = false;   // "stay on this stage" was for the old run: the new one climbs
+    state.combat.lastRiseAt = game.now;
     state.gold = 0;          // combat gold is run-scoped, like the camp it buys
     resetCamp(state);
     game.recompute();
     state.combat.hp = game.derived.maxHp;
     spawnEnemy(game);
     log(game, `✨ Prestige ${state.prestige.count}: +${preview.tokens} tokens, +${preview.skillPoints} skill point${preview.skillPoints === 1 ? '' : 's'}. Starting at stage ${preview.startStage}.`, 'prestige');
-    game.emit({ type: 'prestige', ...preview });
+    game.emit({ type: 'prestige', ...preview, auto, reached });
     game.markDirty();
     return true;
 }
@@ -78,6 +80,38 @@ export function buyPerk(game, perkId) {
     if ((state.perks[perkId] || 0) >= perk.max) { game.emit({ type: 'error', text: `${perk.name} is maxed out.` }); return false; }
     state.prestige.skillPoints -= 1;
     state.perks[perkId] = (state.perks[perkId] || 0) + 1;
+    game.markDirty();
+    return true;
+}
+
+/** Has the hero earned the auto-prestige switch? (BALANCE.prestige.autoAfter prestiges.) */
+export const autoPrestigeEarned = state => state.prestige.count >= BALANCE.prestige.autoAfter;
+
+/**
+ * Milliseconds until the auto-prestige would fire for this run, or null while it can't: the switch is
+ * off (or not earned), the hero isn't climbing the stages (resting, working, staying on a stage, in a
+ * dungeon or at the Titan), or the run hasn't reached the prestige stage. A run that has gone
+ * `autoStallMs` without a new best stage, and has lasted its ten minutes, goes at once.
+ */
+export function autoPrestigeIn(state, now) {
+    const c = state.combat;
+    if (!state.settings.autoPrestige || !autoPrestigeEarned(state)) return null;
+    if (!c.active || c.mode !== 'stages' || c.farmMode || c.maxStage < BALANCE.prestige.minStage) return null;
+    const stalled = (c.lastRiseAt || 0) + BALANCE.prestige.autoStallMs - now;
+    return Math.max(0, stalled, prestigeWaitMs(state, now));
+}
+
+/** The auto-prestige, checked as the fight goes on (online and in the offline replay): true if it went. */
+export function tickAutoPrestige(game) {
+    if (autoPrestigeIn(game.state, game.now) !== 0) return false;
+    if (!doPrestige(game, { auto: true })) return false;
+    enterCombat(game);   // the next run's first fight, as a prestige from the dock does
+    return true;
+}
+
+export function setAutoPrestige(game, on) {
+    if (on && !autoPrestigeEarned(game.state)) return false;
+    game.state.settings.autoPrestige = !!on;
     game.markDirty();
     return true;
 }

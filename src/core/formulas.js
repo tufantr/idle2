@@ -62,15 +62,20 @@ export const BALANCE = {
         minRunMs: 10 * 60 * 1000,   // a run lasts at least this long before it can be prestiged
         fullRunFraction: 0.5,       // the per-prestige skill point needs a run this share of your best
         spPerPrestige: 1,
-        spStageStep: 25         // +1 SP for every 25 stages of all-time best, claimed once
+        spStageStep: 25,        // +1 SP for every 25 stages of all-time best, claimed once
+        // The earned auto-prestige: after `autoAfter` prestiges a switch in the fight's dock prestiges a
+        // run that has gone `autoStallMs` without a new best stage (systems/prestige.js).
+        autoAfter: 20,
+        autoStallMs: 10 * 60 * 1000
     },
     // Deep in the Abyss drops keep pace with the monsters: past `dropScalingFrom`, every depth makes
     // dropped gear `dropGrowth` times stronger (an item level). Monsters grow ~2.26x per depth, so the
     // climb slows but never stops. 1.8 until armour gave health (BASE.hpPerDef): with the hero no longer
-    // killed by any hit past stage ~170, 1.6 holds stage 200 at ~48 h (tools/simulate.mjs, DESIGN §5.2).
+    // killed by any hit past stage ~170, 1.6 held stage 200 at ~48 h; 1.45 since the anvil and the records
+    // made a deep hero stronger (with tokens at 0.4%: tools/simulate.mjs, DESIGN §5.2).
     abyss: {
         dropScalingFrom: 5,
-        dropGrowth: 1.6
+        dropGrowth: 1.45
     },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)

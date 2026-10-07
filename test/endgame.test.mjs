@@ -465,7 +465,8 @@ test('deep in the Abyss, drops keep getting stronger with depth', async () => {
     assert.equal(shallow.depth, undefined);
     assert.equal(deep.depth, from + 4);
     assert.equal(deep.type, shallow.type);
-    assert.ok(itemScore(deep) > 5 * itemScore(shallow), `${itemScore(deep)} vs ${itemScore(shallow)}`);
+    assert.ok(itemScore(deep) > 0.9 * BALANCE.abyss.dropGrowth ** 4 * itemScore(shallow), `${itemScore(deep)} vs ${itemScore(shallow)}`);
+    assert.ok(itemScore(deep) > 4 * itemScore(shallow));
 });
 
 test('the pet at the hero\'s side: the one picked, among those found; else Fang, else the first found', async () => {

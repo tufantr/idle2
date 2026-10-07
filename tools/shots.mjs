@@ -95,7 +95,7 @@ const lateGame = page => page.evaluate(async () => {
     const g = FI.game(); const s = g.state;
     for (const id of Object.keys(s.skills)) s.skills[id].xp = xpForLevel(id === 'combat' ? 62 : 48);
     s.combat.bestStage = 64; s.combat.maxStage = 58; s.combat.stage = 56;
-    s.prestige.tokens = 420; s.prestige.count = 6; s.prestige.skillPoints = 2;
+    s.prestige.tokens = 420; s.prestige.count = 24; s.prestige.skillPoints = 2; s.settings.autoPrestige = true;   // a veteran: the dock's Auto switch is on
     for (const r of Object.keys(s.resources)) s.resources[r] = 240;
     s.resources.essence = 3200; s.gold = 4.8e6;
     const { GEAR_TIERS, RARITIES } = await import('/src/data/items.js');

@@ -2383,6 +2383,14 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .dock-prestige, .dock-perks { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.85rem; text-align: left; }
 .dock-prestige span, .dock-perks span { font-size: 0.78rem; font-weight: 400; opacity: 0.92; text-align: right; }
 .dock-perks.ready { border-color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
+/* Prestige, and beside it once earned the Auto switch with when it will go */
+.dock-prestige-row { display: flex; gap: 0.4rem; min-width: 0; }
+.dock-prestige-row .dock-prestige { flex: 1 1 auto; min-width: 0; }
+.dock-auto { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.05rem; min-width: 60px; padding: 0.3rem 0.5rem; border-radius: 10px; font-size: 0.7rem; line-height: 1.15; }
+.dock-auto b { font-family: var(--font-display); font-size: 0.8rem; }
+.dock-auto span { opacity: 0.85; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dock-auto .spr { margin: -2px 0; }
+.dock-auto.on { color: #ede9fe; border-color: #c4b5fd; background: linear-gradient(180deg, #3b2a5c, #22183a); box-shadow: 0 0 12px rgba(167, 139, 250, 0.4); }
 .dock-equip { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.7rem; text-align: left; color: #bbf7d0; border-color: rgba(74, 222, 128, 0.5); }
 .dock-equip > span { min-width: 0; display: flex; flex-direction: column; font-size: 0.8rem; line-height: 1.25; }
 .dock-equip > span > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); font-weight: 400; }
@@ -2415,7 +2423,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }
     /* on a phone the dock is a column: what a run uses most comes first */
     .dock-loop { order: 1; display: grid; grid-template-columns: 1fr 1fr; }
-    .dock-loop > :only-child, .dock-loop > .dock-equip, .dock-loop > .dock-prestige:not(:has(+ .dock-perks)) { grid-column: 1 / -1; }
+    .dock-loop > :only-child, .dock-loop > .dock-equip, .dock-loop > .dock-prestige-row:not(:has(+ .dock-perks)), .dock-loop > .dock-prestige-row:has(.dock-auto) { grid-column: 1 / -1; }
     .dock-prestige, .dock-perks { flex-direction: column; align-items: flex-start; gap: 0; padding: 0.45rem 0.7rem; }
     .dock-prestige span, .dock-perks span { text-align: left; }
     .dock-camp { order: 2; }

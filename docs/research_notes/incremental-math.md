@@ -2,12 +2,14 @@
 
 *Research report, 5 October 2026. It extends `docs/research_notes/Fantasy Idle game design research/combat_scaling_and_prestige.md` (KQ4 "exponential enemy vs polynomial player", KQ5 "prestige timing") and does not repeat its formula sheet.*
 
-> **Since this note (7 October 2026).** Two findings in §8 have been acted on: armour now carries
-> health (one per 20 defence, `BASE.hpPerDef`), which ended the one-hit deaths of §8.4, and the deep
-> Abyss's drops grow ×1.6 a depth instead of ×1.8 to hold the late pace with it (DESIGN §5.2–5.3).
-> The other levers in §8.8 are proposals in DESIGN §5.5, waiting for the owner. Figures in §8 are
-> as measured before those changes. The gaps listed in §9 are filled, where sources allowed, by the
-> addendum at the end.
+> **Since this note (7 October 2026).** Armour now carries health (one per 20 defence,
+> `BASE.hpPerDef`), which ended the one-hit deaths of §8.4. The owner then chose three of the levers in
+> §8.8 (DESIGN §5.5): weapons and armour from the fight with Smithing's anvil (DESIGN §3.25); records,
+> each 25 stages of best and each dungeon unique multiplying the token effect by 1.05, with an Auto
+> switch earned at 20 prestiges (A1.3; DESIGN §3.9); and camp prices that follow the best stage. To
+> hold the pace with them, tokens give 0.4% (was 0.5%) and the deep Abyss's drops grow ×1.45 a depth
+> (×1.8 at first, then ×1.6). Figures in §8 are as measured before those changes. The gaps listed in
+> §9 are filled, where sources allowed, by the addendum at the end.
 
 
 **How to read it.** A sentence with a link is a fact from that source. **[Inference]** marks my own derivations, readings and recommendations. Numbers about Fantasy Idle come from the repository (`src/core/formulas.js`, `src/data/items.js`, `src/data/camp.js`, `src/systems/prestige.js`, `src/core/modifiers.js`) and from `tools/simulate.mjs` runs made for this report (150 h, seeds 1–3). The experiments in §8 used a scratch copy of the simulator that changes constants at start-up. No repository file was changed.

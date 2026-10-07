@@ -35,9 +35,14 @@ export const BASE = {
     minAttackInterval: 500,
     baseCritChance: 0.05,
     baseCritDmg: 1.5,
-    tokenAtk: 0.005,            // per held prestige token
-    tokenDef: 0.005,
-    tokenHp: 0.0025,
+    tokenAtk: 0.004,            // per held prestige token (0.5% until the records multiplied them)
+    tokenDef: 0.004,
+    tokenHp: 0.002,
+    // Records make every token stronger (docs/research_notes/incremental-math.md A1.3): each 25 stages of
+    // all-time best, and each dungeon unique held, multiply the token effect by 1.05, so a late record
+    // lifts the whole stock where one more run adds a few percent.
+    recordStages: 25,
+    recordMult: 1.05,
     baseOfflineHours: 12,
     baseAutoEatThreshold: 0.5,
     basePotionCharges: 15,
@@ -195,10 +200,20 @@ export function collectModifiers(state) {
     return mods;
 }
 
+/** The hero's records: { stages, uniques, count, mult } — 25-stage steps of the best stage, dungeon uniques held. */
+export function recordsOf(state) {
+    const stages = Math.floor((state.combat?.bestStage || 1) / BASE.recordStages);
+    const held = new Set();
+    for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) held.add(item.uniqueId);
+    const count = stages + held.size;
+    return { stages, uniques: held.size, count, mult: Math.pow(BASE.recordMult, count) };
+}
+
 /** Turn the modifier object into the numbers the combat system uses. */
 export function deriveStats(state, mods = collectModifiers(state)) {
     const combatLevel = skillLevel(state, 'combat');
-    const tokens = state.prestige.tokens || 0;
+    const records = recordsOf(state);
+    const tokens = (state.prestige.tokens || 0) * records.mult;   // what the tokens are worth, records counted
     const tokenLayerAtk = 1 + BASE.tokenAtk * tokens;
     const tokenLayerDef = 1 + BASE.tokenDef * tokens;
     const tokenLayerHp = 1 + BASE.tokenHp * tokens;
@@ -239,6 +254,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         skillSpeed: mods.skillSpeed,
         doubleChance: mods.doubleChance,
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),
+        records,
         campMult: camp,
         focused: !!mods.focused,
         bonfire: bonfireLit(state),

@@ -231,7 +231,7 @@ export function renderHeader(game, ui, cloud) {
     const chips = [
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
-        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +0.5% ATK/DEF each"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
+        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, and each dungeon unique)` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
     const banked = state.daily.banked;
@@ -561,7 +561,11 @@ function renderLoopActions(game) {
             : c.maxStage < BALANCE.prestige.minStage ? `at stage ${BALANCE.prestige.minStage}`
             : preview.blockedBy ? `after the ${afterWhat(preview)}`
             : `ready in ${duration(preview.waitMs)}`;
-        parts.push(`<button class="prestige-btn arcane dock-prestige" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>`);
+        // The earned switch: Auto prestiges a run that has stalled (systems/prestige.js), and says when.
+        const autoIn = game.autoPrestigeIn();
+        const auto = seen(state, 'auto_prestige')
+            ? `<button class="dock-auto${state.settings.autoPrestige ? ' on' : ''}" onclick="FI.setAutoPrestige(${!state.settings.autoPrestige})" aria-pressed="${!!state.settings.autoPrestige}" title="Prestige by itself when a run goes ${BALANCE.prestige.autoStallMs / 60000} minutes without a new best stage">${glyph('away')}<b>Auto</b><span>${state.settings.autoPrestige ? (autoIn === null ? 'on' : `in ${duration(autoIn)}`) : 'off'}</span></button>` : '';
+        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
     }
     if (seen(state, 'skill_points')) {
         const sp = state.prestige.skillPoints;
@@ -2038,7 +2042,7 @@ export function renderPrestigeModal(game) {
         <div class="modal-header">Prestige</div>
         <div class="modal-body">
             <div class="pg-gain">
-                <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${Math.round(p.tokensAfter * 0.5)}% attack and defence</small></div>
+                <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${fmt(Math.round(p.tokensAfter * BASE.tokenAtk * game.derived.records.mult * 100))}% attack and defence${game.derived.records.count ? ` (records ×${game.derived.records.mult.toFixed(2)})` : ''}</small></div>
                 ${p.skillPoints > 0 ? `<div class="pg-get sp"><i class="coin-dot sp" aria-hidden="true"></i><b>+${p.skillPoints} <span>skill point${p.skillPoints === 1 ? '' : 's'}</span></b><small>for perks that last forever</small></div>` : ''}
                 ${newRank ? `<div class="pg-rank">${heroSprite({ ...state, prestige: { ...state.prestige, count: count + 1 }, hero: { ...state.hero, cape: '' } }, { scale: 2 })}<span><small>A new rank</small><b>${esc(rank.name)}</b><small>and a ${esc(rank.cloak)} cloak</small></span></div>` : ''}
                 ${p.fullRun ? '' : `<div class="pg-note muted small">A skill point comes with a run that reaches stage ${nextSp}</div>`}

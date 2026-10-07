@@ -328,8 +328,22 @@ the Abyss repeats with a depth counter and steeper growth.
   Keeps: skills and mastery, gear, tools, materials, essence, achievements, tokens, perks, pets,
   dungeon clears and fragments, Titans defeated, the agility course and farming plots.
 - **Tokens** = `floor(((best stage this run − 5) / 5)^1.5)`: 1 at stage 10, 27 at 50, 82 at 100,
-  156 at 150. Tokens are **held, never spent**; each is a permanent +0.5% ATK and DEF and +0.25% HP,
-  in its own multiplicative layer. The Eternity achievement adds +10% tokens.
+  156 at 150. Tokens are **held, never spent**; each is a permanent +0.4% ATK and DEF and +0.2% HP
+  (0.5% and 0.25% until the records came), in its own multiplicative layer, so the layer is
+  `1 + 0.004 × tokens × records`. The Eternity achievement adds +10% tokens.
+- **Records** (`recordsOf` in `src/core/modifiers.js`; the owner's choice 2, from
+  `incremental-math.md` A1.3): every 25 stages of all-time best and every dungeon unique held is a
+  record, and each multiplies what the tokens give by 1.05 (stage 300 with five uniques: ×2.29). Held
+  tokens alone make each late run add less (+0.8% a run after the hundredth); a record lifts the whole
+  stock. A new 25-stage record is a card ("Your tokens are ×1.05 stronger"), and a unique's card says
+  so too, once the player has tokens; the token chip's tip counts them.
+- **Auto** (`autoPrestigeIn`, `tickAutoPrestige`): after 20 prestiges the dock's Prestige button gets
+  an Auto switch beside it (`settings.autoPrestige`, off until turned on). With it on, a run that has
+  gone 10 minutes without a new best stage (`combat.lastRiseAt`), and may be prestiged, is: the hero
+  walks straight into the next run's first fight, and a note says what it paid (a new rank still gets
+  its card). Only while climbing the stage ladder: never while staying on a stage, in a dungeon or at
+  the Titan, resting or working. Offline replay runs the same check, and the welcome-back summary
+  counts the prestiges. The switch shows when it will go ("in 7m").
 - **Skill points:** 1 per prestige for a run that reached at least half your all-time best, plus 1
   for every 25 stages of all-time best (each threshold pays once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
   (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
@@ -1098,7 +1112,8 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | Weekend events | `EVENTS` (bonuses), `EVENT_DAILY_CAP`, `EVENT_MILESTONES`, `EVENT_SHOP` | `src/data/events.js` |
 | The bonfire | `BASE.bonfire*` | `src/core/modifiers.js` |
 | More/less gold | `BALANCE.rewards.goldPerHp`; camp `growth`, `max` | `formulas.js`, `src/data/camp.js` |
-| Stronger prestige | `BALANCE.prestige.token*`; `BASE.tokenAtk` | `formulas.js`, `src/core/modifiers.js` |
+| Stronger prestige | `BALANCE.prestige.token*`; `BASE.tokenAtk`, `recordStages`, `recordMult` | `formulas.js`, `src/core/modifiers.js` |
+| The Auto switch | `BALANCE.prestige.autoAfter`, `autoStallMs` | `formulas.js` |
 | Offline length | `BASE.baseOfflineHours`; Endurance perk | `modifiers.js`, `src/data/perks.js` |
 | Active-play weight | `BALANCE.minigame`; `BASE.focus*` | `formulas.js`, `modifiers.js` |
 
@@ -1160,7 +1175,7 @@ disagreed, the implementation follows the simulator:
    prestige power grows at the enemy's rate. An exponential formula of this kind
    (`0.75 × 2^(S/10)`, +1% per token) was implemented first; within 20 simulated hours it reached
    10¹¹ tokens and stage 350, because camp upgrades and HP-proportional gold compound on top of it.
-   The game uses `((S−5)/5)^1.5` with +0.5% per token instead, and relies on gear tiers and the camp
+   The game uses `((S−5)/5)^1.5` with +0.5% per token (+0.4% since the records, §3.9) instead, and relies on gear tiers and the camp
    for within-run growth.
 2. **Enemy growth.** The report keeps ×1.15 HP per stage. This design uses ×1.075 (×2.06 per zone)
    for the authored stages so the ×2.2 gear tiers set the pace and numbers stay readable (a stage 100

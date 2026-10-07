@@ -30,6 +30,9 @@ import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
+import { BASE } from './core/modifiers.js';
+
+const BASE_RECORD_MULT = BASE.recordMult;
 
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
@@ -450,7 +453,7 @@ function refreshPerks() {
 const ARRIVALS = {
     essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
-    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line'
+    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto'
 };
 const arrivals = new Set();
 
@@ -569,7 +572,9 @@ function handleEvents(events) {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
                 const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
-                if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
+                if (ev.auto && rank === rankFor(count - 1)) {   // the switch's own: a note, and the fight goes on
+                    toast(`Auto-prestige: ${paid}`, 'prestige', pic(FEATURES.prestige.icon));
+                } else if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
                     rewards.celebrate({ kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: '' } }, { scale: 3 }), kicker: 'A new rank', title: rank.name,   // the new cloak, even over a cape
                         lines: [`A ${rank.cloak} cloak, for ${count} prestige${count === 1 ? '' : 's'}`, paid] });
                 } else {
@@ -611,8 +616,12 @@ function handleEvents(events) {
             }
             case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'record':   // every 25 stages of all-time best: the tokens grow stronger (once there are tokens to strengthen)
+                if (seen(game.state, 'tokens')) rewards.celebrate({ key: `record:${ev.stage}`, kind: 'legend', icon: sprite('token', { scale: 2, fallback: '✨' }), kicker: 'A new record', title: `Stage ${fmt(ev.stage)}`,
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
+                break;
             case 'unique':
-                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory'] });
+                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
                 else toast(`A spare ${ev.item.name}: salvage it for essence`, 'achievement', pic(itemSpriteKey(ev.item)));
                 break;
             case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;
@@ -903,6 +912,7 @@ window.FI = {
     sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
     sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
     upgrade(id) { const ok = game.upgradeItem(id); if (ok) sound.play('craft'); render(); if (ok) flourish('#item-detail .detail-art'); },
+    setAutoPrestige(on) { if (game.setAutoPrestige(on)) sound.play(on ? 'unlock' : 'click'); render(); },
     reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
     reroll(id) { const ok = game.rerollItem(id); sound.play(ok ? 'rare' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)'); },
     toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },

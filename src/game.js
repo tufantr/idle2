@@ -7,7 +7,7 @@ import { tickAction, startNodeAction, startSmelting, startSmithing, startCraftin
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
-import { doPrestige, prestigePreview, buyPerk, canPrestige } from './systems/prestige.js';
+import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue, expireMinigames } from './systems/minigame.js';
@@ -109,6 +109,7 @@ export class Game {
                     decayHeat(this, action.skill, step);
                 }
                 tickCombat(this, step);
+                tickAutoPrestige(this);
             }
         } while (dt > 0);
 
@@ -239,6 +240,9 @@ export class Game {
         });
     }
     buyPerk(id) { return this._act(() => buyPerk(this, id)); }
+    setAutoPrestige(on) { return this._act(() => setAutoPrestige(this, on)); }
+    /** Milliseconds until the auto-prestige goes for this run, or null while it can't. */
+    autoPrestigeIn() { return autoPrestigeIn(this.state, this.now); }
 
     startMinigame(skill) { return this._act(() => startMinigame(this, skill)); }
     resolveMinigame(skill) { return this._act(() => resolveMinigame(this, skill)); }

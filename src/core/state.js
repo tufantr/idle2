@@ -53,7 +53,8 @@ export function createDefaultState(now = Date.now()) {
             mode: 'stages',    // 'stages' | 'dungeon' | 'titan'
             dungeon: null,     // { id, index } while in a dungeon run
             recovering: false, // fallen: resting to full health, then back into the fight by himself
-            pity: 0            // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
+            pity: 0,           // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
+            lastRiseAt: 0      // when this run last reached a new best stage (the auto-prestige waits on it)
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
@@ -89,7 +90,7 @@ export function createDefaultState(now = Date.now()) {
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
         log: [],
-        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null },
+        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false },
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -396,6 +397,8 @@ function normalise(data, now) {
     state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
     state.combat.combo = 0;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
+    state.combat.lastRiseAt = Math.min(now, Math.max(0, finite(state.combat.lastRiseAt)));
+    state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;

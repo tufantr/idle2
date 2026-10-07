@@ -3,6 +3,7 @@
 
 import { resolveAction, completeAction, canComplete, intervalFor } from './skilling.js';
 import { tickCombat } from './combat.js';
+import { tickAutoPrestige } from './prestige.js';
 import { masteryLevel } from './mastery.js';
 import { isFocused, bonfireLit } from '../core/modifiers.js';
 import { RESOURCES } from '../data/resources.js';
@@ -29,6 +30,8 @@ function snapshot(state) {
         dungeons: Object.fromEntries(DUNGEONS.map(d => [d.id, { ...state.dungeons[d.id] }])),
         pets: { ...state.pets },
         uniques: state.stats.uniquesFound || 0,
+        prestiges: state.prestige.count,
+        tokens: state.prestige.tokens,
         gilded: state.stats.gildedKills || 0,
         stars: state.stats.bestiaryStars || 0,
         combatMode: state.combat.mode
@@ -60,6 +63,8 @@ function diff(before, state) {
         pets: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => `${p.icon} ${p.name}`),
         petIds: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => p.id),
         uniques: (state.stats.uniquesFound || 0) - before.uniques,
+        prestiges: state.prestige.count - before.prestiges,   // by the auto-prestige
+        tokens: state.prestige.tokens - before.tokens,
         gilded: (state.stats.gildedKills || 0) - before.gilded,        // gilded monsters defeated
         stars: (state.stats.bestiaryStars || 0) - before.stars,        // bestiary stars earned
         startedInDungeon: before.combatMode === 'dungeon'
@@ -131,6 +136,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             tickCombat(game, dt);
             remaining -= dt;
             game.now += dt;
+            tickAutoPrestige(game);   // a stalled run is prestiged while away too, if the switch is on
             checkAchievements(game);  // a medal earned on the way counts from then on
             if (game.dirty) game.recompute(); // level-ups, medals and potion charges take effect mid-replay
         }
@@ -160,7 +166,8 @@ export function describeOffline(summary) {
     if (summary.mode === 'skill') lines.push(summary.stalledReason ? `Work stopped early: ${summary.stalledReason}.` : 'Your hero kept working the whole time.');
     if (summary.mode === 'combat') {
         const fell = summary.deaths ? ` — ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}you fell ${summary.deaths === 1 ? 'once' : `${summary.deaths} times`} and got up again` : '';
-        lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 ? `, ${summary.stages} stage${summary.stages === 1 ? '' : 's'} gained` : ''}${fell}.`);
+        lines.push(`${summary.kills.toLocaleString()} monsters defeated${summary.stages > 0 && !summary.prestiges ? `, ${summary.stages} stage${summary.stages === 1 ? '' : 's'} gained` : ''}${fell}.`);
+        if (summary.prestiges > 0) lines.push(`✨ Your hero prestiged ${summary.prestiges === 1 ? 'once' : `${summary.prestiges} times`} on his own: +${summary.tokens.toLocaleString()} tokens.`);
         for (const d of summary.dungeonClears || []) lines.push(`${d.clears.toLocaleString()} ${d.name} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragment${d.fragments === 1 ? '' : 's'})`);
     }
     if (summary.plotsReady) lines.push(`🌾 ${summary.plotsReady} farming plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest.`);

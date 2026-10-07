@@ -28,7 +28,7 @@ import { dungeonPreview, dungeonUnlocked, fightPreview } from '../src/systems/du
 import { AGILITY_SLOTS } from '../src/data/agility.js';
 import { canBuild, obstacleCost, upgradeInfo } from '../src/systems/agility.js';
 import { plotUnlocked, plotReady, bestCrop, seedCost } from '../src/systems/farming.js';
-import { enemyForStage } from '../src/core/formulas.js';
+import { enemyForStage, BALANCE } from '../src/core/formulas.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
 const HOURS = Number(args.hours || 100);
@@ -42,6 +42,9 @@ const NO_DUNGEONS = !!args['no-dungeons'];
 //   --farm-ladder=push  keep pushing at the wall (an AFK player who leaves combat running)
 const FARM_LADDER = args['farm-ladder'] ? (args['farm-ladder'] === 'push' ? 'push' : 'farm') : null;
 const NO_TITAN = !!args['no-titan'];
+// --auto: once earned (BALANCE.prestige.autoAfter prestiges), turn on the dock's Auto switch, as a player
+// who has done twenty resets by hand would; the bot's own prestige rule stays for the runs it decides.
+const AUTO = !!args.auto;
 
 rng.setSource(seededRandom(SEED));
 let now = 0;
@@ -417,6 +420,7 @@ function agilityTask() {
 }
 
 function decide() {
+    if (AUTO && S.prestige.count >= BALANCE.prestige.autoAfter && !S.settings.autoPrestige) game.setAutoPrestige(true);
     equipBest();
     spendPoints();
     tendFarm();
@@ -547,6 +551,10 @@ while (now < totalMs) {
         if (ev.type === 'dungeonClear') { milestone(`${ev.dungeon} clears`, 1); if (ev.clears === 10 || ev.clears === 50) milestone(`${ev.dungeon} clears`, ev.clears); }
         if (ev.type === 'dungeonFail') dungeonFails++;
         if (ev.type === 'titan') { titanTries++; if (ev.won) milestone('titan kill', S.titan.kills); }
+        if (ev.type === 'prestige' && ev.auto) {
+            runLog.push({ run: S.prestige.count, hours: H(now - runStartedAt), reached: ev.reached, tokens: ev.tokens, auto: true });
+            runStartedAt = now; milestone('prestige', S.prestige.count);
+        }
     }
     if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
     if (task.kind === 'combat' && !S.combat.active && S.combat.hp <= game.derived.maxHp * 0.5) needTraining = true;
