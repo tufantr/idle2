@@ -13,7 +13,7 @@ import { rankFor } from '../data/ranks.js';
 
 export const PLAYTEST_MAX = 5000;
 export const PLAYTEST_KINDS = new Set(['start', 'place', 'zone', 'record', 'unique', 'pet', 'medal', 'obstacle', 'level', 'rank', 'prestige',
-    'firstClear', 'tier', 'titan', 'death', 'bossHeldOut', 'mastery', 'return', 'show', 'hide']);
+    'firstClear', 'tier', 'titan', 'death', 'bossHeldOut', 'mastery', 'trial', 'return', 'show', 'hide']);
 
 /** The log entry an event makes ({ kind, what, cls }), or null. Reads the state as it is after the event. */
 export function playtestEntry(state, ev) {
@@ -38,6 +38,7 @@ export function playtestEntry(state, ev) {
         case 'titan': return ev.won ? { kind: 'titan', what: String(ev.level || ''), cls: 'medium' } : null;
         case 'death': return { kind: 'death', what: `${ev.mode || 'stages'} ${ev.stage ?? ''}`, cls: 'minor' };
         case 'bossTimeout': return { kind: 'bossHeldOut', what: String(ev.stage ?? ''), cls: 'minor' };
+        case 'trialTier': return { kind: 'trial', what: `${ev.id} ${ev.tier}`, cls: ev.last ? 'major' : 'medium' };
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? { kind: 'mastery', what: ev.key, cls: 'medium' } : null;
         default: return null;
     }

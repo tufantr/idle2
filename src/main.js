@@ -31,6 +31,8 @@ import { capeFor } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
 import { playtestExport } from './systems/playtest.js';
+import { trialById, TRIAL_TIERS } from './data/trials.js';
+import { nextTrialTarget } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
 
 const BASE_RECORD_MULT = BASE.recordMult;
@@ -464,7 +466,7 @@ function refreshPerks() {
 const ARRIVALS = {
     essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
-    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto'
+    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials'
 };
 const arrivals = new Set();
 
@@ -508,7 +510,7 @@ function soundFor(ev, onCombat) {
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
         case 'unlock': case 'zoneReached': return ['unlock'];
-        case 'achievement': case 'eventMilestone': case 'dungeonMilestone': return ['achievement'];
+        case 'achievement': case 'eventMilestone': case 'dungeonMilestone': case 'trialTier': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
         case 'death': case 'bossTimeout': return ['defeat'];
         case 'dungeonFail': return ev.lost ? ['defeat'] : null;   // leaving by choice is no defeat
@@ -583,11 +585,16 @@ function handleEvents(events) {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
                 const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
+                const trial = trialById(ev.trial);   // prestiged into a Trial (systems/trials.js)
                 if (ev.auto && rank === rankFor(count - 1)) {   // the switch's own: a note, and the fight goes on
                     toast(`Auto-prestige: ${paid}`, 'prestige', pic(FEATURES.prestige.icon));
                 } else if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
                     rewards.celebrate({ kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: '' } }, { scale: 3 }), kicker: 'A new rank', title: rank.name,   // the new cloak, even over a cape
                         lines: [`A ${rank.cloak} cloak, for ${count} prestige${count === 1 ? '' : 's'}`, paid] });
+                    if (trial) toast(`Trial: ${trial.name}. ${trial.rule}`, 'prestige', pic(trial.icon));
+                } else if (trial) {
+                    rewards.celebrate({ key: `trial:${trial.id}`, kind: 'prestige', icon: sprite(trial.icon, { scale: 2 }), kicker: 'A Trial begins', title: trial.name,
+                        lines: [trial.rule, `Stage ${nextTrialTarget(game.state, trial)} for a record`, paid] });
                 } else {
                     rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
                         lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
@@ -627,6 +634,14 @@ function handleEvents(events) {
             }
             case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
+                const trial = trialById(ev.id);
+                if (!trial) break;
+                const target = nextTrialTarget(game.state, trial);
+                rewards.celebrate({ key: `trial:${ev.id}:${ev.tier}`, kind: ev.last ? 'legend' : 'medal', icon: sprite(trial.icon, { scale: 2 }), kicker: ev.last ? 'Trial cleared to the top' : `Trial · tier ${ev.tier} of ${TRIAL_TIERS}`, title: trial.name,
+                    lines: [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`, ...(target ? [`Next: stage ${target}`] : [])] });
+                break;
+            }
             case 'record':   // every 25 stages of all-time best: the tokens grow stronger (once there are tokens to strengthen)
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `record:${ev.stage}`, kind: 'legend', icon: sprite('token', { scale: 2, fallback: '✨' }), kicker: 'A new record', title: `Stage ${fmt(ev.stage)}`,
                     lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
@@ -959,10 +974,24 @@ window.FI = {
 
     openPrestige() { if (game.canPrestige()) openModal(renderPrestigeModal(game), 'prestige'); },
     confirmPrestige() {
+        const trial = document.querySelector('.prestige-modal input[name="trial"]:checked')?.value;   // a Trial picked in the dialog
         writeBackup(game.serialize(Date.now()), 'prestige', `Before prestige ${game.state.prestige.count + 1}`);
         closeModal();
-        game.prestige({ resume: true }); // a hero who was fighting walks into the new run's first fight
+        if (trial) game.startTrial(trial);
+        else game.prestige({ resume: true }); // a hero who was fighting walks into the new run's first fight
         render();
+    },
+    /** A Trial card in the prestige dialog, ticked or unticked: one at most, and the button says which. */
+    pickTrial(input) {
+        const modal = input.closest('.prestige-modal');
+        if (!modal) return;
+        for (const other of modal.querySelectorAll('input[name="trial"]')) if (other !== input) other.checked = false;
+        const t = input.checked ? input.dataset : null;
+        const button = modal.querySelector('.btn-confirm');
+        if (button) button.textContent = t ? `Prestige into ${t.name}` : 'Prestige now';
+        const line = modal.querySelector('.trial-pick-line');
+        if (line) line.textContent = t ? `Reach stage ${t.target} in this run for a record: your tokens ×${BASE_RECORD_MULT} stronger, for good.` : '';
+        sound.play(t ? 'equip' : 'click');
     },
     closeModal() { closeModal(); },
 

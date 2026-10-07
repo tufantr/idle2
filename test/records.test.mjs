@@ -22,7 +22,7 @@ test('each 25 stages of the best ever, and each unique held, multiply what token
     s.prestige.tokens = 1000;
     s.equipped.Weapon = { id: 800, type: 'Weapon', tier: 7, atk: 5000, def: 0, affixes: [], upgrade: 0 };
     s.combat.bestStage = 24;
-    assert.deepEqual(recordsOf(s), { stages: 0, uniques: 0, count: 0, mult: 1 });
+    assert.deepEqual(recordsOf(s), { stages: 0, uniques: 0, trials: 0, count: 0, mult: 1 });
     const plain = deriveStats(s);
     s.combat.bestStage = 100;
     const four = deriveStats(s);

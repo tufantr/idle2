@@ -7,6 +7,7 @@ import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MA
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
+import { TRIALS, TRIAL_TIERS, trialById } from '../data/trials.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
@@ -94,6 +95,7 @@ export function createDefaultState(now = Date.now()) {
         log: [],
         settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false, playtestLog: false },
         playtest: [],          // the playtest log, when the player turns it on (systems/playtest.js)
+        trials: { active: null, cleared: {} },   // the Trial this run plays under, and the tiers cleared (data/trials.js)
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -407,6 +409,13 @@ function normalise(data, now) {
     delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.settings.playtestLog = state.settings.playtestLog === true;
+    // Trials: a known one active, and whole tiers in range for each
+    const trials = isPlainObject(data?.trials) ? data.trials : {};
+    state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {} };
+    for (const t of TRIALS) {
+        const n = Math.floor(Number(trials.cleared?.[t.id]) || 0);
+        if (n > 0) state.trials.cleared[t.id] = Math.min(TRIAL_TIERS, n);
+    }
     state.playtest = (Array.isArray(data?.playtest) ? data.playtest : [])
         .filter(e => isPlainObject(e) && PLAYTEST_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))
         .slice(-PLAYTEST_MAX).map(e => ({ t: Number(e.t), kind: e.kind, what: String(e.what ?? '').slice(0, 60), cls: ['major', 'medium', 'minor'].includes(e.cls) ? e.cls : 'minor' }));

@@ -2,6 +2,7 @@
 
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
 import { goldPerKillAtStage } from '../core/formulas.js';
+import { trialBite } from '../data/trials.js';
 import { bumpStat } from './progress.js';
 
 /** The price of the next level of `upgrade` from `level`, for this hero (it follows the best stage: data/camp.js). */
@@ -14,6 +15,7 @@ export function buyCampUpgrade(game, id, count = 1) {
     const state = game.state;
     const upgrade = CAMP_UPGRADES.find(u => u.id === id);
     if (!upgrade) return 0;
+    if (trialBite(state).noCamp) { game.emit({ type: 'error', text: 'The camp stays packed in this Trial.' }); return 0; }
     const maxHpBefore = game.derived?.maxHp || 0;
     let bought = 0;
     const wanted = count === 'max' ? Infinity : Math.max(1, Math.floor(count));

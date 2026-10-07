@@ -16,6 +16,7 @@ import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART } from './features.js';
+import { activeTrial, nextTrialTarget } from '../systems/trials.js';
 
 // Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
 const PARTICLES = { meadow: 'motes', forest: 'fireflies', caves: 'sparkles', marsh: 'bubbles', highland: 'rain', ruins: 'bubbles', volcano: 'embers', frost: 'snow', skyreach: 'motes', abyss: 'void', dungeon: 'embers', titan: 'rain',
@@ -92,7 +93,7 @@ export function createScene(root, actions) {
         <header class="battle-top">
             <div class="battle-title">
                 <button type="button" class="battle-zone" disabled></button>
-                <span class="battle-sub"><span class="battle-stage"></span><span class="battle-regroup" hidden></span></span>
+                <span class="battle-sub"><span class="battle-stage"></span><span class="battle-trial" hidden></span><span class="battle-regroup" hidden></span></span>
             </div>
             <ol class="stage-path" aria-label="Stages in this zone"></ol>
         </header>
@@ -121,7 +122,7 @@ export function createScene(root, actions) {
 
     const $ = sel => root.querySelector(sel);
     const el = {
-        battle: $('.battle'), zone: $('.battle-zone'), stage: $('.battle-stage'), regroup: $('.battle-regroup'), path: $('.stage-path'),
+        battle: $('.battle'), zone: $('.battle-zone'), stage: $('.battle-stage'), trial: $('.battle-trial'), regroup: $('.battle-regroup'), path: $('.stage-path'),
         hero: $('.hero'), heroStand: $('.hero .fighter-stand'), heroSprite: $('.hero .fighter-sprite'), petFigure: $('.hero .pet-figure'), heroFigure: $('.hero-figure'), heroBar: $('.hero .fill'), heroTrail: $('.hero .trail'), heroText: $('.hero .fbar-text'),
         heroName: $('.hero .fighter-name'), heroMeta: $('.hero .fighter-meta'), heroAtk: $('.hero .attack-bar i'),
         foe: $('.foe'), foeStand: $('.foe .fighter-stand'), foeSprite: $('.foe .fighter-sprite'), foeBar: $('.foe .fill'), foeTrail: $('.foe .trail'), foeText: $('.foe .fbar-text'),
@@ -471,6 +472,14 @@ export function createScene(root, actions) {
             } else {
                 setMarkup(el.zone, esc(zoneForStage(c.stage).name));
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
+            }
+            // a run in a Trial wears it beside the stage: its icon, its name, and the stage the next tier asks for
+            const trial = c.mode === 'stages' ? activeTrial(state) : null;
+            el.trial.hidden = !trial;
+            if (trial) {
+                const target = nextTrialTarget(state, trial);
+                setMarkup(el.trial, `${sprite(trial.icon, { scale: 0.5, cls: 'res-spr' })} ${esc(trial.name)}${target ? ` · to ${target}` : ''}`);
+                if (el.trial.title !== trial.rule) el.trial.title = trial.rule;
             }
             // The zone's name opens the world map, once there is a second zone to travel to.
             const mapped = c.mode !== 'titan' && seen(state, 'world_map');   // in a dungeon too: its gate is on the map

@@ -12,6 +12,8 @@ import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan, choosin
 import { COMBAT_PET_SECONDS } from '../data/pets.js';
 import { eventProgress } from './events.js';
 import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
+import { trialBite } from '../data/trials.js';
+import { checkTrial } from './trials.js';
 
 const FIRST_GILDED_STAGE = 7;
 
@@ -26,6 +28,14 @@ export function spawnEnemy(game) {
     else {
         c.mode = 'stages';
         c.enemy = enemyForStage(c.stage);
+        // a Trial's monsters (data/trials.js): harder hitting, tougher, or bosses with less time; each
+        // pays as ever (its worth is its health before the Trial)
+        const bite = trialBite(state);
+        if (bite.enemyAtk || bite.enemyHp) {
+            const hp = Math.floor(c.enemy.maxHp * (bite.enemyHp || 1));
+            c.enemy = { ...c.enemy, worth: c.enemy.worth || c.enemy.maxHp, atk: c.enemy.atk * (bite.enemyAtk || 1), hp, maxHp: hp };
+        }
+        if (bite.bossTime && c.enemy.boss) c.enemy = { ...c.enemy, timeLimit: (c.enemy.timeLimit || BALANCE.combat.bossTimeMs) * bite.bossTime };
         // Now and then a regular monster comes gilded: the same fight, a far better payout. A new hero
         // meets his first at stage 7 (one in 150 is too rare for the first minutes).
         const firstGilded = c.stage === FIRST_GILDED_STAGE && c.stage === c.maxStage && !c.farmMode && !state.stats.gildedKills && !state.prestige.count;
@@ -105,6 +115,7 @@ export function tryEat(game) {
     const state = game.state;
     const d = game.derived;
     let eaten = 0;
+    if (trialBite(state).noFood) return 0;   // the Fasting Trial: nothing is eaten
     while (state.combat.hp > 0 && state.combat.hp < d.maxHp * d.autoEatThreshold && eaten < 5) {
         const food = chooseFood(state, d.maxHp - state.combat.hp, d.foodMult);
         if (!food) break;
@@ -165,7 +176,7 @@ export function playerAttack(game, { manual = false } = {}) {
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
     enemy.hp -= dmg;
 
-    const lifesteal = Math.min(BASE.caps.lifesteal, d.lifesteal + (combo >= 20 ? 0.15 : 0));
+    const lifesteal = trialBite(game.state).noRegen ? 0 : Math.min(BASE.caps.lifesteal, d.lifesteal + (combo >= 20 ? 0.15 : 0));   // none in Fasting
     if (lifesteal > 0) c.hp = Math.min(d.maxHp, c.hp + Math.round(dmg * lifesteal));
 
     if (potionActive && !manual) {
@@ -346,7 +357,7 @@ export function onEnemyDeath(game) {
     if (enemy.boss) c.regroupLeft = 0;
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
-        if (c.stage > c.maxStage) { c.maxStage = c.stage; c.stallMs = 0; }
+        if (c.stage > c.maxStage) { c.maxStage = c.stage; c.stallMs = 0; checkTrial(game); }
         if (c.stage > c.bestStage) {
             c.bestStage = c.stage;
             // a record: every 25 stages of all-time best make the tokens stronger (core/modifiers.js recordsOf)
@@ -401,7 +412,7 @@ export function onBossTimeout(game) {
     if (c.mode === 'titan') { endTitan(game, false); return; }
     bumpStat(game, 'bossEscapes');
     const back = Math.max(1, c.stage - 1);
-    log(game, `⏳ ${c.enemy.name} held out for ${BALANCE.combat.bossTimeMs / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
+    log(game, `⏳ ${c.enemy.name} held out for ${(c.enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
     game.emit({ type: 'bossTimeout', stage: c.stage });
     c.stage = back;
     c.regroupLeft = BALANCE.combat.regroupMs;
@@ -441,7 +452,7 @@ export function tickCombat(game, dt) {
     // The run's stall clock: time spent climbing the stage ladder (fighting, or resting to fight on)
     // since its last new best stage. The Auto switch waits on it (systems/prestige.js).
     if ((c.active || c.recovering) && c.mode === 'stages' && !c.farmMode) c.stallMs = (c.stallMs || 0) + dt;
-    const regen = c.active ? BALANCE.combat.regenInCombat : BALANCE.combat.regenResting;
+    const regen = c.active ? (trialBite(state).noRegen ? 0 : BALANCE.combat.regenInCombat) : BALANCE.combat.regenResting;   // none while fighting in Fasting
     if (c.hp > 0 && c.hp < d.maxHp) c.hp = Math.min(d.maxHp, c.hp + d.maxHp * regen * dt / 1000);
     if (!c.active) {
         if (c.combo > 0) c.combo = 0;

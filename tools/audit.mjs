@@ -128,16 +128,17 @@ if (base && existsSync(RUNS)) {
     const labels = readdirSync(RUNS).filter(l => l.startsWith('E7-'));
     if (labels.length) {
         out.push('\n## E7 · sensitivity (elasticity of hours to stage 200; |ε| > 2 is a knife-edge)\n');
-        out.push('| Knob | −20% | −10% | +10% | +20% | ε |\n|---|---|---|---|---|---|');
+        const levels = [...new Set(labels.map(l => l.match(/-([-0-9.]+)$/)?.[1]).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
+        out.push(`| Knob | ${levels.map(f => `${Number(f) > 0 ? '+' : ''}${Math.round(100 * Number(f))}%`).join(' | ')} | ε |\n|---|${levels.map(() => '---|').join('')}---|`);
         const b200 = med(stageAt(base, 200));
         const knobs = [...new Set(labels.map(l => l.replace(/^E7-/, '').replace(/-[-0-9.]+$/, '')))];
         data.e7 = {};
         for (const k of knobs) {
-            const row = ['-0.2', '-0.1', '0.1', '0.2'].map(f => { const runs = batch(`E7-${k}-${f}`); return runs ? med(stageAt(runs, 200)) : null; });
-            const e = [[-0.2, row[0]], [-0.1, row[1]], [0.1, row[2]], [0.2, row[3]]].filter(([, h]) => h !== null).map(([f, h]) => (h / b200 - 1) / f);
+            const row = levels.map(f => { const runs = batch(`E7-${k}-${f}`); return runs && runs.length ? med(stageAt(runs, 200)) : undefined; });
+            const e = levels.map((f, i) => [Number(f), row[i]]).filter(([, h]) => h !== undefined && h !== null).map(([f, h]) => (h / b200 - 1) / f);
             const eps = e.length ? med(e) : null;
             data.e7[k] = { row, eps };
-            out.push(`| ${k} | ${row.map(h => (h === null ? 'never' : fmt(h))).join(' | ')} | ${fmt(eps, 2)} |`);
+            out.push(`| ${k} | ${row.map(h => (h === undefined ? '' : h === null ? 'never' : fmt(h))).join(' | ')} | ${fmt(eps, 2)} |`);
         }
         const edges = Object.entries(data.e7).filter(([, v]) => v.eps !== null && Math.abs(v.eps) > 2);
         check(!edges.length, `knife-edges: ${edges.length ? edges.map(([k, v]) => `${k} (ε ${fmt(v.eps, 1)})`).join(', ') : 'none'}`);

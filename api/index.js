@@ -201,6 +201,7 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage) {
         next[r.key] = peak && peak.v >= value ? peak : { v: value, at: now };
     }
     if (num(metrics.attackDamage) > plausibleAttackDamage(metrics.bestStage)) flags.push('attack beyond what its best stage allows');
+    if (num(metrics.trialTiersBeyondBest) > 0) flags.push('Trial tiers beyond its best stage');
     return { flags, peaks: next };
 }
 

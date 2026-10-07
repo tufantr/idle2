@@ -2474,3 +2474,36 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
     .combat-side { flex-direction: row; flex-wrap: wrap; align-items: center; min-width: 0; padding: 0.8rem 0 0; border-left: 0; border-top: 1px solid var(--line); }
     .dock-orders .combat-side { padding-top: 0; border-top: 0; }
 }
+
+/* The Trials (src/systems/trials.js): in the prestige dialog, each a card on its place's painting that is
+   ticked to prestige into it; in the fight, a badge beside the stage. */
+.trial-grid { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 0.5rem; }
+/* the dialog's buttons stay in view while the Trials scroll under them */
+.prestige-modal:has(.pg-trials) .modal-footer { position: sticky; bottom: -1.5rem; z-index: 3; margin-bottom: -1.5rem; padding: 1.1rem 0 1.5rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 1.1rem); }
+.trial-card { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "icon name" "rule rule" "foot foot"; align-items: center; gap: 0.25rem 0.45rem;
+    min-height: 104px; padding: 0.55rem 0.6rem; border-radius: 10px; cursor: pointer;
+    background: linear-gradient(180deg, rgba(14, 10, 7, 0.3), rgba(14, 10, 7, 0.86) 62%), var(--art) var(--art-at, center 60%) / cover no-repeat, var(--panel-2);
+    border: 1px solid rgba(214, 170, 92, 0.25); transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s; }
+.trial-card input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: inherit; }
+.trial-card:hover { border-color: rgba(252, 211, 77, 0.6); }
+.trial-card:has(input:focus-visible) { outline: 2px solid #fcd34d; outline-offset: 2px; }
+.trial-card:has(input:checked) { border-color: #fcd34d; box-shadow: 0 0 0 1px #fcd34d, 0 0 18px rgba(252, 211, 77, 0.4); transform: translateY(-2px); }
+.trial-card.done { cursor: default; filter: saturate(0.55); }
+.trial-icon { grid-area: icon; display: grid; place-items: center; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)); }
+.trial-name { grid-area: name; font-family: var(--font-display); font-size: 0.9rem; line-height: 1.15; color: var(--heading); text-shadow: 0 1px 4px #000; }
+.trial-rule { grid-area: rule; align-self: start; font-size: 0.72rem; line-height: 1.25; color: var(--text-main); text-shadow: 0 1px 3px #000; }
+.trial-foot { grid-area: foot; align-self: end; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+.trial-foot small { font-size: 0.7rem; font-weight: 700; color: #fde68a; text-shadow: 0 1px 3px #000; }
+.trial-card.done .trial-foot small { color: var(--text-muted); }
+.trial-pips { display: inline-flex; gap: 3px; }
+.trial-pips i { width: 8px; height: 8px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(214, 170, 92, 0.5); }
+.trial-pips i.on { background: radial-gradient(circle at 35% 30%, #fde68a, #c08a2a); border-color: #fde68a; }
+.trial-pick-line { flex: 1 1 100%; margin: 0; min-height: 1em; font-size: 0.78rem; color: #fde68a; }
+.trial-pick-line:empty { display: none; }
+.battle-trial { display: inline-flex; align-items: center; gap: 0.3rem; color: #fca5a5; font-weight: 700; }
+.battle-trial .spr { filter: drop-shadow(0 1px 2px #000); }
+@media (prefers-reduced-motion: reduce) { .trial-card { transition: none; } .trial-card:has(input:checked) { transform: none; } }
+body.reduced-motion .trial-card { transition: none; }
+body.reduced-motion .trial-card:has(input:checked) { transform: none; }
+.camp-packed { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0.4rem 0.2rem; font-size: 0.82rem; color: var(--text-muted); text-shadow: 0 1px 3px #000; }
+.camp-packed .spr { filter: grayscale(0.7) brightness(0.7); }

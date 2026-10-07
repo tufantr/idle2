@@ -43,7 +43,7 @@ export function prestigePreview(game) {
     };
 }
 
-export function doPrestige(game, { auto = false } = {}) {
+export function doPrestige(game, { auto = false, trial = null } = {}) {
     const state = game.state;
     if (!canPrestige(state, game.now)) return false;
     const preview = prestigePreview(game);
@@ -62,13 +62,14 @@ export function doPrestige(game, { auto = false } = {}) {
     state.combat.regroupLeft = 0;
     state.combat.farmMode = false;   // "stay on this stage" was for the old run: the new one climbs
     state.combat.stallMs = 0;
+    if (state.trials) state.trials.active = trial;   // a prestige ends a Trial, or begins one (systems/trials.js startTrial)
     state.gold = 0;          // combat gold is run-scoped, like the camp it buys
     resetCamp(state);
     game.recompute();
     state.combat.hp = game.derived.maxHp;
     spawnEnemy(game);
     log(game, `✨ Prestige ${state.prestige.count}: +${preview.tokens} tokens, +${preview.skillPoints} skill point${preview.skillPoints === 1 ? '' : 's'}. Starting at stage ${preview.startStage}.`, 'prestige');
-    game.emit({ type: 'prestige', ...preview, auto, reached });
+    game.emit({ type: 'prestige', ...preview, auto, reached, trial });
     game.markDirty();
     return true;
 }

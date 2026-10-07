@@ -6,6 +6,7 @@ import { migrateState } from './state.js';
 import { deriveStats } from './modifiers.js';
 import { levelForXp } from './xp.js';
 import { enemyBaseStats, BALANCE } from './formulas.js';
+import { TRIALS, trialTarget, trialTier } from '../data/trials.js';
 
 export const CLAN_ATTACK_SECONDS = 60;
 
@@ -24,6 +25,7 @@ export function powerSummary(rawState, now = Date.now()) {
     for (const mg of Object.values(state.minigame)) mg.boostUntil = 0;
     state.bonfire.until = 0;
     state.combat.potion = 'none';
+    state.trials.active = null;   // a Trial's rule handicaps a run, not the hero the boards compare
     const derived = deriveStats(state);
     const totalLevel = Object.values(state.skills).reduce((sum, s) => sum + levelForXp(s.xp), 0);
     return {
@@ -36,7 +38,9 @@ export function powerSummary(rawState, now = Date.now()) {
         combatLevel: derived.combatLevel,
         titanKills: state.titan.kills,
         dungeonClears: state.stats.dungeonClears || 0,
-        prestiges: state.prestige.count
+        prestiges: state.prestige.count,
+        // Trial tiers whose stage is past the best stage ever reached: none in a save that was played
+        trialTiersBeyondBest: TRIALS.reduce((n, t) => n + Array.from({ length: trialTier(state, t.id) }, (_, i) => trialTarget(t, i + 1)).filter(stage => stage > state.combat.bestStage).length, 0)
     };
 }
 

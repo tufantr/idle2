@@ -337,7 +337,8 @@ the Abyss repeats with a depth counter and steeper growth.
   `1 + 0.004 × tokens × records`. The Eternity achievement adds +10% tokens.
 - **Records** (`recordsOf` in `src/core/modifiers.js`; the owner's choice 2, from
   `incremental-math.md` A1.3): every 25 stages of all-time best and every dungeon unique held is a
-  record, and each multiplies what the tokens give by 1.05 (stage 300 with five uniques: ×2.29). Held
+  record, and so is each Trial tier cleared (§3.26); each multiplies what the tokens give by 1.05 (stage
+  300 with five uniques: ×2.29). Held
   tokens alone make each late run add less (+0.8% a run after the hundredth); a record lifts the whole
   stock. A new 25-stage record is a card ("Your tokens are ×1.05 stronger"), and a unique's card says
   so too, once the player has tokens; the token chip's tip counts them.
@@ -950,6 +951,61 @@ prices the whole game was retuned (§5.2). The skiller who fights least lost the
 armour no longer come from the forge (stage 100 at 32–45 h, from 14–22 h). A new player's first
 minutes are unchanged (`tools/opening.mjs`).
 
+### 3.26 Trials
+
+The long-term research (`docs/research_notes/robust-and-fun/B_longterm_motivation.md` §8.2) found the
+late resets alike: past stage 200 a run was the last run again, a few hundred tokens on a hundred
+thousand. Trials make some of them different. From best stage 200 (`TRIALS_FROM`; the disclosure
+`trials`) the prestige dialog lays out eight Trials as cards (each its place's painting, icon, name and
+rule, its tiers as five pips, the stage the next one asks for); ticking one turns the dialog's button
+into "Prestige into ...": the prestige as ever, and the next run plays under the Trial's rule until the
+next prestige (by hand or by Auto) ends it. Reaching a tier's stage in that run clears the tier for good,
+several at once if the run is past them, with a card; a run in a Trial wears it beside the stage in the
+fight. Five tiers each, 25 stages apart; **each tier cleared is a record** (§3.9): the tokens grow ×1.05
+stronger, as for 25 stages of best stage or a unique. The run earns its tokens as any run does, from the
+stage it reaches under the rule, so a Trial costs a little of a run (about 15% fewer tokens): a choice.
+`src/data/trials.js`, `src/systems/trials.js`; saved as `trials: { active, cleared }`.
+
+| Trial | Rule (`bite`) | First tier | Stages the rule cost a run at best 200 / 260 / 320 |
+|---|---|---|---|
+| Brutes | Monsters hit four times as hard (`enemyAtk` 4) | 175 | 20 / 14–20 / 20 |
+| Thick Hides | Monsters have ten times the health (`enemyHp` 10; they pay as before) | 175 | 10–20 / 20 / 20–30 |
+| Glass Hero | A tenth of the hero's health (`heroHp` 0.1) | 175 | 19–20 / 20–25 / 29–30 |
+| Rusted Gear | Gear gives a quarter of everything (`gear` 0.25: stats and affixes) | 175 | 20 / 20 / 20 |
+| Swift Bosses | A stage boss gives a tenth of the time (`bossTime` 0.1: 3 s) | 180 | 10 / 10–20 / 20 |
+| No Camp | The camp stays packed (`noCamp`: no levels, none bought) | 180 | 10–11 / 11–20 / 11–12 |
+| Fasting | No food, and no health back while fighting (`noFood`, `noRegen`: no regeneration, no lifesteal; resting heals) | 185 | 10 / 10–12 / 12–20 |
+| Faithless | Tokens give nothing (`noTokens`) | 125 | 70 / 90 / 110 |
+
+How the rules were sized (`tools/trials.mjs`, heroes the simulator saved at best 200, 260 and 320 with
+`--save-at`, three seeds each): a rule costs a run about the same number of stages at any depth, since
+power grows by a steady factor a stage, and the cost comes in steps of ten (each tenth stage is a boss,
+and the bosses are the walls). The first rules, a weaker set (monsters ×2 attack, half health, half the
+boss's time, half the gear, no food), cost 0–10 stages: food heals a fixed amount, nothing to a late
+hero; a boss falls long before its clock runs out; and the tokens' layer is most of a late hero's power,
+so gear barely mattered. Past a point, stronger rules cost no more: a boss that kills the hero in one
+blow stops him at the same place however hard it hits, so Brutes at ×10 or ×25 and Glass Hero at a
+twentieth or a fiftieth cost what ×4 and a tenth do. Faithless costs more the deeper the hero, since the
+tokens are an ever larger share of his power, and the records the other Trials bring don't help it. Each
+first tier is about what a hero at the door reaches under its rule, so one falls soon after the Trials
+open, and the fifth asks for about a hundred stages more: a hero at 320 clears all five of the seven in a
+run each, and four of Faithless. The simulator's bot goes into the Trial with the lowest next target every fifth prestige
+once they are open (`--trials`).
+
+What they do to the pace (`tools/simulate.mjs --hours=400`, seeds 1–3, the bot going into a Trial every
+fifth prestige, against `--trials=0`): the first tier falls at 57–61 hours, just after the Trials open;
+stage 300 at 135–150 hours (183–315 without); best stage 370–380 at 400 hours (320–329); all forty tiers
+by 213–296 hours, in 44–56 Trial runs. Between hours 150 and 300 a big moment came every 11–15 hours,
+the longest wait 29–87 hours (one every 30–50, waits of 97–112, without): the long-term targets (one a
+day, no wait past three days) are met for the rate, and for the wait in two seeds of three, where the
+game had failed both. Forty records multiply the
+tokens by about seven, so the Trials are a large part of late power: a player who never tries one
+climbs as before, one who does climbs well past him. Past 300 hours, with every tier cleared, the
+moments thin out again (one every 25–33 hours); that is for the next late-game work.
+
+The server keeps a Trial out of what the boards compare (`powerSummary` drops the run's rule) and flags a
+save with tiers its best stage could not have cleared (`trialTiersBeyondBest`).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -1036,7 +1092,10 @@ an hour) and training a skill (Mining and Smithing first while they can't yet ma
 weapon it wears); put bars and essence into its worn gear at the anvil; challenge the Titan whenever
 it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
 materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
-it holds (15% early, ~2% at 7,000 tokens); claim the daily crate when it is ripe. `--auto` also turns on
+it holds (15% early, ~2% at 7,000 tokens), or when it has gone an hour without a new best in the run
+(its own stall clock: until October 2026 a fresh fight restarted it, so at the wall near stage 310 the
+bot never prestiged again and late runs read too slow); every fifth prestige, once they open, go into a
+Trial (§3.26; `--trials=0` never, as every figure before them); claim the daily crate when it is ripe. `--auto` also turns on
 the dock's Auto switch once earned; `--player=<schedule>` plays a login schedule (online, tab16,
 evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay between sessions;
 `--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
@@ -1310,12 +1369,13 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
                       · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
-                      · capes (skill capes at 99)
+                      · capes (skill capes at 99) · trials (the Trials: rules, first tiers)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
                       · anvil (reinforcing and rerolling worn gear with bars) · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
                       · disclosure (which pieces of the screens have opened for the player)
+                      · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
@@ -1338,7 +1398,8 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       cards.py (cuts the action cards' pictures from sheets of nine, writes src/data/cardart.js) ·
                       icons.py (the app icons in assets/icons/, the hero on the meadow; manifest.json installs them) ·
                       serve.py (the local server: no stale modules after a change) ·
-                      shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors)
+                      shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors) ·
+                      trials.mjs (how far a run gets under each Trial's rule, from heroes the simulator saved)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for the paintings) · reports/ ·
                       research_notes/
 ```

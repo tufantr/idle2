@@ -429,6 +429,24 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Trials** (the long-term research's first late-game item, `robust-and-fun/B_longterm_motivation.md`
+      §8.2; DESIGN §3.26): from best stage 200 the prestige dialog lays out eight Trials as cards on
+      their places' paintings; tick one and the prestige starts a run under its rule: monsters that hit
+      four times as hard or have ten times the health, a tenth of the hero's health, gear at a quarter,
+      three seconds for a boss, no camp, no food or healing in a fight, or tokens that give nothing.
+      Five tiers each, 25 stages apart; each tier cleared is a record (tokens ×1.05), with a card, and the
+      fight wears the Trial beside the stage. The rules were sized by `tools/trials.mjs` on simulated
+      heroes at best 200, 260 and 320: the first, milder set cost a late run nothing (food heals a fixed
+      amount, a boss falls long before its clock, and the tokens are most of a late hero's power). With a
+      Trial every fifth prestige, three simulated seeds reached stage 300 at 135–150 hours (183–315
+      without) and best 370–380 at 400 hours (320–329), cleared all 40 tiers by 213–296 hours, and had a
+      big moment every 11–15 hours between hours 150 and 300 (every 30–50, with gaps of 97–112 hours,
+      without). Past 300 hours the game is thin again: that is for the next late-game work.
+      The leaderboards and clan bosses compare the hero without the Trial, and the server flags tiers a
+      save's best stage could not have cleared. The simulator's bot had stopped prestiging at the wall
+      near stage 310: it restarted its stall clock whenever it went back to fighting, and a run there
+      paid one token less than its rule asked for, so it sat for a hundred hours; it uses the run's own
+      clock now
 - [x] **Titans that keep falling, a playtest log** (the long-term research found a Titan falling once in
       30–220 hours late in the game): from the 21st, each Titan stands 5 stages past the last instead of
       10 and leaves +1% instead of +2%, twice as many for the same power; unused attempts bank, up to

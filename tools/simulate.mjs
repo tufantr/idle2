@@ -4,12 +4,19 @@
 //
 //   node tools/simulate.mjs --hours=100 --seed=1 [--step=500] [--verbose] [--snapshot=10]
 //   [--auto] [--player=checkin3] [--set=BALANCE.abyss.dropGrowth:1.5;BASE.tokenAtk:0.004] [--json=out.json]
+//   [--trials=5] [--save-at=200,260,320 --save=runs/hero]
 //
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
 // --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES; numbers
 // only), for sweeps. --json writes the run as JSON (milestones, a log of big moments by band, time by
 // task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
+//
+// --trials=N: once the Trials open (data/trials.js), every Nth prestige the bot makes goes into a Trial:
+// the one with the fewest tiers cleared, then the lowest next target (a player trying each in turn); 0
+// never; 5 by default. --save-at writes the
+// game's save as the best stage first reaches each mark (to <--save>-<stage>.json), and the run ends at
+// the last: heroes for tools/trials.mjs.
 //
 // Nothing here touches the DOM. Change a constant in src/core/formulas.js or the data tables,
 // re-run, and compare the milestone table against the targets in docs/DESIGN.md §7.
@@ -40,6 +47,8 @@ import { enemyForStage, BALANCE } from '../src/core/formulas.js';
 import { BASE } from '../src/core/modifiers.js';
 import { GEAR_DROP_CHANCE } from '../src/data/items.js';
 import { rankFor } from '../src/data/ranks.js';
+import { TRIALS } from '../src/data/trials.js';
+import { trialsOpen, nextTrialTarget } from '../src/systems/trials.js';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
@@ -83,6 +92,9 @@ if (args.vary) {
 // who has done twenty resets by hand would; the bot's own prestige rule stays for the runs it decides.
 const AUTO = !!args.auto;
 const PLAYER = String(args.player || 'online');
+const TRIAL_EVERY = args.trials === undefined ? 5 : Number(args.trials);
+const SAVE_AT = String(args['save-at'] || '').split(',').map(Number).filter(n => n > 0).sort((a, b) => a - b);
+const SAVE_PREFIX = String(args.save || 'hero');
 const JSON_OUT = args.json ? String(args.json) : null;
 
 // --set=ROOT.path:value[;ROOT.path:value]: a constant changed before the game starts.
@@ -327,6 +339,26 @@ function spendPoints() {
 }
 const runLog = [];
 let runStartedAt = 0;
+let trialRuns = 0;
+let lastTrialPrestige = -Infinity;
+
+/**
+ * The bot's prestige: every TRIAL_EVERY-th one, once the Trials are open, goes into a Trial (the fewest
+ * tiers cleared, then the lowest next target). Notes the run that ends (and whether it was a Trial).
+ * True if it went.
+ */
+function prestigeNow() {
+    const p = game.prestigePreview();
+    const pick = TRIAL_EVERY > 0 && trialsOpen(S) && S.prestige.count + 1 - lastTrialPrestige >= TRIAL_EVERY
+        ? TRIALS.map(t => ({ t, target: nextTrialTarget(S, t), tiers: S.trials.cleared[t.id] || 0 })).filter(x => x.target !== null).sort((a, b) => a.tiers - b.tiers || a.target - b.target)[0]?.t
+        : null;
+    const ended = { run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens, trial: S.trials.active || undefined };
+    if (!(pick ? game.startTrial(pick.id) : game.prestige())) return false;
+    runLog.push(ended);
+    if (pick) { lastTrialPrestige = S.prestige.count; trialRuns++; }
+    runStartedAt = now; milestone('prestige', S.prestige.count);
+    return true;
+}
 let autoOnAt = null;   // when the bot turned the Auto switch on
 
 // Spend gold on camp upgrades, cheapest-first, keeping a small reserve.
@@ -409,6 +441,11 @@ function stallTask() {
 }
 
 let lastStageGainAt = 0;
+// The run's own stall clock for the bot's prestige: since this run's last new best stage (or its start).
+// lastStageGainAt restarts with every fight the bot begins, so a bot that cooks between fights at the
+// wall would never see a long stall by it, and never prestige again.
+let lastRunMax = 0;
+let lastRunRiseAt = 0;
 let lastTrainedSkill = null;
 function combatTask() {
     return { kind: 'combat', why: `fight at stage ${S.combat.stage}`, until: () => !S.combat.active || now - lastStageGainAt > 15 * 60000 };
@@ -485,24 +522,19 @@ function decide() {
     spendPoints();
     tendFarm();
     buildObstacles();
-    if (SPEED_PRESTIGE && game.canPrestige()) {
-        const p = game.prestigePreview();
-        runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
-        game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
-    }
+    if (SPEED_PRESTIGE && game.canPrestige()) prestigeNow();
     // Prestige when the run's tokens are a meaningful addition.
-    if (game.canPrestige() && now - lastStageGainAt > POLICY.stallMin * 60000) {
+    const runStalled = now - lastRunRiseAt;
+    if (game.canPrestige() && (now - lastStageGainAt > POLICY.stallMin * 60000 || runStalled > POLICY.longStallMin * 60000)) {
         const p = game.prestigePreview();
         // Worth it when the run adds a decent share of what we hold; the share asked for shrinks as
         // tokens pile up (15% early, ~2% at 7,000), since a late run can only add a few percent.
         const share = POLICY.prestigeShare * Math.sqrt(100 / (100 + S.prestige.tokens));
         // A player stuck at the wall for an hour prestiges anyway: it is the only progress left (once the
         // run is back near its best: not a run left at its start while the hero was off working).
-        const longStall = now - lastStageGainAt > POLICY.longStallMin * 60000 && S.combat.maxStage >= 0.9 * S.combat.bestStage;
-        if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) {
-            runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
-            game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
-        }
+        // (a Trial's run is meant to fall short of the best: stalled is enough)
+        const longStall = runStalled > POLICY.longStallMin * 60000 && (S.combat.maxStage >= 0.9 * S.combat.bestStage || !!S.trials.active);
+        if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) prestigeNow();
     }
     for (const d of DUNGEONS) if (S.dungeons[d.id].fragments >= FRAGMENTS_PER_UNIQUE && game.assembleUnique(d.id)) milestone('unique', d.unique);
     return gearTask() || agilityTask() || toolTask() || foodTask() || jewelTask() || stallTask() || combatTask();
@@ -621,6 +653,7 @@ function noteEvent(ev) {
         case 'titan': if (ev.won) moment('medium', 'titan defeated'); break;
         case 'dungeonMilestone': moment('medium', `${ev.dungeon} ${ev.clears} clears`); break;
         case 'masteryLevel': if (ev.from < 99 && ev.level >= 99) moment('medium', `mastery 99 ${ev.key}`); break;
+        case 'trialTier': moment(ev.last ? 'major' : 'medium', `trial ${ev.id} ${ev.tier}`); milestone('trial tiers', Object.values(S.trials.cleared).reduce((a, b) => a + b, 0)); break;
     }
 }
 const BANDS = [[0, 1], [1, 10], [10, 50], [50, 150], [150, 300], [300, 500], [500, 1000], [1000, 2000]];
@@ -702,10 +735,7 @@ function sessionPrestige() {
     if (!game.canPrestige() || S.settings.autoPrestige) return;
     const p = game.prestigePreview();
     const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
-    if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (S.combat.maxStage >= 0.9 * S.combat.bestStage && p.tokens >= 2)) {
-        runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
-        game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
-    }
+    if (p.tokens >= Math.max(2, share * S.prestige.tokens) || ((S.combat.maxStage >= 0.9 * S.combat.bestStage || !!S.trials.active) && p.tokens >= 2)) prestigeNow();
 }
 function leaveBehind() {
     const fightUseful = S.settings.autoPrestige || S.combat.maxStage < 0.9 * S.combat.bestStage;
@@ -717,7 +747,7 @@ let task = apply(decide());
 let lastDecision = now;
 let lastSnapshot = 0;
 let lastMaxStage = S.combat.maxStage;
-const totalMs = HOURS * 3600000;
+let totalMs = HOURS * 3600000;   // (--save-at ends the run early)
 const t0 = Date.now();
 
 const deathStages = { boss: 0, regular: 0 };
@@ -761,6 +791,7 @@ while (now < totalMs) {
         }
     }
     if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
+    if (S.combat.maxStage !== lastRunMax) { lastRunMax = S.combat.maxStage; lastRunRiseAt = now; }   // a new best in the run, or a new run
     while (bestByHour.length <= Math.floor(H(now))) bestByHour.push(S.combat.bestStage);
     if (task.budget === 'agility') agilityMs += STEP;
     const kind = task.budget === 'agility' ? 'agility' : task.kind;
@@ -790,6 +821,7 @@ while (now < totalMs) {
         if (VERBOSE) console.log(`  [${fmtH(now)}] -> ${task.why}`);
     }
     for (const m of STAGE_MARKS) if (S.combat.bestStage >= m) milestone('stage', m);
+    while (SAVE_AT.length && S.combat.bestStage >= SAVE_AT[0]) { writeFileSync(`${SAVE_PREFIX}-${SAVE_AT[0]}.json`, game.serialize(now)); SAVE_AT.shift(); if (!SAVE_AT.length) totalMs = now; }
     for (const d of DUNGEONS) if (S.combat.bestStage >= d.unlockStage) { milestone('dungeon opens', d.id); if (!momentsSeen.dungeons.has(d.id)) { momentsSeen.dungeons.add(d.id); moment('major', `dungeon opens ${d.id}`); } }
     if (S.equipped.Weapon) milestone('weapon tier', S.equipped.Weapon.tier);
     for (const id of ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'combat', 'farming', 'agility']) for (const m of LEVEL_MARKS) if (lvl(id) >= m) milestone(`${id} lv`, m);
@@ -828,7 +860,7 @@ if (JSON_OUT) {
     try { commit = execSync('git rev-parse --short HEAD', { cwd: new URL('..', import.meta.url).pathname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* not a checkout */ }
     const at = (key, value) => { const m = milestones.find(x => x.key === key && x.value === value); return m ? +H(m.at).toFixed(3) : null; };
     const out = {
-        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null }, policy: POLICY, overrides,
+        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null, trials: TRIAL_EVERY }, policy: POLICY, overrides,
         stages: Object.fromEntries(STAGE_MARKS.map(m => [m, at('stage', m)])),
         weaponTier: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(t => [t, at('weapon tier', t)])),
         firstPrestige: at('prestige', 1), autoEarned: autoOnAt === null ? null : +H(autoOnAt).toFixed(3),
@@ -840,6 +872,7 @@ if (JSON_OUT) {
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length
         },
+        trials: { runs: trialRuns, tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },
         runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },
         deaths: deathStages,
         gold: { earned: S.stats.goldEarned, spent: S.stats.goldSpent, bySink: spentOn, lostToPrestige },

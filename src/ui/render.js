@@ -47,6 +47,8 @@ import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, next
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 import { campOnOffer } from '../systems/guide.js';
+import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
+import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 
 // The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
 // the bag (the owner's order), in a group of their own above the headings; the rest follow by group.
@@ -231,7 +233,7 @@ export function renderHeader(game, ui, cloud) {
     const chips = [
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
-        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, and each dungeon unique)` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
+        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
     const banked = state.daily.banked;
@@ -357,6 +359,8 @@ function renderLoadout(game) {
  */
 function campTokens(game) {
     const state = game.state;
+    // the No Camp Trial (data/trials.js): the camp is packed for the run, nothing on offer
+    if (trialBite(state).noCamp) return `<p class="camp-packed">${sprite('campfire', { scale: 1 })}<span>Packed for the Trial</span></p>`;
     return campOnOffer(state, game.derived).map(u => {   // the Armour Rack once there is defence to raise
         const level = state.camp[u.id] || 0;
         const cost = nextCampCost(state, u.id);
@@ -2039,6 +2043,7 @@ export function renderPrestigeModal(game) {
         has('farming') ? [sprite('farm/growing', { scale: 1 }), 'The farm'] : null
     ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
     const nextSp = Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage);
+    const trial = activeTrial(state);
     return `<div class="modal-content about-card prestige-modal">
         <div class="about-art" style="${artStyle('prestige')}" aria-hidden="true"></div>
         <div class="modal-header">Prestige</div>
@@ -2053,11 +2058,32 @@ export function renderPrestigeModal(game) {
                 <span class="pg-item"><span class="pg-pip">${p.startStage}</span> back to stage ${p.startStage}</span>
                 <span class="pg-item">${coinIcon(1)} ${fmt(state.gold)} gold</span>
                 ${campLevels ? `<span class="pg-item">${sprite('campfire', { scale: 1 })} the camp (${campLevels} level${campLevels === 1 ? '' : 's'})</span>` : ''}
+                ${trial ? `<span class="pg-item">${sprite(trial.icon, { scale: 1 })} the Trial: ${esc(trial.name)}</span>` : ''}
             </div>
             <div class="pg-row"><h4>Everything else stays</h4><span class="pg-keep">${keep}</span></div>
+            ${seen(state, 'trials') && trialsOpen(state) ? renderTrialPicks(state) : ''}
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmPrestige()">Prestige now</button></div>
     </div>`;
+}
+
+/**
+ * The Trials in the prestige dialog (systems/trials.js): each its place's painting, its icon, name and
+ * rule, the tiers cleared as pips and the stage the next one asks for. Picking one (main.js pickTrial)
+ * turns the dialog's button into "Prestige into ..." and says what the next tier gives.
+ */
+function renderTrialPicks(state) {
+    const cards = trialBoard(state).map(({ trial: t, tier, target }) => {
+        const done = target === null;
+        const pips = Array.from({ length: TRIAL_TIERS }, (_, i) => `<i${i < tier ? ' class="on"' : ''}></i>`).join('');
+        return `<label class="trial-card${done ? ' done' : ''}" style="${paintStyle(t.art, 'center 60%')}">
+            <input type="checkbox" name="trial" value="${t.id}" data-name="${esc(t.name)}" data-target="${target ?? ''}" onchange="FI.pickTrial(this)"${done ? ' disabled' : ''}>
+            <span class="trial-icon">${sprite(t.icon, { scale: 1 })}</span><b class="trial-name">${esc(t.name)}</b>
+            <small class="trial-rule">${esc(t.rule)}</small>
+            <span class="trial-foot"><span class="trial-pips" role="img" aria-label="${tier} of ${TRIAL_TIERS} tiers cleared">${pips}</span><small>${done ? 'Cleared' : `Stage ${target}`}</small></span>
+        </label>`;
+    }).join('');
+    return `<div class="pg-row pg-trials"><h4>Or prestige into a Trial ${aboutButton('trials')}</h4><div class="trial-grid">${cards}</div><p class="trial-pick-line" aria-live="polite"></p></div>`;
 }
 
 /** An in-page yes/no; confirm() is blocked when the game runs inside another page. */

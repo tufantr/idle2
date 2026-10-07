@@ -15,6 +15,7 @@ import { MASTERY_PER_LEVEL } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
+import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { escapeHtml as esc } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
@@ -55,9 +56,13 @@ export const FEATURES = {
         points: ['Supplies are priced by your best stage, so gathering always stays worth it.', 'Perks cost one skill point each and last forever.'] },
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',
         points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence, forever.`,
-            `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, and each dungeon unique you hold, multiply what tokens give by ${BASE.recordMult}.`,
+            `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
             'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. A run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
             `After ${BALANCE.prestige.autoAfter} prestiges, or two days after your first, the fight's dock gets an Auto switch: it prestiges a run that has spent ${BALANCE.prestige.autoStallMs / 60000} minutes climbing without a new best stage, even while you are away.`] },
+    trials: { name: 'Trials', art: 'citadel', icon: 'mon/Mountain Troll', blurb: 'A run under one hard rule, for records that last forever.',
+        points: [`From stage ${TRIALS_FROM}, the prestige dialog offers Trials: pick one, and the next run plays under its rule.`,
+            `Each Trial has ${TRIAL_TIERS} tiers, ${TRIAL_STEP} stages apart. Reach a tier's stage in the Trial and it is cleared for good: a record, so your tokens grow ×${BASE.recordMult} stronger.`,
+            'The run earns its tokens as any run does, from the stage it reaches. The next prestige ends the Trial.'] },
     achievements: { name: 'Achievements', art: 'hall', icon: 'uniq/goblin_crown', blurb: 'A trophy for every deed, with a reward that lasts forever.',
         points: [`Every medal has its own reward, and each one also adds +${pc(ACHIEVEMENT_GLOBAL_BONUS)} attack, defence and skill speed.`, 'The bestiary counts every kind of monster you defeat, with a star at 10, 100 and 1,000.', 'Pets, unique items and every kind of gear you find are kept here too. Some medals stay secret until earned.'] },
     dungeons: { name: 'Dungeons', art: 'dungeon', icon: 'mon/Skeleton', blurb: 'Elite monsters, a chest at the end and pieces of unique gear.',

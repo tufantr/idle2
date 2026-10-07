@@ -15,6 +15,7 @@ import { RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
+import { trialBite, trialTiersCleared } from '../data/trials.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
 import { eventStatus } from '../systems/events.js';
@@ -115,14 +116,16 @@ export function skillLevel(state, skillId) {
 export function collectModifiers(state) {
     const mods = emptyMods();
 
-    // Equipment: base stats scaled by upgrade level, plus affixes.
+    // Equipment: base stats scaled by upgrade level, plus affixes (all of it times a Trial's `gear`,
+    // nothing in Rusted Gear: data/trials.js).
+    const gearShare = trialBite(state).gear ?? 1;
     for (const slot of EQUIP_SLOTS) {
         const item = state.equipped[slot];
-        if (!item) continue;
-        const upgradeMult = 1 + UPGRADE_STEP * (item.upgrade || 0);
+        if (!item || !gearShare) continue;
+        const upgradeMult = (1 + UPGRADE_STEP * (item.upgrade || 0)) * gearShare;
         mods.gearAtk += (item.atk || 0) * upgradeMult;
         mods.gearDef += (item.def || 0) * upgradeMult;
-        for (const affix of item.affixes || []) addMods(mods, { [affix.stat]: affix.value });
+        for (const affix of item.affixes || []) addMods(mods, { [affix.stat]: affix.value * gearShare });
     }
 
     // Combat level.
@@ -205,26 +208,29 @@ export function recordsOf(state) {
     const stages = Math.floor((state.combat?.bestStage || 1) / BASE.recordStages);
     const held = new Set();
     for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) held.add(item.uniqueId);
-    const count = stages + held.size;
-    return { stages, uniques: held.size, count, mult: Math.pow(BASE.recordMult, count) };
+    const trials = trialTiersCleared(state);   // each Trial tier cleared (data/trials.js)
+    const count = stages + held.size + trials;
+    return { stages, uniques: held.size, trials, count, mult: Math.pow(BASE.recordMult, count) };
 }
 
 /** Turn the modifier object into the numbers the combat system uses. */
 export function deriveStats(state, mods = collectModifiers(state)) {
     const combatLevel = skillLevel(state, 'combat');
     const records = recordsOf(state);
-    const tokens = (state.prestige.tokens || 0) * records.mult;   // what the tokens are worth, records counted
+    const bite = trialBite(state);   // the run's Trial, if any (data/trials.js)
+    // what the tokens are worth, records counted (nothing in the Faithless Trial)
+    const tokens = bite.noTokens ? 0 : (state.prestige.tokens || 0) * records.mult;
     const tokenLayerAtk = 1 + BASE.tokenAtk * tokens;
     const tokenLayerDef = 1 + BASE.tokenDef * tokens;
     const tokenLayerHp = 1 + BASE.tokenHp * tokens;
 
     // Camp upgrades: the run-scoped layer (reset on prestige).
     const camp = { atk: 1, def: 1, hp: 1 };
-    for (const upgrade of CAMP_UPGRADES) camp[upgrade.stat] *= campMultiplier(upgrade, state.camp?.[upgrade.id] || 0);
+    if (!bite.noCamp) for (const upgrade of CAMP_UPGRADES) camp[upgrade.stat] *= campMultiplier(upgrade, state.camp?.[upgrade.id] || 0);
 
     const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk;
     const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def;
-    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp;
+    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * (bite.heroHp ?? 1);
     const attackSpeed = Math.min(BASE.caps.attackSpeed, mods.attackSpeed);
 
     return {

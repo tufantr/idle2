@@ -7,7 +7,9 @@
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
 //                                                 # 'battle' is the fight filling the screen; 'map' and
 //                                                 # 'prestige' are those dialogs over the game; 'anvil'
-//                                                 # is Smithing's anvil step)
+//                                                 # is Smithing's anvil step; 'trials' is the prestige
+//                                                 # dialog with Trials cleared and one picked, and
+//                                                 # 'trialfight' a fight in a Trial)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -28,11 +30,22 @@ const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
 // 'battle' is not a tab: it is the combat tab with the fight on, which fills the screen.
 const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons', 'map'];
 // A step inside a tab, shot like a tab.
-const STEPS = { anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); } };
+const STEPS = {
+    anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
+    trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); }
+};
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
     map: () => { FI.switchTab('combat'); FI.openMap(); },
-    prestige: () => { FI.game().state.prestige.runStartedAt = 0; FI.openPrestige(); }
+    prestige: () => { FI.game().state.prestige.runStartedAt = 0; FI.openPrestige(); },
+    trials: () => {
+        const g = FI.game(); const s = g.state;
+        s.prestige.runStartedAt = 0; s.trials.cleared = { brutes: 2, faithless: 5, glass: 1 }; s.trials.active = 'fasting'; s.combat.bestStage = Math.max(s.combat.bestStage, 236);
+        g.recompute(); FI.openPrestige();
+        const pick = document.querySelector('.prestige-modal input[value="swift_bosses"]');
+        if (pick) { pick.checked = true; FI.pickTrial(pick); }
+        document.querySelector('.pg-trials')?.scrollIntoView({ block: 'start' });   // the Trials, and the buttons over them
+    }
 };
 
 let chromium;
