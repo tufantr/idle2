@@ -23,15 +23,27 @@ of `tools/simulate.mjs` (no game code changed by them):
   simulator's agility budget leaks (D).
 - 3–4 seeds show directions only: use 30+ seeds, hours-to-stage percentiles, separate RNG streams (D).
 
-## Strategy, in order (not yet done)
-1. Fixes: dev flags on local hosts only; pity counts only bosses whose drop could be an upgrade (drop power with
-   depth) and pays at the best depth; simulator agility budget; leaderboard allowance by best stage.
-2. Unlock pacing per A (growing gaps, attended time only, useful-when triggers, wall-breakers first).
-3. Tooling: batch runner with JSON, novelty log, `--set` overrides, RNG streams, `--player=<type>` login schedules.
-4. Experiments E1–E11 of D §6 (baseline 100 seeds, bot QA, exploit suite, policy panel, cadence, luck, sweeps,
-   choices, leaderboard envelope).
-5. Changes by strength of evidence: Auto earned by play (after 3–5 prestiges or 48 h); 24 h offline cap;
-   welcome-back that leads with where the run stalled and the decisions; banked Titan attempts and Titans tied
-   to the best stage; then late content (ranks past Mythic, Abyss strata, two more dungeons, mastery
-   checkpoints, an Ascension layer with Trials, a completion percentage).
-6. An opt-in playtest log, and a short playtest with people.
+## Strategy, in order, and where it stands (7 October 2026)
+1. **Fixes: done.** Dev flags work on local hosts only (a save that carries them is flagged); the pity
+   ring counts only bosses whose drop could beat something worn, by drop power at depth; the simulator's
+   agility budget no longer leaks; the leaderboard lets a best stage grow by its depth (three times the
+   fastest of 166 simulated runs: 160 stages a day from stage 200, not 1,470).
+2. **Unlock pacing: done** per A (growing breathers in attended time, useful-when triggers, wall-breakers
+   first, one place per return); `tools/opening.mjs` checks the caps for five kinds of new player.
+3. **Tooling: done.** `tools/batch.mjs`, `tools/audit.mjs`, `--set`, `--player`, `--vary`, `--without`,
+   `--json`, `--save-at`, `tools/trials.mjs`, the robustness suite (parity, a thousand mangled saves, no
+   arbitrage). The simulator's bot also had two blind spots found on the way: it reset its stall clock
+   with every fight (so it never prestiged again at a late wall) and never left a Trial run.
+4. **Experiments: E1 and E11 done, the rest running.** E1 (100 seeds and four play styles, 150 hours):
+   every band to hour 150 meets its target (DESIGN §5.6). E11 set the leaderboard's allowance (1).
+5. **Changes by evidence: done**, except what needs new paintings or a choice. Auto after 5 prestiges or
+   two days; 24 h offline; a welcome-back that leads with where the run stopped; banked Titans that
+   keep falling; then the late content: Trials (eight, five tiers each, each tier a record), ranks past
+   Mythic (500, 1,000, 2,000), mastery checkpoints, a completion percentage, Ascension (Stars, a day's
+   rest), sixteen named strata in the Abyss and six medals for the deep game. Hours 150–300 now meet
+   their target; hours 300–1,000 still miss it, because late progress crawls (DESIGN §5.6 gives the two
+   ways on: a faster deep Abyss, or moments on the calendar). **Still to do:** two more dungeons near
+   stages 240 and 275 and a painting for each stratum (new paintings, with the owner's go-ahead for
+   Gemini downloads), an end boss, each early Ascension opening something new, a cape for 100%.
+6. **Playtest log: done** (Settings, exported for `tools/playtest.mjs`). A short playtest with people is
+   the owner's.
