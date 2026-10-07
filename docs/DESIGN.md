@@ -495,18 +495,24 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 - **The gear codex** (`state.codex`, `CODEX_TYPES` in `src/data/items.js`): a page per kind of gear
   and tier, 70 in all, filled by `addItem` whenever a piece arrives (kept or salvaged on landing);
   shown in the Hall's Collection. The Armourer medal comes at 40 pages.
-- **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true —
-  Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
-  first hunt, Fishing after 5 dishes, Firemaking after 20 logs, the Shop and the Hall when the first
-  boss falls, Dungeons at stage 20, Alchemy at 15, Prestige at 30, Agility at 35, and the weekend
-  Events and the Clan only after the first prestige; Farming after 10 Alchemy actions
-  or Cooking 15, Crafting with the first silver (or gold) bar once a gem has been found: its first
-  piece of jewellery can be made at once (it used to open at Mining 20 or the first gem, hours before
-  anything in it could be made, since its bows and rods want Crafting 5). **One at a time, a breather
-  apart** (§3.24): a place reached by climbing (`pace`) waits until the time played since the last
-  place opened reaches `PLACE_GAPS_MS` (1.5, 2.5, 3.5, 4.5, then 5 minutes), in the order listed; a
-  place earned by work in a skill opens within 30 s (`WORK_GAP_MS`), never closer than that to
-  another. Time away does not count (`meta.lastPlaceAt` against `meta.playtimeMs`). Each goal
+- **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
+  when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
+  Smithing after mining 5 times (ore that monsters drop no longer opens it for a hero who only
+  fights), Woodcutting after the first bar, Cooking after the first hunt, Fishing after 5 dishes,
+  Firemaking after 20 logs, Farming after 10 Alchemy actions or Cooking 15, Crafting with the first
+  silver (or gold) bar once a gem has been found (its first piece can be made at once; it used to
+  open hours before anything in it could be made); by climbing (`pace`), in this order when several
+  wait: Hunting at stage 5, Dungeons at 20, Alchemy at 15, Prestige at 30 in a run old enough to be
+  prestiged (so it can be used the moment it opens), the Shop when the first boss falls, the Hall
+  with five medals, the Clan after the first prestige, the weekend Events after it when a festival is
+  on or due within a day, and Agility at stage 35 with Woodcutting and Smithing open and half of the
+  first obstacle's gold in hand. **One at a time, a breather apart** (§3.24): a place reached by
+  climbing waits until the attended time since the last place opened reaches `PLACE_GAPS_MS` (1.5,
+  3, 4, 5, 7, 10, 15, 20, then 30 minutes); a place earned by work opens within 90 s
+  (`WORK_GAP_MS`), never closer than that to another; none opens during a boss fight. Attended time
+  (`meta.attendedMs`) runs while the page is in view or the player gave input in the last three
+  minutes: a tab left in the background, and time away, do not count. A return after ten minutes or
+  more opens the one place that was waiting, and the welcome-back report names it. Each goal
   carries a `task` in a few words and the `tab` where the work happens; the sidebar's Next card
   shows it with its progress, and a place earned but waiting as "On its way", its bar filling with the
   breather. On a local development host `?dev=1` unlocks all (Settings then shows a switch to turn it
@@ -856,13 +862,17 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   levels cost what they did), and the Armour Rack waits until the hero has defence for it to raise.
 - **One place at a time, a breather apart.** Stage gates alone opened eight places in 28 s for a
   player who taps and in under four minutes for one who watches (the owner found it far too much at
-  once). Now a place reached by climbing waits for a breather of time played since the last one: the
-  first after a minute and a half, then 2.5, 3.5, 4.5 and 5 minutes; a place earned by work in a
-  skill answers within 30 s. The weekend events and the clan wait for the first prestige. In the
-  first ten minutes one who watches meets Hunting (1:30), the Shop (4:00) and the Hall (7:30); one who
-  taps the same three (with Smithing at 2:00 if monsters drop him ore). The Next card says "On its
-  way" for a place earned and waiting. Celebration cards wait while a boss fight is on screen, so the
-  first boss is seen.
+  once). Now a place reached by climbing waits for a breather of attended time since the last one,
+  growing from a minute and a half to half an hour (§3.14), and what breaks the wall in front of the
+  hero comes first: one who watches meets Hunting at 1:30, Dungeons at 4:30, Alchemy at 8:30,
+  Prestige at about 14 minutes and the Shop at about 21; one who taps the same. A place earned by work
+  answers within 90 s; the clan and the events wait for the first prestige; a tab left in the
+  background opens nothing, and a return opens the one place that waited. `node tools/opening.mjs 60`
+  checks it for five players (idle, watcher, tapper, skiller, background) against the caps of the
+  research: at most 1 place by minute 3, 3 by 10, 5 by 20 and 7 by 60 for one who only fights, no two
+  within 90 s, none in a boss fight, none unattended. The Next card says "On its way" for a place
+  earned and waiting. Celebration cards wait while a boss fight is on screen, so the first boss is
+  seen.
 - **A hand on the thing itself, for those who need it.** `src/systems/guide.js` (pure, from stats the
   game keeps) names the one thing to do, and `src/ui/guide.js` points a white glove at it, pressing,
   with a ring where it presses: the monster until the player has struck three times, the sword's
@@ -882,8 +892,8 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
 Measured over five seeds (`node tools/opening.mjs`): one who only watches but takes what is offered
 gets his sword at 4.5 s and his first camp level at 10.5 s, meets the first boss at 35 s and beats it
 at 48 s, is at stage 30 after five minutes and first falls after about four; a new place opens at
-1:30, 4:00 and 7:30, and something new (a level, a drop, a boss, a place) comes at least every
-50–60 s. One who strikes beats the first boss in 8 s. The long game is
+1:30, 4:30 and 8:30, and something new (a level, a drop, a boss, a place) comes at least every
+56 s. One who strikes beats the first boss in 8 s. The long game is
 unchanged: over seeds 1–4 the 150-hour simulation ends at stage 255 on average (259 before; most of
 the spread is the simulator farming the Void Citadel for hours on some seeds, old code and new alike),
 a little ahead in the first hours.

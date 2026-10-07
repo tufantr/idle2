@@ -2,7 +2,7 @@
 
 import { SKILLS } from '../data/skills.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
-import { evaluateUnlocks } from '../data/unlocks.js';
+import { evaluateUnlocks, openWaitingPlace } from '../data/unlocks.js';
 import { evaluateDisclosures } from './disclosure.js';
 import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
 import { petForSkill, petChance } from '../data/pets.js';
@@ -76,6 +76,16 @@ export function checkUnlocks(game) {
         log(game, `🔓 Unlocked: ${id.charAt(0).toUpperCase() + id.slice(1)}`, 'unlock');
     }
     return newly;
+}
+
+/** Back from time away: the place that was waiting opens now, one per return (data/unlocks.js). Its id, or null. */
+export function openPlaceOnReturn(game) {
+    const id = openWaitingPlace(game.state);
+    if (id) {
+        game.emit({ type: 'unlock', id, onReturn: true });
+        log(game, `🔓 Unlocked: ${id.charAt(0).toUpperCase() + id.slice(1)}`, 'unlock');
+    }
+    return id;
 }
 
 /** Open the pieces of the interface the player has now met (systems/disclosure.js). */

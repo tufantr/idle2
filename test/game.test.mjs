@@ -259,8 +259,8 @@ test('unlocks follow the player instead of a forced script', () => {
     const game = new Game(null, T0);
     assert.ok(!game.state.unlocks.smithing);
     game.startNodeAction('mining', 'copper_ore');
-    run(game, 31_000);
-    assert.ok(game.state.unlocks.smithing, 'mining a few ores unlocks smithing (within half a minute of play)');
+    run(game, 91_000);
+    assert.ok(game.state.unlocks.smithing, 'mining a few ores unlocks smithing (within a minute and a half of play)');
 });
 
 test('migration: an original prototype save keeps resources, levels, stage and tokens', () => {

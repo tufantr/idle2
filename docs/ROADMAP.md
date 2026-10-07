@@ -429,6 +429,16 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Places when they are of use** (the onboarding research, `robust-and-fun/A_onboarding_pacing.md`):
+      the breather between places keeps growing (1.5, 3, 4, 5, 7, 10, 15, 20, then 30 minutes) and runs
+      only while the player attends (the page in view, or input in the last three minutes), so a tab
+      left in the background opens nothing; a return after ten minutes opens the one place that waited,
+      named in the welcome-back report (which now also counts Auto's prestiges); none opens during a
+      boss fight. What breaks the wall comes first: Hunting, Dungeons, Alchemy, then Prestige (in a run
+      old enough to use it), the Shop, the Hall (with five medals), the Clan, the weekend Events (when a
+      festival is near) and Agility (with the gold for a first obstacle half in hand). Places earned by
+      work answer within 90 s, and ore that monsters drop no longer opens Smithing for a hero who only
+      fights. `tools/opening.mjs` plays a skiller and a background tab too, and checks the caps
 - [x] **Fixes the robustness research found** (`docs/research_notes/robust-and-fun/`): `?dev=1` and
       `&event=` worked on the live site, opening every dungeon, the Titan and any event's bonuses to
       anyone; they now work only on a local host, a save that picked them up is cleaned, and the server

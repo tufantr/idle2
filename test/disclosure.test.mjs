@@ -103,18 +103,18 @@ test('Crafting opens when its first piece can be made: a silver bar and a gem', 
     s.resources.copper_bar = 20;
     s.skills.mining.xp = xpForLevel(25);
     s.unlocks.woodcutting = true;   // the bars smelted opened it long ago
-    game.tick(T0 + 31_000);         // a place earned by work answers within half a minute (data/unlocks.js)
+    game.tick(T0 + 91_000);         // a place earned by work answers within a minute and a half (data/unlocks.js)
     assert.ok(!s.unlocks.crafting, 'copper bars and a gem make nothing in Crafting');
     s.resources.silver_bar = 1;
-    game.tick(T0 + 62_000);
+    game.tick(T0 + 182_000);
     assert.ok(s.unlocks.crafting, 'the first silver bar opens it for the gem already found');
     // a silver bar alone waits for a gem
     const other = new Game(null, T0);
     other.state.resources.gold_bar = 1;
-    other.tick(T0 + 31_000);
+    other.tick(T0 + 91_000);
     assert.ok(!other.state.unlocks.crafting);
     other.state.stats.gemsFound = 1;
-    other.tick(T0 + 62_000);
+    other.tick(T0 + 182_000);
     assert.ok(other.state.unlocks.crafting);
 });
 

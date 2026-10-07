@@ -318,10 +318,11 @@ test('new skills unlock from play', () => {
     s.stats.actionsBySkill.cooking = 5;
     s.stats.actionsBySkill.woodcutting = 20;
     s.combat.bestStage = 35;   // agility's stage
-    for (const id of ['shop', 'achievements', 'dungeons', 'alchemy', 'prestige']) s.unlocks[id] = true;   // the places before it on the road
+    for (const id of ['shop', 'achievements', 'dungeons', 'alchemy', 'prestige', 'smithing', 'woodcutting']) s.unlocks[id] = true;   // the places before it on the road
+    s.gold = 20_000;   // agility waits for half the first obstacle's gold
     let now = T0;
     const play = minutes => { for (let i = 0; i < minutes; i++) { now += 60_000; game.tick(now); } };   // places open one at a time (data/unlocks.js)
-    play(12);
+    play(40);
     for (const id of ['fishing', 'firemaking', 'agility']) assert.ok(s.unlocks[id], id);
     assert.ok(!s.unlocks.farming);
     s.stats.actionsBySkill.alchemy = 10;

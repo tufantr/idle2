@@ -8,7 +8,7 @@ import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEa
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn } from './systems/prestige.js';
-import { checkAchievements, checkUnlocks, checkDisclosures, bumpStat } from './systems/progress.js';
+import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue, expireMinigames } from './systems/minigame.js';
 import { applyOffline } from './systems/offline.js';
@@ -28,6 +28,11 @@ const MAX_TICK_MS = 5000;        // the longest single simulation step; longer g
 // Gaps longer than this are replayed as offline progress (with its welcome-back report). A background
 // tab ticks about once a minute, so this sits well above that: those minutes run as ordinary play.
 const OFFLINE_GAP_MS = 5 * 60000;
+// Attended time (meta.attendedMs) paces the new places (data/unlocks.js): it runs while the page is in
+// view (the UI says so with setAttending) or the player gave input in the last ATTEND_INPUT_MS.
+const ATTEND_INPUT_MS = 3 * 60000;
+// A return after at least this long away opens one place that was waiting (openPlaceOnReturn).
+const RETURN_MS = 10 * 60000;
 // Events that happen many times a second in combat; they don't warrant re-rendering a tab.
 const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge']);
 
@@ -39,6 +44,7 @@ export class Game {
         this.events = [];
         this.revision = 0;     // bumps whenever something visible changes; the UI re-renders on change
         this.silent = false;   // offline replay runs silently and reports a summary instead
+        this.attending = true; // the page is in view (the UI sets it; headless runs count as attended)
         this.dirty = true;
         this.derived = null;
         this.mods = null;
@@ -46,6 +52,16 @@ export class Game {
         if (!this.state.combat.enemy) spawnEnemy(this);
         evaluateDisclosures(this.state); // a loaded save opens with what it has earned, without fanfare
     }
+
+    /** Back from time away: one waiting place opens, and the welcome-back report names it. */
+    _returned(summary) {
+        if (!summary || !(summary.simulated >= RETURN_MS)) return;
+        const id = openPlaceOnReturn(this);
+        if (id) summary.place = id;
+    }
+
+    /** The page is in view, or not (attended time paces the new places). */
+    setAttending(on) { this.attending = !!on; }
 
     // ----- infrastructure -----
     emit(event) {
@@ -88,6 +104,7 @@ export class Game {
             this.now = now;
             this.recompute();
             offlineSummary = applyOffline(this, now, { minMs: OFFLINE_GAP_MS });
+            this._returned(offlineSummary);
             dt = 0;
         }
         // Work through the gap in steps of at most MAX_TICK_MS: a background tab may only tick once a
@@ -97,6 +114,7 @@ export class Game {
             dt -= step;
             this.now = now - dt;
             this.state.meta.playtimeMs += step;
+            if (this.attending || this.now - (this.state.meta.lastInputAt || 0) < ATTEND_INPUT_MS) this.state.meta.attendedMs = (this.state.meta.attendedMs || 0) + step;
             expireMinigames(this);
             if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || this.eventId(this.now) !== this.derived.event) this.recompute();
             this.state.meta.lastActiveAt = this.now;
@@ -127,6 +145,7 @@ export class Game {
         this.recompute();
         const summary = applyOffline(this, now);
         checkAchievements(this);
+        this._returned(summary);
         checkUnlocks(this);
         evaluateDisclosures(this.state);
         if (this.dirty) this.recompute();

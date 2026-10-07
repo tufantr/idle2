@@ -3,11 +3,28 @@
 // goal in a few words (the sidebar's "next" slot) and `tab` is where the work for it happens.
 // The pieces inside a screen open by the rules in systems/disclosure.js.
 
+import { EVENT_START_DAY, EVENT_LENGTH_HOURS } from './events.js';
+import { AGILITY_SLOTS } from './agility.js';
+
+const MIN_RUN_MS = 10 * 60 * 1000;   // BALANCE.prestige.minRunMs: a run may be prestiged from then
+const DAY = 24 * 3600 * 1000;
+const runAge = s => (s.meta.lastActiveAt || 0) - (s.prestige.runStartedAt || 0);
+
+/** Is a weekend festival on, or due within a day? (The rotation itself is in systems/events.js.) */
+function festivalNear(now) {
+    const d = new Date(now);
+    const midnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const start = midnight - ((d.getUTCDay() - EVENT_START_DAY + 7) % 7) * DAY;
+    return now < start + EVENT_LENGTH_HOURS * 3600 * 1000 || now >= start + 7 * DAY - DAY;
+}
+
 export const UNLOCKS = [
     { id: 'combat',       always: true },
     { id: 'mining',       always: true },
     { id: 'inventory',    always: true },
-    { id: 'smithing',     hint: 'Mine 5 ore to unlock Smithing', task: 'Mine 5 ore', tab: 'mining', requires: s => (s.stats.actionsBySkill.mining || 0) >= 5 || heldOre(s) >= 5,
+    // Smithing answers mining (ore that monsters drop doesn't open it for a hero who only fights);
+    // a migrated prototype save, with no action stats and no kills, opens it with the ore it holds.
+    { id: 'smithing',     hint: 'Mine 5 ore to unlock Smithing', task: 'Mine 5 ore', tab: 'mining', requires: s => (s.stats.actionsBySkill.mining || 0) >= 5 || (heldOre(s) >= 5 && !s.stats.kills),
       progress: s => Math.max((s.stats.actionsBySkill.mining || 0), heldOre(s)) / 5 },
     { id: 'woodcutting',  hint: 'Smelt your first bar to unlock Woodcutting', task: 'Smelt a bar', tab: 'smithing', requires: s => s.stats.barsSmelted >= 1, progress: s => s.stats.barsSmelted / 1 },
     { id: 'hunting',      pace: true, hint: 'Reach Stage 5 to unlock Hunting', task: 'Reach stage 5', tab: 'combat', requires: s => s.combat.maxStage >= 5, progress: s => s.combat.maxStage / 5 },
@@ -19,33 +36,40 @@ export const UNLOCKS = [
     { id: 'crafting',     hint: 'Smelt a silver bar, with a gem found, to unlock Crafting', task: 'Smelt a silver bar', tab: 'smithing',
       requires: s => heldPreciousBars(s) >= 1 && ((s.stats.gemsFound || 0) >= 1 || heldGems(s) >= 1),
       progress: s => (heldPreciousBars(s) >= 1 ? 0.95 : Math.min(0.9, s.skills.smithing.xp / 4470)) },   // Smithing 20 smelts silver
-    // Places reached by climbing (`pace`) open one at a time, a breather apart (PLACE_GAPS_MS): a player
-    // who taps to stage 30 in half a minute no longer opens eight places at once. Listed in the order
-    // they come when several are waiting: the fight's own places first, the clan and the weekend events
-    // only after the first prestige, once the loop is learned (docs/research_notes/first-session.md,
-    // patterns 11 and 21).
-    { id: 'shop',         pace: true, hint: 'Beat the Stage 10 boss to unlock the Shop', task: 'Beat the stage 10 boss', tab: 'combat', requires: s => s.combat.bestStage >= 11, progress: s => s.combat.bestStage / 11 },
-    { id: 'achievements', pace: true, hint: 'Beat the Stage 10 boss to unlock Achievements', task: 'Beat the stage 10 boss', tab: 'combat', requires: s => s.combat.bestStage >= 11, progress: s => s.combat.bestStage / 11 },
+    // Places reached by climbing (`pace`) open one at a time, a breather apart (PLACE_GAPS_MS), each when
+    // it is of use (docs/research_notes/robust-and-fun/A_onboarding_pacing.md §5.4), and in this order
+    // when several are waiting: what breaks the wall in front of the hero (Dungeons, Alchemy), what
+    // changes the loop (Prestige), the conveniences (the Shop, the Hall), the social and weekly places,
+    // and the long-horizon one (Agility). The clan and the weekend events come after the first prestige.
     { id: 'dungeons',     pace: true, hint: 'Reach Stage 20 to find the first dungeon', task: 'Reach stage 20', tab: 'combat', requires: s => s.combat.bestStage >= 20, progress: s => s.combat.bestStage / 20 },
     { id: 'alchemy',      pace: true, hint: 'Reach Stage 15 to unlock Alchemy', task: 'Reach stage 15', tab: 'combat', requires: s => s.combat.bestStage >= 15, progress: s => s.combat.bestStage / 15 },
-    { id: 'prestige',     pace: true, hint: 'Reach Stage 30 to unlock Prestige', task: 'Reach stage 30', tab: 'combat', requires: s => s.combat.bestStage >= 30, progress: s => s.combat.bestStage / 30 },
+    { id: 'prestige',     pace: true, hint: 'Reach Stage 30 in a run ten minutes old to unlock Prestige: it can be used the moment it opens', task: 'Stage 30, a 10-minute run', tab: 'combat',
+      requires: s => s.combat.bestStage >= 30 && runAge(s) >= MIN_RUN_MS, progress: s => Math.min(s.combat.bestStage / 30, runAge(s) / MIN_RUN_MS) },
+    { id: 'shop',         pace: true, hint: 'Beat the Stage 10 boss to unlock the Shop', task: 'Beat the stage 10 boss', tab: 'combat', requires: s => s.combat.bestStage >= 11, progress: s => s.combat.bestStage / 11 },
+    { id: 'achievements', pace: true, hint: 'Earn five medals to open the Hall', task: 'Earn five medals', tab: 'combat', requires: s => Object.keys(s.achievements || {}).length >= 5, progress: s => Object.keys(s.achievements || {}).length / 5 },
     { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', task: 'Brew 10 times, or Cooking 15', tab: 'alchemy', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411,
       progress: s => Math.max((s.stats.actionsBySkill.alchemy || 0) / 10, s.skills.cooking.xp / 2411) },
-    { id: 'agility',      pace: true, hint: 'Reach Stage 35 to unlock Agility', task: 'Reach stage 35', tab: 'combat', requires: s => s.combat.bestStage >= 35, progress: s => s.combat.bestStage / 35 },
-    { id: 'events',       pace: true, hint: 'Prestige once to join the weekend events', task: 'Prestige once', tab: 'combat', requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 18, progress: s => Math.min(1, s.prestige.count) },
-    { id: 'clan',         pace: true, hint: 'Prestige once to join a clan', task: 'Prestige once', tab: 'combat', requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 25, progress: s => Math.min(1, s.prestige.count) }
+    { id: 'clan',         pace: true, hint: 'Prestige once to join a clan', task: 'Prestige once', tab: 'combat', requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 25, progress: s => Math.min(1, s.prestige.count) },
+    { id: 'events',       pace: true, hint: 'After a first prestige, the weekend festival opens when one is on or near', task: 'A festival, after a prestige', tab: 'combat',
+      requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 18 && festivalNear(s.meta.lastActiveAt || 0), progress: s => (s.prestige.count >= 1 ? 0.5 : 0) },
+    { id: 'agility',      pace: true, hint: 'Reach Stage 35 with Woodcutting and Smithing open, and half the gold for a first obstacle in hand', task: 'Stage 35 and 10,000 gold', tab: 'combat',
+      requires: s => s.combat.bestStage >= 35 && !!s.unlocks.woodcutting && !!s.unlocks.smithing && s.gold >= AGILITY_SLOTS[0].costGold / 2,
+      progress: s => Math.min(s.combat.bestStage / 35, s.gold / (AGILITY_SLOTS[0].costGold / 2), s.unlocks.woodcutting && s.unlocks.smithing ? 1 : 0.9) }
 ];
 
-// The breather between places, in time played (the game open, offline time not counted): the first
-// place reached by climbing a minute and a half in, then 2.5, 3.5, 4.5 and from then on 5 minutes
-// apart, so a first session of 10 to 20 minutes meets three to five of them. A place earned by work
-// in a skill (Smithing after mining, say) answers that work within WORK_GAP_MS, never closer than that
-// to another place, and starts the next breather.
-export const PLACE_GAPS_MS = [90, 150, 210, 270, 300].map(s => s * 1000);
-export const WORK_GAP_MS = 30 * 1000;
+// The breather between places, in attended time (`meta.attendedMs`: the page in view, or an input in
+// the last three minutes; time away and a tab left in the background do not count). The first place
+// reached by climbing comes a minute and a half in, and the gaps keep growing (1.5, 3, 4, 5, 7, 10,
+// 15, 20, then 30 minutes; A_onboarding_pacing.md §5.2), so a first session of 10 to 20 minutes meets
+// three or four places and the rest come over the first hours. A place earned by work in a skill
+// (Smithing after mining, say) answers that work within WORK_GAP_MS, never closer than that to another
+// place, and starts the next breather. A place still waiting when the player leaves opens when he comes
+// back (openWaitingPlace, one per return). No place opens during a boss fight.
+export const PLACE_GAPS_MS = [90, 180, 240, 300, 420, 600, 900, 1200, 1800].map(s => s * 1000);
+export const WORK_GAP_MS = 90 * 1000;
 
 const opened = state => UNLOCKS.filter(u => !u.always && state.unlocks[u.id]).length;
-const sinceLastPlace = state => (state.meta.playtimeMs || 0) - (state.meta.lastPlaceAt || 0);
+const sinceLastPlace = state => (state.meta.attendedMs || 0) - (state.meta.lastPlaceAt || 0);
 
 /** Milliseconds of play before the next place reached by climbing may open (0: now). */
 export function placeWaitMs(state) {
@@ -99,9 +123,10 @@ export function evaluateUnlocks(state) {
     const newly = [];
     const open = def => {
         state.unlocks[def.id] = true;
-        state.meta.lastPlaceAt = state.meta.playtimeMs || 0;
+        state.meta.lastPlaceAt = state.meta.attendedMs || 0;
         newly.push(def.id);
     };
+    if (state.combat.active && state.combat.enemy?.boss) return newly;   // the boss fight is the moment
     if (sinceLastPlace(state) < WORK_GAP_MS) return newly;
     const earned = UNLOCKS.find(def => !def.always && !def.pace && !state.unlocks[def.id] && def.requires?.(state));
     if (earned) open(earned);
@@ -110,6 +135,16 @@ export function evaluateUnlocks(state) {
         if (next) open(next);
     }
     return newly;
+}
+
+/** A player back from time away: the first place earned and waiting opens now (one per return). Its id, or null. */
+export function openWaitingPlace(state) {
+    if (state.settings.devUnlockAll) return null;
+    const def = UNLOCKS.find(u => !u.always && !u.pace && !state.unlocks[u.id] && u.requires?.(state)) || waitingPlaces(state)[0];
+    if (!def) return null;
+    state.unlocks[def.id] = true;
+    state.meta.lastPlaceAt = state.meta.attendedMs || 0;
+    return def.id;
 }
 
 /** The next places to open, in order, with their hints: one on its way first, then the goals to reach. */

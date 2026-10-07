@@ -137,6 +137,7 @@ const guide = createGuide(document.body);
 // open every dungeon, the Titan and any event's bonuses to anyone, so there they are ignored, and a save
 // that picked them up before is cleaned (the server also flags an upload that has them on).
 function withDevFlags(g) {
+    g.setAttending(!document.hidden);   // every game made here starts knowing whether the page is in view
     const devHost = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
     if (!devHost) {
         g.state.settings.devUnlockAll = false;
@@ -219,7 +220,7 @@ function paintGold(now = performance.now()) {
 }
 requestAnimationFrame(frame);
 
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(Date.now()); });
+document.addEventListener('visibilitychange', () => { game.setAttending(!document.hidden); if (document.hidden) save(Date.now()); });
 // The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
 let resizeQueued = false;
 window.addEventListener('resize', () => {

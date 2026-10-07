@@ -24,7 +24,7 @@ export const SAVE_VERSION = 3;
 export function createDefaultState(now = Date.now()) {
     const state = {
         version: SAVE_VERSION,
-        meta: { createdAt: now, savedAt: now, playtimeMs: 0, lastActiveAt: now, lastInputAt: now, lastPlaceAt: 0 },   // lastPlaceAt: time played when the last place opened (data/unlocks.js)
+        meta: { createdAt: now, savedAt: now, playtimeMs: 0, attendedMs: 0, lastActiveAt: now, lastInputAt: now, lastPlaceAt: 0 },   // attendedMs: time played with the page in view; lastPlaceAt: attended time when the last place opened (data/unlocks.js)
         gold: 0,
         resources: {},
         inventory: [],
@@ -247,7 +247,9 @@ export function clampTimers(state, now) {
     if (isPlainObject(state.meta)) {
         state.meta.lastInputAt = upTo(state.meta.lastInputAt, now);
         state.meta.lastActiveAt = upTo(state.meta.lastActiveAt, now);
-        state.meta.lastPlaceAt = Math.max(0, Math.min(finite(state.meta.playtimeMs), finite(state.meta.lastPlaceAt)));
+        // attended time began with the paced places; a save from before counts all its play as attended
+        if (!(typeof state.meta.attendedMs === 'number' && Number.isFinite(state.meta.attendedMs) && state.meta.attendedMs >= 0)) state.meta.attendedMs = Math.max(0, finite(state.meta.playtimeMs));
+        state.meta.lastPlaceAt = Math.max(0, Math.min(state.meta.attendedMs, finite(state.meta.lastPlaceAt)));
     }
     return state;
 }

@@ -168,6 +168,7 @@ test('places reached by climbing open one at a time, a breather apart, however f
     const game = new Game(null, T0);
     const s = game.state;
     Object.assign(s.combat, { stage: 40, maxStage: 40, bestStage: 40 });   // a tapper half a minute in
+    for (const id of ['first_blood', 'm2', 'm3', 'm4', 'm5']) s.achievements[id] = true;   // the Hall waits for five medals
     const opened = [];
     let now = T0;
     for (let i = 0; i < 40 * 60; i++) {   // forty minutes of play, a second at a time
@@ -175,18 +176,21 @@ test('places reached by climbing open one at a time, a breather apart, however f
         game.tick(now);
         for (const ev of game.drainEvents()) if (ev.type === 'unlock') opened.push({ id: ev.id, at: (now - T0) / 1000 });
     }
-    assert.deepEqual(opened.map(o => o.id), ['hunting', 'shop', 'achievements', 'dungeons', 'alchemy', 'prestige', 'agility']);
+    // what breaks the wall first, then what changes the loop, then the conveniences; Agility waits for its gold
+    assert.deepEqual(opened.map(o => o.id), ['hunting', 'dungeons', 'alchemy', 'prestige', 'shop', 'achievements']);
     assert.ok(opened[0].at >= PLACE_GAPS_MS[0] / 1000, `the first place at ${opened[0].at} s`);
-    for (let i = 1; i < opened.length; i++) assert.ok(opened[i].at - opened[i - 1].at >= PLACE_GAPS_MS[Math.min(i, PLACE_GAPS_MS.length - 1)] / 1000, `${opened[i].id} came ${opened[i].at - opened[i - 1].at} s after ${opened[i - 1].id}`);
+    for (let i = 1; i < opened.length; i++) assert.ok(opened[i].at - opened[i - 1].at >= PLACE_GAPS_MS[i] / 1000, `${opened[i].id} came ${opened[i].at - opened[i - 1].at} s after ${opened[i - 1].id}`);
     assert.ok(opened.filter(o => o.at <= 600).length <= 3, 'three places at most in the first ten minutes');
-    // the clan and the weekend events wait for the first prestige
+    assert.ok(opened.filter(o => o.at <= 1200).length <= 5, 'five at most in the first twenty');
+    // the clan waits for the first prestige, the weekend events for a festival too
     assert.ok(!s.unlocks.clan && !s.unlocks.events);
     s.prestige.count = 1;
-    for (let i = 0; i < 12 * 60; i++) { now += 1000; game.tick(now); }
-    assert.ok(s.unlocks.events && s.unlocks.clan, 'then they come, one after the other');
+    for (let i = 0; i < 16 * 60; i++) { now += 1000; game.tick(now); }
+    assert.ok(s.unlocks.clan, 'then the clan comes');
+    assert.equal(!!s.unlocks.events, false, 'a Tuesday: no festival near');
 });
 
-test('a place earned by work answers it within half a minute; time away does not open a flood', () => {
+test('a place earned by work answers it within a minute and a half; a return opens one waiting place, never a flood', () => {
     const game = new Game(null, T0);
     const s = game.state;
     s.stats.actionsBySkill.mining = 5;
@@ -205,4 +209,36 @@ test('a place earned by work answers it within half a minute; time away does not
     assert.equal(goal.id, waitingPlaces(back.state)[0].id);
     const p = goalProgress(back.state, goal);
     assert.ok(p >= 0 && p < 1, `on its way: ${p}`);
+});
+
+test('only attended time paces the places; a return opens the one waiting, and none opens during a boss fight', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    Object.assign(s.combat, { stage: 40, maxStage: 40, bestStage: 40 });
+    // a tab left in the background with no input: the breather does not run
+    game.setAttending(false);
+    s.meta.lastInputAt = T0 - 10 * 60_000;
+    let now = T0;
+    for (let i = 0; i < 4 * 60; i++) { now += 1000; game.tick(now); }   // four minutes in the background
+    assert.equal(s.meta.attendedMs, 0);
+    assert.ok(!s.unlocks.hunting, 'nothing opens while nobody looks');
+    // in view again: it runs
+    game.setAttending(true);
+    for (let i = 0; i < 100; i++) { now += 1000; game.tick(now); }
+    assert.ok(s.unlocks.hunting);
+    // back after an hour away: the place that was waiting opens at once, and the welcome-back names it
+    const back = new Game(JSON.parse(game.serialize(now)), now + 3600_000);
+    const summary = back.resumeFromSave(now + 3600_000);
+    assert.equal(summary.place, 'dungeons');
+    assert.ok(back.state.unlocks.dungeons && !back.state.unlocks.alchemy, 'one place per return');
+    // a boss on screen holds a place back until it falls
+    const fight = new Game(null, T0);
+    Object.assign(fight.state.combat, { stage: 10, maxStage: 10, bestStage: 12 });
+    fight.state.combat.enemy = null;
+    fight.enterCombat();
+    assert.ok(fight.state.combat.enemy.boss);
+    fight.state.meta.attendedMs = 10 * 60_000;
+    fight.state.combat.enemy.hp = 1e12;   // a boss that will not fall in time
+    fight.tick(T0 + 1000);
+    assert.ok(!fight.state.unlocks.hunting, 'not while the boss fight is on');
 });

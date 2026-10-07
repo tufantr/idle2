@@ -107,14 +107,14 @@ const lateGame = page => page.evaluate(async () => {
     g.startNodeAction('mining', 'mithril_ore');
 });
 
-/** A new player a minute in: mining under way, four ores up, so the fifth opens Smithing on camera. */
+/** A new player two minutes in: mining under way, four ores up, so the fifth opens Smithing on camera. */
 const firstSkill = page => page.evaluate(() => {
     const g = FI.game();
     FI.switchTab('mining');
     FI.startNode('mining', 'copper_ore');
     g.state.stats.actionsBySkill.mining = 4;
     g.state.resources.copper_ore = 4;
-    g.state.meta.playtimeMs = Math.max(g.state.meta.playtimeMs, 60000);   // a minute in: past the half minute a place earned by work waits
+    g.state.meta.attendedMs = Math.max(g.state.meta.attendedMs, 120000);   // two minutes in: past the minute and a half a place earned by work waits
     g.markDirty();
 });
 

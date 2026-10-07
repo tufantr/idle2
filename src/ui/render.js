@@ -2095,6 +2095,8 @@ export function renderWelcomeBack(summary, state) {
     const used = Object.entries(summary.resources).filter(([, d]) => d < 0);
     const tile = (id, text, cls = '') => `<div class="wb-tile${cls}" style="--i:${next()};--r:${res(id)?.color || '#e2e8f0'}" title="${esc(res(id)?.name || id)}">${resIcon(id, { scale: 1.25 })}<span>${text}</span></div>`;
     const finds = [
+        summary.place ? `<div class="wb-find place" style="--i:${next()}">${sprite(feature(summary.place).icon, { scale: 1, fallback: '🔓' })}<span>Ready for you: <b>${esc(feature(summary.place).name)}</b></span></div>` : '',
+        summary.prestiges > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.prestige.icon, { scale: 1 })}<span>Prestiged <b>${summary.prestiges === 1 ? 'once' : `${fmt(summary.prestiges)} times`}</b> on its own: +${fmt(summary.tokens)} tokens</span></div>` : '',
         ...(summary.petIds || []).map(id => { const p = PETS.find(x => x.id === id); return `<div class="wb-find pet" style="--i:${next()}">${sprite(`pet/${id}`, { scale: 1.5, fallback: p?.icon || '🐾' })}<span>A pet found you: <b>${esc(p?.name || id)}</b></span></div>`; }),
         summary.uniques > 0 ? `<div class="wb-find unique" style="--i:${next()}">${sprite(FEATURES.achievements.icon, { scale: 1 })}<span><b>${summary.uniques}</b> unique item${summary.uniques > 1 ? 's' : ''} found</span></div>` : '',
         summary.items > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.inventory.icon, { scale: 1 })}<span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
