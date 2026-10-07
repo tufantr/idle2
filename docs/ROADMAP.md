@@ -429,6 +429,17 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Ascension** (the long-term research's outer reset; DESIGN §3.27): from best stage 300 the prestige
+      dialog offers to ascend: a prestige that also gives every token up for Stars, 10 for each tenfold
+      past 1,000 (100,000 tokens: 20), each making every later prestige pay 25% more tokens, for good. It
+      asks first, writes a backup, is the biggest card in the game, and rests a day after (else
+      ascending every other run would farm Stars). Simulated over 1,000 hours, the bot ascends four times
+      (hours 85–215 with Auto) and ends 70–80 stages further (510 against 430 with Auto). It is not yet
+      a rhythm: past hour 500 big moments still come about once in 100 hours
+- [x] **A completion percentage** (the long-term research; DESIGN §3.14): the Hall's banner says how much
+      of the game is done ("7.8% done", a decimal so late sessions show it move), and Records opens on
+      its parts as bars: skill levels, mastery, the bestiary's stars, the codex, medals, pets, uniques,
+      the first 20 Titans, the Trials and the course, ten of equal weight; only the parts met are named
 - [x] **Mastery checkpoints** (the long-term research, `robust-and-fun/B_longterm_motivation.md` §8.2):
       at 10, 25, 50 and 95% of a skill's whole mastery, every action of it gets 2, 3, 5 and 10% faster,
       for good, with a card. The skill header's Mastery pill shows that share as a bar, with a mark at the

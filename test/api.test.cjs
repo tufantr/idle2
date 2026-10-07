@@ -153,6 +153,14 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.deepEqual(run(highs(m()), m({ totalXp: 30e6 }), t0 + 12 * hour).flags, [], 'a long absence allows a long replay');
     assert.ok(run(highs(m()), m({ totalXp: 30e6 }), t0 + 60 * 1000).flags.length, 'but not a minute later');
     assert.ok(run(null, m({ bestStage: 5, attackDamage: 1e12 }), t0).flags.includes('attack beyond what its best stage allows'), 'a weapon no play could make');
+    // Stars come with Ascensions only: a few a day, and none past what any save could hold.
+    assert.ok(run(null, m({ stars: 5000 }), t0).flags.includes('Stars beyond any possible save'));
+    assert.deepEqual(run(highs(m({ stars: 20 })), m({ stars: 50 }), t0 + 24 * hour).flags, [], 'an Ascension a day');
+    assert.ok(run(highs(m({ stars: 20 })), m({ stars: 400 }), t0 + hour).flags.includes('Stars grew faster than any play could'));
+    // A prestige pays more with Stars, so the tokens may grow as much faster.
+    const tokensIn = (gain, tokens) => run(highs(m({ bestStage: 300, tokens: 0 })), m({ bestStage: 300, tokens, tokenGain: gain }), t0 + hour).flags.includes('prestige tokens grew faster than any play could');
+    assert.equal(tokensIn(1, 30_000), true);
+    assert.equal(tokensIn(11, 30_000), false);
     // The best stage may grow by what its depth allows: fast early, slowly late.
     const climbed = (from, to, hours) => run(highs(m({ bestStage: from })), m({ bestStage: to }), t0 + hours * hour).flags.includes('best stage grew faster than any play could');
     assert.equal(climbed(1, 120, 2), false, 'a new player\'s first hours');

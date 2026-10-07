@@ -181,7 +181,9 @@ const RANKED = [
     { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 2, ceiling: 20000 },
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
     { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
-    { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e9 }
+    { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e9 },
+    // Stars come only with an Ascension (data/ascension.js): ten for each tenfold of tokens, at most a few a day
+    { key: 'stars', label: 'Stars', perHour: 3, flat: 40, ceiling: 2000 }
 ];
 
 /** Reasons a save's numbers look impossible next to their highest so far, and the new highs. */
@@ -194,8 +196,9 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
         if (value > r.ceiling) { flags.push(`${r.label} beyond any possible save`); if (peak) next[r.key] = peak; continue; }
         if (peak && Number.isFinite(peak.v)) {
             const hours = (Math.max(0, now - num(peak.at)) + SLACK_MS) / HOUR;
-            // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached.
-            const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(metrics.bestStage)));
+            // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached, times
+            // what the save's Stars and medals make a prestige pay (tokenGain, at least 1).
+            const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(metrics.bestStage))) * Math.max(1, num(metrics.tokenGain));
             const allowed = r.byDepth && honestClimb ? honestClimb(peak.v, hours) : r.flat + perHour * hours;
             if (value - peak.v > allowed) flags.push(`${r.label} grew faster than any play could`);
         }

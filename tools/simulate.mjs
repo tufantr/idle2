@@ -4,7 +4,7 @@
 //
 //   node tools/simulate.mjs --hours=100 --seed=1 [--step=500] [--verbose] [--snapshot=10]
 //   [--auto] [--player=checkin3] [--set=BALANCE.abyss.dropGrowth:1.5;BASE.tokenAtk:0.004] [--json=out.json]
-//   [--trials=5] [--save-at=200,260,320 --save=runs/hero]
+//   [--trials=5] [--ascend=1] [--save-at=200,260,320 --save=runs/hero]
 //
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
@@ -12,6 +12,9 @@
 // only), for sweeps. --json writes the run as JSON (milestones, a log of big moments by band, time by
 // task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
+// --ascend=0: never ascend. By default, once Ascension opens (data/ascension.js) the bot ascends with its
+// run near its best (95%), the first time as soon as it may, later when the Stars would raise the
+// prestige's tokens by half and a day has passed since the last.
 // --trials=N: once the Trials open (data/trials.js), every Nth prestige the bot makes goes into a Trial:
 // the one with the fewest tiers cleared, then the lowest next target (a player trying each in turn); 0
 // never; 5 by default. --save-at writes the
@@ -93,6 +96,7 @@ if (args.vary) {
 const AUTO = !!args.auto;
 const PLAYER = String(args.player || 'online');
 const TRIAL_EVERY = args.trials === undefined ? 5 : Number(args.trials);
+const ASCEND = args.ascend === undefined ? true : Number(args.ascend) !== 0;
 const SAVE_AT = String(args['save-at'] || '').split(',').map(Number).filter(n => n > 0).sort((a, b) => a - b);
 const SAVE_PREFIX = String(args.save || 'hero');
 const JSON_OUT = args.json ? String(args.json) : null;
@@ -342,6 +346,21 @@ let runStartedAt = 0;
 let trialRuns = 0;
 let lastTrialPrestige = -Infinity;
 
+let lastAscendAt = -Infinity;
+/** The bot's Ascension (see --ascend above). True if it went. */
+function maybeAscend() {
+    if (!ASCEND || S.combat.maxStage < 0.95 * S.combat.bestStage) return false;
+    const a = game.ascendPreview();
+    if (!a.allowed) return false;
+    if (S.ascension.count > 0 && (a.gainAfter / a.gainNow < 1.5 || now - lastAscendAt < 24 * 3600000)) return false;
+    const ended = { run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: a.tokens, ascend: true };
+    if (!game.ascend()) return false;
+    runLog.push(ended);
+    lastAscendAt = now;
+    runStartedAt = now; milestone('prestige', S.prestige.count); milestone('ascension', S.ascension.count);
+    return true;
+}
+
 /**
  * The bot's prestige: every TRIAL_EVERY-th one, once the Trials are open, goes into a Trial (the fewest
  * tiers cleared, then the lowest next target). Notes the run that ends (and whether it was a Trial).
@@ -523,6 +542,7 @@ function decide() {
     tendFarm();
     buildObstacles();
     if (SPEED_PRESTIGE && game.canPrestige()) prestigeNow();
+    maybeAscend();
     // Prestige when the run's tokens are a meaningful addition.
     const runStalled = now - lastRunRiseAt;
     if (game.canPrestige() && (now - lastStageGainAt > POLICY.stallMin * 60000 || runStalled > POLICY.longStallMin * 60000)) {
@@ -653,6 +673,7 @@ function noteEvent(ev) {
         case 'titan': if (ev.won) moment('medium', 'titan defeated'); break;
         case 'dungeonMilestone': moment('medium', `${ev.dungeon} ${ev.clears} clears`); break;
         case 'masteryLevel': if (ev.from < 99 && ev.level >= 99) moment('medium', `mastery 99 ${ev.key}`); break;
+        case 'ascend': moment('major', `ascension ${ev.count} +${ev.stars} stars`); break;
         case 'masteryCheckpoint': moment('medium', `mastery ${ev.skill} ${Math.round(ev.at * 100)}%`); milestone('mastery checkpoints', S.stats.masteryCheckpoints || 0); break;
         case 'trialTier': moment(ev.last ? 'major' : 'medium', `trial ${ev.id} ${ev.tier}`); milestone('trial tiers', Object.values(S.trials.cleared).reduce((a, b) => a + b, 0)); break;
     }
@@ -861,7 +882,7 @@ if (JSON_OUT) {
     try { commit = execSync('git rev-parse --short HEAD', { cwd: new URL('..', import.meta.url).pathname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* not a checkout */ }
     const at = (key, value) => { const m = milestones.find(x => x.key === key && x.value === value); return m ? +H(m.at).toFixed(3) : null; };
     const out = {
-        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null, trials: TRIAL_EVERY }, policy: POLICY, overrides,
+        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null, trials: TRIAL_EVERY, ascend: ASCEND }, policy: POLICY, overrides,
         stages: Object.fromEntries(STAGE_MARKS.map(m => [m, at('stage', m)])),
         weaponTier: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(t => [t, at('weapon tier', t)])),
         firstPrestige: at('prestige', 1), autoEarned: autoOnAt === null ? null : +H(autoOnAt).toFixed(3),
@@ -873,6 +894,7 @@ if (JSON_OUT) {
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length
         },
+        ascension: { count: S.ascension.count, stars: S.ascension.stars, at: Object.fromEntries([1, 2, 3, 4, 5, 6, 8, 10].map(n => [n, at('ascension', n)])) },
         masteryCheckpoints: { count: S.stats.masteryCheckpoints || 0, at: Object.fromEntries([1, 3, 5, 10, 15, 20].map(n => [n, at('mastery checkpoints', n)])) },
         trials: { runs: trialRuns, tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },
         runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },

@@ -2511,3 +2511,28 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .mastery-total[style*="--share"] { position: relative; overflow: hidden; isolation: isolate; }
 .mastery-total[style*="--share"]::before { content: ""; position: absolute; inset: 0; z-index: -1; width: var(--share); background: linear-gradient(90deg, rgba(124, 92, 196, 0.25), rgba(183, 148, 246, 0.45)); }
 .mastery-total[style*="--next"]::after { content: ""; position: absolute; bottom: 0; height: 6px; left: var(--next); width: 2px; border-radius: 1px 1px 0 0; background: #fcd34d; box-shadow: 0 0 4px rgba(252, 211, 77, 0.8); }
+
+/* Ascension (src/systems/ascension.js): Stars as a pale gold coin, the Ascend row in the prestige dialog */
+.coin-dot.stars { --coin: #fff3c4; --coin-dark: #b7791f; box-shadow: 0 0 14px rgba(253, 230, 138, 0.75), inset 0 0 0 1px rgba(0, 0, 0, 0.35); }
+.coin-dot.big { width: 64px; height: 64px; }
+.chip.stars { --coin: #fff3c4; --coin-dark: #b7791f; }
+.chip.stars b { color: #fde68a; }
+.pg-ascend { border-style: solid; border-color: rgba(253, 230, 138, 0.35); background: radial-gradient(120% 140% at 50% 0%, rgba(214, 170, 92, 0.16), rgba(0, 0, 0, 0.3)); }
+.pg-get.stars b { color: #fff3c4; text-shadow: 0 0 12px rgba(253, 230, 138, 0.6); }
+.btn-ascend { flex: 0 0 auto; padding: 0.7rem 1.2rem; font-size: 0.95rem; color: #1f1406; border-color: #fff1c9; background: linear-gradient(180deg, #fde68a, #b7791f); }
+.btn-ascend:disabled { opacity: 0.45; cursor: default; }
+@media (max-width: 700px) { .pg-ascend .btn-ascend { flex: 1 1 100%; } }
+
+/* Completion (src/systems/completion.js): a figure on the Hall's banner, the parts as bars under Records */
+.completion-pill { font: inherit; cursor: pointer; color: inherit; background: none; border: 0; box-shadow: none; padding: 0; min-height: 0; }
+.completion-pill:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.completion-pill b { color: #fde68a; }
+.completion-panel .panel-header { align-items: baseline; }
+.done-whole { font-family: var(--font-display); font-size: 1.6rem; color: #fde68a; text-shadow: 0 0 14px rgba(253, 230, 138, 0.45); }
+.done-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.35rem 1.2rem; }
+.done-row { display: grid; grid-template-columns: 34px minmax(0, 7.5rem) 1fr auto; align-items: center; gap: 0.5rem; padding: 0.2rem 0; }
+.done-art { display: grid; place-items: center; }
+.done-name { font-size: 0.82rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.done-bar { height: 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(214, 170, 92, 0.25); overflow: hidden; }
+.done-bar i { display: block; height: 100%; background: linear-gradient(90deg, #b7791f, #fde68a); }
+.done-count { font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }

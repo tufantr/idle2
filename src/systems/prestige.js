@@ -43,7 +43,7 @@ export function prestigePreview(game) {
     };
 }
 
-export function doPrestige(game, { auto = false, trial = null } = {}) {
+export function doPrestige(game, { auto = false, trial = null, ascend = false } = {}) {
     const state = game.state;
     if (!canPrestige(state, game.now)) return false;
     const preview = prestigePreview(game);
@@ -69,7 +69,7 @@ export function doPrestige(game, { auto = false, trial = null } = {}) {
     state.combat.hp = game.derived.maxHp;
     spawnEnemy(game);
     log(game, `✨ Prestige ${state.prestige.count}: +${preview.tokens} tokens, +${preview.skillPoints} skill point${preview.skillPoints === 1 ? '' : 's'}. Starting at stage ${preview.startStage}.`, 'prestige');
-    game.emit({ type: 'prestige', ...preview, auto, reached, trial });
+    game.emit({ type: 'prestige', ...preview, auto, reached, trial, ascend });   // (an Ascension has its own card: systems/ascension.js)
     game.markDirty();
     return true;
 }

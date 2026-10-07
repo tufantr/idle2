@@ -16,6 +16,7 @@ import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
+import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { escapeHtml as esc } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
@@ -59,6 +60,11 @@ export const FEATURES = {
             `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
             'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. A run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
             `After ${BALANCE.prestige.autoAfter} prestiges, or two days after your first, the fight's dock gets an Auto switch: it prestiges a run that has spent ${BALANCE.prestige.autoStallMs / 60000} minutes climbing without a new best stage, even while you are away.`] },
+    ascension: { name: 'Ascension', art: 'skyreach', icon: 'token', blurb: 'Give up every token for Stars, and climb again faster.',
+        points: [`From stage ${ASCEND_FROM}, the prestige dialog offers to ascend: a prestige that also takes your tokens back to nothing.`,
+            `It pays Stars: ${STARS_PER_DECADE} for every tenfold of the tokens given up, past ${STAR_BASE.toLocaleString('en-US')}. Each Star makes every prestige pay +${Math.round(STAR_TOKEN_GAIN * 100)}% tokens, forever.`,
+            'Your best stage and its records, skills, gear, perks, mastery, Trials and collections all stay.',
+            `After an Ascension it rests for ${ASCEND_REST_MS / 3600000} hours.`] },
     trials: { name: 'Trials', art: 'citadel', icon: 'mon/Mountain Troll', blurb: 'A run under one hard rule, for records that last forever.',
         points: [`From stage ${TRIALS_FROM}, the prestige dialog offers Trials: pick one, and the next run plays under its rule.`,
             `Each Trial has ${TRIAL_TIERS} tiers, ${TRIAL_STEP} stages apart. Reach a tier's stage in the Trial and it is cleared for good: a record, so your tokens grow ×${BASE.recordMult} stronger.`,

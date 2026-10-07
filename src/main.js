@@ -466,7 +466,7 @@ function refreshPerks() {
 const ARRIVALS = {
     essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
-    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials'
+    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars'
 };
 const arrivals = new Set();
 
@@ -515,7 +515,8 @@ function soundFor(ev, onCombat) {
         case 'masteryCheckpoint': return ['achievement'];
         case 'death': case 'bossTimeout': return ['defeat'];
         case 'dungeonFail': return ev.lost ? ['defeat'] : null;   // leaving by choice is no defeat
-        case 'prestige': return ['prestige'];
+        case 'prestige': return ev.ascend ? null : ['prestige'];
+        case 'ascend': return ['legendary'];
         case 'pet': return ['pet'];
         case 'unique': return ['legendary'];
         case 'dungeonClear': return ['chest'];
@@ -587,6 +588,7 @@ function handleEvents(events) {
                 const rank = rankFor(count);
                 const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
                 const trial = trialById(ev.trial);   // prestiged into a Trial (systems/trials.js)
+                if (ev.ascend && rank === rankFor(count - 1)) { save(Date.now()); break; }   // an Ascension: its own card below ('ascend')
                 if (ev.auto && rank === rankFor(count - 1)) {   // the switch's own: a note, and the fight goes on
                     toast(`Auto-prestige: ${paid}`, 'prestige', pic(FEATURES.prestige.icon));
                 } else if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
@@ -635,6 +637,11 @@ function handleEvents(events) {
             }
             case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'ascend':   // tokens given up for Stars: the biggest card there is
+                rewards.celebrate({ key: `ascend:${ev.count}`, kind: 'legend', icon: '<i class="coin-dot stars big" aria-hidden="true"></i>', kicker: `Ascension ${ev.count}`, title: `+${fmt(ev.stars)} Stars`,
+                    lines: [`Every prestige pays ×${ev.gain.toFixed(2)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
+                save(Date.now());
+                break;
             case 'masteryCheckpoint':   // a checkpoint of a skill's whole mastery: its actions faster for good
                 if (!seen(game.state, 'mastery')) break;   // (said once mastery itself has been met)
                 rewards.celebrate({ key: `mastery:${ev.skill}:${ev.at}`, kind: 'level', icon: tabIcon(ev.skill, 2), kicker: 'Mastery checkpoint', title: `${SKILLS[ev.skill].name} ${Math.round(ev.at * 100)}%`,
@@ -986,6 +993,17 @@ window.FI = {
         if (trial) game.startTrial(trial);
         else game.prestige({ resume: true }); // a hero who was fighting walks into the new run's first fight
         render();
+    },
+    /** The prestige dialog's Ascend: it gives every token up, so it asks first, in a dialog of its own. */
+    askAscend() {
+        const a = game.ascendPreview();
+        if (!a.allowed) return;
+        closeModal();
+        askConfirm('Ascend?', `Your ${fmt(a.tokens)} tokens become ${fmt(a.stars)} Stars, and the tokens start again from nothing. Every prestige after pays ×${a.gainAfter.toFixed(2)} tokens. Your best stage, gear, skills and perks stay.`, 'Ascend', () => {
+            writeBackup(game.serialize(Date.now()), 'prestige', `Before Ascension ${game.state.ascension.count + 1}`);
+            game.ascend();
+            render();
+        });
     },
     /** A Trial card in the prestige dialog, ticked or unticked: one at most, and the button says which. */
     pickTrial(input) {

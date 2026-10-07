@@ -39,6 +39,8 @@ export function powerSummary(rawState, now = Date.now()) {
         titanKills: state.titan.kills,
         dungeonClears: state.stats.dungeonClears || 0,
         prestiges: state.prestige.count,
+        stars: state.ascension.stars,                // Ascension's Stars (data/ascension.js)
+        tokenGain: derived.tokenMult,                // what every prestige's tokens are multiplied by (Stars, medals, uniques)
         // Trial tiers whose stage is past the best stage ever reached: none in a save that was played
         trialTiersBeyondBest: TRIALS.reduce((n, t) => n + Array.from({ length: trialTier(state, t.id) }, (_, i) => trialTarget(t, i + 1)).filter(stage => stage > state.combat.bestStage).length, 0)
     };

@@ -9,7 +9,8 @@
 //                                                 # 'prestige' are those dialogs over the game; 'anvil'
 //                                                 # is Smithing's anvil step; 'trials' is the prestige
 //                                                 # dialog with Trials cleared and one picked, and
-//                                                 # 'trialfight' a fight in a Trial)
+//                                                 # 'trialfight' a fight in a Trial; 'ascend' the
+//                                                 # dialog's Ascend row)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -32,12 +33,19 @@ const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cookin
 // A step inside a tab, shot like a tab.
 const STEPS = {
     anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
+    records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); }
 };
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
     map: () => { FI.switchTab('combat'); FI.openMap(); },
     prestige: () => { FI.game().state.prestige.runStartedAt = 0; FI.openPrestige(); },
+    ascend: () => {
+        const g = FI.game(); const s = g.state;
+        s.combat.bestStage = Math.max(s.combat.bestStage, 312); s.prestige.tokens = 104000; s.ascension.stars = 20; s.prestige.runStartedAt = 0;
+        g.recompute(); FI.openPrestige();
+        document.querySelector('.pg-ascend')?.scrollIntoView({ block: 'center' });
+    },
     trials: () => {
         const g = FI.game(); const s = g.state;
         s.prestige.runStartedAt = 0; s.trials.cleared = { brutes: 2, faithless: 5, glass: 1 }; s.trials.active = 'fasting'; s.combat.bestStage = Math.max(s.combat.bestStage, 236);

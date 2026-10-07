@@ -96,6 +96,7 @@ export function createDefaultState(now = Date.now()) {
         settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false, playtestLog: false },
         playtest: [],          // the playtest log, when the player turns it on (systems/playtest.js)
         trials: { active: null, cleared: {} },   // the Trial this run plays under, and the tiers cleared (data/trials.js)
+        ascension: { count: 0, stars: 0, firstAt: 0, lastAt: 0 },   // Ascensions made, the Stars they paid, the first and the last (data/ascension.js)
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -237,6 +238,7 @@ export function clampTimers(state, now) {
         plot.readyAt = upTo(plot.readyAt, now + (cropById(plot.crop)?.growMs || 0));
     }
     if (isPlainObject(state.bonfire)) state.bonfire.until = upTo(state.bonfire.until, now + 60 * 60 * 1000);   // BASE.bonfireMaxMs
+    if (isPlainObject(state.ascension)) state.ascension.lastAt = upTo(state.ascension.lastAt, now);   // the Ascension's day of rest from it
     if (isPlainObject(state.combat)) {
         state.combat.lastClickAt = upTo(state.combat.lastClickAt, now);
         state.combat.lastComboAt = upTo(state.combat.lastComboAt, now);
@@ -409,6 +411,14 @@ function normalise(data, now) {
     delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.settings.playtestLog = state.settings.playtestLog === true;
+    // Ascension: whole, non-negative counts
+    const asc = isPlainObject(data?.ascension) ? data.ascension : {};
+    state.ascension = {
+        count: Math.min(1e6, Math.max(0, Math.floor(Number(asc.count) || 0))),
+        stars: Math.min(1e7, Math.max(0, Math.floor(Number(asc.stars) || 0))),
+        firstAt: Math.max(0, Number(asc.firstAt) || 0),
+        lastAt: Math.max(0, Number(asc.lastAt) || 0)
+    };
     // Trials: a known one active, and whole tiers in range for each
     const trials = isPlainObject(data?.trials) ? data.trials : {};
     state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {} };

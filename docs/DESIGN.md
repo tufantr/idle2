@@ -508,6 +508,13 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 - **The gear codex** (`state.codex`, `CODEX_TYPES` in `src/data/items.js`): a page per kind of gear
   and tier, 70 in all, filled by `addItem` whenever a piece arrives (kept or salvaged on landing);
   shown in the Hall's Collection. The Armourer medal comes at 40 pages.
+- **Completion** (`src/systems/completion.js`; `robust-and-fun/B_longterm_motivation.md` §8.2 item 8):
+  how much of the game is done, as one figure with a decimal on the Hall's banner ("7.8% done"), and its
+  parts as bars at the top of Records. Ten parts of equal weight, each its share done: skill levels to
+  99, mastery to 99 on every action, the bestiary's stars, the codex, the medals, the pets, the uniques,
+  the first 20 Titans, the Trials' tiers and the agility course's slots. The whole counts every part from
+  the start, so it only rises; Records names only the parts the player has met. A cape for 100% is still
+  to come.
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
   when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
   Smithing after mining 5 times (ore that monsters drop no longer opens it for a hero who only
@@ -1020,6 +1027,36 @@ moments thin out again (one every 25–33 hours); that is for the next late-game
 
 The server keeps a Trial out of what the boards compare (`powerSummary` drops the run's rule) and flags a
 save with tiers its best stage could not have cleared (`trialTiersBeyondBest`).
+
+### 3.27 Ascension
+
+The outer reset of the long-term research (`robust-and-fun/B_longterm_motivation.md` §5.4 and §8.2 item 5;
+`incremental-math.md` §2.6): late in the game a prestige adds well under 1% to the tokens held, and an
+outer layer pays big again. From best stage 300 (`ASCEND_FROM`; disclosure `ascension`) the prestige
+dialog has an "Or ascend" row: the Stars it would pay, big, what every prestige would pay after it, and a
+button that asks first in its own dialog (a backup is written before). An Ascension is a prestige that
+also takes the tokens back to nothing, the run's own tokens included, and pays **Stars**: 10 for every
+tenfold of the tokens given up past 1,000 (100,000 tokens: 20 Stars). Stars are kept, and each makes every
+later prestige pay +25% tokens (20 Stars: ×6). The best stage and its records, skills, gear, perks,
+mastery, Trials and collections all stay; an Ascension ends a Trial. It is the biggest card there is,
+the Stars show in the purse once there are some, and Ascension then **rests for a day**: a log pays small
+stocks better than big ones, so without the rest ascending every second run would pay about 2.8 Stars a
+run against 20 a day for a player who waits. `src/data/ascension.js`, `src/systems/ascension.js`; saved
+as `ascension: { count, stars, firstAt, lastAt }`. The server checks Stars (at most 2,000; 40 plus 3 an
+hour) and lets the tokens grow as much faster as the save's Stars make a prestige pay.
+
+What it does (`tools/simulate.mjs --hours=1000`, seeds 1–3; the bot ascends with its run near its best,
+the first time when it may, later when the Stars would raise the tokens by half and a day has passed):
+- **With Auto:** four Ascensions, at about 85, 110, 135 and 215 hours, about 97 Stars in all; best stage
+  420–430 at 200 hours (370–379 without), 470 at 400 (400), 510 at 1,000 (430).
+- **Without Auto:** four, at about 140, 165, 190 and 285–330 hours; best 480 at 1,000 hours (410).
+- **Then it stops.** With prestiges at ×25, a new Ascension can't add half again, and giving the stock up
+  costs more than it pays: by a rough model (the stock grows with time, the gain only with the log of
+  it), ascending each day falls behind waiting after about two days. So Ascension
+  is four big moments and a lasting lift, not a rhythm. Hours 500 to 1,000 still have a big moment about
+  every 100 hours (the research asks for one every 48), with waits of 155–237 hours: they need new
+  things to reach (named Abyss strata, two more dungeons, an end boss), which need paintings. The
+  research's other idea, each early Ascension opening something new, is still to do.
 
 ## 4. The modifier pipeline
 

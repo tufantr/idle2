@@ -48,6 +48,9 @@ import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paint
 import { seen } from '../systems/disclosure.js';
 import { campOnOffer } from '../systems/guide.js';
 import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
+import { ascensionOpen } from '../systems/ascension.js';
+import { starGain } from '../data/ascension.js';
+import { completion } from '../systems/completion.js';
 import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 
 // The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
@@ -234,6 +237,7 @@ export function renderHeader(game, ui, cloud) {
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
         seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
+        seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${d.tokenMult.toFixed(2)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${starGain(d.stars).toFixed(1)}</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
     const banked = state.daily.banked;
@@ -1381,7 +1385,35 @@ export function renderHall(game, ui) {
 function hallBanner(game) {
     const done = ACHIEVEMENTS.filter(a => game.state.achievements[a.id]).length;
     const shown = ACHIEVEMENTS.filter(a => medalShown(game.state, a)).length;   // a secret medal counts once found
-    return banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${shown}</span>` });
+    const whole = completion(game.state).share;
+    return banner('achievements', { extra: `<span class="banner-count" title="Each medal also gives +${Math.round(ACHIEVEMENT_GLOBAL_BONUS * 100)}% attack, defence and skill speed: +${done}% so far"><b>${done}</b> / ${shown}</span>
+        <button class="banner-count completion-pill" onclick="FI.hallView('records')" title="How much of the game you have done: the parts are under Records"><b>${pctDone(whole)}</b> done</button>` });
+}
+
+/** A completion share as a percentage that moves: one decimal place (never 100% before it is). */
+const pctDone = share => `${(share >= 1 ? 100 : Math.min(99.9, Math.floor(share * 1000) / 10)).toFixed(share >= 1 ? 0 : 1)}%`;
+
+/**
+ * Completion (systems/completion.js): the whole, big, and the parts the player has met, each a bar with
+ * its picture and count. The parts not met yet count in the whole but are not named.
+ */
+function renderCompletion(game) {
+    const state = game.state;
+    const c = completion(state);
+    const met = {
+        mastery: seen(state, 'mastery'), codex: seen(state, 'gear'), pets: true, medals: true, bestiary: true, skills: true,
+        uniques: isUnlocked(state, 'dungeons'), titans: titanUnlocked(state), trials: seen(state, 'trials'), course: isUnlocked(state, 'agility')
+    };
+    const rows = c.parts.filter(p => met[p.id]).map(p => `<div class="done-row" title="${esc(p.name)}: ${fmt(p.have)} of ${fmt(p.of)}">
+        <span class="done-art">${sprite(p.art, { scale: 1 })}</span>
+        <span class="done-name">${esc(p.name)}</span>
+        <span class="done-bar"><i style="width:${(p.share * 100).toFixed(1)}%"></i></span>
+        <span class="done-count">${fmt(p.have)}/${fmt(p.of)}</span>
+    </div>`).join('');
+    return `<section class="glass-panel completion-panel ${painted('hall', 'center 40%')}">
+        <div class="panel-header"><h2>Completion</h2><b class="done-whole">${pctDone(c.share)}</b></div>
+        <div class="done-rows">${rows}</div>
+    </section>`;
 }
 
 // A bestiary star: filled once the kind has fallen 10, 100 or 1,000 times.
@@ -1464,7 +1496,7 @@ function renderRecords(game) {
         ['perk/endurance', hours >= 1 ? `${fmt(Math.floor(hours))} h` : `${Math.floor(hours * 60)} min`, 'played'],
         ['mon/Skeleton', fmt(s.deaths || 0), 'falls']
     ];
-    return `<section class="glass-panel ${painted('library', 'center 50%')}">
+    return `${renderCompletion(game)}<section class="glass-panel ${painted('library', 'center 50%')}">
         <div class="record-grid">${records.map(([art, value, label]) => `<div class="record">
             <span class="record-art">${sprite(art, { scale: 1.5 })}</span>
             <b class="record-value">${value}</b>
@@ -2066,9 +2098,22 @@ export function renderPrestigeModal(game) {
                 ${trial ? `<span class="pg-item">${sprite(trial.icon, { scale: 1 })} the Trial: ${esc(trial.name)}</span>` : ''}
             </div>
             <div class="pg-row"><h4>Everything else stays</h4><span class="pg-keep">${keep}</span></div>
+            ${seen(state, 'ascension') && ascensionOpen(state) ? renderAscendRow(game) : ''}
             ${seen(state, 'trials') && trialsOpen(state) ? renderTrialPicks(state) : ''}
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmPrestige()">Prestige now</button></div>
+    </div>`;
+}
+
+/**
+ * Ascension in the prestige dialog (systems/ascension.js): the Stars it would pay, big, what every
+ * prestige would pay after, and a button that asks first (it gives the tokens up).
+ */
+function renderAscendRow(game) {
+    const a = game.ascendPreview();
+    return `<div class="pg-row pg-ascend"><h4>Or ascend ${aboutButton('ascension')}</h4>
+        <div class="pg-get stars"><i class="coin-dot stars" aria-hidden="true"></i><b>+${fmt(a.stars)} <span>Stars</span></b><small>${fmt(a.tokens)} tokens back to nothing; every prestige then pays ×${a.gainAfter.toFixed(2)} tokens${a.gainNow > 1 ? ` (now ×${a.gainNow.toFixed(2)})` : ''}</small></div>
+        <button class="modal-btn btn-ascend" onclick="FI.askAscend()"${a.allowed ? '' : ' disabled'}>${a.restMs > 0 ? `Rests ${duration(a.restMs)}` : 'Ascend…'}</button>
     </div>`;
 }
 

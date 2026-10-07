@@ -19,6 +19,7 @@ import { trialBite, trialTiersCleared } from '../data/trials.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
 import { MASTERY_SKILLS, masteryShare, checkpointsAt } from '../data/mastery.js';
+import { starGain } from '../data/ascension.js';
 import { eventStatus } from '../systems/events.js';
 import { levelForXp } from './xp.js';
 
@@ -257,7 +258,8 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         offlineMs: (BASE.baseOfflineHours + mods.offlineHours) * 3600 * 1000,
         boostDurationMult: 1 + mods.boostDuration,
         craftQuality: mods.craftQuality,
-        tokenMult: 1 + mods.tokenMult,
+        tokenMult: (1 + mods.tokenMult) * starGain(state.ascension?.stars),   // Stars: every prestige pays more (data/ascension.js)
+        stars: state.ascension?.stars || 0,
         farmYield: 1 + mods.farmYield,
         gildedMult: 1 + mods.gildedChance,   // how much more often gilded monsters come
         petMult: 1 + mods.petChance,         // how much likelier a pet is to find the hero
