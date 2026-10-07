@@ -304,14 +304,18 @@ the Abyss repeats with a depth counter and steeper growth.
 ### 3.8 Economy: gold, camp and supplies
 
 - **Sources:** combat kills (dominant), the Titan, selling materials and items, daily crates.
-- **Sinks:** camp upgrades, gear upgrades and reforges (with essence), supplies, farming seeds, and
-  agility obstacles and their upgrades — the long-term sink. In the simulator over 90% of gold is spent
-  while the course is being built (the first ~50–90 hours), mostly on gear upgrades and agility; see
-  §5.3 for the late game.
+- **Sinks:** camp upgrades, jewellery upgrades and reforges (with essence), supplies, farming seeds,
+  and agility obstacles and their upgrades. Since the camp's prices follow the best stage, the camp is
+  the big one: about half of all gold earned in 150 simulated hours (45–53%; 70–85% for a player with
+  Auto on), against about 1% before, when 95–99% of gold was lost at prestige unspent.
 - **Camp** (`src/data/camp.js`) — the run-scoped power layer, bought with gold and **reset on
   prestige**: Whetstone +5% ATK, Armour Rack +5% DEF, Hearth +4% HP per level, multiplicative, max
-  25 levels each (×3.39 / ×3.39 / ×2.67 when maxed), cost `base × 1.30^level` (60 / 60 / 50 base).
-  It turns each new run into a climb and gives gold a job.
+  25 levels each (×3.39 / ×3.39 / ×2.67 when maxed). A level costs `max(base, 0.008 × a kill's gold at
+  the best stage) × 1.36^level` (base 20 / 20 / 15): the base price until about best stage 85, so a new
+  player's camp is as it was (§3.24); past that, a whole upgrade costs about 50 kills at the best stage,
+  so each run buys its camp again as it nears its best (the owner's choice 3a). At 0.016 the camp took
+  80% of gold but each late run took 0.7 h instead of 0.5 h. It turns each new run into a climb and
+  gives gold a job.
 - **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 80
   kills — the open-ended late-game sink) priced in "kills at your best stage" (25–40 regular kills;
   a boss stage prices like its regular monsters), so the price scales with income and can never be
@@ -896,10 +900,12 @@ owner's choice of option 1a):
   salvaging pieces gives their bars back. The anvil is a step of Smithing (Smelt · Forge · Anvil ·
   Tools) from level 5; a worn piece in the bag's detail has an Anvil button instead of Upgrade.
 
-Simulated over seeds 1–3 for 150 hours (old figures in brackets, §5.2): stage 50 at 0.8 h (0.8), 100
-at 3.7–5.3 h (5.0–5.2), 150 at 13.2–16.5 h (16–18), 200 at 46.8–51.5 h (48.3–48.9); best 320–330
-(270–310). The simulated smith reaches 75 at 84–89 h and wears Abyssal pieces at +4 to +10 by the
-end. A new player's first minutes are unchanged (`tools/opening.mjs`).
+Simulated over seeds 1–3 for 150 hours as first built (old figures in brackets): stage 100 at 3.7–5.3 h
+(5.0–5.2), 150 at 13.2–16.5 h (16–18), 200 at 46.8–51.5 h (48.3–48.9); best 320–330 (270–310); the
+simulated smith wore Abyssal pieces at +4 to +10 by the end. With the records, Auto and the camp's new
+prices the whole game was retuned (§5.2). The skiller who fights least lost the most: its weapons and
+armour no longer come from the forge (stage 100 at 32–45 h, from 14–22 h). A new player's first
+minutes are unchanged (`tools/opening.mjs`).
 
 ## 4. The modifier pipeline
 
@@ -980,35 +986,42 @@ fights about a third of the time, so a player who mostly fights gets there soone
 ### 5.2 Whole-game simulation
 
 `node tools/simulate.mjs --hours=150 --seed=N` plays the game through the same `Game` API as the UI,
-with a "sensible player" policy: gear up (forging a piece only if it beats what it wears), keep food
+with a "sensible player" policy: wear what beats what it wears and salvage the commons, keep food
 stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
 comfortably (while its chests or unique still help — otherwise it keeps fighting at the wall for half
-an hour) and training whatever gates the next metal tier; challenge the Titan whenever it wakes; tend
-the farm; build and upgrade the agility course (training agility up to a quarter of the time);
-prestige when a run stalls and adds a fair share of the tokens it holds (15% early, ~2% at 7,000
-tokens). Three seeds, 150 hours each:
+an hour) and training a skill (Mining and Smithing first while they can't yet make the bars for the
+weapon it wears); put bars and essence into its worn gear at the anvil; challenge the Titan whenever
+it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
+materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
+it holds (15% early, ~2% at 7,000 tokens). `--auto` also turns on the dock's Auto switch once earned.
+Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|
-| First prestige | 1.5 h (stage 56, +32 tokens) | 1.5 h (stage 50, +27) | 1.5 h (stage 50, +27) |
-| Stage 50 / 100 / 120 | 0.8 / 5.2 / 7.3 h | 0.8 / 5.0 / 8.0 h | 0.8 / 5.0 / 6.9 h |
-| Stage 150 / 200 · best at 150 h | 16.0 / 48.7 h · 270 | 18.0 / 48.9 h · 280 | 18.1 / 48.3 h · 310 |
-| Weapon tier 4 / 5 / 6 / 7 | 3.8 / 9.9 / 16.0 / 51.7 h | 7.8 / 16.6 / 24.8 / 49.6 h | — / 6.8 / 24.0 / 48.2 h |
-| Crown / Heart / Cleaver / Plate / Aegis / Band | 1.5 / 3.6 / 6.6 / 18.5 / 52.5 / 120 h | 1.5 / 3.6 / 7.7 / 23.2 / 51.7 / 121 h | 1.5 / 3.9 / 7.6 / 22.6 / 54.5 / 100 h |
-| Titans defeated by 12 h · by 150 h | 11 · 24 | 11 · 25 | 10 · 27 |
-| Agility obstacles 1 / 4 / 6 | 3.2 / 21.8 / 51.8 h | 2.3 / 22.7 / 56.5 h | 4.3 / 25.8 / 52.9 h |
-| Mining 50 · Smithing 50 / 75 | 16.2 · 17.1 / 44.3 h | 18.6 · 19.4 / 46.4 h | 19.5 · 20.2 / 45.7 h |
-| Farming 50 / 75 · Agility 50 / 75 | 9.3 / 29.1 · 24.3 / 58.8 h | 9.5 / 31.4 · 28.1 / 61.0 h | 9.4 / 31.8 · 27.9 / 58.8 h |
-| Combat 60 / 75 / 90 | 3.5 / 28.9 / 78.9 h | 3.4 / 24.9 / 81.8 h | 3.4 / 23.6 / 104.5 h |
-| Prestiges in 150 h | 267 | 256 | 281 |
-| Deaths in 150 h (on non-boss stages) | 3,190 (44%) | 2,168 (47%) | 2,958 (35%) |
+| First prestige | 0.7 h (stage 48, +25 tokens) | 0.7 h (stage 40, +18) | 1.6 h (stage 58, +34) |
+| Stage 50 / 100 / 120 | 0.8 / 4.3 / 7.6 h | 0.8 / 6.2 / 8.7 h | 0.8 / 5.4 / 9.7 h |
+| Stage 150 / 200 · best at 150 h | 15.5 / 54.0 h · 280 | 19.8 / 55.9 h · 280 | 17.2 / 55.5 h · 280 |
+| The same with Auto on | 15.5 / 44.8 h · 290 | 19.8 / 47.5 h · 300 | 17.2 / 45.3 h · 298 |
+| Weapon tier 4 / 5 / 6 / 7 | 4.9 / 7.4 / 16.6 / 52.9 h | 8.6 / 12.6 / 19.6 / 54.6 h | 7.7 / 9.5 / 16.8 / 55.1 h |
+| Crown / Heart / Cleaver / Plate / Aegis / Band | 1.7 / 2.6 / 6.5 / 20.1 / 55.1 / 105 h | 2.7 / 4.3 / 8.5 / 24.1 / 55.2 / 109 h | 1.6 / 3.9 / 7.6 / 22.4 / 57.1 / 111 h |
+| Titans defeated by 12 h · by 150 h | 11 · 25 | 10 · 25 | 10 · 25 |
+| Agility obstacles 1 / 4 / 6 | 3.5 / 23.7 / 64.5 h | 4.8 / 29.8 / 72.7 h | 3.5 / 24.5 / 71.1 h |
+| Mining 50 · Smithing 50 / 75 | 19.4 · 40.8 / 113 h | 21.9 · 45.7 / 116 h | 21.2 · 38.8 / 119 h |
+| Farming 50 / 75 · Agility 50 / 75 | 9.6 / 30.2 · 34.3 / 77.1 h | 9.8 / 30.3 · 41.0 / 80.6 h | 9.5 / 29.9 · 28.8 / 80.5 h |
+| Combat 60 / 75 / 90 | 2.2 / 29.0 / 122 h | 3.9 / 28.3 / 124 h | 3.7 / 29.3 / 127 h |
+| Prestiges in 150 h (with Auto) | 237 (304) | 241 (298) | 232 (306) |
+| Deaths in 150 h (on non-boss stages) | 4,382 (25%) | 3,886 (21%) | 4,649 (35%) |
 
-Measured on 7 October 2026 with everything above: Melvor pace (§5.1), tier 6 and 7 gear worn from
-combat 70 and 80, the first session's gentle start (§3.24), armour that carries health and the deep
-Abyss's drops at ×1.6 a depth (§5.3). Health from armour halved the deaths (5,000–7,200 in 150 h
-before) and moved the best stage at 150 h from 230–280 to 270–310, with stage 200 where it was
-(48–53 h before). The earlier table here was measured before the gentle start and the lower wear
-levels, and had drifted (stage 200 at 54–60 h).
+Measured on 7 October 2026 with everything above: weapons and armour from the fight with Smithing's
+anvil (§3.25), records and Auto with tokens at 0.4% (§3.9), the camp priced by the best stage (§3.8),
+and the deep Abyss's drops at ×1.45 a depth (§5.3). Against the table before them (stage 200 at
+48–49 h, best 270–310): the bot's own rule is a little slower to stage 200 and ends at 280; a player
+with Auto on is a little faster and ends at 290–300. Every gear tier now comes from drops, a few hours
+later than the forge made it (weapon tier 5 at 7–13 h, was 7–17 h with the forge), and the camp, now
+dear, holds back the agility course (obstacle 6 at 65–73 h, was 52–57 h). Two simulator fixes came
+with this: a bot that needed Smithing 75 for an obstacle's runite bars smelted adamant for fifty hours
+without fighting (its gathering now shares agility's quarter of the time), and its "stuck an hour,
+prestige anyway" rule prestiged runs left at their start while it worked (now only a run near its best).
 
 These runs include every fix from the code review (prestige needs a 10-minute run; kills keep the
 rest of a time step; prices follow regular monsters) and the Abyss drop scaling. Earlier fixes found
@@ -1022,17 +1035,20 @@ Titan; `--farm-ladder=push` = an AFK player who keeps fighting at the wall inste
 
 | Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Stage 200 | Best at 150 h | Weapon tier 5+ |
 |---|---|---|---|---|---|---|
-| Skiller | 14.0–22.0 h | 78–118 h | — | — | 128–138 | 107–143 h |
-| Skiller with the Titan | 7.6–10.9 h | 19.5–25.8 h | 62–142 h | — | 150–180 | 45–64 h |
-| Ladder farmer | 8.4–18.8 h | 27–51 h | 35–67 h | 76–98 h | 250–260 | 28–65 h |
-| AFK pusher | 7.3–8.3 h | 10.3–12.1 h | 21.7–24.1 h | 50–60 h | 297–309 | 11–25 h |
-| Sensible (dungeons + Titan) | 5.0–5.2 h | 6.9–8.0 h | 16.0–18.1 h | 48.3–48.9 h | 270–310 | 6.8–16.6 h |
+| Skiller | 31.6–45.3 h | 97–140 h | 144 h (1 of 3) | — | 117–150 | 76–88 h |
+| Skiller with the Titan | 11.6–13.6 h | 26.4–33.3 h | 65–124 h | — | 160–190 | 16–38 h |
+| Ladder farmer | 12.3–17.3 h | 25.1–40.9 h | 38–57 h | 74–90 h | 230–250 | 25–45 h |
+| AFK pusher | 5.3–8.0 h | 8.5–14.1 h | 18.3–22.9 h | 61–67 h | 268–270 | 10–18 h |
+| Sensible (dungeons + Titan) | 4.3–6.2 h | 7.6–9.7 h | 15.5–19.8 h | 54.0–55.9 h | 280 | 7.4–12.6 h |
+| Sensible with Auto on | 4.3–6.2 h | 7.6–9.7 h | 15.5–19.8 h | 44.8–47.5 h | 290–300 | 7.4–12.6 h |
 
-(Measured 7 October 2026, with armour that carries health.) The sensible player reaches every
-milestone first, but by 150 hours the AFK pusher has caught up: with health from armour, staying at
-the wall pays, and the simulator's sensible player spends long stretches farming the Void Citadel
-(1,500–9,000 clears in 150 h), which its stopping rule does not end. The over-farming is the bot's,
-not a rule of the game; it is worth fixing in the simulator before the next dungeon change.
+(Measured 7 October 2026, with gear from the fight, records and the camp priced by the best stage.)
+The sensible player reaches every milestone first, and Auto takes about a sixth off its road to stage
+200 (×1.2, within the ×1.5 the research allows). The skillers lost the most when weapons and armour
+left the forge: a hero who barely fights now waits on drops for every tier (the skiller's stage 100
+went from 14–22 h to 32–45 h). Before, the sensible player spent long stretches farming the Void
+Citadel (1,500–9,000 clears in 150 h), which its stopping rule does not end; worth fixing in the
+simulator before the next dungeon change.
 
 Dungeons and the Titan put the sensible player ahead through the milestones (dungeons were tuned to
 about 1.5× the progress of pushing for the same time): stage 200 2–11 hours sooner than the AFK
@@ -1053,10 +1069,11 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 ### 5.3 Known risks
 
 - **The Abyss is a slow climb on purpose.** Tokens grow polynomially and monsters ×2.26 per depth,
-  so late power comes mostly from deeper drops (×1.6 per depth). In the terms of
-  `docs/research_notes/incremental-math.md`, the deep Abyss is near-critical: drops grow at about
-  60% of the monsters' rate in log terms, and the gap between the two sets the late pace (about one
-  stage an hour). The climb slows as it goes: stage ~200 at 48 h, 270–310 at 150 h.
+  so late power comes mostly from deeper drops (×1.45 per depth since the records and the anvil; ×1.6
+  before them). In the terms of `docs/research_notes/incremental-math.md`, the deep Abyss is
+  near-critical: drops grow at about half the monsters' rate in log terms, and the gap between the two
+  (with the records' ×1.05 every 25 stages) sets the late pace (about one stage an hour). The climb
+  slows as it goes: stage ~200 at 45–56 h, 280–300 at 150 h.
   `BALANCE.abyss.dropGrowth` sets the pace: with drops at ×1.8 and no health from armour the best at
   150 h was 230–280; ×2.0 spread it to 250–334, and ×2.2 ran away (390–470); at ×2.26 or above there
   is no wall at all. A player who stops prestiging stops moving; the simulator prestiges after an hour
@@ -1127,43 +1144,36 @@ couple of `node tools/simulate.mjs --hours=150 --seed=N` runs (add `--farm-ladde
 prestige currencies, the idle-game literature and automated resets) and
 `docs/research_notes/gear-sources.md` (where gear should come from, and the mathematics of loot)
 end with an evaluation recipe: what to measure in the simulator, and the targets the sources give.
-The game, measured against it after the survival fix (seeds 1–3, 150 h):
+The game, measured against it after the owner's three choices were built (seeds 1–3, 150 h; the
+figures before them, after the survival fix, in brackets):
 
 | # | Measure | Fantasy Idle | Target | |
 |---|---|---|---|---|
-| 1 | Milestones | first prestige 1.5 h; stage 50 / 100 / 150 / 200 at 0.8 / 5.0–5.2 / 16–18 / 48–49 h; a new place every 20–60 s in the first minutes | first prestige ~1 h; something new every 20–60 s at first | ✓ |
-| 2 | Time per stage, band to band | 0.11 → 0.29 → 0.65 → 1.45 h a stage (100–120, 120–150, 150–200, 200–270) | rises smoothly, no band over ~3× the last | ✓ |
+| 1 | Milestones | first prestige 0.7–1.6 h; stage 50 / 100 / 150 / 200 at 0.8 / 4.3–6.2 / 15.5–19.8 / 54–56 h, 45–48 h with Auto (0.8 / 5.0–5.2 / 16–18 / 48–49); a new place every 20–60 s in the first minutes | first prestige ~1 h; something new every 20–60 s at first | ✓ |
+| 2 | Time per stage, band to band | 0.13–0.22 → 0.25–0.37 → 0.72–0.77 → 1.2 h a stage (100–120, 120–150, 150–200, 200–280) | rises smoothly, no band over ~3× the last | ✓, at the edge |
 | 3 | Walls | none longer than a session or two; no one-hit wall since armour carries health | each under a day of play, with two ways out | ✓ |
-| 4 | Gain per prestige | median +14–15% of the tokens held over runs 1–20, +0.8% after run 100 | +50% to +200% when a player chooses to reset; late resets either decisions or automated | ✗ |
-| 5 | Run lengths | median 0.7–0.8 h over the first 20 runs, about the same later | short at first, lengthening, with bumps | ~ |
-| 6 | The deep Abyss's gap | drops ×1.6 against monsters ×2.26 a depth (δ ≈ 0.035 a stage) | above ~0.02 (nearer 0 runs away) | ✓ |
-| 7 | Late pace | ~0.7–1 stage an hour from stage 200 | 0.5–1 an hour | ✓ |
-| 8 | Power by source (share of log attack) | gear ~60%, tokens ~25%, levels and perks ~8%, camp ~6% | each major system 25–60% | ✓ (the camp is the early game's layer) |
+| 4 | Gain per prestige | median +15–19% of the tokens held over runs 1–20, +0.8% after run 100 (+0.7% with Auto); each record (every 25 stages of best, each unique) lifts the whole stock 5% at once, about six late runs' worth | +50% to +200% when a player chooses to reset; late resets either decisions or automated | ~ (late resets are records or automated) |
+| 5 | Run lengths | median 0.8–0.85 h over the first 20 runs, 0.5 h after run 100 (0.4 h with Auto) | short at first, lengthening, with bumps | ~ |
+| 6 | The deep Abyss's gap | drops ×1.45 against monsters ×2.26 a depth, the records' ×1.05 every 25 stages (δ ≈ 0.042 a stage) | above ~0.02 (nearer 0 runs away) | ✓ |
+| 7 | Late pace | ~0.8–0.9 stage an hour from stage 200 | 0.5–1 an hour | ✓ |
+| 8 | Power by source (share of log attack, from 20 h) | gear 58–59%, tokens 28–29%, levels and perks 8%, camp 4–6% (~60 / 25 / 8 / 6) | each major system 25–60% | ✓ (the camp is each run's climb) |
 | 9 | Survival at the wall | 1–2 hits to fall; defence 5–12× the monsters' attack | 2–20 hits; defence under 9× | ~ (it was 0.03–0.5 hits and 76–104×) |
-| 10 | Play styles | prestiging as soon as allowed reaches stage 200 ×1.4 sooner; the AFK pusher matches the sensible player by 150 h | no style more than ~1.5× faster | ✓, at the edge |
-| 11 | Gold spent | 8–12% of all gold earned; 83–91% resets unspent | gold matters late if it is meant to | ✗ |
-| 12 | Gear by source | worn gear is all dropped or unique by hour 5–10; forged weapons and armour last ~4 h, crafted jewellery is never worn in 60 h | each skill's products used | ✗ |
+| 10 | Play styles | Auto reaches stage 200 ×1.2 sooner than the bot's own rule; the AFK pusher reaches it ×1.1 later and ends at 270 (280) | no style more than ~1.5× faster | ✓ |
+| 11 | Gold spent | 45–53% of all gold earned goes to the camp (70–85% with Auto) (8–12% in all; 83–91% reset unspent) | gold matters late if it is meant to | ✓ |
+| 12 | Gear by source | weapons and armour past copper all drop, reinforced at the anvil (+4 to +10 by 150 h) with bars from Smithing and salvage; jewellery crafted or dropped epic | each skill's products used | ✓ |
 
-**Done.** Armour carries health and the deep Abyss's drops grow ×1.6 a depth (§5.3): measures 3, 9.
-**Weapons and armour from the fight** (the owner's idea, option 1a; §3.25): forging makes copper only,
-drops lean on the zone's tier and the hero's empty slots, a pity count on frontier bosses, ordinary
-jewellery left to Crafting, and Smithing's anvil reinforces and rerolls worn gear with bars that
-salvage gives back. Measure 12. (A chest favouring named slots per dungeon was not built.)
+**Done.** Armour carries health (§5.3): measures 3, 9. The owner's three choices, each in its own
+section: **weapons and armour from the fight** with Smithing's anvil (1a, §3.25; measure 12; a chest
+favouring named slots per dungeon was not built), **records that multiply the tokens** with an earned
+**Auto** switch (2, §3.9; measures 4, 10), and **camp prices that follow the best stage** (3a, §3.8;
+measure 11). No brake on fast prestiging (4): Auto's edge is ×1.2. To hold the pace with them, tokens
+give 0.4% (was 0.5%) and the deep Abyss's drops grow ×1.45 a depth (×1.6).
 
-**Chosen by the owner, being built:** records that multiply the tokens with an earned auto-prestige
-(2), and camp prices that follow the best stage (3a); no brake on fast prestiging (4).
-
-**Proposed earlier** (each simulated in a scratch copy):
-
-- **Late prestiges that count** (`incremental-math.md` §8.3 and the addendum A1.3): keep the held
-  tokens, and add a rare compounding unit (×1.05 to the token effect for each new 25-stage record or
-  dungeon unique), so a late record multiplies the whole stock instead of adding 0.7%; and once
-  resets are routine (after the 20th, say), an earned auto-prestige in the dock (when the run is back
-  at its best and long enough). Measure 4.
-- **A late job for gold**: camp levels priced in kills at the best stage (each run climbs it again),
-  or levels past 25 at a steeper price. Measure 11.
-- **If the speed edge grows**: pay a run's tokens in full only from 30 minutes on (×1.4 → ×1.07 in the
-  simulator, the sensible player unchanged; 20 minutes was not enough). Measure 10.
+**Still open:** measure 4's per-run gain stays under 1% late (the research's +50% per chosen reset is
+for runs a player decides on; late runs here are Auto's or records' business), and measure 5's runs
+shorten rather than lengthen as the game goes on. If the speed edge grows: pay a run's tokens in full
+only from 30 minutes on (×1.4 → ×1.07 in the simulator, the sensible player unchanged; 20 minutes was
+not enough).
 
 ## 6. Where this differs from the research report
 

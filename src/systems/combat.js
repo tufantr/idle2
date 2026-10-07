@@ -343,7 +343,7 @@ export function onEnemyDeath(game) {
     if (enemy.boss) c.regroupLeft = 0;
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         c.stage += 1;
-        if (c.stage > c.maxStage) { c.maxStage = c.stage; c.lastRiseAt = game.now; }
+        if (c.stage > c.maxStage) { c.maxStage = c.stage; c.stallMs = 0; }
         if (c.stage > c.bestStage) {
             c.bestStage = c.stage;
             // a record: every 25 stages of all-time best make the tokens stronger (core/modifiers.js recordsOf)
@@ -435,6 +435,9 @@ export function tickCombat(game, dt) {
         return;
     }
     const d = game.derived;
+    // The run's stall clock: time spent climbing the stage ladder (fighting, or resting to fight on)
+    // since its last new best stage. The Auto switch waits on it (systems/prestige.js).
+    if ((c.active || c.recovering) && c.mode === 'stages' && !c.farmMode) c.stallMs = (c.stallMs || 0) + dt;
     const regen = c.active ? BALANCE.combat.regenInCombat : BALANCE.combat.regenResting;
     if (c.hp > 0 && c.hp < d.maxHp) c.hp = Math.min(d.maxHp, c.hp + d.maxHp * regen * dt / 1000);
     if (!c.active) {

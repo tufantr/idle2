@@ -18,7 +18,8 @@ import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
-import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
+import { CAMP_UPGRADES } from '../src/data/camp.js';
+import { campPrice } from '../src/systems/camp.js';
 import { itemUpgradeCost, itemScore, goldShopPrice } from '../src/systems/inventory.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
@@ -278,7 +279,7 @@ let runStartedAt = 0;
 function buyCamp() {
     let guard = 0;
     while (guard++ < 500) {
-        const options = CAMP_UPGRADES.map(u => ({ u, cost: (S.camp[u.id] || 0) < u.max ? campCost(u, S.camp[u.id] || 0) : Infinity }))
+        const options = CAMP_UPGRADES.map(u => ({ u, cost: (S.camp[u.id] || 0) < u.max ? campPrice(S, u) : Infinity }))
             .sort((a, b) => a.cost - b.cost);
         const pick = options[0];
         if (!pick || pick.cost === Infinity || S.gold - pick.cost < 200) break;
@@ -411,10 +412,13 @@ function agilityTask() {
         const end = now + 30 * 60000;
         return { kind: 'agility', why: `train agility toward ${target}`, until: () => { if (now >= end || lvl('agility') >= target) { agilityMs += now - start; return true; } return false; } };
     }
+    // The materials, and the skills to make them, out of the same quarter of the bot's time (a player
+    // who needs Smithing 75 for an obstacle's bars still goes back to the fight between sessions).
+    if (agilityMs > 0.25 * now) return null;
     for (const [id, qty] of Object.entries(cost.materials)) {
         if (RESOURCES[id].category === 'gem') continue; // gems come from mining luck; wait for them
         const t = obtain(id, qty);
-        if (t) return t;
+        if (t) { t.budget = 'agility'; return t; }
     }
     return null;
 }
@@ -431,8 +435,9 @@ function decide() {
         // Worth it when the run adds a decent share of what we hold; the share asked for shrinks as
         // tokens pile up (15% early, ~2% at 7,000), since a late run can only add a few percent.
         const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
-        // A player stuck at the wall for an hour prestiges anyway: it is the only progress left.
-        const longStall = now - lastStageGainAt > 60 * 60000;
+        // A player stuck at the wall for an hour prestiges anyway: it is the only progress left (once the
+        // run is back near its best: not a run left at its start while the hero was off working).
+        const longStall = now - lastStageGainAt > 60 * 60000 && S.combat.maxStage >= 0.9 * S.combat.bestStage;
         if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) {
             runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
             game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
@@ -557,6 +562,7 @@ while (now < totalMs) {
         }
     }
     if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
+    if (task.budget === 'agility') agilityMs += STEP;
     if (task.kind === 'combat' && !S.combat.active && S.combat.hp <= game.derived.maxHp * 0.5) needTraining = true;
     if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
 

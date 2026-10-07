@@ -429,6 +429,17 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Camp prices that follow the best stage** (the owner's choice, 3a; DESIGN §3.8): a camp level
+      costs its old price or, once higher, 0.008 kills' worth of gold at the best stage (about 50 kills
+      for a whole upgrade), growing ×1.36 a level. A new player's camp is as it was until about stage
+      85; after that each run buys its camp again as it nears its best, so gold has a late job: half
+      of all gold goes to the camp in the simulator (70–85% with Auto), against about 1% before. The
+      camp's "?" says so. Measured with everything (DESIGN §5.2, §5.5): stage 200 at 54–56 h by the
+      simulator's own prestige rule and 45–48 h with Auto, best 280–300 at 150 h. Two simulator fixes
+      on the way: a bot that needed runite bars for an obstacle smelted adamant for fifty hours
+      without fighting, and its "stuck an hour" rule prestiged runs it had left at their start; and the
+      Auto switch's ten minutes now count only time spent climbing (a hero back from the mine was
+      prestiged at once)
 - [x] **Records that make tokens stronger, and an Auto switch** (the owner's choice, 2; DESIGN §3.9):
       every 25 stages of the best stage ever and every dungeon unique held multiply what the tokens
       give by 1.05, so a late record lifts the whole stock instead of adding under 1%; a new record is

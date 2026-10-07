@@ -6,7 +6,8 @@
 // the stats the game keeps anyway, so it has nothing of its own to save; src/ui/guide.js draws it.
 
 import { findUpgrade, gearIsLocked } from './inventory.js';
-import { CAMP_UPGRADES, campCost } from '../data/camp.js';
+import { CAMP_UPGRADES } from '../data/camp.js';
+import { campPrice } from './camp.js';
 import { seen } from './disclosure.js';
 
 /** Strikes on a monster before the hand leaves it. */
@@ -35,7 +36,7 @@ export function guideStep(state, derived, { battle = false, tab = null } = {}) {
         // the first camp upgrade, as soon as one is affordable (the cheapest)
         if (!state.stats.campLevels && seen(state, 'camp')) {
             const offer = campOnOffer(state, derived)
-                .map(u => ({ u, cost: campCost(u, state.camp[u.id] || 0) }))
+                .map(u => ({ u, cost: campPrice(state, u) }))
                 .filter(o => state.gold >= o.cost)
                 .sort((a, b) => a.cost - b.cost)[0];
             if (offer) return `camp:${offer.u.id}`;

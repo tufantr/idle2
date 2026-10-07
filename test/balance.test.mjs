@@ -1,6 +1,6 @@
 // Balance rules from the research pass (docs/research_notes/incremental-math.md, DESIGN §5): armour
 // carries health, so a deep hero is not killed by every hit; the deep Abyss's drops keep pace below
-// the monsters' growth.
+// the monsters' growth; camp prices follow the best stage, so gold has a job late.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -8,6 +8,9 @@ import { Game } from '../src/game.js';
 import { BASE } from '../src/core/modifiers.js';
 import { BALANCE, generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
+import { CAMP_UPGRADES, CAMP_PRICE_KILLS, campCost } from '../src/data/camp.js';
+import { campPrice } from '../src/systems/camp.js';
+import { goldPerKillAtStage } from '../src/core/formulas.js';
 
 const T0 = 1_700_000_000_000;
 
@@ -46,4 +49,22 @@ test('deep in the Abyss health grows with the depth the armour came from, and dr
     // (it stood still before armour gave health; the health from levels dilutes it a little)
     assert.ok(grew > Math.pow(BALANCE.abyss.dropGrowth, 5) / 2, `health x${grew.toFixed(1)} over five depths`);
     assert.ok(BALANCE.abyss.dropGrowth < Math.pow(BALANCE.enemy.abyssHpGrowth, 10), 'drops stay below the monsters, or the climb runs away');
+});
+
+test('camp prices are the old ones for a new player, and follow the best stage later', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const [whetstone] = CAMP_UPGRADES;
+    for (const best of [1, 30, 60]) {
+        s.combat.bestStage = best;
+        for (const level of [0, 10, 24]) assert.equal(campPrice(s, whetstone, level), campCost(whetstone, level), `stage ${best}, level ${level}`);
+    }
+    s.combat.bestStage = 200;
+    const first = campPrice(s, whetstone, 0);
+    assert.equal(first, Math.ceil(CAMP_PRICE_KILLS * goldPerKillAtStage(200)));
+    assert.ok(Math.abs(campPrice(s, whetstone, 5) / first - whetstone.growth ** 5) < 0.01);
+    // buying pays that price, and a prestige packs the camp up as before
+    s.gold = first * 3;
+    assert.equal(game.buyCampUpgrade('whetstone', 1), 1);
+    assert.equal(s.gold, first * 2);
 });

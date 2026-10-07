@@ -11,7 +11,8 @@
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
+import { CAMP_UPGRADES } from '../src/data/camp.js';
+import { campPrice } from '../src/systems/camp.js';
 import { seen } from '../src/systems/disclosure.js';
 import { findUpgrade } from '../src/systems/inventory.js';
 
@@ -36,7 +37,7 @@ function play(policy, seed) {
             const up = findUpgrade(game.state);
             if (up && game.equipItem(up.item.id)) { first('equip', now); moments.push(now); }
             if (seen(game.state, 'camp')) {
-                for (const u of CAMP_UPGRADES) if (game.state.gold >= campCost(u, game.state.camp[u.id] || 0) && game.buyCampUpgrade(u.id, 1)) first('camp', now);
+                for (const u of CAMP_UPGRADES) if (game.state.gold >= campPrice(game.state, u) && game.buyCampUpgrade(u.id, 1)) first('camp', now);
             }
         }
         for (const ev of game.drainEvents()) {

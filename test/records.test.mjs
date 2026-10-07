@@ -60,7 +60,7 @@ function veteran({ count = BALANCE.prestige.autoAfter, runMin = 30, stallMin = 1
     s.prestige.count = count;
     s.settings.autoPrestige = auto;
     s.prestige.runStartedAt = T0 - runMin * MIN;
-    Object.assign(s.combat, { stage: 40, maxStage: 40, bestStage: 60, lastRiseAt: T0 - stallMin * MIN });
+    Object.assign(s.combat, { stage: 40, maxStage: 40, bestStage: 60, stallMs: stallMin * MIN });
     s.combat.enemy = null;
     game.enterCombat();
     return game;
@@ -114,6 +114,20 @@ test('Auto waits while the run still climbs, and never while staying on a stage,
     const unearned = veteran({ count: 3 });
     unearned.tick(T0 + 100);
     assert.equal(unearned.state.prestige.count, 3);
+});
+
+test('Auto counts only time spent climbing: work between fights does not stall a run', () => {
+    const game = veteran({ stallMin: 2 });
+    const s = game.state;
+    game.startNodeAction('mining', 'copper_ore');
+    let now = T0;
+    for (let i = 0; i < 15 * 60; i++) { now += 1000; game.tick(now); }   // a quarter of an hour in the mine
+    assert.ok(Math.abs(s.combat.stallMs - 2 * MIN) < 1000, `${s.combat.stallMs} ms of stall`);
+    game.enterCombat();
+    now += 100;
+    game.tick(now);
+    assert.equal(s.prestige.count, BALANCE.prestige.autoAfter, 'back from the mine, the run goes on');
+    assert.ok(Math.abs(game.autoPrestigeIn() - 8 * MIN) < 2000);
 });
 
 test('away from the game, Auto goes on prestiging stalled runs, and the summary says so', () => {

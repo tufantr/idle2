@@ -1,7 +1,13 @@
 // Buying camp upgrades with gold.
 
 import { CAMP_UPGRADES, campCost } from '../data/camp.js';
+import { goldPerKillAtStage } from '../core/formulas.js';
 import { bumpStat } from './progress.js';
+
+/** The price of the next level of `upgrade` from `level`, for this hero (it follows the best stage: data/camp.js). */
+export function campPrice(state, upgrade, level = state.camp[upgrade.id] || 0) {
+    return campCost(upgrade, level, goldPerKillAtStage(state.combat.bestStage));
+}
 
 /** Buy `count` levels (or 'max' = as many as affordable). Returns levels bought. */
 export function buyCampUpgrade(game, id, count = 1) {
@@ -14,7 +20,7 @@ export function buyCampUpgrade(game, id, count = 1) {
     while (bought < wanted) {
         const level = state.camp[id] || 0;
         if (level >= upgrade.max) break;
-        const cost = campCost(upgrade, level);
+        const cost = campPrice(state, upgrade, level);
         if (state.gold < cost) break;
         state.gold -= cost;
         state.stats.goldSpent = (state.stats.goldSpent || 0) + cost;
@@ -39,5 +45,5 @@ export function resetCamp(state) {
 export function nextCampCost(state, id) {
     const upgrade = CAMP_UPGRADES.find(u => u.id === id);
     const level = state.camp[id] || 0;
-    return level >= upgrade.max ? null : campCost(upgrade, level);
+    return level >= upgrade.max ? null : campPrice(state, upgrade, level);
 }

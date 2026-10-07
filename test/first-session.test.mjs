@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { enemyForStage, enemyBaseStats, goldForKill, combatXpForKill, BALANCE } from '../src/core/formulas.js';
-import { CAMP_UPGRADES, campCost } from '../src/data/camp.js';
+import { CAMP_UPGRADES } from '../src/data/camp.js';
+import { campPrice } from '../src/systems/camp.js';
 import { findUpgrade } from '../src/systems/inventory.js';
 import { guideStep, campOnOffer, GUIDE_STRIKES } from '../src/systems/guide.js';
 import { seen } from '../src/systems/disclosure.js';
@@ -28,7 +29,7 @@ function watch(seed, seconds, onTick = () => {}) {
         game.tick(now);
         const up = findUpgrade(game.state);
         if (up) game.equipItem(up.item.id);
-        if (seen(game.state, 'camp')) for (const u of CAMP_UPGRADES) if (game.state.gold >= campCost(u, game.state.camp[u.id] || 0) && game.buyCampUpgrade(u.id, 1)) log.campAt ??= now - T0;
+        if (seen(game.state, 'camp')) for (const u of CAMP_UPGRADES) if (game.state.gold >= campPrice(game.state, u) && game.buyCampUpgrade(u.id, 1)) log.campAt ??= now - T0;
         for (const ev of game.drainEvents()) {
             if (ev.type === 'kill') { log.firstKill ??= now - T0; if (ev.enemy.boss) log.firstBoss ??= now - T0; }
             if (ev.type === 'itemDropped' && ev.item.type === 'Weapon') log.sword ??= ev.item;

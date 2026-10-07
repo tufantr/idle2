@@ -54,7 +54,7 @@ export function createDefaultState(now = Date.now()) {
             dungeon: null,     // { id, index } while in a dungeon run
             recovering: false, // fallen: resting to full health, then back into the fight by himself
             pity: 0,           // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
-            lastRiseAt: 0      // when this run last reached a new best stage (the auto-prestige waits on it)
+            stallMs: 0         // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
@@ -397,7 +397,8 @@ function normalise(data, now) {
     state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
     state.combat.combo = 0;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
-    state.combat.lastRiseAt = Math.min(now, Math.max(0, finite(state.combat.lastRiseAt)));
+    state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
+    delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.

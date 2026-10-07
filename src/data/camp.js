@@ -17,8 +17,17 @@ export function campUpgradeById(id) {
     return CAMP_UPGRADES.find(u => u.id === id) || null;
 }
 
-export function campCost(upgrade, level) {
-    return Math.ceil(upgrade.baseCost * Math.pow(upgrade.growth, level));
+// Prices follow the best stage (the owner's choice 3a, DESIGN §3.8): a level costs its base price or,
+// once that is higher, CAMP_PRICE_KILLS kills' worth of gold at the hero's best stage, growing the same
+// x1.36 a level (a whole upgrade: about 50 kills at the best). Below about stage 85 the base price is
+// the higher, so a new player's camp is as it was; past it, each run buys its camp again as it nears its
+// best, and gold has a job late in the game (half of all gold is spent, against 1% before; 0.016 spent
+// 80% but slowed the runs, tools/simulate.mjs).
+export const CAMP_PRICE_KILLS = 0.008;
+
+/** Gold for the next level of an upgrade at `level`; `goldAtBest` is a kill's gold at the best stage (0: the base price). */
+export function campCost(upgrade, level, goldAtBest = 0) {
+    return Math.ceil(Math.max(upgrade.baseCost, CAMP_PRICE_KILLS * goldAtBest) * Math.pow(upgrade.growth, level));
 }
 
 /** Multiplier contributed by `level` levels of an upgrade. */

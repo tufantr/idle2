@@ -60,7 +60,7 @@ export function doPrestige(game, { auto = false } = {}) {
     state.combat.combo = 0;
     state.combat.regroupLeft = 0;
     state.combat.farmMode = false;   // "stay on this stage" was for the old run: the new one climbs
-    state.combat.lastRiseAt = game.now;
+    state.combat.stallMs = 0;
     state.gold = 0;          // combat gold is run-scoped, like the camp it buys
     resetCamp(state);
     game.recompute();
@@ -89,23 +89,23 @@ export const autoPrestigeEarned = state => state.prestige.count >= BALANCE.prest
 
 /**
  * Milliseconds until the auto-prestige would fire for this run, or null while it can't: the switch is
- * off (or not earned), the hero isn't climbing the stages (resting, working, staying on a stage, in a
- * dungeon or at the Titan), or the run hasn't reached the prestige stage. A run that has gone
- * `autoStallMs` without a new best stage, and has lasted its ten minutes, goes at once.
+ * off (or not earned), the hero isn't climbing the stages (working, staying on a stage, in a dungeon
+ * or at the Titan), or the run hasn't reached the prestige stage. A run that has spent `autoStallMs`
+ * climbing without a new best stage (`combat.stallMs`, which only runs while he fights or rests to
+ * fight on), and has lasted its ten minutes, goes at once.
  */
 export function autoPrestigeIn(state, now) {
     const c = state.combat;
     if (!state.settings.autoPrestige || !autoPrestigeEarned(state)) return null;
-    if (!c.active || c.mode !== 'stages' || c.farmMode || c.maxStage < BALANCE.prestige.minStage) return null;
-    const stalled = (c.lastRiseAt || 0) + BALANCE.prestige.autoStallMs - now;
-    return Math.max(0, stalled, prestigeWaitMs(state, now));
+    if (!(c.active || c.recovering) || c.mode !== 'stages' || c.farmMode || c.maxStage < BALANCE.prestige.minStage) return null;
+    return Math.max(0, BALANCE.prestige.autoStallMs - (c.stallMs || 0), prestigeWaitMs(state, now));
 }
 
 /** The auto-prestige, checked as the fight goes on (online and in the offline replay): true if it went. */
 export function tickAutoPrestige(game) {
     if (autoPrestigeIn(game.state, game.now) !== 0) return false;
     if (!doPrestige(game, { auto: true })) return false;
-    enterCombat(game);   // the next run's first fight, as a prestige from the dock does
+    enterCombat(game);   // the next run's first fight, as a prestige from the dock does (rested or not)
     return true;
 }
 
