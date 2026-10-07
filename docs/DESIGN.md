@@ -444,6 +444,8 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 | Dragon's Lair | 120 | 125–135 | 2,515,540 / 51,285 | 6 | Dragonheart Plate (Body, tier 6) |
 | Void Citadel | 160 | 165–175 | 65,738,659 / 925,413 | 7 | Void King's Aegis (Shield, tier 7) |
 | Abyssal Maw | 210 | 215–227 | 4,572,642,334 / 39,771,879 | 7 (at depth 12) | Starless Band (Ring, tier 7) |
+| Sunken Necropolis | 240 | 245–257 | 52,851,750,768 / 348,201,024 | 7 (at depth 15) | Drowned King's Greaves (Legs, tier 7) |
+| The Hellforge | 275 | 280–292 | 918,544,529,014 / 4,376,493,552 | 7 (at depth 18) | Hellforged Gauntlets (Gloves, tier 7) |
 
 - **Worn, a unique shows on the hero:** the Goblin King's Crown as a gold crown, the Warlord's
   Cleaver as an executioner's axe, the Dragonheart Plate as red dragon armour and the Void King's
@@ -462,6 +464,13 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
   base power than their tier — the best piece of that tier, not a tier skip. The first copy starts
   locked; a spare (assembled or found again) arrives unlocked, to salvage for essence. Uniques cannot
   be reforged.
+- **The Sunken Necropolis and the Hellforge** (October 2026; `robust-and-fun/B_longterm_motivation.md`
+  §8.2 item 2): two more past the Maw, a drowned city of the dead (twelve undead, the Sunken King) and a
+  forge of the damned (twelve constructs, the Obsidian Colossus), from DCSS tiles. Their uniques (Legs
+  and Gloves, the slots no unique had) are records too. Until each has a painting they borrow one under
+  their own light (`DUNGEON_GRADE` in `src/ui/features.js`, a CSS filter as the Abyss's strata wear): the
+  Drowned Ruins, colder and darker, and the Dragon's Lair, hotter; their map pins sit by the drowned
+  ruins' lake and at the volcano's foot. With Auto they open at about 56 and 74 hours of play.
 - **The Abyssal Maw** is the long game's dungeon: it opens at stage 210, about 83 hours into the
   simulator's play at Melvor pace, and its careful player first clears it at about 177: twelve horrors of the deep Abyss and the Devourer. Its unique, the Starless Band, is
   worth its affixes rather than its power, since gear dropped that deep is dozens of times stronger

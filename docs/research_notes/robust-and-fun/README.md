@@ -42,8 +42,8 @@ of `tools/simulate.mjs` (no game code changed by them):
    Mythic (500, 1,000, 2,000), mastery checkpoints, a completion percentage, Ascension (Stars, a day's
    rest), sixteen named strata in the Abyss and six medals for the deep game. Hours 150–300 now meet
    their target; hours 300–1,000 still miss it, because late progress crawls (DESIGN §5.6 gives the two
-   ways on: a faster deep Abyss, or moments on the calendar). **Still to do:** two more dungeons near
-   stages 240 and 275 and a painting for each stratum (new paintings, with the owner's go-ahead for
-   Gemini downloads), an end boss, each early Ascension opening something new, a cape for 100%.
+   ways on: a faster deep Abyss, or moments on the calendar). Two more dungeons came after (240 and 275).
+   **Still to do:** paintings for each stratum and the two new dungeons (Gemini, with the owner's
+   go-ahead for its downloads), an end boss, each early Ascension opening something new, a cape for 100%.
 6. **Playtest log: done** (Settings, exported for `tools/playtest.mjs`). A short playtest with people is
    the owner's.

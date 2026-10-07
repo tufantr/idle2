@@ -112,7 +112,11 @@ export const ZONE_LINES = {
 };
 
 // Each dungeon's painting (assets/paint): on its card, and behind its fight (src/ui/scene.js).
-export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair', void_citadel: 'citadel', abyssal_maw: 'maw' };
+export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', orc_stronghold: 'stronghold', dragons_lair: 'lair', void_citadel: 'citadel', abyssal_maw: 'maw',
+    sunken_necropolis: 'ruins', hellforge: 'lair' };
+// The two late dungeons borrow a painting under their own light (a CSS filter, as the Abyss's strata do:
+// data/strata.js) until each has one of its own (docs/art/gemini.md).
+export const DUNGEON_GRADE = { sunken_necropolis: 'hue-rotate(-25deg) saturate(0.6) brightness(0.62) contrast(1.15)', hellforge: 'hue-rotate(-12deg) saturate(1.6) brightness(0.72) contrast(1.25)' };
 
 /** The inline style that puts painting `name` behind an element (as --art, with its focus). */
 export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/paint/${name}.webp);--art-at:${focus}`;

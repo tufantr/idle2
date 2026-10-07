@@ -158,6 +158,17 @@ STRATA_MONSTERS = {
     'Rust Devil': 'demons/rust_devil', 'Sin Beast': 'demons/sin_beast', 'Spark Demon': 'demons/sixfirhy',
     'Night Hag': 'demons/drude', 'Pandemonium Lord': 'panlord/pandemonium_lord',
 }
+# The two late dungeons (src/data/dungeons.js) and their uniques, packed after the strata.
+LATE_DUNGEON_MONSTERS = {
+    # Sunken Necropolis
+    'Poltergeist': 'undead/poltergeist', 'Grave Hopper': 'undead/jiangshi', 'Marsh Ghast': 'undead/glowmurk_ghast',
+    'Soul Wisp': 'undead/soul_wisp', 'Mind Gaunt': 'undead/cognitogaunt', 'Tomb Vampire': 'undead/vampire', 'Sunken King': 'unique/boris',
+    # The Hellforge
+    'Clockwork Bee': 'nonliving/clockwork_bee', 'Rusted Inspector': 'nonliving/rusted_inspector', 'Thermic Dynamo': 'nonliving/thermic_dynamo1',
+    'Sawblade': 'statues/diamond_sawblade', 'Walking Alembic': 'nonliving/walking_alembic', 'Firespitter': 'statues/firespitter_statue',
+    'Hellfire Mortar': 'statues/hellfire_mortar', 'Obsidian Colossus': 'statues/obsidian_statue',
+}
+LATE_DUNGEON_UNIQUES = { 'drowned_greaves': 'armour/artefact/urand_bk_barding', 'hellforged_gauntlets': 'armour/artefact/urand_power_gloves' }
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------
@@ -242,8 +253,12 @@ def main(rltiles):
         add(f'uniq/{uid}', f'item/{tile}')
     for key, img in build_late(rltiles).items():   # the guide's hand
         add(key, img)
-    for name, tile in STRATA_MONSTERS.items():     # the Abyss's strata, last of all
+    for name, tile in STRATA_MONSTERS.items():     # the Abyss's strata
         add(f'mon/{name}', f'mon/{tile}')
+    for name, tile in LATE_DUNGEON_MONSTERS.items():   # the two late dungeons and their uniques, last of all
+        add(f'mon/{name}', f'mon/{tile}')
+    for uid, tile in LATE_DUNGEON_UNIQUES.items():
+        add(f'uniq/{uid}', f'item/{tile}')
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

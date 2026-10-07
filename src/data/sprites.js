@@ -5,7 +5,7 @@
 // hero/cloaks/<rank cloak>, hero/capes/<skill>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=cf1fa821da', cell: 32, cols: 16, rows: 32 };
+export const ATLAS = { url: 'assets/sprites.png?v=5ce08f9761', cell: 32, cols: 16, rows: 33 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -511,5 +511,22 @@ export const SPRITES = {
     "mon/Sin Beast": [4, 31],
     "mon/Spark Demon": [5, 31],
     "mon/Night Hag": [6, 31],
-    "mon/Pandemonium Lord": [7, 31]
+    "mon/Pandemonium Lord": [7, 31],
+    "mon/Poltergeist": [8, 31],
+    "mon/Grave Hopper": [9, 31],
+    "mon/Marsh Ghast": [10, 31],
+    "mon/Soul Wisp": [11, 31],
+    "mon/Mind Gaunt": [12, 31],
+    "mon/Tomb Vampire": [13, 31],
+    "mon/Sunken King": [14, 31],
+    "mon/Clockwork Bee": [15, 31],
+    "mon/Rusted Inspector": [0, 32],
+    "mon/Thermic Dynamo": [1, 32],
+    "mon/Sawblade": [2, 32],
+    "mon/Walking Alembic": [3, 32],
+    "mon/Firespitter": [4, 32],
+    "mon/Hellfire Mortar": [5, 32],
+    "mon/Obsidian Colossus": [6, 32],
+    "uniq/drowned_greaves": [7, 32],
+    "uniq/hellforged_gauntlets": [8, 32]
 };

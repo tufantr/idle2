@@ -8,7 +8,7 @@ import {
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
-import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle } from './ui/features.js';
+import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, DUNGEON_GRADE, ZONE_LINES, paintStyle } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
@@ -640,7 +640,7 @@ function handleEvents(events) {
             }
             case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting
                 const d = dungeonById(ev.dungeon);
-                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
+                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: `${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}${DUNGEON_GRADE[d.id] ? `;filter:${DUNGEON_GRADE[d.id]}` : ''}`, icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
                     kicker: `${d.name} · ${fmt(ev.clears)} clears`, title: ev.desc, lines: ['Yours for good, through every prestige'] });
                 break;
             }

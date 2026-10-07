@@ -44,7 +44,7 @@ import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
 import { CAPES, capeFor, capeEarned, capesEarned, capeWorn } from '../data/capes.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
-import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
+import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, DUNGEON_GRADE, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 import { campOnOffer } from '../systems/guide.js';
 import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
@@ -541,7 +541,7 @@ export function renderRunChoiceModal(game) {
     if (!d) return '';
     const record = state.dungeons[d.id];
     return `<div class="modal-content narrow about-card run-choice">
-        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}" aria-hidden="true"></div>
+        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}${DUNGEON_GRADE[d.id] ? `;filter:${DUNGEON_GRADE[d.id]}` : ''}" aria-hidden="true"></div>
         <div class="run-choice-head"><span class="run-kicker">Dungeon cleared</span><div class="modal-header">${esc(d.name)}</div></div>
         <div class="run-choice-facts">
             <div class="run-clears">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span></div>
@@ -1809,7 +1809,7 @@ export function renderDungeons(game) {
         const unique = UNIQUES[d.unique];
         const { cls: ready, text: verdict } = dungeonVerdict(game, d);
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
-            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}">
+            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}${DUNGEON_GRADE[d.id] ? `;--grade:${DUNGEON_GRADE[d.id]}` : ''}">
                 <span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 2, cls: open ? '' : 'silhouette', fallback: d.icon })}</span>
                 <div class="dungeon-title"><b>${esc(d.name)}</b><span class="small" title="Like stages ${d.stage}–${d.stage + d.monsters.length}; the chest holds tier ${d.chestTier} loot">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span></div>
             </div>

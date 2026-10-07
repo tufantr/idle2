@@ -15,7 +15,7 @@ import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
-import { DUNGEON_ART } from './features.js';
+import { DUNGEON_ART, DUNGEON_GRADE } from './features.js';
 import { activeTrial, nextTrialTarget } from '../systems/trials.js';
 
 // Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
@@ -463,7 +463,7 @@ export function createScene(root, actions) {
             }
             sceneDrawn = true;
             // a stratum of the Abyss wears its own light on the Abyss's painting (data/strata.js; style.css --grade)
-            const grade = c.mode === 'stages' ? zoneForStage(c.stage).grade || '' : '';
+            const grade = c.mode === 'stages' ? zoneForStage(c.stage).grade || '' : c.mode === 'dungeon' ? DUNGEON_GRADE[c.dungeon?.id] || '' : '';
             if (el.battle.__grade !== grade) { el.battle.__grade = grade; el.battle.style.setProperty('--grade', grade || 'brightness(1)'); }   // (a filter list, never 'none': CSS adds to it)
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);

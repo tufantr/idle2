@@ -795,10 +795,15 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .dungeon-card.locked { opacity: 0.6; }
 /* each dungeon on its painting, its boss in front */
 .dungeon-art {
+    position: relative; isolation: isolate;
     display: flex; align-items: flex-end; gap: 0.7rem; min-height: 120px; padding: 0.7rem 0.9rem;
-    background: linear-gradient(180deg, rgba(12, 8, 5, 0) 25%, rgba(12, 8, 5, 0.92)), var(--art, none) var(--art-at, center) / cover no-repeat, var(--panel-2);
+    background: var(--panel-2);
     border-bottom: 1px solid var(--line);
 }
+/* the painting in a layer of its own, so a borrowed one can wear its dungeon's light (--grade) */
+.dungeon-art::before, .dungeon-art::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.dungeon-art::before { z-index: -2; background: var(--art, none) var(--art-at, center) / cover no-repeat; filter: var(--grade, none); }
+.dungeon-art::after { z-index: -1; background: linear-gradient(180deg, rgba(12, 8, 5, 0) 25%, rgba(12, 8, 5, 0.92)); }
 .dungeon-card.locked .dungeon-art { filter: grayscale(0.75) brightness(0.65); }
 .dungeon-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding-bottom: 0.2rem; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
 .dungeon-title b { font-family: var(--font-display); font-size: 1.08rem; color: var(--heading); }
@@ -2538,6 +2543,6 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .done-count { font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* The Abyss's strata (src/data/strata.js): each its own light over the Abyss's painting, until each has one */
-.battle[data-scene="abyss"] .battle-sky { filter: var(--grade, brightness(1)); transition: filter 1.2s ease; }
-.battle.boss-fight[data-scene="abyss"] .battle-sky { filter: var(--grade, brightness(1)) brightness(0.78) saturate(1.15) contrast(1.06); }
-.battle.idle[data-scene="abyss"] .battle-sky { filter: var(--grade, brightness(1)) saturate(0.55) brightness(0.78); }
+.battle[data-scene] .battle-sky { filter: var(--grade, brightness(1)); transition: filter 1.2s ease; }
+.battle.boss-fight[data-scene] .battle-sky { filter: var(--grade, brightness(1)) brightness(0.78) saturate(1.15) contrast(1.06); }
+.battle.idle[data-scene] .battle-sky { filter: var(--grade, brightness(1)) saturate(0.55) brightness(0.78); }

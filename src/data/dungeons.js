@@ -103,6 +103,31 @@ export const DUNGEONS = [
         ],
         boss: { name: 'Devourer', icon: '🐙' },
         unique: 'starless_band'
+    },
+    {
+        // Two more for the long climb past the Maw (robust-and-fun/B_longterm_motivation.md §8.2 item 2):
+        // a drowned city of the dead in the Starless Sea's reaches, and a forge of the damned below it.
+        // Each unique is a record too (core/modifiers.js recordsOf).
+        id: 'sunken_necropolis', name: 'Sunken Necropolis', icon: '⚰️', unlockStage: 240, stage: 245, chestTier: 7,
+        monsters: [
+            { name: 'Poltergeist', icon: '👻' }, { name: 'Grave Hopper', icon: '🧟' }, { name: 'Marsh Ghast', icon: '💀' },
+            { name: 'Soul Wisp', icon: '💫' }, { name: 'Poltergeist', icon: '👻' }, { name: 'Mind Gaunt', icon: '🧠' },
+            { name: 'Tomb Vampire', icon: '🧛' }, { name: 'Grave Hopper', icon: '🧟' }, { name: 'Marsh Ghast', icon: '💀' },
+            { name: 'Mind Gaunt', icon: '🧠' }, { name: 'Soul Wisp', icon: '💫' }, { name: 'Tomb Vampire', icon: '🧛' }
+        ],
+        boss: { name: 'Sunken King', icon: '👑' },
+        unique: 'drowned_greaves'
+    },
+    {
+        id: 'hellforge', name: 'The Hellforge', icon: '⚒️', unlockStage: 275, stage: 280, chestTier: 7,
+        monsters: [
+            { name: 'Clockwork Bee', icon: '🐝' }, { name: 'Rusted Inspector', icon: '🤖' }, { name: 'Thermic Dynamo', icon: '⚙️' },
+            { name: 'Sawblade', icon: '🪚' }, { name: 'Clockwork Bee', icon: '🐝' }, { name: 'Walking Alembic', icon: '⚗️' },
+            { name: 'Firespitter', icon: '🔥' }, { name: 'Thermic Dynamo', icon: '⚙️' }, { name: 'Hellfire Mortar', icon: '💥' },
+            { name: 'Sawblade', icon: '🪚' }, { name: 'Rusted Inspector', icon: '🤖' }, { name: 'Hellfire Mortar', icon: '💥' }
+        ],
+        boss: { name: 'Obsidian Colossus', icon: '🗿' },
+        unique: 'hellforged_gauntlets'
     }
 ];
 
@@ -132,6 +157,14 @@ export const UNIQUES = {
     dragonheart_plate: {
         id: 'dragonheart_plate', name: 'Dragonheart Plate', type: 'Body', tier: 6, power: 56,
         affixes: [ { stat: 'hpMult', name: 'Max HP', value: 0.1 }, { stat: 'dodge', name: 'Dodge', value: 0.05 }, { stat: 'lifesteal', name: 'Lifesteal', value: 0.03 }, { stat: 'combatXpMult', name: 'Combat XP', value: 0.1 } ]
+    },
+    drowned_greaves: {
+        id: 'drowned_greaves', name: "Drowned King's Greaves", type: 'Legs', tier: 7, power: 123,
+        affixes: [ { stat: 'hpMult', name: 'Max HP', value: 0.12 }, { stat: 'lifesteal', name: 'Lifesteal', value: 0.04 }, { stat: 'dodge', name: 'Dodge', value: 0.05 }, { stat: 'goldMult', name: 'Gold Find', value: 0.15 } ]
+    },
+    hellforged_gauntlets: {
+        id: 'hellforged_gauntlets', name: 'Hellforged Gauntlets', type: 'Gloves', tier: 7, power: 123,
+        affixes: [ { stat: 'critChance', name: 'Crit Chance', value: 0.06 }, { stat: 'critDmg', name: 'Crit Damage', value: 0.35 }, { stat: 'attackSpeed', name: 'Attack Speed', value: 0.06 }, { stat: 'dropMult', name: 'Drop Chance', value: 0.1 } ]
     }
 };
 

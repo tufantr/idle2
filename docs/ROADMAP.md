@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Two more dungeons** (the long-term research, item 2): the Sunken Necropolis at stage 240 (twelve
+      undead and the Sunken King) and the Hellforge at 275 (twelve constructs and the Obsidian
+      Colossus), with uniques for the two slots none had: Drowned King's Greaves and Hellforged
+      Gauntlets, each a record. They borrow the Drowned Ruins' and the Dragon's Lair's paintings under
+      their own light until they get their own; their map pins sit by the lake and at the volcano's foot
 - [x] **Medals for the deep game**: big moments past hour 300 were days apart, and only three medals
       marked stages (11, 50, 100). Six more: the bottoms of the Ember Pits, the Storm Wastes and the
       Burning Choir (stages 200, 300, 400), Pandemonium's 500, a first Ascension and twenty Trial tiers;
