@@ -133,7 +133,16 @@ const stage = createStage(document.getElementById('stage'), { sound: name => sou
 const guide = createGuide(document.body);
 
 // ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
+// Only on a local development host (tools/serve.py, the screenshot tool): on the live site they would
+// open every dungeon, the Titan and any event's bonuses to anyone, so there they are ignored, and a save
+// that picked them up before is cleaned (the server also flags an upload that has them on).
 function withDevFlags(g) {
+    const devHost = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
+    if (!devHost) {
+        g.state.settings.devUnlockAll = false;
+        g.state.settings.forceEvent = null;
+        return g;
+    }
     if (params.has('dev')) g.state.settings.devUnlockAll = true;
     g.state.settings.forceEvent = (params.has('dev') && params.get('event')) || null;
     return g;

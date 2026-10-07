@@ -3,7 +3,7 @@
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS } from '../data/items.js';
-import { addItem, dropTypesFor, isUpgrade, weakestGearTier, weakestGearSlot } from './inventory.js';
+import { addItem, dropTypesFor, isUpgrade, laggingSlot, PITY_LAG } from './inventory.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { rng } from '../core/rng.js';
@@ -267,19 +267,22 @@ function rollLoot(game, enemy, payout) {
 }
 
 /**
- * The pity count: a boss's first fall where the hero's gear could still improve (his weakest weapon or
- * armour is of the place's tier or below) marks one when it leaves no upgrade, and the PITY_MARKS-th
- * mark leaves a sure piece of the place's own tier for his weakest slot. An upgrade wipes the marks.
+ * The pity count: a boss's first fall where the place's drops could still beat something the hero wears
+ * (a common piece of its tier, at its depth, outscores his most lagging weapon or armour: laggingSlot)
+ * marks one when it leaves no upgrade, and the PITY_MARKS-th mark leaves a sure piece of the place's own
+ * tier, at its depth, for that slot. An upgrade wipes the marks. A re-climb through places whose gear
+ * the hero has outgrown (shallower Abyss depths are all tier 7, but far weaker) marks nothing.
  */
 function pityMark(game, zone, drops) {
     const state = game.state;
     const c = state.combat;
     if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && isUpgrade(state, dr.item))) { c.pity = 0; return; }
-    if (weakestGearTier(state) > zone.gearTier) return;   // the hero has outgrown this place's gear
+    const lag = laggingSlot(state, zone);
+    if (!lag || lag.ratio >= PITY_LAG) return;   // nothing this place drops could beat what the hero wears
     c.pity = (c.pity || 0) + 1;
     if (c.pity < PITY_MARKS) return;
     c.pity = 0;
-    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: weakestGearSlot(state), weight: 1 }], { tier: zone.gearTier });
+    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { tier: zone.gearTier });
     const result = addItem(game, item);
     bumpStat(game, 'itemsDropped');
     bumpStat(game, 'pityDrops');

@@ -6,7 +6,7 @@
 import { zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { dungeonById } from '../data/dungeons.js';
 import { RARITIES, PITY_MARKS } from '../data/items.js';
-import { weakestGearTier } from '../systems/inventory.js';
+import { laggingSlot, PITY_LAG } from '../systems/inventory.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
@@ -322,7 +322,7 @@ export function createScene(root, actions) {
             const start = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
             // The bosses' due (data/items.js PITY_MARKS): a gold ring round the boss fills a mark with each
             // boss at the hero's frontier that left no upgrade; it shows where the marks count.
-            const pity = seen(state, 'pity') && weakestGearTier(state) <= zoneForStage(c.stage).gearTier ? c.pity || 0 : null;
+            const pity = seen(state, 'pity') && laggingSlot(state, zoneForStage(c.stage)).ratio < PITY_LAG ? c.pity || 0 : null;
             nodes = Array.from({ length: STAGES_PER_ZONE }, (_, i) => {
                 const s = start + i;
                 const boss = isBossStage(s);

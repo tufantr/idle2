@@ -226,6 +226,10 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
         newFlags = checked.flags;
         metrics.peaks = checked.peaks;
     }
+    // The developer switches (every place open, a weekend event forced on) only work on a local host;
+    // a save that carries them was not played by the rules the boards compare.
+    const settings = state.settings && typeof state.settings === 'object' ? state.settings : {};
+    if (settings.devUnlockAll === true || (typeof settings.forceEvent === 'string' && settings.forceEvent)) newFlags.push('developer switches on');
     let flags = [];
     try { flags = JSON.parse((current && current.flags) || '[]'); } catch { flags = []; }
     if (!Array.isArray(flags)) flags = [];

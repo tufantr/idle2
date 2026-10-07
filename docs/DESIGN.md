@@ -509,7 +509,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   another. Time away does not count (`meta.lastPlaceAt` against `meta.playtimeMs`). Each goal
   carries a `task` in a few words and the `tab` where the work happens; the sidebar's Next card
   shows it with its progress, and a place earned but waiting as "On its way", its bar filling with the
-  breather. Settings has a developer switch (and `?dev=1`) that unlocks all.
+  breather. On a local development host `?dev=1` unlocks all (Settings then shows a switch to turn it
+  off); on any other host it is ignored and cleaned from the save, and the server flags an upload that
+  carries it or a forced event.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for
   you**, so a missed day costs nothing; no streaks. A crate holds 40 kills of gold at your best stage,
   12 materials and a gem from that zone, and `3 × zone tier` essence. Every seventh crate opened
@@ -655,7 +657,7 @@ needs no server: the schedule is the UTC calendar, so events run offline too.
 - **The event shop** (open only while an event runs): 60 essence for 20 tokens, a diamond for 40,
   100 bait for 10, ten of each herb for 15, ten runite bars for 60.
 - **Adding an event** is one entry in `EVENTS` (id, name, icon, colour, description, `mods`). For
-  testing, `?dev=1&event=<id>` runs one immediately; it is never kept in the save.
+  testing on a local host, `?dev=1&event=<id>` runs one immediately; it is never kept in the save.
 
 ### 3.20 Mastery
 
@@ -902,11 +904,16 @@ owner's choice of option 1a):
   twice (`dropTypesFor` in `src/systems/inventory.js`; chests too).
 - **Ordinary jewellery is Crafting's:** a ring, amulet or earring drops only epic or legendary (the
   rarity is rolled first; a lower one picks among weapons and armour).
-- **The bosses' due** (pity): a boss's first fall in a run, where the hero's weakest weapon or armour
-  is of the place's tier or below, marks one when it leaves no upgrade; the eighth mark leaves a sure
-  piece of the place's own tier for the weakest slot (empty first, then the lowest tier), and an
+- **The bosses' due** (pity): a boss's first fall in a run, where a common piece of the place's tier
+  at its Abyss depth would outscore one of the hero's worn weapon or armour (`laggingSlot`: worn
+  score under 95% of it, an empty slot always), marks one when it leaves no upgrade; the eighth mark
+  leaves a sure piece of the place's own tier, at its depth, for that most lagging slot, and an
   upgrade wipes the marks. Saved in `combat.pity`, kept through prestige; shown as eight marks of a
-  gold ring round the boss's node on the stage path, once there are two (disclosure `pity`).
+  gold ring round the boss's node on the stage path where the marks count, once there are two
+  (disclosure `pity`). It first compared tiers only, and every Abyss depth from 5 on is tier 7, so a
+  re-climb through shallow depths filled the ring and paid 127–229 pieces in 150 simulated hours, of
+  which 4–9% were ever worn; comparing drop power it pays 2–7 times, where it can help
+  (`docs/research_notes/robust-and-fun/D_robustness_methods.md` §4).
 - **Smithing's job is the anvil** (§3.4): bars of the worn piece's own metal make it stronger, and
   salvaging pieces gives their bars back. The anvil is a step of Smithing (Smelt · Forge · Anvil ·
   Tools) from level 5; a worn piece in the bag's detail has an Anvil button instead of Upgrade.

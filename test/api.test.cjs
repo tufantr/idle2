@@ -120,6 +120,13 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     const fresh = await register('fresh_cheat');
     assert.equal((await (await post('/save', { state: heroSave({ bestStage: 1e9 }) }, fresh)).json()).flagged, true);
 
+    // A save played with the developer switches on (they only work on a local host) is flagged.
+    const dev = await register('dev_switches');
+    assert.equal((await (await post('/save', { state: { ...heroSave(), settings: { devUnlockAll: true } } }, dev)).json()).flagged, true);
+    const event = await register('forced_event');
+    assert.equal((await (await post('/save', { state: { ...heroSave(), settings: { forceEvent: 'gold_fever' } } }, event)).json()).flagged, true);
+    assert.equal((await (await post('/save', { state: { ...heroSave(), settings: { devUnlockAll: false, forceEvent: null } } }, await register('honest_settings'))).json()).flagged, false);
+
     // The numbers checked are the server's own reading of the save: a raw field can't be dressed up.
     const sneaky = await register('sneaky_stage');
     const sneakySave = { ...heroSave(), combat: { stage: 999999, bestStage: 1, maxStage: 1 } };

@@ -429,6 +429,14 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Fixes the robustness research found** (`docs/research_notes/robust-and-fun/`): `?dev=1` and
+      `&event=` worked on the live site, opening every dungeon, the Titan and any event's bonuses to
+      anyone; they now work only on a local host, a save that picked them up is cleaned, and the server
+      flags an upload that carries them. The pity ring compared tiers, and every deep Abyss depth is
+      tier 7, so re-climbs filled it with pieces nobody wore (127–229 in 150 h, 4–9% worn); it now counts
+      a boss only where its drops could beat something worn, comparing drop power at the place's depth,
+      and pays 2–7 times in 150 h. The simulator charged its agility time only when a task ran its full
+      half hour, so some seeds trained agility for days at stage 26; it is charged as it passes now
 - [x] **Places one at a time** (the owner found that everything opened in seconds; DESIGN §3.14,
       §3.24): a player who taps reached stage 30 in half a minute and opened eight places in 28 s. A
       place reached by climbing now waits for a breather of time played since the last one (1.5, 2.5,

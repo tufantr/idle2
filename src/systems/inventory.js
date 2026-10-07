@@ -3,12 +3,12 @@
 import {
     TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, upgradeCost, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
     BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
-    SMITHING_TYPES, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT
+    SMITHING_TYPES, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
 } from '../data/items.js';
 import { salvageBars } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
-import { itemSellValue, goldPerKillAtStage, rerollAffixes } from '../core/formulas.js';
+import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
 import { skillLevel } from '../core/modifiers.js';
 import { rng } from '../core/rng.js';
 import { log, bumpStat } from './progress.js';
@@ -39,16 +39,26 @@ export function dropTypesFor(state, zoneTier) {
     });
 }
 
-/** The lowest tier among the worn weapon and armour (0 while a slot is empty). */
-export function weakestGearTier(state) {
-    return Math.min(...SMITHING_TYPES.map(type => state.equipped[type]?.tier || 0));
+
+/**
+ * The worn weapon or armour that lags furthest behind what a place drops: { type, ratio }, where ratio is
+ * the worn piece's score against a common piece of that kind from the place (its tier, at its Abyss
+ * depth); 0 for an empty slot. The pity count only runs where this is below PITY_LAG (combat.js): a
+ * boss whose drops could not beat anything worn (a re-climb through shallower depths) marks nothing.
+ */
+export const PITY_LAG = 0.95;
+export function laggingSlot(state, zone) {
+    const power = GEAR_TIERS[Math.max(1, Math.min(GEAR_TIERS.length, zone.gearTier)) - 1].power * abyssDropMult(zone.depth || 0);
+    let worst = null;
+    for (const type of SMITHING_TYPES) {
+        const slot = SLOT_STATS[type];
+        const place = STAT_UNIT * power * (slot.atk + slot.def);
+        const ratio = state.equipped[type] ? itemScore(state.equipped[type]) / place : 0;
+        if (!worst || ratio < worst.ratio) worst = { type, ratio };
+    }
+    return worst;
 }
 
-/** The weapon or armour slot most in need: an empty one, else the lowest tier, else the weakest piece. */
-export function weakestGearSlot(state) {
-    const rank = type => { const item = state.equipped[type]; return item ? [item.tier || 1, itemScore(item)] : [0, -1]; };
-    return [...SMITHING_TYPES].sort((a, b) => { const [ta, sa] = rank(a); const [tb, sb] = rank(b); return ta - tb || sa - sb; })[0];
-}
 
 export function canWear(state, item) {
     return skillLevel(state, 'combat') >= (TIER_WEAR_LEVEL[item.tier] || 1);

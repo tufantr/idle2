@@ -339,7 +339,7 @@ function ladderFarmTask() {
 }
 
 let lastStallWasDungeon = false;
-let agilityMs = 0; // time spent training agility for the next slot
+let agilityMs = 0; // time spent on the course and its materials, charged as it passes (tasks with budget 'agility')
 function stallTask() {
     if (!needTraining) return null;
     if (!lastStallWasDungeon && FARM_LADDER) { lastStallWasDungeon = true; needTraining = false; return ladderFarmTask(); }
@@ -398,9 +398,8 @@ function agilityTask() {
         const waiting = S.agility.built.map((id, i) => (id ? upgradeInfo(S, i) : null)).filter(Boolean)
             .find(info => S.gold >= info.gold && lvl('agility') < info.levelReq);
         if (!waiting) return null;
-        const start = now;
         const end = now + 30 * 60000;
-        return { kind: 'agility', why: `train agility toward ${waiting.levelReq}`, until: () => { if (now >= end || lvl('agility') >= waiting.levelReq) { agilityMs += now - start; return true; } return false; } };
+        return { kind: 'agility', budget: 'agility', why: `train agility toward ${waiting.levelReq}`, until: () => now >= end || lvl('agility') >= waiting.levelReq };
     }
     const cost = obstacleCost(S, slot);
     if (S.gold < cost.gold * 0.5) return null;
@@ -408,9 +407,8 @@ function agilityTask() {
     if (lvl('agility') < target) {
         // A real player interleaves: at most a quarter of the time on the course, half an hour at a go.
         if (!S.agility.built.some(Boolean) || agilityMs > 0.25 * now) return null;
-        const start = now;
         const end = now + 30 * 60000;
-        return { kind: 'agility', why: `train agility toward ${target}`, until: () => { if (now >= end || lvl('agility') >= target) { agilityMs += now - start; return true; } return false; } };
+        return { kind: 'agility', budget: 'agility', why: `train agility toward ${target}`, until: () => now >= end || lvl('agility') >= target };
     }
     // The materials, and the skills to make them, out of the same quarter of the bot's time (a player
     // who needs Smithing 75 for an obstacle's bars still goes back to the fight between sessions).
@@ -611,6 +609,6 @@ if (VERBOSE) for (const d of DUNGEONS) {
     const p = dungeonPreview(game.derived, d);
     console.log(`  ${d.name}: boss ${p.bossFight.killSeconds.toFixed(1)} s to kill / ${p.bossFight.surviveSeconds.toFixed(1)} s to survive; last elite ${p.eliteFight.killSeconds.toFixed(1)} / ${p.eliteFight.surviveSeconds.toFixed(1)} s`);
 }
-console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}`);
+console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}, pity drops ${S.stats.pityDrops || 0}`);
 console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.equipped[s].upgrade ? '+' + S.equipped[s].upgrade : ''}` : null).filter(Boolean).join(', ')}`);
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);

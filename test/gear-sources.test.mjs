@@ -14,6 +14,7 @@ import { reinforceCost, rerollCost, salvageBars, ANVIL_REFUND } from '../src/dat
 import { dropTypesFor, salvagePreview } from '../src/systems/inventory.js';
 import { anvilCost } from '../src/systems/anvil.js';
 import { spawnEnemy } from '../src/systems/combat.js';
+import { zoneForStage } from '../src/data/zones.js';
 
 const T0 = 1_700_000_000_000;
 /** A dropped piece of gear of a kind, tier and rarity (common unless `rarity` is given). */
@@ -124,6 +125,22 @@ test('a dry run of bosses at the frontier ends in a sure piece for the weakest s
     const loaded = new Game(migrateState(JSON.parse(game.serialize(T0)), T0), T0);
     assert.equal(loaded.state.combat.pity, 3);
     assert.equal(migrateState({ ...JSON.parse(game.serialize(T0)), combat: { ...s.combat, enemy: null, pity: 99 } }, T0).combat.pity, PITY_MARKS - 1);
+});
+
+test('deep in the Abyss, a boss whose drops the hero has outgrown marks nothing', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    game.enterCombat();
+    s.stats.bossKills = 5;
+    // gear from depth 18, re-climbing past depth 6 (both tier 7: only the depth tells them apart)
+    for (const type of SMITHING_TYPES) s.equipped[type] = generateDrop(7, true, s.idCounter++, 18, [{ type, weight: 1 }], { tier: 7 });
+    const shallow = Array.from({ length: 400 }, (_, i) => i + 1).find(st => st % 10 === 0 && zoneForStage(st).depth === 6);
+    const deep = Array.from({ length: 400 }, (_, i) => i + 1).find(st => st % 10 === 0 && zoneForStage(st).depth === 19);
+    s.combat.pity = 0;
+    beatBoss(game, shallow, 0.9999);
+    assert.equal(s.combat.pity, 0, 'a depth-6 boss cannot upgrade depth-18 gear');
+    beatBoss(game, deep, 0.9999);
+    assert.equal(s.combat.pity, 1, 'one past the hero\'s gear can');
 });
 
 test('the anvil reinforces with bars of the piece\'s metal and essence, for Smithing XP', () => {
