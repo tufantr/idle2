@@ -341,9 +341,14 @@ the Abyss repeats with a depth counter and steeper growth.
   tokens alone make each late run add less (+0.8% a run after the hundredth); a record lifts the whole
   stock. A new 25-stage record is a card ("Your tokens are ×1.05 stronger"), and a unique's card says
   so too, once the player has tokens; the token chip's tip counts them.
-- **Auto** (`autoPrestigeIn`, `tickAutoPrestige`): after 20 prestiges the dock's Prestige button gets
-  an Auto switch beside it (`settings.autoPrestige`, off until turned on). With it on, a run that has
-  gone 10 minutes without a new best stage (`combat.lastRiseAt`), and may be prestiged, is: the hero
+- **Auto** (`autoPrestigeIn`, `tickAutoPrestige`): after 5 prestiges, or 48 hours after the first one
+  (`prestige.firstAt`), whichever comes first, the dock's Prestige button gets an Auto switch beside it
+  (`settings.autoPrestige`, off until turned on). It took 20 prestiges until the check-in research
+  found that a player who visits three times a day earned it on day 8, his runs sitting at their wall
+  for 86–97% of his time away, and one who visits once a day never
+  (`docs/research_notes/robust-and-fun/C_sessions_players.md`). With it on, a run that has spent 10
+  minutes climbing without a new best stage (`combat.stallMs`, which runs only while the hero fights or
+  rests to fight on), and may be prestiged, is: the hero
   walks straight into the next run's first fight, and a note says what it paid (a new rank still gets
   its card). Only while climbing the stage ladder: never while staying on a stage, in a dungeon or at
   the Titan, resting or working. Offline replay runs the same check, and the welcome-back summary
@@ -560,9 +565,15 @@ medals' cards show once the player is back). Farming plots run on timestamps and
 tab that ticks less often (browsers slow hidden tabs to once a minute) is plain play, simulated in
 5-second steps; a kill hands the rest of a step to the next monster, and a step is split where a
 boss's clock runs out, so the step size never changes the result. Capped at
-**12 hours** (+2 h per Endurance perk, up to 24 h, +1 h from the Zipline). Absences under a minute
+**24 hours** (+2 h per Endurance perk, up to 36 h, +1 h from the Zipline; it was 12 until the check-in
+research found a once-a-day player losing 11 hours a day to it,
+`docs/research_notes/robust-and-fun/C_sessions_players.md`). Absences under a minute
 are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
-plots ready to harvest, how often the hero fell and got up, and why work stopped early.
+plots ready to harvest, how often the hero fell and got up, and why work stopped early. Since the
+check-in research it leads with where the run stopped ("climbed to stage 57, then held there for
+1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
+a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better
+gear to wear; a place that waited opens on the return and is named there too.
 
 ### 3.17 Saves, cloud and the API
 
@@ -1241,8 +1252,8 @@ disagreed, the implementation follows the simulator:
     a similar number of kills (~450 vs 80–330) with a steadier bar.
 11. **Boss payouts by health** — not in the report; added when the simulator showed that farming a
     boss (or a dungeon's) beat every other way to farm.
-12. **Offline cap 12 h** (+2 h per Endurance level, up to 24 h) instead of a flat 24 h, so the perk
-    has something to give.
+12. **Offline cap 24 h** (+2 h per Endurance level, up to 36 h): it was 12 h, so the perk had
+    something to give, until a once-a-day player was found to lose 11 hours a day to it.
 13. **Mini-game numbers:** +35–55% for 90 s every 3–6 min (report: +50–100% for 60–120 s every
     3–8 min), plus the idle Focus bonus so that active play stays optional.
 14. **Seeds cost a flat price** and **agility obstacles fixed gold amounts**, not "kills at your best

@@ -327,6 +327,7 @@ function spendPoints() {
 }
 const runLog = [];
 let runStartedAt = 0;
+let autoOnAt = null;   // when the bot turned the Auto switch on
 
 // Spend gold on camp upgrades, cheapest-first, keeping a small reserve.
 function buyCamp() {
@@ -479,7 +480,7 @@ function agilityTask() {
 }
 
 function decide() {
-    if (AUTO && S.prestige.count >= BALANCE.prestige.autoAfter && !S.settings.autoPrestige) game.setAutoPrestige(true);
+    if (AUTO && !S.settings.autoPrestige && game.autoPrestigeEarned()) { game.setAutoPrestige(true); autoOnAt = now; }
     equipBest();
     spendPoints();
     tendFarm();
@@ -830,7 +831,7 @@ if (JSON_OUT) {
         commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null }, policy: POLICY, overrides,
         stages: Object.fromEntries(STAGE_MARKS.map(m => [m, at('stage', m)])),
         weaponTier: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(t => [t, at('weapon tier', t)])),
-        firstPrestige: at('prestige', 1), autoEarned: at('prestige', BALANCE.prestige.autoAfter),
+        firstPrestige: at('prestige', 1), autoEarned: autoOnAt === null ? null : +H(autoOnAt).toFixed(3),
         uniques: Object.fromEntries(milestones.filter(m => m.key === 'unique').map(m => [m.value, +H(m.at).toFixed(2)])),
         levels: Object.fromEntries(milestones.filter(m => m.key.endsWith(' lv')).map(m => [`${m.key.slice(0, -3)} ${m.value}`, +H(m.at).toFixed(2)])),
         final: {

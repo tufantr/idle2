@@ -8,7 +8,7 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel, levelForXp } from '../src/core/xp.js';
 import { createDefaultState, migrateState, SAVE_VERSION } from '../src/core/state.js';
-import { actionInterval } from '../src/core/modifiers.js';
+import { actionInterval, BASE } from '../src/core/modifiers.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../src/systems/daily.js';
 import { generateEquipment, enemyForStage, tokensForStage, enemyDamage } from '../src/core/formulas.js';
 import { RESOURCES, sellValue } from '../src/data/resources.js';
@@ -75,7 +75,7 @@ test('regression: offline progress with a workshop action does not throw and mak
     assert.match(summary.stalledReason || '', /ran out of materials/);
 });
 
-test('offline progress is capped (12h base) and speeds up with mastery as it goes', () => {
+test('offline progress is capped (24 h base) and speeds up with mastery as it goes', () => {
     const game = new Game(null, T0);
     game.startNodeAction('mining', 'copper_ore');
     const saved = JSON.parse(game.serialize(T0));
@@ -86,7 +86,7 @@ test('offline progress is capped (12h base) and speeds up with mastery as it goe
     assert.ok(g2.derived.focused);
     const derived = g2.derived;
     const summary = g2.resumeFromSave(later);
-    assert.equal(summary.simulated, 12 * 3600 * 1000);
+    assert.equal(summary.simulated, BASE.baseOfflineHours * 3600 * 1000);
     assert.ok(summary.capped);
     // Replay the timeline by hand: each ore takes the interval of the mastery level it starts at.
     let t = 0, actions = 0, practice = 0;
@@ -404,9 +404,11 @@ test('a 12 h offline combat replay is silent and fast', () => {
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 12 * 3600 * 1000;
     const g2 = new Game(saved, later);
-    const started = Date.now();
+    const started = process.cpuUsage();   // this process's own time: a busy machine does not count
     const summary = g2.resumeFromSave(later);
-    assert.ok(Date.now() - started < 5000, `replay took ${Date.now() - started} ms`);
+    const cpu = process.cpuUsage(started);
+    const ms = (cpu.user + cpu.system) / 1000;
+    assert.ok(ms < 5000, `replay took ${Math.round(ms)} ms of CPU`);
     assert.equal(summary.mode, 'combat');
     assert.equal(summary.died, false);
     assert.ok(summary.kills > 20000, `kills ${summary.kills}`);

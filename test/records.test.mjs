@@ -66,13 +66,25 @@ function veteran({ count = BALANCE.prestige.autoAfter, runMin = 30, stallMin = 1
     return game;
 }
 
-test('the Auto switch is earned with the 20th prestige', () => {
+test('the Auto switch is earned with the fifth prestige, or two days after the first', () => {
     const early = veteran({ count: BALANCE.prestige.autoAfter - 1, auto: false });
     assert.equal(early.setAutoPrestige(true), false);
     assert.equal(early.state.settings.autoPrestige, false);
     const earned = veteran({ auto: false });
     assert.equal(earned.setAutoPrestige(true), true);
     assert.equal(earned.state.settings.autoPrestige, true);
+    // two days after a first prestige, whatever the count
+    const slow = veteran({ count: 1, auto: false });
+    slow.state.prestige.firstAt = T0 - 47 * 3600_000;
+    assert.equal(slow.setAutoPrestige(true), false, 'not yet at 47 hours');
+    slow.state.prestige.firstAt = T0 - 49 * 3600_000;
+    assert.equal(slow.setAutoPrestige(true), true, 'earned at 48');
+    // a first prestige notes when it was
+    const fresh = new Game(null, T0);
+    Object.assign(fresh.state.combat, { maxStage: 30, bestStage: 30 });
+    fresh.state.prestige.runStartedAt = T0 - 3600_000;
+    assert.ok(fresh.prestige());
+    assert.equal(fresh.state.prestige.firstAt, T0);
     // saved, and a save from before has it off
     assert.equal(migrateState(JSON.parse(earned.serialize(T0)), T0).settings.autoPrestige, true);
     const raw = JSON.parse(earned.serialize(T0));

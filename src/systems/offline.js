@@ -150,6 +150,9 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     }
 
     const summary = { elapsed, simulated, capped: elapsed > cap, mode, stalledReason, ...diff(before, state) };
+    // Where the run stands: the stage it reached and how long it has climbed without a new best since
+    // (combat.stallMs), for the welcome-back's "climbed to X, then held there for Y".
+    if (mode === 'combat') summary.run = { stage: state.combat.maxStage, best: state.combat.bestStage, stallMs: state.combat.stallMs || 0 };
     if (mastery && mastery.to > mastery.from) summary.mastery = mastery;
     summary.plotsReady = (state.farming?.plots || []).filter(p => p.crop && now >= p.readyAt).length;
     game.emit({ type: 'offline', summary });

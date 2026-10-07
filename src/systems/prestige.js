@@ -53,6 +53,7 @@ export function doPrestige(game, { auto = false } = {}) {
     state.prestige.skillPoints += preview.skillPoints;
     state.prestige.spClaimedStage = Math.max(state.prestige.spClaimedStage, state.combat.bestStage);
     state.prestige.count += 1;
+    if (!state.prestige.firstAt) state.prestige.firstAt = game.now;   // the Auto switch comes two days on, at the latest
     state.prestige.runStartedAt = game.now;
     bumpStat(game, 'prestiges');
     state.combat.stage = preview.startStage;
@@ -84,8 +85,11 @@ export function buyPerk(game, perkId) {
     return true;
 }
 
-/** Has the hero earned the auto-prestige switch? (BALANCE.prestige.autoAfter prestiges.) */
-export const autoPrestigeEarned = state => state.prestige.count >= BALANCE.prestige.autoAfter;
+/** Has the hero earned the auto-prestige switch? autoAfter prestiges, or autoAfterMs since the first. */
+export function autoPrestigeEarned(state, now = state.meta?.lastActiveAt || 0) {
+    const p = state.prestige;
+    return p.count >= BALANCE.prestige.autoAfter || (p.count >= 1 && p.firstAt > 0 && now - p.firstAt >= BALANCE.prestige.autoAfterMs);
+}
 
 /**
  * Milliseconds until the auto-prestige would fire for this run, or null while it can't: the switch is
@@ -96,7 +100,7 @@ export const autoPrestigeEarned = state => state.prestige.count >= BALANCE.prest
  */
 export function autoPrestigeIn(state, now) {
     const c = state.combat;
-    if (!state.settings.autoPrestige || !autoPrestigeEarned(state)) return null;
+    if (!state.settings.autoPrestige || !autoPrestigeEarned(state, now)) return null;
     if (!(c.active || c.recovering) || c.mode !== 'stages' || c.farmMode || c.maxStage < BALANCE.prestige.minStage) return null;
     return Math.max(0, BALANCE.prestige.autoStallMs - (c.stallMs || 0), prestigeWaitMs(state, now));
 }
@@ -110,7 +114,7 @@ export function tickAutoPrestige(game) {
 }
 
 export function setAutoPrestige(game, on) {
-    if (on && !autoPrestigeEarned(game.state)) return false;
+    if (on && !autoPrestigeEarned(game.state, game.now)) return false;
     game.state.settings.autoPrestige = !!on;
     game.markDirty();
     return true;

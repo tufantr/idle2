@@ -63,7 +63,7 @@ export function createDefaultState(now = Date.now()) {
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
         agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
         events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [] },
-        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now },
+        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0 },   // firstAt: when the first prestige was
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
         achievements: {},
@@ -404,6 +404,10 @@ function normalise(data, now) {
     delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
+    // When the first prestige was (the Auto switch comes two days after it at the latest); a save from
+    // before it was kept starts the two days now.
+    state.prestige.firstAt = Math.max(0, Math.min(now, finite(state.prestige.firstAt)));
+    if (state.prestige.count >= 1 && !state.prestige.firstAt) state.prestige.firstAt = now;
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;
     state.prestige.runStartedAt = Math.min(state.prestige.runStartedAt, now);

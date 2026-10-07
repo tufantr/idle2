@@ -43,7 +43,7 @@ export const BASE = {
     // lifts the whole stock where one more run adds a few percent.
     recordStages: 25,
     recordMult: 1.05,
-    baseOfflineHours: 12,
+    baseOfflineHours: 24,       // a day: a player who comes back once a day loses nothing (12 until the check-in research)
     baseAutoEatThreshold: 0.5,
     basePotionCharges: 15,
     // Focus: after a minute without input the hero settles in (Clicker Heroes' idle ancients).

@@ -153,7 +153,7 @@ function withDevFlags(g) {
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
 const offlineSummary = game.resumeFromSave(Date.now());
-if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderWelcomeBack(offlineSummary, game.state), 'offline');
+if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderWelcomeBack(offlineSummary, game), 'offline');
 if (cloud.loggedIn) syncFromCloud();
 // A new player meets the game first, not a login form: a title card, then straight into a fight.
 // Signing in stays one click away (on the card, and in the header once there is progress to keep).
@@ -167,7 +167,7 @@ let lastCloudSave = Date.now();
 /** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
 function advance(now) {
     const summary = game.tick(now);
-    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game.state), 'offline');
+    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
 }
 
 let tickErrorShown = false;
@@ -794,7 +794,7 @@ async function syncFromCloud() {
 function adoptState(stateObject) {
     game = withDevFlags(new Game(stateObject, Date.now()));
     const summary = game.resumeFromSave(Date.now());
-    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game.state), 'offline');
+    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
     save(Date.now());
     render();
 }

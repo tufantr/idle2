@@ -2072,7 +2072,8 @@ export function renderConfirmModal(title, text, confirmLabel) {
  * each skill's XP with its bar (a level-up stands out), the materials as tiles popping in one by
  * one, gold, finds (pets, uniques, items, dungeon clears) and what was used up.
  */
-export function renderWelcomeBack(summary, state) {
+export function renderWelcomeBack(summary, game) {
+    const state = game.state;
     const mins = Math.floor(summary.simulated / 60000);
     const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'
@@ -2107,6 +2108,20 @@ export function renderWelcomeBack(summary, state) {
         summary.plotsReady ? `<div class="wb-find" style="--i:${next()}">${sprite('farm/growing', { scale: 1, fallback: '🌾' })}<span><b>${summary.plotsReady}</b> farm plot${summary.plotsReady > 1 ? 's are' : ' is'} ready to harvest</span></div>` : '',
         summary.mastery && summary.mastery.to > summary.mastery.from ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.mastery.icon, { scale: 1 })}<span>${esc(summary.mastery.name)} mastery ${summary.mastery.from} → <b>${summary.mastery.to}</b></span></div>` : ''
     ].filter(Boolean).join('');
+    // Where the run stopped: it climbed, then held its wall (the share of the time away, as a bar).
+    const run = summary.run;
+    const wall = run && run.stallMs >= 10 * 60000 && summary.simulated > 0
+        ? `<div class="wb-wall"><span>Climbed to stage <b>${fmt(run.stage)}</b>, then held there for <b>${duration(Math.min(run.stallMs, summary.simulated))}</b></span><i class="wb-wall-bar" style="--climb:${(100 * Math.max(0, 1 - run.stallMs / summary.simulated)).toFixed(0)}%" aria-hidden="true"></i></div>` : '';
+    // What is ready now, each one a tap away (it closes this and does the thing).
+    const ready = [];
+    const preview = game.canPrestige() && !state.settings.autoPrestige ? game.prestigePreview() : null;
+    if (preview && preview.tokens > 0) ready.push(['FI.openPrestige()', sprite(FEATURES.prestige.icon, { scale: 0.75 }), `Prestige: +${fmt(preview.tokens)} tokens`]);
+    if (state.daily?.banked > 0) ready.push(['FI.claimDaily()', sprite('crate', { scale: 0.75 }), `${state.daily.banked > 1 ? `${state.daily.banked} crates` : 'A crate'} to open`]);
+    if (game.titanReady()) ready.push(['FI.challengeTitan()', sprite('titan/0', { scale: 0.75 }), 'The Titan is awake']);
+    if (state.prestige.skillPoints > 0) ready.push(['FI.openPerks()', sprite('perk/knight', { scale: 0.75 }), `${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'} to spend`]);
+    const upgrade = findUpgrade(state);
+    if (upgrade) ready.push([`FI.equip(${Number(upgrade.item.id)})`, sprite(itemSpriteKey(upgrade.item), { scale: 0.75, fallback: esc(upgrade.item.icon) }), `Wear the ${esc(upgrade.item.name)}`]);
+    const readyRow = ready.length ? `<div class="wb-ready">${ready.map(([act, art, text]) => `<button class="wb-ready-btn" onclick="FI.collectOffline(); ${act}">${art}<span>${text}</span></button>`).join('')}</div>` : '';
     // the hero who did the work, with the tool of it in hand (the sword after a fight), and the pet
     const pet = companionPet(state);
     const hero = `<div class="wb-hero" aria-hidden="true">${heroSprite(state, { scale: 2, tool: summary.mode === 'skill' ? state.action?.skill || null : null })}${pet ? sprite(`pet/${pet}`, { scale: 1, cls: 'wb-pet' }) : ''}</div>`;
@@ -2115,6 +2130,8 @@ export function renderWelcomeBack(summary, state) {
         <div class="modal-header">Welcome back</div>
         <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
         <p class="wb-story">${story}</p>
+        ${wall}
+        ${readyRow}
         ${summary.gold > 0 ? `<div class="wb-gold" style="--i:${next()}">${sprite('gold', { scale: 1.25 })}<b>+${fmt(summary.gold)}</b> gold</div>` : ''}
         ${skills ? `<div class="wb-skills">${skills}</div>` : ''}
         ${gains.length ? `<div class="wb-tiles">${gains.map(([id, d]) => tile(id, `+${shortQty(d)}`)).join('')}</div>` : ''}

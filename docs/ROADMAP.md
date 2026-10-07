@@ -429,6 +429,13 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **For players who check in** (the sessions research, `robust-and-fun/C_sessions_players.md`): a
+      player who visited three times a day earned Auto on day 8 and one who came once a day never, his
+      runs sitting at their wall most of his time away. Auto now comes with the fifth prestige, or two
+      days after the first; offline progress runs for a day (24 hours, was 12; the Endurance perk adds
+      up to 12 more); and the welcome-back leads with where the run stopped (climbed to a stage, then
+      held it for how long, as a bar) and a row of what is ready, each a tap away: the prestige with its
+      payout, crates, the Titan, skill points, better gear
 - [x] **Places when they are of use** (the onboarding research, `robust-and-fun/A_onboarding_pacing.md`):
       the breather between places keeps growing (1.5, 3, 4, 5, 7, 10, 15, 20, then 30 minutes) and runs
       only while the player attends (the page in view, or input in the last three minutes), so a tab

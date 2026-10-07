@@ -63,9 +63,14 @@ export const BALANCE = {
         fullRunFraction: 0.5,       // the per-prestige skill point needs a run this share of your best
         spPerPrestige: 1,
         spStageStep: 25,        // +1 SP for every 25 stages of all-time best, claimed once
-        // The earned auto-prestige: after `autoAfter` prestiges a switch in the fight's dock prestiges a
-        // run that has gone `autoStallMs` without a new best stage (systems/prestige.js).
-        autoAfter: 20,
+        // The earned auto-prestige: after `autoAfter` prestiges, or `autoAfterMs` after the first one
+        // (whichever comes first), a switch in the fight's dock prestiges a run that has spent
+        // `autoStallMs` climbing without a new best stage (systems/prestige.js). It took 20 prestiges
+        // until the check-in research found that a player who visits three times a day earned it only
+        // on day 8, his runs sitting at their wall for 86-97% of his time away, and one who visits once a
+        // day never (robust-and-fun/C_sessions_players.md §6).
+        autoAfter: 5,
+        autoAfterMs: 48 * 3600 * 1000,
         autoStallMs: 10 * 60 * 1000
     },
     // Deep in the Abyss drops keep pace with the monsters: past `dropScalingFrom`, every depth makes

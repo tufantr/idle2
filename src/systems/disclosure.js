@@ -13,7 +13,9 @@ import { SMITHING_TYPES } from '../data/items.js';
 import { levelForXp } from '../core/xp.js';
 import { BALANCE } from '../core/formulas.js';
 
-const AUTO_PRESTIGE_AFTER = BALANCE.prestige.autoAfter;
+// The Auto switch, earned (systems/prestige.js autoPrestigeEarned, which this mirrors to stay free of it).
+const autoEarned = s => s.prestige.count >= BALANCE.prestige.autoAfter
+    || (s.prestige.count >= 1 && s.prestige.firstAt > 0 && (s.meta?.lastActiveAt || 0) - s.prestige.firstAt >= BALANCE.prestige.autoAfterMs);
 
 const CHEAPEST_CAMP = Math.min(...CAMP_UPGRADES.map(u => u.baseCost));
 const JEWELLERY = new Set(['Ring', 'Neck', 'Ear']);
@@ -25,7 +27,7 @@ export const DISCLOSURES = [
     // the purse: a currency shows once you hold some
     { id: 'essence',      when: s => s.resources.essence > 0 },
     { id: 'tokens',       when: s => s.prestige.tokens > 0 || s.prestige.count > 0 },
-    { id: 'auto_prestige', when: s => s.prestige.count >= AUTO_PRESTIGE_AFTER },   // the dock's Auto switch, earned
+    { id: 'auto_prestige', when: autoEarned },   // the dock's Auto switch, earned
     { id: 'skill_points', when: s => s.prestige.skillPoints > 0 || s.prestige.count > 0 || Object.values(s.perks).some(level => level > 0) },
     // the combat tab
     { id: 'camp',         when: s => s.gold >= CHEAPEST_CAMP || Object.values(s.camp).some(level => level > 0) || s.prestige.count > 0 },
