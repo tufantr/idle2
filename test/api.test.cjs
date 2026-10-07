@@ -385,6 +385,31 @@ test('clan races: parallel creates leave no empty clan, parallel joins respect t
     assert.equal(view.members.length, 20, 'never past 20');
 });
 
+test("the week's Trial has a board of this week's runs only, and a stage past the best is flagged", async () => {
+    const { trialWeekStart } = await import('../src/core/power.js');
+    const { weeklyTrialAt } = await import('../src/data/trials.js');
+    const week = weeklyTrialAt(clock);
+    const trialSave = (bestStage, weekly) => ({ ...heroSave({ bestStage }), trials: { active: null, cleared: {}, best: { [week.trial.id]: weekly?.best || 0 }, laurels: 0, weekly } });
+    const now = { start: week.start, id: week.trial.id, bar: 0, won: false, best: 240 };
+    const stale = { ...now, start: week.start - 7 * 24 * 3600 * 1000, best: 270 };
+    const keen = await register('keen_trialist');
+    const old = await register('last_week');
+    await post('/save', { state: trialSave(260, now) }, keen);
+    await post('/save', { state: trialSave(280, stale) }, old);
+    await post('/leaderboard/consent', { optIn: true }, keen);
+    await post('/leaderboard/consent', { optIn: true }, old);
+    clock += 61 * 1000;   // past the board cache
+    const board = await (await get('/leaderboard?metric=weeklyTrial&period=week', keen)).json();
+    assert.equal(board.metric, 'weeklyTrial');
+    assert.equal(board.period, 'all', "the week's Trial is a weekly number already");
+    assert.equal(board.me.value, 240);
+    assert.ok(!board.entries.some(e => e.username === 'last_week'), "last week's run is not on this week's board");
+    assert.equal(trialWeekStart(clock), week.start);
+    // a run in the week's Trial past the hero's best stage is impossible
+    const forger = await register('trial_forger');
+    assert.equal((await (await post('/save', { state: trialSave(100, { ...now, best: 400 }) }, forger)).json()).flagged, true);
+});
+
 test('leaderboards ignore inherited metric names', async () => {
     const t = await register('curious');
     const res = await (await get('/leaderboard?metric=constructor', t)).json();

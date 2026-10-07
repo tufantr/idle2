@@ -6,7 +6,10 @@ import { migrateState } from './state.js';
 import { deriveStats } from './modifiers.js';
 import { levelForXp } from './xp.js';
 import { enemyBaseStats, BALANCE } from './formulas.js';
-import { TRIALS, WEEK_MS, trialTarget, trialTier, laurelsOf } from '../data/trials.js';
+import { TRIALS, WEEK_MS, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
+
+/** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
+export const trialWeekStart = now => weeklyTrialAt(now).start;
 
 export const CLAN_ATTACK_SECONDS = 60;
 
@@ -43,6 +46,9 @@ export function powerSummary(rawState, now = Date.now()) {
         tokenGain: derived.tokenMult,                // what every prestige's tokens are multiplied by (Stars, medals, uniques)
         // Trial tiers whose stage is past the best stage ever reached: none in a save that was played
         trialTiersBeyondBest: TRIALS.reduce((n, t) => n + Array.from({ length: trialTier(state, t.id) }, (_, i) => trialTarget(t, i + 1)).filter(stage => stage > state.combat.bestStage).length, 0),
+        // the best stage this week in the week's Trial, and the week it belongs to (the week's board)
+        weeklyTrial: state.trials.weekly?.start === weeklyTrialAt(now).start ? state.trials.weekly.best || 0 : 0,
+        weeklyTrialWeek: weeklyTrialAt(now).start,
         // laurels past one a week since the save began (the week's Trial: data/trials.js)
         laurelsBeyondWeeks: Math.max(0, laurelsOf(state) - (Math.floor(Math.max(0, now - (Number(state.meta.createdAt) || 0)) / WEEK_MS) + 1))
     };

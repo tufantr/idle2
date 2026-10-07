@@ -38,7 +38,7 @@ export function weeklyGoal(state, now) {
 export function syncWeekly(state, now) {
     const w = weeklyTrialAt(now);
     if (state.trials.weekly?.start === w.start) return state.trials.weekly;
-    state.trials.weekly = { start: w.start, id: w.trial.id, bar: state.trials.best[w.trial.id] || 0, won: false };
+    state.trials.weekly = { start: w.start, id: w.trial.id, bar: state.trials.best[w.trial.id] || 0, won: false, best: 0 };
     return state.trials.weekly;
 }
 
@@ -86,6 +86,7 @@ export function checkTrial(game) {
     if (stage > (state.trials.best[trial.id] || 0)) state.trials.best[trial.id] = stage;
     let records = 0;
     const week = syncWeekly(state, game.now);
+    if (week.id === trial.id && stage > (week.best || 0)) week.best = stage;   // this week's best in it: the week's board (api)
     if (week.id === trial.id && !week.won && stage >= Math.max(week.bar + 1, trial.first)) {
         week.won = true;
         state.trials.laurels = (state.trials.laurels || 0) + 1;

@@ -1059,7 +1059,11 @@ your best stage in it from before the week began (or its first tier's stage, if 
 older save, at least the stage its cleared tiers asked), and the week's first tick notes it as the
 week's bar (`trials.weekly`), so the goal scales with the hero and a Trial cleared at hour 300 is still
 worth a run every eighth week. The simulator's bot tries for the laurel first when a Trial is due,
-three times a week at most. The server flags more laurels than weeks since the save began.
+three times a week at most. The server flags more laurels than weeks since the save began. The week
+has a **board** too: the save keeps the week's best stage in its Trial (`trials.weekly.best`), the server
+reads it with the week it belongs to (`weeklyTrial`, `weeklyTrialWeek` in `powerSummary`), and the
+leaderboards' "Week's Trial" tab lists this week's runs only (a weekly number already, it has no "this
+week" toggle); a run in it past the hero's best stage is flagged.
 
 The server keeps a Trial out of what the boards compare (`powerSummary` drops the run's rule) and flags a
 save with tiers its best stage could not have cleared (`trialTiersBeyondBest`).

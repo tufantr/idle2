@@ -207,6 +207,7 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
     if (num(metrics.attackDamage) > plausibleAttackDamage(metrics.bestStage)) flags.push('attack beyond what its best stage allows');
     if (num(metrics.trialTiersBeyondBest) > 0) flags.push('Trial tiers beyond its best stage');
     if (num(metrics.laurelsBeyondWeeks) > 0) flags.push('more laurels than weeks played');
+    if (num(metrics.weeklyTrial) > num(metrics.bestStage)) flags.push("the week's Trial past the best stage");
     return { flags, peaks: next };
 }
 
@@ -462,7 +463,8 @@ app.post('/api/rewards/claim', authenticateToken, route('claim rewards', async (
 // Only players who opted in are listed, only by username, only with numbers the server computed
 // from their stored save; accounts flagged in the last 30 days are left out.
 
-const METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans defeated', dungeonClears: 'Dungeon clears' };
+const METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans defeated', dungeonClears: 'Dungeon clears', weeklyTrial: "This week's Trial" };
+// The week's Trial (src/data/trials.js) is a weekly number already: only this week's saves count on its board.
 const BOARD_CACHE_MS = 60 * 1000;
 const boardCache = new Map();
 
@@ -475,16 +477,19 @@ app.post('/api/leaderboard/consent', authenticateToken, route('consent', async (
 
 app.get('/api/leaderboard', authenticateToken, route('leaderboard', async (req, res) => {
     const metric = Object.hasOwn(METRICS, req.query.metric) ? req.query.metric : 'bestStage';
-    const period = req.query.period === 'week' ? 'week' : 'all';
+    const period = req.query.period === 'week' && metric !== 'weeklyTrial' ? 'week' : 'all';
     const now = Date.now();
     const week = isoWeek(now);
-    const key = `${metric}:${period}:${week}`;
+    const trialWeek = metric === 'weeklyTrial' ? (await engine()).trialWeekStart(now) : 0;
+    const key = `${metric}:${period}:${week}:${trialWeek}`;
     let rows = boardCache.get(key);
     if (!rows || now - rows.at > BOARD_CACHE_MS) {
         const entries = [];
         for (const r of await store.leaderboardRows(week)) {
             if (recentlyFlagged(r.flags, now)) continue;
-            let value = num(parseMetrics(r.metrics)?.[metric]);
+            const metrics = parseMetrics(r.metrics);
+            let value = num(metrics?.[metric]);
+            if (metric === 'weeklyTrial' && (num(metrics?.weeklyTrialWeek) !== trialWeek || value <= 0)) continue;   // last week's, or none
             if (period === 'week') {
                 const snap = parseMetrics(r.weekMetrics);
                 if (!snap) continue;

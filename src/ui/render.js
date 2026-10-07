@@ -2040,7 +2040,7 @@ export function renderClan(game, ui, cloud) {
         ${renderLeaderboard(social)}`;
 }
 
-const BOARD_METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans', dungeonClears: 'Dungeon clears' };
+const BOARD_METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans', dungeonClears: 'Dungeon clears', weeklyTrial: "Week's Trial" };
 
 function renderLeaderboard(social) {
     const board = social.leaderboard;
@@ -2050,8 +2050,8 @@ function renderLeaderboard(social) {
     const rows = board ? board.entries.map(e => `<tr class="${e.you ? 'you-row' : ''}"><td>${e.rank}</td><td>${esc(e.username)}</td><td>${fmt(e.value)}</td></tr>`).join('') : '';
     return `<section class="glass-panel ${painted('hall', 'center 60%')}">
         <div class="panel-header"><h2>Leaderboards</h2>
-            <div class="btn-row">${Object.entries(BOARD_METRICS).map(([id, label]) => `<button class="mini-btn ${social.metric === id ? 'active' : ''}" onclick="FI.boardMetric('${id}')">${label}</button>`).join('')}
-            <button class="mini-btn ${social.period === 'week' ? 'active' : ''}" onclick="FI.boardPeriod('${social.period === 'week' ? 'all' : 'week'}')">${social.period === 'week' ? 'This week' : 'All time'}</button></div></div>
+            <div class="btn-row">${Object.entries(BOARD_METRICS).map(([id, label]) => `<button class="mini-btn ${social.metric === id ? 'active' : ''}" onclick="FI.boardMetric('${id}')">${esc(label)}</button>`).join('')}
+            ${social.metric === 'weeklyTrial' ? '' : `<button class="mini-btn ${social.period === 'week' ? 'active' : ''}" onclick="FI.boardPeriod('${social.period === 'week' ? 'all' : 'week'}')">${social.period === 'week' ? 'This week' : 'All time'}</button>`}</div></div>
         ${consent}
         ${board ? (rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Player</th><th>${esc(board.label)}${board.period === 'week' ? ' (this week)' : ''}</th></tr></thead><tbody>${rows}</tbody></table></div>${board.me && board.me.rank > 50 ? `<p class="small">You: #${board.me.rank} (${fmt(board.me.value)})</p>` : ''}` : '<p class="muted small">Nobody on this board yet.</p>') : ''}
     </section>`;

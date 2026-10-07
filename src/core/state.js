@@ -431,7 +431,8 @@ function normalise(data, now) {
     }
     const w = trials.weekly;
     if (isPlainObject(w) && trialById(w.id) && Number.isFinite(Number(w.start))) {
-        state.trials.weekly = { start: Number(w.start), id: w.id, bar: Math.min(1e6, Math.max(0, Math.floor(Number(w.bar) || 0))), won: w.won === true };
+        const stage = v => Math.min(1e6, Math.max(0, Math.floor(Number(v) || 0)));
+        state.trials.weekly = { start: Number(w.start), id: w.id, bar: stage(w.bar), won: w.won === true, best: stage(w.best) };
     }
     state.playtest = (Array.isArray(data?.playtest) ? data.playtest : [])
         .filter(e => isPlainObject(e) && PLAYTEST_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))

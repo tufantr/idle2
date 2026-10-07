@@ -432,7 +432,8 @@ progress as motion, art before words, one stage with a HUD around it.
 - [x] **The week's Trial** (the late game's first moment on the calendar; DESIGN §3.26): each week one
       of the eight Trials is the week's, first in the prestige dialog under a "This week" ribbon and open
       even when its tiers are cleared. Beat your best in it for a laurel, a record, once a week, so the
-      Trials stay worth a run after hour 300 and the goal grows with the hero
+      Trials stay worth a run after hour 300 and the goal grows with the hero. The leaderboards have a
+      "Week's Trial" tab: the best stage in it this week, worked out on the server from the cloud save
 - [x] **Two more dungeons** (the long-term research, item 2): the Sunken Necropolis at stage 240 (twelve
       undead and the Sunken King) and the Hellforge at 275 (twelve constructs and the Obsidian
       Colossus), with uniques for the two slots none had: Drowned King's Greaves and Hellforged
