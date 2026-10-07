@@ -498,14 +498,18 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true —
   Smithing after mining 5 times, Woodcutting after the first bar, Hunting at stage 5, Cooking after the
   first hunt, Fishing after 5 dishes, Firemaking after 20 logs, the Shop and the Hall when the first
-  boss falls (none as it appears: its fight is the moment), Alchemy at stage 15, Events at 18,
-  Dungeons at 20, the Clan at 25 (on its own), Prestige at 30 and Agility at 35, one beat at a time
-  through a new player's first minutes (§3.24); Farming after 10 Alchemy actions
+  boss falls, Dungeons at stage 20, Alchemy at 15, Prestige at 30, Agility at 35, and the weekend
+  Events and the Clan only after the first prestige; Farming after 10 Alchemy actions
   or Cooking 15, Crafting with the first silver (or gold) bar once a gem has been found: its first
   piece of jewellery can be made at once (it used to open at Mining 20 or the first gem, hours before
-  anything in it could be made, since its bows and rods want Crafting 5). Each goal
+  anything in it could be made, since its bows and rods want Crafting 5). **One at a time, a breather
+  apart** (§3.24): a place reached by climbing (`pace`) waits until the time played since the last
+  place opened reaches `PLACE_GAPS_MS` (1.5, 2.5, 3.5, 4.5, then 5 minutes), in the order listed; a
+  place earned by work in a skill opens within 30 s (`WORK_GAP_MS`), never closer than that to
+  another. Time away does not count (`meta.lastPlaceAt` against `meta.playtimeMs`). Each goal
   carries a `task` in a few words and the `tab` where the work happens; the sidebar's Next card
-  shows it with its progress. Settings has a developer switch (and `?dev=1`) that unlocks all.
+  shows it with its progress, and a place earned but waiting as "On its way", its bar filling with the
+  breather. Settings has a developer switch (and `?dev=1`) that unlocks all.
 - **Daily crates** (`src/systems/daily.js`): one ripens every 20 hours and **up to three wait for
   you**, so a missed day costs nothing; no streaks. A crate holds 40 kills of gold at your best stage,
   12 materials and a gem from that zone, and `3 × zone tier` essence. Every seventh crate opened
@@ -848,9 +852,15 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   so a first +5% shows (10 becomes 11).
 - **The camp from the first minute.** Its first levels cost 20 and 15 gold, growing ×1.36 (the last
   levels cost what they did), and the Armour Rack waits until the hero has defence for it to raise.
-- **One place at a time.** Hunting at stage 5; the Shop and the Hall when the first boss falls (none
-  as it appears); Alchemy at 15, Events at 18, Dungeons at 20, the Clan at 25, Prestige at 30, Agility
-  at 35. Celebration cards wait while a boss fight is on screen, so the first boss is seen.
+- **One place at a time, a breather apart.** Stage gates alone opened eight places in 28 s for a
+  player who taps and in under four minutes for one who watches (the owner found it far too much at
+  once). Now a place reached by climbing waits for a breather of time played since the last one: the
+  first after a minute and a half, then 2.5, 3.5, 4.5 and 5 minutes; a place earned by work in a
+  skill answers within 30 s. The weekend events and the clan wait for the first prestige. In the
+  first ten minutes one who watches meets Hunting (1:30), the Shop (4:00) and the Hall (7:30); one who
+  taps the same three (with Smithing at 2:00 if monsters drop him ore). The Next card says "On its
+  way" for a place earned and waiting. Celebration cards wait while a boss fight is on screen, so the
+  first boss is seen.
 - **A hand on the thing itself, for those who need it.** `src/systems/guide.js` (pure, from stats the
   game keeps) names the one thing to do, and `src/ui/guide.js` points a white glove at it, pressing,
   with a ring where it presses: the monster until the player has struck three times, the sword's
@@ -869,8 +879,9 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
 
 Measured over five seeds (`node tools/opening.mjs`): one who only watches but takes what is offered
 gets his sword at 4.5 s and his first camp level at 10.5 s, meets the first boss at 35 s and beats it
-at 48 s, is at stage 30 after five minutes and first falls after about four; a new place opens every
-20–60 s through the first four minutes. One who strikes beats the first boss in 8 s. The long game is
+at 48 s, is at stage 30 after five minutes and first falls after about four; a new place opens at
+1:30, 4:00 and 7:30, and something new (a level, a drop, a boss, a place) comes at least every
+50–60 s. One who strikes beats the first boss in 8 s. The long game is
 unchanged: over seeds 1–4 the 150-hour simulation ends at stage 255 on average (259 before; most of
 the spread is the simulator farming the Void Citadel for hours on some seeds, old code and new alike),
 a little ahead in the first hours.
@@ -1149,7 +1160,7 @@ figures before them, after the survival fix, in brackets):
 
 | # | Measure | Fantasy Idle | Target | |
 |---|---|---|---|---|
-| 1 | Milestones | first prestige 0.7–1.6 h; stage 50 / 100 / 150 / 200 at 0.8 / 4.3–6.2 / 15.5–19.8 / 54–56 h, 45–48 h with Auto (0.8 / 5.0–5.2 / 16–18 / 48–49); a new place every 20–60 s in the first minutes | first prestige ~1 h; something new every 20–60 s at first | ✓ |
+| 1 | Milestones | first prestige 0.7–1.6 h; stage 50 / 100 / 150 / 200 at 0.8 / 4.3–6.2 / 15.5–19.8 / 54–56 h, 45–48 h with Auto (0.8 / 5.0–5.2 / 16–18 / 48–49); something new every 50–60 s at most in the first minutes, a new place every 1.5–5 minutes | first prestige ~1 h; something new every 20–60 s at first; a new system every 3–5 minutes | ✓ |
 | 2 | Time per stage, band to band | 0.13–0.22 → 0.25–0.37 → 0.72–0.77 → 1.2 h a stage (100–120, 120–150, 150–200, 200–280) | rises smoothly, no band over ~3× the last | ✓, at the edge |
 | 3 | Walls | none longer than a session or two; no one-hit wall since armour carries health | each under a day of play, with two ways out | ✓ |
 | 4 | Gain per prestige | median +15–19% of the tokens held over runs 1–20, +0.8% after run 100 (+0.7% with Auto); each record (every 25 stages of best, each unique) lifts the whole stock 5% at once, about six late runs' worth | +50% to +200% when a player chooses to reset; late resets either decisions or automated | ~ (late resets are records or automated) |

@@ -114,6 +114,7 @@ const firstSkill = page => page.evaluate(() => {
     FI.startNode('mining', 'copper_ore');
     g.state.stats.actionsBySkill.mining = 4;
     g.state.resources.copper_ore = 4;
+    g.state.meta.playtimeMs = Math.max(g.state.meta.playtimeMs, 60000);   // a minute in: past the half minute a place earned by work waits
     g.markDirty();
 });
 

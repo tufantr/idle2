@@ -14,6 +14,7 @@ import { guideStep, campOnOffer, GUIDE_STRIKES } from '../src/systems/guide.js';
 import { seen } from '../src/systems/disclosure.js';
 import { spawnEnemy } from '../src/systems/combat.js';
 import { xpForLevel } from '../src/core/xp.js';
+import { PLACE_GAPS_MS, WORK_GAP_MS, nextGoals, goalProgress, waitingPlaces } from '../src/data/unlocks.js';
 
 const T0 = 1_700_000_000_000;
 
@@ -161,4 +162,47 @@ test('while the hero regroups after a boss held out, the hand points at the boss
     game.setStage(10);   // the boss again, at once
     assert.equal(c.enemy.boss, true);
     assert.equal(guideStep(game.state, game.derived, { battle: true }), null);
+});
+
+test('places reached by climbing open one at a time, a breather apart, however fast the climb', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    Object.assign(s.combat, { stage: 40, maxStage: 40, bestStage: 40 });   // a tapper half a minute in
+    const opened = [];
+    let now = T0;
+    for (let i = 0; i < 40 * 60; i++) {   // forty minutes of play, a second at a time
+        now += 1000;
+        game.tick(now);
+        for (const ev of game.drainEvents()) if (ev.type === 'unlock') opened.push({ id: ev.id, at: (now - T0) / 1000 });
+    }
+    assert.deepEqual(opened.map(o => o.id), ['hunting', 'shop', 'achievements', 'dungeons', 'alchemy', 'prestige', 'agility']);
+    assert.ok(opened[0].at >= PLACE_GAPS_MS[0] / 1000, `the first place at ${opened[0].at} s`);
+    for (let i = 1; i < opened.length; i++) assert.ok(opened[i].at - opened[i - 1].at >= PLACE_GAPS_MS[Math.min(i, PLACE_GAPS_MS.length - 1)] / 1000, `${opened[i].id} came ${opened[i].at - opened[i - 1].at} s after ${opened[i - 1].id}`);
+    assert.ok(opened.filter(o => o.at <= 600).length <= 3, 'three places at most in the first ten minutes');
+    // the clan and the weekend events wait for the first prestige
+    assert.ok(!s.unlocks.clan && !s.unlocks.events);
+    s.prestige.count = 1;
+    for (let i = 0; i < 12 * 60; i++) { now += 1000; game.tick(now); }
+    assert.ok(s.unlocks.events && s.unlocks.clan, 'then they come, one after the other');
+});
+
+test('a place earned by work answers it within half a minute; time away does not open a flood', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.stats.actionsBySkill.mining = 5;
+    let now = T0;
+    while (!s.unlocks.smithing) { now += 1000; game.tick(now); }
+    assert.ok(now - T0 <= WORK_GAP_MS + 1000, `Smithing after ${(now - T0) / 1000} s`);
+    // earned while away: the places wait for time played, and come one at a time
+    Object.assign(s.combat, { stage: 40, maxStage: 40, bestStage: 40 });
+    const back = new Game(JSON.parse(game.serialize(now)), now + 6 * 3600 * 1000);
+    back.resumeFromSave(now + 6 * 3600 * 1000);
+    back.tick(now + 6 * 3600 * 1000 + 1000);
+    const open = ['hunting', 'shop', 'achievements', 'dungeons', 'alchemy', 'prestige', 'agility'].filter(id => back.state.unlocks[id]);
+    assert.ok(open.length <= 1, `${open.join(', ')} opened at once`);
+    // the Next card shows the place on its way first, its bar filling with the breather
+    const [goal] = nextGoals(back.state, 1);
+    assert.equal(goal.id, waitingPlaces(back.state)[0].id);
+    const p = goalProgress(back.state, goal);
+    assert.ok(p >= 0 && p < 1, `on its way: ${p}`);
 });

@@ -188,10 +188,11 @@ export function renderNavNext(game) {
     if (!goal) return '';
     const f = feature(goal.id);
     const where = isUnlocked(state, goal.tab) ? goal.tab : 'combat';
-    return `<button class="nav-next" onclick="FI.switchTab('${where}')" title="${esc(goal.hint)}" style="${artStyle(goal.id)}">
+    const coming = goal.requires?.(state);   // earned: it opens when its breather is over (data/unlocks.js)
+    return `<button class="nav-next${coming ? ' coming' : ''}" onclick="FI.switchTab('${where}')" title="${esc(coming ? `${f.name} is on its way` : goal.hint)}" style="${artStyle(goal.id)}">
         <span class="nav-next-kicker">Next</span>
         <span class="nav-next-name">${esc(f.name)}</span>
-        <span class="nav-next-task">${esc(goal.task || goal.hint)}</span>
+        <span class="nav-next-task">${esc(coming ? 'On its way' : goal.task || goal.hint)}</span>
         <i class="goal-bar" style="--p:${(goalProgress(state, goal) * 100).toFixed(1)}%" aria-hidden="true"></i>
     </button>`;
 }

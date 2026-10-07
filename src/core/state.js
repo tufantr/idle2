@@ -24,7 +24,7 @@ export const SAVE_VERSION = 3;
 export function createDefaultState(now = Date.now()) {
     const state = {
         version: SAVE_VERSION,
-        meta: { createdAt: now, savedAt: now, playtimeMs: 0, lastActiveAt: now, lastInputAt: now },
+        meta: { createdAt: now, savedAt: now, playtimeMs: 0, lastActiveAt: now, lastInputAt: now, lastPlaceAt: 0 },   // lastPlaceAt: time played when the last place opened (data/unlocks.js)
         gold: 0,
         resources: {},
         inventory: [],
@@ -247,6 +247,7 @@ export function clampTimers(state, now) {
     if (isPlainObject(state.meta)) {
         state.meta.lastInputAt = upTo(state.meta.lastInputAt, now);
         state.meta.lastActiveAt = upTo(state.meta.lastActiveAt, now);
+        state.meta.lastPlaceAt = Math.max(0, Math.min(finite(state.meta.playtimeMs), finite(state.meta.lastPlaceAt)));
     }
     return state;
 }

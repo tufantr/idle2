@@ -429,6 +429,13 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Places one at a time** (the owner found that everything opened in seconds; DESIGN §3.14,
+      §3.24): a player who taps reached stage 30 in half a minute and opened eight places in 28 s. A
+      place reached by climbing now waits for a breather of time played since the last one (1.5, 2.5,
+      3.5, 4.5, then 5 minutes); one earned by work in a skill answers within half a minute; the
+      weekend events and the clan wait for the first prestige. The first ten minutes bring three places
+      (Hunting, the Shop, the Hall), the first half hour six or seven. The Next card shows a place earned
+      and waiting as "On its way", its bar filling and its frame warming
 - [x] **Camp prices that follow the best stage** (the owner's choice, 3a; DESIGN §3.8): a camp level
       costs its old price or, once higher, 0.008 kills' worth of gold at the best stage (about 50 kills
       for a whole upgrade), growing ×1.36 a level. A new player's camp is as it was until about stage
