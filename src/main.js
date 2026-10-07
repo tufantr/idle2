@@ -512,6 +512,7 @@ function soundFor(ev, onCombat) {
         case 'unlock': case 'zoneReached': return ['unlock'];
         case 'achievement': case 'eventMilestone': case 'dungeonMilestone': case 'trialTier': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
+        case 'masteryCheckpoint': return ['achievement'];
         case 'death': case 'bossTimeout': return ['defeat'];
         case 'dungeonFail': return ev.lost ? ['defeat'] : null;   // leaving by choice is no defeat
         case 'prestige': return ['prestige'];
@@ -634,6 +635,11 @@ function handleEvents(events) {
             }
             case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'masteryCheckpoint':   // a checkpoint of a skill's whole mastery: its actions faster for good
+                if (!seen(game.state, 'mastery')) break;   // (said once mastery itself has been met)
+                rewards.celebrate({ key: `mastery:${ev.skill}:${ev.at}`, kind: 'level', icon: tabIcon(ev.skill, 2), kicker: 'Mastery checkpoint', title: `${SKILLS[ev.skill].name} ${Math.round(ev.at * 100)}%`,
+                    lines: [`+${Math.round(ev.speed * 100)}% speed in ${SKILLS[ev.skill].name}, for good`] });
+                break;
             case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
                 const trial = trialById(ev.id);
                 if (!trial) break;

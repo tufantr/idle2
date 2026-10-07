@@ -11,7 +11,7 @@ import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TI
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { MASTERY_PER_LEVEL } from '../data/mastery.js';
+import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
@@ -79,7 +79,8 @@ export const FEATURES = {
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.',
             'Once you have gone far, prices follow your best stage: each run buys its camp again as it nears its best.'] },
     mastery: { name: 'Mastery', art: 'caves', icon: 'res/diamond', blurb: 'Every action gets better the more you do it.',
-        points: [`Each mastery level adds +${pc(MASTERY_PER_LEVEL.speed, 1)} speed to that action.`, `Gathering and cooking also gain +${pc(MASTERY_PER_LEVEL.double, 2)} chance of a double; recipes gain +${pc(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients.`, 'Mastery is permanent.'] },
+        points: [`Each mastery level adds +${pc(MASTERY_PER_LEVEL.speed, 1)} speed to that action.`, `Gathering and cooking also gain +${pc(MASTERY_PER_LEVEL.double, 2)} chance of a double; recipes gain +${pc(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients.`,
+            `At ${MASTERY_CHECKPOINTS.map(c => `${Math.round(c.at * 100)}%`).join(', ')} of a skill's whole mastery, every action of it gets faster: ${MASTERY_CHECKPOINTS.map(c => `+${Math.round(c.speed * 100)}%`).join(', ')}.`, 'Mastery is permanent.'] },
     minigames: { name: 'A chance to play', art: 'forest', icon: 'res/topaz', blurb: 'Every few minutes of work, a short game appears.',
         points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Skipping costs nothing.'] }
 };

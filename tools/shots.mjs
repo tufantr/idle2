@@ -116,6 +116,8 @@ const lateGame = page => page.evaluate(async () => {
     s.combat.pity = 3;
     for (let i = 0; i < 12; i++) s.inventory.push(generateDrop(2 + (i % 3), i % 4 === 0, s.idCounter++));
     s.daily.banked = 1;
+    const { masteryActions, MASTERY_XP_DIVISOR } = await import('/src/data/mastery.js');
+    masteryActions('mining').forEach((a, i) => { s.mastery.mining[a.key] = xpForLevel([90, 70, 55, 30, 12, 1, 1, 1][i] || 1) / MASTERY_XP_DIVISOR; });   // a sixth of Mining mastered: one checkpoint passed
     g.markDirty(); g.recompute(); g.setStage(56);
     g.startNodeAction('mining', 'mithril_ore');
 });

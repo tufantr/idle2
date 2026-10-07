@@ -706,7 +706,15 @@ pool: every repeatable action has its own level from 1 to 99, earned by doing it
   gathering, cooking, alchemy, smelting, and a log burning twice in Firemaking; +0.2% chance to keep
   the ingredients and fuel (+19.6%) when it has any, forging and jewellery included. These add to the
   skill's own speed and double chance.
-- **Skill-wide:** the skill header shows the mastery levels gained out of the maximum. Three
+- **Checkpoints** (Melvor's mastery-pool checkpoints without the pool; `MASTERY_CHECKPOINTS`, from
+  `robust-and-fun/B_longterm_motivation.md` §8.2): at 10, 25, 50 and 95% of a skill's whole mastery
+  (the levels gained over all its actions, out of their most), every action of that skill gets +2, +3,
+  +5 and +10% speed, for good, with a card. The skill header's Mastery pill fills with that share and
+  marks the next checkpoint; its tip gives the levels and what the next one brings. Nothing is saved:
+  they come from the levels. The simulated fighter reaches its first at about 2 hours, the fifth at
+  12–14, the tenth at 37–46 and the fifteenth at about 150 (16–17 in 400 hours); one who skills more
+  gets them sooner.
+- **Skill-wide:** the skill header shows the share of the skill's mastery gained (it showed the levels). Three
   achievements reward the total: Well Practised (500 levels: +5% speed in every skill), Polymath
   (2,500: +5% double chance in every skill) and Grandmaster (a first 99: +5% XP).
 - **Kept through prestige**, replayed offline (the replay speeds up as levels come), and on each save

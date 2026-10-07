@@ -18,6 +18,7 @@ import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../d
 import { trialBite, trialTiersCleared } from '../data/trials.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
+import { MASTERY_SKILLS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { eventStatus } from '../systems/events.js';
 import { levelForXp } from './xp.js';
 
@@ -127,6 +128,9 @@ export function collectModifiers(state) {
         mods.gearDef += (item.def || 0) * upgradeMult;
         for (const affix of item.affixes || []) addMods(mods, { [affix.stat]: affix.value * gearShare });
     }
+
+    // Mastery checkpoints: a skill's actions faster for good at 10, 25, 50 and 95% of its whole mastery.
+    for (const id of MASTERY_SKILLS) for (const c of checkpointsAt(masteryShare(state, id))) mods.skillSpeed[id] = (mods.skillSpeed[id] || 0) + c.speed;
 
     // Combat level.
     const combatLevel = skillLevel(state, 'combat');

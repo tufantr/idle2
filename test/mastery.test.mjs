@@ -7,8 +7,8 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { migrateState } from '../src/core/state.js';
 import { resolveAction, intervalFor } from '../src/systems/skilling.js';
-import { masteryBonus, masteryLevel, skillMastery } from '../src/systems/mastery.js';
-import { MASTERY_XP_DIVISOR, MASTERY_SKILLS, masteryActions, forgeKey } from '../src/data/mastery.js';
+import { masteryBonus, masteryLevel, skillMastery, addMasteryXp } from '../src/systems/mastery.js';
+import { MASTERY_XP_DIVISOR, MASTERY_SKILLS, MASTERY_CHECKPOINTS, MASTERY_MAX_LEVEL, masteryActions, masteryShare, checkpointsAt, forgeKey } from '../src/data/mastery.js';
 import { RESOURCES } from '../src/data/resources.js';
 import { generateDrop } from '../src/core/formulas.js';
 import { reinforceCost } from '../src/data/workshop.js';
@@ -153,4 +153,54 @@ test('every mastery action is real and every key is unique within its skill', ()
     }
     assert.ok(total >= 70, `${total} actions with a mastery`);
     for (const a of masteryActions('crafting')) assert.ok(RESOURCES[a.key.replace('jewel_', '')], a.key);
+});
+
+test('checkpoints: at 10, 25, 50 and 95% of a skill\'s whole mastery its actions get faster, for good', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const actions = masteryActions('woodcutting');
+    const most = actions.length * (MASTERY_MAX_LEVEL - 1);
+    assert.equal(masteryShare(s, 'woodcutting'), 0);
+    const base = game.derived.skillSpeed.woodcutting || 0;
+    // levels spread over the actions up to just under 10%: no checkpoint yet
+    const below = Math.floor(0.10 * most) - 1;
+    let left = below;
+    for (const a of actions) { const lv = Math.min(MASTERY_MAX_LEVEL - 1, left); s.mastery.woodcutting[a.key] = practiceFor(lv + 1); left -= lv; if (!left) break; }
+    game.recompute();
+    assert.ok(masteryShare(s, 'woodcutting') < 0.10);
+    assert.equal(game.derived.skillSpeed.woodcutting, base);
+    // the level that crosses it: a card, a line in the log, and the speed at once
+    game.drainEvents();
+    const key = actions.find(a => masteryLevel(s, 'woodcutting', a.key) < MASTERY_MAX_LEVEL).key;
+    const level = masteryLevel(s, 'woodcutting', key);
+    addMasteryXp(game, 'woodcutting', key, practiceFor(level + 2) - s.mastery.woodcutting[key]);
+    const cp = game.drainEvents().filter(e => e.type === 'masteryCheckpoint');
+    assert.deepEqual(cp.map(e => [e.skill, e.at, e.speed]), [['woodcutting', 0.10, MASTERY_CHECKPOINTS[0].speed]]);
+    assert.ok(Math.abs(game.derived.skillSpeed.woodcutting - base - MASTERY_CHECKPOINTS[0].speed) < 1e-9);
+    assert.equal(s.stats.masteryCheckpoints, 1);
+    // everything mastered: all four, and only the woodcutting's own actions are faster
+    for (const a of actions) s.mastery.woodcutting[a.key] = practiceFor(MASTERY_MAX_LEVEL);
+    game.recompute();
+    assert.equal(masteryShare(s, 'woodcutting'), 1);
+    assert.equal(checkpointsAt(1).length, MASTERY_CHECKPOINTS.length);
+    const all = MASTERY_CHECKPOINTS.reduce((sum, c) => sum + c.speed, 0);
+    assert.ok(Math.abs(game.derived.skillSpeed.woodcutting - base - all) < 1e-9);
+    assert.equal(game.derived.skillSpeed.mining || 0, new Game(null, T0).derived.skillSpeed.mining || 0);
+    // a save keeps them: they come from the levels, with nothing to store
+    const back = new Game(JSON.parse(game.serialize(T0)), T0);
+    assert.ok(Math.abs(back.derived.skillSpeed.woodcutting - game.derived.skillSpeed.woodcutting) < 1e-9);
+    assert.equal(back.drainEvents().filter(e => e.type === 'masteryCheckpoint').length, 0, 'no cards on load');
+});
+
+test('two checkpoints passed at once are both announced', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    // woodcutting has six actions: one taken from 1 to 99 is a sixth of its mastery, from under 10% past 25%
+    const actions = masteryActions('woodcutting');
+    s.mastery.woodcutting[actions[0].key] = practiceFor(50);
+    game.recompute();
+    assert.ok(masteryShare(s, 'woodcutting') < 0.10);
+    game.drainEvents();
+    addMasteryXp(game, 'woodcutting', actions[1].key, practiceFor(MASTERY_MAX_LEVEL));
+    assert.deepEqual(game.drainEvents().filter(e => e.type === 'masteryCheckpoint').map(e => e.at), [0.10, 0.25]);
 });

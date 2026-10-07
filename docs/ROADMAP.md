@@ -429,6 +429,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Mastery checkpoints** (the long-term research, `robust-and-fun/B_longterm_motivation.md` §8.2):
+      at 10, 25, 50 and 95% of a skill's whole mastery, every action of it gets 2, 3, 5 and 10% faster,
+      for good, with a card. The skill header's Mastery pill shows that share as a bar, with a mark at the
+      next checkpoint. The simulated fighter passes 16–17 in 400 hours, the first after about 2
 - [x] **Ranks past Mythic** (the long-term research, `robust-and-fun/B_longterm_motivation.md` §8.2):
       Exalted at 500 prestiges in a dragon-scale cloak, Eternal at 1,000 in cyan and Immortal at 2,000
       in void purple, each a card with the hero in his new cloak; with Auto they come near hours 240,

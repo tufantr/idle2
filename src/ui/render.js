@@ -16,7 +16,7 @@ import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/mo
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
-import { MASTERY_SKILLS, MASTERY_MAX_LEVEL } from '../data/mastery.js';
+import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
@@ -621,8 +621,13 @@ function xpHeader(game, skillId, extra = '') {
     const lp = levelProgress(state.skills[skillId].xp);
     let mastery = '';
     if (MASTERY_SKILLS.includes(skillId) && seen(state, 'mastery')) {
+        // the skill's whole mastery as a bar, with a mark at its next checkpoint (data/mastery.js)
         const m = skillMastery(state, skillId);
-        mastery = `<button class="mastery-total" onclick="FI.about('mastery')" title="Mastery levels gained across this skill's ${m.actions} actions (${m.maxed} at ${MASTERY_MAX_LEVEL}). Every action levels its own mastery as you do it.">Mastery ${fmt(m.levels)}</button>`;
+        const share = masteryShare(state, skillId);
+        const next = MASTERY_CHECKPOINTS.find(c => share < c.at);
+        const sped = checkpointsAt(share).reduce((sum, c) => sum + c.speed, 0);
+        const tip = `${fmt(m.levels)} mastery levels across this skill's ${m.actions} actions (${m.maxed} at ${MASTERY_MAX_LEVEL})${sped ? `; its actions are ${Math.round(sped * 100)}% faster` : ''}${next ? `. At ${Math.round(next.at * 100)}%: +${Math.round(next.speed * 100)}% speed` : ''}`;
+        mastery = `<button class="mastery-total" style="--share:${(share * 100).toFixed(1)}%${next ? `;--next:${next.at * 100}%` : ''}" onclick="FI.about('mastery')" title="${esc(tip)}">Mastery ${share < 0.01 && share > 0 ? '<1' : Math.floor(share * 100)}%</button>`;
     }
     return `<div class="panel-header">
         <h2><span class="h-icon">${tabIcon(skillId, 1)}</span>${skill.name} ${aboutButton(skillId)}</h2>

@@ -1,6 +1,6 @@
 // Mastery levels per action (see data/mastery.js for the rules and numbers).
 
-import { MASTERY_MAX_LEVEL, MASTERY_XP_DIVISOR, MASTERY_PER_LEVEL, MASTERY_MILESTONES, masteryActions } from '../data/mastery.js';
+import { MASTERY_MAX_LEVEL, MASTERY_XP_DIVISOR, MASTERY_PER_LEVEL, MASTERY_MILESTONES, MASTERY_CHECKPOINTS, masteryActions, masteryShare } from '../data/mastery.js';
 import { SKILLS } from '../data/skills.js';
 import { levelForXp, levelProgress, xpForLevel } from '../core/xp.js';
 import { log, bumpStat } from './progress.js';
@@ -58,6 +58,16 @@ export function addMasteryXp(game, skillId, key, amount) {
         if (before < m && after >= m) log(game, `${SKILLS[skillId].icon} ${action?.name || key}: mastery ${m}!`, m >= MASTERY_MAX_LEVEL ? 'achievement' : 'level');
     }
     game.emit({ type: 'masteryLevel', skill: skillId, key, name: action?.name || key, level: after, from: before });
+    // a checkpoint of the skill's whole mastery passed: its actions are faster for good (data/mastery.js)
+    const share = masteryShare(state, skillId);
+    const shareBefore = share - (Math.min(after, MASTERY_MAX_LEVEL) - before) / (masteryActions(skillId).length * (MASTERY_MAX_LEVEL - 1));
+    for (const c of MASTERY_CHECKPOINTS) {
+        if (shareBefore >= c.at || share < c.at) continue;
+        bumpStat(game, 'masteryCheckpoints');
+        log(game, `${SKILLS[skillId].icon} ${SKILLS[skillId].name} mastery ${Math.round(c.at * 100)}%: +${Math.round(c.speed * 100)}% speed, for good.`, 'achievement');
+        game.emit({ type: 'masteryCheckpoint', skill: skillId, at: c.at, speed: c.speed });
+        game.recompute();
+    }
     game.markDirty();
     return after;
 }

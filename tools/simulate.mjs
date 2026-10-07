@@ -653,6 +653,7 @@ function noteEvent(ev) {
         case 'titan': if (ev.won) moment('medium', 'titan defeated'); break;
         case 'dungeonMilestone': moment('medium', `${ev.dungeon} ${ev.clears} clears`); break;
         case 'masteryLevel': if (ev.from < 99 && ev.level >= 99) moment('medium', `mastery 99 ${ev.key}`); break;
+        case 'masteryCheckpoint': moment('medium', `mastery ${ev.skill} ${Math.round(ev.at * 100)}%`); milestone('mastery checkpoints', S.stats.masteryCheckpoints || 0); break;
         case 'trialTier': moment(ev.last ? 'major' : 'medium', `trial ${ev.id} ${ev.tier}`); milestone('trial tiers', Object.values(S.trials.cleared).reduce((a, b) => a + b, 0)); break;
     }
 }
@@ -872,6 +873,7 @@ if (JSON_OUT) {
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length
         },
+        masteryCheckpoints: { count: S.stats.masteryCheckpoints || 0, at: Object.fromEntries([1, 3, 5, 10, 15, 20].map(n => [n, at('mastery checkpoints', n)])) },
         trials: { runs: trialRuns, tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },
         runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },
         deaths: deathStages,
