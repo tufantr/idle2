@@ -630,6 +630,12 @@ function apply(task) {
     if ((task.kind === 'dungeon' || task.kind === 'farm') && ok) return task;
     if (task.kind === 'combat' || !ok) {
         if (!ok && VERBOSE) console.log(`  [${fmtH(now)}] could not start: ${task.why}`);
+        // back to climbing. A dungeon on repeat (a dungeon task replaced before its end, as when a session
+        // ends inside it) used to run on for days while the bot thought it climbed, with the Auto switch
+        // (rightly) waiting outside: two check-in runs in ten sat at one best stage for a week. And a ladder
+        // farm keeps "stay on this stage" on.
+        if (S.combat.mode === 'dungeon' && !game.dungeonEnd()) game.leaveDungeon();   // at the chest it ends; mid-run it is left
+        if (S.combat.farmMode) game.setFarmMode(false);
         lastStageGainAt = now;
         game.enterCombat();
         return ok ? task : combatTask();
