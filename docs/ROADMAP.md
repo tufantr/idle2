@@ -429,6 +429,13 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Titans that keep falling, a playtest log** (the long-term research found a Titan falling once in
+      30–220 hours late in the game): from the 21st, each Titan stands 5 stages past the last instead of
+      10 and leaves +1% instead of +2%, twice as many for the same power; unused attempts bank, up to
+      three. Settings can keep a playtest log, a timeline of the moments of play in the save, exported
+      as a file for `tools/playtest.mjs` to set beside the simulator. The new robustness suite's
+      thousand mangled saves found that a negative camp level loaded and took the hero's health to
+      nothing; camp levels are now cleaned on load like the perks
 - [x] **For players who check in** (the sessions research, `robust-and-fun/C_sessions_players.md`): a
       player who visited three times a day earned Auto on day 8 and one who came once a day never, his
       runs sitting at their wall most of his time away. Auto now comes with the fifth prestige, or two

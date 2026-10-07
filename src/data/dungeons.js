@@ -148,5 +148,19 @@ export const TITAN_TIME_MS = 60000;
 export const TITAN_UNLOCK_STAGE = 20;
 export const TITAN_HP_MULT = 10;
 export const TITAN_ATK_MULT = 1.2;
-export const TITAN_BONUS = { atkMult: 0.02, hpMult: 0.02 }; // per Titan defeated
+export const TITAN_BONUS = { atkMult: 0.02, hpMult: 0.02 }; // per Titan defeated (half from the TITAN_LATE_FROM-th on)
+// The Titan line: level N stands at stage 10(N+1) for the first TITAN_LATE_FROM, then 5 stages apart, so
+// late Titans fall twice as often (the long-term research found one in 30–220 hours late in the game,
+// robust-and-fun/B §7.3) for the same power per stage: each late one leaves half the bonus. Unused
+// attempts bank, up to TITAN_BANK (one an hour), for a player who comes back after a few hours.
+export const TITAN_LATE_FROM = 20;
+export const TITAN_BANK = 3;
+/** The stage a Titan of `level` stands at. */
+export function titanStage(level) {
+    return level <= TITAN_LATE_FROM ? 10 * (level + 1) : 10 * (TITAN_LATE_FROM + 1) + 5 * (level - TITAN_LATE_FROM);
+}
+/** Titans defeated, as counts of the full bonus (a late one counts half). */
+export function titanBonusUnits(kills) {
+    return Math.min(kills, TITAN_LATE_FROM) + 0.5 * Math.max(0, kills - TITAN_LATE_FROM);
+}
 export const TITAN_NAMES = ['Stone', 'Iron', 'Storm', 'Flame', 'Frost', 'Tide', 'Thorn', 'Night', 'Sun', 'Void'];

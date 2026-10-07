@@ -14,7 +14,7 @@ import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/worksh
 import { RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
-import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS } from '../data/dungeons.js';
+import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
 import { eventStatus } from '../systems/events.js';
@@ -157,7 +157,7 @@ export function collectModifiers(state) {
         const clears = state.dungeons?.[d.id]?.clears || 0;
         for (const m of DUNGEON_MILESTONES) if (clears >= m.clears) addMods(mods, m.mods);
     }
-    addMods(mods, TITAN_BONUS, state.titan?.kills || 0);
+    addMods(mods, TITAN_BONUS, titanBonusUnits(state.titan?.kills || 0));
 
     // Agility obstacles (permanent, one per course slot); an upgraded obstacle counts once per level.
     (state.agility?.built || []).forEach((id, slot) => {

@@ -460,10 +460,14 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 ### 3.12 The Titan
 
 Once an hour (from stage 20) you may challenge the Titan: a **60-second damage race** at full health
-against a boss with ten times a boss's health. Titan level L fights like stage `10 × (L + 1)` (level 1:
-2,963 HP; level 10: 2.2 M HP). A win is permanent: **+2% ATK and max HP** per Titan defeated, plus
+against a boss with ten times a boss's health. Unused attempts bank, up to three (`TITAN_BANK`), so a
+player back after a few hours has them waiting. Titan level L fights like stage `10 × (L + 1)` for the
+first 20 (level 1: 2,963 HP; level 10: 2.2 M HP), then 5 stages apart (`titanStage`). A win is
+permanent: **+2% ATK and max HP** per Titan defeated (+1% from the 21st: `titanBonusUnits`), plus
 `8 × L` essence, 30 kills of gold at your best stage and two gems; the next Titan is stronger. A loss
-pays essence for the share of health you took off. A Titan fight never survives a reload.
+pays essence for the share of health you took off. A Titan fight never survives a reload. The late
+line was halved when the long-term research found Titans falling once in 30–220 hours late in the
+game: they now fall twice as often for the same power over the same stretch of the road.
 
 ### 3.13 Pets and the collection
 
@@ -1037,7 +1041,11 @@ the dock's Auto switch once earned; `--player=<schedule>` plays a login schedule
 evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay between sessions;
 `--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
 of hours. `node tools/batch.mjs --seeds=30` runs many seeds in parallel (about 7 runs of 150 h a
-minute on 8 cores) and reports medians with the 10th and 90th percentiles. Three seeds, 150 hours each:
+minute on 8 cores) and reports medians with the 10th and 90th percentiles; `node tools/audit.mjs`
+checks the batches against the research's thresholds (the report card). A real player's rhythm can be
+set beside it: Settings' **playtest log** (off unless turned on; `src/systems/playtest.js`) keeps a
+timeline of the moments of play in the save, exported as a file that `node tools/playtest.mjs` reads.
+Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|

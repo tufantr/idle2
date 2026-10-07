@@ -21,8 +21,8 @@ import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from 
 import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
-import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS } from '../data/dungeons.js';
-import { dungeonUnlocked, titanReady, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique, choosingAfterClear } from '../systems/dungeon.js';
+import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
+import { dungeonUnlocked, titanReady, titanCharges, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique, choosingAfterClear } from '../systems/dungeon.js';
 import { PETS, PET_BASE, companionPet } from '../data/pets.js';
 import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
@@ -1752,10 +1752,10 @@ export function renderDungeons(game) {
         ? `<p class="muted small">Reach stage ${TITAN_UNLOCK_STAGE} to wake the first Titan.</p>`
         : `<div class="titan-row">
             <span class="dungeon-icon titan-face">${sprite(monsterSpriteKey(titanEnemy(state)), { scale: 2, fallback: '🗿' })}</span>
-            <div class="titan-text"><b>${esc(titanEnemy(state).name)}</b> · level ${tl}${state.titan.kills ? ` · ${state.titan.kills} defeated: +${Math.round(TITAN_BONUS.atkMult * 100 * state.titan.kills)}% attack and health` : ''}${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
+            <div class="titan-text"><b>${esc(titanEnemy(state).name)}</b> · level ${tl}${state.titan.kills ? ` · ${state.titan.kills} defeated: +${Math.round(TITAN_BONUS.atkMult * 100 * titanBonusUnits(state.titan.kills))}% attack and health` : ''}${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
                 <div class="small ${readinessClass(titanFight.killSeconds, TITAN_TIME_MS / 1000, titanFight.surviveSeconds)}">You would deal about ${Math.round(titanPct * 100)}% of its health in ${TITAN_TIME_MS / 1000} s${titanFight.surviveSeconds < TITAN_TIME_MS / 1000 ? `, and last about ${Math.round(titanFight.surviveSeconds)} s without food` : ''}.</div></div>
             ${c.mode === 'titan' ? '<span class="status-pill fighting">Fighting now</span>'
-                : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">${sprite('titan/0', { scale: 0.625, cls: 'soft res-spr' })} Challenge (${TITAN_TIME_MS / 1000} s)</button>`
+                : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">${sprite('titan/0', { scale: 0.625, cls: 'soft res-spr' })} Challenge (${TITAN_TIME_MS / 1000} s)${titanCharges(state, game.now) > 1 ? ` ×${titanCharges(state, game.now)}` : ''}</button>`
                 : `<button class="mini-btn" disabled>Rests for ${duration(state.titan.readyAt - game.now)}</button>`}
         </div>`;
     const nextDungeon = DUNGEONS.find(d => !dungeonUnlocked(state, d));
@@ -1912,6 +1912,8 @@ export function renderSettings(game, ui, cloud) {
         ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
         ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
+        <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
+        ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
         <p class="muted small">Save version ${state.version}</p>
     </section>`;
 }

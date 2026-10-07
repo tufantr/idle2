@@ -6,6 +6,7 @@ import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
 import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS } from '../data/items.js';
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
+import { CAMP_UPGRADES } from '../data/camp.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
@@ -17,6 +18,7 @@ import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 import { heroName } from './text.js';
 import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
 import { capeEarned } from '../data/capes.js';
+import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 
 export const SAVE_VERSION = 3;
@@ -90,7 +92,8 @@ export function createDefaultState(now = Date.now()) {
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
         log: [],
-        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false },
+        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false, playtestLog: false },
+        playtest: [],          // the playtest log, when the player turns it on (systems/playtest.js)
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -403,6 +406,10 @@ function normalise(data, now) {
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
     delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
+    state.settings.playtestLog = state.settings.playtestLog === true;
+    state.playtest = (Array.isArray(data?.playtest) ? data.playtest : [])
+        .filter(e => isPlainObject(e) && PLAYTEST_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))
+        .slice(-PLAYTEST_MAX).map(e => ({ t: Number(e.t), kind: e.kind, what: String(e.what ?? '').slice(0, 60), cls: ['major', 'medium', 'minor'].includes(e.cls) ? e.cls : 'minor' }));
     state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
     // When the first prestige was (the Auto switch comes two days after it at the latest); a save from
     // before it was kept starts the two days now.
@@ -459,6 +466,8 @@ function normalise(data, now) {
     state.daily.banked = Math.max(0, Math.min(DAILY_MAX_BANKED, Math.floor(Number(state.daily.banked) || 0)));
     if (!Number.isFinite(Number(state.daily.nextAt))) state.daily.nextAt = now + DAILY_INTERVAL_MS;
     for (const perk of PERKS) state.perks[perk.id] = Math.min(perk.max, Math.max(0, Math.floor(Number(state.perks[perk.id]) || 0)));
+    // camp levels as whole numbers in range: a negative one multiplied the hero's health to nothing
+    for (const u of CAMP_UPGRADES) state.camp[u.id] = Math.min(u.max, Math.max(0, Math.floor(Number(state.camp[u.id]) || 0)));
     // Mini-game challenges never survive a reload.
     for (const id of NON_COMBAT_SKILLS) {
         const mg = state.minigame[id];

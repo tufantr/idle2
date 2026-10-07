@@ -1955,6 +1955,8 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .wb-ready { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-bottom: 0.9rem; }
 .wb-ready-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.65rem; border-radius: 999px; font-size: 0.82rem; border-color: rgba(252, 211, 77, 0.55); box-shadow: 0 0 10px rgba(252, 211, 77, 0.18); }
 .wb-ready-btn .spr { margin: -6px 0; }
+/* Settings: the playtest log's count and its export */
+.playtest-row { display: flex; align-items: center; gap: 0.6rem; margin: -0.2rem 0 0.6rem 1.8rem; }
 .wb-find { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.7rem; border-radius: 10px; background: var(--well); border: 1px solid rgba(214, 170, 92, 0.2); font-size: 0.9rem; }
 .wb-find.pet, .wb-find.unique { border-color: rgba(252, 211, 77, 0.55); box-shadow: 0 0 14px rgba(252, 211, 77, 0.18); }
 .wb-find-icon { width: 32px; text-align: center; font-size: 1.3rem; }

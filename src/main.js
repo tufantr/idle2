@@ -30,6 +30,7 @@ import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
+import { playtestExport } from './systems/playtest.js';
 import { BASE } from './core/modifiers.js';
 
 const BASE_RECORD_MULT = BASE.recordMult;
@@ -995,6 +996,18 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    setPlaytestLog(on) { game.setPlaytestLog(on); render(); },
+    /** The playtest log as a file to keep or send (systems/playtest.js). */
+    exportPlaytest() {
+        const blob = new Blob([playtestExport(game.state, Date.now())], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `fantasy-idle-playtest-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    },
     /** The volume slider: heard at once, saved when let go. */
     setVolume(value, done = false) {
         game.state.settings.volume = Math.max(0, Math.min(1, Number(value) || 0));

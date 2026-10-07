@@ -12,6 +12,7 @@ import { generateEquipment, goldPerKillAtStage } from '../src/core/formulas.js';
 import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
 import { GOLD_SHOP } from '../src/data/perks.js';
 import { sellValue } from '../src/data/resources.js';
+import { PLAYTEST_MAX, playtestExport } from '../src/systems/playtest.js';
 
 const T0 = 1_700_000_000_000;
 const HOUR = 3600_000;
@@ -73,14 +74,14 @@ function mangle(value, r) {
     return copy;
 }
 
-test('three hundred mangled saves load, run and keep their numbers finite', () => {
+test('a thousand mangled saves load, run and keep their numbers finite', () => {
     const base = midGame();
     let now = T0;
     for (let i = 0; i < 120; i++) { now += 1000; base.tick(now); }
     base.claimDaily();
     const save = JSON.parse(base.serialize(now));
     const r = seededRandom(77);
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 1000; i++) {
         const raw = mangle(save, r);
         let game;
         try {
@@ -108,4 +109,33 @@ test('nothing the shop sells is worth more sold back than it cost, at any best s
             assert.ok(back < price, `${entry.id} at stage ${best}: costs ${price}, sells back for ${back}`);
         }
     }
+});
+
+test('the playtest log notes nothing until turned on, then the moments of play, and keeps them in the save', () => {
+    const game = midGame();
+    let now = T0;
+    for (let i = 0; i < 60; i++) { now += 1000; game.tick(now); }
+    assert.equal(game.state.playtest.length, 0, 'off by default');
+    game.setPlaytestLog(true);
+    assert.equal(game.state.playtest[0].kind, 'start');
+    for (let i = 0; i < 600; i++) { now += 1000; game.tick(now); }
+    const kinds = new Set(game.state.playtest.map(e => e.kind));
+    assert.ok(kinds.has('level') || kinds.has('death') || kinds.has('record'), [...kinds].join(', '));
+    game.setAttending(false);
+    assert.equal(game.state.playtest.at(-1).kind, 'hide');
+    // kept in the save, and cleaned on the way in
+    const raw = JSON.parse(game.serialize(now));
+    raw.playtest.push({ t: 'x', kind: 'bogus' }, { t: now, kind: 'medal', what: 'a'.repeat(500), cls: 'huge' });
+    const back = migrateState(raw, now);
+    assert.equal(back.playtest.length, game.state.playtest.length + 1);
+    assert.equal(back.playtest.at(-1).what.length, 60);
+    assert.equal(back.playtest.at(-1).cls, 'minor');
+    // capped, and exported with what it needs to be read
+    game.state.playtest = Array.from({ length: PLAYTEST_MAX + 50 }, (_, i) => ({ t: i, kind: 'level', what: 'x', cls: 'minor' }));
+    game.state.settings.playtestLog = true;
+    game.setAttending(true);
+    assert.equal(game.state.playtest.length, PLAYTEST_MAX);
+    const file = JSON.parse(playtestExport(game.state, now));
+    assert.equal(file.kind, 'fantasy-idle-playtest');
+    assert.equal(file.events.length, PLAYTEST_MAX);
 });

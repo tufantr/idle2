@@ -7,7 +7,7 @@ import { SKILLS } from '../data/skills.js';
 import { BALANCE } from '../core/formulas.js';
 import { BASE } from '../core/modifiers.js';
 import { ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
-import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, FRAGMENTS_PER_UNIQUE } from '../data/dungeons.js';
+import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TITAN_LATE_FROM, TITAN_BANK, FRAGMENTS_PER_UNIQUE } from '../data/dungeons.js';
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
@@ -63,7 +63,8 @@ export const FEATURES = {
     dungeons: { name: 'Dungeons', art: 'dungeon', icon: 'mon/Skeleton', blurb: 'Elite monsters, a chest at the end and pieces of unique gear.',
         points: [`A row of elites, then a boss with a ${secs(DUNGEON_BOSS_TIME_MS)} second timer, fought with the gear you walk in with.`, 'Dying, leaving or running out of time loses the run.', `Every clear opens a chest with a fragment: ${FRAGMENTS_PER_UNIQUE} fragments make the dungeon's unique item.`, `After the first clear you choose: keep going (it runs again and again until you leave) or end the dungeon. With no answer in ${secs(DUNGEON_CHOICE_MS)} seconds, it keeps going.`, 'Clear counts unlock permanent bonuses.'] },
     titan: { name: 'The Titan', art: 'titan', icon: 'titan/0', blurb: `Once an hour: a ${secs(TITAN_TIME_MS)} second damage race.`,
-        points: ['Deal as much damage as you can before the time runs out. Clicking helps.', `Each Titan you bring down is gone for good and leaves +${pc(TITAN_BONUS.atkMult)} attack and health.`] },
+        points: ['Deal as much damage as you can before the time runs out. Clicking helps.', `Each Titan you bring down is gone for good and leaves +${pc(TITAN_BONUS.atkMult)} attack and health. From the ${TITAN_LATE_FROM + 1}st, they stand closer together and leave half as much.`,
+            `One attempt an hour; unused ones wait for you, up to ${TITAN_BANK}.`] },
     events: { name: 'Events', art: 'festival', icon: 'res/starfruit', blurb: 'A festival every weekend, with its own tokens and shop.',
         points: ['One event runs each weekend, Friday to Monday (UTC), and brings its own bonuses.', `Every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token, up to ${EVENT_DAILY_CAP} a day.`, 'Tokens keep between events. The event shop opens while one runs.'] },
     clan: { name: 'Clan', art: 'clanhall', icon: 'item/Shield/4', blurb: 'Join a clan and fight a weekly boss together.',

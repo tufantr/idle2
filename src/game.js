@@ -23,6 +23,7 @@ import { heroName } from './core/text.js';
 import { lookById, lookOpen } from './data/looks.js';
 import { capeEarned } from './data/capes.js';
 import { noteChronicle } from './systems/chronicle.js';
+import { playtestEvent, notePlaytest } from './systems/playtest.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
 // Gaps longer than this are replayed as offline progress (with its welcome-back report). A background
@@ -55,17 +56,28 @@ export class Game {
 
     /** Back from time away: one waiting place opens, and the welcome-back report names it. */
     _returned(summary) {
+        if (summary && summary.simulated >= 60000) notePlaytest(this.state, { kind: 'return', what: `${Math.round(summary.simulated / 60000)} min away`, cls: 'minor' }, this.now);
         if (!summary || !(summary.simulated >= RETURN_MS)) return;
         const id = openPlaceOnReturn(this);
         if (id) summary.place = id;
     }
 
-    /** The page is in view, or not (attended time paces the new places). */
-    setAttending(on) { this.attending = !!on; }
+    /** The page is in view, or not (attended time paces the new places; the playtest log notes it). */
+    setAttending(on) {
+        if (!!on !== this.attending) notePlaytest(this.state, { kind: on ? 'show' : 'hide', what: '', cls: 'minor' }, this.now);
+        this.attending = !!on;
+    }
+    /** Turn the playtest log on or off (Settings); turning it on starts it afresh. */
+    setPlaytestLog(on) {
+        this.state.settings.playtestLog = !!on;
+        if (on) { this.state.playtest = []; notePlaytest(this.state, { kind: 'start', what: `best stage ${this.state.combat.bestStage}`, cls: 'minor' }, this.now); }
+        this.markDirty();
+    }
 
     // ----- infrastructure -----
     emit(event) {
         noteChronicle(this.state, event, this.now);   // the hero's story is kept while away too
+        playtestEvent(this.state, event, this.now);   // and the playtest log, when it is on
         if (this.silent) return;
         this.events.push(event);
         if (!QUIET_EVENTS.has(event.type)) this.revision++;

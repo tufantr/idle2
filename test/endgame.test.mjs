@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_COOLDOWN_MS, TITAN_UNLOCK_STAGE, TITAN_TIME_MS, TITAN_BONUS, DUNGEON_MILESTONES, CHEST_ESSENCE_PER_TIER, DUNGEON_CHOICE_MS } from '../src/data/dungeons.js';
+import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_COOLDOWN_MS, TITAN_UNLOCK_STAGE, TITAN_TIME_MS, TITAN_BONUS, DUNGEON_MILESTONES, CHEST_ESSENCE_PER_TIER, DUNGEON_CHOICE_MS, TITAN_BANK, TITAN_LATE_FROM, titanStage, titanBonusUnits } from '../src/data/dungeons.js';
+import { titanCharges } from '../src/systems/dungeon.js';
 import { migrateState } from '../src/core/state.js';
 import { GEAR_TIERS } from '../src/data/items.js';
 import { BALANCE, enemyForStage, goldForKill } from '../src/core/formulas.js';
@@ -315,15 +316,21 @@ test('the Titan: unlock, hourly cooldown, a loss pays for damage dealt, a win is
     assert.equal(weak.titanReady(), true);
     assert.equal(weak.challengeTitan(), true);
     assert.equal(weak.state.combat.hp, weak.derived.maxHp, 'the race starts at full health');
-    assert.equal(weak.state.titan.readyAt, T0 + TITAN_COOLDOWN_MS);
     runUntil(weak, () => weak.state.combat.mode !== 'titan', TITAN_TIME_MS + 5000);
     assert.equal(weak.state.titan.kills, 0);
     assert.equal(weak.state.combat.mode, 'stages');
     const [loss] = events(weak, 'titan');
     assert.equal(loss.won, false);
+    // the hours bank attempts, up to three: two more wait, then he rests for an hour
+    assert.equal(titanCharges(weak.state, weak.now), TITAN_BANK - 1);
+    for (let i = 1; i < TITAN_BANK; i++) {
+        assert.equal(weak.challengeTitan(), true);
+        runUntil(weak, () => weak.state.combat.mode !== 'titan', TITAN_TIME_MS + 5000);
+    }
     assert.equal(weak.titanReady(), false, 'resting for an hour');
-    weak.tick(T0 + TITAN_COOLDOWN_MS + 1);
+    weak.tick(weak.now + TITAN_COOLDOWN_MS + 1);
     assert.equal(weak.titanReady(), true);
+    assert.equal(titanCharges(weak.state, weak.now), 1, 'one back after an hour');
 
     const strong = newGame({ bestStage: 50, tokens: 20000 });
     const atkMultBefore = strong.mods.atkMult;
@@ -335,6 +342,16 @@ test('the Titan: unlock, hourly cooldown, a loss pays for damage dealt, a win is
     assert.ok(strong.state.resources.essence >= essence + 8);
     assert.ok(strong.mods.atkMult - atkMultBefore >= TITAN_BONUS.atkMult - 1e-9);
     assert.equal(strong.state.combat.active, true, 'back on the stage ladder, still fighting');
+});
+
+test('late Titans stand closer together and leave half the bonus', () => {
+    assert.equal(titanStage(1), 20);
+    assert.equal(titanStage(TITAN_LATE_FROM), 10 * (TITAN_LATE_FROM + 1));
+    assert.equal(titanStage(TITAN_LATE_FROM + 1) - titanStage(TITAN_LATE_FROM), 5);
+    assert.equal(titanBonusUnits(TITAN_LATE_FROM), TITAN_LATE_FROM);
+    assert.equal(titanBonusUnits(TITAN_LATE_FROM + 10), TITAN_LATE_FROM + 5, 'ten late Titans are worth five early ones');
+    // the same bonus for the same stretch of the road
+    assert.equal(titanBonusUnits(TITAN_LATE_FROM + 12), titanBonusUnits(TITAN_LATE_FROM) + (titanStage(TITAN_LATE_FROM + 12) - titanStage(TITAN_LATE_FROM)) / 10);
 });
 
 test('a Titan fight never survives a reload; a dungeon run does', () => {

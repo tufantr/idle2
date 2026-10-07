@@ -5,8 +5,7 @@ import {
     DUNGEONS, dungeonById, UNIQUES, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, DIRECT_UNIQUE_CHANCE,
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE,
     ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS,
-    TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES
-} from '../data/dungeons.js';
+    TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES, titanStage, TITAN_BANK } from '../data/dungeons.js';
 import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, BALANCE } from '../core/formulas.js';
 import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RARITIES } from '../data/items.js';
@@ -46,7 +45,7 @@ export function titanLevel(state) {
 
 export function titanEnemy(state) {
     const level = titanLevel(state);
-    const stage = 10 * (level + 1);
+    const stage = titanStage(level);
     const base = enemyBaseStats(stage);
     const e = BALANCE.enemy;
     const hp = Math.floor(base.hp * e.bossHpMult * TITAN_HP_MULT);
@@ -303,8 +302,15 @@ export function titanUnlocked(state) {
     return state.combat.bestStage >= TITAN_UNLOCK_STAGE || !!state.settings.devUnlockAll;
 }
 
+/** Attempts waiting: one an hour, banked up to TITAN_BANK. */
+export function titanCharges(state, now) {
+    const readyAt = state.titan.readyAt || 0;
+    if (!titanUnlocked(state) || now < readyAt) return 0;
+    return Math.min(TITAN_BANK, 1 + Math.floor((now - readyAt) / TITAN_COOLDOWN_MS));
+}
+
 export function titanReady(state, now) {
-    return titanUnlocked(state) && now >= (state.titan.readyAt || 0);
+    return titanCharges(state, now) > 0;
 }
 
 export function challengeTitan(game) {
@@ -316,7 +322,8 @@ export function challengeTitan(game) {
     const c = state.combat;
     if (c.mode === 'titan') return false;
     if (c.mode === 'dungeon') failDungeon(game, 'you left to face the Titan');
-    state.titan.readyAt = game.now + TITAN_COOLDOWN_MS;
+    // one attempt used: the bank keeps the others (readyAt never lags more than the bank's hours behind)
+    state.titan.readyAt = Math.max(state.titan.readyAt || 0, game.now - (TITAN_BANK - 1) * TITAN_COOLDOWN_MS) + TITAN_COOLDOWN_MS;
     state.titan.attempts = (state.titan.attempts || 0) + 1;
     c.mode = 'titan';
     c.dungeon = null;
