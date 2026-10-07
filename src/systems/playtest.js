@@ -39,6 +39,7 @@ export function playtestEntry(state, ev) {
         case 'death': return { kind: 'death', what: `${ev.mode || 'stages'} ${ev.stage ?? ''}`, cls: 'minor' };
         case 'bossTimeout': return { kind: 'bossHeldOut', what: String(ev.stage ?? ''), cls: 'minor' };
         case 'ascend': return { kind: 'ascend', what: `${ev.count} +${ev.stars}`, cls: 'major' };
+        case 'laurel': return { kind: 'trial', what: `laurel ${ev.id} ${ev.stage}`, cls: 'major' };
         case 'trialTier': return { kind: 'trial', what: `${ev.id} ${ev.tier}`, cls: ev.last ? 'major' : 'medium' };
         case 'masteryCheckpoint': return { kind: 'mastery', what: `${ev.skill} ${Math.round(ev.at * 100)}%`, cls: 'medium' };
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? { kind: 'mastery', what: ev.key, cls: 'medium' } : null;

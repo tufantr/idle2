@@ -15,7 +15,7 @@ import { RESOURCES } from '../data/resources.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
-import { trialBite, trialTiersCleared } from '../data/trials.js';
+import { trialBite, trialTiersCleared, laurelsOf } from '../data/trials.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
 import { MASTERY_SKILLS, masteryShare, checkpointsAt } from '../data/mastery.js';
@@ -214,8 +214,9 @@ export function recordsOf(state) {
     const held = new Set();
     for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) held.add(item.uniqueId);
     const trials = trialTiersCleared(state);   // each Trial tier cleared (data/trials.js)
-    const count = stages + held.size + trials;
-    return { stages, uniques: held.size, trials, count, mult: Math.pow(BASE.recordMult, count) };
+    const laurels = laurelsOf(state);          // and each week's Trial beaten
+    const count = stages + held.size + trials + laurels;
+    return { stages, uniques: held.size, trials, laurels, count, mult: Math.pow(BASE.recordMult, count) };
 }
 
 /** Turn the modifier object into the numbers the combat system uses. */

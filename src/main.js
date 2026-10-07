@@ -511,7 +511,7 @@ function soundFor(ev, onCombat) {
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
         case 'unlock': case 'zoneReached': return ['unlock'];
-        case 'achievement': case 'eventMilestone': case 'dungeonMilestone': case 'trialTier': return ['achievement'];
+        case 'achievement': case 'eventMilestone': case 'dungeonMilestone': case 'trialTier': case 'laurel': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
         case 'masteryCheckpoint': return ['achievement'];
         case 'death': case 'bossTimeout': return ['defeat'];
@@ -656,6 +656,13 @@ function handleEvents(events) {
                 rewards.celebrate({ key: `mastery:${ev.skill}:${ev.at}`, kind: 'level', icon: tabIcon(ev.skill, 2), kicker: 'Mastery checkpoint', title: `${SKILLS[ev.skill].name} ${Math.round(ev.at * 100)}%`,
                     lines: [`+${Math.round(ev.speed * 100)}% speed in ${SKILLS[ev.skill].name}, for good`] });
                 break;
+            case 'laurel': {   // the week's Trial beaten (systems/trials.js): a record
+                const trial = trialById(ev.id);
+                if (!trial) break;
+                rewards.celebrate({ key: `laurel:${ev.laurels}`, kind: 'legend', icon: sprite(trial.icon, { scale: 2 }), kicker: "This week's Trial", title: 'A laurel',
+                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
+                break;
+            }
             case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
                 const trial = trialById(ev.id);
                 if (!trial) break;
@@ -1023,7 +1030,9 @@ window.FI = {
         const button = modal.querySelector('.btn-confirm');
         if (button) button.textContent = t ? `Prestige into ${t.name}` : 'Prestige now';
         const line = modal.querySelector('.trial-pick-line');
-        if (line) line.textContent = t ? `Reach stage ${t.target} in this run for a record: your tokens ×${BASE_RECORD_MULT} stronger, for good.` : '';
+        if (line) line.textContent = !t ? ''
+            : t.target ? `Reach stage ${t.target} in this run for a record${t.laurel ? `, and stage ${t.laurel} for this week's laurel` : ''}: your tokens ×${BASE_RECORD_MULT} stronger each, for good.`
+            : `Reach stage ${t.laurel} in this run for this week's laurel: a record, your tokens ×${BASE_RECORD_MULT} stronger, for good.`;
         sound.play(t ? 'equip' : 'click');
     },
     closeModal() { closeModal(); },

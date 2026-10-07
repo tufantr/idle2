@@ -2546,3 +2546,8 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .battle[data-scene] .battle-sky { filter: var(--grade, brightness(1)); transition: filter 1.2s ease; }
 .battle.boss-fight[data-scene] .battle-sky { filter: var(--grade, brightness(1)) brightness(0.78) saturate(1.15) contrast(1.06); }
 .battle.idle[data-scene] .battle-sky { filter: var(--grade, brightness(1)) saturate(0.55) brightness(0.78); }
+
+/* The week's Trial (src/data/trials.js weeklyTrialAt): a ribbon on its card, its laurel goal in the foot */
+.trial-card.weekly { border-color: rgba(134, 239, 172, 0.55); box-shadow: 0 0 0 1px rgba(134, 239, 172, 0.25), 0 0 14px rgba(74, 222, 128, 0.18); }
+.trial-week { position: absolute; top: -8px; right: 8px; z-index: 1; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #052e16; background: linear-gradient(180deg, #bbf7d0, #4ade80); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.trial-foot small .laurel, .laurel { width: 15px; height: 15px; vertical-align: -3px; color: #86efac; filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.6)); }

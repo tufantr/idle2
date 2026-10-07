@@ -1493,6 +1493,7 @@ function renderRecords(game) {
         ['res/raw_trout', fmt(s.fishCaught || 0), 'fish caught'],
         ['res/pumpkin', fmt(s.cropsHarvested || 0), 'crops harvested'],
         ['res/diamond', fmt(s.masteryLevels || 0), 'mastery levels'],
+        ...(seen(state, 'trials') ? [['mon/Mountain Troll', fmt(state.trials?.laurels || 0), 'laurels from the week\'s Trial']] : []),
         ['perk/endurance', hours >= 1 ? `${fmt(Math.floor(hours))} h` : `${Math.floor(hours * 60)} min`, 'played'],
         ['mon/Skeleton', fmt(s.deaths || 0), 'falls']
     ];
@@ -2099,7 +2100,7 @@ export function renderPrestigeModal(game) {
             </div>
             <div class="pg-row"><h4>Everything else stays</h4><span class="pg-keep">${keep}</span></div>
             ${seen(state, 'ascension') && ascensionOpen(state) ? renderAscendRow(game) : ''}
-            ${seen(state, 'trials') && trialsOpen(state) ? renderTrialPicks(state) : ''}
+            ${seen(state, 'trials') && trialsOpen(state) ? renderTrialPicks(game) : ''}
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmPrestige()">Prestige now</button></div>
     </div>`;
@@ -2122,19 +2123,27 @@ function renderAscendRow(game) {
  * rule, the tiers cleared as pips and the stage the next one asks for. Picking one (main.js pickTrial)
  * turns the dialog's button into "Prestige into ..." and says what the next tier gives.
  */
-function renderTrialPicks(state) {
-    const cards = trialBoard(state).map(({ trial: t, tier, target }) => {
-        const done = target === null;
+function renderTrialPicks(game) {
+    const board = trialBoard(game.state, game.now);
+    // the week's Trial first (data/trials.js weeklyTrialAt): open even when cleared, its laurel a stage to beat
+    const cards = [...board.filter(r => r.weekly), ...board.filter(r => !r.weekly)].map(({ trial: t, tier, target, weekly }) => {
+        const laurel = weekly && !weekly.won ? weekly.target : null;
+        const done = target === null && laurel === null;
         const pips = Array.from({ length: TRIAL_TIERS }, (_, i) => `<i${i < tier ? ' class="on"' : ''}></i>`).join('');
-        return `<label class="trial-card${done ? ' done' : ''}" style="${paintStyle(t.art, 'center 60%')}">
-            <input type="checkbox" name="trial" value="${t.id}" data-name="${esc(t.name)}" data-target="${target ?? ''}" onchange="FI.pickTrial(this)"${done ? ' disabled' : ''}>
+        const foot = target !== null ? `Stage ${target}${laurel !== null ? ` ${ICON_LAUREL}` : ''}` : laurel !== null ? `${ICON_LAUREL} Stage ${laurel}` : weekly ? `${ICON_LAUREL} Won` : 'Cleared';
+        return `<label class="trial-card${done ? ' done' : ''}${weekly ? ' weekly' : ''}" style="${paintStyle(t.art, 'center 60%')}">
+            ${weekly ? `<span class="trial-week" title="This week's Trial, until ${esc(new Date(weekly.end).toUTCString().slice(0, 11))}: beat your best in it for a laurel, a record">This week</span>` : ''}
+            <input type="checkbox" name="trial" value="${t.id}" data-name="${esc(t.name)}" data-target="${target ?? ''}" data-laurel="${laurel ?? ''}" onchange="FI.pickTrial(this)"${done ? ' disabled' : ''}>
             <span class="trial-icon">${sprite(t.icon, { scale: 1 })}</span><b class="trial-name">${esc(t.name)}</b>
             <small class="trial-rule">${esc(t.rule)}</small>
-            <span class="trial-foot"><span class="trial-pips" role="img" aria-label="${tier} of ${TRIAL_TIERS} tiers cleared">${pips}</span><small>${done ? 'Cleared' : `Stage ${target}`}</small></span>
+            <span class="trial-foot"><span class="trial-pips" role="img" aria-label="${tier} of ${TRIAL_TIERS} tiers cleared">${pips}</span><small>${foot}</small></span>
         </label>`;
     }).join('');
     return `<div class="pg-row pg-trials"><h4>Or prestige into a Trial ${aboutButton('trials')}</h4><div class="trial-grid">${cards}</div><p class="trial-pick-line" aria-live="polite"></p></div>`;
 }
+
+// A laurel (the week's Trial beaten): two sprigs of leaves.
+const ICON_LAUREL = '<svg class="laurel" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.6C4.4 13.9 2.2 10.9 2.5 6.6M8 14.6c3.6-.7 5.8-3.7 5.5-8" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><g fill="currentColor"><ellipse cx="2.9" cy="11.2" rx="1.6" ry=".75" transform="rotate(-50 2.9 11.2)"/><ellipse cx="2.2" cy="8.4" rx="1.6" ry=".75" transform="rotate(-80 2.2 8.4)"/><ellipse cx="4.9" cy="13.4" rx="1.6" ry=".75" transform="rotate(-25 4.9 13.4)"/><ellipse cx="13.1" cy="11.2" rx="1.6" ry=".75" transform="rotate(50 13.1 11.2)"/><ellipse cx="13.8" cy="8.4" rx="1.6" ry=".75" transform="rotate(80 13.8 8.4)"/><ellipse cx="11.1" cy="13.4" rx="1.6" ry=".75" transform="rotate(25 11.1 13.4)"/></g></svg>';
 
 /** An in-page yes/no; confirm() is blocked when the game runs inside another page. */
 export function renderConfirmModal(title, text, confirmLabel) {

@@ -206,6 +206,7 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
     }
     if (num(metrics.attackDamage) > plausibleAttackDamage(metrics.bestStage)) flags.push('attack beyond what its best stage allows');
     if (num(metrics.trialTiersBeyondBest) > 0) flags.push('Trial tiers beyond its best stage');
+    if (num(metrics.laurelsBeyondWeeks) > 0) flags.push('more laurels than weeks played');
     return { flags, peaks: next };
 }
 

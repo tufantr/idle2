@@ -1050,6 +1050,17 @@ tokens by about seven, so the Trials are a large part of late power: a player wh
 climbs as before, one who does climbs well past him. Past 300 hours, with every tier cleared, the
 moments thin out again (one every 25–33 hours); that is for the next late-game work.
 
+**The week's Trial** (October 2026, the long-term research's calendar drips, §5.6): each week, Monday to
+Monday UTC, one Trial is the week's, in turn through all eight (`weeklyTrialAt`, with eras like the
+weekend events' so a new Trial never changes a week already played). Its card comes first in the
+dialog with a "This week" ribbon, and it can be played even when its tiers are all cleared. Beating
+your best stage in it from before the week began (or its first tier's stage, if higher) wins a
+**laurel**: a record, one a week at most. The best in each Trial is kept (`trials.best`; on loading an
+older save, at least the stage its cleared tiers asked), and the week's first tick notes it as the
+week's bar (`trials.weekly`), so the goal scales with the hero and a Trial cleared at hour 300 is still
+worth a run every eighth week. The simulator's bot tries for the laurel first when a Trial is due,
+three times a week at most. The server flags more laurels than weeks since the save began.
+
 The server keeps a Trial out of what the boards compare (`powerSummary` drops the run's rule) and flags a
 save with tiers its best stage could not have cleared (`trialTiersBeyondBest`).
 

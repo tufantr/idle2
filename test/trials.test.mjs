@@ -10,8 +10,8 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { migrateState } from '../src/core/state.js';
 import { BASE, collectModifiers, deriveStats, recordsOf } from '../src/core/modifiers.js';
 import { BALANCE } from '../src/core/formulas.js';
-import { TRIALS, TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, trialById, trialTarget, trialTiersCleared } from '../src/data/trials.js';
-import { trialsOpen, trialBoard, nextTrialTarget } from '../src/systems/trials.js';
+import { TRIALS, TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, WEEK_MS, trialById, trialTarget, trialTiersCleared, weeklyTrialAt } from '../src/data/trials.js';
+import { trialsOpen, trialBoard, nextTrialTarget, weeklyGoal, syncWeekly } from '../src/systems/trials.js';
 import { spawnEnemy, onEnemyDeath, tryEat, tickCombat } from '../src/systems/combat.js';
 import { seen } from '../src/systems/disclosure.js';
 import { powerSummary } from '../src/core/power.js';
@@ -53,7 +53,7 @@ test('the Trials open at best stage 200, in the dialog and as a piece of the scr
     assert.equal(trialsOpen(game.state), true);
     game.tick(T0 + 1000);
     assert.equal(seen(game.state, 'trials'), true);
-    const board = trialBoard(game.state);
+    const board = trialBoard(game.state, T0);
     assert.equal(board.length, TRIALS.length);
     for (const row of board) assert.equal(row.target, row.trial.first);
 });
@@ -211,7 +211,7 @@ test('tiers clear as the run climbs, several at once if it must, and each is a r
     // a Trial cleared to the top is not offered again
     s.prestige.runStartedAt = T0 - 30 * MIN;
     assert.equal(game.startTrial('brutes'), false);
-    assert.equal(trialBoard(s).find(r => r.trial.id === 'brutes').target, null);
+    assert.equal(trialBoard(s, game.now).find(r => r.trial.id === 'brutes').target, null);
 });
 
 test('a run outside a Trial clears nothing, and a prestige ends the Trial', () => {
@@ -233,11 +233,12 @@ test('saves keep the Trial and its tiers, and odd values come back in range', ()
     const game = veteran();
     game.state.trials = { active: 'fasting', cleared: { glass: 2, brutes: 5 } };
     const back = migrateState(JSON.parse(game.serialize(T0)), T0);
-    assert.deepEqual(back.trials, { active: 'fasting', cleared: { glass: 2, brutes: 5 } });
+    // (the best stage in each Trial is at least what its cleared tiers asked: saves from before it was kept)
+    assert.deepEqual(back.trials, { active: 'fasting', cleared: { glass: 2, brutes: 5 }, best: { glass: 200, brutes: 275 }, laurels: 0, weekly: null });
     const odd = JSON.parse(game.serialize(T0));
     odd.trials = { active: 'nonsense', cleared: { glass: -3, brutes: 99, fasting: '2.7', toString: 4, no_camp: 'x' } };
     const fixed = migrateState(odd, T0);
-    assert.deepEqual(fixed.trials, { active: null, cleared: { brutes: TRIAL_TIERS, fasting: 2 } });
+    assert.deepEqual(fixed.trials, { active: null, cleared: { brutes: TRIAL_TIERS, fasting: 2 }, best: { brutes: 275, fasting: 210 }, laurels: 0, weekly: null });
     assert.equal(trialTiersCleared(fixed), TRIAL_TIERS + 2);
     for (const raw of [null, 7, 'x', [], { cleared: [1, 2] }]) {
         const save = JSON.parse(game.serialize(T0));
@@ -249,7 +250,7 @@ test('saves keep the Trial and its tiers, and odd values come back in range', ()
     // an old save, from before the Trials
     const old = JSON.parse(game.serialize(T0));
     delete old.trials;
-    assert.deepEqual(migrateState(old, T0).trials, { active: null, cleared: {} });
+    assert.deepEqual(migrateState(old, T0).trials, { active: null, cleared: {}, best: {}, laurels: 0, weekly: null });
 });
 
 test('the boards compare the hero, not the Trial a run is in, and see tiers no best stage allows', () => {
@@ -263,6 +264,12 @@ test('the boards compare the hero, not the Trial a run is in, and see tiers no b
     assert.equal(powerSummary(save(), T0).trialTiersBeyondBest, 0);
     game.state.trials.cleared = { brutes: 5 };                 // 225, 250 and 275 are past it
     assert.equal(powerSummary(save(), T0).trialTiersBeyondBest, 3);
+    // one laurel a week at most, since the save began
+    game.state.meta.createdAt = T0 - 3 * WEEK_MS;
+    game.state.trials.laurels = 4;
+    assert.equal(powerSummary(save(), T0).laurelsBeyondWeeks, 0);
+    game.state.trials.laurels = 9;
+    assert.equal(powerSummary(save(), T0).laurelsBeyondWeeks, 5);
 });
 
 test('the Trials data hangs together', () => {
@@ -278,4 +285,61 @@ test('the Trials data hangs together', () => {
             assert.ok(value === true || (typeof value === 'number' && value >= 0), `${t.id}.${key}`);
         }
     }
+});
+
+test("the week's Trial: one each Monday, all eight in turn, the same all week", () => {
+    const monday = Date.UTC(2026, 9, 5);
+    const met = new Set();
+    for (let w = 0; w < TRIALS.length; w++) {
+        const at = weeklyTrialAt(monday + w * WEEK_MS + 3_600_000);
+        assert.equal(at.start, monday + w * WEEK_MS);
+        assert.equal(new Date(at.start).getUTCDay(), 1, 'a Monday');
+        assert.equal(weeklyTrialAt(at.end - 1).trial.id, at.trial.id);
+        met.add(at.trial.id);
+    }
+    assert.equal(met.size, TRIALS.length);
+});
+
+test("the week's Trial stays open when cleared, and beating your best in it wins one laurel a week", () => {
+    const game = veteran();
+    const s = game.state;
+    const week = weeklyTrialAt(game.now);
+    const trial = week.trial;
+    s.combat.bestStage = 320;                   // (deep enough that the climbs below make no stage record)
+    s.trials.cleared[trial.id] = TRIAL_TIERS;   // cleared to the top
+    s.trials.best[trial.id] = 290;              // its best so far (past its fifth tier's stage)
+    game.tick(game.now + 1000);                 // the week's first tick notes what the laurel asks
+    assert.deepEqual([s.trials.weekly.id, s.trials.weekly.bar, s.trials.weekly.won], [trial.id, 290, false]);
+    const goal = weeklyGoal(s, game.now);
+    assert.equal(goal.target, 291);
+    // another Trial cleared to the top is not offered; the week's is
+    const other = TRIALS.find(t => t.id !== trial.id);
+    s.trials.cleared[other.id] = TRIAL_TIERS;
+    s.prestige.runStartedAt = game.now - 30 * MIN;
+    assert.equal(game.startTrial(other.id), false);
+    assert.equal(game.startTrial(trial.id), true);
+    assert.equal(trialBoard(s, game.now).find(r => r.trial.id === trial.id).weekly.target, goal.target);
+    // the run climbs past its best: one laurel, a record, at once
+    const before = recordsOf(s);
+    const c = s.combat;
+    const climb = stage => { Object.assign(c, { stage: stage - 1, maxStage: stage - 1, mode: 'stages', farmMode: false, regroupLeft: 0 }); spawnEnemy(game); game.drainEvents(); onEnemyDeath(game); return game.drainEvents(); };
+    assert.deepEqual(climb(goal.target - 1).filter(e => e.type === 'laurel'), [], 'not short of it');
+    const won = climb(goal.target).filter(e => e.type === 'laurel');
+    assert.deepEqual(won.map(e => [e.id, e.stage, e.laurels]), [[trial.id, goal.target, 1]]);
+    assert.equal(s.trials.weekly.won, true);
+    assert.equal(game.derived.records.laurels, 1);
+    assert.equal(game.derived.records.count, before.count + 1);
+    // another new best that week: the best moves on, no second laurel
+    assert.deepEqual(climb(goal.target + 4).filter(e => e.type === 'laurel'), []);
+    assert.equal(s.trials.laurels, 1);
+    assert.equal(s.trials.best[trial.id], goal.target + 4);
+    // the next week: its own Trial, its own bar, a laurel to win again
+    const next = syncWeekly(s, week.end + 1000);
+    assert.notEqual(next.id, trial.id);
+    assert.deepEqual([next.bar, next.won], [s.trials.best[next.id] || 0, false]);
+    // saves keep it all
+    const back = migrateState(JSON.parse(game.serialize(game.now)), game.now);
+    assert.deepEqual(back.trials.weekly, s.trials.weekly);
+    assert.equal(back.trials.laurels, 1);
+    assert.equal(back.trials.best[trial.id], goal.target + 4);
 });

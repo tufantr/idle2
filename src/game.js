@@ -24,7 +24,7 @@ import { lookById, lookOpen } from './data/looks.js';
 import { capeEarned } from './data/capes.js';
 import { noteChronicle } from './systems/chronicle.js';
 import { playtestEvent, notePlaytest } from './systems/playtest.js';
-import { startTrial } from './systems/trials.js';
+import { startTrial, syncWeekly } from './systems/trials.js';
 import { doAscend, ascendPreview } from './systems/ascension.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
@@ -133,6 +133,7 @@ export class Game {
             if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || this.eventId(this.now) !== this.derived.event) this.recompute();
             this.state.meta.lastActiveAt = this.now;
             accrueDaily(this.state, this.now);
+            syncWeekly(this.state, this.now);   // a new week notes what its Trial's laurel asks (systems/trials.js)
             if (step > 0) {
                 const action = resolveAction(this.state);
                 if (action) {

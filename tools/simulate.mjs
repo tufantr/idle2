@@ -16,8 +16,8 @@
 // run near its best (95%), the first time as soon as it may, later when the Stars would raise the
 // prestige's tokens by half and a day has passed since the last.
 // --trials=N: once the Trials open (data/trials.js), every Nth prestige the bot makes goes into a Trial:
-// the one with the fewest tiers cleared, then the lowest next target (a player trying each in turn); 0
-// never; 5 by default. --save-at writes the
+// the week's while its laurel is to win (three tries a week at most), else the one with the fewest tiers
+// cleared, then the lowest next target (a player trying each in turn); 0 never; 5 by default. --save-at writes the
 // game's save as the best stage first reaches each mark (to <--save>-<stage>.json), and the run ends at
 // the last: heroes for tools/trials.mjs.
 //
@@ -51,7 +51,7 @@ import { BASE } from '../src/core/modifiers.js';
 import { GEAR_DROP_CHANCE } from '../src/data/items.js';
 import { rankFor } from '../src/data/ranks.js';
 import { TRIALS } from '../src/data/trials.js';
-import { trialsOpen, nextTrialTarget } from '../src/systems/trials.js';
+import { trialsOpen, nextTrialTarget, weeklyGoal } from '../src/systems/trials.js';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
@@ -366,11 +366,17 @@ function maybeAscend() {
  * tiers cleared, then the lowest next target). Notes the run that ends (and whether it was a Trial).
  * True if it went.
  */
+const weeklyTries = new Map();   // the week's start -> the bot's tries at its laurel (three at most)
 function prestigeNow() {
     const p = game.prestigePreview();
-    const pick = TRIAL_EVERY > 0 && trialsOpen(S) && S.prestige.count + 1 - lastTrialPrestige >= TRIAL_EVERY
-        ? TRIALS.map(t => ({ t, target: nextTrialTarget(S, t), tiers: S.trials.cleared[t.id] || 0 })).filter(x => x.target !== null).sort((a, b) => a.tiers - b.tiers || a.target - b.target)[0]?.t
-        : null;
+    const due = TRIAL_EVERY > 0 && trialsOpen(S) && S.prestige.count + 1 - lastTrialPrestige >= TRIAL_EVERY;
+    // the week's laurel first (data/trials.js), then the Trial with the fewest tiers
+    const week = weeklyGoal(S, now);
+    const tries = weeklyTries.get(week.start) || 0;
+    const pick = !due ? null
+        : !week.won && tries < 3 ? week.trial
+        : TRIALS.map(t => ({ t, target: nextTrialTarget(S, t), tiers: S.trials.cleared[t.id] || 0 })).filter(x => x.target !== null).sort((a, b) => a.tiers - b.tiers || a.target - b.target)[0]?.t || null;
+    if (pick && pick.id === week.trial.id && !week.won) weeklyTries.set(week.start, tries + 1);
     const ended = { run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens, trial: S.trials.active || undefined };
     if (!(pick ? game.startTrial(pick.id) : game.prestige())) return false;
     runLog.push(ended);
@@ -673,6 +679,7 @@ function noteEvent(ev) {
         case 'titan': if (ev.won) moment('medium', 'titan defeated'); break;
         case 'dungeonMilestone': moment('medium', `${ev.dungeon} ${ev.clears} clears`); break;
         case 'masteryLevel': if (ev.from < 99 && ev.level >= 99) moment('medium', `mastery 99 ${ev.key}`); break;
+        case 'laurel': moment('major', `laurel ${ev.id}`); milestone('laurels', ev.laurels); break;
         case 'ascend': moment('major', `ascension ${ev.count} +${ev.stars} stars`); break;
         case 'masteryCheckpoint': moment('medium', `mastery ${ev.skill} ${Math.round(ev.at * 100)}%`); milestone('mastery checkpoints', S.stats.masteryCheckpoints || 0); break;
         case 'trialTier': moment(ev.last ? 'major' : 'medium', `trial ${ev.id} ${ev.tier}`); milestone('trial tiers', Object.values(S.trials.cleared).reduce((a, b) => a + b, 0)); break;
@@ -896,7 +903,7 @@ if (JSON_OUT) {
         },
         ascension: { count: S.ascension.count, stars: S.ascension.stars, at: Object.fromEntries([1, 2, 3, 4, 5, 6, 8, 10].map(n => [n, at('ascension', n)])) },
         masteryCheckpoints: { count: S.stats.masteryCheckpoints || 0, at: Object.fromEntries([1, 3, 5, 10, 15, 20].map(n => [n, at('mastery checkpoints', n)])) },
-        trials: { runs: trialRuns, tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },
+        trials: { runs: trialRuns, laurels: S.trials.laurels || 0, firstLaurelAt: at('laurels', 1), tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },
         runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },
         deaths: deathStages,
         gold: { earned: S.stats.goldEarned, spent: S.stats.goldSpent, bySink: spentOn, lostToPrestige },

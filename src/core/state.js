@@ -7,7 +7,7 @@ import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MA
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
-import { TRIALS, TRIAL_TIERS, trialById } from '../data/trials.js';
+import { TRIALS, TRIAL_TIERS, trialById, trialTarget } from '../data/trials.js';
 import { xpForLevel, levelForXp } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
@@ -95,7 +95,7 @@ export function createDefaultState(now = Date.now()) {
         log: [],
         settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false, playtestLog: false },
         playtest: [],          // the playtest log, when the player turns it on (systems/playtest.js)
-        trials: { active: null, cleared: {} },   // the Trial this run plays under, and the tiers cleared (data/trials.js)
+        trials: { active: null, cleared: {}, best: {}, laurels: 0, weekly: null },   // the run's Trial, tiers cleared, best stage in each, the week's laurel (data/trials.js)
         ascension: { count: 0, stars: 0, firstAt: 0, lastAt: 0 },   // Ascensions made, the Stars they paid, the first and the last (data/ascension.js)
         idCounter: 1
     };
@@ -421,10 +421,17 @@ function normalise(data, now) {
     };
     // Trials: a known one active, and whole tiers in range for each
     const trials = isPlainObject(data?.trials) ? data.trials : {};
-    state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {} };
+    state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {}, best: {}, laurels: Math.min(1e5, Math.max(0, Math.floor(Number(trials.laurels) || 0))), weekly: null };
     for (const t of TRIALS) {
         const n = Math.floor(Number(trials.cleared?.[t.id]) || 0);
         if (n > 0) state.trials.cleared[t.id] = Math.min(TRIAL_TIERS, n);
+        // the best stage reached in it: at least what its tiers cleared ask (saves from before the weekly Trial)
+        const best = Math.max(Math.floor(Number(trials.best?.[t.id]) || 0), n > 0 ? trialTarget(t, Math.min(TRIAL_TIERS, n)) : 0);
+        if (best > 0) state.trials.best[t.id] = Math.min(1e6, best);
+    }
+    const w = trials.weekly;
+    if (isPlainObject(w) && trialById(w.id) && Number.isFinite(Number(w.start))) {
+        state.trials.weekly = { start: Number(w.start), id: w.id, bar: Math.min(1e6, Math.max(0, Math.floor(Number(w.bar) || 0))), won: w.won === true };
     }
     state.playtest = (Array.isArray(data?.playtest) ? data.playtest : [])
         .filter(e => isPlainObject(e) && PLAYTEST_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))

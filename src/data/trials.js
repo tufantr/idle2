@@ -49,3 +49,26 @@ export const trialTiersCleared = state => TRIALS.reduce((n, t) => n + Math.min(T
 
 /** The stage a Trial's tier (1-based) asks for. */
 export const trialTarget = (trial, tier) => trial.first + TRIAL_STEP * (tier - 1);
+
+// The week's Trial (robust-and-fun/B_longterm_motivation.md §8.2 item 10: late players need moments on
+// the calendar, since late progress crawls). Each week, Monday 00:00 UTC to the next, one Trial is the
+// week's, in turn. Beating your best stage in it from before the week began (or its first tier's stage,
+// if that is higher) wins a laurel: a record, for good (core/modifiers.js recordsOf). The week's Trial can
+// be played even when its tiers are cleared, so the Trials stay worth a run after the last tier falls.
+// Your best in each Trial scales the goal with you. When a Trial joins, a new era starts at a future week
+// (as the weekend events do: systems/events.js) so the weeks already played keep their Trial.
+export const WEEK_MS = 7 * 24 * 3600 * 1000;
+export const WEEKLY_FROM = Date.UTC(2024, 0, 1);   // a Monday
+export const WEEKLY_ERAS = [{ from: WEEKLY_FROM, count: 8, offset: 0 }];
+
+/** The week holding `now` and its Trial: { trial, start, end }. */
+export function weeklyTrialAt(now) {
+    const start = WEEKLY_FROM + Math.floor((now - WEEKLY_FROM) / WEEK_MS) * WEEK_MS;
+    let era = WEEKLY_ERAS[0];
+    for (const e of WEEKLY_ERAS) if (start >= e.from) era = e;
+    const n = Math.floor((start - era.from) / WEEK_MS) + era.offset;
+    return { trial: TRIALS[((n % era.count) + era.count) % era.count], start, end: start + WEEK_MS };
+}
+
+/** Laurels won from the week's Trials: each is a record. */
+export const laurelsOf = state => Math.max(0, Math.floor(state.trials?.laurels || 0));
