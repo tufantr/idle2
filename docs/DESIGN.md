@@ -1392,13 +1392,13 @@ The robustness research (`docs/research_notes/robust-and-fun/`) asked for a big 
 24, 72 and ~150 hours. Measured with `tools/batch.mjs` (100 seeds, 150 hours) and `tools/simulate.mjs
 --hours=1000` (seeds 1–3), each step added in turn:
 
-| Band (h) | Target | Before (Trials only) | Now (Trials, Ascension, strata) |
-|---|---|---|---|
-| 10–50 | every 4 h, wait ≤ 12 | every 2.0 h, longest 9.7 (P90 13.6) | the same |
-| 50–150 | every 6 h, wait ≤ 24 | every 5.3 h, longest 21 (P90 26) | the same |
-| 150–300 | every 24 h, wait ≤ 72 | without Trials: every 30–50 h, waits of 97–112 | every 7–20 h, longest 31–88 |
-| 300–500 | every 24 h, wait ≤ 72 | every 33–67 h, longest 61–100 | every 29–40 h, longest 59–123 |
-| 500–1,000 | every 48 h, wait ≤ 150 | every 70–125 h, longest 106–231 | every 60–125 h, longest 110–182 |
+| Band (h) | Target | Before (Trials only) | Ascension, strata | Now: and the week's Trial, festival cloaks (with Auto / without) |
+|---|---|---|---|---|
+| 10–50 | every 4 h, wait ≤ 12 | every 2.0 h, longest 9.7 (P90 13.6) | the same | every 1.8 h, longest 11.4 (P90 13.9) |
+| 50–150 | every 6 h, wait ≤ 24 | every 5.3 h, longest 21 (P90 26) | the same | every 3.1 h, longest 18.7 (P90 24.6) |
+| 150–300 | every 24 h, wait ≤ 72 | without Trials: every 30–50 h, waits of 97–112 | every 7–20 h, longest 31–88 | every 11–14 h, longest 28–50 / every 5–6 h, longest 27–35 |
+| 300–500 | every 24 h, wait ≤ 72 | every 33–67 h, longest 61–100 | every 29–40 h, longest 59–123 | every 29 h, longest 56–62 / every 18–25 h, longest 49–73 |
+| 500–1,000 | every 48 h, wait ≤ 150 | every 70–125 h, longest 106–237 | every 60–125 h, longest 110–182 | every 45–50 h, longest 95–128 / every 38–56 h, longest 167–168 |
 
 With Auto, the realistic player, stage 200 comes at 42 hours (57 without), 300 at 89 (137) and 350 at
 135; by hour 1,000 the best is 510 (480 without Auto), against 430 (410) before Ascension. The first
@@ -1406,16 +1406,19 @@ With Auto, the realistic player, stage 200 comes at 42 hours (57 without), 300 a
 the skiller, twenty randomised policies); the speed-prestiger, the exploit-seeker, reaches stage 200 at
 38 hours, no faster than Auto.
 
-**What still misses: the late game crawls.** Past hour 400 the hero gains about 40 stages in 600 hours,
-so everything tied to stages (records every 25, strata every 25, medals at 400 and 500, Titans) comes a
-few times in those 600 hours. Two ways on, for the owner to choose:
+**The late game, now.** Past hour 400 the hero gains about 40 stages in 600 hours, so what is tied to
+stages (records every 25, strata every 25, medals at 400 and 500, Titans) comes a few times in those
+600 hours; the calendar carries the rest: a laurel from the week's Trial each week (seven in 1,000 hours)
+and a festival cloak each event weekend (five of six by hour 1,000). With them a player with Auto meets
+every band's target (hours 300–500 within a few hours of it); one without Auto waits up to a week past
+hour 500. Two ways further, for the owner to choose:
 - **A faster deep Abyss.** Its drops grow ×1.45 a depth against the monsters' ×2.26 (§3.7, measure 6
   above): the gap sets the late pace. Easing the monsters' growth past stage ~400 only (×1.085 a stage
   now) would speed the late game without touching the first 150 hours; raising `dropGrowth` speeds the
   middle too (stage 200 sooner).
-- **Moments on the calendar.** A weekly Trial with a board on the server (beside the weekly clan
-  boss), something to collect from each weekend event, and the research's other late content (two more
-  dungeons near stages 240 and 275, an end boss, a painting for each stratum).
+- **More on the calendar and to reach.** Built so far: the week's Trial with its board, the festival
+  cloaks and the two late dungeons (§3.26, §3.19, §3.11). Still open: an end boss, and paintings for the
+  strata and the two dungeons (they wear borrowed ones under their own light).
 
 ## 6. Where this differs from the research report
 
