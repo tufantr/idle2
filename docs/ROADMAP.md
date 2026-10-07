@@ -429,6 +429,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Ranks past Mythic** (the long-term research, `robust-and-fun/B_longterm_motivation.md` §8.2):
+      Exalted at 500 prestiges in a dragon-scale cloak, Eternal at 1,000 in cyan and Immortal at 2,000
+      in void purple, each a card with the hero in his new cloak; with Auto they come near hours 240,
+      500 and 930. No old cell of the atlas moved
 - [x] **The boards' pace by depth** (the last fix of the robustness research's first step, its E11): the
       server let a best stage grow 30 stages plus 60 an hour at any depth, 1,470 in a day where an honest
       late hero gains 20 to 50. It now allows three times the fastest climb in 166 simulated runs from

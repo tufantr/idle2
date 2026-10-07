@@ -1067,8 +1067,16 @@ TAP_HAND = ['.....##........', '....#ww#.......', '....#ww#.......', '....#ww#..
 
 
 def build_late(tiles):
-    """Cells added after the first release, packed after every other cell: the guide's hand."""
-    return {'icon/tap': to_image(blow_up(bitmap(TAP_HAND)))}
+    """Cells added after the first release, packed after every other cell, in the order added: the
+    guide's hand; the cloaks of the ranks past Mythic (src/data/ranks.js): the DCSS dragonskin cloak,
+    the cyan one, and the black one dyed the violet of the void."""
+    tile = lambda p: Image.open(f'{tiles}/{p}.png').convert('RGBA')
+    return {
+        'icon/tap': to_image(blow_up(bitmap(TAP_HAND))),
+        'hero/cloaks/dragon': to_image(from_image(tile('player/cloak/dragonskin'))),
+        'hero/cloaks/cyan': to_image(from_image(tile('player/cloak/cyan'))),
+        'hero/cloaks/void': to_image(from_image(rehue(tile('player/cloak/magenta'), '#5b21b6', sat=1.0, val=0.75))),
+    }
 
 
 def build_capes(tiles):

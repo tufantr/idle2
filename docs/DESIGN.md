@@ -366,7 +366,10 @@ the Abyss repeats with a depth counter and steeper growth.
 - **Ranks** (`src/data/ranks.js`): prestiges earn the hero a title worn as his cloak's colour, the
   gear rarities' colours and then past them: Recruit (red), Adventurer (1, green), Veteran (5, blue),
   Champion (15, purple), Hero (40, gold), Legend (100, white), Mythic (250, black), at about 1, 5,
-  12, 30, 60 and 150 hours of play in the simulator. No bonus: a mark of how far he has come. A rank
+  12, 30, 60 and 150 hours of play in the simulator; then Exalted (500, a dragon-scale cloak), Eternal
+  (1,000, cyan) and Immortal (2,000, void purple), added for the late game's long stretches
+  (`robust-and-fun/B_longterm_motivation.md` §8.2: with Auto near hours 240, 500 and 930). No bonus: a
+  mark of how far he has come. A rank
   badge sits by the hero in the Inventory and on the Prestige panel (with the count to the next), and
   a prestige that earns one is a card of its own with the hero in his new cloak.
 - **Looks and name** (`src/data/looks.js`, `state.hero`): the player names the hero and picks one of
