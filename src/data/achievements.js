@@ -20,6 +20,15 @@ export const ACHIEVEMENTS = [
     { id: 'boss_1',       name: 'Chieftain Slayer',  desc: 'Defeat the Stage 10 boss',        req: stat('maxStage', 11),        reward: '+10% Max HP',             mods: { hpMult: 0.10 } },
     { id: 'boss_5',       name: 'Highland Conqueror',desc: 'Reach Stage 50',                  req: stat('maxStage', 50),        reward: '+10% DEF',                mods: { defMult: 0.10 } },
     { id: 'boss_10',      name: 'Abyss Walker',      desc: 'Reach Stage 100',                 req: stat('maxStage', 100),       reward: '+10% ATK, +10% DEF',      mods: { atkMult: 0.10, defMult: 0.10 } },
+    // The deep game (the long-term research: big moments there were days apart): the bottoms of the
+    // Ember Pits, the Storm Wastes, the Burning Choir and Pandemonium's first 25 stages (data/strata.js),
+    // the first Ascension, and the Trials.
+    { id: 'deep_200',     name: 'Ember Walker',      desc: 'Reach Stage 200',                 req: stat('maxStage', 200),       reward: '+5% ATK, +5% Max HP',     mods: { atkMult: 0.05, hpMult: 0.05 } },
+    { id: 'deep_300',     name: 'Stormrider',        desc: 'Reach Stage 300',                 req: stat('maxStage', 300),       reward: '+5% DEF, +5% Max HP',     mods: { defMult: 0.05, hpMult: 0.05 } },
+    { id: 'deep_400',     name: 'Choirbreaker',      desc: 'Reach Stage 400',                 req: stat('maxStage', 400),       reward: '+5% ATK, +5% DEF',        mods: { atkMult: 0.05, defMult: 0.05 } },
+    { id: 'deep_500',     name: 'Bottom of the World', desc: 'Reach Stage 500',               req: stat('maxStage', 500),       reward: '+10% ATK, DEF and Max HP', mods: { atkMult: 0.10, defMult: 0.10, hpMult: 0.10 } },
+    { id: 'ascendant',    name: 'Ascendant',         desc: 'Ascend once',                     req: stat('ascensions', 1),       reward: '+10% Prestige Tokens',    mods: { tokenMult: 0.10 }, after: 'ascension' },
+    { id: 'trial_master', name: 'Trial Master',      desc: 'Clear 20 tiers of the Trials',    req: stat('trialTiers', 20),      reward: '+5% ATK, +5% DEF',        mods: { atkMult: 0.05, defMult: 0.05 }, after: 'trials' },
     { id: 'excavator',    name: 'The Excavator',     desc: 'Reach Mining level 25',           req: skillLevel('mining', 25),    reward: '+10% Mining speed',       mods: { skillSpeed: { mining: 0.10 } } },
     { id: 'lumberjack',   name: 'Lumberjack',        desc: 'Reach Woodcutting level 25',      req: skillLevel('woodcutting', 25), reward: '+10% Woodcutting speed', mods: { skillSpeed: { woodcutting: 0.10 } } },
     { id: 'tracker',      name: 'Tracker',           desc: 'Reach Hunting level 25',          req: skillLevel('hunting', 25),   reward: '+10% Hunting speed',      mods: { skillSpeed: { hunting: 0.10 } } },
@@ -53,8 +62,13 @@ export const ACHIEVEMENTS = [
     { id: 'unbroken',     name: 'Unbroken',          desc: 'Get back up after 100 falls',     req: stat('recoveries', 100),     reward: '+5% Max HP',              mods: { hpMult: 0.05 }, secret: true }
 ];
 
-/** Is medal `a` shown in the Hall? Every open medal, and a secret one once it is earned. */
-export const medalShown = (state, a) => !a.secret || !!state.achievements[a.id];
+/**
+ * Is medal `a` shown in the Hall? Every open medal, a secret one once it is earned, and one `after` a
+ * piece of the game (systems/disclosure.js) once the player has met it (a new player sees only what they
+ * have met).
+ */
+export const medalShown = (state, a) => (!a.secret || !!state.achievements[a.id])
+    && (!a.after || !!state.seen?.[a.after] || !!state.achievements[a.id] || !!state.settings?.devUnlockAll);
 
 export function achievementById(id) {
     return ACHIEVEMENTS.find(a => a.id === id) || null;

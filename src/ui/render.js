@@ -1350,7 +1350,7 @@ export function renderShop(game, ui) {
 const MEDAL_ART = {
     kills: 'item/Weapon/3', goldEarned: 'gold', itemsCrafted: 'item/Body/4', petsFound: 'pet/fang', uniquesFound: 'uniq/goblin_crown',
     titanKills: 'titan/0', dungeonClears: 'mon/Goblin King', legendariesEquipped: 'item/Neck/7',
-    prestiges: 'res/essence', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin', gildedKills: 'gold',
+    prestiges: 'res/essence', ascensions: 'token', trialTiers: 'mon/Mountain Troll', obstaclesBuilt: 'obstacle/hurdles', minigameWins: 'res/topaz', masteryLevels: 'res/diamond', bestiaryStars: 'mon/Griffin', gildedKills: 'gold',
     masteries99: 'uniq/crystal_heart', skills99: 'crown', petPats: 'pet/fang', greatCrates: 'crate', recoveries: 'campfire', codexFound: 'item/Head/5'
 };
 const SKILL_MEDAL = {
@@ -1369,7 +1369,7 @@ function medalLook(state, a, won) {
 /** A medal's picture: its deed's sprite (`scale` 1.5 in the Hall, 2 on the card that announces it). */
 export function medalArt(a, scale = 1.5) {
     let key = a.req.type === 'skillLevel' ? SKILL_MEDAL[a.req.skill] : MEDAL_ART[a.req.key];
-    if (a.req.key === 'maxStage') key = `mon/${ZONES[Math.min(ZONES.length - 1, Math.floor((a.req.value - 2) / STAGES_PER_ZONE))]?.boss}`;
+    if (a.req.key === 'maxStage') key = `mon/${zoneForStage(Math.max(1, a.req.value - 1)).boss}`;   // the boss of where it is won (a stratum's, deep down)
     return sprite(key || 'crown', { scale, fallback: '🏆' });
 }
 

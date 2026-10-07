@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Medals for the deep game**: big moments past hour 300 were days apart, and only three medals
+      marked stages (11, 50, 100). Six more: the bottoms of the Ember Pits, the Storm Wastes and the
+      Burning Choir (stages 200, 300, 400), Pandemonium's 500, a first Ascension and twenty Trial tiers;
+      a stage medal wears the boss of where it is won. The Ascension and Trial medals stay hidden until
+      the player has met those
 - [x] **The Abyss in strata** (the long-term research, `robust-and-fun/B_longterm_motivation.md` §8.2;
       DESIGN §3.7): past stage 100 the Abyss was one place with the same five monsters forever. It is
       now sixteen named layers of 25 stages, from the Weeping Dark and the Ember Pits to the Glass Garden
