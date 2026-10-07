@@ -24,6 +24,11 @@ export const BASE = {
     unarmedAtk: 5,
     baseHp: 100,
     hpPerCombatLevel: 12,
+    // Armour also adds health, one point for every 20 defence it carries (before the health bonuses
+    // multiply it). Gear is the one source of power that grows with depth, so without this a deep
+    // hero's health stood still while the monsters' attack grew x2.06 a depth: past stage ~170 every
+    // hit killed, and food, defence and lifesteal stopped mattering (docs/research_notes/incremental-math.md §8.4).
+    hpPerDef: 0.05,
     atkPerCombatLevel: 0.012,   // +1.2% ATK per combat level (x2.18 at 99)
     defPerCombatLevel: 0.012,
     baseAttackInterval: 1500,
@@ -204,7 +209,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
 
     const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk;
     const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def;
-    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1)) * (1 + mods.hpMult) * tokenLayerHp * camp.hp;
+    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp;
     const attackSpeed = Math.min(BASE.caps.attackSpeed, mods.attackSpeed);
 
     return {

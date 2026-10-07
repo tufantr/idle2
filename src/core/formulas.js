@@ -66,10 +66,11 @@ export const BALANCE = {
     },
     // Deep in the Abyss drops keep pace with the monsters: past `dropScalingFrom`, every depth makes
     // dropped gear `dropGrowth` times stronger (an item level). Monsters grow ~2.26x per depth, so the
-    // climb slows but never stops (tools/simulate.mjs: stage ~285 at 150 h, ~330 at 300 h).
+    // climb slows but never stops. 1.8 until armour gave health (BASE.hpPerDef): with the hero no longer
+    // killed by any hit past stage ~170, 1.6 holds stage 200 at ~48 h (tools/simulate.mjs, DESIGN §5.2).
     abyss: {
         dropScalingFrom: 5,
-        dropGrowth: 1.8
+        dropGrowth: 1.6
     },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)

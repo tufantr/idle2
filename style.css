@@ -675,6 +675,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .item-name { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
 .item-atk { color: var(--atk-color); }
 .item-def { color: var(--def-color); }
+.item-hp { color: #fb7185; }
 .inv-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.8rem; }
 .inv-item { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 0.8rem; padding: 1rem; border-radius: 12px; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
 .inv-item:hover { transform: translateY(-3px); border-color: rgba(240, 198, 116, 0.5); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45); }

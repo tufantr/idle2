@@ -855,6 +855,10 @@ Rules:
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
    `skillSpeed[skill]` and so on.
 2. **Layers multiply:** content layer × **token layer** (`1 + 0.005 × tokens`) × **camp layer**.
+   Health's base is `100 + 12 × (combat level − 1) + 0.05 × gear defence` (`BASE.hpPerDef`: armour
+   carries one point of health for every 20 defence) before its layers multiply it. Gear is the only
+   source that grows with depth, so health from armour is what keeps a deep hero from falling to
+   every hit (§5.3).
 3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30% (combo bonuses included), attack speed +100% (attack interval ≥ 0.75 s),
    damage mitigation 90%, action interval ≥ 250 ms.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
@@ -927,26 +931,25 @@ tokens). Three seeds, 150 hours each:
 
 | Milestone | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|
-| First prestige | 1.1 h (stage 40, +18 tokens) | 1.2 h (stage 40, +18) | 1.2 h (stage 40, +18) |
-| Stage 50 / 100 / 120 | 1.8 / 5.0 / 8.4 h | 1.8 / 5.8 / 10.7 h | 1.6 / 5.0 / 9.0 h |
-| Stage 150 / 200 · best at 150 h | 22.5 / 55.9 h · 238 | 22.0 / 60.1 h · 270 | 19.9 / 53.7 h · 250 |
-| Weapon tier 4 / 5 / 6 / 7 | 8.1 / 20.9 / 31.6 / 94.0 h | 8.1 / 20.9 / 34.6 / 83.9 h | 9.0 / — / 28.8 / 87.7 h |
-| Crown / Heart / Cleaver / Plate / Aegis | 2.5 / 4.2 / 8.0 / 25.0 / 72.0 h | 2.5 / 5.0 / 8.1 / 35.1 / 57.4 h | 2.2 / 4.0 / 8.9 / 28.8 / 55.5 h |
-| Titans defeated by 12 h · by 150 h | 10 · 20 | 9 · 21 | 9 · 20 |
-| Agility obstacles 1 / 4 / 6 | 2.2 / 27.0 / 56.7 h | 2.2 / 27.6 / 56.9 h | 1.9 / 24.5 / 56.8 h |
-| Mining 50 · Smithing 50 / 75 | 20.8 · 23.6 / 48.7 h | 18.9 · 23.8 / 49.8 h | 19.2 · 21.4 / 47.6 h |
-| Farming 50 / 75 · Agility 50 / 75 | 9.6 / 31.4 · 29.8 / 60.9 h | 10.0 / 32.1 · 28.8 / 62.9 h | 9.7 / 29.8 · 26.2 / 61.6 h |
-| Combat 60 / 75 / 90 / 99 | 3.7 / 31.5 / 93.9 / 161 h | 4.1 / 34.6 / 83.7 / 209 h | 3.5 / 28.6 / 87.5 / 184 h |
-| Prestiges in 150 h | 227 | 256 | 243 |
-| Deaths on non-boss stages | 35% | 45% | 37% |
+| First prestige | 1.5 h (stage 56, +32 tokens) | 1.5 h (stage 50, +27) | 1.5 h (stage 50, +27) |
+| Stage 50 / 100 / 120 | 0.8 / 5.2 / 7.3 h | 0.8 / 5.0 / 8.0 h | 0.8 / 5.0 / 6.9 h |
+| Stage 150 / 200 · best at 150 h | 16.0 / 48.7 h · 270 | 18.0 / 48.9 h · 280 | 18.1 / 48.3 h · 310 |
+| Weapon tier 4 / 5 / 6 / 7 | 3.8 / 9.9 / 16.0 / 51.7 h | 7.8 / 16.6 / 24.8 / 49.6 h | — / 6.8 / 24.0 / 48.2 h |
+| Crown / Heart / Cleaver / Plate / Aegis / Band | 1.5 / 3.6 / 6.6 / 18.5 / 52.5 / 120 h | 1.5 / 3.6 / 7.7 / 23.2 / 51.7 / 121 h | 1.5 / 3.9 / 7.6 / 22.6 / 54.5 / 100 h |
+| Titans defeated by 12 h · by 150 h | 11 · 24 | 11 · 25 | 10 · 27 |
+| Agility obstacles 1 / 4 / 6 | 3.2 / 21.8 / 51.8 h | 2.3 / 22.7 / 56.5 h | 4.3 / 25.8 / 52.9 h |
+| Mining 50 · Smithing 50 / 75 | 16.2 · 17.1 / 44.3 h | 18.6 · 19.4 / 46.4 h | 19.5 · 20.2 / 45.7 h |
+| Farming 50 / 75 · Agility 50 / 75 | 9.3 / 29.1 · 24.3 / 58.8 h | 9.5 / 31.4 · 28.1 / 61.0 h | 9.4 / 31.8 · 27.9 / 58.8 h |
+| Combat 60 / 75 / 90 | 3.5 / 28.9 / 78.9 h | 3.4 / 24.9 / 81.8 h | 3.4 / 23.6 / 104.5 h |
+| Prestiges in 150 h | 267 | 256 | 281 |
+| Deaths in 150 h (on non-boss stages) | 3,190 (44%) | 2,168 (47%) | 2,958 (35%) |
 
-Measured at Melvor pace (§5.1), with tier 6 and 7 gear worn from combat 75 and 90 (since lowered to
-70 and 80, below); combat 99 comes from 300-hour runs of the same seeds. Tier 6 and 7 gear arrived
-with those levels (before the pace: 16–23 h for tier 7), and stage 200 moved from ~40–47 h to
-~54–60 h. Past stage 200 the climb continues: roughly 5–10
-stages every 10 hours, with the odd 20-hour plateau at a boss. The three 300-hour runs end at stages
-328, 336 and 327 (before the pace: 327 and 321). Mining stops in the 60s because Abyss drops
-outpace forging, so the bot stops needing ore.
+Measured on 7 October 2026 with everything above: Melvor pace (§5.1), tier 6 and 7 gear worn from
+combat 70 and 80, the first session's gentle start (§3.24), armour that carries health and the deep
+Abyss's drops at ×1.6 a depth (§5.3). Health from armour halved the deaths (5,000–7,200 in 150 h
+before) and moved the best stage at 150 h from 230–280 to 270–310, with stage 200 where it was
+(48–53 h before). The earlier table here was measured before the gentle start and the lower wear
+levels, and had drifted (stage 200 at 54–60 h).
 
 These runs include every fix from the code review (prestige needs a 10-minute run; kills keep the
 rest of a time step; prices follow regular monsters) and the Abyss drop scaling. Earlier fixes found
@@ -960,16 +963,21 @@ Titan; `--farm-ladder=push` = an AFK player who keeps fighting at the wall inste
 
 | Style (seeds 1–3) | Stage 100 | Stage 120 | Stage 150 | Stage 200 | Best at 150 h | Weapon tier 5+ |
 |---|---|---|---|---|---|---|
-| Skiller | 14.8–17.1 h | 52–97 h | — | — | 129–137 | 77–132 h |
-| Skiller with the Titan | 9.9–10.9 h | 24–30 h | 82–117 h | — | 160–170 | 31–96 h |
-| Ladder farmer | 7.7–10.7 h | 10.5–37 h | 26–117 h | 71–76 h, or never | 188–230 | 16–109 h |
-| AFK pusher | 7.0–9.5 h | 10.5–14.7 h | 20–25 h | 57–65 h | 226–239 | 17–22 h |
-| Sensible (dungeons + Titan) | 5.0–5.8 h | 8.4–10.7 h | 20–23 h | 54–60 h | 238–270 | 21–29 h |
+| Skiller | 14.0–22.0 h | 78–118 h | — | — | 128–138 | 107–143 h |
+| Skiller with the Titan | 7.6–10.9 h | 19.5–25.8 h | 62–142 h | — | 150–180 | 45–64 h |
+| Ladder farmer | 8.4–18.8 h | 27–51 h | 35–67 h | 76–98 h | 250–260 | 28–65 h |
+| AFK pusher | 7.3–8.3 h | 10.3–12.1 h | 21.7–24.1 h | 50–60 h | 297–309 | 11–25 h |
+| Sensible (dungeons + Titan) | 5.0–5.2 h | 6.9–8.0 h | 16.0–18.1 h | 48.3–48.9 h | 270–310 | 6.8–16.6 h |
 
-Dungeons and the Titan put the sensible player ahead (dungeons were tuned to about 1.5× the
-progress of pushing for the same time): stage 200 a few hours sooner and a higher best stage at
-150 h than the AFK pusher. The Titan alone moves a skiller's stage 100 forward
-by 4–7 hours. Farming a comfortable stage is weaker than pushing, because each boss's first fall is
+(Measured 7 October 2026, with armour that carries health.) The sensible player reaches every
+milestone first, but by 150 hours the AFK pusher has caught up: with health from armour, staying at
+the wall pays, and the simulator's sensible player spends long stretches farming the Void Citadel
+(1,500–9,000 clears in 150 h), which its stopping rule does not end. The over-farming is the bot's,
+not a rule of the game; it is worth fixing in the simulator before the next dungeon change.
+
+Dungeons and the Titan put the sensible player ahead through the milestones (dungeons were tuned to
+about 1.5× the progress of pushing for the same time): stage 200 2–11 hours sooner than the AFK
+pusher. The Titan alone moves a skiller's stage 100 forward by 4–11 hours. Farming a comfortable stage is weaker than pushing, because each boss's first fall is
 worth the risk. Melvor pace hit the skiller hardest: its runite waits for smithing 75 and mining for
 its ore, which now take twice as long. (The ladder farmer used to stall for good: when the Titan woke
 during a farm, the bot left farm mode on and farmed one stage for the rest of the run. Fixed in the
@@ -986,10 +994,22 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 ### 5.3 Known risks
 
 - **The Abyss is a slow climb on purpose.** Tokens grow polynomially and monsters ×2.26 per depth,
-  so late power comes mostly from deeper drops (×1.8 per depth). The climb slows as it goes: stage
-  ~200 at 54–60 h, 238–270 at 150 h, 327–336 at 300 h. `BALANCE.abyss.dropGrowth` sets the pace: at
-  2.0 the seeds spread from 250 to 334 at 150 h, and at 2.2 it runs away (390–470). A player who
-  stops prestiging stops moving; the simulator prestiges after an hour stuck at the wall.
+  so late power comes mostly from deeper drops (×1.6 per depth). In the terms of
+  `docs/research_notes/incremental-math.md`, the deep Abyss is near-critical: drops grow at about
+  60% of the monsters' rate in log terms, and the gap between the two sets the late pace (about one
+  stage an hour). The climb slows as it goes: stage ~200 at 48 h, 270–310 at 150 h.
+  `BALANCE.abyss.dropGrowth` sets the pace: with drops at ×1.8 and no health from armour the best at
+  150 h was 230–280; ×2.0 spread it to 250–334, and ×2.2 ran away (390–470); at ×2.26 or above there
+  is no wall at all. A player who stops prestiging stops moving; the simulator prestiges after an hour
+  stuck at the wall.
+- **Survival used to drop out of the deep game.** The monsters' attack grows ×2.06 a depth, and the
+  hero's health had no source that grew with depth, so past stage ~170–200 any hit killed (at 150 h the
+  hero fell to 0.03–0.5 of a hit at the wall), defence piled up to 80–100 times the monsters' attack,
+  far past the 90% mitigation cap where it does nothing, and food, lifesteal, the Hearth and the
+  defence potion stopped mattering. Armour now carries health (one per 20 defence): at the wall the
+  hero takes about one or two hits, his defence stays at 5–12 times the monsters' attack, and he
+  falls half as often. With it, the drops' growth came down from ×1.8 to ×1.6 a depth to keep stage
+  200 at the same time.
 - **Late-game gold piles up.** Sinks keep pace while the agility course is being built (finished at
   about 57 h in the simulator); after that income dwarfs the bounded sinks, and over 150 hours only
   7–14% of all gold earned is spent. Most of the rest resets with the run. That is what run
@@ -1039,6 +1059,52 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 After any change: `node --test test/*.test.mjs test/*.test.cjs`, `node tools/pacing.mjs`, and a
 couple of `node tools/simulate.mjs --hours=150 --seed=N` runs (add `--farm-ladder=push` and
 `--no-dungeons` to compare play styles).
+
+### 5.5 Checked against the research (October 2026)
+
+`docs/research_notes/incremental-math.md` (the mathematics of idle games, with an addendum on
+prestige currencies, the idle-game literature and automated resets) and
+`docs/research_notes/gear-sources.md` (where gear should come from, and the mathematics of loot)
+end with an evaluation recipe: what to measure in the simulator, and the targets the sources give.
+The game, measured against it after the survival fix (seeds 1–3, 150 h):
+
+| # | Measure | Fantasy Idle | Target | |
+|---|---|---|---|---|
+| 1 | Milestones | first prestige 1.5 h; stage 50 / 100 / 150 / 200 at 0.8 / 5.0–5.2 / 16–18 / 48–49 h; a new place every 20–60 s in the first minutes | first prestige ~1 h; something new every 20–60 s at first | ✓ |
+| 2 | Time per stage, band to band | 0.11 → 0.29 → 0.65 → 1.45 h a stage (100–120, 120–150, 150–200, 200–270) | rises smoothly, no band over ~3× the last | ✓ |
+| 3 | Walls | none longer than a session or two; no one-hit wall since armour carries health | each under a day of play, with two ways out | ✓ |
+| 4 | Gain per prestige | median +14–15% of the tokens held over runs 1–20, +0.8% after run 100 | +50% to +200% when a player chooses to reset; late resets either decisions or automated | ✗ |
+| 5 | Run lengths | median 0.7–0.8 h over the first 20 runs, about the same later | short at first, lengthening, with bumps | ~ |
+| 6 | The deep Abyss's gap | drops ×1.6 against monsters ×2.26 a depth (δ ≈ 0.035 a stage) | above ~0.02 (nearer 0 runs away) | ✓ |
+| 7 | Late pace | ~0.7–1 stage an hour from stage 200 | 0.5–1 an hour | ✓ |
+| 8 | Power by source (share of log attack) | gear ~60%, tokens ~25%, levels and perks ~8%, camp ~6% | each major system 25–60% | ✓ (the camp is the early game's layer) |
+| 9 | Survival at the wall | 1–2 hits to fall; defence 5–12× the monsters' attack | 2–20 hits; defence under 9× | ~ (it was 0.03–0.5 hits and 76–104×) |
+| 10 | Play styles | prestiging as soon as allowed reaches stage 200 ×1.4 sooner; the AFK pusher matches the sensible player by 150 h | no style more than ~1.5× faster | ✓, at the edge |
+| 11 | Gold spent | 8–12% of all gold earned; 83–91% resets unspent | gold matters late if it is meant to | ✗ |
+| 12 | Gear by source | worn gear is all dropped or unique by hour 5–10; forged weapons and armour last ~4 h, crafted jewellery is never worn in 60 h | each skill's products used | ✗ |
+
+**Done.** Armour carries health and the deep Abyss's drops grow ×1.6 a depth (§5.3): measures 3, 9.
+
+**Proposed, for the owner to decide** (each simulated in a scratch copy; none built):
+
+- **Weapons and armour from the fight** (the owner's idea; `gear-sources.md` §5): stop forging weapons
+  and armour above copper, so they come from bosses' first falls, regular kills and dungeon chests,
+  which every prestige re-arms. Ship with it: Smithing reinforces dropped gear with bars (the +1…+10
+  upgrades move to the anvil), smelts unwanted drops back into bars and rerolls affixes; drops lean on
+  the zone's own tier (offsets 25/65/10), favour empty and lagging slots, with a visible pity count on
+  frontier bosses; each dungeon's chest favours named slots; ordinary jewellery leaves the drop tables
+  so Crafting's rings and amulets are the way to them. Simulated (copper forge kept, slot-aware drops,
+  offsets 25/65/10): stage 50 at 0.8 h, 100 at 4.4–4.7 h, 150 at 14–15 h, 200 at 46–49 h. Without the
+  copper forge the first two hours slow down (stage 50 at 1.6–2.1 h). Measures 12, 4.
+- **Late prestiges that count** (`incremental-math.md` §8.3 and the addendum A1.3): keep the held
+  tokens, and add a rare compounding unit (×1.05 to the token effect for each new 25-stage record or
+  dungeon unique), so a late record multiplies the whole stock instead of adding 0.7%; and once
+  resets are routine (after the 20th, say), an earned auto-prestige in the dock (when the run is back
+  at its best and long enough). Measure 4.
+- **A late job for gold**: camp levels priced in kills at the best stage (each run climbs it again),
+  or levels past 25 at a steeper price. Measure 11.
+- **If the speed edge grows**: pay a run's tokens in full only from 30 minutes on (×1.4 → ×1.07 in the
+  simulator, the sensible player unchanged; 20 minutes was not enough). Measure 10.
 
 ## 6. Where this differs from the research report
 

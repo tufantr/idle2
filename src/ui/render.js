@@ -1107,7 +1107,7 @@ export function renderItemDetail(game, id) {
             </div>
             <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
         </div>
-        <div class="detail-stats">${atk ? `<span class="item-atk">${ATK_ICON} ${fmt(atk)} ATK</span>` : ''}${def ? `<span class="item-def">${DEF_ICON} ${fmt(def)} DEF</span>` : ''}${atk || def ? '' : '<span class="muted">No base stats</span>'}</div>
+        <div class="detail-stats">${atk ? `<span class="item-atk">${ATK_ICON} ${fmt(atk)} ATK</span>` : ''}${def ? `<span class="item-def">${DEF_ICON} ${fmt(def)} DEF</span>` : ''}${def * BASE.hpPerDef >= 1 ? `<span class="item-hp" title="Armour adds health: one for every ${Math.round(1 / BASE.hpPerDef)} defence, raised by your health bonuses">${glyph('heart')} +${fmt(Math.floor(def * BASE.hpPerDef))}</span>` : ''}${atk || def ? '' : '<span class="muted">No base stats</span>'}</div>
         ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}</li>`).join('')}</ul>` : ''}
         ${compare}
         ${wearable ? '' : `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>`}
@@ -1154,7 +1154,7 @@ export function renderInventory(game, ui) {
             <div class="doll-stats">
                 ${stat(ATK_ICON, fmt(d.atk), 'attack', 'Attack: the damage of a hit, before the monster\'s defence')}
                 ${stat(DEF_ICON, fmt(d.def), 'defence', 'Defence: taken off every hit you receive')}
-                ${stat(glyph('heart'), fmt(d.maxHp), 'health', 'Health')}
+                ${stat(glyph('heart'), fmt(d.maxHp), 'health', `Health: from your level, your armour (one for every ${Math.round(1 / BASE.hpPerDef)} defence) and your health bonuses`)}
             </div>
             <div class="doll-stats minor">
                 <span title="Critical hits: how often, and how much harder they hit">${glyph('crit')} ${pct(d.critChance, 1)} crit × ${d.critDmg.toFixed(2)}</span>

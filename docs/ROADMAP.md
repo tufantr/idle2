@@ -429,6 +429,18 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Balanced against the mathematics of idle games** (the owner asked for the research to be
+      expanded and the game balanced by it; `docs/research_notes/incremental-math.md` with its
+      addendum, `docs/research_notes/gear-sources.md`, DESIGN §5.5). Measured first: gear carries ~60%
+      of the hero's power and tokens ~25%; worn gear is all dropped by hour 5–10; late prestiges add
+      ~0.8% each; and past stage ~170 every hit killed, because the hero's health had no source that
+      grew with depth (defence piled up 80–100 times past the point where it counts). Now armour
+      carries health, one point for every 20 defence (shown on each piece and in the hero's numbers),
+      and the deep Abyss's drops grow ×1.6 a depth (×1.8) to keep stage 200 at ~48 h: the hero takes
+      one or two hits at the wall instead of a fraction of one, falls half as often, and food, defence
+      and lifesteal matter again. The pace tables in DESIGN §5.2 are measured afresh. Weapons and
+      armour from drops only (the owner's idea), late prestiges that count and a late job for gold
+      are proposed in §5.5 with their simulations, for the owner to decide
 - [x] **A first session worth the first impression** (the owner found the start dull; research on Tap
       Titans 2 and other idle games in `docs/research_notes/first-session.md`, DESIGN §3.24). Measured
       first: a player who only watched fell at stage 5 within a minute and was below stage 10 after
