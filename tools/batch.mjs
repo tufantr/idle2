@@ -7,6 +7,7 @@
 //   node tools/batch.mjs --seeds=31-60 --hours=150 --auto --label=auto
 //   node tools/batch.mjs --seeds=10 --player=checkin3 --hours=336
 //   node tools/batch.mjs --seeds=10 --set=BALANCE.abyss.dropGrowth:1.52 --label=dg152
+//   node tools/batch.mjs --seeds=30 --vary=seed --label=varied                  # a different sensible bot per seed
 //
 // Writes one JSON per run and summary.json to runs/<label>/ (git-ignored), and prints the report.
 // --jobs=N sets how many run at once (default: the cores less one).
@@ -19,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : true]; }));
-const OWN = new Set(['seeds', 'jobs', 'label', 'out', 'quiet']);
+const OWN = new Set(['seeds', 'jobs', 'label', 'out', 'quiet', 'skip-existing']);
 const pass = Object.entries(args).filter(([k]) => !OWN.has(k)).map(([k, v]) => (v === true ? `--${k}` : `--${k}=${v}`));
 const [lo, hi] = String(args.seeds || 10).includes('-') ? String(args.seeds).split('-').map(Number) : [1, Number(args.seeds || 10)];
 const seeds = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
@@ -31,21 +32,26 @@ mkdirSync(OUT, { recursive: true });
 /** Run the seeds, JOBS at a time. */
 async function runAll() {
     let next = 0;
+    let todo = seeds;
     let done = 0;
     const started = Date.now();
     const one = seed => new Promise(resolve => {
         const file = join(OUT, `${seed}.json`);
-        const child = spawn(process.execPath, [join(ROOT, 'tools/simulate.mjs'), `--seed=${seed}`, '--snapshot=1000000', `--json=${file}`, ...pass], { stdio: ['ignore', 'ignore', 'pipe'] });
+        // --vary=seed: each seed plays its own variant of the bot's thresholds (simulate.mjs POLICY)
+        const own = pass.map(a => (a === '--vary=seed' ? `--vary=${seed}` : a));
+        const child = spawn(process.execPath, [join(ROOT, 'tools/simulate.mjs'), `--seed=${seed}`, '--snapshot=1000000', `--json=${file}`, ...own], { stdio: ['ignore', 'ignore', 'pipe'] });
         let err = '';
         child.stderr.on('data', d => { err += d; });
         child.on('close', code => {
             done++;
             if (code !== 0) console.error(`seed ${seed} failed (${code}): ${err.slice(0, 400)}`);
-            if (!args.quiet) process.stderr.write(`\r${done}/${seeds.length} runs, ${((Date.now() - started) / 1000).toFixed(0)} s   `);
+            if (!args.quiet) process.stderr.write(`\r${done}/${todo.length} runs, ${((Date.now() - started) / 1000).toFixed(0)} s   `);
             resolve();
         });
     });
-    await Promise.all(Array.from({ length: Math.min(JOBS, seeds.length) }, async () => { while (next < seeds.length) await one(seeds[next++]); }));
+    // --skip-existing: seeds already run (a batch stopped part-way) are not run again
+    todo = args['skip-existing'] ? seeds.filter(seed => !existsSync(join(OUT, `${seed}.json`))) : seeds;
+    await Promise.all(Array.from({ length: Math.min(JOBS, todo.length) }, async () => { while (next < todo.length) await one(todo[next++]); }));
     if (!args.quiet) process.stderr.write('\n');
 }
 

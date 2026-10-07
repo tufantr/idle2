@@ -49,12 +49,36 @@ const SEED = Number(args.seed || 1);
 const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
-const NO_DUNGEONS = !!args['no-dungeons'];
+// --without=dungeons,titan,farming,agility,anvil,camp,perks,crafting,essence: the bot leaves those alone
+// (restricted play: what each system is worth, robust-and-fun/D §2.3).
+const WITHOUT = new Set(String(args.without || '').split(',').filter(Boolean));
+const NO_DUNGEONS = !!args['no-dungeons'] || WITHOUT.has('dungeons');
 // Controls for dungeon balance: spend the dungeon half hours on the ladder instead.
 //   --farm-ladder       farm the highest comfortable stage of the run (farm mode)
 //   --farm-ladder=push  keep pushing at the wall (an AFK player who leaves combat running)
 const FARM_LADDER = args['farm-ladder'] ? (args['farm-ladder'] === 'push' ? 'push' : 'farm') : null;
-const NO_TITAN = !!args['no-titan'];
+const NO_TITAN = !!args['no-titan'] || WITHOUT.has('titan');
+// --speed-prestige: prestige the moment the game allows it (the exploit-seeking player, D §2.2 P6).
+const SPEED_PRESTIGE = !!args['speed-prestige'];
+// The bot's own thresholds. --vary=N draws a different sensible player for each N (D §2.2 P10): how
+// much a run must add before it prestiges, how long a stall lasts, how long it farms a dungeon, its
+// share of time for agility, how long it trains, and the order it buys perks in.
+const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60,
+    perkOrder: ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'] };
+if (args.vary) {
+    const r = seededRandom(1_000_003 * Number(args.vary));
+    const between = (a, b) => a + (b - a) * r();
+    POLICY.prestigeShare = 0.15 * Math.pow(2, between(-1, 1));
+    POLICY.stallMin = Math.round(between(10, 40));
+    POLICY.longStallMin = Math.round(between(40, 120));
+    POLICY.dungeonMin = Math.round(between(15, 60));
+    POLICY.agilityShare = between(0.1, 0.4);
+    POLICY.trainMin = Math.round(between(20, 90));
+    POLICY.gateTrainMin = Math.round(between(30, 120));
+    const head = POLICY.perkOrder.slice(0, -1);
+    for (let i = head.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [head[i], head[j]] = [head[j], head[i]]; }
+    POLICY.perkOrder = [...head, 'paragon'];
+}
 // --auto: once earned (BALANCE.prestige.autoAfter prestiges), turn on the dock's Auto switch, as a player
 // who has done twenty resets by hand would; the bot's own prestige rule stays for the runs it decides.
 const AUTO = !!args.auto;
@@ -178,7 +202,7 @@ function train(skillId, minutes = 20) {
     if (skillId === 'smithing') {
         // Bars for the anvil's next job first, if we can smelt them (the reinforcing itself happens in
         // spendPoints; bars we can't smelt yet only come from salvage).
-        const job = anvilJob();
+        const job = WITHOUT.has('anvil') ? null : anvilJob();
         const smeltable = job && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === job.cost.bar).levelReq;
         if (smeltable) { const t = obtain(job.cost.bar, job.cost.bars); if (t) return t; }
         // Then forge copper if bars are on hand, otherwise smelt the best bar we can source ore for.
@@ -261,6 +285,7 @@ function foodTask() {
 }
 
 function jewelTask() {
+    if (WITHOUT.has('crafting')) return null;
     if (lvl('mining') < 30) return null;
     if (!S.unlocks.crafting) return lvl('smithing') >= 20 ? obtain('silver_bar', 1) : null;   // the first silver bar opens Crafting
     const bar = [...JEWEL_BARS].reverse().find(b => lvl('crafting') >= b.levelReq && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === b.bar).levelReq);
@@ -281,20 +306,20 @@ function jewelTask() {
 }
 
 function spendPoints() {
-    const order = ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'];
+    const order = POLICY.perkOrder;
     let guard = 0;
-    while (S.prestige.skillPoints > 0 && guard++ < 100) {
+    while (!WITHOUT.has('perks') && S.prestige.skillPoints > 0 && guard++ < 100) {
         const perk = order.map(id => PERKS.find(p => p.id === id)).find(p => S.perks[p.id] < p.max);
         if (!perk || !game.buyPerk(perk.id)) break;
     }
     // Spare gold buys essence (after the camp, and never the gold saved for the next obstacle).
     const reserve = nextSlot() >= 0 ? obstacleCost(S, nextSlot()).gold : 0;
-    for (let guard = 0; guard < 50 && S.resources.essence < 3000; guard++) {
+    for (let guard = 0; !WITHOUT.has('essence') && guard < 50 && S.resources.essence < 3000; guard++) {
         const price = goldShopPrice(game, GOLD_SHOP.find(i => i.id === 'buy_essence'));
         if (S.gold - price < reserve + 20 * price || !game.buyGoldShopItem('buy_essence')) break;
     }
     // Bars and essence into the worn weapon and armour at the anvil, weapon first.
-    for (const slot of ARMOUR_PRIORITY) {
+    for (const slot of WITHOUT.has('anvil') ? [] : ARMOUR_PRIORITY) {
         const item = S.equipped[slot];
         for (let g = 0; item && g < MAX_UPGRADE && anvilCost(S, item).ok; g++) game.reinforceItem(item.id);
     }
@@ -305,6 +330,7 @@ let runStartedAt = 0;
 
 // Spend gold on camp upgrades, cheapest-first, keeping a small reserve.
 function buyCamp() {
+    if (WITHOUT.has('camp')) return;
     let guard = 0;
     while (guard++ < 500) {
         const options = CAMP_UPGRADES.map(u => ({ u, cost: (S.camp[u.id] || 0) < u.max ? campPrice(S, u) : Infinity }))
@@ -331,7 +357,7 @@ function dungeonTask() {
     // hero who already wears that tier farming it forever instead of pushing).
     const hasUnique = [...S.inventory, ...Object.values(S.equipped)].some(i => i && i.uniqueId === pick.unique);
     if (hasUnique && pick.chestTier <= (S.equipped.Weapon?.tier || 0)) return null;
-    const end = now + 30 * 60000;
+    const end = now + POLICY.dungeonMin * 60000;
     return {
         kind: 'dungeon', id: pick.id, why: `run ${pick.name}`,
         // When time is up, stop repeating, let the current run finish, and end the dungeon at its chest.
@@ -389,6 +415,7 @@ function combatTask() {
 
 // Farming: harvest what is ready and keep every open plot planted with the best crop we can afford.
 function tendFarm() {
+    if (WITHOUT.has('farming')) return;
     if (!S.unlocks.farming) return;
     S.farming.plots.forEach((plot, i) => {
         if (plotReady(plot, now)) game.harvest(i);
@@ -406,6 +433,7 @@ function nextSlot() {
     return S.unlocks.agility ? S.agility.built.findIndex(b => !b) : -1;
 }
 function buildObstacles() {
+    if (WITHOUT.has('agility')) return;
     const slot = nextSlot();
     if (slot >= 0 && canBuild(S, AGILITY_PICKS[slot]).ok && game.buildObstacle(AGILITY_PICKS[slot])) milestone('obstacle', slot + 1);
     const reserve = nextSlot() >= 0 ? obstacleCost(S, nextSlot()).gold : 0;
@@ -419,10 +447,11 @@ function buildObstacles() {
 }
 // When the next obstacle's gold is within reach: train agility for its slot, then gather materials.
 function agilityTask() {
+    if (WITHOUT.has('agility')) return null;
     const slot = nextSlot();
     if (slot < 0) {
         // Course complete: train agility when an upgrade we can afford is waiting on the level.
-        if (!S.unlocks.agility || agilityMs > 0.25 * now) return null;
+        if (!S.unlocks.agility || agilityMs > POLICY.agilityShare * now) return null;
         const waiting = S.agility.built.map((id, i) => (id ? upgradeInfo(S, i) : null)).filter(Boolean)
             .find(info => S.gold >= info.gold && lvl('agility') < info.levelReq);
         if (!waiting) return null;
@@ -434,13 +463,13 @@ function agilityTask() {
     const target = AGILITY_SLOTS[slot].levelReq;
     if (lvl('agility') < target) {
         // A real player interleaves: at most a quarter of the time on the course, half an hour at a go.
-        if (!S.agility.built.some(Boolean) || agilityMs > 0.25 * now) return null;
+        if (!S.agility.built.some(Boolean) || agilityMs > POLICY.agilityShare * now) return null;
         const end = now + 30 * 60000;
         return { kind: 'agility', budget: 'agility', why: `train agility toward ${target}`, until: () => now >= end || lvl('agility') >= target };
     }
     // The materials, and the skills to make them, out of the same quarter of the bot's time (a player
     // who needs Smithing 75 for an obstacle's bars still goes back to the fight between sessions).
-    if (agilityMs > 0.25 * now) return null;
+    if (agilityMs > POLICY.agilityShare * now) return null;
     for (const [id, qty] of Object.entries(cost.materials)) {
         if (RESOURCES[id].category === 'gem') continue; // gems come from mining luck; wait for them
         const t = obtain(id, qty);
@@ -455,15 +484,20 @@ function decide() {
     spendPoints();
     tendFarm();
     buildObstacles();
+    if (SPEED_PRESTIGE && game.canPrestige()) {
+        const p = game.prestigePreview();
+        runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
+        game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
+    }
     // Prestige when the run's tokens are a meaningful addition.
-    if (game.canPrestige() && now - lastStageGainAt > 20 * 60000) {
+    if (game.canPrestige() && now - lastStageGainAt > POLICY.stallMin * 60000) {
         const p = game.prestigePreview();
         // Worth it when the run adds a decent share of what we hold; the share asked for shrinks as
         // tokens pile up (15% early, ~2% at 7,000), since a late run can only add a few percent.
-        const share = 0.15 * Math.sqrt(100 / (100 + S.prestige.tokens));
+        const share = POLICY.prestigeShare * Math.sqrt(100 / (100 + S.prestige.tokens));
         // A player stuck at the wall for an hour prestiges anyway: it is the only progress left (once the
         // run is back near its best: not a run left at its start while the hero was off working).
-        const longStall = now - lastStageGainAt > 60 * 60000 && S.combat.maxStage >= 0.9 * S.combat.bestStage;
+        const longStall = now - lastStageGainAt > POLICY.longStallMin * 60000 && S.combat.maxStage >= 0.9 * S.combat.bestStage;
         if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) {
             runLog.push({ run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens });
             game.prestige(); runStartedAt = now; milestone('prestige', S.prestige.count);
@@ -486,16 +520,16 @@ function trainWeakest() {
         const recipe = SMELTING_RECIPES.find(r => r.produces === target.bar);
         const oreId = Object.keys(recipe.consumes).find(id => RESOURCES[id].category === 'ore' && id !== 'coal');
         const oreNode = nodeFor('mining', oreId);
-        if (lvl('mining') < oreNode.levelReq && lastTrainedSkill !== 'mining') { lastTrainedSkill = 'mining'; return train('mining', 60); }
-        if (lvl('smithing') < target.levelReq && lastTrainedSkill !== 'smithing') { lastTrainedSkill = 'smithing'; return train('smithing', 60); }
+        if (lvl('mining') < oreNode.levelReq && lastTrainedSkill !== 'mining') { lastTrainedSkill = 'mining'; return train('mining', POLICY.gateTrainMin); }
+        if (lvl('smithing') < target.levelReq && lastTrainedSkill !== 'smithing') { lastTrainedSkill = 'smithing'; return train('smithing', POLICY.gateTrainMin); }
     }
-    const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)));
+    const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)) && !WITHOUT.has(id));
     candidates.sort((a, b) => lvl(a) - lvl(b));
     const pick = candidates.find(c => c !== lastTrainedSkill) || candidates[0];
     lastTrainedSkill = pick;
     if (pick === 'crafting') return craftTraining();
     if (pick === 'agility') { const end = now + 45 * 60000; return { kind: 'agility', why: 'run the agility course', until: () => now >= end }; }
-    return train(pick, 45);
+    return train(pick, POLICY.trainMin);
 }
 
 // Gems come from rocks of about their tier, so look for them in the richest rock whose gems we can
@@ -690,6 +724,7 @@ let steady = null; // gold earned/spent at the halfway mark, for the steady-stat
 let dungeonFails = 0;
 let titanTries = 0;
 const taskMs = {};   // time by kind of task (the bot's own bookkeeping, for its QA)
+const bestByHour = [];   // the best stage at each whole hour (the leaderboard's honest-growth envelope)
 let awayFromFight = { since: null, longest: 0 };   // the longest stretch without fighting while a stage could be gained
 let curEnd = sessionEndAt(now);
 while (now < totalMs) {
@@ -725,6 +760,7 @@ while (now < totalMs) {
         }
     }
     if (S.combat.bestStage > lastMaxStage) { lastMaxStage = S.combat.bestStage; lastStageGainAt = now; }
+    while (bestByHour.length <= Math.floor(H(now))) bestByHour.push(S.combat.bestStage);
     if (task.budget === 'agility') agilityMs += STEP;
     const kind = task.budget === 'agility' ? 'agility' : task.kind;
     taskMs[kind] = (taskMs[kind] || 0) + STEP;
@@ -791,7 +827,7 @@ if (JSON_OUT) {
     try { commit = execSync('git rev-parse --short HEAD', { cwd: new URL('..', import.meta.url).pathname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* not a checkout */ }
     const at = (key, value) => { const m = milestones.find(x => x.key === key && x.value === value); return m ? +H(m.at).toFixed(3) : null; };
     const out = {
-        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER }, overrides,
+        commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null }, policy: POLICY, overrides,
         stages: Object.fromEntries(STAGE_MARKS.map(m => [m, at('stage', m)])),
         weaponTier: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(t => [t, at('weapon tier', t)])),
         firstPrestige: at('prestige', 1), autoEarned: at('prestige', BALANCE.prestige.autoAfter),
@@ -808,6 +844,7 @@ if (JSON_OUT) {
         gold: { earned: S.stats.goldEarned, spent: S.stats.goldSpent, bySink: spentOn, lostToPrestige },
         taskHours: Object.fromEntries(Object.entries(taskMs).map(([k, v]) => [k, +H(v).toFixed(2)])),
         longestAwayFromFightHours: +H(awayFromFight.longest).toFixed(2),
+        bestByHour,
         moments: PLAYER === 'online' ? { major: bandStats(majors), majorAndMedium: bandStats(moments), list: majors.map(m => [+H(m.at).toFixed(2), m.what]) } : null,
         returns: PLAYER !== 'online' ? { ...returns, offlineCappedHours: +H(offlineCappedMs).toFixed(1) } : null,
         simSeconds: +((Date.now() - t0) / 1000).toFixed(1)
