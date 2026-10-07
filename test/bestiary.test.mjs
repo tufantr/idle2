@@ -8,6 +8,7 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { migrateState } from '../src/core/state.js';
 import { BESTIARY, BESTIARY_NAMES, BESTIARY_SIZE, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../src/data/bestiary.js';
 import { ZONES } from '../src/data/zones.js';
+import { STRATA } from '../src/data/strata.js';
 import { DUNGEONS } from '../src/data/dungeons.js';
 import { onEnemyDeath } from '../src/systems/combat.js';
 import { checkAchievements } from '../src/systems/progress.js';
@@ -15,13 +16,16 @@ import { checkAchievements } from '../src/systems/progress.js';
 rng.setSource(seededRandom(77));
 const T0 = 1_700_000_000_000;
 
-test('every monster of every zone and dungeon is in the bestiary, once', () => {
-    const all = new Set([...ZONES.flatMap(z => [...z.monsters, z.boss]), ...DUNGEONS.flatMap(d => [...d.monsters.map(m => m.name), d.boss.name])]);
+test('every monster of every zone, stratum and dungeon is in the bestiary, once', () => {
+    const all = new Set([...ZONES.flatMap(z => [...z.monsters, z.boss]), ...STRATA.flatMap(s => [...s.monsters, s.boss]), ...DUNGEONS.flatMap(d => [...d.monsters.map(m => m.name), d.boss.name])]);
     assert.equal(BESTIARY_SIZE, all.size);
     for (const name of all) assert.ok(BESTIARY_NAMES.has(name), name);
     const listed = BESTIARY.flatMap(g => g.monsters.map(m => m.name));
     assert.equal(listed.length, new Set(listed).size, 'a name is listed once');
     assert.equal(BESTIARY.filter(g => g.kind === 'zone').length, ZONES.length);
+    assert.equal(BESTIARY.filter(g => g.kind === 'stratum').length, STRATA.length - 1, 'the first stratum is the Abyss zone\'s own');
+    // every place's kinds stand on a stage of that place
+    for (const g of BESTIARY.filter(x => x.kind !== 'dungeon')) for (const m of g.monsters) assert.ok(m.at >= g.from, `${m.name} at ${m.at}`);
 });
 
 test('stars come at 10, 100 and 1,000 defeats', () => {

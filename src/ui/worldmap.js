@@ -12,6 +12,7 @@ import { isUnlocked } from '../data/unlocks.js';
 import { dungeonUnlocked, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { BESTIARY, KILL_STARS, starsFor } from '../data/bestiary.js';
+import { STRATA_FROM, stratumForStage } from '../data/strata.js';
 import { sprite, resIcon, heroSprite } from './sprites.js';
 import { dungeonVerdict } from './render.js';
 import { escapeHtml as esc } from './format.js';
@@ -66,7 +67,9 @@ function zoneView(state, index) {
     // The Abyss goes on forever: travelling there means its deepest depth reached this run.
     const target = abyss && open ? Math.floor((c.maxStage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1 : first;
     const range = abyss ? (here > index ? `depth ${here - index}` : `${first}+`) : `${first}–${last}`;
-    return { zone, first, last, abyss, current, open, cleared, target, range };
+    // below its first ten stages the Abyss is a stack of strata (data/strata.js): the one the hero is in, or the deepest this run
+    const deep = abyss && c.maxStage >= STRATA_FROM ? stratumForStage(current ? Math.max(STRATA_FROM, c.stage) : c.maxStage) : null;
+    return { zone, first, last, abyss, current, open, cleared, target, range, deep: deep && deep.index > 0 ? deep : null };
 }
 
 /** The dungeons on the map: the open ones and the next to open (a ladder shows its next rung). */
@@ -91,7 +94,8 @@ function starsPill(state, id) {
 export function renderZoneInfo(game, index) {
     const state = game.state;
     const v = zoneView(state, index);
-    const boss = sprite(`mon/${v.zone.boss}`, { scale: 1.5, cls: v.open ? '' : 'silhouette', fallback: '⚔️' });
+    const ruler = v.deep ? v.deep.boss : v.zone.boss;
+    const boss = sprite(`mon/${ruler}`, { scale: 1.5, cls: v.open ? '' : 'silhouette', fallback: '⚔️' });
     const loot = v.zone.loot.map(l => `<span class="fact" title="${esc(RESOURCES[l.id].name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('');
     const action = v.current ? '<span class="status-pill fighting">You are here</span>'
         : v.open ? `<button class="prestige-btn war" onclick="FI.mapTravel(${v.target})">Travel</button>`
@@ -99,8 +103,8 @@ export function renderZoneInfo(game, index) {
     return `<div class="zone-card">
         <span class="zone-emblem${v.open ? '' : ' locked'}">${boss}</span>
         <div class="zone-card-text">
-            <b class="zone-card-name">${esc(v.zone.name)}${v.open ? starsPill(state, v.zone.id) : ''}</b>
-            <span class="muted small">Stages ${v.range}${v.open ? ` · ruled by the ${esc(v.zone.boss)}` : ''}</span>
+            <b class="zone-card-name">${esc(v.zone.name)}${v.deep ? ` · ${esc(v.deep.name)}` : ''}${v.open ? starsPill(state, v.deep ? v.deep.id : v.zone.id) : ''}</b>
+            <span class="muted small">Stages ${v.range}${v.open ? ` · ruled by the ${esc(ruler)}` : ''}</span>
             ${v.open ? `<span class="zone-facts"><span class="muted small">Drops</span>${loot}${seen(state, 'gear') ? `<span class="muted small">· gear tier <b>${v.zone.gearTier}</b></span>` : ''}</span>` : ''}
         </div>
         ${action}

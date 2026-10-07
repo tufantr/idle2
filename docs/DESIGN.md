@@ -256,7 +256,19 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 ### 3.7 Zones, enemies and loot
 
 `src/data/zones.js`. Ten authored zones of ten stages; stage 10 of each is a boss. After stage 100
-the Abyss repeats with a depth counter and steeper growth.
+the Abyss goes on with a depth counter and steeper growth, in named strata.
+
+- **The Abyss's strata** (`src/data/strata.js`; `robust-and-fun/B_longterm_motivation.md` §8.2 item 1):
+  past stage 100 the Abyss was one place, the same four monsters and boss for hundreds of stages. It is
+  now a stack of sixteen layers of 25 stages from stage 101: The Abyss (its own monsters), the Weeping
+  Dark, the Bone Reaches, the Ember Pits, the Frozen Void, the Writhing Maze, the Shadow Court, the Storm
+  Wastes, the Starless Sea, the Iron Halls, the Hollow Throne, the Burning Choir, the Glass Garden, the
+  Rotting Deep, the Spatial Rift and Pandemonium (476 on, without end). Each has four monsters and a boss
+  of its own from the DCSS tiles (75 new bestiary pages, 168 kinds in all), a card the first time it is
+  reached (its line, its boss as a silhouette), its name over the fight and on the world map's Abyss
+  pin, and its own light: a colour grade over the Abyss's painting (`grade`, a CSS filter; the painting
+  is purple, so hues turn from there) until each has a painting of its own. The zone keeps the id
+  `abyss` and everything else the Abyss had: its scaling, loot, depth and gear tiers.
 
 - **Enemy HP** = `25 × 1.075^(s−1)` to stage 100 (×2.06 per zone), then ×1.085 per stage.
   **Enemy ATK** = `5 × 1.065^(s−1)`, then ×1.075. **Bosses** ×3 HP, ×1.6 ATK.
@@ -280,9 +292,9 @@ the Abyss repeats with a depth counter and steeper growth.
 | 70 | Ember Volcano | Ember Drake (boss) | 11,021 | 616 | 8,266 | 1,299 | 3 | 46 |
 | 90 | Skyreach Spire | Thunder Roc (boss) | 46,818 | 2,173 | 35,114 | 1,691 | 4 | 70 |
 | 100 | The Abyss | Abyss Warlord (boss) | 96,493 | 4,080 | 72,370 | 1,888 | 4 | 82 |
-| 120 | Abyss — Depth 2 | Abyss Warlord (boss) | 493,280 | 17,332 | 369,960 | 2,287 | 5 | 110 |
-| 130 | Abyss — Depth 3 | Abyss Warlord (boss) | 1,115,299 | 35,723 | 836,474 | 2,487 | 6 | 125 |
-| 150 | Abyss — Depth 5 | Abyss Warlord (boss) | 5,701,460 | 151,748 | 4,276,095 | 2,891 | 7 | 156 |
+| 120 | The Abyss, depth 2 | Abyss Warlord (boss) | 493,280 | 17,332 | 369,960 | 2,287 | 5 | 110 |
+| 130 | The Weeping Dark, depth 3 | Dread Lich (boss) | 1,115,299 | 35,723 | 836,474 | 2,487 | 6 | 125 |
+| 150 | The Weeping Dark, depth 5 | Dread Lich (boss) | 5,701,460 | 151,748 | 4,276,095 | 2,891 | 7 | 156 |
 
 - **Rewards per kill:** gold `0.25 × enemy max HP` (a boss's first fall ×3 on top of its ×3 HP);
   combat XP `3 × stage^1.05` (first fall ×5); a zone material with 35% chance (first-fall bosses

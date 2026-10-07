@@ -19,7 +19,7 @@ export const PLAYTEST_KINDS = new Set(['start', 'place', 'zone', 'record', 'uniq
 export function playtestEntry(state, ev) {
     switch (ev.type) {
         case 'unlock': return { kind: 'place', what: ev.id, cls: 'major' };
-        case 'zoneReached': return { kind: 'zone', what: ev.zone, cls: 'major' };
+        case 'zoneReached': return { kind: 'zone', what: ev.zone, cls: 'major' };   // a stratum of the Abyss too
         case 'record': return { kind: 'record', what: String(ev.stage), cls: 'major' };
         case 'unique': return ev.item?.locked ? { kind: 'unique', what: ev.item.uniqueId || ev.item.name, cls: 'major' } : null;
         case 'pet': return { kind: 'pet', what: ev.pet?.id || '', cls: 'major' };

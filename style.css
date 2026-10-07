@@ -2536,3 +2536,8 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .done-bar { height: 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(214, 170, 92, 0.25); overflow: hidden; }
 .done-bar i { display: block; height: 100%; background: linear-gradient(90deg, #b7791f, #fde68a); }
 .done-count { font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* The Abyss's strata (src/data/strata.js): each its own light over the Abyss's painting, until each has one */
+.battle[data-scene="abyss"] .battle-sky { filter: var(--grade, brightness(1)); transition: filter 1.2s ease; }
+.battle.boss-fight[data-scene="abyss"] .battle-sky { filter: var(--grade, brightness(1)) brightness(0.78) saturate(1.15) contrast(1.06); }
+.battle.idle[data-scene="abyss"] .battle-sky { filter: var(--grade, brightness(1)) saturate(0.55) brightness(0.78); }

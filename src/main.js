@@ -32,6 +32,7 @@ import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
 import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
+import { STRATA, STRATUM_STAGES } from './data/strata.js';
 import { nextTrialTarget } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
 
@@ -621,6 +622,14 @@ function handleEvents(events) {
                 if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, 2400);
                 break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
+                if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its light on the Abyss's painting, its line
+                    const s = STRATA.find(x => x.id === ev.zone);
+                    if (!s) break;
+                    const endless = s === STRATA[STRATA.length - 1];
+                    rewards.celebrate({ key: `zone:${s.id}`, kind: 'unlock', art: `${paintStyle('abyss')};filter:${s.grade || 'none'}`, icon: sprite(`mon/${s.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
+                        kicker: 'Deeper into the Abyss', title: s.name, note: s.line, lines: [endless ? `Stages ${ev.stage}+, without end` : `Stages ${ev.stage}–${ev.stage + STRATUM_STAGES - 1}`], ms: 5000 });
+                    break;
+                }
                 const zone = ZONES.find(z => z.id === ev.zone);
                 if (!zone) break;
                 const last = ev.stage + STAGES_PER_ZONE - 1;

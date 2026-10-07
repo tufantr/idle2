@@ -9,6 +9,8 @@
 // when they first get there (tools/simulate.mjs), and a drop one tier up is the lucky case. The
 // drop-only tiers live in the Abyss: Dragonbone from depth 3, Abyssal from depth 5.
 
+import { stratumForStage } from './strata.js';
+
 export const STAGES_PER_ZONE = 10;
 
 export const ZONES = [
@@ -46,13 +48,18 @@ export const ZONES = [
 
 export const AUTHORED_STAGES = ZONES.length * STAGES_PER_ZONE; // 100
 
-/** Zone definition for a stage. Stages past the authored content loop through the Abyss with a depth counter. */
+/**
+ * Zone definition for a stage. Past the authored content the Abyss goes on with a depth counter (ten
+ * stages a depth: its scaling and its gear), in named strata of its own monsters (data/strata.js); the
+ * zone keeps the id 'abyss', with `stratum` naming the layer.
+ */
 export function zoneForStage(stage) {
     const index = Math.floor((stage - 1) / STAGES_PER_ZONE);
     if (index < ZONES.length) return { ...ZONES[index], depth: 0, index };
     const depth = index - ZONES.length + 1;
     const abyss = ZONES[ZONES.length - 1];
-    return { ...abyss, name: `The Abyss — Depth ${depth}`, depth, index, gearTier: abyssGearTier(depth) };
+    const s = stratumForStage(stage);
+    return { ...abyss, name: s.name, stratum: s.id, grade: s.grade, monsters: s.monsters, boss: s.boss, depth, index, gearTier: abyssGearTier(depth) };
 }
 
 /** Runite at depths 1–2, Dragonbone at 3–4, Abyssal from 5. */

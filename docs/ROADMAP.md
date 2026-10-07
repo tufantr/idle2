@@ -429,6 +429,12 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The Abyss in strata** (the long-term research, `robust-and-fun/B_longterm_motivation.md` §8.2;
+      DESIGN §3.7): past stage 100 the Abyss was one place with the same five monsters forever. It is
+      now sixteen named layers of 25 stages, from the Weeping Dark and the Ember Pits to the Glass Garden
+      and Pandemonium, each with four monsters and a boss of its own (75 new DCSS sprites, 75 new
+      bestiary pages), a card when first reached, its name over the fight and on the map, and its own
+      light over the Abyss's painting until each gets a painting of its own (Gemini, with the owner)
 - [x] **Ascension** (the long-term research's outer reset; DESIGN §3.27): from best stage 300 the prestige
       dialog offers to ascend: a prestige that also gives every token up for Stars, 10 for each tenfold
       past 1,000 (100,000 tokens: 20), each making every later prestige pay 25% more tokens, for good. It

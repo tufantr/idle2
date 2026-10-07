@@ -462,6 +462,9 @@ export function createScene(root, actions) {
                 if (arriving) el.battle.querySelector('.battle-sky')?.animate?.([{ opacity: 0, filter: 'brightness(0.3)' }, { opacity: 1, filter: 'none' }], { duration: 700, easing: 'ease-out' });
             }
             sceneDrawn = true;
+            // a stratum of the Abyss wears its own light on the Abyss's painting (data/strata.js; style.css --grade)
+            const grade = c.mode === 'stages' ? zoneForStage(c.stage).grade || '' : '';
+            if (el.battle.__grade !== grade) { el.battle.__grade = grade; el.battle.style.setProperty('--grade', grade || 'brightness(1)'); }   // (a filter list, never 'none': CSS adds to it)
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);
                 setMarkup(el.zone, esc(dg ? dg.name : 'Dungeon'));
@@ -470,7 +473,7 @@ export function createScene(root, actions) {
                 setMarkup(el.zone, `${sprite('titan/0', { scale: 0.75, cls: 'soft res-spr' })} Titan challenge`);
                 setText(el.stage, `Level ${titanLevel(state)}`);
             } else {
-                setMarkup(el.zone, esc(zoneForStage(c.stage).name));
+                setMarkup(el.zone, esc(zoneForStage(c.stage).name));   // a stratum's name in the Abyss (data/strata.js)
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
             }
             // a run in a Trial wears it beside the stage: its icon, its name, and the stage the next tier asks for

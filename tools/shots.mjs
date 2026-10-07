@@ -34,6 +34,8 @@ const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cookin
 const STEPS = {
     anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
+    bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
+    stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
     trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); }
 };
 // Dialogs over the game, shot like tabs.

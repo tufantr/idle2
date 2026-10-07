@@ -1428,16 +1428,16 @@ function renderBestiary(game) {
     const state = game.state;
     const best = Math.max(state.combat.bestStage || 1, state.stats.maxStage || 1);
     const kills = state.stats.killsByMonster || {};
-    const zonesReached = BESTIARY.filter(g => g.kind === 'zone' && best > g.index * STAGES_PER_ZONE).length;
     const open = DUNGEONS.filter(d => dungeonUnlocked(state, d)).length;
-    const shown = BESTIARY.filter(g => (g.kind === 'zone' ? g.index <= zonesReached : DUNGEONS.findIndex(d => d.id === g.id) <= open));
+    // the places (zones, then the Abyss's strata) reached, and the next one as silhouettes
+    const placeReached = g => best >= g.from;
+    const nextPlace = BESTIARY.find(g => g.kind !== 'dungeon' && !placeReached(g));
+    const shown = BESTIARY.filter(g => (g.kind === 'dungeon' ? DUNGEONS.findIndex(d => d.id === g.id) <= open : placeReached(g) || g === nextPlace));
     // Met: one has fallen, or (for saves from before the counts) the hero has stood on its stage.
-    const met = (g, m) => (kills[m.name] || 0) > 0 || (g.kind === 'zone'
-        ? best >= g.index * STAGES_PER_ZONE + m.at
-        : (state.dungeons[g.id]?.clears || 0) > 0);
+    const met = (g, m) => (kills[m.name] || 0) > 0 || (g.kind === 'dungeon' ? (state.dungeons[g.id]?.clears || 0) > 0 : best >= m.at);
     let metCount = 0;
     const groups = shown.map(g => {
-        const reached = g.kind === 'zone' ? g.index < zonesReached : DUNGEONS.findIndex(d => d.id === g.id) < open;
+        const reached = g.kind === 'dungeon' ? DUNGEONS.findIndex(d => d.id === g.id) < open : placeReached(g);
         let stars = 0;
         const tiles = g.monsters.map(m => {
             const k = kills[m.name] || 0;
@@ -1453,7 +1453,7 @@ function renderBestiary(game) {
                 ${seen ? `${starRow(s)}<span class="beast-kills">${fmt(k)}${next ? `<i class="beast-next" style="--p:${Math.min(100, (k - (KILL_STARS[s - 1] || 0)) / (next - (KILL_STARS[s - 1] || 0)) * 100).toFixed(1)}%"></i>` : ''}</span>` : ''}
             </div>`;
         }).join('');
-        const art = g.kind === 'zone' ? g.id : DUNGEON_ART[g.id] || 'dungeon';
+        const art = g.kind === 'zone' ? g.id : g.kind === 'stratum' ? 'abyss' : DUNGEON_ART[g.id] || 'dungeon';
         return `<section class="glass-panel bestiary-group${reached ? '' : ' unreached'} ${painted(art, 'center 60%')}">
             <div class="panel-header"><h2>${esc(g.name)}</h2>${reached ? `<span class="beast-sum">${ICON_STAR} ${stars} / ${g.monsters.length * KILL_STARS.length}</span>` : '<span class="muted small">Not reached yet</span>'}</div>
             <div class="beast-grid">${tiles}</div>

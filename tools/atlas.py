@@ -110,6 +110,54 @@ LATE_MONSTERS = {
     'Star Skull': 'demons/tzitzimitl', 'Devourer': 'unique/mnoleg',
 }
 LATE_UNIQUES = { 'starless_band': 'ring/randarts/dark' }
+# The Abyss's strata (src/data/strata.js), packed after everything else so the cells before keep their place.
+STRATA_MONSTERS = {
+    # The Weeping Dark
+    'Weeping Skull': 'undead/weeping_skull', 'Lost Soul': 'undead/lost_soul', 'Drowned Soul': 'undead/drowned_soul',
+    'Flayed Ghost': 'undead/flayed_ghost', 'Dread Lich': 'undead/dread_lich',
+    # The Bone Reaches
+    'Curse Skull': 'undead/curse_skull', 'Revenant': 'undead/revenant', 'Wight': 'undead/wight',
+    'Ancient Champion': 'undead/ancient_champion', 'Bone Dragon': 'undead/bone_dragon',
+    # The Ember Pits
+    'Hell Hound': 'animals/hell_hound', 'Hell Hog': 'animals/hell_hog', 'Sun Demon': 'demons/sun_demon',
+    'Smoke Demon': 'demons/smoke_demon', 'Flame Tyrant': 'demons/balrug',
+    # The Frozen Void
+    'Frost Imp': 'demons/white_imp', 'Rime Drake': 'dragons/rime_drake', 'Shard Shrike': 'animals/shard_shrike',
+    'Frostbound Tome': 'nonliving/frostbound_tome', 'Ice Dragon': 'dragons/ice_dragon',
+    # The Writhing Maze
+    'Twisted Spawn': 'aberrations/ugly_thing', 'Flesh Cage': 'aberrations/crawling_flesh_cage0', 'Unseen Horror': 'aberrations/unseen_horror',
+    'Nameless Horror': 'aberrations/nameless_horror', 'Tentacled Monstrosity': 'aberrations/tentacled_monstrosity',
+    # The Shadow Court
+    'Shadow Imp': 'demons/shadow_imp', 'Shadow Puppet': 'nonliving/shadow_puppet', 'Vampire Knight': 'undead/vampire_knight',
+    'Vampire Mage': 'undead/vampire_mage', 'Blood Prince': 'undead/vampire_bloodprince',
+    # The Storm Wastes
+    'Ball Lightning': 'nonliving/ball_lightning', 'Spark Wasp': 'animals/spark_wasp', 'Sky Beast': 'animals/sky_beast',
+    'Twister': 'nonliving/twister1', 'Storm Dragon': 'dragons/storm_dragon',
+    # The Starless Sea
+    'Electric Eel': 'aquatic/electric_eel', 'Abyssal Jellyfish': 'aquatic/jellyfish', 'Sludgefish': 'aquatic/roaming_sludgefish0',
+    'Marrowcuda': 'undead/marrowcuda', 'Abyssal Hydra': 'unique/lernaean_hydra09',
+    # The Iron Halls
+    'Iron Mechanist': 'humanoids/ironbound_mechanist', 'Thunderhulk': 'humanoids/ironbound_thunderhulk', 'War Gargoyle': 'nonliving/war_gargoyle',
+    'Living Armour': 'undead/undying_armoury', 'Iron Dragon': 'dragons/iron_dragon',
+    # The Hollow Throne
+    'Ancient Lich': 'undead/ancient_lich', 'Eidolon': 'undead/eidolon', 'Bone Warlock': 'undead/halazid_warlock',
+    'Tomb Crawler': 'undead/pharaoh_ant', 'Hollow King': 'undead/guardian_mummy',
+    # The Burning Choir
+    'Cinder Demon': 'demons/orange_demon', 'Shrieker Demon': 'demons/ufetubus', 'Chaos Spawn': 'demons/neqoxec',
+    'Bell Demon': 'demons/ynoxinul', 'Choirmaster': 'demons/zykzyl',
+    # The Glass Garden
+    'Glass Eye': 'eyes/glass_eye', 'Golden Eye': 'eyes/golden_eye', 'Shining Eye': 'eyes/shining_eye',
+    'Eye of Devastation': 'eyes/eye_of_devastation', 'Great Orb of Eyes': 'eyes/great_orb_of_eyes',
+    # The Rotting Deep
+    'Bloated Husk': 'undead/bloated_husk', 'Bog Body': 'undead/bog_body', 'Cursed Cob': 'undead/death_cob',
+    'Death Scarab': 'undead/death_scarab', 'Stoker': 'undead/stoker',
+    # The Spatial Rift
+    'Spatial Vortex': 'nonliving/spatial_vortex1', 'Planar Tesseract': 'statues/planar_tesseract0', 'Orb of Entropy': 'nonliving/orb_of_entropy',
+    'Globe of Annihilation': 'nonliving/globe_of_annihilation_dis1', 'Entropy Weaver': 'demihumanoids/entropy_weaver',
+    # Pandemonium
+    'Rust Devil': 'demons/rust_devil', 'Sin Beast': 'demons/sin_beast', 'Spark Demon': 'demons/sixfirhy',
+    'Night Hag': 'demons/drude', 'Pandemonium Lord': 'panlord/pandemonium_lord',
+}
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------
@@ -194,6 +242,8 @@ def main(rltiles):
         add(f'uniq/{uid}', f'item/{tile}')
     for key, img in build_late(rltiles).items():   # the guide's hand
         add(key, img)
+    for name, tile in STRATA_MONSTERS.items():     # the Abyss's strata, last of all
+        add(f'mon/{name}', f'mon/{tile}')
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

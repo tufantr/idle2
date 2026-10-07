@@ -13,6 +13,7 @@ import { COMBAT_PET_SECONDS } from '../data/pets.js';
 import { eventProgress } from './events.js';
 import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 import { trialBite } from '../data/trials.js';
+import { stratumStartingAt } from '../data/strata.js';
 import { checkTrial } from './trials.js';
 
 const FIRST_GILDED_STAGE = 7;
@@ -365,6 +366,9 @@ export function onEnemyDeath(game) {
             // the first step ever into a zone (the Abyss once, at its first depth)
             const zone = Math.floor((c.stage - 1) / STAGES_PER_ZONE);
             if ((c.stage - 1) % STAGES_PER_ZONE === 0 && zone >= 1 && zone < ZONES.length) game.emit({ type: 'zoneReached', zone: ZONES[zone].id, stage: c.stage });
+            // and into each stratum of the Abyss below its first (data/strata.js)
+            const stratum = stratumStartingAt(c.stage);
+            if (stratum && stratum.index > 0) game.emit({ type: 'zoneReached', zone: stratum.id, stratum: true, stage: c.stage });
         }
         if (c.bestStage > state.stats.maxStage) state.stats.maxStage = c.bestStage;
     }
