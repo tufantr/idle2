@@ -700,6 +700,14 @@ with the game's own stat code; the client never submits damage or scores.
 `src/data/events.js` (content), `src/systems/events.js` (logic). A template for timed content that
 needs no server: the schedule is the UTC calendar, so events run offline too.
 
+- **Festival cloaks** (October 2026, the long-term research's calendar drips): each event sells its own
+  cloak, first in its shop, for 120 tokens (two days' worth): a look only, the cloak dyed the event's
+  colour with a silver hem where a skill cape's is gold (`FESTIVAL_CLOAKS` in `src/data/capes.js`, drawn
+  by `tools/resource_art.py`). Owned for good (`events.cloaks`), worn from Settings like a cape, and a
+  part of the Hall's completion; one missed comes back with its event six weeks on. The card shows
+  the hero in it. For a late player, for whom essence and diamonds matter little, it is the weekend's
+  big moment.
+
 - **When:** every weekend, Friday 00:00 to Monday 00:00 UTC. Six events rotate week by week:
   **Harvest Festival** (+25% farming yield, +15% cooking and fishing speed), **Titan's Fury** (+20%
   combat XP and gold, +10% drop chance), **Miner's Rush** (+20% gathering speed, +10% XP in every

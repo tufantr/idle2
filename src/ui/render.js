@@ -30,7 +30,7 @@ import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { DISCORD_INVITE } from '../data/social.js';
-import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP } from '../data/events.js';
+import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
@@ -41,7 +41,7 @@ import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank, RANKS } from '../data/ranks.js';
 import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
-import { CAPES, capeFor, capeEarned, capesEarned, capeWorn } from '../data/capes.js';
+import { CAPES, capeFor, capeEarned, capesEarned, capeWorn, festivalCloaksOwned } from '../data/capes.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, DUNGEON_GRADE, EVENT_ART, paintStyle } from './features.js';
@@ -1402,7 +1402,8 @@ function renderCompletion(game) {
     const c = completion(state);
     const met = {
         mastery: seen(state, 'mastery'), codex: seen(state, 'gear'), pets: true, medals: true, bestiary: true, skills: true,
-        uniques: isUnlocked(state, 'dungeons'), titans: titanUnlocked(state), trials: seen(state, 'trials'), course: isUnlocked(state, 'agility')
+        uniques: isUnlocked(state, 'dungeons'), titans: titanUnlocked(state), trials: seen(state, 'trials'), course: isUnlocked(state, 'agility'),
+        cloaks: isUnlocked(state, 'events')
     };
     const rows = c.parts.filter(p => met[p.id]).map(p => `<div class="done-row" title="${esc(p.name)}: ${fmt(p.have)} of ${fmt(p.of)}">
         <span class="done-art">${sprite(p.art, { scale: 1 })}</span>
@@ -1587,7 +1588,14 @@ export function renderEvents(game) {
         </div>`;
     }).join('');
     const milestones = `<div class="ms-track" role="list" aria-label="Milestones: ${earned} tokens earned this event" style="--f:${fill.toFixed(3)}">${nodes}</div>`;
-    const shop = EVENT_SHOP.map(item => {
+    // the event's festival cloak first (data/capes.js): a look to keep, until it is owned
+    const owned = !!ev.cloaks?.[e.id];
+    const cloak = e.cloak ? `<div class="shop-item cloak-item${owned ? ' owned' : ''}">
+            <div class="shop-art">${sprite(`hero/capes/fest_${e.id}`, { scale: 1.5 })}</div>
+            <div class="shop-item-info"><span class="shop-item-name">${esc(e.name)} cloak</span><span class="shop-item-desc">${owned ? 'Yours: wear it from Settings' : 'A look to keep; it comes back with its event'}</span></div>
+            ${owned ? `<span class="owned-mark">${ICON_CHECK}</span>` : `<button class="gold-btn token-btn" onclick="FI.buyFestivalCloak()" ${status.active && ev.tokens >= FESTIVAL_CLOAK_COST ? '' : 'disabled'} aria-label="Buy the ${esc(e.name)} cloak for ${FESTIVAL_CLOAK_COST} tokens">${token(0.75)} ${FESTIVAL_CLOAK_COST}</button>`}
+        </div>` : '';
+    const shop = cloak + EVENT_SHOP.map(item => {
         const [resId] = Object.keys(item.gives);
         return `<div class="shop-item">
             <div class="shop-art">${resIcon(resId, { scale: 1.5 })}</div>
@@ -1901,13 +1909,14 @@ function renderCodex(state) {
  * one lit, and the next cape (the skill nearest 99) as a silhouette.
  */
 function capePicks(state) {
-    const earned = capesEarned(state);
+    const earned = [...capesEarned(state), ...festivalCloaksOwned(state)];   // skill capes, and festival cloaks bought
     if (!earned.length) return '';
     const worn = capeWorn(state)?.skill || '';
     const rank = rankFor(state.prestige?.count || 0);
     const pick = (skill, key, name, tip) => `<button class="cape-pick${worn === skill ? ' on' : ''}" onclick="FI.setHeroCape('${skill}')" aria-label="${esc(name)}" aria-pressed="${worn === skill}" title="${esc(tip)}">${sprite(key, { scale: 2 })}</button>`;
     const picks = [pick('', `hero/cloaks/${rank.cloak}`, `${rank.name}'s cloak`, `The ${rank.cloak} cloak of a ${rank.name}`)];
-    for (const c of earned) picks.push(pick(c.skill, `hero/capes/${c.skill}`, `${SKILLS[c.skill].name} cape`, `${SKILLS[c.skill].name} cape: ${c.perk}`));
+    for (const c of earned) picks.push(c.event ? pick(c.skill, `hero/capes/${c.skill}`, c.name, `${c.name}, from its weekend event`)
+        : pick(c.skill, `hero/capes/${c.skill}`, `${SKILLS[c.skill].name} cape`, `${SKILLS[c.skill].name} cape: ${c.perk}`));
     const next = CAPES.filter(c => !capeEarned(state, c.skill)).sort((a, b) => state.skills[b.skill].xp - state.skills[a.skill].xp)[0];
     if (next) picks.push(`<span class="cape-pick locked" title="${esc(`${SKILLS[next.skill].name} cape, at level 99 in ${SKILLS[next.skill].name}: ${next.perk}`)}">${sprite(`hero/capes/${next.skill}`, { scale: 2, cls: 'silhouette' })}</span>`);
     return `<div class="cape-picks" role="group" aria-label="Your hero's cloak">${picks.join('')}</div>`;

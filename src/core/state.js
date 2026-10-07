@@ -18,7 +18,7 @@ import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions }
 import { BESTIARY_NAMES, bestiaryStars } from '../data/bestiary.js';
 import { heroName } from './text.js';
 import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
-import { capeEarned } from '../data/capes.js';
+import { capeEarned, festivalCloak, FESTIVAL_CLOAKS } from '../data/capes.js';
 import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 
@@ -65,7 +65,7 @@ export function createDefaultState(now = Date.now()) {
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
         agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
-        events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [] },
+        events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [], cloaks: {} },   // cloaks: the festival cloaks bought (data/capes.js)
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0 },   // firstAt: when the first prestige was
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
@@ -487,6 +487,11 @@ function normalise(data, now) {
     const ev = state.events;
     for (const key of ['tokens', 'earnedToday', 'progress', 'instanceEarned']) ev[key] = Math.max(0, Math.floor(Number(ev[key]) || 0));
     if (!Array.isArray(ev.milestones)) ev.milestones = [];
+    // festival cloaks bought (data/capes.js): only the known events', and none worn that is not owned
+    const cloaks = isPlainObject(ev.cloaks) ? ev.cloaks : {};
+    ev.cloaks = {};
+    for (const c of FESTIVAL_CLOAKS) if (cloaks[c.event] === true) ev.cloaks[c.event] = true;
+    if (festivalCloak(state.hero.cape) && !capeEarned(state, state.hero.cape)) state.hero.cape = '';
     if (!state.pets || typeof state.pets !== 'object') state.pets = {};
     state.titan.kills = Math.max(0, Math.floor(Number(state.titan.kills) || 0));
     if (!Number.isFinite(Number(state.titan.readyAt))) state.titan.readyAt = 0;

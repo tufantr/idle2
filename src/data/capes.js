@@ -6,6 +6,7 @@
 
 import { levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { SPEED_SKILLS } from './skills.js';
+import { EVENTS } from './events.js';
 
 const everySkill = value => Object.fromEntries(SPEED_SKILLS.map(id => [id, value]));
 
@@ -24,10 +25,22 @@ export const CAPES = [
     { skill: 'crafting',    perk: 'Better rolls on everything made (+10% quality)', mods: { craftQuality: 0.10 } }
 ];
 
-export const capeFor = skill => CAPES.find(c => c.skill === skill) || null;
+// Festival cloaks: one for each weekend event (data/events.js `cloak`), bought in its shop while it runs,
+// owned for good (state.events.cloaks). A look only, worn like a cape: its key is `fest_<event id>` (the
+// sprite hero/capes/fest_<event id>, a silver hem where a skill cape's is gold).
+export const FESTIVAL_CLOAKS = EVENTS.filter(e => e.cloak).map(e => ({ skill: `fest_${e.id}`, event: e.id, name: `${e.name} cloak`, perk: '' }));
+export const festivalCloak = key => FESTIVAL_CLOAKS.find(c => c.skill === key) || null;
+/** Festival cloaks this hero owns. */
+export const festivalCloaksOwned = state => FESTIVAL_CLOAKS.filter(c => !!state?.events?.cloaks?.[c.event]);
 
-/** Has this hero earned the cape of `skill` (level 99 in it)? */
-export const capeEarned = (state, skill) => !!capeFor(skill) && levelForXp(state?.skills?.[skill]?.xp || 0) >= MAX_LEVEL;
+export const capeFor = skill => CAPES.find(c => c.skill === skill) || festivalCloak(skill);
+
+/** Has this hero earned the cape of `skill` (level 99 in it), or bought the festival cloak `skill`? */
+export const capeEarned = (state, skill) => {
+    const fest = festivalCloak(skill);
+    if (fest) return !!state?.events?.cloaks?.[fest.event];
+    return !!CAPES.find(c => c.skill === skill) && levelForXp(state?.skills?.[skill]?.xp || 0) >= MAX_LEVEL;
+};
 
 /** Every cape this hero has earned. */
 export const capesEarned = state => CAPES.filter(c => capeEarned(state, c.skill));

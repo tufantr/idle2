@@ -1,10 +1,10 @@
 // Completion: how much of the game the hero has done, as one percentage in the Hall
 // (docs/research_notes/robust-and-fun/B_longterm_motivation.md §8.2 item 8: Melvor's completion, built
-// from what exists, so a late session always shows movement). Ten parts of equal weight, each its share
-// done: skill levels to 99, mastery to 99 on every action, the bestiary's stars, the codex, the medals,
-// the pets, the dungeons' uniques, the first TITAN_LATE_FROM Titans, the Trials' tiers and the agility
-// course's slots. The whole counts every part from the start (so it only ever rises); the Hall lists
-// the parts the player has met. Pure: the UI only reads it.
+// from what exists, so a late session always shows movement). Eleven parts of equal weight, each its
+// share done: skill levels to 99, mastery to 99 on every action, the bestiary's stars, the codex, the
+// medals, the pets, the dungeons' uniques, the first TITAN_LATE_FROM Titans, the Trials' tiers, the agility
+// course's slots and the weekend events' festival cloaks. The whole counts every part from the start (so
+// it only ever rises); the Hall lists the parts the player has met. Pure: the UI only reads it.
 
 import { SKILL_IDS } from '../data/skills.js';
 import { levelForXp, MAX_LEVEL } from '../core/xp.js';
@@ -16,6 +16,7 @@ import { PETS } from '../data/pets.js';
 import { UNIQUES, TITAN_LATE_FROM } from '../data/dungeons.js';
 import { TRIALS, TRIAL_TIERS, trialTiersCleared } from '../data/trials.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
+import { FESTIVAL_CLOAKS, festivalCloaksOwned } from '../data/capes.js';
 
 const held = state => new Set([...(state.inventory || []), ...Object.values(state.equipped || {})].filter(i => i?.uniqueId).map(i => i.uniqueId));
 
@@ -33,7 +34,8 @@ export function completion(state) {
         { id: 'uniques', name: 'Uniques', art: 'uniq/goblin_crown', have: [...held(state)].filter(id => UNIQUES[id]).length, of: Object.keys(UNIQUES).length },
         { id: 'titans', name: 'Titans', art: 'titan/0', have: Math.min(TITAN_LATE_FROM, state.titan?.kills || 0), of: TITAN_LATE_FROM },
         { id: 'trials', name: 'Trials', art: 'mon/Mountain Troll', have: trialTiersCleared(state), of: TRIALS.length * TRIAL_TIERS },
-        { id: 'course', name: 'The course', art: 'obstacle/rope_swing', have: (state.agility?.built || []).filter(Boolean).length, of: AGILITY_SLOTS.length }
+        { id: 'course', name: 'The course', art: 'obstacle/rope_swing', have: (state.agility?.built || []).filter(Boolean).length, of: AGILITY_SLOTS.length },
+        { id: 'cloaks', name: 'Festival cloaks', art: `hero/capes/${FESTIVAL_CLOAKS[0].skill}`, have: festivalCloaksOwned(state).length, of: FESTIVAL_CLOAKS.length }
     ].map(p => ({ ...p, have: Math.min(p.have, p.of), share: p.of ? Math.min(1, p.have / p.of) : 0 }));
     return { parts, share: parts.reduce((sum, p) => sum + p.share, 0) / parts.length };
 }

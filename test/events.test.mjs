@@ -108,3 +108,44 @@ test('Lucky Paws joins the rotation without moving a weekend already run, and ma
     quiet.recompute();
     assert.equal(quiet.derived.petMult, 1);
 });
+
+test("each event's festival cloak: bought with tokens while it runs, kept, worn as a look", async () => {
+    const { FESTIVAL_CLOAK_COST } = await import('../src/data/events.js');
+    const { FESTIVAL_CLOAKS, festivalCloaksOwned, capeWorn } = await import('../src/data/capes.js');
+    const { migrateState } = await import('../src/core/state.js');
+    const { completion } = await import('../src/systems/completion.js');
+    const game = new Game(null, FRIDAY + 10 * H);
+    const s = game.state;
+    const e = eventStatus(s, game.now).event;
+    const key = `fest_${e.id}`;
+    assert.equal(FESTIVAL_CLOAKS.length, EVENTS.length, 'one for every event');
+    // too few tokens, then enough
+    s.events.tokens = FESTIVAL_CLOAK_COST - 1;
+    assert.equal(game.buyFestivalCloak(), false);
+    assert.equal(game.setHeroCape(key), false, 'not before it is owned');
+    s.events.tokens = FESTIVAL_CLOAK_COST + 5;
+    game.drainEvents();
+    assert.equal(game.buyFestivalCloak(), true);
+    assert.equal(s.events.tokens, 5);
+    assert.equal(s.events.cloaks[e.id], true);
+    assert.ok(game.drainEvents().some(ev => ev.type === 'festivalCloak' && ev.cape === key));
+    assert.equal(game.buyFestivalCloak(), false, 'once');
+    // worn like a cape, a look only: no bonus
+    const mods = JSON.stringify(collectModifiers(s));
+    assert.equal(game.setHeroCape(key), true);
+    assert.equal(capeWorn(s).skill, key);
+    assert.equal(JSON.stringify(collectModifiers(s)), mods);
+    assert.equal(festivalCloaksOwned(s).length, 1);
+    assert.equal(completion(s).parts.find(p => p.id === 'cloaks').have, 1);
+    // the shop shuts when the event ends
+    game.now = FRIDAY + 80 * H;
+    s.events.tokens = 1000;
+    assert.equal(game.buyFestivalCloak(), false);
+    // saves keep it; an unknown event's cloak, or one worn and not owned, does not survive a load
+    const save = JSON.parse(game.serialize(game.now));
+    assert.equal(migrateState(save, game.now).hero.cape, key);
+    save.events.cloaks = { nonsense: true, [e.id]: 'yes' };
+    const odd = migrateState(save, game.now);
+    assert.deepEqual(odd.events.cloaks, {});
+    assert.equal(odd.hero.cape, '');
+});

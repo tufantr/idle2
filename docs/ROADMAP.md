@@ -429,6 +429,9 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Festival cloaks**: each weekend event sells a cloak of its own colour (a silver hem, where a skill
+      cape's is gold), first in its shop for 120 tokens: a look to keep and wear from Settings, a card
+      with the hero in it, and a part of the Hall's completion. Six to collect, each back with its event
 - [x] **The week's Trial** (the late game's first moment on the calendar; DESIGN §3.26): each week one
       of the eight Trials is the week's, first in the prestige dialog under a "This week" ribbon and open
       even when its tiers are cleared. Beat your best in it for a laurel, a record, once a week, so the

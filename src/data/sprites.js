@@ -5,7 +5,7 @@
 // hero/cloaks/<rank cloak>, hero/capes/<skill>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=5ce08f9761', cell: 32, cols: 16, rows: 33 };
+export const ATLAS = { url: 'assets/sprites.png?v=db43835312', cell: 32, cols: 16, rows: 33 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -528,5 +528,11 @@ export const SPRITES = {
     "mon/Hellfire Mortar": [5, 32],
     "mon/Obsidian Colossus": [6, 32],
     "uniq/drowned_greaves": [7, 32],
-    "uniq/hellforged_gauntlets": [8, 32]
+    "uniq/hellforged_gauntlets": [8, 32],
+    "hero/capes/fest_harvest_festival": [9, 32],
+    "hero/capes/fest_titans_fury": [10, 32],
+    "hero/capes/fest_miners_rush": [11, 32],
+    "hero/capes/fest_guild_fair": [12, 32],
+    "hero/capes/fest_gold_fever": [13, 32],
+    "hero/capes/fest_lucky_paws": [14, 32]
 };

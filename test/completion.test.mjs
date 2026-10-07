@@ -1,4 +1,4 @@
-// Completion (DESIGN §3.14): ten parts of equal weight, each its share done, as one percentage in the Hall.
+// Completion (DESIGN §3.14): eleven parts of equal weight, each its share done, as one percentage in the Hall.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -14,12 +14,13 @@ import { PETS } from '../src/data/pets.js';
 import { UNIQUES, TITAN_LATE_FROM } from '../src/data/dungeons.js';
 import { TRIALS, TRIAL_TIERS } from '../src/data/trials.js';
 import { AGILITY_SLOTS } from '../src/data/agility.js';
+import { EVENTS } from '../src/data/events.js';
 
 const T0 = 1_700_000_000_000;
 
 test('a new hero has done next to nothing, and every part is counted', () => {
     const c = completion(new Game(null, T0).state);
-    assert.equal(c.parts.length, 10);
+    assert.equal(c.parts.length, 11);
     for (const p of c.parts) assert.ok(p.of > 0 && p.have >= 0 && p.have <= p.of, p.id);
     assert.ok(c.share > 0 && c.share < 0.01);
 });
@@ -48,6 +49,8 @@ test('everything done is 100%, and each thing done moves it up', () => {
     for (const t of TRIALS) s.trials.cleared[t.id] = TRIAL_TIERS;
     rises('trials');
     s.agility.built = AGILITY_SLOTS.map(slot => slot.obstacles[0].id);
+    rises('course');
+    for (const e of EVENTS) s.events.cloaks[e.id] = true;
     const c = completion(s);
     assert.equal(c.share, 1);
     for (const p of c.parts) assert.equal(p.share, 1, p.id);

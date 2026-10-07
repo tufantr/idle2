@@ -1,7 +1,7 @@
 // Weekend events: which one is running, Festival Tokens from play, milestones and the event shop.
 // Everything is derived from the UTC calendar, so events work offline and need no server.
 
-import { EVENTS, EVENT_START_DAY, EVENT_LENGTH_HOURS, EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, eventById } from '../data/events.js';
+import { EVENTS, EVENT_START_DAY, EVENT_LENGTH_HOURS, EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST, eventById } from '../data/events.js';
 import { RESOURCES } from '../data/resources.js';
 import { log } from './progress.js';
 
@@ -83,6 +83,24 @@ export function eventProgress(game, amount = 1) {
     if (ev.earnedToday >= EVENT_DAILY_CAP) ev.progress = 0;
     if (earned) game.markDirty();
     return earned;
+}
+
+/** Buy the running event's festival cloak (data/capes.js): a look to keep. */
+export function buyFestivalCloak(game) {
+    const state = game.state;
+    const status = eventStatus(state, game.now);
+    if (!status.active) { game.emit({ type: 'error', text: 'The event shop opens when the next event starts.' }); return false; }
+    const e = status.event;
+    if (!e.cloak) return false;
+    if (!state.events.cloaks) state.events.cloaks = {};
+    if (state.events.cloaks[e.id]) { game.emit({ type: 'error', text: `You have the ${e.name} cloak already.` }); return false; }
+    if (state.events.tokens < FESTIVAL_CLOAK_COST) { game.emit({ type: 'error', text: `The ${e.name} cloak costs ${FESTIVAL_CLOAK_COST} Festival Tokens.` }); return false; }
+    state.events.tokens -= FESTIVAL_CLOAK_COST;
+    state.events.cloaks[e.id] = true;
+    log(game, `🎉 The ${e.name} cloak is yours: wear it from Settings.`, 'achievement');
+    game.emit({ type: 'festivalCloak', event: e.id, cape: `fest_${e.id}` });
+    game.markDirty();
+    return true;
 }
 
 export function buyEventItem(game, itemId) {

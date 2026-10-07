@@ -27,7 +27,7 @@ import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
 import { nextLook, lookForMedal } from './data/looks.js';
-import { capeFor } from './data/capes.js';
+import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
 import { playtestExport } from './systems/playtest.js';
@@ -514,6 +514,7 @@ function soundFor(ev, onCombat) {
         case 'achievement': case 'eventMilestone': case 'dungeonMilestone': case 'trialTier': case 'laurel': return ['achievement'];
         case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
         case 'masteryCheckpoint': return ['achievement'];
+        case 'festivalCloak': return ['legendary'];
         case 'death': case 'bossTimeout': return ['defeat'];
         case 'dungeonFail': return ev.lost ? ['defeat'] : null;   // leaving by choice is no defeat
         case 'prestige': return ev.ascend ? null : ['prestige'];
@@ -651,6 +652,12 @@ function handleEvents(events) {
                     lines: [`Every prestige pays ×${ev.gain.toFixed(2)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
                 save(Date.now());
                 break;
+            case 'festivalCloak': {   // a weekend event's cloak bought (data/capes.js): the hero in it
+                const cloak = festivalCloak(ev.cape);
+                if (cloak) rewards.celebrate({ key: `cloak:${ev.event}`, kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: ev.cape } }, { scale: 3 }), kicker: 'A festival cloak', title: cloak.name,
+                    lines: ['Yours to keep: wear it from Settings'] });
+                break;
+            }
             case 'masteryCheckpoint':   // a checkpoint of a skill's whole mastery: its actions faster for good
                 if (!seen(game.state, 'mastery')) break;   // (said once mastery itself has been met)
                 rewards.celebrate({ key: `mastery:${ev.skill}:${ev.at}`, kind: 'level', icon: tabIcon(ev.skill, 2), kicker: 'Mastery checkpoint', title: `${SKILLS[ev.skill].name} ${Math.round(ev.at * 100)}%`,
@@ -946,6 +953,7 @@ window.FI = {
     pickSeed(crop) { ui.lastCrop = crop; render(); },
     plantAll(crop) { ui.lastCrop = crop; if (game.plantAll(crop) > 0) sound.play('drop'); render(); },
     buyEventItem(id) { if (game.buyEventItem(id)) toast('Bought!', 'info'); render(); },
+    buyFestivalCloak() { game.buyFestivalCloak(); render(); },
     harvest(plot) { game.harvest(plot); render(); },
     harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info', tabIcon('farming', 0.625)); render(); },
     /** Build an obstacle; swapping out a built one (no refund, its levels lost) asks first. */

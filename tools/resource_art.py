@@ -1005,9 +1005,15 @@ CAPE_CLOTH = {
     'farming': '#93bd28', 'alchemy': '#14a39a', 'fishing': '#2a6fdb', 'hunting': '#8a5a2c',
     'cooking': '#e6dfcb', 'firemaking': '#ea5a12', 'agility': '#4f46e5', 'crafting': '#c43fd8'}
 CAPE_HEM = (233, 181, 74)
+# The weekend events' festival cloaks (src/data/events.js `cloak`, data/capes.js): a silver hem, where a
+# skill cape's is gold.
+FESTIVAL_CLOTH = {
+    'harvest_festival': '#c97a2a', 'titans_fury': '#8f1d1d', 'miners_rush': '#2f6f57',
+    'guild_fair': '#a03aa8', 'gold_fever': '#d6b028', 'lucky_paws': '#e07aa8'}
+FESTIVAL_HEM = (214, 222, 232)
 
 
-def skill_cape(cloak, cloth):
+def skill_cape(cloak, cloth, hem=CAPE_HEM):
     """The red cloak re-dyed `cloth`, its shading kept, and its lowest two rows of cloth gold: the hem
     that shows at the hero's feet and marks a cape from a rank's cloak."""
     a = from_image(cloak).astype(float)
@@ -1023,7 +1029,7 @@ def skill_cape(cloak, cloth):
     for x in np.unique(xs):
         for y in sorted(ys[xs == x])[-2:]:
             for k in range(3):
-                a[y, x, k] = min(255, CAPE_HEM[k] * (0.45 + 0.75 * shade[y, x]))
+                a[y, x, k] = min(255, hem[k] * (0.45 + 0.75 * shade[y, x]))
     return a.astype(np.uint8)
 
 
@@ -1083,6 +1089,12 @@ def build_capes(tiles):
     """The skill capes, hero/capes/<skill> (packed last, so the cells before them keep their place)."""
     cloak = Image.open(f'{tiles}/player/cloak/red.png').convert('RGBA')
     return {f'hero/capes/{skill}': to_image(skill_cape(cloak, cloth)) for skill, cloth in CAPE_CLOTH.items()}
+
+
+def build_festival_cloaks(tiles):
+    """The weekend events' festival cloaks, hero/capes/fest_<event> (packed after everything else)."""
+    cloak = Image.open(f'{tiles}/player/cloak/red.png').convert('RGBA')
+    return {f'hero/capes/fest_{event}': to_image(skill_cape(cloak, cloth, FESTIVAL_HEM)) for event, cloth in FESTIVAL_CLOTH.items()}
 
 
 # ---------- the art direction: resource id -> how its cell is made ----------

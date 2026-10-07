@@ -50,6 +50,7 @@ import { enemyForStage, BALANCE } from '../src/core/formulas.js';
 import { BASE } from '../src/core/modifiers.js';
 import { GEAR_DROP_CHANCE } from '../src/data/items.js';
 import { rankFor } from '../src/data/ranks.js';
+import { FESTIVAL_CLOAK_COST } from '../src/data/events.js';
 import { TRIALS } from '../src/data/trials.js';
 import { trialsOpen, nextTrialTarget, weeklyGoal } from '../src/systems/trials.js';
 import { writeFileSync } from 'node:fs';
@@ -680,6 +681,7 @@ function noteEvent(ev) {
         case 'dungeonMilestone': moment('medium', `${ev.dungeon} ${ev.clears} clears`); break;
         case 'masteryLevel': if (ev.from < 99 && ev.level >= 99) moment('medium', `mastery 99 ${ev.key}`); break;
         case 'laurel': moment('major', `laurel ${ev.id}`); milestone('laurels', ev.laurels); break;
+        case 'festivalCloak': moment('major', `cloak ${ev.event}`); break;
         case 'ascend': moment('major', `ascension ${ev.count} +${ev.stars} stars`); break;
         case 'masteryCheckpoint': moment('medium', `mastery ${ev.skill} ${Math.round(ev.at * 100)}%`); milestone('mastery checkpoints', S.stats.masteryCheckpoints || 0); break;
         case 'trialTier': moment(ev.last ? 'major' : 'medium', `trial ${ev.id} ${ev.tier}`); milestone('trial tiers', Object.values(S.trials.cleared).reduce((a, b) => a + b, 0)); break;
@@ -760,6 +762,13 @@ function noteReturn(summary, evs) {
     if (Object.values(f).some(Boolean)) returns.something++; else returns.nothing++;
 }
 function claimCrates() { for (let i = 0; i < 3; i++) if (!game.claimDaily()) break; }
+// The weekend event's festival cloak (data/capes.js), once the tokens are there: a player who collects.
+let cloaksBought = 0;
+function buyCloak() {
+    const e = game.eventStatus?.(now) || null;
+    if (!e?.active || !e.event.cloak || S.events.cloaks?.[e.event.id] || S.events.tokens < FESTIVAL_CLOAK_COST) return;
+    if (game.buyFestivalCloak()) cloaksBought++;
+}
 function sessionPrestige() {
     if (!game.canPrestige() || S.settings.autoPrestige) return;
     const p = game.prestigePreview();
@@ -831,7 +840,7 @@ while (now < totalMs) {
     if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
 
     if (now % (5 * 60000) < STEP) { tendFarm(); buildObstacles(); }
-    if (now % 3600000 < STEP) claimCrates();   // the daily crate, as a player who drops by takes it
+    if (now % 3600000 < STEP) { claimCrates(); buyCloak(); }   // the daily crate, as a player who drops by takes it; a cloak
     if (now >= totalMs / 2 && !steady) steady = { earned: S.stats.goldEarned, spent: S.stats.goldSpent };
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
     if (task.kind === 'farm' && !task.stage && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
@@ -901,6 +910,7 @@ if (JSON_OUT) {
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length
         },
+        cloaks: cloaksBought,
         ascension: { count: S.ascension.count, stars: S.ascension.stars, at: Object.fromEntries([1, 2, 3, 4, 5, 6, 8, 10].map(n => [n, at('ascension', n)])) },
         masteryCheckpoints: { count: S.stats.masteryCheckpoints || 0, at: Object.fromEntries([1, 3, 5, 10, 15, 20].map(n => [n, at('mastery checkpoints', n)])) },
         trials: { runs: trialRuns, laurels: S.trials.laurels || 0, firstLaurelAt: at('laurels', 1), tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },

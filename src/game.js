@@ -18,7 +18,7 @@ import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, 
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
-import { eventStatus, buyEventItem } from './systems/events.js';
+import { eventStatus, buyEventItem, buyFestivalCloak } from './systems/events.js';
 import { heroName } from './core/text.js';
 import { lookById, lookOpen } from './data/looks.js';
 import { capeEarned } from './data/capes.js';
@@ -250,6 +250,8 @@ export class Game {
     eventId(now = this.now) { const s = eventStatus(this.state, now); return s.active ? s.event.id : null; }
     eventStatus() { return eventStatus(this.state, this.now); }
     buyEventItem(id) { return this._act(() => buyEventItem(this, id)); }
+    /** Buy the running event's festival cloak (data/capes.js), a look to keep. */
+    buyFestivalCloak() { return this._act(() => buyFestivalCloak(this)); }
 
     enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
     leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }
