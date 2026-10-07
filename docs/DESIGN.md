@@ -1437,6 +1437,58 @@ hour 500. Two ways further, for the owner to choose:
   cloaks and the two late dungeons (§3.26, §3.19, §3.11). Still open: an end boss, and paintings for the
   strata and the two dungeons (they wear borrowed ones under their own light).
 
+### 5.7 The report card (October 2026)
+
+`node tools/audit.mjs` checks the batches of the robustness research's audit plan
+(`docs/research_notes/robust-and-fun/D_robustness_methods.md` §6) against its thresholds. Run with
+`tools/batch.mjs` on commit c948e34: 60 seeds for the baseline (the bot's own rule, 150 hours), 6 for
+each knob moved 15% either way, 5 for each kind of player who checks in (two weeks of the calendar).
+The systems and two of the check-ins were measured again after the two changes below (12 seeds for
+each system left out, against a baseline of 30):
+
+| | Experiment | Result | |
+|---|---|---|---|
+| E1 | Spread | stage 100 / 150 / 200 / 250 / 300 at 5.4 / 17.7 / 56.8 / 86 / 136 h; the 90th percentile at most 1.14× the median (1.05× at stage 200) | ✓ |
+| E1 | First prestige | 1.6 h | ✗, the bot's patience (below) |
+| E2 | The bot itself | agility at most a quarter of its time, never over an hour from a fight that could gain a stage, prestige counts within ±25% of each other | ✓ |
+| E4 | Players | Auto ×1.02 faster to stages 100–200, not 1.5× (the other play styles in §5.6) | ✓ |
+| E4 | A system left out: slower to stage 150 / 200 / 250 | dungeons ×2.47 / 1.98 / 1.74; the camp ×1.84 / 1.47 / 1.53; perks ×1.12 / 1.10 / 1.29; agility ×1.10 / 1.07 / 1.18; the Titan ×1.02 / 0.99 / 1.08; the anvil ×1.00 / 1.00 / 1.06; farming ×0.98 / 1.01 / 1.00; crafting ×0.98 / 0.99 / 0.98; essence bought with gold ×1.00 / 1.02 / 0.98 (with 12 seeds, ±5% is noise) | ~ |
+| E5 | Big moments | hours 10–50: one every 1.8 h, the longest wait 11.4 h; hours 50–150: every 3.1 h, 18.7 h | ✓ |
+| E6 | Luck: gear drops 40% rarer / commoner | ×1.04–1.07 slower / ×1.05–1.14 faster to stages 100–200; a median 5 pity drops in 150 h | ✓ |
+| E7 | Sensitivity of the hours to stage 200 | the monsters' growth 1.3–1.7% more for each 1% more; `tokenExp` 4.2% fewer for each 1% more; the other eight knobs under 0.4% | ~ |
+| E11 | The fastest climbs | at most 20 stages an hour past stage 250 (the 99.9th percentile), 30 from 150 | sets the board's allowance (§3.17) |
+| P7 | Players who check in | five times a day: Auto after a day, stage 200 on day 3, 430–440 after two weeks; three times: Auto at 37 h, stage 200 on day 4, 350–430; once a day: Auto on day 3, stage 200 on day 7, 320; a tab open 16 hours a day: stage 200 at 38.5 h, 460. Every return found something new | ✓ |
+
+**What it changed.**
+- **The anvil's work moves with the hero** (§3.25): a piece put on over a reinforced one takes its
+  levels but one. Reinforcing is still worth nothing to stage 200, and 6% by stage 250; the refit adds
+  2–3% from there, and nobody loses their reinforcing to a better drop.
+- **The bot's blind spot**: a session that ended in a dungeon on repeat left the next session's
+  "climb" in it, where Auto (rightly) never prestiges, and two check-in runs in ten stood still for a
+  week (best 140 and 180 after two weeks). Climbing again now leaves the dungeon; every seed climbs.
+- **The card itself** looked at the systems to stage 200 only, and at each knob on one side. It looks to
+  stage 250 too (the anvil tells only there) and takes each knob's steeper side.
+
+**What stays, and why.**
+- **Dungeons carry the climb**: without them the bot is twice as slow to stages 150–200. They are where
+  the fight's gear comes from (the owner's 1a, §3.25) and their uniques are records; they open with a
+  card, and the dungeons' tab shows a unique ready to assemble. Mandatory by design.
+- **The Titan, farming and essence bought with gold hardly move the pace** (under 8%, near the noise).
+  +2% attack and health a Titan is a stage or two against monsters whose health grows 7.5% a stage;
+  he stays a moment (each kill is a big one, and the first twenty count for completion) rather than a
+  lever. The bot brews no potions, so what the farm's herbs are worth through Alchemy is not measured.
+  The bot has the essence it needs without buying any; the gold shop's essence is for a player short
+  of it.
+- **`tokenExp` is the strongest knob**, as an exponent is: 15% less takes stage 200 from 57 to 92
+  hours. Move it a percent or two at a time (§5.4); every other knob is safe to move.
+- **The first prestige at 1.6 hours** is the bot's patience: Prestige opens at stage 30 in a run ten
+  minutes old, and the bot waits until a run has gone 20 minutes without a new stage.
+
+**Open, for the owner.** Crafting makes the hero's jewellery only until epic pieces drop: crafted
+jewellery stops at rare (`CRAFT_MAX_RARITY`, §3.4) while the fight's is epic or legendary, so leaving
+Crafting alone costs the bot nothing. Letting it reach epic at high Crafting levels would give it a
+late job, as the refit gave the anvil.
+
 ## 6. Where this differs from the research report
 
 The report ([Redesign section](reports/Fantasy%20Idle%20game%20design%20research.md#the-redesign-change-these-formulas-add-these-systems-cut-these))

@@ -23,7 +23,7 @@ of `tools/simulate.mjs` (no game code changed by them):
   simulator's agility budget leaks (D).
 - 3–4 seeds show directions only: use 30+ seeds, hours-to-stage percentiles, separate RNG streams (D).
 
-## Strategy, in order, and where it stands (7 October 2026)
+## Strategy, in order, and where it stands (8 October 2026)
 1. **Fixes: done.** Dev flags work on local hosts only (a save that carries them is flagged); the pity
    ring counts only bosses whose drop could beat something worn, by drop power at depth; the simulator's
    agility budget no longer leaks; the leaderboard lets a best stage grow by its depth (three times the
@@ -34,16 +34,22 @@ of `tools/simulate.mjs` (no game code changed by them):
    `--json`, `--save-at`, `tools/trials.mjs`, the robustness suite (parity, a thousand mangled saves, no
    arbitrage). The simulator's bot also had two blind spots found on the way: it reset its stall clock
    with every fight (so it never prestiged again at a late wall) and never left a Trial run.
-4. **Experiments: E1 and E11 done, the rest running.** E1 (100 seeds and four play styles, 150 hours):
-   every band to hour 150 meets its target (DESIGN §5.6). E11 set the leaderboard's allowance (1).
+4. **Experiments: done**, as a report card (`tools/audit.mjs`, DESIGN §5.7). E1 (100 seeds and four play
+   styles, 150 hours): every band to hour 150 meets its target (DESIGN §5.6). E11 set the leaderboard's
+   allowance (1). The card found the anvil's work lost at every better drop (now refitted), the bot
+   looping a dungeon while it meant to climb (fixed), `tokenExp` the one knife-edge, dungeons mandatory
+   by design, and Crafting without a job once epic jewellery drops (the owner's choice).
 5. **Changes by evidence: done**, except what needs new paintings or a choice. Auto after 5 prestiges or
    two days; 24 h offline; a welcome-back that leads with where the run stopped; banked Titans that
    keep falling; then the late content: Trials (eight, five tiers each, each tier a record), ranks past
    Mythic (500, 1,000, 2,000), mastery checkpoints, a completion percentage, Ascension (Stars, a day's
-   rest), sixteen named strata in the Abyss and six medals for the deep game. Hours 150–300 now meet
-   their target; hours 300–1,000 still miss it, because late progress crawls (DESIGN §5.6 gives the two
-   ways on: a faster deep Abyss, or moments on the calendar). Two more dungeons came after (240 and 275).
-   **Still to do:** paintings for each stratum and the two new dungeons (Gemini, with the owner's
-   go-ahead for its downloads), an end boss, each early Ascension opening something new, a cape for 100%.
+   rest), sixteen named strata in the Abyss and six medals for the deep game, two more dungeons (240
+   and 275), and moments on the calendar: the week's Trial with its laurel and board, and a festival
+   cloak each event weekend. With Auto every band to hour 1,000 meets its target but hours 300–500,
+   which come close (a big moment every 29 hours against 24; DESIGN §5.6); without Auto the waits past
+   hour 500 reach a week. **Still to do:** paintings for each stratum and the
+   two new dungeons (Gemini, with the owner's go-ahead for its downloads), the deep Abyss's pace and
+   Crafting's late job (the owner's choices), an end boss, each early Ascension opening something new,
+   a cape for 100%.
 6. **Playtest log: done** (Settings, exported for `tools/playtest.mjs`). A short playtest with people is
    the owner's.

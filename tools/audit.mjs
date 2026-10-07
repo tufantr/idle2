@@ -78,14 +78,16 @@ if (base) {
     }
     const dominant = Object.entries(data.e4).filter(([, r]) => r.every(x => Number.isFinite(x) && x >= 1.5));
     check(!dominant.length, `no player is 1.5× faster than the baseline at every milestone${dominant.length ? ` (${dominant.map(([l]) => l).join(', ')})` : ''}`);
-    out.push('\n| Without | Stage 150 | 200 | Slower than the baseline by |\n|---|---|---|---|');
+    // Stage 250 too: some systems (the anvil's reinforcing) tell only in the deep Abyss.
+    const LATE = [150, 200, 250];
+    out.push('\n| Without | Stage 150 | 200 | 250 | Slower than the baseline by |\n|---|---|---|---|---|');
     data.without = {};
     for (const sys of ['dungeons', 'titan', 'farming', 'agility', 'anvil', 'camp', 'perks', 'crafting', 'essence']) {
         const runs = batch(`E4-without-${sys}`);
         if (!runs) continue;
-        const slow = [150, 200].map(m => { const a = med(stageAt(runs, m)); const b = med(stageAt(base, m)); return a === null ? Infinity : a / b; });
+        const slow = LATE.map(m => { const a = med(stageAt(runs, m)); const b = med(stageAt(base, m)); return a === null ? Infinity : a / b; });
         data.without[sys] = slow;
-        out.push(`| ${sys} | ${fmt(med(stageAt(runs, 150)))} | ${fmt(med(stageAt(runs, 200)))} | ${slow.map(x => (Number.isFinite(x) ? `×${fmt(x, 2)}` : 'never')).join(', ')} |`);
+        out.push(`| ${sys} | ${LATE.map(m => fmt(med(stageAt(runs, m)))).join(' | ')} | ${slow.map(x => (Number.isFinite(x) ? `×${fmt(x, 2)}` : 'never')).join(', ')} |`);
     }
     for (const [sys, slow] of Object.entries(data.without)) {
         const worst = Math.max(...slow);
@@ -127,7 +129,7 @@ if (base && cursed && blessed) {
 if (base && existsSync(RUNS)) {
     const labels = readdirSync(RUNS).filter(l => l.startsWith('E7-'));
     if (labels.length) {
-        out.push('\n## E7 · sensitivity (elasticity of hours to stage 200; |ε| > 2 is a knife-edge)\n');
+        out.push('\n## E7 · sensitivity (elasticity of hours to stage 200, on its steeper side; |ε| > 2 is a knife-edge)\n');
         const levels = [...new Set(labels.map(l => l.match(/-([-0-9.]+)$/)?.[1]).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
         out.push(`| Knob | ${levels.map(f => `${Number(f) > 0 ? '+' : ''}${Math.round(100 * Number(f))}%`).join(' | ')} | ε |\n|---|${levels.map(() => '---|').join('')}---|`);
         const b200 = med(stageAt(base, 200));
@@ -136,7 +138,7 @@ if (base && existsSync(RUNS)) {
         for (const k of knobs) {
             const row = levels.map(f => { const runs = batch(`E7-${k}-${f}`); return runs && runs.length ? med(stageAt(runs, 200)) : undefined; });
             const e = levels.map((f, i) => [Number(f), row[i]]).filter(([, h]) => h !== undefined && h !== null).map(([f, h]) => (h / b200 - 1) / f);
-            const eps = e.length ? med(e) : null;
+            const eps = e.length ? e.reduce((w, x) => (Math.abs(x) > Math.abs(w) ? x : w)) : null;   // the steeper side: a knife-edge either way counts
             data.e7[k] = { row, eps };
             out.push(`| ${k} | ${row.map(h => (h === undefined ? '' : h === null ? 'never' : fmt(h))).join(' | ')} | ${fmt(eps, 2)} |`);
         }
