@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The smith refits the reinforcing**: a weapon or piece of armour put on in place of a reinforced
+      one takes its anvil levels but one, and the bars in them, so the anvil's work is no longer lost at
+      every better drop (the simulated hero ends 150 hours at +8.6 on average, from +7.3, and 10 stages
+      deeper). The bag compares a new piece as it will be ("refitted to +6"), its ▲ and the dock's Equip
+      count it so, and a toast tells when the smith does it. Swapping back and forth loses a level each time
 - [x] **Festival cloaks**: each weekend event sells a cloak of its own colour (a silver hem, where a skill
       cape's is gold), first in its shop for 120 tokens: a look to keep and wear from Settings, a card
       with the hero in it, and a part of the Hall's completion. Six to collect, each back with its event

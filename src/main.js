@@ -583,6 +583,7 @@ function handleEvents(events) {
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
+            case 'refit': toast(`The smith refits it: +${ev.level} carried over from the ${ev.from.name}`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon || ''))); break;   // (systems/inventory.js refitLevel)
             case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
             case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
             case 'prestige': {

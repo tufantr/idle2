@@ -166,7 +166,8 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   XP (as forging did: 18 / 30 / 57 / 90 / 135 a bar, paced). A reroll takes a piece's worth of bars
   and the old reforge's essence. The metal's mastery grows a second a bar and takes up to 19.6% of
   the bars off. Smelting a metal needs its level, so the bars are the real gate (runite at 75), or they
-  come from salvaging gear of that metal.
+  come from salvaging gear of that metal. A piece put on in place of a reinforced one of its kind is
+  refitted: it takes the levels but one, and their bars (§3.25).
 - **Jewellery:** 1 silver or gold bar + 1 gem → Ring, Earring or Amulet. The gem sets the base level
   (1 / 10 / 25 / 40 / 55 / 70), the tier and the power (0.8 × the tier's power, like dropped
   jewellery); a gold setting adds 20%. Earrings add +2 and Amulets +4 levels; gold bars need crafting
@@ -998,6 +999,16 @@ owner's choice of option 1a):
 - **Smithing's job is the anvil** (§3.4): bars of the worn piece's own metal make it stronger, and
   salvaging pieces gives their bars back. The anvil is a step of Smithing (Smelt · Forge · Anvil ·
   Tools) from level 5; a worn piece in the bag's detail has an Anvil button instead of Upgrade.
+- **The smith refits the reinforcing** (October 2026): a weapon or piece of armour put on in place of a
+  reinforced one takes its levels but one and the bars that went into them, and the old piece comes off
+  plain (`refitLevel` in `src/systems/inventory.js`; a toast says so). Whether a new piece is better is
+  judged refitted, by the bag's ▲, the dock's Equip and the bosses' due, and the bag's detail compares
+  it so ("refitted to +6"). The anvil's work used to be lost with every better drop, and the hero
+  changes gear at almost every new depth, so a player who never reinforced lost nothing to stage 200
+  (§5.7). Swapping back and forth loses a level each time, so nothing is gained by it. Against the same
+  build without it (30 seeds, 150 hours): the same pace to stage 200, stages 250 and 300 2–3% sooner
+  (at 82.9 and 129 hours, from 84.5 and 133), the worn gear at +8.6 on average by the end (+7.3), and
+  the best stage 320 (310). Its larger part is fairness: a player's reinforcing is never thrown away.
 
 Simulated over seeds 1–3 for 150 hours as first built (old figures in brackets): stage 100 at 3.7–5.3 h
 (5.0–5.2), 150 at 13.2–16.5 h (16–18), 200 at 46.8–51.5 h (48.3–48.9); best 320–330 (270–310); the
@@ -1201,7 +1212,7 @@ evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay bet
 `--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
 of hours. `node tools/batch.mjs --seeds=30` runs many seeds in parallel (about 7 runs of 150 h a
 minute on 8 cores) and reports medians with the 10th and 90th percentiles; `node tools/audit.mjs`
-checks the batches against the research's thresholds (the report card). A real player's rhythm can be
+checks the batches against the research's thresholds (the report card, §5.7). A real player's rhythm can be
 set beside it: Settings' **playtest log** (off unless turned on; `src/systems/playtest.js`) keeps a
 timeline of the moments of play in the save, exported as a file that `node tools/playtest.mjs` reads.
 Three seeds, 150 hours each:
@@ -1343,6 +1354,12 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | The Auto switch | `BALANCE.prestige.autoAfter`, `autoStallMs` | `formulas.js` |
 | Offline length | `BASE.baseOfflineHours`; Endurance perk | `modifiers.js`, `src/data/perks.js` |
 | Active-play weight | `BALANCE.minigame`; `BASE.focus*` | `formulas.js`, `modifiers.js` |
+
+How hard the knobs pull (E7 in §5.7: the hours to stage 200 for each 1% a knob moves): the monsters'
+growth (`hpGrowth`, `atkGrowth` and their Abyss twins, moved in their growth part) 1.3–1.7%; `tokenExp`
+4.2% the other way, as an exponent does (move it a percent or two at a time); `dropGrowth`,
+`goldPerHp`, `bossHpMult`, `hpPerDef`, `recordMult`, `startStageFraction`, the bosses' gear chance and
+the tokens' bonuses under 0.4% each (they shape other things than the pace to stage 200).
 
 After any change: `node --test test/*.test.mjs test/*.test.cjs`, `node tools/pacing.mjs`, and a
 couple of `node tools/simulate.mjs --hours=150 --seed=N` runs (add `--farm-ladder=push` and

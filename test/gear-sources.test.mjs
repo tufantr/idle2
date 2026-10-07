@@ -214,3 +214,34 @@ test('old saves keep their gear; bars spent at the anvil are cleaned and kept', 
     assert.deepEqual(loaded.inventory.map(i => i.barsIn), [40, undefined, undefined]);
     assert.equal(loaded.combat.pity, 0);
 });
+
+test('the smith refits the reinforcing: a new piece takes the old one\'s anvil levels but one', async () => {
+    const { Game } = await import('../src/game.js');
+    const { findUpgrade, refitLevel } = await import('../src/systems/inventory.js');
+    const game = new Game(null, 1_700_000_000_000);
+    const s = game.state;
+    s.skills.combat.xp = 1e9;   // can wear anything
+    const piece = (id, tier, atk, upgrade = 0, extra = {}) => ({ id, type: 'Weapon', tier, name: `Sword ${id}`, rarity: 'common', atk, def: 0, affixes: [], upgrade, ...extra });
+    s.equipped.Weapon = piece(1, 5, 100, 6, { barsIn: 40 });
+    s.inventory.push(piece(2, 6, 140));
+    // a +0 piece of more base attack, as it would be worn: +5 refitted, so it is the upgrade
+    assert.equal(refitLevel(s.inventory[0], s.equipped.Weapon), 5);
+    assert.equal(findUpgrade(s)?.item.id, 2);
+    game.drainEvents();
+    assert.equal(game.equipItem(2), true);
+    assert.equal(s.equipped.Weapon.upgrade, 5);
+    assert.equal(s.equipped.Weapon.barsIn, 40, 'the bars go with the levels (and come back when it is salvaged)');
+    const old = s.inventory.find(i => i.id === 1);
+    assert.deepEqual([old.upgrade, old.barsIn], [0, 0], 'the old piece comes off plain');
+    assert.ok(game.drainEvents().some(e => e.type === 'refit' && e.level === 5));
+    // swapping back loses a level each way: nothing to gain
+    assert.equal(game.equipItem(1), true);
+    assert.equal(s.equipped.Weapon.upgrade, 4);
+    assert.equal(game.equipItem(2), true);
+    assert.equal(s.equipped.Weapon.upgrade, 3);
+    // a piece already better reinforced keeps its own; jewellery is not the anvil's
+    s.inventory.push(piece(3, 6, 150, 7));
+    assert.equal(refitLevel(s.inventory.at(-1), s.equipped.Weapon), 7);
+    const ring = { id: 9, type: 'Ring', tier: 5, name: 'Ring', rarity: 'common', atk: 10, def: 0, affixes: [], upgrade: 0 };
+    assert.equal(refitLevel(ring, { ...ring, upgrade: 5 }), 0);
+});

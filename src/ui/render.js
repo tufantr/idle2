@@ -18,7 +18,7 @@ import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/ski
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
-import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked } from '../systems/inventory.js';
+import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
@@ -1155,9 +1155,11 @@ export function renderItemDetail(game, id) {
     if (!slot) {
         const worn = (TYPE_SLOTS[item.type] || []).map(sl => state.equipped[sl]).sort((a, b) => itemScore(a) - itemScore(b))[0];
         const wornMult = worn ? 1 + UPGRADE_STEP * (worn.upgrade || 0) : 0;
+        const refit = refitLevel(item, worn);   // put on, it takes the worn piece's anvil levels but one
+        const newMult = 1 + UPGRADE_STEP * refit;
         const delta = (value, icon) => value ? `<span class="${value > 0 ? 'up' : 'down'}">${icon} ${value > 0 ? '+' : '−'}${fmt(Math.abs(value))}</span>` : '';
-        const deltas = delta(atk - Math.round((worn?.atk || 0) * wornMult), ATK_ICON) + delta(def - Math.round((worn?.def || 0) * wornMult), DEF_ICON);
-        compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${worn.upgrade ? ` +${worn.upgrade}` : ''}` : 'That slot is empty'}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
+        const deltas = delta(Math.round((item.atk || 0) * newMult) - Math.round((worn?.atk || 0) * wornMult), ATK_ICON) + delta(Math.round((item.def || 0) * newMult) - Math.round((worn?.def || 0) * wornMult), DEF_ICON);
+        compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${worn.upgrade ? ` +${worn.upgrade}` : ''}${refit > up ? `, refitted to +${refit}` : ''}` : 'That slot is empty'}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
     }
     return `<div class="detail" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}">
         <button class="detail-close" onclick="FI.selectItem(null)" aria-label="Close">✕</button>

@@ -70,10 +70,23 @@ export function itemScore(item) {
     return ((item.atk || 0) + (item.def || 0)) * (1 + UPGRADE_STEP * (item.upgrade || 0)) + 5 * (item.affixes?.length || 0);
 }
 
+// The smith refits the reinforcing: a weapon or armour piece put on in place of a reinforced one takes its
+// anvil levels but one (and the bars that went into them), and the old piece comes off plain. The anvil's
+// work used to be lost with every better drop, and a hero replaced his gear at almost every new depth, so
+// Smithing's anvil hardly changed his pace (tools/audit.mjs: 0.3% without it). Swapping back and forth
+// loses a level each time, so nothing is gained by it.
+/** The anvil level `item` would have once worn in place of `worn`. */
+export function refitLevel(item, worn) {
+    if (!item || !worn || !SMITHING_TYPES.includes(item.type) || worn.type !== item.type) return item?.upgrade || 0;
+    return Math.max(item.upgrade || 0, Math.min(MAX_UPGRADE, (worn.upgrade || 0) - 1));
+}
+/** `item`'s score as it would be worn in place of `worn` (refitted). */
+const scoreInPlaceOf = (item, worn) => itemScore({ ...item, upgrade: refitLevel(item, worn) });
+
 /** True if the item beats what is worn in the weakest slot it fits (empty slots count as beaten). */
 export function isUpgrade(state, item) {
     const slots = TYPE_SLOTS[item.type] || [];
-    return slots.some(slot => itemScore(item) > itemScore(state.equipped[slot]));
+    return slots.some(slot => scoreInPlaceOf(item, state.equipped[slot]) > itemScore(state.equipped[slot]));
 }
 
 /** The weakest equipped slot an item could go into (empty slots first). */
@@ -88,7 +101,7 @@ export function findUpgrade(state) {
     for (const item of state.inventory) {
         if (!canWear(state, item)) continue;
         const slot = weakestSlotFor(state, item.type);
-        const gain = itemScore(item) - itemScore(state.equipped[slot]);
+        const gain = scoreInPlaceOf(item, state.equipped[slot]) - itemScore(state.equipped[slot]);
         if (gain > 0 && (!best || gain > best.gain)) best = { item, slot, gain };
     }
     return best;
@@ -239,6 +252,14 @@ export function equipItem(game, id, requestedSlot = null) {
     if (!slot) slot = slots.find(s => !state.equipped[s]) || slots.reduce((w, s) => (itemScore(state.equipped[s]) < itemScore(state.equipped[w]) ? s : w), slots[0]);
 
     const previous = state.equipped[slot];
+    const refit = refitLevel(item, previous);   // the smith refits the reinforcing (above)
+    if (previous && refit > (item.upgrade || 0)) {
+        item.upgrade = refit;
+        item.barsIn = (item.barsIn || 0) + (previous.barsIn || 0);
+        previous.upgrade = 0;
+        previous.barsIn = 0;
+        game.emit({ type: 'refit', item, from: previous, level: refit });
+    }
     state.equipped[slot] = item;
     state.inventory.splice(index, 1);
     if (previous) state.inventory.push(previous);

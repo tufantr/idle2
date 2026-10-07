@@ -10,7 +10,8 @@
 //                                                 # is Smithing's anvil step; 'trials' is the prestige
 //                                                 # dialog with Trials cleared and one picked, and
 //                                                 # 'trialfight' a fight in a Trial; 'ascend' the
-//                                                 # dialog's Ascend row)
+//                                                 # dialog's Ascend row; 'refit' a new piece in the
+//                                                 # bag compared with the reinforced one it would replace)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -36,7 +37,15 @@ const STEPS = {
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
-    trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); }
+    trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); },
+    refit: async () => {   // a better body armour in the bag than the worn one at +7: its detail compares it refitted
+        const { generateEquipment } = await import('/src/core/formulas.js');
+        const { GEAR_TIERS, RARITIES } = await import('/src/data/items.js');
+        const g = FI.game(); const s = g.state;
+        const piece = generateEquipment({ type: 'Body', tier: 4, power: GEAR_TIERS[3].power, materialName: 'Adamant', rarity: RARITIES[1], source: 'drop' }, s.idCounter++);
+        s.inventory.push(piece); g.markDirty();
+        FI.switchTab('inventory'); FI.selectItem(piece.id);
+    }
 };
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
