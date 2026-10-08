@@ -24,3 +24,6 @@ __pycache__/
 
 # Simulator batches from tools/batch.mjs
 /runs/
+
+# The wiki, built by wiki/build.mjs
+/wiki/dist/

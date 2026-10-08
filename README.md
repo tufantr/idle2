@@ -65,6 +65,21 @@ cd /tmp/fi-deploy && npx vercel link --yes --project fantasy-idle --scope skinba
 Without `POSTGRES_URL` and `JWT_SECRET` (above) the API answers "Database unavailable" and the game
 plays as a guest with its save in the browser.
 
+## The wiki
+
+https://fantasy-idle-wiki.vercel.app is the player wiki: a static site built from the game's own data by
+`wiki/build.mjs` (see `wiki/README.md`), deployed as its own Vercel project, `fantasy-idle-wiki`. Every
+table, number and picture comes from `src/` and `assets/`, so after a change to the game, rebuild and
+redeploy it:
+
+```bash
+rm -rf /tmp/fi-wiki && mkdir -p /tmp/fi-wiki/src && git archive claude/intelligent-einstein-y5i5iq | tar -x -C /tmp/fi-wiki/src
+cd /tmp/fi-wiki/src && WIKI_VERSION=$(git -C ~/Documents/idle2 rev-parse --short HEAD) node wiki/build.mjs --out /tmp/fi-wiki/site
+cd /tmp/fi-wiki/site && npx vercel link --yes --project fantasy-idle-wiki --scope skinbaba1-3986s-projects && npx vercel deploy --prod --yes
+```
+
+`node wiki/build.mjs --serve` previews it at http://localhost:8010.
+
 ## Tests and balance tools
 
 Node 22+, no install needed (the API tests use the packages in `api/node_modules`):

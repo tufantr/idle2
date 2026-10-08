@@ -1689,6 +1689,10 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       finished action makes, popping off its target) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
+wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki.vercel.app): build.mjs makes a
+                      static site from src/ and assets/ (pages/*.mjs: tables, infoboxes and cross-links from the
+                      data; content/**/*.md: the written explanations, with {{ }} numbers read from the game;
+                      lib/: Markdown, layout, search, link check). test/wiki.test.mjs keeps it building
 api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
                       rewards, leaderboards) · store.js (every query) · database.js (the connection)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an

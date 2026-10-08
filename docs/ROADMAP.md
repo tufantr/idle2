@@ -429,6 +429,14 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The wiki** (the owner's ask; wiki/README.md): https://fantasy-idle-wiki.vercel.app, its own Vercel
+      project. Built from the game's data by `wiki/build.mjs`, so every number is the game's: a page for every
+      skill (actions, tools, mastery, pet, cape, medals), item (where it comes from and what it is for),
+      monster (its stats at every stage it stands on, its drops), land and stratum of the Abyss, dungeon,
+      gear tier (the hero shown in the set), unique, plus prestige, perks, ranks, Trials, Ascension, mastery,
+      medals, pets, capes, looks, events, clans, offline progress, formulas and the XP table, and written
+      guides (getting started, getting past a wall, training skills, gold, an FAQ). In the game's look, with
+      search, a phone menu and sortable tables; the build fails on a broken link or a bad number
 - [x] **Cards fit a phone** (DESIGN §3.22): a new medal, a level-up (Combat 10) and a new land still covered
       a third to almost half of a phone's screen, over the fighters' bars. On a phone every card is now a
       banner at the top: the picture at the left, the words beside it, a land's or place's painting behind

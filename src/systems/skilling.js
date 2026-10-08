@@ -18,7 +18,7 @@ import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
 
-const GEM_FIND_CHANCE = 0.02;
+export const GEM_FIND_CHANCE = 0.02;   // a gem now and then while mining (exported for the wiki)
 export const BAIT_EXTRA_CHANCE = 0.5;   // each catch uses one bait, if you have any, for this chance of a second fish
 
 /**
