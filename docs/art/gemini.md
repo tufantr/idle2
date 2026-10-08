@@ -204,6 +204,103 @@ the figure was painted out by hand (filled row by row from the haze beside it) b
 Back to the backdrop set: same style and rules as the place backdrops (side view at eye level, wide 16:9, the bottom quarter flat open ground running straight across with nothing standing on it in the middle, the scenery in the distance and at the left and right edges, no people, no creatures, no text). Next, Abyssal Maw: the deepest pit of the Abyss, a colossal cavern shaped like an open maw, curved black stone fangs the size of towers rising from below and hanging from above at the left and right edges, a vast starless dark in the back with a faint ring of cold teal light around a bottomless chasm, drifting motes of pale light like dying stars, thin strands of dark mist; a flat ledge of cracked black basalt with faint teal veins across the bottom.
 ```
 
+## The Abyss's strata and the two late dungeons
+
+Below its first stage the Abyss is sixteen strata of 25 stages each (`src/data/strata.js`), and two
+dungeons open late (the Sunken Necropolis at stage 240, the Hellforge at 275). Until each has a
+painting of its own they borrow one under a colour grade (the strata the Abyss's, the dungeons the
+Drowned Ruins' and the Dragon's Lair's). The first stratum is the Abyss itself; these seventeen are
+the rest. Send them in the same chat, after the Abyssal Maw, save each under the name shown in
+`art/strata/`, and import with `python3 tools/paint.py art/strata --trim 0`. Each stratum's colours
+follow its grade, so the set reads as a descent; the reds (the Ember Pits, the Burning Choir,
+Pandemonium, the Hellforge) are told apart by their light: orange lava, white-gold flame, green
+hellfire, molten metal.
+
+`weeping.png` (The Weeping Dark, stages 126–150)
+```text
+Back to the backdrop set: same style and rules as the place backdrops (side view at eye level, wide 16:9, the bottom quarter flat open ground running straight across with nothing standing on it in the middle, the scenery in the distance and at the left and right edges, no people, no creatures, no text). Next come the layers below the Abyss, one painting each, every one with its own colours and light. First, The Weeping Dark: a vast dim hollow of grief in cold blue-grey, black stone trees with long drooping branches like weeping willows at the left and right edges, thin silver waterfalls falling from unseen heights like tears into the dark, small pale lights drifting in the mist like lost lanterns; dark wet stone with shallow pools that mirror the pale light across the bottom.
+```
+
+`bone.png` (The Bone Reaches, 151–175)
+```text
+Same style and rules. Next, The Bone Reaches: a wide plain of bleached bone under a dusty yellow-grey sky, the colossal ribcages, spines and skulls of long-dead giants and dragons at the left and right edges and far away, tall spires of fused bone on the horizon, drifting dust in pale sunlight; a flat ground of packed bone dust strewn with small bones across the bottom.
+```
+
+`ember.png` (The Ember Pits, 176–200)
+```text
+Same style and rules. Next, The Ember Pits: deep stepped pits of molten rock in orange and red, pools and slow falls of glowing orange lava like hot springs, black crags and carved demonic stone pillars at the left and right edges, smoke and rising sparks under a dark red glow; cracked black rock with glowing orange seams across the bottom.
+```
+
+`frozen.png` (The Frozen Void, 201–225)
+```text
+Same style and rules. Next, The Frozen Void: a black starless void full of floating ice, jagged blue-white ice shards and broken frozen waterfalls hanging in the dark at the left and right edges, frost mist and cold blue light from nowhere, tiny ice crystals glittering in the air; a flat sheet of dark blue ice with white cracks across the bottom.
+```
+
+`writhing.png` (The Writhing Maze, 226–250)
+```text
+Same style and rules. Next, The Writhing Maze: a maze of living walls in deep green and sickly purple, twisting root-like growths and ridged organic arches curling at the left and right edges and receding into the distance, glistening surfaces with softly glowing green veins, a faint green haze; dark ridged organic stone across the bottom.
+```
+
+`shadow.png` (The Shadow Court, 251–275)
+```text
+Same style and rules. Next, The Shadow Court: a ruined gothic throne hall in eternal night, tall black marble columns and pointed arches at the left and right edges, faded crimson curtains, silver candelabras burning with pale blue flames, an empty high-backed throne far in the back in a cold shaft of light; a polished black marble floor across the bottom.
+```
+
+`storm.png` (The Storm Wastes, 276–300)
+```text
+Same style and rules. Next, The Storm Wastes: a shattered wasteland of black rock under a churning violet and blue storm sky, many bolts of lightning striking the land in the distance, tall wind-carved rock pillars at the left and right edges, blowing grit and rain; cracked dark stone with faint scorch marks across the bottom.
+```
+
+`starless.png` (The Starless Sea, 301–325)
+```text
+Same style and rules. Next, The Starless Sea: an endless black underground sea with no shore and no stars, faint teal glows drifting beneath the still surface, huge dark rock fangs jutting out of the water at the left and right edges, a dim green-teal haze over the water; a flat slab of wet black rock across the bottom, like a jetty out over the sea.
+```
+
+`iron.png` (The Iron Halls, 326–350)
+```text
+Same style and rules. Next, The Iron Halls: colossal ancient halls of grey iron and bronze, giant riveted pillars, huge gears and chains at the left and right edges, iron walkways in the distance, cold blue-grey light with a few deep orange forge glows far in the back, drifting smoke; riveted iron floor plates across the bottom.
+```
+
+`hollow.png` (The Hollow Throne, 351–375)
+```text
+Same style and rules. Next, The Hollow Throne: an enormous ancient tomb palace of crumbling gold and sandstone, tall carved pillars and faded royal banners at the left and right edges, a great empty throne on a high dais far in the back with a golden crown resting on its seat, warm dusty shafts of light, sepia and gold; worn golden flagstones across the bottom.
+```
+
+`choir.png` (The Burning Choir, 376–400)
+```text
+Same style and rules. Next, The Burning Choir: a colossal infernal cathedral of deep crimson stone, rows of huge black organ pipes at the left and right edges crowned with tall flames of pale gold and white, burning rose windows high in the back, a haze of drifting sparks; a cracked crimson stone nave floor across the bottom.
+```
+
+`glass.png` (The Glass Garden, 401–425)
+```text
+Same style and rules. Next, The Glass Garden: a surreal garden made of glass, trees and flowers of green, gold and clear crystal at the left and right edges, round polished stones that look like watching eyes set among the glass rocks, prismatic light and small rainbows, a pale green sky; a smooth glassy ground across the bottom.
+```
+
+`rot.png` (The Rotting Deep, 426–450)
+```text
+Same style and rules. Next, The Rotting Deep: a murky drowned bog deep underground, rotting shipwrecks and dead trees half sunk in brown-green water at the left and right edges, hanging moss, clusters of sickly yellow-green glowing fungus, drifting spores in a dim olive haze; a muddy bank of dark peat across the bottom.
+```
+
+`rift.png` (The Spatial Rift, 451–475)
+```text
+Same style and rules. Next, The Spatial Rift: a land coming apart at its seams, slabs of ground and pieces of sky floating apart as clean geometric shards at the left and right edges, glowing white-gold cracks running through space, floating stone cubes and rings, swirling magenta and gold nebula colours; a flat floating slab of pale stone across the bottom.
+```
+
+`pandemonium.png` (Pandemonium, from 476, without end)
+```text
+Same style and rules. Next, Pandemonium, the very bottom of the Abyss: a vast infernal city of black spires and hanging chains under a sky of churning green hellfire and black smoke, giant horned statues carved in obsidian at the left and right edges, rivers of red lava between the towers; a scorched obsidian plaza across the bottom.
+```
+
+`necropolis.png` (the Sunken Necropolis, a dungeon)
+```text
+Same style and rules. Next, a dungeon, Sunken Necropolis: a vast drowned city of the dead under the sea, rows of tombs and mausoleums of green-stained stone half-flooded with dark water at the left and right edges, toppled statues of crowned kings, drifting kelp, shafts of pale blue light from far above, small rising bubbles; wet flooded flagstones across the bottom.
+```
+
+`hellforge.png` (the Hellforge, a dungeon)
+```text
+Same style and rules. Next, a dungeon, Hellforge: a hellish foundry deep underground, enormous forges and crucibles pouring molten red metal at the left and right edges, black obsidian anvils, chains and hooks, black iron machinery, fire, sparks and red-black smoke; a floor of black obsidian plates with glowing molten seams across the bottom.
+```
+
 ## Cards, banners and the world map
 
 These are not backdrops of a fight. `src/ui/features.js` shows them on the card of a newly opened

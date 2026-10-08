@@ -76,7 +76,7 @@ function play(policy, seed) {
                 moments.push(now);
             }
             else if (ev.type === 'itemDropped') { first('gear', now); moments.push(now); }
-            else if (ev.type === 'zoneReached') { first('zone 2', now); moments.push(now); }
+            else if (ev.type === 'zoneReached') { if (!ev.stratum) first(`zone ${Math.floor((ev.stage - 1) / 10) + 1}`, now); moments.push(now); }
             else if (ev.type === 'levelUp') moments.push(now);
         }
         if (game.state.combat.stage >= 10) first('stage 10', now);
