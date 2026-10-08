@@ -36,3 +36,8 @@ export function duration(ms) {
 export function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+/** A share of a whole in words: 0.5 -> "half", 0.1 -> "a tenth" (else a percentage). For a strike's share of an attack. */
+export function shareInWords(x) {
+    return { 0.5: 'half', 0.25: 'a quarter', 0.2: 'a fifth', 0.1: 'a tenth', 0.05: 'a twentieth' }[x] || `${Math.round(x * 100)}%`;
+}

@@ -124,7 +124,7 @@ test('the guide points at one thing at a time, and never for a veteran', () => {
     assert.equal(guideStep(game.state, game.derived, view), 'camp:hearth');
     game.buyCampUpgrade('hearth', 1);
     assert.equal(guideStep(game.state, game.derived, view), 'strike');
-    for (let i = 0; i < GUIDE_STRIKES; i++) { now += 200; game.tick(now); game.clickAttack(); }
+    for (let i = 0; i < GUIDE_STRIKES; i++) { now += 300; game.tick(now); game.clickAttack(); }
     assert.equal(guideStep(game.state, game.derived, view), null);
     // the first vein, on the Mining tab, before any skill has been worked
     assert.equal(guideStep(game.state, game.derived, { tab: 'mining' }), 'vein');

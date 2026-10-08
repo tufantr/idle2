@@ -174,7 +174,7 @@ function comboMultiplier(combo) {
     return 1 + Math.min(BALANCE.combat.comboMax, combo) * BALANCE.combat.comboDmgPerStack;
 }
 
-/** One player attack. `manual` clicks hit for half damage and build the combo. */
+/** One player attack. `manual`: a strike, a tenth of an attack (BALANCE.combat.manualHitMult). The combo raises every hit. */
 export function playerAttack(game, { manual = false } = {}) {
     const state = game.state;
     const c = state.combat;
@@ -184,13 +184,13 @@ export function playerAttack(game, { manual = false } = {}) {
 
     const potionActive = ensurePotion(game);
     const combo = c.combo || 0;
-    const critChance = Math.min(BASE.caps.critChance, d.critChance + (combo >= 10 ? 0.10 : 0));
+    const critChance = Math.min(BASE.caps.critChance, d.critChance);
     const isCrit = rng.chance(critChance);
     let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult : 1);
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
     enemy.hp -= dmg;
 
-    const lifesteal = trialBite(game.state).noRegen ? 0 : Math.min(BASE.caps.lifesteal, d.lifesteal + (combo >= 20 ? 0.15 : 0));   // none in Fasting
+    const lifesteal = trialBite(game.state).noRegen ? 0 : Math.min(BASE.caps.lifesteal, d.lifesteal);   // none in Fasting
     if (lifesteal > 0) c.hp = Math.min(d.maxHp, c.hp + Math.round(dmg * lifesteal));
 
     if (potionActive && !manual) {
@@ -452,19 +452,17 @@ export function onBossTimeout(game) {
     game.markDirty();
 }
 
-/** Manual click on the enemy: builds combo and lands a half-damage hit. */
+/** A strike on the enemy (a click, a tap or Space): a tenth of an attack, and a stack of the combo. */
 export function clickAttack(game) {
     const state = game.state;
     const c = state.combat;
     if (!c.active || !c.enemy || choosingAfterClear(state)) return false;
-    if (game.now - (c.lastClickAt || 0) < 120) return false; // no benefit from auto-clickers
+    if (game.now - (c.lastClickAt || 0) < BALANCE.combat.strikeGapMs) return false;   // faster clicking (or an auto-clicker) adds nothing
     c.lastClickAt = game.now;
     bumpStat(game, 'strikes');   // the player's own strikes (the guide's hand leaves the monster after three)
     c.combo = Math.min(BALANCE.combat.comboMax, (c.combo || 0) + 1 / (1 + (c.combo || 0) / 40));
     c.lastComboAt = game.now;
     playerAttack(game, { manual: true });
-    // Echo strike at full combo.
-    if (c.combo >= 30 && c.enemy && c.enemy.hp > 0 && rng.chance(0.2)) playerAttack(game, { manual: true });
     return true;
 }
 

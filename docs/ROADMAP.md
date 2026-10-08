@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Strikes cut down** (DESIGN §3.6, the owner's ask): fast clicking took a hero to stage 100 with no
+      prestige, food or potion and cleared dungeons in seconds. A strike is now a tenth of an attack, at most
+      four a second, and the combo adds at most +10% (it was +90%, with extra crit, 15% lifesteal and echo
+      strikes). Measured as an auto-clicker would play, at every interval between clicks from 1 ms to 2 s:
+      at best about 1.5 times an idle hero's damage (6.7 before), and no healing
 - [x] **The wiki** (the owner's ask; wiki/README.md): https://fantasy-idle-wiki.vercel.app, its own Vercel
       project. Built from the game's data by `wiki/build.mjs`, so every number is the game's: a page for every
       skill (actions, tools, mastery, pet, cape, medals), item (where it comes from and what it is for),

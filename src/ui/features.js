@@ -17,7 +17,7 @@ import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
-import { escapeHtml as esc } from './format.js';
+import { escapeHtml as esc, shareInWords } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;   // 25th, 21st
@@ -27,7 +27,7 @@ const secs = ms => Math.round(ms / 1000);
 // or an emoji for small places, `blurb` one line, `points` the rules in a few short lines.
 export const FEATURES = {
     combat: { name: 'Combat', art: 'meadow', icon: 'item/Weapon/3', blurb: SKILLS.combat.desc,
-        points: ['Your hero fights automatically. Click the monster (or press Space) to strike as well: half damage, and it builds a combo.', 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.',
+        points: [`Your hero fights automatically. Click the monster (or press Space) to strike as well: ${shareInWords(BALANCE.combat.manualHitMult)} of an attack, up to ${1000 / BALANCE.combat.strikeGapMs} a second, and each strike builds a combo of up to +${pc(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack)} damage.`, 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.',
             `Weapons and armour past copper only drop, mostly of the zone's own tier and for the slots you lack. A boss that leaves no upgrade fills a mark of the gold ring round the boss's node; the ${ordinal(PITY_MARKS)} brings a sure piece for your weakest slot.`,
             `Deeper stages teach more. Past combat level ${BALANCE.rewards.xpPace.from}, each kill teaches less the higher you rise (from ${BALANCE.rewards.xpPace.to}, a ${ordinal(BALANCE.rewards.xpPace.slow)} as much), so level 99 is a long road.`] },
     mining: { name: 'Mining', art: 'caves', icon: 'res/copper_ore', blurb: SKILLS.mining.desc,

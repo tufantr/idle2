@@ -96,9 +96,18 @@ export const BALANCE = {
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
         regenResting: 0.02,     // fraction of max HP per second out of combat (full in under a minute)
-        manualHitMult: 0.2,     // a strike: a fifth of an attack (it was half, and a hero who struck crossed six places in two minutes)
-        comboDmgPerStack: 0.03,
-        comboMax: 30,
+        // A strike: a tenth of an attack, at most one every `strikeGapMs`, and the combo it builds adds up to
+        // comboMax × comboDmgPerStack to every hit (+10%). It was half an attack, then a fifth, at up to eight a
+        // second, with a combo of +90% and, from 10, 20 and 30 stacks, +10% crit, 15% lifesteal and echo strikes:
+        // fast clicking dealt nearly seven times an idle hero's damage and healed him, so the owner's hero reached
+        // stage 100 without a prestige, food or a potion, and cleared dungeons in seconds that the Dungeons tab
+        // said were out of reach. The game has no anti-cheat, so an auto-clicker is assumed: every interval
+        // between clicks from 1 ms to 2 s was measured, and the best now deals about 1.5 times an idle hero's
+        // damage (one at twice a second about 1.2 times, once a second about 1.1), with no healing.
+        manualHitMult: 0.1,
+        strikeGapMs: 250,
+        comboDmgPerStack: 0.01,
+        comboMax: 10,
         comboDecayAfterMs: 1500,
         deathHpFraction: 0.5,
         retreatStages: 1,

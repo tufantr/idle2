@@ -13,10 +13,12 @@ import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout, packSize } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
-import { fmt, seconds, escapeHtml as esc } from './format.js';
+import { fmt, seconds, escapeHtml as esc, shareInWords } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART } from './features.js';
 import { activeTrial, nextTrialTarget } from '../systems/trials.js';
+
+const STRIKE_SHARE = shareInWords(BALANCE.combat.manualHitMult);   // a strike's share of an attack, in words
 
 // Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
 const PARTICLES = { meadow: 'motes', forest: 'fireflies', caves: 'sparkles', marsh: 'bubbles', highland: 'rain', ruins: 'bubbles', volcano: 'embers', frost: 'snow', skyreach: 'motes', abyss: 'void', dungeon: 'embers', titan: 'rain',
@@ -400,8 +402,8 @@ export function createScene(root, actions) {
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
         el.foe.classList.toggle('gilded', !!enemy.gilded);
-        el.foe.setAttribute('aria-label', `Strike ${enemy.name}: half damage, builds your combo`);
-        el.foe.title = `Click to strike ${enemy.name}: half damage, builds your combo`;
+        el.foe.setAttribute('aria-label', `Strike ${enemy.name}: ${STRIKE_SHARE} of an attack, builds your combo`);
+        el.foe.title = `Click to strike ${enemy.name}: ${STRIKE_SHARE} of an attack, builds your combo`;
         setMarkup(el.foeMeta, foeMeta(game.state, game.derived, enemy));
         resetTrail(trails.foe, Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100))); // a fresh monster has no damage trail
         if (silent) return;
@@ -578,8 +580,9 @@ export function createScene(root, actions) {
             el.combo.hidden = combo <= 0;
             if (combo > 0) {
                 setText(el.comboN, `${combo}×`);
-                setText(el.comboBuffs, combo >= 30 ? 'crit · lifesteal · echo' : combo >= 20 ? 'crit · lifesteal' : combo >= 10 ? '+10% crit' : '');
-                el.combo.dataset.tier = combo >= 30 ? 3 : combo >= 20 ? 2 : combo >= 10 ? 1 : 0;
+                const most = BALANCE.combat.comboMax;
+                setText(el.comboBuffs, `+${Math.round(Math.min(most, combo) * BALANCE.combat.comboDmgPerStack * 100)}% damage`);
+                el.combo.dataset.tier = combo >= most ? 3 : combo >= most * 2 / 3 ? 2 : combo >= most / 3 ? 1 : 0;
             }
         },
 

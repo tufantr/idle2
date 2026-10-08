@@ -236,13 +236,21 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 - **Damage taken:** `dmg = max(ATK_e² / (ATK_e + DEF), 10% of ATK_e, 1)`. DEF equal to the enemy's ATK
   halves damage, and no amount of DEF blocks more than 90%. The prototype subtracted DEF flat, which
   made the player immune until a boss's ×2 ATK suddenly killed them — every wall was a boss.
-- **Crits:** 5% × 1.5 base; affixes and combo add. **Dodge**, **lifesteal** from affixes/potions.
+- **Crits:** 5% × 1.5 base; affixes add. **Dodge**, **lifesteal** from affixes/potions.
 - **HP:** no refill between enemies. Regen 0.1% of max HP per second in combat, 2% per second out of
   combat. **Auto-eat** below 50% HP (Gourmet perk raises it), "Auto" picks the smallest food that
   fills the gap. **Potions** hold 15 charges; one is used per player attack.
-- **Clicks and combo:** clicking the enemy lands a half-damage hit (at most ~5 clicks/s count) and
-  adds a combo stack (diminishing, max 30, decays after 1.5 s idle). Each stack is +3% damage; 10+
-  stacks give +10% crit, 20+ give +15% lifesteal, 30 gives 20% echo strikes.
+- **Clicks and combo** (cut in October 2026, the owner: fast clicking took his hero to stage 100 with no
+  prestige, food or potion, and cleared dungeons in seconds that the Dungeons tab called out of reach):
+  a strike lands a tenth of an attack (`BALANCE.combat.manualHitMult`), at most one every 250 ms
+  (`strikeGapMs`, four a second), and adds a combo stack (diminishing, max 10, decays after 1.5 s
+  without one). Each stack is +1% damage on every hit. It was half, then a fifth, of an attack, up to
+  eight a second, with +3% a stack to 30 and, at 10, 20 and 30 stacks, +10% crit, +15% lifesteal and
+  echo strikes. The game has no anti-cheat, so an auto-clicker is assumed: a minute's damage at every
+  interval between clicks from 1 ms to 2 s (each click also ends Focus) against an idle hero's was
+  ×6.7 at best before, ×1.54 now (×1.5 for anything faster than four a second, ×1.2 at two a second,
+  ×1.08 at one), and no healing. A player who taps through the first hour stands at stage 70 (110
+  before) against 50 for one who only watches (`node tools/opening.mjs 60 3`).
 - **Boss timer:** a boss must fall within **30 seconds of fighting** (the clock only runs while you
   fight, so it works the same offline). If it holds out you step back one stage and farm there for
   60 seconds before it is retried automatically; beating it sooner (by stepping forward) ends the
@@ -566,8 +574,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   Firemaking after 20 logs, Farming after 10 Alchemy actions or Cooking 15, Crafting with the first
   silver (or gold) bar once a gem has been found (its first piece can be made at once; it used to
   open hours before anything in it could be made); by climbing (`pace`), in this order when several
-  wait: Hunting at stage 5, Dungeons at 20, Alchemy at 15, Prestige at 30 in a run old enough to be
-  prestiged (so it can be used the moment it opens), the Shop when the first boss falls, the Hall
+  wait: Hunting at stage 5, Prestige once the stage-20 boss falls (the first prestige needs no
+  ten-minute run, so it can be used the moment it opens: §3.24), Dungeons at 20, Alchemy at 15, the
+  Shop when the first boss falls, the Hall
   with five medals, the Clan after the first prestige, the weekend Events after it when a festival is
   on or due within a day, and Agility at stage 35 with Woodcutting and Smithing open and half of the
   first obstacle's gold in hand. **One at a time, a breather apart** (§3.24): a place reached by
@@ -1003,7 +1012,7 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   now" after three seconds, time to read what is gained and what stays; after it, at the dock's Perks
   and, in that dialog, at the first perk the skill point buys (`firstPrestigeDue`; the steps `prestige`,
   `prestige-confirm`, `perks`, `perk-learn`). Once only: a hero who has prestiged sees no Prestige hand,
-  one who has learned a perk no Perks hand. At stage 21 to 24 it pays 5 or 6 tokens and one skill point
+  one who has learned a perk no Perks hand. At stage 21 to 24 it pays 5 to 7 tokens and one skill point
   (two from stage 25); the climb back is quick, as ground already cleared is one fight a stage. From then
   on the button glows at each wall (three minutes without a new best stage, until Auto is earned).
   Measured (`node tools/opening.mjs 60 9`, players who press what the hand points at and a glowing
@@ -1020,8 +1029,8 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   two places in two minutes, and one who struck five times a second crossed five in a minute: a strike
   hit for half his attack, up to eight a second, and the combo it builds raises every hit by up to 90%.
   Now a stage never cleared in places 2 to 5 (stages 11–50) holds a pack of three monsters (a boss stands
-  alone; pips under the stage on the path fill as they fall), and a strike hits for a fifth of his
-  attack (`BALANCE.combat.firstPack`, `manualHitMult`; `packSize` in `src/systems/combat.js`). The meadow
+  alone; pips under the stage on the path fill as they fall), and a strike hit for a fifth of his
+  attack (a tenth since the strikes were cut again: §3.6) (`BALANCE.combat.firstPack`, `manualHitMult`; `packSize` in `src/systems/combat.js`). The meadow
   stays one monster a stage, so the first boss still falls within the first minute, and ground already
   cleared is one fight, so a run after a prestige climbs as fast as ever. Tried and dropped: tougher
   early monsters stalled one who watches at stage 20 and hardly slowed one who strikes, and strikes
@@ -1207,7 +1216,7 @@ Rules:
    carries one point of health for every 20 defence) before its layers multiply it. Gear is the only
    source that grows with depth, so health from armour is what keeps a deep hero from falling to
    every hit (§5.3).
-3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30% (combo bonuses included), attack speed +100% (attack interval ≥ 0.75 s),
+3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.75 s),
    damage mitigation 90%, action interval ≥ 250 ms.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.
