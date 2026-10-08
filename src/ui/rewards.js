@@ -149,14 +149,17 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
         const node = document.createElement('div');
         node.className = `celebration ${card.kind || ''}${card.art ? ' pictured' : ''}${card.go || card.tiles ? ' clickable' : ''}`;
         node.setAttribute('role', 'status');
+        // The words in one box: under the picture on a wide screen, beside it on a phone (a banner).
         node.innerHTML = `${card.art ? `<span class="cel-art" style="${card.art}" aria-hidden="true"></span>` : '<span class="cel-rays" aria-hidden="true"></span>'}
             ${card.icon ? `<span class="cel-icon" aria-hidden="true">${card.icon}</span>` : ''}
-            <span class="cel-kicker">${esc(card.kicker)}</span>
-            <strong class="cel-title">${esc(card.title)}</strong>
-            ${card.lines?.length ? `<span class="cel-lines">${card.lines.map(l => `<span>${l}</span>`).join('')}</span>` : ''}
-            ${card.note ? `<span class="cel-note">${esc(card.note)}</span>` : ''}
+            <span class="cel-text">
+                <span class="cel-kicker">${esc(card.kicker)}</span>
+                <strong class="cel-title">${esc(card.title)}</strong>
+                ${card.lines?.length ? `<span class="cel-lines">${card.lines.map(l => `<span>${l}</span>`).join('')}</span>` : ''}
+                ${card.note ? `<span class="cel-note">${esc(card.note)}</span>` : ''}
+                ${card.go ? '<span class="cel-go">Take a look →</span>' : ''}
+            </span>
             ${card.tiles ? `<span class="cel-tiles">${card.tiles.map((t, i) => `<button type="button" class="cel-tile" data-tile="${i}" style="${t.art}"><span>${esc(t.name)}</span></button>`).join('')}</span>` : ''}
-            ${card.go ? '<span class="cel-go">Take a look →</span>' : ''}
             ${card.go || card.tiles ? '<button type="button" class="cel-close" aria-label="Dismiss">✕</button>' : ''}`;
         // A card with somewhere to go is a button: the whole card, or each of its pictures. It ignores
         // the first moment after it appears, so a tap already on its way to the monster doesn't leave the fight.

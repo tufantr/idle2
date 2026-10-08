@@ -429,6 +429,10 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Cards fit a phone** (DESIGN §3.22): a new medal, a level-up (Combat 10) and a new land still covered
+      a third to almost half of a phone's screen, over the fighters' bars. On a phone every card is now a
+      banner at the top: the picture at the left, the words beside it, a land's or place's painting behind
+      it; 80 to 114 px (12–17% of the screen) instead of 200 to 300. Desktop cards are as they were
 - [x] **Dialogs fit a phone** (DESIGN §3.22): on a phone browser every popup took the whole screen. Under
       600 px they are compact cards now: less padding, smaller type, the painting a strip with the title
       on it, Prestige's "starts over" beside "stays", the perks three across, the crate's haul two

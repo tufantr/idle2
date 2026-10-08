@@ -900,6 +900,13 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   390 × 664, Prestige covers 73% of the screen (it was taller than the screen), the perks 84%, an About
   card 81%, the crate about 70%; at 390 × 844, 57%, 68%, 64% and about 55% (92%, 96% and scrolling,
   96% and 79% before).
+- **Cards on a phone are banners.** The celebration cards (a medal, a level-up, a new land, a place, a
+  rank, a pet) were columns over the middle of the fight: at 390 × 664 a new land covered 45% of the
+  screen and the top of both fighters' bars, a level-up 36%, a medal 30%. Under 600 px each is now a
+  banner at the top of the screen, like a phone's own notices: its picture at the left, the words beside
+  it, a land's or a place's painting behind the whole banner, darker under the words (`.cel-text` holds
+  the words; on a wide screen it is no box, and the card is the column it was). 80 to 114 px tall,
+  12–17% of that screen.
 - **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from
   the zone's name on the scene or the Map button. A pin puts its zone under the map (stages, drops,
   gear tier) with a Travel button; on a phone the pins lose their labels and the zone card names them.

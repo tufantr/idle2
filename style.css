@@ -1528,6 +1528,7 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
     animation: spin 9s linear infinite;
 }
 .cel-icon { font-size: 2.7rem; line-height: 1.1; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6)); animation: celIcon 0.8s cubic-bezier(.3, 1.6, .5, 1) 0.08s both; }
+.cel-text { display: contents; }   /* the words: under the picture here, beside it on a phone (below) */
 .cel-kicker { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase; color: var(--cel); }
 .cel-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; line-height: 1.15; color: #fff7e6; text-wrap: balance; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 24px var(--cel-glow); }
 .cel-lines { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem 0.45rem; margin-top: 0.4rem; font-size: 0.8rem; color: #e2e8f0; }
@@ -1591,11 +1592,6 @@ body.reduced-motion .nav-ready { animation: none; }
 @keyframes crateShake { 0%, 100% { transform: rotate(0deg); } 15% { transform: rotate(-9deg); } 30% { transform: rotate(9deg); } 45% { transform: rotate(-6deg); } 60% { transform: rotate(6deg); } 75% { transform: rotate(-3deg); } }
 @keyframes cratePop { 0% { transform: scale(1); } 40% { transform: translateY(-8px) scale(1.3); } 100% { transform: scale(1.06); } }
 @keyframes lootIn { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
-@media (max-width: 600px) {
-    .celebration { padding: 0.9rem 1.1rem 0.85rem; }
-    .cel-title { font-size: 1.3rem; }
-    .cel-icon { font-size: 2.2rem; }
-}
 
 /* ===== Work you can see (src/ui/actionfx.js) ===== */
 #work-fx { position: fixed; inset: 0; z-index: 470; pointer-events: none; overflow: hidden; }
@@ -2029,7 +2025,6 @@ body:has(#modal-root .modal-overlay.active) #toast-area, body:has(#modal-root .m
 .cel-tile { height: 78px; padding: 0; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; border-radius: 10px; border: 1px solid rgba(214, 170, 92, 0.6); background: linear-gradient(180deg, rgba(10, 7, 4, 0) 30%, rgba(10, 7, 4, 0.92)), var(--art, none) var(--art-at, center) / cover no-repeat, #1a1510; }
 .cel-tile:hover { border-color: #fde68a; box-shadow: 0 0 14px rgba(252, 211, 77, 0.45); }
 .cel-tile span { padding: 0.25rem 0.3rem; font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; color: #fff7e6; text-shadow: 0 1px 3px #000; }
-@media (max-width: 600px) { .cel-art { margin: 0 -1.1rem 0.5rem; height: 104px; } }
 
 /* a place's banner, on the tabs without a scene of their own */
 .tab-banner {
@@ -2656,4 +2651,36 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
     /* the title card */
     .intro { gap: 0.6rem; padding-bottom: 1.1rem; }
     .intro-scene { height: 160px; }
+}
+
+/* ===== Cards on a phone: a banner at the top, like a phone's own notices =====
+   (the owner: a new medal, a level-up and a new land still covered too much of a phone's screen; at
+   390 x 664 a new land took 45% of it, over the fighters' bars.) The picture at the left, the words
+   beside it, a land's or a place's painting behind the whole banner, darker under the words. */
+@media (max-width: 600px) {
+    .celebration {
+        top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+        flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 0.75rem;
+        width: calc(100vw - 1.5rem); min-width: 0; max-width: 440px;
+        padding: 0.55rem 0.85rem; text-align: left; border-radius: 14px;
+    }
+    .celebration.pictured { width: calc(100vw - 1.5rem); padding: 0.55rem 2.1rem 0.55rem 0.85rem; isolation: isolate; }
+    .cel-art { position: absolute; inset: 0; z-index: -1; height: auto; margin: 0;
+        background: linear-gradient(90deg, rgba(18, 13, 8, 0.95) 25%, rgba(18, 13, 8, 0.7) 65%, rgba(18, 13, 8, 0.4)), var(--art, none) var(--art-at, center) / cover no-repeat; }
+    .cel-rays { left: 2.6rem; top: 50%; width: 150px; height: 150px; margin: -75px 0 0 -75px; }   /* behind the picture */
+    .cel-icon { flex: 0 0 auto; font-size: 2rem; line-height: 1; }
+    .cel-medal, .cel-hero { width: 60px; height: 60px; border-width: 2px; }
+    .cel-medal .spr { --k: 1.5 !important; }
+    .cel-hero .hero-doll, .celebration.legend .cel-icon > .hero-doll { --k: 2 !important; }
+    .cel-text { display: flex; flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; }
+    .cel-kicker { font-size: 0.6rem; letter-spacing: 0.2em; }
+    .cel-title { font-size: 1.1rem; line-height: 1.2; text-wrap: pretty; }
+    .cel-lines { justify-content: flex-start; gap: 0.2rem 0.3rem; margin-top: 0.2rem; font-size: 0.7rem; }
+    .cel-lines > span { padding: 0.05rem 0.45rem; }
+    .cel-note { max-width: none; margin-top: 0.15rem; font-size: 0.7rem; line-height: 1.3; text-wrap: pretty; }
+    .cel-go { margin-top: 0.15rem; font-size: 0.66rem; }
+    .cel-close { top: 50%; right: 6px; width: 24px; height: 24px; margin-top: -12px; }
+    .cel-tiles { flex: 1 1 100%; width: auto; margin-top: 0.45rem; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 0.35rem; }
+    .cel-tile { height: 52px; }
+    .cel-tile span { font-size: 0.7rem; }
 }
