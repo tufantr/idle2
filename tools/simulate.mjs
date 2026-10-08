@@ -54,6 +54,7 @@ import { rankFor } from '../src/data/ranks.js';
 import { FESTIVAL_CLOAK_COST } from '../src/data/events.js';
 import { TRIALS } from '../src/data/trials.js';
 import { trialsOpen, nextTrialTarget, weeklyGoal } from '../src/systems/trials.js';
+import { firstPrestigeDue } from '../src/systems/guide.js';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
@@ -553,6 +554,8 @@ function decide() {
     tendFarm();
     buildObstacles();
     if (SPEED_PRESTIGE && game.canPrestige()) prestigeNow();
+    // the first prestige teaches the loop: a player follows the guide's hand to it as Prestige opens (systems/guide.js)
+    if (firstPrestigeDue(S, now)) prestigeNow();
     maybeAscend();
     // Prestige when the run's tokens are a meaningful addition.
     const runStalled = now - lastRunRiseAt;

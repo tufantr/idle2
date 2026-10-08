@@ -58,7 +58,7 @@ export const FEATURES = {
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',
         points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence, forever.`,
             `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
-            'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. A run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
+            'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. After the first prestige, a run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
             `After ${BALANCE.prestige.autoAfter} prestiges, or two days after your first, the fight's dock gets an Auto switch: it prestiges a run that has spent ${BALANCE.prestige.autoStallMs / 60000} minutes climbing without a new best stage, even while you are away.`] },
     ascension: { name: 'Ascension', art: 'skyreach', icon: 'token', blurb: 'Give up every token for Stars, and climb again faster.',
         points: [`From stage ${ASCEND_FROM}, the prestige dialog offers to ascend: a prestige that also takes your tokens back to nothing.`,
@@ -119,8 +119,9 @@ export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', 
 /** The inline style that puts painting `name` behind an element (as --art, with its focus). */
 export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/paint/${name}.webp);--art-at:${focus}`;
 
-// The 'prestige' unlock has no tab of its own: it lives in the Shop.
-export const FEATURE_TAB = { prestige: 'shop', titan: 'dungeons', camp: 'combat', mastery: null, minigames: null };
+// The 'prestige' unlock has no tab of its own: its card goes to the fight, whose dock holds Prestige (and
+// where the guide's hand points at it the first time); the Shop shows it too.
+export const FEATURE_TAB = { prestige: 'combat', titan: 'dungeons', camp: 'combat', mastery: null, minigames: null };
 
 export const feature = id => FEATURES[id] || { name: id.charAt(0).toUpperCase() + id.slice(1), icon: '🔓', blurb: '', points: [] };
 export const artUrl = id => (FEATURES[id]?.art ? `assets/paint/${FEATURES[id].art}.webp` : '');

@@ -67,10 +67,14 @@ function play(policy, seed) {
             if (seen(game.state, 'camp')) {
                 for (const u of CAMP_UPGRADES) if (game.state.gold >= campPrice(game.state, u) && game.buyCampUpgrade(u.id, 1)) first('camp', now);
             }
-            // the guide's first prestige: when the hand points at Prestige, it is pressed (src/systems/guide.js)
-            if (guideStep(game.state, game.derived, { battle: true, tab: 'combat', now }) === 'prestige') {
+            // the guide's first prestige: when the hand points at Prestige, it is pressed (src/systems/guide.js);
+            // later ones when the dock's Prestige glows, its run at a wall (systems/prestige.js prestigeReady)
+            const guided = guideStep(game.state, game.derived, { battle: true, tab: 'combat', now }) === 'prestige';
+            if (guided || (game.state.prestige.count && game.prestigeReady())) {
                 const at = game.state.combat.bestStage;
-                if (game.prestige({ resume: true }) !== false) { first('prestige', now); firstPrestigeStage ??= at; moments.push(now); }   // as the dialog's "Prestige now" does
+                if (game.prestige({ resume: true }) !== false) {   // as the dialog's "Prestige now" does
+                    first(game.state.prestige.count > 1 ? 'prestige 2' : 'prestige', now); firstPrestigeStage ??= at; moments.push(now);
+                }
             }
         }
         for (const ev of game.drainEvents()) {

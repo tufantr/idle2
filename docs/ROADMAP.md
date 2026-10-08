@@ -429,12 +429,24 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Dialogs fit a phone** (DESIGN §3.22): on a phone browser every popup took the whole screen. Under
+      600 px they are compact cards now: less padding, smaller type, the painting a strip with the title
+      on it, Prestige's "starts over" beside "stays", the perks three across, the crate's haul two
+      across, none taller than 84% of the screen (a long one scrolls under its buttons). At 390 × 664,
+      Prestige covers 73% (it overflowed), the perks 84%, an About card 81%, the crate about 70%
+- [x] **The first prestige teaches the loop** (DESIGN §3.24, the owner's ask): Prestige opens once the
+      stage-20 boss falls, first of the places waiting (about 4½ minutes in), the first prestige needs no
+      ten-minute run, and the hand points at it at once; it pays a few tokens and a skill point, and the
+      hand goes on to Perks and the first perk. Later, the Prestige button glows at each wall (three
+      minutes without a new best, until Auto is earned). One who watches stands at stage 63 after an
+      hour (50 before), one who taps at 110 (100)
 - [x] **The first prestige, by the hand** (DESIGN §3.24): the owner's first run went to stage 41 and
       combat level 27 with nothing to say a prestige was the way past the wall. Now, once the Prestige
       place is open and the first run has gone three minutes without a new best, the guide's hand points
       at the dock's Prestige (which glows), then at "Prestige now" in the dialog, then at Perks and the
       first perk to learn. A climb still going is left alone. One who watches now prestiges at about 14
-      minutes and stands at stage 40 after an hour (30 before); one who taps, 79 (60)
+      minutes and stands at stage 40 after an hour (30 before); one who taps, 79 (60). Superseded the
+      same day by the teaching prestige above
 - [x] **Gem pouches for Crafting** (docs/research_notes/crafting-gems.md): a hero whose fight had gone deep
       found only gems a new crafter cannot cut (the simulated hero held 1,913 Diamonds and was still
       Crafting 1). The shop's Supplies now offer ten Amethysts, Topaz or Sapphires for gold, once Crafting

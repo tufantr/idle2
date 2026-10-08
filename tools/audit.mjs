@@ -50,7 +50,7 @@ if (base) {
     out.push('');
     check(data.e1.p90over <= 1.15, `P90 / median of hours to stage 200 is ${fmt(data.e1.p90over, 2)} (at most 1.15)`);
     const firstPrestige = med(base.map(r => r.firstPrestige));
-    check(firstPrestige !== null && firstPrestige <= 1.5, `first prestige at ${fmt(firstPrestige, 2)} h (about an hour)`);
+    check(firstPrestige !== null && firstPrestige <= 1.5, `first prestige at ${fmt(firstPrestige, 2)} h (the one the guide teaches; an hour and a half at most)`);
     // ---------- E2: the bot's own health ----------
     out.push('\n## E2 · bot QA\n');
     const agility = base.map(r => (r.taskHours.agility || 0) / r.hours);

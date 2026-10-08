@@ -7,7 +7,7 @@ import { tickAction, startNodeAction, startSmelting, startSmithing, startCraftin
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
-import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned } from './systems/prestige.js';
+import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue, expireMinigames } from './systems/minigame.js';
@@ -265,6 +265,8 @@ export class Game {
     challengeTitan() { return this._act(() => challengeTitan(this)); }
 
     canPrestige() { return canPrestige(this.state, this.now); }
+    /** The dock's Prestige glows: the first as soon as it may be made, a later one at its wall (systems/prestige.js). */
+    prestigeReady() { return prestigeReady(this.state, this.now); }
     prestigePreview() { return prestigePreview(this); }
     /** Prestige. With `resume`, a hero who was fighting (or resting to fight on) walks straight into the new run's first fight. */
     prestige({ resume = false } = {}) {

@@ -76,9 +76,9 @@ flowchart LR
 **Minute to minute:** one action runs at a time — a skill node, a workshop recipe, or combat
 (starting one stops the other, like Melvor). **Hour to hour:** push a zone for the next tier's drops →
 gather and smelt bars of the metal you wear → reinforce it at the anvil → when a boss stops you, farm
-a dungeon, train a skill, or prestige. **Day to day:** prestige when a run stalls (the first one at the
-first wall after the Prestige place opens, a quarter of an hour in or later, with the guide's hand on it:
-§3.24), spend skill points on perks, challenge the Titan when it wakes, claim banked daily crates,
+a dungeon, train a skill, or prestige. **Day to day:** prestige when a run stalls (the first one, which
+teaches it, a few minutes in, after the stage-20 boss, with the guide's hand on it: §3.24), spend skill
+points on perks, challenge the Titan when it wakes, claim banked daily crates,
 let offline progress run overnight.
 
 ## 3. Systems
@@ -354,8 +354,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
 `src/systems/prestige.js`, `src/data/perks.js`.
 
 - **Available** from stage 10, once the run has lasted **10 minutes** (otherwise a run that starts
-  past stage 10 could be prestiged again at once, forever). Resets: stage (restart at 10% of your
-  all-time best), gold, camp.
+  past stage 10 could be prestiged again at once, forever); the first prestige, which teaches the loop
+  and comes once, need not wait (§3.24). Resets: stage (restart at 10% of your all-time best), gold,
+  camp.
   Keeps: skills and mastery, gear, tools, materials, essence, achievements, tokens, perks, pets,
   dungeon clears and fragments, Titans defeated, the agility course and farming plots.
 - **Tokens** = `floor(((best stage this run − 5) / 5)^1.5)`: 1 at stage 10, 27 at 50, 82 at 100,
@@ -381,8 +382,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   its card). Only while climbing the stage ladder: never while staying on a stage, in a dungeon or at
   the Titan, resting or working. Offline replay runs the same check, and the welcome-back summary
   counts the prestiges. The switch shows when it will go ("in 7m"). With Auto off, the Prestige button
-  glows once a run has stalled that long and may be prestiged (3 minutes in the first run, when the
-  guide's hand points at it: §3.24).
+  glows once a run may be prestiged and has stalled that long (`prestigeReady`); before Auto is earned,
+  three minutes without a new best stage (`BALANCE.prestige.readyStallMs`: an early run's stages come in
+  seconds, so three minutes is a wall), and the first prestige at once (§3.24).
 - **Skill points:** 1 per prestige for a run that reached at least half your all-time best, plus 1
   for every 25 stages of all-time best (each threshold pays once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
   (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
@@ -890,6 +892,14 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   sprite beside their text.
 - **One card per moment.** Places that open together share a card (the first boss opens five), so
   nothing queues up. A card is a button: it goes to the place.
+- **Dialogs on a phone are cards, not screens** (October 2026: the owner found every popup took a phone
+  browser's whole screen; its bars leave a 390 px phone about 660 px). Under 600 px a dialog has less
+  padding and smaller type, a painting is a strip with the title on its foot, Prestige puts what starts
+  over beside what stays, the perks stand three across, the crate's haul two across, and no dialog is
+  taller than 84% of the screen (a longer one scrolls under its buttons, which stay in view). At
+  390 × 664, Prestige covers 73% of the screen (it was taller than the screen), the perks 84%, an About
+  card 81%, the crate about 70%; at 390 × 844, 57%, 68%, 64% and about 55% (92%, 96% and scrolling,
+  96% and 79% before).
 - **The world map** (`src/ui/worldmap.js`) is a painting with the ten zones as pins, opened from
   the zone's name on the scene or the Map button. A pin puts its zone under the map (stages, drops,
   gear tier) with a Travel button; on a phone the pins lose their labels and the zone card names them.
@@ -956,8 +966,9 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   player who taps and in under four minutes for one who watches (the owner found it far too much at
   once). Now a place reached by climbing waits for a breather of attended time since the last one,
   growing from a minute and a half to half an hour (§3.14), and what breaks the wall in front of the
-  hero comes first: one who watches meets Hunting at 1:30, Dungeons at 4:30, Alchemy at 8:30,
-  Prestige at about 14 minutes and the Shop at about 21; one who taps the same. A place earned by work
+  hero comes first, after the loop itself: one who watches meets Hunting at 1:30, Prestige at 4:30
+  (it opens once the stage-20 boss has fallen, first of the places waiting), Dungeons at 8:30, Alchemy
+  at 13:30 and the Shop at about 20; one who taps the same. A place earned by work
   answers within 90 s; the clan and the events wait for the first prestige; a tab left in the
   background opens nothing, and a return opens the one place that waited. `node tools/opening.mjs 60`
   checks it for five players (idle, watcher, tapper, skiller, background) against the caps of the
@@ -976,20 +987,27 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   dialogs and cards (all but the two below), points down from above where there is no room below,
   gives up on the monster after 15 s if the player would rather watch (and comes back for the first
   boss), and shows these only to a hero with no prestige in the first three zones.
-- **The first prestige, by the hand** (October 2026: the owner climbed to stage 41 and combat level 27
-  in a first run with nothing to say that a prestige was the way past the wall). Once the Prestige
-  place is open, a hero who has never prestiged, whose run has gone three minutes without a new best
-  stage (`GUIDE_PRESTIGE_STALL_MS`) and who may prestige now sees the hand on the dock's Prestige, which
-  glows; in the dialog it points at "Prestige now" after three seconds, time to read what is gained and
-  what stays; after it, at the dock's Perks and, in that dialog, at the first perk the skill points buy
-  (`firstPrestigeDue`; the steps `prestige`, `prestige-confirm`, `perks`, `perk-learn`). Once only: a
-  hero who has prestiged sees no Prestige hand, one who has learned a perk no Perks hand. A climb still
-  going is left alone, so a first run lasts until its first wall, however far that is; nothing of the
-  run is lost but its stage and gold, and the tokens grow with the stage reached. Later runs keep the
-  glow on Prestige once a run has stalled as long as Auto would wait, while Auto is off. Measured (`node
-  tools/opening.mjs 60 3`): one who watches prestiges as the place opens, at about 14 minutes and stage
-  30, and stands at stage 40 after an hour (30 without the hand); one who strikes prestiges at 13.5
-  minutes at stage 60 and stands at 79 (60).
+- **The first prestige teaches the loop** (October 2026: the owner climbed to stage 41 and combat
+  level 27 in a first run with nothing to say that a prestige was the way past the wall, then asked that
+  the first prestige come after a short while, for a skill point, to teach prestiging and perks). The
+  Prestige place opens once the stage-20 boss has fallen, first of the places then waiting (4:30 for one
+  who watches or taps), and the first prestige needs no ten-minute run (`prestigeWaitMs`). As it opens,
+  the hand points at the dock's Prestige, which glows (not in a boss fight); in the dialog at "Prestige
+  now" after three seconds, time to read what is gained and what stays; after it, at the dock's Perks
+  and, in that dialog, at the first perk the skill point buys (`firstPrestigeDue`; the steps `prestige`,
+  `prestige-confirm`, `perks`, `perk-learn`). Once only: a hero who has prestiged sees no Prestige hand,
+  one who has learned a perk no Perks hand. At stage 21 to 24 it pays 5 or 6 tokens and one skill point
+  (two from stage 25); the climb back is quick, as ground already cleared is one fight a stage. From then
+  on the button glows at each wall (three minutes without a new best stage, until Auto is earned).
+  Measured (`node tools/opening.mjs 60 9`, players who press what the hand points at and a glowing
+  Prestige): one who watches prestiges at 4.5 minutes at stage 23, again at the stage-30 wall at about
+  21 minutes, and stands at stage 63 after an hour (50 when the first prestige waited for the stage-30
+  wall and fourteen minutes); one who strikes prestiges at 4.5 minutes at stage 46 and stands at 110
+  (100). The simulated all-rounder (`tools/batch.mjs`, 30 seeds, 150 hours), who trains skills between
+  fights so that Prestige comes about half an hour in, prestiges first at 0.54 hours (1.64), reaches
+  stage 100 at 4.5 hours (5.3) and is where it was from stage 150 on (stage 320 at the end, as before).
+  An earlier version (the same day) pointed only once the run had stood three minutes at a wall after a
+  14-minute Prestige place.
 - **The first places last** (October 2026: the owner saw the first three of the map's ten places go by
   in seconds). One kill moves the hero a stage and a place is ten stages, so one who watched crossed
   two places in two minutes, and one who struck five times a second crossed five in a minute: a strike
@@ -1402,6 +1420,7 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | More/less gold | `BALANCE.rewards.goldPerHp`; camp `growth`, `max` | `formulas.js`, `src/data/camp.js` |
 | Stronger prestige | `BALANCE.prestige.token*`; `BASE.tokenAtk`, `recordStages`, `recordMult` | `formulas.js`, `src/core/modifiers.js` |
 | The Auto switch | `BALANCE.prestige.autoAfter`, `autoStallMs` | `formulas.js` |
+| The Prestige button's glow before Auto | `BALANCE.prestige.readyStallMs` | `formulas.js` |
 | Offline length | `BASE.baseOfflineHours`; Endurance perk | `modifiers.js`, `src/data/perks.js` |
 | Active-play weight | `BALANCE.minigame`; `BASE.focus*` | `formulas.js`, `modifiers.js` |
 
@@ -1544,7 +1563,9 @@ each system left out, against a baseline of 30):
 - **`tokenExp` is the strongest knob**, as an exponent is: 15% less takes stage 200 from 57 to 92
   hours. Move it a percent or two at a time (§5.4); every other knob is safe to move.
 - **The first prestige at 1.6 hours** is the bot's patience: Prestige opens at stage 30 in a run ten
-  minutes old, and the bot waits until a run has gone 20 minutes without a new stage.
+  minutes old, and the bot waits until a run has gone 20 minutes without a new stage. (Since the
+  teaching prestige, §3.24, the bot takes the first one as the hand points at it, about half an hour in
+  between its skills, and the rest by its own rule.)
 
 **Crafting's late job: built (October 2026, the owner's choice).** Crafting made the hero's jewellery
 only until epic pieces dropped: crafted jewellery stopped at rare and at Diamond (tier 6), while the

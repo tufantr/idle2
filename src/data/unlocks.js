@@ -6,9 +6,7 @@
 import { EVENT_START_DAY, EVENT_LENGTH_HOURS } from './events.js';
 import { AGILITY_SLOTS } from './agility.js';
 
-const MIN_RUN_MS = 10 * 60 * 1000;   // BALANCE.prestige.minRunMs: a run may be prestiged from then
 const DAY = 24 * 3600 * 1000;
-const runAge = s => (s.meta.lastActiveAt || 0) - (s.prestige.runStartedAt || 0);
 
 /** Is a weekend festival on, or due within a day? (The rotation itself is in systems/events.js.) */
 function festivalNear(now) {
@@ -38,13 +36,16 @@ export const UNLOCKS = [
       progress: s => (heldPreciousBars(s) >= 1 ? 0.95 : Math.min(0.9, s.skills.smithing.xp / 4470)) },   // Smithing 20 smelts silver
     // Places reached by climbing (`pace`) open one at a time, a breather apart (PLACE_GAPS_MS), each when
     // it is of use (docs/research_notes/robust-and-fun/A_onboarding_pacing.md §5.4), and in this order
-    // when several are waiting: what breaks the wall in front of the hero (Dungeons, Alchemy), what
-    // changes the loop (Prestige), the conveniences (the Shop, the Hall), the social and weekly places,
-    // and the long-horizon one (Agility). The clan and the weekend events come after the first prestige.
+    // when several are waiting: the loop itself (Prestige, which a first run meets early to learn it),
+    // what breaks the wall in front of the hero (Dungeons, Alchemy), the conveniences (the Shop, the
+    // Hall), the social and weekly places, and the long-horizon one (Agility). The clan and the weekend
+    // events come after the first prestige.
+    // The first prestige teaches (the owner: a few minutes in, not fourteen): Prestige opens once the
+    // stage-20 boss has fallen, and that first one needs no ten-minute run (systems/prestige.js).
+    { id: 'prestige',     pace: true, hint: 'Beat the Stage 20 boss to unlock Prestige', task: 'Beat the stage 20 boss', tab: 'combat',
+      requires: s => s.combat.bestStage >= 21, progress: s => s.combat.bestStage / 21 },
     { id: 'dungeons',     pace: true, hint: 'Reach Stage 20 to find the first dungeon', task: 'Reach stage 20', tab: 'combat', requires: s => s.combat.bestStage >= 20, progress: s => s.combat.bestStage / 20 },
     { id: 'alchemy',      pace: true, hint: 'Reach Stage 15 to unlock Alchemy', task: 'Reach stage 15', tab: 'combat', requires: s => s.combat.bestStage >= 15, progress: s => s.combat.bestStage / 15 },
-    { id: 'prestige',     pace: true, hint: 'Reach Stage 30 in a run ten minutes old to unlock Prestige: it can be used the moment it opens', task: 'Stage 30, a 10-minute run', tab: 'combat',
-      requires: s => s.combat.bestStage >= 30 && runAge(s) >= MIN_RUN_MS, progress: s => Math.min(s.combat.bestStage / 30, runAge(s) / MIN_RUN_MS) },
     { id: 'shop',         pace: true, hint: 'Beat the Stage 10 boss to unlock the Shop', task: 'Beat the stage 10 boss', tab: 'combat', requires: s => s.combat.bestStage >= 11, progress: s => s.combat.bestStage / 11 },
     { id: 'achievements', pace: true, hint: 'Earn five medals to open the Hall', task: 'Earn five medals', tab: 'combat', requires: s => Object.keys(s.achievements || {}).length >= 5, progress: s => Object.keys(s.achievements || {}).length / 5 },
     { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', task: 'Brew 10 times, or Cooking 15', tab: 'alchemy', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411,

@@ -2,9 +2,9 @@
 // itself, and moves on once it is done. A strike on the monster, the sword the first monster left,
 // the first camp upgrade, the boss's skull on the stage path while the hero regroups after it held out
 // (a tap fights it again at once), and (on the Mining tab, before any skill has been worked) the first vein.
-// Then the first prestige, as Tap Titans 2's tutorial ends by pointing at it: once the first run has
-// stood at its wall a few minutes and a prestige is allowed, the dock's Prestige, the dialog's
-// "Prestige now", and after it the Perks the first skill point buys.
+// Then the first prestige, which teaches the loop (the owner: a few minutes in, for a skill point, not
+// after fourteen minutes at a wall): as soon as Prestige opens (after the stage-20 boss), the dock's
+// Prestige, the dialog's "Prestige now", and after it the Perks the first skill point buys.
 // No words: what is pointed at says what to do (docs/research_notes/first-session.md). Pure: it reads
 // the stats the game keeps anyway, so it has nothing of its own to save; src/ui/guide.js draws it.
 
@@ -21,14 +21,11 @@ export const GUIDE_STRIKES = 3;
 /** A hero still in his first minutes: no prestige yet, in the first three zones. */
 export const newHero = state => !state.prestige?.count && (state.combat?.bestStage || 1) <= 30;
 
-/** How long the first run stands at its wall (no new best stage) before the hand points at Prestige. */
-export const GUIDE_PRESTIGE_STALL_MS = 3 * 60 * 1000;
-
-/** The first prestige is due: never prestiged, the place open, the run stalled at its wall, a prestige allowed now. */
+/** The first prestige is due: never prestiged, the place open, the hero climbing (no boss in front of him), a prestige allowed now. */
 export function firstPrestigeDue(state, now) {
     const c = state.combat;
     return !state.prestige?.count && !state.ascension?.count && isUnlocked(state, 'prestige') && c.mode === 'stages' && !c.farmMode
-        && !state.trials?.active && (c.stallMs || 0) >= GUIDE_PRESTIGE_STALL_MS && canPrestige(state, now);
+        && !(c.active && c.enemy?.boss) && !state.trials?.active && canPrestige(state, now);
 }
 
 /** The first skill point waits for its first perk (after the first prestige). */

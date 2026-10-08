@@ -79,7 +79,10 @@ export const BALANCE = {
         // day never (robust-and-fun/C_sessions_players.md §6).
         autoAfter: 5,
         autoAfterMs: 48 * 3600 * 1000,
-        autoStallMs: 10 * 60 * 1000
+        autoStallMs: 10 * 60 * 1000,
+        // Until Auto is earned the dock's Prestige glows once a run has gone this long without a new best
+        // stage (an early run's stages come in seconds: three minutes is a wall); after, when Auto would go.
+        readyStallMs: 3 * 60 * 1000
     },
     // Deep in the Abyss drops keep pace with the monsters: past `dropScalingFrom`, every depth makes
     // dropped gear `dropGrowth` times stronger (an item level). Monsters grow ~2.26x per depth, so the

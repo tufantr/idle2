@@ -168,9 +168,7 @@ test('prestige converts the run into tokens and skill points, resetting only run
     game.state.resources.iron_bar = 12;
     const atkBefore = game.derived.atk;
     const expected = tokensForStage(40, game.derived.tokenMult);
-    assert.equal(game.prestige(), false, 'a run lasts at least ten minutes');
-    game.now = T0 + 10 * 60 * 1000;
-    assert.ok(game.prestige());
+    assert.ok(game.prestige(), 'the first prestige, which teaches the loop, need not wait');
     assert.equal(game.state.prestige.tokens, expected);
     assert.ok(game.state.prestige.skillPoints >= 2);
     assert.equal(game.state.combat.stage, 4);
@@ -180,6 +178,12 @@ test('prestige converts the run into tokens and skill points, resetting only run
     assert.equal(game.state.resources.iron_bar, 12);
     assert.ok(game.derived.tokenPowerPct > 0);
     assert.ok(atkBefore > 0);
+    // from the second prestige on, a run lasts at least ten minutes
+    game.state.combat.maxStage = 40;
+    assert.equal(game.prestige(), false, 'a run lasts at least ten minutes');
+    game.now = T0 + 10 * 60 * 1000;
+    assert.ok(game.prestige());
+    assert.equal(game.state.prestige.count, 2);
 });
 
 test('prestige tokens grow with stage and are zero below stage 10', () => {

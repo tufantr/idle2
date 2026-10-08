@@ -2574,3 +2574,86 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .trial-card.weekly { border-color: rgba(134, 239, 172, 0.55); box-shadow: 0 0 0 1px rgba(134, 239, 172, 0.25), 0 0 14px rgba(74, 222, 128, 0.18); }
 .trial-week { position: absolute; top: -8px; right: 8px; z-index: 1; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #052e16; background: linear-gradient(180deg, #bbf7d0, #4ade80); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
 .trial-foot small .laurel, .laurel { width: 15px; height: 15px; vertical-align: -3px; color: #86efac; filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.6)); }
+
+/* ===== Dialogs on a phone: compact cards with the game in sight around them =====
+   (the owner: on a phone browser the popups took the whole screen; its bars leave a 390 px phone about
+   660 px). Less padding and smaller type, the painting a strip with the title on it, perks three
+   across, the crate's haul two across; a dialog never taller than most of the screen, its buttons
+   kept in view when it scrolls. */
+@media (max-width: 600px) {
+    .modal-overlay { padding: 0.75rem; }
+    .modal-content { width: 100%; max-width: 380px; max-height: min(84dvh, calc(100dvh - 1.5rem)); padding: 1rem 0.95rem; border-radius: 14px; }
+    .modal-header { margin-bottom: 0.6rem; padding-bottom: 0.45rem; font-size: 1.2rem; }
+    .modal-body { gap: 0.6rem; }
+    .modal-footer { margin-top: 0.85rem; gap: 0.6rem; }
+    .modal-btn { padding: 0.65rem 0.8rem; font-size: 0.95rem; }
+    /* the painting a strip, the title on its foot */
+    .about-card { padding: 0 0 0.95rem; }
+    .about-card > :not(.about-art) { margin-left: 0.95rem; margin-right: 0.95rem; }
+    .about-art { height: 88px; margin-bottom: 0; }
+    .about-card .about-art + .modal-header { position: relative; margin-top: -1.9rem; }
+    .about-card:not(:has(.about-art)) .modal-header { margin-top: 1rem; }
+    .about-blurb { margin-bottom: 0.5rem; font-size: 0.9rem; }
+    .about-points { gap: 0.4rem; font-size: 0.82rem; line-height: 1.4; }
+    /* Prestige */
+    .prestige-modal .modal-body { gap: 0.5rem; }
+    .pg-gain { gap: 0.5rem 0.8rem; padding: 0.6rem 0.75rem; }
+    .pg-get { column-gap: 0.55rem; }
+    .pg-get .coin-dot { width: 28px; height: 28px; }
+    .pg-get b { font-size: 1.3rem; }
+    .pg-get b span { font-size: 0.85rem; }
+    .pg-get small { font-size: 0.7rem; line-height: 1.3; }
+    .pg-rank { gap: 0.7rem; padding-top: 0.45rem; }
+    .pg-rank b { font-size: 1.1rem; }
+    .pg-row { gap: 0.3rem 0.6rem; padding: 0.5rem 0.6rem; }
+    /* what starts over beside what stays (the Trials and Ascension rows keep the whole width) */
+    .prestige-modal .modal-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .prestige-modal .modal-body > :is(.pg-gain, .pg-ascend, .pg-trials) { grid-column: 1 / -1; }
+    .prestige-modal .modal-body > .pg-row { align-content: flex-start; }
+    .pg-get.sp small { display: none; }   /* what skill points are for: the Perks it leads to */
+    .pg-row h4 { font-size: 0.66rem; }
+    .pg-item { font-size: 0.82rem; }
+    .pg-keep { gap: 0.25rem; }
+    .pg-keep-item { width: 32px; height: 32px; }
+    .prestige-modal:has(.pg-trials) .modal-footer { bottom: -0.95rem; margin-bottom: -0.95rem; padding: 0.7rem 0 0.95rem; }
+    /* Perks: three across, each its picture, name, what it does and its button */
+    .perks-modal .about-blurb { margin-bottom: 0.55rem; font-size: 0.85rem; }
+    .purse-rule { display: none; }   /* the rule is in the Shop's "?" card */
+    .perks-modal .shop-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem; }
+    .perks-modal .shop-item { flex-direction: column; align-items: center; justify-content: flex-start; gap: 0.15rem; padding: 0.35rem 0.3rem; text-align: center; }
+    .perks-modal .shop-item:hover { transform: none; }
+    .perks-modal .perk-art { flex: 0 0 auto; width: 36px; height: 36px; }
+    .perks-modal .perk-art .spr { --k: 1 !important; margin: 0; }
+    .perks-modal .shop-item-info { align-items: center; gap: 0.1rem; min-width: 0; }
+    .perks-modal .shop-item-name { font-size: 0.8rem; line-height: 1.2; }
+    .perks-modal .shop-item-name .muted { font-size: 0.64rem; }
+    .perks-modal .shop-item-desc { font-size: 0.66rem; line-height: 1.25; }
+    .perks-modal .shop-btn, .perks-modal .perk-max { width: 100%; min-width: 0; margin-top: auto; padding: 0.3rem 0.2rem; font-size: 0.78rem; }
+    .perks-modal .modal-footer { bottom: -1rem; margin: 0.7rem -0.95rem -1rem; padding: 0.6rem 0.95rem 0.95rem; }
+    /* the daily crate: a smaller chest, the haul two across */
+    .crate-stage { height: 84px; }
+    .crate-box .spr { --k: 2 !important; }
+    .crate-loot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
+    .crate-loot li { min-width: 0; gap: 0.4rem; padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+    .crate-loot li span { width: auto; }
+    .crate-way { margin-top: 0.6rem; }
+    /* welcome back */
+    .wb-story { margin-bottom: 0.6rem; font-size: 0.82rem; }
+    .wb-ready, .wb-skills, .wb-tiles, .wb-used, .wb-finds { margin-bottom: 0.6rem; }
+    .wb-skills, .wb-finds { gap: 0.3rem; }
+    .wb-skill { padding: 0.35rem 0.6rem 0.6rem; }
+    .wb-find { padding: 0.35rem 0.6rem; font-size: 0.82rem; }
+    .wb-away { font-size: 0.95rem; }
+    .wb-gold { margin-bottom: 0.6rem; padding: 0.25rem 0.85rem; font-size: 0.95rem; }
+    .wb-gold b { font-size: 1.05rem; }
+    .wb-gold .spr { --k: 1 !important; }
+    .wb-ready { gap: 0.3rem; }
+    .wb-ready-btn { padding: 0.28rem 0.55rem; font-size: 0.76rem; }
+    .wb-tile { width: 44px; height: 44px; }
+    .wb-tile .spr { --k: 1 !important; margin-top: -8px; }
+    .wb-tile span { font-size: 0.66rem; }
+    .welcome-back .modal-footer { position: sticky; bottom: -1rem; z-index: 3; margin: 0.7rem -0.95rem -1rem; padding: 0.6rem 0.95rem 0.95rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 0.6rem); }
+    /* the title card */
+    .intro { gap: 0.6rem; padding-bottom: 1.1rem; }
+    .intro-scene { height: 160px; }
+}

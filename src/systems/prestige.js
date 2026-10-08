@@ -6,19 +6,33 @@ import { spawnEnemy, leaveCombat, enterCombat } from './combat.js';
 import { resetCamp } from './camp.js';
 import { log, bumpStat } from './progress.js';
 
-/** Milliseconds until this run may be prestiged (0 when it may). */
+/** Milliseconds until this run may be prestiged (0 when it may). The first prestige, which teaches the loop, need not wait. */
 export function prestigeWaitMs(state, now) {
+    if (!state.prestige.count) return 0;
     return Math.max(0, (state.prestige.runStartedAt || 0) + BALANCE.prestige.minRunMs - now);
 }
 
 /** What a prestige would end, so it waits: the Titan fight (the hour's attempt would be lost) or a dungeon run. */
 export const prestigeBlockedBy = state => (state.combat.mode === 'titan' || state.combat.mode === 'dungeon' ? state.combat.mode : null);
 
-// A run must reach stage 10 and last ten minutes. Without the time rule a run that starts past
-// stage 10 (anyone whose best is 100+) could be prestiged again at once, for tokens and a skill point
-// each time, forever.
+// A run must reach stage 10 and, after the first prestige, last ten minutes. Without the time rule a
+// run that starts past stage 10 (anyone whose best is 100+) could be prestiged again at once, for
+// tokens and a skill point each time, forever; the first run starts at stage 1 and comes once.
 export function canPrestige(state, now) {
     return state.combat.maxStage >= BALANCE.prestige.minStage && prestigeWaitMs(state, now) === 0 && !prestigeBlockedBy(state);
+}
+
+/**
+ * A prestige the dock shows as ready (its button glows): allowed now, Auto not on to make it, the hero
+ * climbing the stages; the first prestige as soon as it may be made (the guide's hand points at it then),
+ * a later one once its run has stood at a wall: three minutes without a new best stage until Auto is
+ * earned, then as long as Auto would wait.
+ */
+export function prestigeReady(state, now) {
+    const c = state.combat;
+    const wall = autoPrestigeEarned(state, now) ? BALANCE.prestige.autoStallMs : BALANCE.prestige.readyStallMs;
+    return canPrestige(state, now) && !state.settings.autoPrestige && c.mode === 'stages' && !c.farmMode
+        && (!state.prestige.count || (c.stallMs || 0) >= wall);
 }
 
 /** The per-prestige skill point is for a real run: one that got at least halfway to your best. */
