@@ -21,6 +21,7 @@ import { campPrice } from '../src/systems/camp.js';
 import { seen } from '../src/systems/disclosure.js';
 import { findUpgrade } from '../src/systems/inventory.js';
 import { UNLOCKS } from '../src/data/unlocks.js';
+import { guideStep } from '../src/systems/guide.js';
 
 const minutes = Number(process.argv[2] || 5);
 const seeds = Number(process.argv[3] || 5);
@@ -52,6 +53,7 @@ function play(policy, seed) {
     const first = (key, now) => { if (!(key in firsts)) firsts[key] = Math.round((now - T0) / 100) / 10; };
     const moments = [];
     const unlocks = [];
+    let firstPrestigeStage = null;
     let now = T0;
     for (let i = 0; now < T0 + minutes * 60000; i++) {
         now += 100;
@@ -64,6 +66,11 @@ function play(policy, seed) {
             if (up && game.equipItem(up.item.id)) { first('equip', now); moments.push(now); }
             if (seen(game.state, 'camp')) {
                 for (const u of CAMP_UPGRADES) if (game.state.gold >= campPrice(game.state, u) && game.buyCampUpgrade(u.id, 1)) first('camp', now);
+            }
+            // the guide's first prestige: when the hand points at Prestige, it is pressed (src/systems/guide.js)
+            if (guideStep(game.state, game.derived, { battle: true, tab: 'combat', now }) === 'prestige') {
+                const at = game.state.combat.bestStage;
+                if (game.prestige({ resume: true }) !== false) { first('prestige', now); firstPrestigeStage ??= at; moments.push(now); }   // as the dialog's "Prestige now" does
             }
         }
         for (const ev of game.drainEvents()) {
@@ -86,7 +93,7 @@ function play(policy, seed) {
     let prev = T0;
     for (const m of moments) { gap = Math.max(gap, m - prev); prev = m; }
     gap = Math.max(gap, now - prev);
-    return { firsts, unlocks, best: game.state.combat.bestStage, falls: game.state.stats.deaths, gap: Math.round(gap / 1000) };
+    return { firsts, unlocks, best: game.state.combat.bestStage, falls: game.state.stats.deaths, gap: Math.round(gap / 1000), prestigeStage: firstPrestigeStage };
 }
 
 /** The pacing checks for one run: problems found, as text. */
@@ -121,7 +128,8 @@ for (const policy of ['idle', 'watcher', 'tapper', 'skiller', 'background']) {
     const keys = [...new Set(runs.flatMap(r => Object.keys(r.firsts)))].sort((a, b) => median(runs.map(r => r.firsts[a])) - median(runs.map(r => r.firsts[b])));
     const firsts = keys.map(k => { const have = runs.filter(r => k in r.firsts).length; return `${k} ${median(runs.map(r => r.firsts[k]))}${have < seeds ? ` (${have}/${seeds})` : ''}`; });
     console.log(`${policy.padEnd(10)} ${firsts.join(' · ')}`);
-    console.log(`${''.padEnd(10)} best stage ${median(runs.map(r => r.best))} · falls ${median(runs.map(r => r.falls))} · longest stretch with nothing new ${median(runs.map(r => r.gap))} s`);
+    const prestiged = runs.filter(r => r.prestigeStage !== null);
+    console.log(`${''.padEnd(10)} best stage ${median(runs.map(r => r.best))} · falls ${median(runs.map(r => r.falls))} · longest stretch with nothing new ${median(runs.map(r => r.gap))} s${prestiged.length ? ` · first prestige at stage ${median(prestiged.map(r => r.prestigeStage))} (${prestiged.length}/${runs.length})` : ''}`);
     console.log(`${''.padEnd(10)} places: ${runs[0].unlocks.map(u => `${u.id}@${Math.round(u.at)}`).join(' ') || 'none'} · most in any ten minutes ${median(runs.map(r => mostInTen(r.unlocks.map(u => u.at))))}`);
     const problems = [...new Set(runs.flatMap(r => checks(policy, r)))];
     failed += problems.length;

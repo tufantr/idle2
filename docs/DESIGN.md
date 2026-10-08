@@ -76,8 +76,9 @@ flowchart LR
 **Minute to minute:** one action runs at a time — a skill node, a workshop recipe, or combat
 (starting one stops the other, like Melvor). **Hour to hour:** push a zone for the next tier's drops →
 gather and smelt bars of the metal you wear → reinforce it at the anvil → when a boss stops you, farm
-a dungeon, train a skill, or prestige. **Day to day:** prestige when a run stalls (the first one comes at about an
-hour), spend skill points on perks, challenge the Titan when it wakes, claim banked daily crates,
+a dungeon, train a skill, or prestige. **Day to day:** prestige when a run stalls (the first one at the
+first wall after the Prestige place opens, a quarter of an hour in or later, with the guide's hand on it:
+§3.24), spend skill points on perks, challenge the Titan when it wakes, claim banked daily crates,
 let offline progress run overnight.
 
 ## 3. Systems
@@ -379,7 +380,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   walks straight into the next run's first fight, and a note says what it paid (a new rank still gets
   its card). Only while climbing the stage ladder: never while staying on a stage, in a dungeon or at
   the Titan, resting or working. Offline replay runs the same check, and the welcome-back summary
-  counts the prestiges. The switch shows when it will go ("in 7m").
+  counts the prestiges. The switch shows when it will go ("in 7m"). With Auto off, the Prestige button
+  glows once a run has stalled that long and may be prestiged (3 minutes in the first run, when the
+  guide's hand points at it: §3.24).
 - **Skill points:** 1 per prestige for a run that reached at least half your all-time best, plus 1
   for every 25 stages of all-time best (each threshold pays once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
   (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
@@ -970,9 +973,23 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   then for everyone), and on the Mining tab, before any skill has been worked, the first vein. No
   words. It comes only after a pause in which a player who would do the thing anyway has done it
   (3 s on the monster, 4 s on the camp, about a second elsewhere), never takes a click, hides under
-  dialogs and cards, points down from above where there is no room below, gives up on the monster
-  after 15 s if the player would rather watch (and comes back for the first boss), and only ever
-  shows to a hero with no prestige in the first three zones.
+  dialogs and cards (all but the two below), points down from above where there is no room below,
+  gives up on the monster after 15 s if the player would rather watch (and comes back for the first
+  boss), and shows these only to a hero with no prestige in the first three zones.
+- **The first prestige, by the hand** (October 2026: the owner climbed to stage 41 and combat level 27
+  in a first run with nothing to say that a prestige was the way past the wall). Once the Prestige
+  place is open, a hero who has never prestiged, whose run has gone three minutes without a new best
+  stage (`GUIDE_PRESTIGE_STALL_MS`) and who may prestige now sees the hand on the dock's Prestige, which
+  glows; in the dialog it points at "Prestige now" after three seconds, time to read what is gained and
+  what stays; after it, at the dock's Perks and, in that dialog, at the first perk the skill points buy
+  (`firstPrestigeDue`; the steps `prestige`, `prestige-confirm`, `perks`, `perk-learn`). Once only: a
+  hero who has prestiged sees no Prestige hand, one who has learned a perk no Perks hand. A climb still
+  going is left alone, so a first run lasts until its first wall, however far that is; nothing of the
+  run is lost but its stage and gold, and the tokens grow with the stage reached. Later runs keep the
+  glow on Prestige once a run has stalled as long as Auto would wait, while Auto is off. Measured (`node
+  tools/opening.mjs 60 3`): one who watches prestiges as the place opens, at about 14 minutes and stage
+  30, and stands at stage 40 after an hour (30 without the hand); one who strikes prestiges at 13.5
+  minutes at stage 60 and stands at 79 (60).
 - **The first places last** (October 2026: the owner saw the first three of the map's ten places go by
   in seconds). One kill moves the hero a stage and a place is ten stages, so one who watched crossed
   two places in two minutes, and one who struck five times a second crossed five in a minute: a strike

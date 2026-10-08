@@ -46,7 +46,7 @@ import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
-import { campOnOffer } from '../systems/guide.js';
+import { campOnOffer, GUIDE_PRESTIGE_STALL_MS } from '../systems/guide.js';
 import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
 import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
@@ -573,7 +573,11 @@ function renderLoopActions(game) {
         const autoIn = game.autoPrestigeIn();
         const auto = seen(state, 'auto_prestige')
             ? `<button class="dock-auto${state.settings.autoPrestige ? ' on' : ''}" onclick="FI.setAutoPrestige(${!state.settings.autoPrestige})" aria-pressed="${!!state.settings.autoPrestige}" title="Prestige by itself when a run goes ${BALANCE.prestige.autoStallMs / 60000} minutes without a new best stage">${glyph('away')}<b>Auto</b><span>${state.settings.autoPrestige ? (autoIn === null ? 'on' : `in ${duration(autoIn)}`) : 'off'}</span></button>` : '';
-        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
+        // Ready, on the button itself: the run has stood at its wall a while (3 minutes the first time, as the
+        // guide's hand points then; later Auto's wait), a prestige is allowed, and Auto is not on to do it.
+        const stall = state.prestige.count ? BALANCE.prestige.autoStallMs : GUIDE_PRESTIGE_STALL_MS;
+        const ready = preview.allowed && !state.settings.autoPrestige && c.mode === 'stages' && !c.farmMode && (c.stallMs || 0) >= stall;
+        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige${ready ? ' ready' : ''}" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
     }
     if (seen(state, 'skill_points')) {
         const sp = state.prestige.skillPoints;

@@ -10,7 +10,8 @@ import { enemyForStage, enemyBaseStats, goldForKill, combatXpForKill, BALANCE } 
 import { CAMP_UPGRADES } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
 import { findUpgrade } from '../src/systems/inventory.js';
-import { guideStep, campOnOffer, GUIDE_STRIKES } from '../src/systems/guide.js';
+import { guideStep, campOnOffer, GUIDE_STRIKES, GUIDE_PRESTIGE_STALL_MS } from '../src/systems/guide.js';
+import { PERKS } from '../src/data/perks.js';
 import { seen } from '../src/systems/disclosure.js';
 import { spawnEnemy, onEnemyDeath, onPlayerDeath, packSize } from '../src/systems/combat.js';
 import { xpForLevel } from '../src/core/xp.js';
@@ -302,4 +303,40 @@ test('a fall in the middle of a pack faces it whole again, and a save keeps a pa
     assert.equal(new Game(saved, T0).state.combat.pack, null, 'a pack of another stage');
     saved.combat.pack = 'three';
     assert.equal(new Game(saved, T0).state.combat.pack, null, 'nonsense');
+});
+
+test('the first prestige is guided: at the first wall the hand points at Prestige, then "Prestige now", then the first perk', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const c = s.combat;
+    game.enterCombat();
+    // a first run at its wall: stage 41, the run half an hour old
+    c.stage = c.maxStage = c.bestStage = 41;
+    s.prestige.runStartedAt = T0 - 30 * 60 * 1000;
+    s.stats.strikes = 10;   // the first steps long done
+    s.unlocks.prestige = true;   // the Prestige place has opened (its card came at stage 30, a breather after the last)
+    const view = { battle: true, tab: 'combat', now: T0 };
+    c.stallMs = GUIDE_PRESTIGE_STALL_MS - 1000;
+    assert.notEqual(guideStep(s, game.derived, view), 'prestige', 'not while the run still climbs');
+    c.stallMs = GUIDE_PRESTIGE_STALL_MS;
+    assert.equal(guideStep(s, game.derived, view), 'prestige', 'the run has stood at its wall');
+    assert.equal(guideStep(s, game.derived, { ...view, modal: 'prestige' }), 'prestige-confirm', 'in the dialog: Prestige now');
+    assert.equal(guideStep(s, game.derived, { battle: false, tab: 'mining', now: T0 }), null, 'only where the fight is in sight');
+    c.farmMode = true;
+    assert.notEqual(guideStep(s, game.derived, view), 'prestige', 'not while staying on a stage');
+    c.farmMode = false;
+    s.prestige.runStartedAt = T0 - 60 * 1000;
+    assert.notEqual(guideStep(s, game.derived, view), 'prestige', 'not before a prestige is allowed');
+    s.prestige.runStartedAt = T0 - 30 * 60 * 1000;
+    // the prestige: then the first skill point waits for its first perk
+    game.now = T0;
+    assert.ok(game.prestige() !== false);
+    assert.equal(s.prestige.count, 1);
+    assert.ok(s.prestige.skillPoints > 0);
+    const after = { battle: true, tab: 'combat', now: T0 };
+    assert.equal(guideStep(s, game.derived, after), 'perks');
+    assert.equal(guideStep(s, game.derived, { ...after, modal: 'perks' }), 'perk-learn');
+    assert.equal(guideStep(s, game.derived, { ...after, modal: 'prestige' }), null, 'the second prestige is the player\'s own');
+    game.buyPerk(PERKS[0].id);
+    assert.equal(guideStep(s, game.derived, after), null, 'once a perk is learned, the hand is done');
 });

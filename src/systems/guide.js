@@ -2,6 +2,9 @@
 // itself, and moves on once it is done. A strike on the monster, the sword the first monster left,
 // the first camp upgrade, the boss's skull on the stage path while the hero regroups after it held out
 // (a tap fights it again at once), and (on the Mining tab, before any skill has been worked) the first vein.
+// Then the first prestige, as Tap Titans 2's tutorial ends by pointing at it: once the first run has
+// stood at its wall a few minutes and a prestige is allowed, the dock's Prestige, the dialog's
+// "Prestige now", and after it the Perks the first skill point buys.
 // No words: what is pointed at says what to do (docs/research_notes/first-session.md). Pure: it reads
 // the stats the game keeps anyway, so it has nothing of its own to save; src/ui/guide.js draws it.
 
@@ -9,12 +12,28 @@ import { findUpgrade, gearIsLocked } from './inventory.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
 import { campPrice } from './camp.js';
 import { seen } from './disclosure.js';
+import { canPrestige } from './prestige.js';
+import { isUnlocked } from '../data/unlocks.js';
 
 /** Strikes on a monster before the hand leaves it. */
 export const GUIDE_STRIKES = 3;
 
 /** A hero still in his first minutes: no prestige yet, in the first three zones. */
 export const newHero = state => !state.prestige?.count && (state.combat?.bestStage || 1) <= 30;
+
+/** How long the first run stands at its wall (no new best stage) before the hand points at Prestige. */
+export const GUIDE_PRESTIGE_STALL_MS = 3 * 60 * 1000;
+
+/** The first prestige is due: never prestiged, the place open, the run stalled at its wall, a prestige allowed now. */
+export function firstPrestigeDue(state, now) {
+    const c = state.combat;
+    return !state.prestige?.count && !state.ascension?.count && isUnlocked(state, 'prestige') && c.mode === 'stages' && !c.farmMode
+        && !state.trials?.active && (c.stallMs || 0) >= GUIDE_PRESTIGE_STALL_MS && canPrestige(state, now);
+}
+
+/** The first skill point waits for its first perk (after the first prestige). */
+const firstPerkDue = state => (state.prestige?.count || 0) >= 1 && (state.prestige.skillPoints || 0) > 0
+    && !Object.values(state.perks || {}).some(level => level > 0);
 
 /** The camp upgrades on offer: the Armour Rack once the hero has defence for it to raise. */
 export function campOnOffer(state, derived) {
@@ -23,12 +42,19 @@ export function campOnOffer(state, derived) {
 
 /**
  * What the hand points at now, or null: 'equip' (the dock's Equip), 'camp:<id>' (that camp upgrade),
- * 'retry' (the boss on the stage path, while regrouping), 'strike' (the monster) or 'vein' (the first
- * card on the Mining tab). `view` says what the screen shows: `battle` when the fight is in sight,
- * `tab` the tab open.
+ * 'retry' (the boss on the stage path, while regrouping), 'strike' (the monster), 'vein' (the first
+ * card on the Mining tab), 'prestige' (the dock's Prestige), 'prestige-confirm' (the dialog's "Prestige
+ * now"), 'perks' (the dock's Perks) or 'perk-learn' (a perk in its dialog). `view` says what the screen
+ * shows: `battle` when the fight is in sight, `tab` the tab open, `modal` the dialog open, `now` the time.
  */
-export function guideStep(state, derived, { battle = false, tab = null } = {}) {
-    if (!newHero(state) || state.settings?.devUnlockAll) return null;
+export function guideStep(state, derived, { battle = false, tab = null, modal = null, now = Date.now() } = {}) {
+    if (state.settings?.devUnlockAll) return null;
+    // the first prestige, then its first perk
+    if (modal === 'prestige') return state.prestige?.count ? null : 'prestige-confirm';
+    if (modal === 'perks') return firstPerkDue(state) ? 'perk-learn' : null;
+    if (battle && firstPrestigeDue(state, now)) return 'prestige';
+    if (battle && firstPerkDue(state)) return 'perks';
+    if (!newHero(state)) return null;
     const c = state.combat;
     if (battle && c.active && c.mode === 'stages' && c.enemy) {
         // the first piece of gear: nothing worn yet, and something in the bag to wear

@@ -13,7 +13,10 @@ const TIP = { x: 14, y: 6 };            // the fingertip in the hand's 32 px cel
 const CELL = 32;
 // A step holds this long before the hand comes: long enough that a player who would do it anyway never
 // sees it (hints are for those who need them), short enough that one who doesn't is not left waiting.
-const SHOW_AFTER_MS = { strike: 3000, equip: 1200, camp: 4000, retry: 1500, vein: 2500 };
+const SHOW_AFTER_MS = { strike: 3000, equip: 1200, camp: 4000, retry: 1500, vein: 2500,
+    prestige: 1500, 'prestige-confirm': 3000, perks: 2000, 'perk-learn': 2500 };
+// Steps inside a dialog: the hand stands over the dialog there, where it hides under any other.
+const IN_DIALOG = new Set(['prestige-confirm', 'perk-learn']);
 const STRIKE_PATIENCE_MS = 15000;       // on the monster: then the player is left to watch, until the first boss
 
 // Where each step points: the element, and the spot on it (fractions of its box).
@@ -22,7 +25,11 @@ const TARGETS = {
     equip: () => [document.querySelector('.dock-equip'), 0.5, 0.75],
     vein: () => [document.querySelector('#tab .node-card'), 0.5, 0.45],
     retry: () => [document.querySelector('#scene .stage-path li.boss button'), 0.5, 0.8],
-    camp: id => [document.querySelector(`.camp-token[data-camp="${id}"] .camp-buy`), 0.5, 0.75]
+    camp: id => [document.querySelector(`.camp-token[data-camp="${id}"] .camp-buy`), 0.5, 0.75],
+    prestige: () => [document.querySelector('.dock-prestige'), 0.5, 0.6],
+    'prestige-confirm': () => [document.querySelector('.prestige-modal .btn-confirm'), 0.5, 0.6],
+    perks: () => [document.querySelector('.dock-perks'), 0.5, 0.6],
+    'perk-learn': () => [document.querySelector('.perks-modal .shop-btn:not([disabled])'), 0.5, 0.6]
 };
 
 export function createGuide(parent) {
@@ -51,12 +58,14 @@ export function createGuide(parent) {
             bossBefore = boss;
         },
 
-        /** Every animation frame: keep the hand on its target (`blocked` while a dialog or a card is up). */
-        frame(blocked) {
+        /** Every animation frame: keep the hand on its target (hidden under a dialog, unless it points inside it, and under a card). */
+        frame({ modal = false, card = false } = {}) {
             const now = performance.now();
             const dt = Math.min(250, now - (lastFrame || now));
             lastFrame = now;
-            if (!step || blocked || now - since < (SHOW_AFTER_MS[step.split(':')[0]] ?? 1000)) return hide();
+            const inDialog = !!step && IN_DIALOG.has(step);
+            if (!step || card || (modal && !inDialog) || now - since < (SHOW_AFTER_MS[step.split(':')[0]] ?? 1000)) return hide();
+            hand.classList.toggle('over-dialog', inDialog);
             if (step === 'strike') {
                 if (strikeShown > STRIKE_PATIENCE_MS) return hide();
                 strikeShown += dt;

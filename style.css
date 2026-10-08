@@ -2310,6 +2310,7 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 /* ===== The guide's hand (src/ui/guide.js): a glove on the one thing to do in a new hero's first minutes ===== */
 .guide-hand { position: fixed; left: 0; top: 0; z-index: 90; width: 96px; height: 96px; pointer-events: none; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.7)); will-change: transform; }
 .guide-hand[hidden] { display: none; }
+.guide-hand.over-dialog { z-index: 101; }   /* pointing inside the prestige or perks dialog (src/ui/guide.js) */
 .guide-glove { position: absolute; inset: 0; }
 .guide-hand.down .guide-glove { transform: scaleY(-1); }   /* above its target, finger down */
 .guide-hand .spr { position: relative; animation: guidePress 1.2s ease-in-out infinite; }
@@ -2424,7 +2425,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .run-repeat { font-size: 0.85rem; }
 .dock-prestige, .dock-perks { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.85rem; text-align: left; }
 .dock-prestige span, .dock-perks span { font-size: 0.78rem; font-weight: 400; opacity: 0.92; text-align: right; }
-.dock-perks.ready { border-color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
+.dock-perks.ready, .dock-prestige.ready { border-color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
 /* Prestige, and beside it once earned the Auto switch with when it will go */
 .dock-prestige-row { display: flex; gap: 0.4rem; min-width: 0; }
 .dock-prestige-row .dock-prestige { flex: 1 1 auto; min-width: 0; }

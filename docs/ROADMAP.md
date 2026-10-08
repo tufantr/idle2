@@ -429,6 +429,12 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The first prestige, by the hand** (DESIGN §3.24): the owner's first run went to stage 41 and
+      combat level 27 with nothing to say a prestige was the way past the wall. Now, once the Prestige
+      place is open and the first run has gone three minutes without a new best, the guide's hand points
+      at the dock's Prestige (which glows), then at "Prestige now" in the dialog, then at Perks and the
+      first perk to learn. A climb still going is left alone. One who watches now prestiges at about 14
+      minutes and stands at stage 40 after an hour (30 before); one who taps, 79 (60)
 - [x] **Gem pouches for Crafting** (docs/research_notes/crafting-gems.md): a hero whose fight had gone deep
       found only gems a new crafter cannot cut (the simulated hero held 1,913 Diamonds and was still
       Crafting 1). The shop's Supplies now offer ten Amethysts, Topaz or Sapphires for gold, once Crafting

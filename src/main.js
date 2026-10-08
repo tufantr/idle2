@@ -201,7 +201,7 @@ function frame(now) {
     patchLive(game, ui);
     scene.frame(game);
     stage.frame(game);
-    guide.frame(!!ui.modalOpen || !!document.querySelector('#celebrate .celebration'));
+    guide.frame({ modal: !!ui.modalOpen, card: !!document.querySelector('#celebrate .celebration') });
     paintGold(now);
     requestAnimationFrame(frame);
 }
@@ -429,7 +429,7 @@ function render() {
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
     scene.sync(game, ui);
     stage.sync(game, ui);
-    guide.sync(game, { battle: ui.tab === 'combat', tab: ui.tab });
+    guide.sync(game, { battle: ui.tab === 'combat', tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
     rewards.resume();   // cards held back by a boss fight show once it is over
     paintGold();
     paintBrand();
