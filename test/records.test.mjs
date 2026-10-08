@@ -42,15 +42,15 @@ test('each 25 stages of the best ever, and each unique held, multiply what token
 test('a new record is announced as the stage is reached', () => {
     const game = new Game(null, T0);
     const c = game.state.combat;
-    Object.assign(c, { stage: 49, maxStage: 49, bestStage: 49 });
+    Object.assign(c, { stage: 74, maxStage: 74, bestStage: 74 });   // past the first places' packs (BALANCE.combat.firstPack)
     c.enemy = null;
     game.enterCombat();
     c.enemy.hp = 1;
     let now = T0;
-    while (c.bestStage < 50) { now += 100; game.tick(now); }
+    while (c.bestStage < 75) { now += 100; game.tick(now); }
     const record = game.drainEvents().find(e => e.type === 'record');
-    assert.equal(record?.stage, 50);
-    assert.equal(record.records.count, 2);
+    assert.equal(record?.stage, 75);
+    assert.equal(record.records.count, 3);
 });
 
 /** A veteran fighting at the wall of a run that has lasted `runMin` minutes, its last new best `stallMin` ago. */

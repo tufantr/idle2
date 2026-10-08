@@ -5,44 +5,44 @@
 // reached, and its own light. The scaling, loot and gear depth are the Abyss's as before (data/zones.js
 // zoneForStage); past the last stratum it goes on as the last.
 //
-// `grade` is a CSS filter laid over the Abyss's painting (a purple one: hues turn from there) for the
-// stratum (style.css, --grade), until each has a painting of its own (docs/art/gemini.md). `line` is the one line its card says.
+// Each has its own painting, assets/paint/<id>.webp (the first is the Abyss's; docs/art/gemini.md), behind
+// its fight and on its card. `line` is the one line its card says.
 
 export const STRATUM_STAGES = 25;
 export const STRATA_FROM = 101;
 
 export const STRATA = [
-    { id: 'abyss', name: 'The Abyss', line: 'The edge of the world, falling forever into the dark.', grade: '',
+    { id: 'abyss', name: 'The Abyss', line: 'The edge of the world, falling forever into the dark.',
       monsters: ['Void Stalker', 'Demon', 'Nightmare', 'Abyssal Knight'], boss: 'Abyss Warlord' },
-    { id: 'weeping', name: 'The Weeping Dark', line: 'The lost come here to mourn, and never leave.', grade: 'saturate(0.45) hue-rotate(-40deg) brightness(0.9)',
+    { id: 'weeping', name: 'The Weeping Dark', line: 'The lost come here to mourn, and never leave.',
       monsters: ['Weeping Skull', 'Lost Soul', 'Drowned Soul', 'Flayed Ghost'], boss: 'Dread Lich' },
-    { id: 'bone', name: 'The Bone Reaches', line: 'A plain of bones, and something still walks it.', grade: 'sepia(0.6) saturate(0.6) brightness(1.08)',
+    { id: 'bone', name: 'The Bone Reaches', line: 'A plain of bones, and something still walks it.',
       monsters: ['Curse Skull', 'Revenant', 'Wight', 'Ancient Champion'], boss: 'Bone Dragon' },
-    { id: 'ember', name: 'The Ember Pits', line: 'The rock runs red, and the demons bathe in it.', grade: 'hue-rotate(110deg) saturate(2) brightness(0.95)',
+    { id: 'ember', name: 'The Ember Pits', line: 'The rock runs red, and the demons bathe in it.',
       monsters: ['Hell Hound', 'Hell Hog', 'Sun Demon', 'Smoke Demon'], boss: 'Flame Tyrant' },
-    { id: 'frozen', name: 'The Frozen Void', line: 'Cold enough to freeze a scream mid-air.', grade: 'hue-rotate(-80deg) saturate(1.3) brightness(1.1)',
+    { id: 'frozen', name: 'The Frozen Void', line: 'Cold enough to freeze a scream mid-air.',
       monsters: ['Frost Imp', 'Rime Drake', 'Shard Shrike', 'Frostbound Tome'], boss: 'Ice Dragon' },
-    { id: 'writhing', name: 'The Writhing Maze', line: 'The walls are alive, and hungry.', grade: 'hue-rotate(-150deg) saturate(1.5) brightness(0.9)',
+    { id: 'writhing', name: 'The Writhing Maze', line: 'The walls are alive, and hungry.',
       monsters: ['Twisted Spawn', 'Flesh Cage', 'Unseen Horror', 'Nameless Horror'], boss: 'Tentacled Monstrosity' },
-    { id: 'shadow', name: 'The Shadow Court', line: 'Pale nobles hold court where no light reaches.', grade: 'saturate(1.3) brightness(0.62)',
+    { id: 'shadow', name: 'The Shadow Court', line: 'Pale nobles hold court where no light reaches.',
       monsters: ['Shadow Imp', 'Shadow Puppet', 'Vampire Knight', 'Vampire Mage'], boss: 'Blood Prince' },
-    { id: 'storm', name: 'The Storm Wastes', line: 'Lightning that never stops falling.', grade: 'hue-rotate(-45deg) saturate(1.8) brightness(1.15)',
+    { id: 'storm', name: 'The Storm Wastes', line: 'Lightning that never stops falling.',
       monsters: ['Ball Lightning', 'Spark Wasp', 'Sky Beast', 'Twister'], boss: 'Storm Dragon' },
-    { id: 'starless', name: 'The Starless Sea', line: 'Black water with no shore, and teeth beneath.', grade: 'hue-rotate(-95deg) saturate(1.2) brightness(0.75)',
+    { id: 'starless', name: 'The Starless Sea', line: 'Black water with no shore, and teeth beneath.',
       monsters: ['Electric Eel', 'Abyssal Jellyfish', 'Sludgefish', 'Marrowcuda'], boss: 'Abyssal Hydra' },
-    { id: 'iron', name: 'The Iron Halls', line: 'Forges older than the gods, still burning.', grade: 'saturate(0.2) brightness(1.1) contrast(1.15)',
+    { id: 'iron', name: 'The Iron Halls', line: 'Forges older than the gods, still burning.',
       monsters: ['Iron Mechanist', 'Thunderhulk', 'War Gargoyle', 'Living Armour'], boss: 'Iron Dragon' },
-    { id: 'hollow', name: 'The Hollow Throne', line: 'A crown waits on an empty throne.', grade: 'sepia(0.85) saturate(1.8) brightness(0.85)',
+    { id: 'hollow', name: 'The Hollow Throne', line: 'A crown waits on an empty throne.',
       monsters: ['Ancient Lich', 'Eidolon', 'Bone Warlock', 'Tomb Crawler'], boss: 'Hollow King' },
-    { id: 'choir', name: 'The Burning Choir', line: 'A thousand demons singing one long note.', grade: 'hue-rotate(95deg) saturate(2.4) brightness(0.85)',
+    { id: 'choir', name: 'The Burning Choir', line: 'A thousand demons singing one long note.',
       monsters: ['Cinder Demon', 'Shrieker Demon', 'Chaos Spawn', 'Bell Demon'], boss: 'Choirmaster' },
-    { id: 'glass', name: 'The Glass Garden', line: 'Every stone an eye, and every eye awake.', grade: 'hue-rotate(150deg) saturate(1.6) brightness(1.1)',
+    { id: 'glass', name: 'The Glass Garden', line: 'Every stone an eye, and every eye awake.',
       monsters: ['Glass Eye', 'Golden Eye', 'Shining Eye', 'Eye of Devastation'], boss: 'Great Orb of Eyes' },
-    { id: 'rot', name: 'The Rotting Deep', line: 'Where the drowned dead go to soften.', grade: 'sepia(0.75) hue-rotate(50deg) saturate(1.7) brightness(0.72)',
+    { id: 'rot', name: 'The Rotting Deep', line: 'Where the drowned dead go to soften.',
       monsters: ['Bloated Husk', 'Bog Body', 'Cursed Cob', 'Death Scarab'], boss: 'Stoker' },
-    { id: 'rift', name: 'The Spatial Rift', line: 'Here the world comes apart at its seams.', grade: 'hue-rotate(40deg) saturate(2) brightness(1)',
+    { id: 'rift', name: 'The Spatial Rift', line: 'Here the world comes apart at its seams.',
       monsters: ['Spatial Vortex', 'Planar Tesseract', 'Orb of Entropy', 'Globe of Annihilation'], boss: 'Entropy Weaver' },
-    { id: 'pandemonium', name: 'Pandemonium', line: 'The bottom of everything, and its lords.', grade: 'hue-rotate(60deg) saturate(2.2) brightness(0.7) contrast(1.25)',
+    { id: 'pandemonium', name: 'Pandemonium', line: 'The bottom of everything, and its lords.',
       monsters: ['Rust Devil', 'Sin Beast', 'Spark Demon', 'Night Hag'], boss: 'Pandemonium Lord' }
 ];
 

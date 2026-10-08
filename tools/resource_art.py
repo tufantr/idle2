@@ -1097,6 +1097,12 @@ def build_festival_cloaks(tiles):
     return {f'hero/capes/fest_{event}': to_image(skill_cape(cloak, cloth, FESTIVAL_HEM)) for event, cloth in FESTIVAL_CLOTH.items()}
 
 
+def build_voidstone(tiles):
+    """Crafting's deepest gem, res/voidstone: a DCSS gem darkened to the Abyss's violet (packed after everything else)."""
+    gem = Image.open(f'{tiles}/item/gem/dungeon_found_whole.png').convert('RGBA')
+    return {'res/voidstone': fit(colorize(gem, '#6d28d9', lo=0.8, hi=0.5))}
+
+
 # ---------- the art direction: resource id -> how its cell is made ----------
 
 def build(tiles):

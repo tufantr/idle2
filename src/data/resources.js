@@ -30,6 +30,7 @@ export const RESOURCES = {
     emerald:  R('emerald',  'Emerald',  'gem', 4, '🟢', '#10b981', { power: 10.6 }),
     ruby:     R('ruby',     'Ruby',     'gem', 5, '🔴', '#ef4444', { power: 23.4 }),
     diamond:  R('diamond',  'Diamond',  'gem', 6, '💎', '#e2e8f0', { power: 51.0 }),
+    voidstone: R('voidstone', 'Voidstone', 'gem', 7, '🔮', '#8b5cf6', { power: 112.0, desc: 'Left by the bosses of the deep Abyss' }),
 
     // Logs (woodcutting): cooking fuel, tool handles, bows
     normal_log: R('normal_log', 'Logs',        'log', 1, '🪵', '#a16207'),

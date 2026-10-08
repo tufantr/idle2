@@ -10,6 +10,7 @@ import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan, choosingAfterClear, tickDungeonChoice } from './dungeon.js';
 import { COMBAT_PET_SECONDS } from '../data/pets.js';
+import { VOIDSTONE_DEPTH, VOIDSTONE_CHANCE } from '../data/workshop.js';
 import { eventProgress } from './events.js';
 import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 import { trialBite } from '../data/trials.js';
@@ -19,6 +20,18 @@ import { checkTrial } from './trials.js';
 const FIRST_GILDED_STAGE = 7;
 
 /** Spawn the next enemy for the current mode: the stage ladder, a dungeon run, or the Titan. */
+/**
+ * How many monsters stand on a stage of the ladder (BALANCE.combat.firstPack): a pack on the first trip
+ * through the first places, where the stage was never cleared (it is the best stage), else one. Never in
+ * a Trial, a stay-on-stage farm, a dungeon or before the Titan; a boss stands alone.
+ */
+export function packSize(state, stage = state.combat.stage) {
+    const c = state.combat;
+    const p = BALANCE.combat.firstPack;
+    if (c.mode !== 'stages' || c.farmMode || state.trials?.active || stage < p.from || stage > p.to || isBossStage(stage) || stage < c.bestStage) return 1;
+    return Math.max(1, Math.floor(p.size));
+}
+
 export function spawnEnemy(game) {
     const state = game.state;
     const c = state.combat;
@@ -239,6 +252,11 @@ function rollLoot(game, enemy, payout) {
             add(pickGem(zone), 1);
             bumpStat(game, 'gemsFound');
         }
+        // Crafting's deepest gem: only the Abyss's bosses leave it, from depth VOIDSTONE_DEPTH (data/workshop.js)
+        if (boss && enemy.boss && zone.depth >= VOIDSTONE_DEPTH && rng.chance(VOIDSTONE_CHANCE * d.dropMult)) {
+            add('voidstone', 1);
+            bumpStat(game, 'gemsFound');
+        }
         let essence = 0;
         if (boss) essence = rng.int(r.bossEssence[0], r.bossEssence[1]) * Math.max(1, Math.round(zone.tier / 2));
         else if (rng.chance(r.essenceDropChance * d.dropMult)) essence = rng.int(1, 2);
@@ -357,6 +375,15 @@ export function onEnemyDeath(game) {
     // Beating the boss ends a regroup: you move on (otherwise it could be farmed at its first-fall payout).
     if (enemy.boss) c.regroupLeft = 0;
     if (!c.farmMode && !(c.regroupLeft > 0)) {
+        // a pack on new ground (packSize): its next monster steps up, and the stage holds
+        const killed = (c.pack?.stage === c.stage ? c.pack.killed : 0) + 1;
+        if (killed < packSize(state)) {
+            c.pack = { stage: c.stage, killed };
+            spawnEnemy(game);
+            game.markDirty();
+            return;
+        }
+        c.pack = null;
         c.stage += 1;
         if (c.stage > c.maxStage) { c.maxStage = c.stage; c.stallMs = 0; checkTrial(game); }
         if (c.stage > c.bestStage) {
@@ -400,6 +427,7 @@ export function onPlayerDeath(game) {
     log(game, `💀 You were defeated at stage ${c.stage}. Retreated to stage ${retreatTo}.`, 'death');
     game.emit({ type: 'death', stage: c.stage, mode });
     c.stage = retreatTo;
+    c.pack = null;   // a pack faced again starts whole
     c.regroupLeft = 0;
     c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
     c.combo = 0;

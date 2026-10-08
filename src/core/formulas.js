@@ -93,13 +93,18 @@ export const BALANCE = {
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
         regenResting: 0.02,     // fraction of max HP per second out of combat (full in under a minute)
-        manualHitMult: 0.5,
+        manualHitMult: 0.2,     // a strike: a fifth of an attack (it was half, and a hero who struck crossed six places in two minutes)
         comboDmgPerStack: 0.03,
         comboMax: 30,
         comboDecayAfterMs: 1500,
         deathHpFraction: 0.5,
         retreatStages: 1,
         bossTimeMs: 30000,      // a boss must fall within 30 s of fighting (Clicker Heroes / Tap Titans rule)
+        // The first trip through the first places (the owner, October 2026; docs/DESIGN.md §3.24): a stage
+        // never cleared in stages `from`–`to` holds a pack of `size` monsters (a boss stands alone), so a
+        // place lasts long enough to be met; a stage already cleared is one fight, as ever. The meadow
+        // stays one monster a stage, so the first boss still comes within the first minute.
+        firstPack: { from: 11, to: 50, size: 3 },
         regroupMs: 60000        // after a boss escapes: farm the previous stage for a minute, then retry
     },
     minigame: {

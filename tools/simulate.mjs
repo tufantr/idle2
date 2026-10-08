@@ -30,7 +30,8 @@ import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
 import { FORGE_METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq, anvilMetal } from '../src/data/workshop.js';
 import { anvilCost } from '../src/systems/anvil.js';
-import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS } from '../src/data/items.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
+import { zoneForStage } from '../src/data/zones.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
@@ -310,8 +311,11 @@ function jewelTask() {
     const gemTier = [...GEM_TIERS].reverse().find(g => lvl('crafting') >= g.levelReq && S.resources[g.gem] > 0);
     if (!gemTier) return null;
     const gemRes = RESOURCES[gemTier.gem];
+    // A Voidstone piece is cut to the deepest depth (systems/skilling.js): worth making while a worn piece is shallower.
+    const deep = gemRes.tier >= MAX_GEAR_TIER ? zoneForStage(S.combat.bestStage).depth : 0;
+    const shallow = type => TYPE_SLOTS[type].some(s => (S.equipped[s]?.depth || 0) < deep);
     for (const type of ['Neck', 'Ring', 'Ear']) {
-        if (equippedTier(type) >= gemRes.tier) continue;
+        if (equippedTier(type) >= gemRes.tier && !(deep && shallow(type))) continue;
         const recipe = resolveAction(S, { kind: 'craft', type, bar: bar.bar, gem: gemTier.gem });
         if (lvl('crafting') < recipe.levelReq) continue;
         const t = obtain(bar.bar, 1);

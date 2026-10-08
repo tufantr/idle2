@@ -5,7 +5,7 @@
 // hero/cloaks/<rank cloak>, hero/capes/<skill>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=db43835312', cell: 32, cols: 16, rows: 33 };
+export const ATLAS = { url: 'assets/sprites.png?v=5497511334', cell: 32, cols: 16, rows: 33 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -534,5 +534,6 @@ export const SPRITES = {
     "hero/capes/fest_miners_rush": [11, 32],
     "hero/capes/fest_guild_fair": [12, 32],
     "hero/capes/fest_gold_fever": [13, 32],
-    "hero/capes/fest_lucky_paws": [14, 32]
+    "hero/capes/fest_lucky_paws": [14, 32],
+    "res/voidstone": [15, 32]
 };

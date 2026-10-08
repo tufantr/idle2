@@ -44,7 +44,7 @@ import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
 import { CAPES, capeFor, capeEarned, capesEarned, capeWorn, festivalCloaksOwned } from '../data/capes.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
-import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, DUNGEON_GRADE, EVENT_ART, paintStyle } from './features.js';
+import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
 import { seen } from '../systems/disclosure.js';
 import { campOnOffer } from '../systems/guide.js';
 import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
@@ -541,7 +541,7 @@ export function renderRunChoiceModal(game) {
     if (!d) return '';
     const record = state.dungeons[d.id];
     return `<div class="modal-content narrow about-card run-choice">
-        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}${DUNGEON_GRADE[d.id] ? `;filter:${DUNGEON_GRADE[d.id]}` : ''}" aria-hidden="true"></div>
+        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}" aria-hidden="true"></div>
         <div class="run-choice-head"><span class="run-kicker">Dungeon cleared</span><div class="modal-header">${esc(d.name)}</div></div>
         <div class="run-choice-facts">
             <div class="run-clears">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span></div>
@@ -1456,7 +1456,7 @@ function renderBestiary(game) {
                 ${seen ? `${starRow(s)}<span class="beast-kills">${fmt(k)}${next ? `<i class="beast-next" style="--p:${Math.min(100, (k - (KILL_STARS[s - 1] || 0)) / (next - (KILL_STARS[s - 1] || 0)) * 100).toFixed(1)}%"></i>` : ''}</span>` : ''}
             </div>`;
         }).join('');
-        const art = g.kind === 'zone' ? g.id : g.kind === 'stratum' ? 'abyss' : DUNGEON_ART[g.id] || 'dungeon';
+        const art = g.kind === 'zone' || g.kind === 'stratum' ? g.id : DUNGEON_ART[g.id] || 'dungeon';   // a stratum's id names its painting
         return `<section class="glass-panel bestiary-group${reached ? '' : ' unreached'} ${painted(art, 'center 60%')}">
             <div class="panel-header"><h2>${esc(g.name)}</h2>${reached ? `<span class="beast-sum">${ICON_STAR} ${stars} / ${g.monsters.length * KILL_STARS.length}</span>` : '<span class="muted small">Not reached yet</span>'}</div>
             <div class="beast-grid">${tiles}</div>
@@ -1820,7 +1820,7 @@ export function renderDungeons(game) {
         const unique = UNIQUES[d.unique];
         const { cls: ready, text: verdict } = dungeonVerdict(game, d);
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
-            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}${DUNGEON_GRADE[d.id] ? `;--grade:${DUNGEON_GRADE[d.id]}` : ''}">
+            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}">
                 <span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 2, cls: open ? '' : 'silhouette', fallback: d.icon })}</span>
                 <div class="dungeon-title"><b>${esc(d.name)}</b><span class="small" title="Like stages ${d.stage}–${d.stage + d.monsters.length}; the chest holds tier ${d.chestTier} loot">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span></div>
             </div>

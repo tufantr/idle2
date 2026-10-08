@@ -429,6 +429,23 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A painting for every stratum and the two late dungeons** (the owner's go-ahead): seventeen Gemini
+      paintings in the set's style, so the Abyss's fifteen layers below its first and the Sunken Necropolis
+      and the Hellforge each have their own place behind the fight, on their cards and in the bestiary,
+      instead of a borrowed painting under a colour grade: a hollow of weeping stone trees, a plain of
+      giant bones, stepped lava pits, ice adrift in a black void, living green walls, a gothic throne hall,
+      a storm of violet lightning, a black sea with teal glows, iron halls of gears, a golden tomb palace, a
+      crimson cathedral of burning organ pipes, a garden of glass and watching stones, a drowned bog of
+      shipwrecks, a world in shards, Pandemonium under green hellfire, a flooded city of tombs, a foundry
+      pouring molten metal. Each layer's own particles, and the storm's lightning
+- [x] **The first places last** (DESIGN §3.24): a new player crossed the map's first three places in two
+      minutes, and one who tapped crossed five in a minute. On the first trip through places 2 to 5 each
+      stage now holds a pack of three monsters (pips under the stage fill as they fall; bosses stand alone,
+      cleared ground is one fight), and a tap hits for a fifth of the hero's attack, not half. The first
+      boss still falls within the first minute; a tapper reaches place 3 at about a minute, not 17 seconds
+- [x] **Crafting's late job** (DESIGN §3.4, §5.7): crafted jewellery can roll Epic from Crafting 75 and
+      Legendary at 99, and a new gem, the Voidstone, left now and then by the Abyss's deep bosses, is cut
+      at Crafting 85 into pieces as strong as what drops at the hero's deepest depth
 - [x] **A faster deep Abyss** (the owner's choice; DESIGN §5.6): past stage 400 the monsters grow
       ×1.065 a stage in health and ×1.057 in attack (from ×1.085 and ×1.075), so the late climb keeps
       moving: by hour 1,000 the simulated hero stands at stage 620 with Auto (530 before) and 560 without

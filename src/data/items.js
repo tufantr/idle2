@@ -39,8 +39,13 @@ export const TYPE_ICONS = {
 };
 
 // Rarity = quality multiplier on base stats + number of affixes. `weight` is the crafting roll,
-// which stops at Rare: epic and legendary quality only comes from combat (see DROP_RARITY_WEIGHTS).
+// which stops at Rare for forging; jewellery's rises with Crafting (CRAFT_RARITY_LEVELS): epic from
+// level 75, legendary at 99, at the roll's own odds (about 3% and under 1%, more with the quality bonuses).
+// The fight's jewellery is epic or legendary (JEWEL_DROP_MIN_RANK, DROP_RARITY_WEIGHTS).
 export const CRAFT_MAX_RARITY = 'rare';
+export const CRAFT_RARITY_LEVELS = [[99, 'legendary'], [75, 'epic']];
+/** The best rarity a piece of jewellery can roll at this Crafting level. */
+export const craftMaxRarity = level => CRAFT_RARITY_LEVELS.find(([at]) => level >= at)?.[1] || CRAFT_MAX_RARITY;
 export const RARITIES = [
     { id: 'common',    name: 'Common',    quality: 1.00, affixes: 0, weight: 100, color: '#e2e8f0' },
     { id: 'uncommon',  name: 'Uncommon',  quality: 1.08, affixes: 1, weight: 40,  color: '#22c55e' },

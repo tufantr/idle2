@@ -10,17 +10,22 @@ import { laggingSlot, PITY_LAG } from '../systems/inventory.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
-import { killPayout } from '../systems/combat.js';
+import { killPayout, packSize } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, escapeHtml as esc } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
-import { DUNGEON_ART, DUNGEON_GRADE } from './features.js';
+import { DUNGEON_ART } from './features.js';
 import { activeTrial, nextTrialTarget } from '../systems/trials.js';
 
 // Backdrop per place: zone ids, each dungeon's own painting (DUNGEON_ART) and the Titan (see style.css, .battle[data-scene]).
 const PARTICLES = { meadow: 'motes', forest: 'fireflies', caves: 'sparkles', marsh: 'bubbles', highland: 'rain', ruins: 'bubbles', volcano: 'embers', frost: 'snow', skyreach: 'motes', abyss: 'void', dungeon: 'embers', titan: 'rain',
-    warren: 'embers', depths: 'sparkles', stronghold: 'embers', lair: 'embers', citadel: 'void', maw: 'void' };
+    warren: 'embers', depths: 'sparkles', stronghold: 'embers', lair: 'embers', citadel: 'void', maw: 'void', necropolis: 'bubbles', hellforge: 'embers',
+    // the Abyss's strata (data/strata.js)
+    weeping: 'motes', bone: 'motes', ember: 'embers', frozen: 'snow', writhing: 'fireflies', shadow: 'motes', storm: 'rain', starless: 'bubbles',
+    iron: 'embers', hollow: 'motes', choir: 'embers', glass: 'sparkles', rot: 'fireflies', rift: 'void', pandemonium: 'embers' };
+/** A place's painting: a zone's own, or below the Abyss's first ten stages the stratum's (data/strata.js). */
+const landScene = zone => (zone.depth > 0 ? zone.stratum || 'abyss' : zone.id);
 const PARTICLE_COUNT = 18;
 const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
@@ -270,14 +275,13 @@ export function createScene(root, actions) {
     let sceneDrawn = false;   // the first draw sets the place without fading it in
     let lastTick = 0;         // the boss clock's last second ticked
 
-    // Near a zone's boss, fetch the next land's painting, so stepping into it shows it at once.
+    // A few stages before a new land (a zone, or a stratum of the Abyss), fetch its painting, so stepping
+    // into it shows it at once.
     const preloaded = new Set();
     function preloadNextLand(state) {
         const c = state.combat;
-        const into = (c.stage - 1) % STAGES_PER_ZONE;   // 0 on a zone's first stage, 9 on its boss
-        if (c.mode !== 'stages' || into < STAGES_PER_ZONE - 3) return;
-        const next = zoneForStage(c.stage - into + STAGES_PER_ZONE);
-        const scene = next.depth > 0 ? 'abyss' : next.id;
+        if (c.mode !== 'stages') return;
+        const scene = landScene(zoneForStage(c.stage + 3));
         if (preloaded.has(scene)) return;
         preloaded.add(scene);
         const img = new Image();
@@ -289,8 +293,7 @@ export function createScene(root, actions) {
         const c = state.combat;
         if (c.mode === 'titan') return 'titan';
         if (c.mode === 'dungeon') return DUNGEON_ART[c.dungeon?.id] || 'dungeon';
-        const zone = zoneForStage(c.stage);
-        return zone.depth > 0 ? 'abyss' : zone.id;
+        return landScene(zoneForStage(c.stage));
     }
 
     function currentEnemy(state) {
@@ -324,11 +327,17 @@ export function createScene(root, actions) {
             // The bosses' due (data/items.js PITY_MARKS): a gold ring round the boss fills a mark with each
             // boss at the hero's frontier that left no upgrade; it shows where the marks count.
             const pity = seen(state, 'pity') && laggingSlot(state, zoneForStage(c.stage)).ratio < PITY_LAG ? c.pity || 0 : null;
+            // a pack on new ground (systems/combat.js packSize): pips under the stage, gold for each monster beaten
+            const pack = packSize(state);
+            const beaten = c.pack?.stage === c.stage ? c.pack.killed : 0;
             nodes = Array.from({ length: STAGES_PER_ZONE }, (_, i) => {
                 const s = start + i;
                 const boss = isBossStage(s);
                 const due = boss && pity !== null ? ` · ${pity} of ${PITY_MARKS} marks toward a sure piece of gear` : '';
-                return { label: s, state: s === c.stage ? 'now' : s <= c.maxStage ? 'done' : 'next', boss, go: s !== c.stage && s <= c.maxStage, title: `${boss ? 'Boss · ' : ''}Stage ${s}${due}`, pity: boss && pity !== null ? pity : undefined };
+                const here = s === c.stage && pack > 1;
+                return { label: s, state: s === c.stage ? 'now' : s <= c.maxStage ? 'done' : 'next', boss, go: s !== c.stage && s <= c.maxStage,
+                    title: `${boss ? 'Boss · ' : ''}Stage ${s}${due}${here ? ` · a pack of ${pack}, ${beaten} beaten` : ''}`, pity: boss && pity !== null ? pity : undefined,
+                    pack: here ? [pack, beaten] : undefined };
             });
         }
         const key = JSON.stringify(nodes);
@@ -337,9 +346,10 @@ export function createScene(root, actions) {
         el.path.innerHTML = nodes.map(n => {
             const face = n.portrait || (n.boss ? SKULL : `<span>${n.label}</span>`);
             const ring = n.pity !== undefined ? ` pity" style="--pity:${(n.pity / PITY_MARKS).toFixed(3)}` : '';
+            const pips = n.pack ? `<i class="pack" aria-hidden="true">${Array.from({ length: n.pack[0] }, (_, k) => `<i class="${k < n.pack[1] ? 'on' : k === n.pack[1] ? 'up' : ''}"></i>`).join('')}</i>` : '';
             return `<li class="${n.state}${n.boss ? ' boss' : ''}${n.portrait ? ' portrait' : ''}${ring}">${n.go
                 ? `<button type="button" data-stage="${n.label}" title="Go to ${n.title}" aria-label="Go to ${n.title}">${face}</button>`
-                : `<b title="${n.title}${n.state === 'now' ? ' (here)' : n.state === 'next' ? ' (not reached yet)' : ''}">${face}</b>`}</li>`;
+                : `<b title="${n.title}${n.state === 'now' ? ' (here)' : n.state === 'next' ? ' (not reached yet)' : ''}">${face}</b>`}${pips}</li>`;
         }).join('');
     }
 
@@ -462,9 +472,6 @@ export function createScene(root, actions) {
                 if (arriving) el.battle.querySelector('.battle-sky')?.animate?.([{ opacity: 0, filter: 'brightness(0.3)' }, { opacity: 1, filter: 'none' }], { duration: 700, easing: 'ease-out' });
             }
             sceneDrawn = true;
-            // a stratum of the Abyss wears its own light on the Abyss's painting (data/strata.js; style.css --grade)
-            const grade = c.mode === 'stages' ? zoneForStage(c.stage).grade || '' : c.mode === 'dungeon' ? DUNGEON_GRADE[c.dungeon?.id] || '' : '';
-            if (el.battle.__grade !== grade) { el.battle.__grade = grade; el.battle.style.setProperty('--grade', grade || 'brightness(1)'); }   // (a filter list, never 'none': CSS adds to it)
             if (c.mode === 'dungeon') {
                 const dg = dungeonById(c.dungeon?.id);
                 setMarkup(el.zone, esc(dg ? dg.name : 'Dungeon'));

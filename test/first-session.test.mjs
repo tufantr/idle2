@@ -12,7 +12,7 @@ import { campPrice } from '../src/systems/camp.js';
 import { findUpgrade } from '../src/systems/inventory.js';
 import { guideStep, campOnOffer, GUIDE_STRIKES } from '../src/systems/guide.js';
 import { seen } from '../src/systems/disclosure.js';
-import { spawnEnemy } from '../src/systems/combat.js';
+import { spawnEnemy, onEnemyDeath, onPlayerDeath, packSize } from '../src/systems/combat.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { PLACE_GAPS_MS, WORK_GAP_MS, nextGoals, goalProgress, waitingPlaces } from '../src/data/unlocks.js';
 
@@ -241,4 +241,65 @@ test('only attended time paces the places; a return opens the one waiting, and n
     fight.state.combat.enemy.hp = 1e12;   // a boss that will not fall in time
     fight.tick(T0 + 1000);
     assert.ok(!fight.state.unlocks.hunting, 'not while the boss fight is on');
+});
+
+test('on the first trip through places 2 to 5 a stage holds a pack; the meadow, bosses and cleared ground one monster', () => {
+    const game = new Game(null, T0);
+    const c = game.state.combat;
+    game.enterCombat();
+    const { from, to, size } = BALANCE.combat.firstPack;
+    assert.ok(from > 10 && to >= 50 && size >= 2, 'the meadow stays quick: the first boss comes within the first minute');
+    /** Beats the monster in front of the hero; the stage after it, and how many fell on the way. */
+    const clear = () => { const at = c.stage; let n = 0; while (c.stage === at && n < 10) { c.enemy.hp = 0; onEnemyDeath(game); n += 1; } return n; };
+    c.stage = c.maxStage = c.bestStage = 5;
+    spawnEnemy(game);
+    assert.equal(clear(), 1, 'the meadow: one monster a stage');
+    c.stage = c.maxStage = c.bestStage = from;
+    spawnEnemy(game);
+    assert.equal(packSize(game.state), size);
+    c.enemy.hp = 0; onEnemyDeath(game);
+    assert.deepEqual([c.stage, c.pack?.killed], [from, 1], 'the first of the pack falls and the stage holds');
+    assert.equal(clear(), size - 1, 'the rest of the pack, then on');
+    assert.equal(c.stage, from + 1);
+    // cleared ground is one fight again, after a prestige or a retreat
+    c.stage = from;
+    spawnEnemy(game);
+    assert.equal(packSize(game.state), 1, 'a stage already cleared');
+    assert.equal(clear(), 1);
+    // a boss stands alone, and past the first five places there are no packs
+    c.stage = c.maxStage = c.bestStage = 20;
+    spawnEnemy(game);
+    assert.equal(packSize(game.state), 1, 'a boss stands alone');
+    c.stage = c.maxStage = c.bestStage = to + 1;
+    assert.equal(packSize(game.state), 1, 'past the first places');
+    // nor while farming a stage, nor in a Trial
+    c.stage = c.maxStage = c.bestStage = from + 2;
+    c.farmMode = true;
+    assert.equal(packSize(game.state), 1, 'a stay-on-stage farm');
+    c.farmMode = false;
+    game.state.trials.active = 'brutes';
+    assert.equal(packSize(game.state), 1, 'a Trial');
+    game.state.trials.active = null;
+});
+
+test('a fall in the middle of a pack faces it whole again, and a save keeps a pack only on its own stage', () => {
+    const game = new Game(null, T0);
+    const c = game.state.combat;
+    game.enterCombat();
+    const { from } = BALANCE.combat.firstPack;
+    c.stage = c.maxStage = c.bestStage = from + 1;   // a stage on new ground
+    spawnEnemy(game);
+    c.enemy.hp = 0; onEnemyDeath(game);
+    assert.equal(c.pack?.killed, 1);
+    onPlayerDeath(game);
+    assert.equal(c.pack, null, 'the fall forgets the pack');
+    // a saved pack comes back on its stage, and is dropped anywhere else
+    const saved = JSON.parse(JSON.stringify(game.state));
+    saved.combat.stage = from + 1;
+    saved.combat.pack = { stage: from + 1, killed: 2 };
+    assert.deepEqual(new Game(saved, T0).state.combat.pack, { stage: from + 1, killed: 2 });
+    saved.combat.pack = { stage: from + 5, killed: 1 };
+    assert.equal(new Game(saved, T0).state.combat.pack, null, 'a pack of another stage');
+    saved.combat.pack = 'three';
+    assert.equal(new Game(saved, T0).state.combat.pack, null, 'nonsense');
 });

@@ -50,9 +50,9 @@ of `tools/simulate.mjs` (no game code changed by them):
    moment past hour 500 (it was a week). Every band to hour 1,000 now meets its longest-wait target;
    with Auto the big moments still come less often than asked in hours 300–500 (every 29 hours against
    24) and past hour 500 (every 71 against 48), where only the records and the calendar are left (DESIGN
-   §5.6). **Still to do:** paintings for each
-   stratum and the two new dungeons (the prompts are in `docs/art/gemini.md`), something to reach past
-   stage 500, an end boss, each early Ascension opening something new, a cape for 100%. Crafting's late
-   job stays as it is (the owner's choice; the recommendation is in DESIGN §5.7).
+   §5.6). Each stratum and the two new dungeons now have their own painting, and Crafting a late job
+   (epic and legendary rolls, the Voidstone; DESIGN §5.7, where the bot that never trains Crafting is
+   noted). **Still to do:** something to reach past stage 500, an end boss, each early Ascension opening
+   something new, a cape for 100%.
 6. **Playtest log: done** (Settings, exported for `tools/playtest.mjs`). A short playtest with people is
    the owner's.

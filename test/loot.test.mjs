@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { generateDrop, generateEquipment } from '../src/core/formulas.js';
-import { BAG_SIZE, CRAFT_MAX_RARITY, RARITIES } from '../src/data/items.js';
+import { BAG_SIZE, CRAFT_MAX_RARITY, RARITIES, craftMaxRarity } from '../src/data/items.js';
+import { abyssDropMult } from '../src/core/formulas.js';
+import { resolveAction } from '../src/systems/skilling.js';
+import { onEnemyDeath, spawnEnemy } from '../src/systems/combat.js';
+import { GEM_TIERS, VOIDSTONE_DEPTH } from '../src/data/workshop.js';
 import { addItem, itemScore } from '../src/systems/inventory.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { zoneForStage } from '../src/data/zones.js';
@@ -34,7 +38,7 @@ test('bosses drop better rarities than regular monsters', () => {
     assert.ok(avg(true) > avg(false) + 0.4);
 });
 
-test('crafted gear never rolls above Rare', () => {
+test('forged gear never rolls above Rare', () => {
     const game = new Game(null, T0);
     game.state.resources.copper_bar = 3 * 300;
     game.state.settings.autoSalvage = 'off';
@@ -156,4 +160,68 @@ test('zone gear tiers follow the crafting timeline: never falling, drop-only tie
     assert.equal(zoneForStage(100).gearTier, 4);
     assert.equal(zoneForStage(125).gearTier, 6);
     assert.equal(zoneForStage(145).gearTier, 7);
+});
+
+test('crafted jewellery rolls higher with Crafting: epic from level 75, legendary at 99', () => {
+    assert.equal(craftMaxRarity(74), 'rare');
+    assert.equal(craftMaxRarity(75), 'epic');
+    assert.equal(craftMaxRarity(98), 'epic');
+    assert.equal(craftMaxRarity(99), 'legendary');
+    /** Crafts n rings of ruby in silver at a Crafting level; the rarities made. */
+    const craft = (level, n) => {
+        const game = new Game(null, T0);
+        game.state.skills.crafting.xp = xpForLevel(level);
+        game.state.unlocks.crafting = true;
+        game.state.resources.silver_bar = n;
+        game.state.resources.ruby = n;
+        game.state.settings.autoSalvage = 'off';
+        game.startCrafting('Ring', 'silver_bar', 'ruby');
+        let now = T0;
+        while (game.state.resources.ruby > 0 && now < T0 + n * 10_000) { now += 250; game.tick(now); }
+        const all = [...game.state.inventory, ...Object.values(game.state.equipped).filter(Boolean)].filter(i => i.source === 'crafted');
+        return new Set(all.map(i => i.rarity));
+    };
+    rng.setSource(seededRandom(5));
+    assert.ok(!craft(60, 120).has('epic'), 'below 75 no epic');
+    rng.setSource(seededRandom(5));
+    assert.ok(craft(80, 120).has('epic'), 'from 75 an epic now and then');
+});
+
+test('the Voidstone: only deep bosses leave it, and its pieces are cut to the hero\'s deepest depth', () => {
+    rng.setSource(seededRandom(7));
+    /** Beats n bosses at a stage; the Voidstones found. */
+    const bosses = (stage, n) => {
+        const game = new Game(null, T0);
+        const c = game.state.combat;
+        game.enterCombat();
+        let found = 0;
+        for (let i = 0; i < n; i++) {
+            c.stage = c.maxStage = c.bestStage = stage;
+            game.state.stats.bossKills = 5;   // not the first boss ever
+            spawnEnemy(game);
+            assert.ok(c.enemy.boss);
+            const before = game.state.resources.voidstone;
+            c.enemy.hp = 0;
+            onEnemyDeath(game);
+            found += game.state.resources.voidstone - before;
+        }
+        return found;
+    };
+    const shallow = (VOIDSTONE_DEPTH + 9) * 10;   // the boss of depth VOIDSTONE_DEPTH - 1
+    assert.equal(zoneForStage(shallow).depth, VOIDSTONE_DEPTH - 1);
+    assert.equal(bosses(shallow, 60), 0, 'none above its depth');
+    const deep = (VOIDSTONE_DEPTH + 11) * 10;
+    assert.ok(zoneForStage(deep).depth >= VOIDSTONE_DEPTH);
+    assert.ok(bosses(deep, 60) >= 5, 'a deep boss leaves one now and then');
+    // the recipe opens late, and is cut to the deepest depth reached
+    const game = new Game(null, T0);
+    const s = game.state;
+    assert.equal(GEM_TIERS.at(-1).gem, 'voidstone');
+    s.combat.bestStage = 300;
+    const recipe = resolveAction(s, { kind: 'craft', type: 'Ring', bar: 'gold_bar', gem: 'voidstone' });
+    assert.ok(recipe.levelReq >= 85, 'Crafting 85');
+    const depth = zoneForStage(300).depth;
+    assert.equal(recipe.item.depth, depth);
+    const plain = resolveAction({ ...s, combat: { ...s.combat, bestStage: 1 } }, { kind: 'craft', type: 'Ring', bar: 'gold_bar', gem: 'voidstone' });
+    assert.ok(Math.abs(recipe.item.power / plain.item.power - abyssDropMult(depth)) < 1e-9, 'as strong as what drops there');
 });

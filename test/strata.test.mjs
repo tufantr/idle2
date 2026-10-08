@@ -1,6 +1,7 @@
 // The Abyss's strata (DESIGN §3.7): named layers of 25 stages from stage 101, each with its own monsters,
-// a card when first reached and its own light; the scaling, loot and gear depth stay the Abyss's.
+// a card when first reached and its own painting; the scaling, loot and gear depth stay the Abyss's.
 import { test } from 'node:test';
+import { existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
@@ -47,7 +48,7 @@ test('every stratum has a name, a line, four kinds and a boss of its own, each w
     const names = new Set(ZONES.flatMap(z => [...z.monsters, z.boss]));
     for (const [i, s] of STRATA.entries()) {
         assert.ok(s.name && s.line && s.monsters.length === 4 && s.boss, s.id);
-        assert.equal(typeof s.grade, 'string');
+        assert.ok(existsSync(new URL(`../assets/paint/${s.id}.webp`, import.meta.url)), `a painting for ${s.id}`);
         if (i === 0) continue;   // the first is the Abyss zone's own
         for (const m of [...s.monsters, s.boss]) {
             assert.ok(!names.has(m), `${m} is met once`);

@@ -59,7 +59,7 @@ export function zoneForStage(stage) {
     const depth = index - ZONES.length + 1;
     const abyss = ZONES[ZONES.length - 1];
     const s = stratumForStage(stage);
-    return { ...abyss, name: s.name, stratum: s.id, grade: s.grade, monsters: s.monsters, boss: s.boss, depth, index, gearTier: abyssGearTier(depth) };
+    return { ...abyss, name: s.name, stratum: s.id, monsters: s.monsters, boss: s.boss, depth, index, gearTier: abyssGearTier(depth) };
 }
 
 /** Runite at depths 1–2, Dragonbone at 3–4, Abyssal from 5. */

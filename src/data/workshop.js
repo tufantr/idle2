@@ -95,8 +95,14 @@ export const GEM_TIERS = [
     { gem: 'sapphire', levelReq: 25, xp: 55 },
     { gem: 'emerald',  levelReq: 40, xp: 85 },
     { gem: 'ruby',     levelReq: 55, xp: 130 },
-    { gem: 'diamond',  levelReq: 70, xp: 200 }
+    { gem: 'diamond',  levelReq: 70, xp: 200 },
+    // Crafting's late job (DESIGN §5.7): no mine holds it; the Abyss's bosses leave one now and then from
+    // depth VOIDSTONE_DEPTH, and a Voidstone piece is cut to the hero's deepest depth (systems/skilling.js),
+    // so it keeps pace with what drops there.
+    { gem: 'voidstone', levelReq: 85, xp: 300 }
 ];
+export const VOIDSTONE_DEPTH = 5;
+export const VOIDSTONE_CHANCE = 0.25;   // a boss's first fall
 export const CRAFT_INTERVAL = 3000;
 
 // Tools. Each tier: -TOOL_SPEED_PER_TIER interval and +TOOL_DOUBLE_PER_TIER chance of a double yield.

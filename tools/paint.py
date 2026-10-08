@@ -36,7 +36,11 @@ END = '/* paint:end */'
 # Where each place shows. Battle places are the scene's data-scene values (zones, dungeons, the
 # titan); the skill stages take the first place in their list that has a painting.
 BATTLE = ['meadow', 'forest', 'caves', 'marsh', 'highland', 'ruins', 'volcano', 'frost', 'skyreach', 'abyss', 'dungeon', 'titan',
-          'warren', 'depths', 'stronghold', 'lair', 'citadel', 'maw']  # the last six: one per dungeon (src/ui/features.js, DUNGEON_ART)
+          'warren', 'depths', 'stronghold', 'lair', 'citadel', 'maw',   # one per dungeon (src/ui/features.js, DUNGEON_ART)
+          'necropolis', 'hellforge',
+          # the Abyss's strata below its first (src/data/strata.js; the scene's data-scene is the stratum's id)
+          'weeping', 'bone', 'ember', 'frozen', 'writhing', 'shadow', 'storm', 'starless', 'iron', 'hollow', 'choir', 'glass', 'rot', 'rift',
+          'pandemonium']
 STAGES = {
     'mining': ['caves'], 'woodcutting': ['forest'], 'fishing': ['river'], 'hunting': ['meadow'],
     'cooking': ['camp'], 'firemaking': ['camp'], 'alchemy': ['lab', 'abyss'], 'smithing': ['forge', 'volcano'],
@@ -49,7 +53,7 @@ CARDS = ['market', 'shrine', 'hall', 'festival', 'clanhall', 'farm', 'course', '
 # vault, the perks' library, the settings' study, and the fight's supply table and war table.
 ROOMS = ['guildhall', 'armory', 'chest', 'storeroom', 'vault', 'library', 'study', 'supplies', 'wartable']
 PLACES = BATTLE + ['river', 'camp', 'workshop', 'forge', 'lab'] + CARDS + ROOMS
-LIGHTNING = {'highland', 'titan'}  # their sky keeps the lightning flicker under the slow drift
+LIGHTNING = {'highland', 'titan', 'storm'}  # their sky keeps the lightning flicker under the slow drift
 # How far down the painting the visible band sits (CSS background-position y). The ground the
 # fighters stand on is the bottom quarter of each picture, so the band leans low.
 FOCUS = {'skyreach': 72, 'frost': 76}

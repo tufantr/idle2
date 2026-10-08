@@ -173,7 +173,14 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   jewellery); a gold setting adds 20%. Earrings add +2 and Amulets +4 levels; gold bars need crafting
   30. Silver and gold are jewellery-only metals. (Power used to average the bar and the gem, which
   made a gold-and-amethyst ring a tier-1 item stronger than mithril.)
-- **Crafted gear rolls Common to Rare.** Epic and Legendary come only from combat (§3.5).
+- **Crafted gear rolls Common to Rare**, forged and below Crafting 75 alike. Jewellery's best rises with
+  Crafting (October 2026, §5.7): Epic possible from level 75, Legendary at 99, at the roll's own odds
+  (about 3% and under 1% a piece, more with the quality bonuses; `CRAFT_RARITY_LEVELS` in `src/data/items.js`).
+- **The Voidstone** (tier 7, Crafting 85): no rock holds it. The Abyss's bosses leave one at a quarter of
+  their first falls from depth 5 (stage 141) on (`VOIDSTONE_DEPTH`, `VOIDSTONE_CHANCE` in
+  `src/data/workshop.js`), and a Voidstone piece is cut to the deepest depth the hero has reached: its
+  power grows ×1.45 a depth past 5, like the fight's drops there (`abyssDropMult`), so a crafted piece
+  can stand beside what drops late, and the essence that upgrades jewellery has a piece worth it.
 
 ### 3.5 Equipment
 
@@ -267,9 +274,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   Rotting Deep, the Spatial Rift and Pandemonium (476 on, without end). Each has four monsters and a boss
   of its own from the DCSS tiles (75 new bestiary pages, 168 kinds in all), a card the first time it is
   reached (its line, its boss as a silhouette), its name over the fight and on the world map's Abyss
-  pin, and its own light: a colour grade over the Abyss's painting (`grade`, a CSS filter; the painting
-  is purple, so hues turn from there) until each has a painting of its own. The zone keeps the id
-  `abyss` and everything else the Abyss had: its scaling, loot, depth and gear tiers.
+  pin, and its own painting behind its fight and on its card (`assets/paint/<stratum id>.webp`, painted
+  with Gemini in October 2026; until then each wore a colour grade over the Abyss's). The zone keeps the
+  id `abyss` and everything else the Abyss had: its scaling, loot, depth and gear tiers.
 
 - **Enemy HP** = `25 × 1.075^(s−1)` to stage 100 (×2.06 per zone), then ×1.085 per stage, and past
   stage 400 ×1.065 (`deepFrom`, `deepHpGrowth`: the deep Abyss eased, §5.6).
@@ -469,10 +476,10 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 - **The Sunken Necropolis and the Hellforge** (October 2026; `robust-and-fun/B_longterm_motivation.md`
   §8.2 item 2): two more past the Maw, a drowned city of the dead (twelve undead, the Sunken King) and a
   forge of the damned (twelve constructs, the Obsidian Colossus), from DCSS tiles. Their uniques (Legs
-  and Gloves, the slots no unique had) are records too. Until each has a painting they borrow one under
-  their own light (`DUNGEON_GRADE` in `src/ui/features.js`, a CSS filter as the Abyss's strata wear): the
-  Drowned Ruins, colder and darker, and the Dragon's Lair, hotter; their map pins sit by the drowned
-  ruins' lake and at the volcano's foot. With Auto they open at about 56 and 74 hours of play.
+  and Gloves, the slots no unique had) are records too. Each has its painting (`necropolis`, `hellforge`;
+  they borrowed the Drowned Ruins' and the Dragon's Lair's under a colour grade until October 2026);
+  their map pins sit by the drowned ruins' lake and at the volcano's foot. With Auto they open at about
+  56 and 74 hours of play.
 - **The Abyssal Maw** is the long game's dungeon: it opens at stage 210, about 83 hours into the
   simulator's play at Melvor pace, and its careful player first clears it at about 177: twelve horrors of the deep Abyss and the Devourer. Its unique, the Starless Band, is
   worth its affixes rather than its power, since gear dropped that deep is dozens of times stronger
@@ -961,6 +968,20 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   dialogs and cards, points down from above where there is no room below, gives up on the monster
   after 15 s if the player would rather watch (and comes back for the first boss), and only ever
   shows to a hero with no prestige in the first three zones.
+- **The first places last** (October 2026: the owner saw the first three of the map's ten places go by
+  in seconds). One kill moves the hero a stage and a place is ten stages, so one who watched crossed
+  two places in two minutes, and one who struck five times a second crossed five in a minute: a strike
+  hit for half his attack, up to eight a second, and the combo it builds raises every hit by up to 90%.
+  Now a stage never cleared in places 2 to 5 (stages 11–50) holds a pack of three monsters (a boss stands
+  alone; pips under the stage on the path fill as they fall), and a strike hits for a fifth of his
+  attack (`BALANCE.combat.firstPack`, `manualHitMult`; `packSize` in `src/systems/combat.js`). The meadow
+  stays one monster a stage, so the first boss still falls within the first minute, and ground already
+  cleared is one fight, so a run after a prestige climbs as fast as ever. Tried and dropped: tougher
+  early monsters stalled one who watches at stage 20 and hardly slowed one who strikes, and strikes
+  weaker than a fifth barely mattered, the combo doing the rest. Measured (`node tools/opening.mjs 30
+  3`): one who watches reaches place 2 at 48 s and place 3 at 3.6 minutes (2 before) and meets the
+  stage-30 boss, the wall before the first prestige, at about 9 minutes; one who strikes reaches places
+  2 to 6 at 14 s, 56 s, 2.0, 3.4 and 5.8 minutes (7, 17, 34, 64 and 112 s before).
 - **A visitor early.** A new hero meets his first gilded monster at stage 7 (one in 150 kills, the
   usual chance, is too rare for the first minutes).
 - **Strikes feel like strikes.** The hero swings with each one, a light slash crosses the monster,
@@ -970,7 +991,7 @@ Measured over five seeds (`node tools/opening.mjs`): one who only watches but ta
 gets his sword at 4.5 s and his first camp level at 10.5 s, meets the first boss at 35 s and beats it
 at 48 s, is at stage 30 after five minutes and first falls after about four; a new place opens at
 1:30, 4:30 and 8:30, and something new (a level, a drop, a boss, a place) comes at least every
-56 s. One who strikes beats the first boss in 8 s. The long game is
+56 s. One who strikes beats the first boss in 8 s (14 s since strikes hit for a fifth). The long game is
 unchanged: over seeds 1–4 the 150-hour simulation ends at stage 255 on average (259 before; most of
 the spread is the simulator farming the Void Citadel for hours on some seeds, old code and new alike),
 a little ahead in the first hours.
@@ -1449,10 +1470,10 @@ further, for the owner to choose:
   they were. Also tried: ×1.07 (stage 590 by hour 1,000) and ×1.06 (680, at the edge of running away).
   The leaderboard's allowance was refitted with it (§3.17).
 - **More on the calendar and to reach.** Built so far: the week's Trial with its board, the festival
-  cloaks and the two late dungeons (§3.26, §3.19, §3.11). Still open: an end boss; something to reach
-  past stage 500, which is Pandemonium without end (a layer or a medal every 50 stages would give the
-  faster deep climb somewhere to arrive); and paintings for the strata and the two dungeons (they wear
-  borrowed ones under their own light; the prompts are in `docs/art/gemini.md`).
+  cloaks, the two late dungeons, and a painting for each stratum and both of those dungeons (§3.26,
+  §3.19, §3.11, §3.7). Still open: an end boss, and something to reach past stage 500, which is
+  Pandemonium without end (a layer or a medal every 50 stages would give the faster deep climb somewhere
+  to arrive).
 
 ### 5.7 The report card (October 2026)
 
@@ -1501,15 +1522,17 @@ each system left out, against a baseline of 30):
 - **The first prestige at 1.6 hours** is the bot's patience: Prestige opens at stage 30 in a run ten
   minutes old, and the bot waits until a run has gone 20 minutes without a new stage.
 
-**Kept as it is, by the owner's choice.** Crafting makes the hero's jewellery only until epic pieces
-drop: crafted jewellery stops at rare (`CRAFT_MAX_RARITY`, §3.4) and at Diamond (tier 6), while the
-fight's is epic or legendary up to Voidstone (tier 7), so leaving Crafting alone costs the bot nothing.
-The recommendation, for whenever it is wanted: let the rarity cap rise with Crafting (epic possible from
-level 75, legendary at 99 as a rare roll, both helped by the quality bonuses Crafting already has), and
-add a Voidstone recipe at level 85 with the gem dropped by the Abyss's bosses from depth 5. Crafting then
-makes pieces that can beat drops late, the essence spent upgrading jewellery has something worth it, and
-the late game gains a skill goal; measure it with `tools/batch.mjs` (30 seeds, without crafting against
-with) before keeping it, as the refit was.
+**Crafting's late job: built (October 2026, the owner's choice).** Crafting made the hero's jewellery
+only until epic pieces dropped: crafted jewellery stopped at rare and at Diamond (tier 6), while the
+fight's is epic or legendary up to Voidstone (tier 7), so leaving Crafting alone cost the bot nothing.
+Now its rarity rises with level (epic from 75, legendary at 99) and the Voidstone recipe at 85 is cut to
+the hero's deepest depth (§3.4). Not measured: the simulator's bot never trains Crafting past level 1,
+in 1,000 hours. It trains Mining and Smithing whenever its weapon's metal is out of their reach (most
+of a run), and at a low Crafting level it can cut only the low gems, which it seldom finds (at hour 25
+it held 1,913 Diamonds and 25 Amethysts). A player would meet the same: the gems a high-level hero finds
+are of no use to a new crafter. Two ways on, when wanted: let the bot train Crafting like the other
+skills, and let a low-level crafter work the gems they have (a Diamond below level 70, for little XP),
+or sell the low gems in the shop.
 
 ## 6. Where this differs from the research report
 

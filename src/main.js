@@ -8,7 +8,7 @@ import {
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
-import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, DUNGEON_GRADE, ZONE_LINES, paintStyle } from './ui/features.js';
+import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
@@ -624,11 +624,11 @@ function handleEvents(events) {
                 if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, 2400);
                 break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
-                if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its light on the Abyss's painting, its line
+                if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its painting, its line
                     const s = STRATA.find(x => x.id === ev.zone);
                     if (!s) break;
                     const endless = s === STRATA[STRATA.length - 1];
-                    rewards.celebrate({ key: `zone:${s.id}`, kind: 'unlock', art: `${paintStyle('abyss')};filter:${s.grade || 'none'}`, icon: sprite(`mon/${s.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
+                    rewards.celebrate({ key: `zone:${s.id}`, kind: 'unlock', art: paintStyle(s.id), icon: sprite(`mon/${s.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
                         kicker: 'Deeper into the Abyss', title: s.name, note: s.line, lines: [endless ? `Stages ${ev.stage}+, without end` : `Stages ${ev.stage}–${ev.stage + STRATUM_STAGES - 1}`], ms: 5000 });
                     break;
                 }
@@ -642,7 +642,7 @@ function handleEvents(events) {
             }
             case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting
                 const d = dungeonById(ev.dungeon);
-                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: `${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}${DUNGEON_GRADE[d.id] ? `;filter:${DUNGEON_GRADE[d.id]}` : ''}`, icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
+                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
                     kicker: `${d.name} · ${fmt(ev.clears)} clears`, title: ev.desc, lines: ['Yours for good, through every prestige'] });
                 break;
             }

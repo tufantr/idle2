@@ -3,15 +3,15 @@
 
 import { SKILLS, skillNode } from '../data/skills.js';
 import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
-import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER } from '../data/items.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
 import { RESOURCES, orderedByTier } from '../data/resources.js';
-import { GEM_DROP_TABLE } from '../data/zones.js';
+import { GEM_DROP_TABLE, zoneForStage } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
 import { courseDef } from './agility.js';
 import { eventProgress } from './events.js';
 import { masteryFor, addMasteryXp } from './mastery.js';
 import { forgeKey, jewelKey } from '../data/mastery.js';
-import { generateEquipment } from '../core/formulas.js';
+import { generateEquipment, abyssDropMult } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { withArticle } from '../core/text.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
@@ -63,11 +63,14 @@ function resolveBase(state, action) {
             const gemTier = GEM_TIERS.find(g => g.gem === action.gem);
             if (!jewelBar || !gemTier || !CRAFTING_TYPES.includes(action.type)) return null;
             const gem = RESOURCES[action.gem];
+            // a Voidstone piece is cut to the hero's deepest depth, as strong as what drops there (data/workshop.js)
+            const depth = gem.tier >= MAX_GEAR_TIER ? zoneForStage(state.combat.bestStage).depth : 0;
+            const deep = abyssDropMult(depth);
             return {
                 kind: 'craft', skill: 'crafting', id: `${action.bar}:${action.gem}:${action.type}`, label: `Craft ${gem.name} ${TYPE_NAMES[action.type]}`,
                 levelReq: Math.min(99, Math.max(jewelBar.levelReq, gemTier.levelReq) + (CRAFT_SLOT_OFFSET[action.type] || 0)), interval: CRAFT_INTERVAL, xp: gemTier.xp,
                 consumes: { [action.bar]: 1, [action.gem]: 1 },
-                item: { type: action.type, tier: gem.tier, power: gem.power * JEWEL_POWER * jewelBar.powerMult, materialName: jewelBar.name, gemName: gem.name },
+                item: { type: action.type, tier: gem.tier, power: gem.power * JEWEL_POWER * jewelBar.powerMult * deep, materialName: jewelBar.name, gemName: gem.name, ...(deep > 1 ? { depth } : {}) },
                 masteryKey: jewelKey(action.gem)
             };
         }
@@ -249,7 +252,9 @@ export function completeAction(game, def, { offline = false } = {}) {
         }
         if (!offline && amount === 2) game.emit({ type: 'doubleDrop', resource: def.output });
     } else if (def.kind === 'smith' || def.kind === 'craft') {
-        const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, maxRarity: CRAFT_MAX_RARITY, materials: def.consumes, source: 'crafted' }, state.idCounter++);
+        const maxRarity = def.kind === 'craft' ? craftMaxRarity(skillLevel(state, 'crafting')) : CRAFT_MAX_RARITY;   // jewellery's rises with Crafting
+        const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, maxRarity, materials: def.consumes, source: 'crafted' }, state.idCounter++);
+        if (def.item.depth) item.depth = def.item.depth;
         addItem(game, item);
         bumpStat(game, 'itemsCrafted');
         made = { item };

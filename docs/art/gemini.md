@@ -207,11 +207,15 @@ Back to the backdrop set: same style and rules as the place backdrops (side view
 ## The Abyss's strata and the two late dungeons
 
 Below its first stage the Abyss is sixteen strata of 25 stages each (`src/data/strata.js`), and two
-dungeons open late (the Sunken Necropolis at stage 240, the Hellforge at 275). Until each has a
-painting of its own they borrow one under a colour grade (the strata the Abyss's, the dungeons the
-Drowned Ruins' and the Dragon's Lair's). The first stratum is the Abyss itself; these seventeen are
-the rest. Send them in the same chat, after the Abyssal Maw, save each under the name shown in
-`art/strata/`, and import with `python3 tools/paint.py art/strata --trim 0`. Each stratum's colours
+dungeons open late (the Sunken Necropolis at stage 240, the Hellforge at 275). The first stratum is the
+Abyss itself; these seventeen are the rest, painted on 8 October 2026 in the same chat, after the
+Abyssal Maw (until then they borrowed paintings under a colour grade). Each was saved under the name
+shown in `art/strata/` and imported with `python3 tools/paint.py art/strata --trim 0`; the scene shows
+a stratum's painting by its id (`landScene` in `src/ui/scene.js`). Two needed a nudge: the Spatial
+Rift's first floor was a thin slab with a crumbling underside, and "make the pale stone floor fill the
+whole bottom quarter of the picture right down to the bottom edge, a thick flat floor like the ground in
+the other places with no crumbling underside showing, and keep everything above it the same" fixed it;
+the prompt after a fix like that should say it is "a fresh picture, not a change to the last one". Each stratum's colours
 follow its grade, so the set reads as a descent; the reds (the Ember Pits, the Burning Choir,
 Pandemonium, the Hellforge) are told apart by their light: orange lava, white-gold flame, green
 hellfire, molten metal.
@@ -491,7 +495,8 @@ Add this to `assets/CREDITS.md` once paintings are in:
 
 Where each picture shows:
 
-- **Battle:** the ten zones, the dungeons (the hall, the caves and the volcano) and the Titan.
+- **Battle:** the ten zones, the Abyss's strata, the dungeons (each its own painting, or the hall) and
+  the Titan.
 - **Skill stages:**
 
   | Skill | Place |

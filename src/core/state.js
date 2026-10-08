@@ -57,7 +57,8 @@ export function createDefaultState(now = Date.now()) {
             dungeon: null,     // { id, index } while in a dungeon run
             recovering: false, // fallen: resting to full health, then back into the fight by himself
             pity: 0,           // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
-            stallMs: 0         // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
+            stallMs: 0,        // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
+            pack: null         // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
@@ -408,6 +409,9 @@ function normalise(data, now) {
     state.combat.combo = 0;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
+    const pack = state.combat.pack;
+    state.combat.pack = isPlainObject(pack) && Math.floor(Number(pack.stage)) === state.combat.stage && Number(pack.killed) >= 1
+        ? { stage: state.combat.stage, killed: Math.min(9, Math.floor(Number(pack.killed))) } : null;
     delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.settings.playtestLog = state.settings.playtestLog === true;

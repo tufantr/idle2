@@ -800,9 +800,9 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
     background: var(--panel-2);
     border-bottom: 1px solid var(--line);
 }
-/* the painting in a layer of its own, so a borrowed one can wear its dungeon's light (--grade) */
+/* the painting in a layer of its own */
 .dungeon-art::before, .dungeon-art::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
-.dungeon-art::before { z-index: -2; background: var(--art, none) var(--art-at, center) / cover no-repeat; filter: var(--grade, none); }
+.dungeon-art::before { z-index: -2; background: var(--art, none) var(--art-at, center) / cover no-repeat; }
 .dungeon-art::after { z-index: -1; background: linear-gradient(180deg, rgba(12, 8, 5, 0) 25%, rgba(12, 8, 5, 0.92)); }
 .dungeon-card.locked .dungeon-art { filter: grayscale(0.75) brightness(0.65); }
 .dungeon-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding-bottom: 0.2rem; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
@@ -1289,6 +1289,11 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path .next.boss b { background: rgba(60, 10, 10, 0.9); }
 .stage-path .now.boss b { background: radial-gradient(circle, #f87171, #7f1d1d); animation-name: bossNodePulse; }
 .battle.regroup .stage-path .boss button { background: radial-gradient(circle, #f87171, #7f1d1d); animation: bossNodePulse 1.3s ease-in-out infinite; }   /* while regrouping, the boss waits a tap away */
+/* a pack on new ground (src/ui/scene.js): a pip under the stage for each of its monsters, gold once beaten */
+.stage-path .pack { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); display: flex; gap: 3px; pointer-events: none; }
+.stage-path .pack i { width: 5px; height: 5px; border-radius: 50%; background: rgba(214, 170, 92, 0.3); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+.stage-path .pack i.on { background: #fbbf24; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 4px rgba(251, 191, 36, 0.8); }
+.stage-path .pack i.up { background: #fde68a; }
 /* a dungeon run: each room a round portrait of who waits there */
 .stage-path .portrait b { width: 28px; min-width: 28px; height: 28px; padding: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #2a2016, #0c0906 75%); }
 .stage-path .portrait.now b { width: 32px; min-width: 32px; height: 32px; background: radial-gradient(circle at 50% 40%, #6b4a17, #1a1205 75%); }
@@ -1814,9 +1819,9 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
    A place with a painting shows it whole, drifting slowly, in place of the layers above. */
 /* paint:begin: written by tools/paint.py from assets/paint/; run it again instead of editing here. */
 @keyframes paintDrift { from { transform: scale(1.06) translateX(-1.3%); } to { transform: scale(1.06) translateX(1.3%); } }
-.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"]) .battle-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 46s ease-in-out infinite alternate; }
-.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"]) .battle-far, .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"]) .battle-near { display: none; }
-.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"])::before { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
+.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"], [data-scene="necropolis"], [data-scene="hellforge"], [data-scene="weeping"], [data-scene="bone"], [data-scene="ember"], [data-scene="frozen"], [data-scene="writhing"], [data-scene="shadow"], [data-scene="storm"], [data-scene="starless"], [data-scene="iron"], [data-scene="hollow"], [data-scene="choir"], [data-scene="glass"], [data-scene="rot"], [data-scene="rift"], [data-scene="pandemonium"]) .battle-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 46s ease-in-out infinite alternate; }
+.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"], [data-scene="necropolis"], [data-scene="hellforge"], [data-scene="weeping"], [data-scene="bone"], [data-scene="ember"], [data-scene="frozen"], [data-scene="writhing"], [data-scene="shadow"], [data-scene="storm"], [data-scene="starless"], [data-scene="iron"], [data-scene="hollow"], [data-scene="choir"], [data-scene="glass"], [data-scene="rot"], [data-scene="rift"], [data-scene="pandemonium"]) .battle-far, .battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"], [data-scene="necropolis"], [data-scene="hellforge"], [data-scene="weeping"], [data-scene="bone"], [data-scene="ember"], [data-scene="frozen"], [data-scene="writhing"], [data-scene="shadow"], [data-scene="storm"], [data-scene="starless"], [data-scene="iron"], [data-scene="hollow"], [data-scene="choir"], [data-scene="glass"], [data-scene="rot"], [data-scene="rift"], [data-scene="pandemonium"]) .battle-near { display: none; }
+.battle:is([data-scene="meadow"], [data-scene="forest"], [data-scene="caves"], [data-scene="marsh"], [data-scene="highland"], [data-scene="ruins"], [data-scene="volcano"], [data-scene="frost"], [data-scene="skyreach"], [data-scene="abyss"], [data-scene="dungeon"], [data-scene="titan"], [data-scene="warren"], [data-scene="depths"], [data-scene="stronghold"], [data-scene="lair"], [data-scene="citadel"], [data-scene="maw"], [data-scene="necropolis"], [data-scene="hellforge"], [data-scene="weeping"], [data-scene="bone"], [data-scene="ember"], [data-scene="frozen"], [data-scene="writhing"], [data-scene="shadow"], [data-scene="storm"], [data-scene="starless"], [data-scene="iron"], [data-scene="hollow"], [data-scene="choir"], [data-scene="glass"], [data-scene="rot"], [data-scene="rift"], [data-scene="pandemonium"])::before { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
 .battle[data-scene="meadow"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/meadow.webp); }
 .battle[data-scene="forest"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/forest.webp); }
 .battle[data-scene="caves"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/caves.webp); }
@@ -1835,6 +1840,23 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .battle[data-scene="lair"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/lair.webp); }
 .battle[data-scene="citadel"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/citadel.webp); }
 .battle[data-scene="maw"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/maw.webp); }
+.battle[data-scene="necropolis"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/necropolis.webp); }
+.battle[data-scene="hellforge"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/hellforge.webp); }
+.battle[data-scene="weeping"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/weeping.webp); }
+.battle[data-scene="bone"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/bone.webp); }
+.battle[data-scene="ember"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/ember.webp); }
+.battle[data-scene="frozen"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/frozen.webp); }
+.battle[data-scene="writhing"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/writhing.webp); }
+.battle[data-scene="shadow"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/shadow.webp); }
+.battle[data-scene="storm"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/storm.webp); animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate; }
+.battle[data-scene="starless"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/starless.webp); }
+.battle[data-scene="iron"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/iron.webp); }
+.battle[data-scene="hollow"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/hollow.webp); }
+.battle[data-scene="choir"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/choir.webp); }
+.battle[data-scene="glass"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/glass.webp); }
+.battle[data-scene="rot"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/rot.webp); }
+.battle[data-scene="rift"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/rift.webp); }
+.battle[data-scene="pandemonium"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/pandemonium.webp); }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 50s ease-in-out infinite alternate; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-far { display: none; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-ground { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
@@ -2543,9 +2565,9 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .done-count { font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* The Abyss's strata (src/data/strata.js): each its own light over the Abyss's painting, until each has one */
-.battle[data-scene] .battle-sky { filter: var(--grade, brightness(1)); transition: filter 1.2s ease; }
-.battle.boss-fight[data-scene] .battle-sky { filter: var(--grade, brightness(1)) brightness(0.78) saturate(1.15) contrast(1.06); }
-.battle.idle[data-scene] .battle-sky { filter: var(--grade, brightness(1)) saturate(0.55) brightness(0.78); }
+.battle[data-scene] .battle-sky { filter: brightness(1); transition: filter 1.2s ease; }
+.battle.boss-fight[data-scene] .battle-sky { filter: brightness(0.78) saturate(1.15) contrast(1.06); }
+.battle.idle[data-scene] .battle-sky { filter: saturate(0.55) brightness(0.78); }
 
 /* The week's Trial (src/data/trials.js weeklyTrialAt): a ribbon on its card, its laurel goal in the foot */
 .trial-card.weekly { border-color: rgba(134, 239, 172, 0.55); box-shadow: 0 0 0 1px rgba(134, 239, 172, 0.25), 0 0 14px rgba(74, 222, 128, 0.18); }
