@@ -10,6 +10,9 @@ synthesized sound; it plays on a phone too. Optional accounts add cloud saves, c
 and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
 Postgres API.
 
+**Play:** [fantasy-idle.vercel.app](https://fantasy-idle.vercel.app) (cloud saves, clans and leaderboards wait
+for the database; see [Deploy](#deploy)).
+
 **Docs:** [Game design](docs/DESIGN.md) · [Roadmap](docs/ROADMAP.md) ·
 [Research report](docs/reports/Fantasy%20Idle%20game%20design%20research.md) · [Research notes](docs/research_notes/)
 
@@ -47,6 +50,20 @@ save. It needs Node 20.19+ or 22+.
 | `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss and board; attack (3 a day, damage computed on the server); the owner removes a member |
 | `GET /api/rewards`, `POST /api/rewards/claim` | clan rewards, claimed once |
 | `POST /api/leaderboard/consent`, `GET /api/leaderboard` | opt in or out; boards by best stage, total level, Titans or dungeon clears |
+
+## Deploy
+
+The live game is the Vercel project `fantasy-idle` (team "skinbaba1-3986's projects"), production at
+https://fantasy-idle.vercel.app. It is not connected to Git: a deploy uploads exactly what is committed on
+the branch, never `art/`, `runs/` or `shots/`:
+
+```bash
+rm -rf /tmp/fi-deploy && mkdir /tmp/fi-deploy && git archive claude/intelligent-einstein-y5i5iq | tar -x -C /tmp/fi-deploy
+cd /tmp/fi-deploy && npx vercel link --yes --project fantasy-idle --scope skinbaba1-3986s-projects && npx vercel deploy --prod --yes
+```
+
+Without `POSTGRES_URL` and `JWT_SECRET` (above) the API answers "Database unavailable" and the game
+plays as a guest with its save in the browser.
 
 ## Tests and balance tools
 
