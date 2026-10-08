@@ -15,9 +15,9 @@ The small bonuses add up: all {{ACHIEVEMENTS.length}} medals together give +{{pc
 ## Kinds of medals
 
 The Hall shows each medal with a bar of your progress toward it. Roughly, they are for:
-- **Fighting:** monsters defeated, bosses and stages reached, gilded monsters, [[Dungeons|dungeon]] clears and [[The Titan|Titans]].
+- **Fighting:** monsters defeated, bosses and stages reached, [[Monsters|gilded monsters]], [[Dungeons|dungeon]] clears and [[The Titan|Titans]].
 - **The bestiary:** stars for defeating each kind of monster many times (see [[Monsters]]).
-- **Skills:** level {{[...new Set(ACHIEVEMENTS.filter(a => a.req.type === 'skillLevel').map(a => a.req.level))].sort((x, y) => x - y).join(', ').replace(/, (?=[^,]*$)/, ' or ')}} in a skill, a first level {{MAX_LEVEL}}, and [[Mastery|mastery]] levels.
+- **Skills:** level {{[...new Set(ACHIEVEMENTS.filter(a => a.req.type === 'skillLevel').map(a => a.req.level))].sort((x, y) => x - y).join(', ').replace(/, (?=[^,]*$)/, ' or ')}} in a [[Skills|skill]], a first level {{MAX_LEVEL}}, and [[Mastery|mastery]] levels.
 - **Collecting:** a [[Pets|pet]], a [[Unique items|unique item]], a legendary piece worn, and pages of the gear codex.
 - **The long game:** deep stages, prestiges, an Ascension and [[Trials|Trial]] tiers.
 

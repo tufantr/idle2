@@ -11,7 +11,7 @@
 //   SKILLS, RESOURCES, ZONES, STRATA, DUNGEONS, UNIQUES, PERKS, GOLD_SHOP, PETS, ACHIEVEMENTS, CAPES, RANKS,
 //   TRIALS, EVENTS, EVENT_MILESTONES, EVENT_SHOP, CROPS, FARMING_PLOTS, AGILITY_SLOTS, CAMP_UPGRADES, LOOKS,
 //   METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, GEAR_TIERS, RARITIES, AFFIXES, TIER_WEAR_LEVEL,
-//   PLACE_GAPS_MS, UNLOCKS, and every other constant those data files export (by its own name)
+//   PLACE_GAPS_MS, UNLOCKS, GEM_FIND_CHANCE, BAIT_EXTRA_CHANCE, and every other constant those files export
 //   fmt(n), pct(x, digits), time(ms), res(id, { qty }), icon(key, scale), link(href, text, iconKey),
 //   table(head, rows), callout(kind, html), path.item(id) and the other path helpers   wiki/lib/ui.mjs
 
@@ -42,13 +42,14 @@ import * as bestiary from '../../src/data/bestiary.js';
 import * as unlocks from '../../src/data/unlocks.js';
 import * as pace from '../../src/data/pace.js';
 import * as daily from '../../src/systems/daily.js';
+import * as skilling from '../../src/systems/skilling.js';
 import * as ui from './ui.mjs';
 
 // later modules win a clash of names, so the data files' own names come last
 export const scope = Object.freeze({
     ...ui, ...xp, ...formulas, ...modifiers, ...pace, ...resources, ...skills, ...workshop, ...items, ...zones, ...strata,
     ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...ascension, ...events,
-    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily,
+    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...skilling,
     // two names clash (bestiary's and ascension's starsFor): both kept, by what they count
     bestiaryStarsFor: bestiary.starsFor, ascensionStarsFor: ascension.starsFor, starsFor: undefined
 });

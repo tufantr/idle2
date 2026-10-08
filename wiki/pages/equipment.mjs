@@ -86,7 +86,7 @@ function overviewPage(help) {
             help.prose('/equipment'),
             section('Gear tiers', tiers),
             section('Pieces and slots', `<p>A piece's attack and defence are ${STAT_UNIT} × its tier's power × its rarity's quality × its weights below (jewellery at ${pct(JEWEL_POWER, 0)} of the power). Each level of reinforcing or upgrading adds ${pct(UPGRADE_STEP, 0)} of the piece's own figures.</p>${slots}`),
-            section('Rarities', `<p>A rarer piece is a little stronger and carries more bonuses. Epic and legendary drops grow likelier in richer lands (up to ×${scale.toFixed(1)}).</p>${rarities}`),
+            section('Rarities', `<p>A rarer piece is a little stronger and carries more bonuses. Epic and legendary drops grow likelier where the gear that drops is of a higher tier (up to ×${scale.toFixed(1)} for Abyssal).</p>${rarities}`),
             section('Bonuses', `<p>Each bonus rolls once, in its range, a little higher on better tiers.</p>${affixes}`),
             section('What drops', `<p>A regular monster leaves a piece ${pct(GEAR_DROP_CHANCE.regular, 1)} of the time and a boss on its first fall half the time. The piece is mostly of the land's own tier (sometimes one below or above), and its kind leans to what you lack: a slot you have empty is ${DROP_EMPTY_SLOT_MULT} times as likely, one behind the land's tier twice. Jewellery from the fight is only epic or legendary. A boss whose fall leaves no upgrade marks the gold ring round its node; the ${PITY_MARKS}th mark brings a sure piece for your weakest slot.</p>${kindRows}`),
             section('Upgrades and salvage', `<ul>
@@ -102,7 +102,7 @@ function jewelleryPage(help) {
     const rows = GEM_TIERS.map(g => {
         const gem = RESOURCES[g.gem];
         const p = gem.power * JEWEL_POWER;
-        return [res(g.gem), gem.tier, ...CRAFTING_TYPES.map(t => Math.min(99, g.levelReq + CRAFT_SLOT_OFFSET[t])), `${stat('Neck', p, 1, 'atk')} / ${stat('Neck', p, 1, 'def')}`, `${stat('Ring', p, 1, 'atk')} / ${stat('Ring', p, 1, 'def')}`];
+        return [res(g.gem), gem.tier, ...['Ring', 'Ear', 'Neck'].map(t => Math.min(99, g.levelReq + CRAFT_SLOT_OFFSET[t])), `${stat('Neck', p, 1, 'atk')} / ${stat('Neck', p, 1, 'def')}`, `${stat('Ring', p, 1, 'atk')} / ${stat('Ring', p, 1, 'def')}`];
     });
     const best = [[1, CRAFT_MAX_RARITY], ...[...CRAFT_RARITY_LEVELS].reverse()].map(([lv, r]) => `from Crafting ${lv}: ${RARITIES.find(x => x.id === r).name.toLowerCase()}`).join('; ');
     return {

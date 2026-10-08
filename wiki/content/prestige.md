@@ -11,11 +11,11 @@ A prestige ends your run and trades it for power that lasts. Your hero goes back
 - **Every later prestige** needs a run that has reached stage {{BALANCE.prestige.minStage}} and lasted at least {{BALANCE.prestige.minRunMs / 60000}} minutes. Until then the button says how long is left.
 - A prestige waits while a [[The Titan|Titan]] fight or a [[Dungeons|dungeon]] run is under way, since it would end it. The button says "after the Titan fight" or "after the dungeon run".
 
-The prestige dialog shows everything before you commit: the tokens and skill points you would get, the stage the next run starts at, and what stays. A backup of your save is kept in Settings before every prestige.
+The prestige dialog shows everything before you commit: the tokens and skill points you would get, the stage the next run starts at, and what stays. When you confirm, a backup of your save is kept in Settings first.
 
 ## When to prestige
 
-The Prestige button **glows** when a prestige is a good idea: your hero is climbing the stages and the run has stopped finding new ones. Until you have earned Auto (below), it glows once the run has spent {{BALANCE.prestige.readyStallMs / 60000}} minutes climbing without reaching a new stage; after that, once it has gone as long as Auto would wait. The first prestige glows as soon as it may be made.
+The Prestige button **glows** when a prestige is a good idea: your hero is climbing the stages and the run has stopped finding new ones. Until you have earned Auto (below), it glows once the run has spent {{BALANCE.prestige.readyStallMs / 60000}} minutes climbing without reaching a new stage; after that, once it has gone as long as Auto would wait (and not at all while Auto is on, since Auto will make the prestige itself). The first prestige glows as soon as it may be made.
 
 > Tip: The button's tooltip, and the line on the Combat tab, say what the run would pay if it reached the next boss. If that boss is within reach, one more push can be worth it; if the run has stalled, take the tokens home.
 
@@ -27,7 +27,7 @@ The Prestige button **glows** when a prestige is a good idea: your hero is climb
 - The [[Camp]]: its upgrades are packed up and bought again in the next run.
 - A [[Trials|Trial]] under way ends (or a new one begins, if you prestige into one).
 
-**Stays:** everything else. Your skills and their [[Mastery|mastery]], your gear with its reinforcing and upgrades, your [[Tools|tools]], every material, essence, food and potion, your perks and tokens, [[Medals|medals]], [[Pets|pets]] and [[Unique items|unique items]], dungeon clears and fragments, Titans defeated, the agility course and the farm, and your best stage ever.
+**Stays:** everything else. Your skills and their [[Mastery|mastery]], your gear with its reinforcing and upgrades, your [[Tools|tools]], every material, [[Monster Essence|essence]], [[Food|food]] and [[Potions|potion]], your perks and tokens, [[Medals|medals]], [[Pets|pets]] and [[Unique items|unique items]], dungeon clears and fragments, Titans defeated, the [[/skills/agility|agility course]] and the [[/skills/farming|farm]], and your best stage ever.
 
 Ground you have cleared before goes quickly: a stage you have already beaten is a single fight, so a new run soon reaches its old wall, and with the new tokens it can go further.
 
@@ -54,7 +54,7 @@ Records multiply together: ten of them make your tokens ×{{(BASE.recordMult ** 
 ## Skill points
 
 A prestige can also pay skill points, spent on [[Perks]]:
-- **{{BALANCE.prestige.spPerPrestige}} for a full run**, one that reached at least {{pct(BALANCE.prestige.fullRunFraction, 0)}} of your best stage ever. When the run falls short, the dialog says which stage would have earned it.
+- **{{BALANCE.prestige.spPerPrestige}} for a full run**: a run that reached at least {{pct(BALANCE.prestige.fullRunFraction, 0)}} of your best stage ever. When the run falls short, the dialog says which stage would have earned it.
 - **One more for every {{BALANCE.prestige.spStageStep}} stages** of your best stage ever, each paid once, at the first prestige after you reach it.
 
 So a first prestige at stage {{BALANCE.prestige.spStageStep}} pays {{BALANCE.prestige.spPerPrestige + skillPointsForStages(BALANCE.prestige.spStageStep, 0)}} skill points, while a quick re-run that stops short of half your best pays none.

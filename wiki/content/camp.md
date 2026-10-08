@@ -19,7 +19,7 @@ A prestige packs up the camp: every upgrade goes back to nothing, and so does yo
 
 ## Prices
 
-Each level costs ×{{[...new Set(CAMP_UPGRADES.map(u => u.growth))].join(' or ')}} the last. The first levels are cheap, from {{campUpgradeById('whetstone').baseCost}} gold for the {{campUpgradeById('whetstone').name}}, {{campUpgradeById('armory').baseCost}} for the {{campUpgradeById('armory').name}} and {{campUpgradeById('hearth').baseCost}} for the {{campUpgradeById('hearth').name}}, so a new player buys one within the first minute.
+Each level costs {{[...new Set(CAMP_UPGRADES.map(u => u.growth))].join(' or ')}} times as much as the last. The first levels are cheap, from {{campUpgradeById('whetstone').baseCost}} gold for the {{campUpgradeById('whetstone').name}}, {{campUpgradeById('armory').baseCost}} for the {{campUpgradeById('armory').name}} and {{campUpgradeById('hearth').baseCost}} for the {{campUpgradeById('hearth').name}}, so the first levels come early in a run.
 
 Later on the prices follow your best stage ever. Once a kill there is worth enough gold (from about stage {{Math.min(...CAMP_UPGRADES.map(u => { let s = 1; while (CAMP_PRICE_KILLS * goldPerKillAtStage(s) <= u.baseCost) s++; return s; }))}}), the price of a level grows with the gold a kill pays at your best stage, and a whole upgrade, all {{campUpgradeById('whetstone').max}} levels, comes to about {{fmt(Math.round(CAMP_PRICE_KILLS * Array.from({ length: campUpgradeById('whetstone').max }, (_, l) => campUpgradeById('whetstone').growth ** l).reduce((a, b) => a + b)))}} kills' worth. So each run buys its camp again as it nears its best, and gold keeps a job late in the game. The table below gives each level's base price.
 

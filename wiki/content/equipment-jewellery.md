@@ -1,13 +1,13 @@
 ---
 path: /equipment/jewellery
-keywords: jewellery, jewelry, ring, rings, amulet, earring, earrings, crafting, gem, gems, silver bar, gold bar, setting, voidstone, upgrade, reforge, rarity
+keywords: jewellery, jewelry, ring, rings, amulet, earring, earrings, crafting, gem, gems, silver bar, gold bar, setting, voidstone, upgrade, reforge, rarity, amulets
 aliases: Jewelry, Rings, Amulets, Earrings
 ---
 Jewellery fills {{CRAFTING_TYPES.reduce((n, t) => n + TYPE_SLOTS[t].length, 0)}} of your hero's slots: two rings, an amulet and two earrings. A piece adds a little attack and defence, and its real worth is in its bonuses. You make it in [[Crafting]]; the table below lists every piece you can craft.
 
 ## Crafting a piece
 
-A piece is one precious bar set with one gem: a {{res('silver_bar')}} or a {{res('gold_bar')}}, and a gem from {{res(GEM_TIERS[0].gem)}} up to {{res(GEM_TIERS.at(-1).gem)}}. Gems turn up while mining, drop in the fight and come in daily crates and dungeon chests, and once Crafting is open the [[Shop]] sells pouches of the first ones ({{GOLD_SHOP.filter(e => e.craft).map(e => res(Object.keys(e.gives)[0])).join(', ')}}), each while your Crafting level suits it.
+A piece is one precious bar set with one gem: a {{res('silver_bar')}} or a {{res('gold_bar')}}, and a gem from {{res(GEM_TIERS[0].gem)}} up to {{res(GEM_TIERS.at(-1).gem)}}. Gems turn up while mining ({{pct(GEM_FIND_CHANCE, 0)}} of the ore you dig brings one), drop in the fight and come in daily crates and dungeon chests, and once Crafting is open the [[Shop]] sells pouches of the first ones ({{GOLD_SHOP.filter(e => e.craft).map(e => res(Object.keys(e.gives)[0])).join(', ')}}), each while your Crafting level suits it.
 
 ## Power from the gem
 
@@ -38,7 +38,7 @@ A salvaged piece gives back half the essence its upgrades took. The price of eac
 
 ## Voidstone pieces
 
-The {{res('voidstone')}} is the deepest gem: tier {{RESOURCES.voidstone.tier}}, cut from Crafting {{GEM_TIERS.find(g => g.gem === 'voidstone').levelReq}}. No rock holds it. From depth {{VOIDSTONE_DEPTH}} of the Abyss (stage {{AUTHORED_STAGES + (VOIDSTONE_DEPTH - 1) * STAGES_PER_ZONE + 1}}), a boss's first fall in a run leaves one {{pct(VOIDSTONE_CHANCE, 0)}} of the time.
+The {{res('voidstone')}} is the deepest gem: tier {{RESOURCES.voidstone.tier}}, cut from Crafting {{GEM_TIERS.find(g => g.gem === 'voidstone').levelReq}}. No rock holds it. From depth {{VOIDSTONE_DEPTH}} of the Abyss (stage {{AUTHORED_STAGES + (VOIDSTONE_DEPTH - 1) * STAGES_PER_ZONE + 1}}), a boss's first fall in a run (and a Titan that deep) leaves one {{pct(VOIDSTONE_CHANCE, 0)}} of the time.
 
 A Voidstone piece is cut to the deepest depth you have ever reached. Past depth {{BALANCE.abyss.dropScalingFrom}} each depth makes it {{BALANCE.abyss.dropGrowth}} times as strong, just like the gear that drops there, so a crafted piece can stand beside the deep Abyss's drops. The piece shows its depth.
 

@@ -26,9 +26,9 @@ Gear is the base your hero's attack and defence are built on, and armour adds he
 - **Look in the bag.** When something better is waiting, the fight's dock shows **▲ Equip**, and the Inventory marks it with a green ▲.
 - **Weapons and armour past copper only drop in the fight.** A boss leaves a piece {{pct(GEAR_DROP_CHANCE.boss, 0)}} of the time on its first fall in a run, an ordinary monster about one kill in {{Math.round(1 / GEAR_DROP_CHANCE.regular)}}, and dungeon chests now and then. Drops are mostly of the place's own gear tier, and lean toward what your hero lacks: a kind for an empty slot is {{DROP_EMPTY_SLOT_MULT}}× as likely, and one for a slot holding an older tier {{DROP_BEHIND_SLOT_MULT}}×.
 - **Tier beats rarity.** Each [[/equipment|tier]] is about {{fmt(GEAR_TIERS[1].power / GEAR_TIERS[0].power)}} times as strong as the one before, while the best rarity adds only {{pct(RARITIES[RARITIES.length - 1].quality - 1, 0)}}. A common piece of a new tier has more attack or defence than a legendary of the old one.
-- **Each tier needs a combat level** to wear: {{GEAR_TIERS.map(t => `${t.name} ${TIER_WEAR_LEVEL[t.tier]}`).join(', ')}}.
+- **Each tier needs a [[/combat|combat]] level** to wear: {{GEAR_TIERS.map(t => `${t.name} ${TIER_WEAR_LEVEL[t.tier]}`).join(', ')}}.
 - **The bosses' due.** A boss at your frontier that leaves no upgrade, where the place's gear could still beat what you wear, fills a mark on a gold ring round its stone on the stage path. The {{PITY_MARKS}}th mark brings a sure piece of the place's tier for your weakest slot.
-- **Reinforce at the anvil.** From Smithing {{ANVIL_LEVEL_PER_UPGRADE}}, bars of a piece's own metal and some essence reinforce the weapon or armour your hero wears: +{{pct(UPGRADE_STEP, 0)}} to its base attack and defence a level, up to +{{MAX_UPGRADE}}. Each level needs {{ANVIL_LEVEL_PER_UPGRADE}} more Smithing levels and more bars. Bars come from smelting, or from salvaging pieces of that metal.
+- **Reinforce at the anvil.** From [[/skills/smithing|Smithing]] {{ANVIL_LEVEL_PER_UPGRADE}}, bars of a piece's own metal and some [[/items/essence|essence]] reinforce the weapon or armour your hero wears: +{{pct(UPGRADE_STEP, 0)}} to its base attack and defence a level, up to +{{MAX_UPGRADE}}. Each level needs {{ANVIL_LEVEL_PER_UPGRADE}} more Smithing levels and more bars. Bars come from smelting, or from salvaging pieces of that metal.
 - **Nothing is wasted.** When you put on a better piece of the same kind, the smith refits it: it takes over the old piece's reinforcing, less one level.
 - **Jewellery** (rings, an amulet, earrings) is made in [[/skills/crafting|Crafting]]; only epic and legendary jewellery drops. It is upgraded with essence and gold in the Inventory. See [[/equipment/jewellery|Jewellery]].
 
@@ -47,7 +47,7 @@ Against ordinary stages, health is the limit, and food is more health.
 
 ## 4. Drink a potion
 
-[[/skills/alchemy|Alchemy]] brews four [[/potions|potions]]. Pick one in the fight's Potion row. A bottle lasts {{BASE.basePotionCharges}} of your hero's attacks (your strikes are free), and the next opens by itself.
+[[/skills/alchemy|Alchemy]] brews {{Object.values(RESOURCES).filter(r => r.category === 'potion').length}} [[/potions|potions]]. Pick one in the fight's Potion row. A bottle lasts {{BASE.basePotionCharges}} of your hero's attacks (your strikes are free), and the next opens by itself.
 
 | Potion | Effect | Good against |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ The **Stay on this stage** switch, beside the fight, keeps your hero on the same
 
 From stage {{TITAN_UNLOCK_STAGE}}, [[/titan|the Titan]] waits on the Dungeons tab, with a new attempt every {{TITAN_COOLDOWN_MS / 60000}} minutes: a {{TITAN_TIME_MS / 1000}}-second damage race. Attempts you do not use wait for you, up to {{TITAN_BANK}}.
 
-- Each Titan you bring down is gone for good and leaves +{{pct(TITAN_BONUS.atkMult, 0)}} attack and health, forever. After the first {{TITAN_LATE_FROM}}, each leaves half as much. The next Titan is stronger.
+- Each Titan you bring down is gone for good and leaves +{{pct(TITAN_BONUS.atkMult, 0)}} attack and health, forever. After the first {{TITAN_LATE_FROM}}, each leaves +{{pct(TITAN_BONUS.atkMult * (titanBonusUnits(TITAN_LATE_FROM + 1) - titanBonusUnits(TITAN_LATE_FROM)), 0)}}. The next Titan is stronger.
 - A loss still pays essence for the damage you dealt. Your strikes count here too.
 
 ## 9. Build the agility course

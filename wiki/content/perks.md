@@ -7,7 +7,7 @@ Perks are bonuses bought with **skill points**, and they last forever: a [[Prest
 ## Where skill points come from
 
 Skill points come only from prestiging:
-- {{BALANCE.prestige.spPerPrestige}} for each prestige of a full run, one that reached at least {{pct(BALANCE.prestige.fullRunFraction, 0)}} of your best stage ever;
+- {{BALANCE.prestige.spPerPrestige}} for each full run you prestige: a run that reached at least {{pct(BALANCE.prestige.fullRunFraction, 0)}} of your best stage ever;
 - one more for every {{BALANCE.prestige.spStageStep}} stages of your best stage ever, each paid once, at your next prestige.
 
 Your first prestige brings your first point, or {{BALANCE.prestige.spPerPrestige + skillPointsForStages(BALANCE.prestige.spStageStep, 0)}} if your run got to stage {{BALANCE.prestige.spStageStep}}. The [[Prestige]] page has a table of the points each best stage earns.
@@ -16,7 +16,7 @@ Your first prestige brings your first point, or {{BALANCE.prestige.spPerPrestige
 
 - Each level of a perk costs one skill point. You buy one level at a time, up to the perk's limit (the table below).
 - A level can't be taken back, but it is never wasted either: what you buy is yours for good.
-- A perk's bonus adds to the same kind of bonus from everywhere else. Knight's attack, for example, joins the attack bonuses from your Combat level, [[Medals|medals]], [[Pets|pets]] and gear, and the total multiplies your attack.
+- A perk's bonus adds to the same kind of bonus from everywhere else. Knight's attack, for example, joins the attack bonuses from your [[Combat|Combat level]], [[Medals|medals]], [[Pets|pets]] and [[Equipment|gear]], and the total multiplies your attack.
 - Filling every perk except Paragon takes {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + p.max, 0)}} skill points.
 
 ## Good first picks

@@ -2,13 +2,13 @@
 path: /capes
 keywords: capes, skill capes, skillcape, skill cape, cape, level 99, 99, cloak, festival cloaks, wear
 ---
-Reaching level {{MAX_LEVEL}} in a skill earns its **cape**, for good. There are {{CAPES.length}}, one for each skill and one for [[Combat]]. Each brings a small bonus, most of them to their own skill, and your hero puts the new cape on the moment it is earned: a cloak in the skill's own colours, with a gold hem.
+Reaching level {{MAX_LEVEL}} in a [[Skills|skill]] earns its **cape**, for good. There are {{CAPES.length}}, one for each skill and one for [[Combat]]. Each brings a small bonus, most of them to their own skill, and your hero puts the new cape on the moment it is earned: a cloak in the skill's own colours, with a gold hem.
 
 ## What a cape gives
 
 A cape's bonus counts whether you wear it or not: every cape you have earned gives its bonus all the time. Most of them give their skill +{{pct(CAPES.find(c => c.skill === 'mining').mods.doubleChance.mining, 0)}} chance of a double: a second ore, log, fish, catch, dish, bar, herb or potion, or a log that burns twice. The Farming cape adds crops to every harvest, the Crafting cape raises the quality of everything you make, the Agility cape speeds up every skill, and the Combat cape adds attack and defence. The table below has each one.
 
-A cape comes from your level, and levels are never lost, so no [[Prestige|prestige]] or [[Ascension]] can take one away. Your first level {{MAX_LEVEL}} also earns the medal {{ACHIEVEMENTS.find(a => a.id === 'completionist').name}} ({{ACHIEVEMENTS.find(a => a.id === 'completionist').reward.replace(/^./, c => c.toLowerCase())}}).
+A cape comes from your level, and levels are never lost, so no [[Prestige|prestige]] or [[Ascension]] can take one away. Your first level {{MAX_LEVEL}} also earns the [[Medals|medal]] {{ACHIEVEMENTS.find(a => a.id === 'completionist').name}} ({{ACHIEVEMENTS.find(a => a.id === 'completionist').reward.replace(/^./, c => c.toLowerCase())}}).
 
 ## Choosing what to wear
 

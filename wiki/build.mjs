@@ -74,7 +74,8 @@ export async function build({ out = OUT, quiet = false, assets = true } = {}) {
     const built = new Set(builders.map(b => b.path));
     for (const b of builders) {
         const written = content.get(b.path)?.meta;
-        site.add({ ...b, ...(written?.keywords ? { keywords: [...(b.keywords || []), ...written.keywords.split(',').map(s => s.trim())] } : {}) });
+        const words = list => (list || '').split(',').map(s => s.trim()).filter(Boolean);
+        site.add({ ...b, keywords: [...(b.keywords || []), ...words(written?.keywords)], aliases: [...(b.aliases || []), ...words(written?.aliases)] });
     }
     for (const [path, { meta }] of content) {
         if (built.has(path)) continue;

@@ -2,7 +2,7 @@
 path: /trials
 keywords: trial, trials, challenge, challenge run, tier, tiers, laurel, laurels, weekly trial, week's trial, records, rule
 ---
-A Trial is a run under one hard rule: monsters that hit harder or take longer to kill, a frailer hero, weaker gear, no camp, no food. Reaching the stages a Trial asks for clears its tiers for good, and every tier cleared is a record that makes all your [[Prestige|prestige tokens]] stronger.
+A Trial is a run under one hard rule: monsters that hit harder or take longer to kill, a frailer hero, weaker [[Equipment|gear]], no camp, no [[Food|food]]. Reaching the stages a Trial asks for clears its tiers for good, and every tier cleared is a record that makes all your [[Prestige|prestige tokens]] stronger.
 
 ## When Trials open
 

@@ -12,6 +12,14 @@ import { log, bumpStat } from './progress.js';
 export const DAILY_INTERVAL_MS = 20 * 3600 * 1000;
 export const DAILY_MAX_BANKED = 3;
 export const GREAT_CRATE_EVERY = 7;
+// What a crate holds (the wiki reads these too): gold of this many kills at the best stage, this many picks
+// of the best stage's land's materials (each this many), essence of this many times the land's tier.
+export const CRATE_GOLD_KILLS = 40;
+export const CRATE_PICKS = 6;
+export const CRATE_PICK_QTY = 2;
+export const CRATE_ESSENCE_PER_TIER = 3;
+export const GREAT_CRATE_GOLD_MULT = 3;
+export const GREAT_CRATE_REST_MULT = 2;
 
 /** How many crates have been opened since the last great one (0 to 6): the seventh is great. */
 export const cratesTowardGreat = state => (state.daily.claimed || 0) % GREAT_CRATE_EVERY;
@@ -37,17 +45,17 @@ export function claimDaily(game) {
     if (state.daily.banked < 1) return null;
     state.daily.banked--;
     const great = cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1;
-    const more = great ? 2 : 1;
+    const more = great ? GREAT_CRATE_REST_MULT : 1;
 
     const stage = Math.max(1, state.combat.bestStage);
     const zone = zoneForStage(stage);
-    const gold = 40 * goldPerKillAtStage(stage, game.derived.goldMult) * (great ? 3 : 1);
+    const gold = CRATE_GOLD_KILLS * goldPerKillAtStage(stage, game.derived.goldMult) * (great ? GREAT_CRATE_GOLD_MULT : 1);
     const materials = {};
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < CRATE_PICKS; i++) {
         const pick = rng.weighted(zone.loot);
-        materials[pick.id] = (materials[pick.id] || 0) + 2 * more;
+        materials[pick.id] = (materials[pick.id] || 0) + CRATE_PICK_QTY * more;
     }
-    const essence = 3 * zone.tier * more;
+    const essence = CRATE_ESSENCE_PER_TIER * zone.tier * more;
     const gem = [...GEM_DROP_TABLE].reverse().find(g => g.tier <= zone.tier) || GEM_DROP_TABLE[0];
     materials[gem.id] = (materials[gem.id] || 0) + 1;
     if (great) {   // and a gem of the next tier (the best there is, at the top)

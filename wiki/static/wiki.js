@@ -71,6 +71,32 @@
         if (e.key === 'Escape') setNav(false);
     });
 
+
+    // ---------- the level calculator on a skill's page ----------
+    const XP = [0, 0];
+    for (let l = 1, sum = 0; l < 99; l++) { sum += Math.floor(l + 300 * Math.pow(2, l / 7)); XP.push(Math.floor(sum / 4)); }
+    const span = s => s < 60 ? `${Math.ceil(s)} s` : s < 3600 ? `${Math.round(s / 60)} min` : s < 172800 ? `${(s / 3600).toFixed(1).replace(/\.0$/, '')} h` : `${(s / 86400).toFixed(1).replace(/\.0$/, '')} days`;
+    for (const calc of document.querySelectorAll('.calc')) {
+        const actions = JSON.parse(calc.dataset.actions);
+        const [from, to, act, speed, out] = ['.calc-from', '.calc-to', '.calc-act', '.calc-speed', '.calc-out'].map(q => calc.querySelector(q));
+        act.innerHTML = actions.map((a, i) => `<option value="${i}">${escape(a.n)} (level ${a.lv})</option>`).join('');
+        const update = () => {
+            const f = Math.max(1, Math.min(98, Math.floor(+from.value || 1)));
+            const t = Math.max(f + 1, Math.min(99, Math.floor(+to.value || 2)));
+            const a = actions[+act.value || 0];
+            const need = XP[t] - XP[f];
+            const count = Math.ceil(need / a.xp);
+            const secs = count * a.ms / 1000 / (1 + Math.max(0, +speed.value || 0) / 100);
+            out.innerHTML = `<b>${need.toLocaleString('en-US')} XP</b> from level ${f} to ${t}: <b>${count.toLocaleString('en-US')}</b> × ${escape(a.n)}, about <b>${span(secs)}</b> of work.${a.lv > f ? ` <span class="muted">(it needs level ${a.lv})</span>` : ''}`;
+        };
+        // start on the best action the starting level allows
+        const best = () => { const f = +from.value || 1; let i = 0; actions.forEach((a, k) => { if (a.lv <= f) i = k; }); act.value = String(i); };
+        best();
+        from.addEventListener('input', () => { best(); update(); });
+        for (const el of [to, act, speed]) el.addEventListener('input', update);
+        update();
+    }
+
     // ---------- sortable tables ----------
     const cellValue = td => {
         const text = td.textContent.replace(/[,\s]/g, '').replace(/^[+×x]/, '');

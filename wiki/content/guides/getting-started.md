@@ -12,7 +12,7 @@ Fantasy Idle plays itself, but it helps to know what you are looking at. This pa
 
 ## The title card
 
-The game opens on a title card: your hero on a sunny meadow, with a slime waiting nearby.
+The game opens on a title card: your hero on a sunny meadow, with a [[Slime|slime]] waiting nearby.
 
 - **Name your hero**, if you like. Without a name your hero is simply "You". You can change the name any time in Settings.
 - **Pick a look** with the arrows beside your hero. {{LOOKS.filter(l => !l.medal).length}} looks are open from the start, and {{LOOKS.filter(l => l.medal).length}} more are earned with medals (see [[/looks|Hero looks]]).
@@ -20,10 +20,10 @@ The game opens on a title card: your hero on a sunny meadow, with a slime waitin
 
 ## The first fight
 
-The fight fills the screen. Your hero and the monster attack on their own timers, so you do not have to do anything: your hero wins the first fights alone.
+The [[/combat|fight]] fills the screen. Your hero and the monster attack on their own timers, so you do not have to do anything: your hero wins the first fights alone.
 
 - **Tap the monster** (or press **Space** on a keyboard) to strike as well. A strike hits for {{pct(BALANCE.combat.manualHitMult, 0)}} of a normal attack and builds a **combo**.
-- Each combo stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} damage to every hit, your hero's own attacks included, up to {{BALANCE.combat.comboMax}} stacks. Stop striking for {{BALANCE.combat.comboDecayAfterMs / 1000}} seconds and it starts to fade. A big combo also brings extra critical hits, then lifesteal, and at its top the odd echo strike.
+- Each combo stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} damage to every hit, your hero's own attacks included, up to {{BALANCE.combat.comboMax}} stacks. Stop striking for {{BALANCE.combat.comboDecayAfterMs / 1000}} seconds and it starts to fade.
 - Each monster you beat moves you on a stage. Every {{STAGES_PER_ZONE}}th stage is a boss, and each run of {{STAGES_PER_ZONE}} stages is a place of its own (see [[/zones|Zones]]).
 - The first stages are gentle: the monsters hit softer and have less health, growing to their full strength over the first {{BALANCE.enemy.ease.to}} stages.
 - Combat levels come quickly at first, and every combat level refills your hero's health. Each level adds {{BASE.hpPerCombatLevel}} health and {{pct(BASE.atkPerCombatLevel, 1)}} attack and defence.
@@ -43,7 +43,7 @@ It waits a few seconds before it comes, so if you were about to do the thing any
 
 ## The Rusty Sword
 
-Your hero starts with bare fists. The first monster you beat leaves a **Rusty Sword**, rising out of it in a beam of light, and a **▲ Equip** button appears in the fight's dock. Tap it: the sword doubles your hero's attack.
+Your hero starts with bare fists. The first monster you beat leaves a **Rusty Sword**, rising out of it in a beam of light, and a **▲ Equip** button appears in the fight's dock. Tap it, and your hero hits much harder at once.
 
 From then on the same button appears whenever the bag holds something better than what your hero wears, and a green ▲ marks better gear in the Inventory. The first boss you beat always leaves a piece of armour: a helm, a body or a shield. More on gear in [[/equipment|Equipment]].
 
@@ -119,18 +119,18 @@ The next run starts at {{pct(BALANCE.prestige.startStageFraction, 0)}} of your b
 
 Your hero does one thing at a time. Starting work takes your hero out of the fight, and going back to the fight stops the work.
 
-Mining a few ores opens [[/skills/smithing|Smithing]], which works in steps:
+A little mining opens [[/skills/smithing|Smithing]], which works in steps:
 
-- **Smelt**: ore into bars. A {{res('copper_bar')}} takes one copper ore, and your first bar opens Woodcutting.
-- **Forge**: copper bars into a first set of weapons and armour, from a sword at Smithing 1 to a body at Smithing {{smithLevelReq(METALS[0], 'Body')}}. Stronger weapons and armour only drop in the fight.
+- **Smelt**: ore into bars. Copper ore makes a {{res('copper_bar')}}, and your first bar opens Woodcutting.
+- **Forge**: copper bars into a first set of weapons and armour, from a sword at Smithing {{smithLevelReq(METALS[0], 'Weapon')}} to a body at Smithing {{smithLevelReq(METALS[0], 'Body')}}. Stronger weapons and armour only drop in the fight.
 - **Tools**: a Copper Pickaxe or a Copper Axe, at Smithing {{TOOLS.pickaxe.tiers[0].levelReq}}, from copper bars and a log. Each makes its skill faster.
 - **Anvil**: from Smithing {{ANVIL_LEVEL_PER_UPGRADE}}, bars of a piece's own metal (and some essence) reinforce the weapon or armour your hero wears.
 
-Iron comes next: the Iron Vein at Mining {{SKILLS.mining.nodes.find(n => n.id === 'iron_ore').levelReq}}, and iron bars at Smithing {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').levelReq}}. Each iron bar also takes a lump of {{res('coal')}}, which you can mine from Mining {{SKILLS.mining.nodes.find(n => n.id === 'coal').levelReq}}. See [[/guides/training-skills|Training skills]] for how the skills fit together.
+Iron comes next: the Iron Vein at Mining {{SKILLS.mining.nodes.find(n => n.id === 'iron_ore').levelReq}}, and iron bars at Smithing {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').levelReq}}. Each iron bar also takes {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').consumes.coal}} {{res('coal')}}, which you can mine from Mining {{SKILLS.mining.nodes.find(n => n.id === 'coal').levelReq}}. See [[/guides/training-skills|Training skills]] for how the skills fit together.
 
 ## Food and cooking
 
-Hunting is the first place to open by fighting. Hunt a rabbit and [[/skills/cooking|Cooking]] opens: roast {{res('raw_rabbit')}} into {{res('cooked_rabbit')}}. Every dish burns one log as fuel, so keep some logs.
+Hunting is the first place to open by fighting. Hunt a rabbit and [[/skills/cooking|Cooking]] opens: roast {{res('raw_rabbit')}} into {{res('cooked_rabbit')}}. Every dish burns a log as fuel, so keep some logs.
 
 Once you can cook, a **Food** row appears under the fight. Your hero eats when health falls below {{pct(BASE.baseAutoEatThreshold, 0)}}. On **Auto** your hero picks the smallest dish that fills the gap; you can also choose one dish, or **None**. Food keeps your hero standing through long climbs. A few dishes in, [[/skills/fishing|Fishing]] opens: fish cook into food that heals a little more than meat of the same level. More in [[/food|Food]].
 

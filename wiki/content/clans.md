@@ -8,7 +8,7 @@ Clans are the game's online side. Join one, and every week the whole clan fights
 
 Clans and leaderboards work through an account and the cloud:
 - **An account.** Sign in, or register a new one, from the Clan tab or from "Log in / register" in Settings. You can play without one; your save on this device is kept either way.
-- **A cloud save.** Once you are signed in, your save goes up to the cloud every minute and at important moments, and another device loads whichever save has more play time. Everything other players see of you, your clan attacks and your place on a board, is worked out on the server from that saved hero, never from numbers your game sends.
+- **A [[Offline progress and saves|cloud save]].** Once you are signed in, your save goes up to the cloud every minute and at important moments, and another device loads whichever save has more play time, asking you first when the two don't agree. Everything other players see of you, your clan attacks and your place on a board, is worked out on the server from that saved hero, never from numbers your game sends.
 
 The Clan tab itself opens once you have [[Prestige|prestiged]] and reached stage {{[...Array(1000).keys()].find(s => UNLOCKS.find(u => u.id === 'clan').requires({ prestige: { count: 1 }, combat: { bestStage: s } }))}} (see [[Places and unlocks]]). Until you sign in, it only shows what a clan is.
 
@@ -25,7 +25,7 @@ Each week, from Monday 00:00 UTC to the next Monday, the clan has one boss to br
 
 - **Its health** is set when the week's boss first appears, from the strength of the members: about twelve attacks from each of them, so it holds out for about four days of everyone attacking. A member who leaves (or is removed) before fighting it takes their share of its health away again.
 - **Your attacks:** three a day, back at midnight UTC. Each attack deals what your saved hero would deal in 60 seconds of fighting: your attack, crits and attack speed, with no dice rolled. The game saves your hero to the cloud just before each attack, so the attack uses your hero as it stands now.
-- **What doesn't count:** anything timed or temporary. Focus, potions, the bonfire and mini-game boosts are left out, and a [[Trials|Trial's]] rule doesn't hold your attacks back either.
+- **What doesn't count:** anything timed or temporary. [[Mini-games and Focus|Focus]], [[Potions|potions]], the [[/skills/firemaking|bonfire]] and mini-game boosts are left out, and a [[Trials|Trial's]] rule doesn't hold your attacks back either.
 
 ## Rewards
 

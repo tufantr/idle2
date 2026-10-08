@@ -15,7 +15,7 @@ Short answers, each with a link to the page that tells the whole story. New to t
 
 ### Does the game play while I'm away, or with the tab closed?
 
-Yes. Whatever your hero was doing when you left, the fight or a skill, carries on for up to {{BASE.baseOfflineHours}} hours, and a **Welcome back** report shows what happened. The Endurance [[/perks|perk]] adds {{PERKS.find(p => p.id === 'endurance').mods.offlineHours}} hours a level (up to {{BASE.baseOfflineHours + PERKS.find(p => p.id === 'endurance').max * PERKS.find(p => p.id === 'endurance').mods.offlineHours}} hours in all), and the Zipline on the agility course adds more. A tab left in the background keeps playing too. See [[/offline|Offline progress and saves]].
+Yes. Whatever your hero was doing when you left, the fight or a skill, carries on for up to {{BASE.baseOfflineHours}} hours, and a **Welcome back** report shows what happened. The Endurance [[/perks|perk]] adds {{PERKS.find(p => p.id === 'endurance').mods.offlineHours}} hours a level (up to {{BASE.baseOfflineHours + PERKS.find(p => p.id === 'endurance').max * PERKS.find(p => p.id === 'endurance').mods.offlineHours}} hours in all), and the Zipline on the [[/skills/agility|agility course]] adds more. A tab left in the background keeps playing too. See [[/offline|Offline progress and saves]].
 
 ### Where is my save? Is there a cloud save?
 
@@ -31,7 +31,7 @@ In **Settings**, under Options: **Sound and vibration** switches all sound off, 
 
 ### How do I change my hero's name or look?
 
-In **Settings**, under Options. {{LOOKS.filter(l => !l.medal).length}} looks are open to everyone and {{LOOKS.filter(l => l.medal).length}} more are earned with medals; skill capes and festival cloaks you have earned can be worn there too. See [[/looks|Hero looks]] and [[/capes|Skill capes]].
+In **Settings**, under Options. {{LOOKS.filter(l => !l.medal).length}} looks are open to everyone and {{LOOKS.filter(l => l.medal).length}} more are earned with [[/medals|medals]]; skill capes and festival cloaks you have earned can be worn there too. See [[/looks|Hero looks]] and [[/capes|Skill capes]].
 
 ### Why is a place missing from my sidebar?
 
@@ -69,11 +69,11 @@ Leave the game alone for {{BASE.focusAfterMs / 1000}} seconds (no click, no key)
 
 ### What is the Titan?
 
-From stage {{TITAN_UNLOCK_STAGE}}, a Titan waits on the Dungeons tab, with a new attempt every {{TITAN_COOLDOWN_MS / 60000}} minutes: a {{TITAN_TIME_MS / 1000}}-second race to deal as much damage as you can, at full health. Attempts you do not use wait for you, up to {{TITAN_BANK}}. Each Titan you bring down is gone for good and leaves +{{pct(TITAN_BONUS.atkMult, 0)}} attack and health forever (half as much after the first {{TITAN_LATE_FROM}}), and the next is stronger. A loss still pays essence for the damage dealt. See [[/titan|The Titan]].
+From stage {{TITAN_UNLOCK_STAGE}}, a Titan waits on the Dungeons tab, with a new attempt every {{TITAN_COOLDOWN_MS / 60000}} minutes: a {{TITAN_TIME_MS / 1000}}-second race to deal as much damage as you can, at full health. Attempts you do not use wait for you, up to {{TITAN_BANK}}. Each Titan you bring down is gone for good and leaves +{{pct(TITAN_BONUS.atkMult, 0)}} attack and health forever (+{{pct(TITAN_BONUS.atkMult * (titanBonusUnits(TITAN_LATE_FROM + 1) - titanBonusUnits(TITAN_LATE_FROM)), 0)}} after the first {{TITAN_LATE_FROM}}), and the next is stronger. A loss still pays essence for the damage dealt. See [[/titan|The Titan]].
 
 ### How do dungeon fragments work?
 
-Each [[/dungeons|dungeon]] clear opens a chest with a fragment, now and then three. Collect {{FRAGMENTS_PER_UNIQUE}} and **Assemble** the dungeon's [[/uniques|unique item]]: the best piece of its tier, with fixed bonuses. Very rarely ({{pct(DIRECT_UNIQUE_CHANCE, 1)}} of chests) the chest holds the unique itself. Fragments and clears are kept through prestige. Each unique you hold is a record, so it makes your tokens stronger too.
+Each [[/dungeons|dungeon]] clear opens a chest with a fragment, now and then a few. Collect {{FRAGMENTS_PER_UNIQUE}} and **Assemble** the dungeon's [[/uniques|unique item]]: the best piece of its tier, with fixed bonuses. Very rarely ({{pct(DIRECT_UNIQUE_CHANCE, 1)}} of chests) the chest holds the unique itself. Fragments and clears are kept through prestige. Each unique you hold is a record, so it makes your tokens stronger too.
 
 ## Prestige
 
@@ -89,7 +89,7 @@ When a run stops climbing and the quick fixes (better gear, the camp, food) do n
 
 - **Tokens** come from prestige, more for a deeper run. They are never spent: each gives +{{pct(BASE.tokenAtk, 1)}} attack and defence and +{{pct(BASE.tokenHp, 1)}} health, for good.
 - **Skill points** buy [[/perks|perks]] that last forever. You get one for each prestige of a run that reached at least {{pct(BALANCE.prestige.fullRunFraction, 0)}} of your best stage, and one for every {{BALANCE.prestige.spStageStep}} stages of your best ever.
-- **Records** make every token stronger: every {{BASE.recordStages}} stages of your best ever, every dungeon unique you hold, and later each Trial tier you clear multiplies what tokens give by {{BASE.recordMult}}.
+- **Records** make every token stronger: each one multiplies what tokens give by {{BASE.recordMult}}. Every {{BASE.recordStages}} stages of your best ever is a record, and so is every dungeon unique you hold and, later, each Trial tier you clear.
 
 ### How does Auto prestige unlock?
 
@@ -125,7 +125,7 @@ It was most likely salvaged. To start with, common drops are salvaged as they la
 
 ### What is essence for, and where do I get it?
 
-Essence pays for the anvil's work, jewellery upgrades and rerolling bonuses. Monsters drop it ({{pct(BALANCE.rewards.essenceDropChance, 0)}} of kills, more from bosses and gilded monsters), and it comes from salvaging gear, dungeon chests, the Titan, the [[/daily-crate|daily crate]], weekend events and the [[/shop|Shop]]'s Essence Cache. See {{res('essence')}}.
+Essence pays for the anvil's work, jewellery upgrades and rerolling bonuses. Monsters drop it ({{pct(BALANCE.rewards.essenceDropChance, 0)}} of kills, more from bosses and gilded monsters), and it comes from salvaging gear, dungeon chests, the Titan, the [[/daily-crate|daily crate]], [[/events|weekend events]] and the [[/shop|Shop]]'s Essence Cache. See {{res('essence')}}.
 
 ## Skills and materials
 
@@ -135,10 +135,10 @@ Mine it at the **Coal Seam**, from Mining {{SKILLS.mining.nodes.find(n => n.id =
 
 ### Where do gems come from?
 
-- **Mining**: now and then a gem turns up, about the rock's tier.
+- **Mining**: each ore has a {{pct(GEM_FIND_CHANCE, 0)}} chance of a gem, of about the rock's tier.
 - **Monsters**: {{pct(BALANCE.rewards.gemDropChance, 0)}} of kills, far more often a boss's first fall. A gilded monster always leaves one. Diamonds also drop in the [[Skyreach Spire]] and [[/zones/abyss|the Abyss]].
 - **Dungeon chests** ({{pct(CHEST_GEM_CHANCE, 0)}} of clears), the **Titan** (gems with each win) and the **daily crate** (a gem, and a better one besides in a great crate).
-- **The Shop**: once Crafting is open, pouches of the three lowest gems for the Crafting levels that use them.
+- **The Shop**: once Crafting is open, a pouch of {{GOLD_SHOP.filter(e => e.craft).map(e => RESOURCES[Object.keys(e.gives)[0]].name).join(', ').replace(/, ([^,]*)$/, ' or $1')}}, whichever fits your Crafting level.
 - The **Voidstone**, the deepest gem, only comes from the Abyss's bosses from stage {{AUTHORED_STAGES + VOIDSTONE_DEPTH * STAGES_PER_ZONE}} on, at {{pct(VOIDSTONE_CHANCE, 0)}} of their first falls.
 
 See [[/skills/crafting|Crafting]] for what gems make.

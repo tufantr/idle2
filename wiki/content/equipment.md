@@ -1,6 +1,6 @@
 ---
 path: /equipment
-keywords: gear, equipment, weapon, sword, armour, armor, shield, helm, plate, greaves, boots, gauntlets, ring, amulet, earring, slots, rarity, affix, affixes, bonuses, tier, wear level, drop, codex, bag, salvage, auto-salvage, lock, anvil, reinforce, reroll, refit, reforge, sell, pity
+keywords: gear, equipment, weapon, sword, armour, armor, shield, helm, plate, greaves, boots, gauntlets, ring, amulet, earring, slots, rarity, affix, affixes, bonuses, tier, wear level, drop, codex, bag, salvage, auto-salvage, lock, anvil, reinforce, reroll, refit, reforge, sell, pity, weapons, reinforcing, gear codex
 aliases: Gear, Weapons, Armour, Anvil, Reinforcing, Salvage, Auto-salvage, Gear codex, Bag
 ---
 Gear is most of your hero's strength. He wears up to {{EQUIP_SLOTS.length}} pieces: weapons and armour come from the fight and are worked at the anvil in [[Smithing]], and jewellery is made in [[Crafting]]. Gear is kept when you prestige. The tables below give the tiers, the slots, the rarities and the bonuses.
@@ -20,13 +20,13 @@ Three things set a piece's attack and defence:
 - its **slot**, which splits that strength between attack and defence;
 - its **rarity**, a quality bonus that stops at ×{{RARITIES.at(-1).quality}} for a {{RARITIES.at(-1).name.toLowerCase()}} piece.
 
-A piece's attack is {{STAT_UNIT}} × its tier's power × its slot's attack weight × its rarity's quality, give or take a twentieth, and its defence likewise: a common {{GEAR_TIERS[0].name}} {{TYPE_NAMES.Weapon}} has about {{STAT_UNIT * GEAR_TIERS[0].power * SLOT_STATS.Weapon.atk}} attack. The tiers are so far apart that, on base stats, a common piece always beats a legendary one of the tier below. Jewellery carries {{pct(JEWEL_POWER, 0)}} of its tier's power: its worth is in its bonuses.
+A piece's attack is {{STAT_UNIT}} × its tier's power × its slot's attack weight × its rarity's quality, give or take a little, and its defence likewise: a common {{GEAR_TIERS[0].name}} {{TYPE_NAMES.Weapon}} has about {{STAT_UNIT * GEAR_TIERS[0].power * SLOT_STATS.Weapon.atk}} attack. The tiers are so far apart that, on base stats, a common piece always beats a legendary one of the tier below. Jewellery carries {{pct(JEWEL_POWER, 0)}} of its tier's power: its worth is in its bonuses.
 
 Defence also gives health, one for every {{1 / BASE.hpPerDef}} defence, and each upgrade level adds {{pct(UPGRADE_STEP, 0)}} to a piece's base attack and defence.
 
 ## Rarity and bonuses
 
-A rarer piece carries more bonuses: none on a {{RARITIES[0].name.toLowerCase()}} piece, up to {{RARITIES.at(-1).affixes}} on a {{RARITIES.at(-1).name.toLowerCase()}} one. Each bonus is one of the kinds in the table below, rolled once when the piece is made, and a little larger on higher tiers. The bonuses of everything your hero wears add up, and a few stop at a cap (see [[Combat]]).
+A rarer piece carries more bonuses: none on a {{RARITIES[0].name.toLowerCase()}} piece, up to {{RARITIES.at(-1).affixes}} on a {{RARITIES.at(-1).name.toLowerCase()}} one. Each bonus is one of the kinds in the table below, rolled when the piece is made (a reroll rolls them again), and a little larger on higher tiers. The bonuses of everything your hero wears add up, and a few stop at a cap (see [[Combat]]).
 
 ## Wear levels
 
@@ -44,21 +44,9 @@ Each tier needs a combat level before your hero can wear it (the table below). Y
 A piece of gear that drops is rolled in four steps:
 
 1. **Its tier:** the land's gear tier {{pct(DROP_TIER_OFFSETS.find(o => o.offset === 0).weight / DROP_TIER_OFFSETS.reduce((a, o) => a + o.weight, 0), 0)}} of the time, one tier below {{pct(DROP_TIER_OFFSETS.find(o => o.offset === -1).weight / DROP_TIER_OFFSETS.reduce((a, o) => a + o.weight, 0), 0)}}, one above {{pct(DROP_TIER_OFFSETS.find(o => o.offset === 1).weight / DROP_TIER_OFFSETS.reduce((a, o) => a + o.weight, 0), 0)}}. Each land's gear tier is on its page ([[Zones]]); in the Abyss it rises with the depth.
-2. **Its rarity:** a boss's first fall (and a dungeon chest) rolls far better than an ordinary kill, and epic and legendary pieces grow more likely on higher gear tiers.
+2. **Its rarity:** a boss's first fall (and a dungeon chest) rolls far better than an ordinary kill (the Rarities table below), and epic and legendary pieces grow more likely with the land's gear tier, about {{fmt(1 + DROP_HIGH_RARITY_PER_TIER * (MAX_GEAR_TIER - 1))}} times as likely on the top tier as on the first.
 3. **Its kind:** what your hero lacks comes more often. A kind with an empty slot is {{DROP_EMPTY_SLOT_MULT}} times as likely, and a kind whose worn piece is of a lower tier than the land's gear {{DROP_BEHIND_SLOT_MULT}} times. A ring, amulet or earring can only come {{RARITIES[JEWEL_DROP_MIN_RANK].name.toLowerCase()}} or {{RARITIES.at(-1).name.toLowerCase()}}: a lower roll is always a weapon or armour.
 4. **Its depth:** past depth {{BALANCE.abyss.dropScalingFrom}} of the Abyss every depth makes dropped gear {{BALANCE.abyss.dropGrowth}} times as strong as the depth before, and the piece shows its depth.
-
-The chance of each rarity:
-
-{{(() => {
-    const epic = RARITIES.findIndex(r => r.id === 'epic');
-    const share = (kind, tier, i) => {
-        const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (tier - 1);
-        const w = DROP_RARITY_WEIGHTS[kind].map((x, j) => (j >= epic ? x * scale : x));
-        return pct(w[i] / w.reduce((a, b) => a + b, 0));
-    };
-    return table(['Rarity', 'Ordinary kill, gear tier 1 #', `Ordinary kill, gear tier ${MAX_GEAR_TIER} #`, 'Boss or chest, gear tier 1 #', `Boss or chest, gear tier ${MAX_GEAR_TIER} #`], RARITIES.map((r, i) => [r.name, share('regular', 1, i), share('regular', MAX_GEAR_TIER, i), share('boss', 1, i), share('boss', MAX_GEAR_TIER, i)]), { sort: false });
-})()}}
 
 ## The bosses' due
 

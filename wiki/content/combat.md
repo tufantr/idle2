@@ -1,13 +1,13 @@
 ---
 path: /combat
-keywords: fight, fighting, battle, stage, stages, boss, boss timer, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel
+keywords: fight, fighting, battle, stage, stages, boss, boss timer, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
 aliases: Fighting, Battle, Combo, Strikes, Gilded monsters, Boss timer, Bosses' due
 ---
 Your hero fights by himself. He and the monster in front of him attack on their own timers, and when the monster falls the next one steps up. You can simply watch, help with strikes, and spend what the fight brings. The same fight runs the stage ladder, [[Dungeons|dungeon runs]] and [[The Titan]], and it goes on while you are away ([[/offline|offline progress]]).
 
 ## Stages and lands
 
-The fight is a ladder of stages. Each kill moves your hero one stage on, and every {{STAGES_PER_ZONE}} stages make a land with its own monsters and loot: {{ZONES.length}} lands, then [[The Abyss]], which goes on without end past stage {{AUTHORED_STAGES}} (see [[Zones]]). Every {{STAGES_PER_ZONE}}th stage is a boss.
+The fight is a ladder of stages. Each kill moves your hero one stage on, and every {{STAGES_PER_ZONE}} stages make a land with its own monsters and loot: {{ZONES.length}} lands, the last of them [[The Abyss]], which goes on without end past stage {{AUTHORED_STAGES}} (see [[Zones]]). Every {{STAGES_PER_ZONE}}th stage is a boss.
 
 The first time through stages {{BALANCE.combat.firstPack.from}} to {{BALANCE.combat.firstPack.to}}, a stage you have never cleared holds a pack of {{BALANCE.combat.firstPack.size}} monsters, one after another, and the stage only moves on when the last one falls (pips under the stage on the path count them). A boss always stands alone, and ground you have cleared before is one fight a stage, so a run after a [[Prestige|prestige]] climbs as fast as ever. There are no packs in a [[Trials|Trial]] or while you stay on a stage.
 
@@ -39,7 +39,7 @@ Health does not refill between monsters. While he fights your hero regains {{pct
 
 Attack is {{BASE.unarmedAtk}} (his fists) plus what his [[Equipment|gear]] gives, multiplied by his bonuses: each combat level adds {{pct(BASE.atkPerCombatLevel)}} (the table below), and perks, medals, pets, the camp's Whetstone, prestige tokens and potions add more. Defence comes from gear alone (armour, and a little from jewellery) and is multiplied the same way.
 
-Each of your hero's hits deals his attack, give or take a tenth, and a critical hit more. Monsters have no defence. A monster's hit is softened by your defence: it deals its attack × its attack ÷ (its attack + your defence), at least 1. Defence equal to the monster's attack halves its hits, and no amount of defence takes off more than {{pct(MAX_MITIGATION, 0)}}:
+Each of your hero's hits deals his attack, give or take a little, and a critical hit more. Monsters have no defence. A monster's hit is softened by your defence: it deals its attack × its attack ÷ (its attack + your defence), at least 1. Defence equal to the monster's attack halves its hits, and no amount of defence takes off more than {{pct(MAX_MITIGATION, 0)}}:
 
 {{table(['Your defence', 'Of its hit you take #'], [['none', 0], ['half its attack', 0.5], ['equal to its attack', 1], ['three times its attack', 3], [`${fmt(MAX_MITIGATION / (1 - MAX_MITIGATION))} times its attack or more`, MAX_MITIGATION / (1 - MAX_MITIGATION)]].map(([label, k]) => [label, pct(enemyDamage(1e6, k * 1e6) / 1e6, 0)]), { sort: false })}}
 
@@ -55,7 +55,7 @@ A monster attacks every {{fmt(BALANCE.enemy.baseInterval / 1000)}} seconds at st
 
 - **Critical hits:** at first {{pct(BASE.baseCritChance, 0)}} of your hero's hits are critical and deal {{BASE.baseCritDmg}} times the damage. Gear bonuses, unique items, the Living Legend medal and the Gap Leap obstacle raise the chance; gear bonuses and uniques raise the damage.
 - **Dodge:** a chance to avoid a monster's hit completely. It comes from the Evasion Potion, gear bonuses, unique items and the Rock Wall obstacle.
-- **Lifesteal:** each of your hero's hits heals him a share of the damage it deals. It comes from gear bonuses, unique items and a long combo. There is none in the Fasting Trial.
+- **Lifesteal:** each of your hero's hits heals him a share of the damage it deals. It comes from gear bonuses and unique items. There is none in the Fasting Trial.
 
 The totals are capped (critical damage is not):
 
@@ -68,13 +68,9 @@ The totals are capped (critical damage is not):
 
 ## Strikes and the combo
 
-Tap the monster (or press Space) to strike: a hit for {{pct(BALANCE.combat.manualHitMult, 0)}} of your hero's attack, on top of his own attacks. Strikes too close together do not count, so an auto-clicker gains nothing.
+Tap the monster (or press Space) to strike: a hit for {{pct(BALANCE.combat.manualHitMult, 0)}} of your hero's attack, on top of his own attacks. Strikes count at most {{fmt(1000 / BALANCE.combat.strikeGapMs)}} times a second: clicking faster adds nothing.
 
-Each strike builds the combo, up to {{BALANCE.combat.comboMax}}; each one adds a little less as it grows. Every point of combo makes all your hero's hits, his own and your strikes, deal {{pct(BALANCE.combat.comboDmgPerStack, 0)}} more: +{{pct(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack, 0)}} at full combo. A long combo gives more besides:
-
-- from 10: +10% critical chance
-- from 20: +15% lifesteal
-- at {{BALANCE.combat.comboMax}}: each strike has a 20% chance to strike twice
+Each strike builds the combo, up to {{BALANCE.combat.comboMax}}; each one adds a little less as it grows. Every point of combo makes all your hero's hits, his own and your strikes, deal {{pct(BALANCE.combat.comboDmgPerStack, 0)}} more: +{{pct(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack, 0)}} at full combo. Strikes matter most against a boss on its timer and in the Titan's race.
 
 The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} seconds after your last strike, faster the higher it is, and it is gone when your hero leaves the fight or falls. Strikes do not use up potion charges.
 
@@ -89,7 +85,7 @@ A [[Potions|potion]] picked on the Combat tab is drunk as the fight needs it, an
 - **Gold:** {{pct(BALANCE.rewards.goldPerHp, 0)}} of the monster's full health, {{BALANCE.rewards.bossGoldMult}} times that for a boss's first fall, raised by gold bonuses (the Fortune perk, medals, gear). Gold is the run's money: it buys [[Camp]] upgrades and [[Shop|supplies]], and it is gone at the next prestige.
 - **Combat XP:** {{BALANCE.rewards.xpBase}} × the stage to the power {{BALANCE.rewards.xpExp}}, {{BALANCE.rewards.bossXpMult}} times that for a boss's first fall, so deeper stages teach more (the table below). XP bonuses multiply it: Combat XP gear bonuses, [[/mini-games|the bonfire]], medals.
   - **A fast start:** at combat level 1 a kill teaches {{1 + BALANCE.rewards.fastStart.extra}} times as much, the bonus shrinking evenly to nothing at level {{BALANCE.rewards.fastStart.below}}.
-  - **The slowdown:** from combat level {{BALANCE.rewards.xpPace.from}} each kill teaches less the higher you rise, down to 1/{{BALANCE.rewards.xpPace.slow}} as much from level {{BALANCE.rewards.xpPace.to}}, so level 99 is a long road.
+  - **The slowdown:** from combat level {{BALANCE.rewards.xpPace.from}} each kill teaches less the higher you rise, down to 1/{{BALANCE.rewards.xpPace.slow}} as much from level {{BALANCE.rewards.xpPace.to}}, so level {{MAX_LEVEL}} is a long road.
 - **The bestiary:** every kind of monster you defeat is counted, with a star at {{KILL_STARS.slice(0, -1).map(n => fmt(n)).join(', ')}} and {{fmt(KILL_STARS.at(-1))}} defeats of a kind (see [[Monsters]]).
 - **A pet:** each kill is a small chance that {{PETS.find(p => p.skill === 'combat').name}}, the fight's pet, finds you (see [[Pets]]).
 
@@ -100,13 +96,13 @@ Each kill rolls for loot from the land it is in. A boss's first fall in a run is
 | Drop | An ordinary kill | A boss's first fall |
 | --- | --- | --- |
 | A material from the land's loot table | {{pct(BALANCE.rewards.materialDropChance, 0)}} | always |
-| A gem of about the land's tier | {{pct(BALANCE.rewards.gemDropChance, 0)}} | ten times as likely |
-| [[Monster Essence]] | {{pct(BALANCE.rewards.essenceDropChance, 0)}}, one or two | always, {{BALANCE.rewards.bossEssence[0]}} to {{BALANCE.rewards.bossEssence[1]}}, more in richer lands |
+| A gem of about the land's tier | {{pct(BALANCE.rewards.gemDropChance, 0)}} | far more likely |
+| [[Monster Essence]] | {{pct(BALANCE.rewards.essenceDropChance, 0)}}, a little | always, {{BALANCE.rewards.bossEssence[0]}} to {{BALANCE.rewards.bossEssence[1]}}, more in richer lands |
 | A piece of gear | {{pct(GEAR_DROP_CHANCE.regular, 1)}} | {{pct(GEAR_DROP_CHANCE.boss, 0)}} |
 
 - Materials come one at a time in the first lands and several at a time in the richer ones. Each land's loot table is on its page ([[Zones]]).
-- A gem is of the land's tier or one either side of it, the lower ones three times as likely.
-- From depth {{VOIDSTONE_DEPTH}} of the Abyss (stage {{AUTHORED_STAGES + (VOIDSTONE_DEPTH - 1) * STAGES_PER_ZONE + 1}}), a boss's first fall also leaves a [[Voidstone]] {{pct(VOIDSTONE_CHANCE, 0)}} of the time. Nothing else gives one.
+- A gem is of the land's tier or one either side of it, the lower ones likelier.
+- From depth {{VOIDSTONE_DEPTH}} of the Abyss (stage {{AUTHORED_STAGES + (VOIDSTONE_DEPTH - 1) * STAGES_PER_ZONE + 1}}), a boss's first fall (and a Titan that deep) also leaves a [[Voidstone]] {{pct(VOIDSTONE_CHANCE, 0)}} of the time. Nothing else gives one.
 - Drop chance bonuses (the Fortune perk, medals, dungeon milestones, weekend events) raise these chances.
 - Which piece of gear drops, and how its tier, rarity and kind are picked, is on [[Equipment]].
 - A new hero's first kill leaves him a sword, and the first boss he ever beats always leaves a piece of armour.
@@ -138,6 +134,4 @@ A monster at stage 1 has {{BALANCE.enemy.baseHp}} health and {{BALANCE.enemy.bas
 | {{AUTHORED_STAGES + 1}} to {{BALANCE.enemy.deepFrom}}, the Abyss | +{{pct(BALANCE.enemy.abyssHpGrowth - 1)}} a stage, ×{{fmt(BALANCE.enemy.abyssHpGrowth ** STAGES_PER_ZONE)}} a depth | +{{pct(BALANCE.enemy.abyssAtkGrowth - 1)}} a stage |
 | past {{BALANCE.enemy.deepFrom}}, the deep Abyss | +{{pct(BALANCE.enemy.deepHpGrowth - 1)}} a stage, ×{{fmt(BALANCE.enemy.deepHpGrowth ** STAGES_PER_ZONE)}} a depth | +{{pct(BALANCE.enemy.deepAtkGrowth - 1)}} a stage |
 
-The Abyss grows faster than the lands above it, so the climb slows there; past stage {{BALANCE.enemy.deepFrom}} the growth eases off so the long climb keeps moving. Some of the bosses on the way:
-
-{{table(['Stage #', 'Boss', 'Health #', 'Attack #'], [10, 50, 100, 150, 200, 300, 400].map(s => { const e = enemyForStage(s); return [fmt(s), link(path.monster(e.baseName), e.baseName, `mon/${e.baseName}`), fmt(e.maxHp), fmt(e.atk)]; }), { sort: false })}}
+The Abyss grows faster than the lands above it, so the climb slows there; past stage {{BALANCE.enemy.deepFrom}} the growth eases off so the long climb keeps moving. A boss has the multiples above on top. The table below gives a monster's health, attack and pay at stages along the way.

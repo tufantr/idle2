@@ -9,7 +9,7 @@ Besides fighting, your hero has {{SKILL_IDS.length - 1}} skills to train, each f
 - **Levels.** Every skill, [[Combat]] included, uses the same [[XP table]], the one from RuneScape and Melvor Idle. Each level asks for more XP than the last: level {{MAX_LEVEL}} takes {{fmt(XP_FOR_MAX_LEVEL, { short: false })}} XP, and level {{[...Array(MAX_LEVEL).keys()].map(i => i + 1).find(l => xpForLevel(l) >= XP_FOR_MAX_LEVEL / 2)}} is only halfway there.
 - **One thing at a time.** Your hero does one skill action at a time, or fights. Starting an action takes your hero out of the fight, going back to the fight stops the action, and tapping an action again stops it. [[/skills/farming|Farming]] is the exception: its plots grow on the clock while you do anything else.
 - **Actions open with your level.** Each skill's actions open at set levels (the table on each skill's page). Later actions give more XP each and make better things.
-- **While you are away.** Whatever your hero was doing goes on while the game is closed, for up to {{BASE.baseOfflineHours}} hours (more with the Endurance perk and the Zipline obstacle). Work stops early if it runs out of what it uses. See [[Offline progress and saves]].
+- **While you are away.** Whatever your hero was doing goes on while the game is closed, for up to {{BASE.baseOfflineHours}} hours (more with the Endurance [[Perks|perk]] and the Zipline [[/skills/agility|obstacle]]). Work stops early if it runs out of what it uses. See [[Offline progress and saves]].
 - **Skills open as you go.** Only [[/skills/mining|Mining]] is open from the start; each of the others opens after some work in another skill or some progress in the fight (see [[Places and unlocks]]).
 
 ## Kinds of skills

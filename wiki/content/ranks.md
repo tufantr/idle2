@@ -8,7 +8,7 @@ Your hero's rank is a title earned by [[Prestige|prestiging]], and you can see i
 
 A rank gives no bonus at all. It only shows how far you have come.
 - Every prestige counts toward it: the ones you make by hand, the ones Auto makes, a prestige into a [[Trials|Trial]] and an [[Ascension]].
-- When a prestige will earn a new rank, the prestige dialog shows your hero in the new cloak before you confirm. Earning it brings a card of its own, and the chronicle under Records in the Hall notes the day.
+- When a prestige will earn a new rank, the prestige dialog shows your hero in the new cloak before you confirm. Earning it brings a card of its own, and the chronicle under Records in the [[Medals|Hall]] notes the day.
 - Your rank shows as a badge in its cloak's colour beside your hero in the Inventory and on the Prestige panel in the [[Shop]], with the count of prestiges the next rank needs.
 
 ## Wearing a cape instead

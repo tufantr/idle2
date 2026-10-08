@@ -41,12 +41,9 @@ function prestigePage(help) {
     };
 }
 
-/** What a perk gives at its most: its first number times its levels. */
+/** What a perk gives at its most: every number in its line times its levels. */
 function perkMax(p) {
-    const m = /^\+(\d+(?:\.\d+)?)(%| hours?)(.*)$/.exec(p.desc);
-    if (!m) return '';
-    const v = Number(m[1]) * p.max;
-    return `+${fmt(v)}${m[2]}${m[3].replace(/ per level$/, '')}`;
+    return p.desc.replace(/\+(\d+(?:\.\d+)?)/g, (_, n) => `+${fmt(Number(n) * p.max)}`).replace(/ per level$/, '');
 }
 
 function perksPage(help) {

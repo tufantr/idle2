@@ -1,6 +1,6 @@
 ---
 path: /potions
-keywords: potion, potions, alchemy, brew, brewing, charges, accuracy potion, defense potion, evasion potion, health potion, alchemist
+keywords: potion, potions, alchemy, brew, brewing, charges, accuracy potion, defense potion, evasion potion, health potion, alchemist, potion charges
 aliases: Potion charges, Brewing
 ---
 A potion gives your hero a bonus in the fight: more attack, defence, dodge or health (the table below). Potions are brewed in [[Alchemy]], and one works at a time.

@@ -5,7 +5,7 @@
 import { UNLOCKS, PLACE_GAPS_MS, WORK_GAP_MS } from '../../src/data/unlocks.js';
 import { GOLD_SHOP } from '../../src/data/perks.js';
 import { EVENTS, EVENT_MILESTONES, EVENT_SHOP, EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP, FESTIVAL_CLOAK_COST, EVENT_START_DAY, EVENT_LENGTH_HOURS } from '../../src/data/events.js';
-import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED, GREAT_CRATE_EVERY } from '../../src/systems/daily.js';
+import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED, GREAT_CRATE_EVERY, CRATE_GOLD_KILLS, CRATE_PICKS, CRATE_PICK_QTY, CRATE_ESSENCE_PER_TIER, GREAT_CRATE_GOLD_MULT, GREAT_CRATE_REST_MULT } from '../../src/systems/daily.js';
 import { enemyForStage, goldPerKillAtStage, tokensForStage, combatXpForKill, goldForKill, BALANCE, MAX_MITIGATION } from '../../src/core/formulas.js';
 import { BASE } from '../../src/core/modifiers.js';
 import { xpForLevel, MAX_LEVEL } from '../../src/core/xp.js';
@@ -34,10 +34,10 @@ function placesPage(help) {
 function cratePage(help) {
     return {
         infobox: infobox({ title: 'Daily crate', image: icon('crate', 3), rows: [['A new crate', `every ${time(DAILY_INTERVAL_MS)}`], ['Waiting at most', DAILY_MAX_BANKED], ['Great crate', `every ${GREAT_CRATE_EVERY}th opened`]] }),
-        body: `${help.prose('/daily-crate')}\n${section('What is inside', table(['', 'A crate', 'A great crate'], [
-            ['Gold', `${40} kills' worth at your best stage`, 'three times as much'],
-            ['Materials', '6 picks of your best stage\'s land, 2 each', 'twice as many'],
-            ['Essence', '3 × the land\'s richness tier', 'twice as much'],
+        body: `${help.prose('/daily-crate')}\n${section('Crate contents', table(['', 'A crate', 'A great crate'], [
+            ['Gold', `${CRATE_GOLD_KILLS} kills' worth at your best stage`, `${GREAT_CRATE_GOLD_MULT} times as much`],
+            ['Materials', `${CRATE_PICKS} picks of your best stage's land, ${CRATE_PICK_QTY} each`, `${GREAT_CRATE_REST_MULT} times as many`],
+            ['Essence', `${CRATE_ESSENCE_PER_TIER} × the land's richness tier`, `${GREAT_CRATE_REST_MULT} times as much`],
             ['Gem', 'the best gem of the land\'s tier', 'and one of the next tier']
         ], { sort: false }))}`
     };

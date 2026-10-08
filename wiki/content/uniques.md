@@ -1,9 +1,9 @@
 ---
 path: /uniques
-keywords: unique, uniques, unique item, unique items, fragment, fragments, assemble, dungeon, legendary, record, records, spare
+keywords: unique, uniques, unique item, unique items, fragment, fragments, assemble, dungeon, legendary, record, records, spare, unique fragments
 aliases: Uniques, Fragments, Unique fragments
 ---
-Every [[Dungeons|dungeon]] guards a unique item: a piece of gear with a name of its own, legendary quality and bonuses that never change. The list below has them all, with the dungeon each comes from.
+Every [[Dungeons|dungeon]] guards a unique item: a piece of gear with a name of its own, legendary quality and bonuses that never change. The list below has them all.
 
 ## Where uniques come from
 

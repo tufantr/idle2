@@ -3,7 +3,7 @@
 
 import { SKILLS, GATHERING_SKILLS, PRODUCTION_SKILLS } from '../../src/data/skills.js';
 import { RESOURCES } from '../../src/data/resources.js';
-import { SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, SMITH_SLOT_OFFSET, smithLevelReq, reinforceCost, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND, VOIDSTONE_DEPTH } from '../../src/data/workshop.js';
+import { SMITH_INTERVAL, CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, SMITH_SLOT_OFFSET, smithLevelReq, reinforceCost, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND, VOIDSTONE_DEPTH } from '../../src/data/workshop.js';
 import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES } from '../../src/data/items.js';
 import { CROPS, FARMING_PLOTS } from '../../src/data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL, obstacleUpgradeGold, obstacleUpgradeLevelReq } from '../../src/data/agility.js';
@@ -24,8 +24,8 @@ import { path, res, resList, resIcon, icon, link, table, infobox, section, tiles
 const sec = { section: 'Skills', sectionPath: '/skills' };
 const KIND = id => (GATHERING_SKILLS.includes(id) ? 'Gathering' : PRODUCTION_SKILLS.includes(id) ? 'Production' : ['smithing', 'crafting'].includes(id) ? 'Workshop' : id === 'farming' ? 'Growing' : 'Training');
 const FEEDS = {
-    mining: ['smithing', 'crafting'], woodcutting: ['cooking', 'firemaking', 'smithing', 'crafting', 'agility'], fishing: ['cooking'], hunting: ['cooking', 'alchemy'],
-    cooking: [], firemaking: [], alchemy: [], farming: ['cooking', 'alchemy'], smithing: ['crafting', 'agility'], crafting: [], agility: []
+    mining: ['smithing', 'crafting', 'alchemy'], woodcutting: ['cooking', 'firemaking', 'smithing', 'crafting', 'alchemy', 'agility'], fishing: ['cooking'], hunting: ['cooking', 'alchemy'],
+    cooking: ['alchemy'], firemaking: [], alchemy: [], farming: ['cooking', 'alchemy'], smithing: ['crafting', 'agility'], crafting: [], agility: []
 };
 
 const card = id => (CARD_ART.has(id) ? `<span class="card-thumb" style="background-image:url(/assets/paint/cards/${id}.webp)" aria-hidden="true"></span>` : '');
@@ -72,7 +72,10 @@ function petSection(id) {
     const pet = PETS.find(p => p.skill === id);
     if (!pet) return '';
     const hours = level => fmt(Math.round(PET_BASE / level / 3600));
-    return section('Pet', `<div class="feature-row">${icon(`pet/${pet.id}`, 2)}<div><p><strong>${esc(pet.name)}</strong>: ${esc(pet.desc)}, for good.</p><p>A pet finds you while you train: on average after ${hours(50)} hours of ${esc(SKILLS[id].name)} at level 50, or ${hours(99)} hours at 99. See ${link('/pets', 'Pets')}.</p></div></div>`);
+    const when = id === 'farming'
+        ? `A pet finds you as you harvest: each harvest's chance is its crop's growing time in seconds × your Farming level ÷ ${fmt(PET_BASE)}, so slow crops are likelier.`
+        : `A pet finds you while you train: on average after ${hours(50)} hours of ${esc(SKILLS[id].name)} at level 50, or ${hours(99)} hours at 99.`;
+    return section('Pet', `<div class="feature-row">${icon(`pet/${pet.id}`, 2)}<div><p><strong>${esc(pet.name)}</strong>: ${esc(pet.desc)}, for good.</p><p>${when} See ${link('/pets', 'Pets')}.</p></div></div>`);
 }
 
 function capeSection(id) {
@@ -85,6 +88,25 @@ function medalsSection(id) {
     const list = ACHIEVEMENTS.filter(a => a.req.type === 'skillLevel' && a.req.skill === id || (id === 'smithing' || id === 'crafting') && a.id === 'artisan' || id === 'agility' && a.id === 'architect');
     if (!list.length) return '';
     return section('Medals', table(['Medal', 'For', 'Reward'], list.map(a => [`<span class="act">${medalArt(a, 1)} <a href="/medals#${a.id}">${esc(a.name)}</a></span>`, esc(a.desc), esc(a.reward)]), { sort: false }));
+}
+
+
+/** The level calculator (wiki.js): the skill's actions as data, XP and base time each. */
+function calculator(id) {
+    let list = [];
+    if (SKILLS[id].nodes.length) list = SKILLS[id].nodes.map(n => ({ n: n.name, xp: n.xp, ms: n.interval, lv: n.levelReq }));
+    if (id === 'smithing') list = [...SMELTING_RECIPES.map(r => ({ n: `Smelt ${r.name}`, xp: r.xp, ms: r.interval, lv: r.levelReq })),
+        ...SMITHING_TYPES.map(type => ({ n: `Forge Copper ${TYPE_NAMES[type]}`, xp: METALS[0].xpPerBar * SMITHING_BAR_COST[type], ms: SMITH_INTERVAL, lv: smithLevelReq(METALS[0], type) }))];
+    if (id === 'crafting') list = GEM_TIERS.map(g => ({ n: `${RESOURCES[g.gem].name} ring`, xp: g.xp, ms: CRAFT_INTERVAL, lv: g.levelReq + CRAFT_SLOT_OFFSET.Ring }));
+    if (!list.length) return '';
+    list.sort((a, b) => a.lv - b.lv);
+    return section('Level calculator', `<div class="calc" data-actions="${esc(JSON.stringify(list))}">
+        <label>From level <input class="calc-from" type="number" min="1" max="98" value="1" inputmode="numeric"></label>
+        <label>To level <input class="calc-to" type="number" min="2" max="99" value="${Math.min(99, list[0].lv + 20)}" inputmode="numeric"></label>
+        <label class="calc-wide">Doing <select class="calc-act"></select></label>
+        <label>Speed bonus % <input class="calc-speed" type="number" min="0" max="1000" value="0" inputmode="numeric"></label>
+        <output class="calc-out" aria-live="polite"></output>
+    </div><p class="muted">Base XP and time; add your speed bonuses (tools, mastery, perks, Focus) for a closer figure. XP bonuses (the bonfire, Scholar) shorten it further.</p>`);
 }
 
 // ---------- the special skills ----------
@@ -174,7 +196,7 @@ function skillPage(id, help) {
                 cape ? ['Cape (99)', esc(cape.perk)] : null
             ]
         }),
-        body: [help.prose(path.skill(id)), actions, special ? special() : '', id === 'firemaking' ? firemakingSections() : '', toolsFor(id), masterySection(id), petSection(id), capeSection(id), medalsSection(id)].filter(Boolean).join('\n'),
+        body: [help.prose(path.skill(id)), actions, special ? special() : '', id === 'firemaking' ? firemakingSections() : '', calculator(id), toolsFor(id), masterySection(id), petSection(id), capeSection(id), medalsSection(id)].filter(Boolean).join('\n'),
         navbox: navbox('Skills', [...SKILL_ORDER.map(s => link(path.skill(s), esc(SKILLS[s].name), skillIcon(s))), link('/combat', 'Combat', 'item/Weapon/3')])
     };
 }
