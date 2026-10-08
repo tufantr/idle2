@@ -13,6 +13,14 @@ export const BALANCE = {
         baseAtk: 5,
         atkGrowth: 1.065,
         abyssAtkGrowth: 1.075,
+        // The deep Abyss (the owner's choice, docs/DESIGN.md §5.6): past stage `deepFrom` the monsters grow
+        // more slowly, so the late climb keeps moving (1.6 times as fast from hour 400 on in the simulator;
+        // a player with Auto gets there at about hour 150, one without later). The gap to the drops
+        // (BALANCE.abyss.dropGrowth a depth of ten stages) and the records stays near 0.024 a stage:
+        // nearer 0.02 the climb runs away (test/balance.test.mjs).
+        deepFrom: 400,
+        deepHpGrowth: 1.065,
+        deepAtkGrowth: 1.057,
         bossHpMult: 3,
         bossAtkMult: 1.6,
         baseInterval: 2200,     // ms between enemy attacks at stage 1
@@ -115,9 +123,10 @@ export function enemyBaseStats(stage) {
         hp = e.baseHp * Math.pow(e.hpGrowth, stage - 1);
         atk = e.baseAtk * Math.pow(e.atkGrowth, stage - 1);
     } else {
-        const extra = stage - AUTHORED_STAGES;
-        hp = e.baseHp * Math.pow(e.hpGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssHpGrowth, extra);
-        atk = e.baseAtk * Math.pow(e.atkGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssAtkGrowth, extra);
+        const extra = Math.min(stage, e.deepFrom) - AUTHORED_STAGES;
+        const deep = Math.max(0, stage - e.deepFrom);
+        hp = e.baseHp * Math.pow(e.hpGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssHpGrowth, extra) * Math.pow(e.deepHpGrowth, deep);
+        atk = e.baseAtk * Math.pow(e.atkGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssAtkGrowth, extra) * Math.pow(e.deepAtkGrowth, deep);
     }
     return { hp, atk, interval: Math.max(e.minInterval, e.baseInterval - e.intervalPerStage * Math.min(stage, 120)) };
 }

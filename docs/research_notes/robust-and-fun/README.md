@@ -45,11 +45,14 @@ of `tools/simulate.mjs` (no game code changed by them):
    Mythic (500, 1,000, 2,000), mastery checkpoints, a completion percentage, Ascension (Stars, a day's
    rest), sixteen named strata in the Abyss and six medals for the deep game, two more dungeons (240
    and 275), and moments on the calendar: the week's Trial with its laurel and board, and a festival
-   cloak each event weekend. With Auto every band to hour 1,000 meets its target but hours 300–500,
-   which come close (a big moment every 29 hours against 24; DESIGN §5.6); without Auto the waits past
-   hour 500 reach a week. **Still to do:** paintings for each stratum and the
-   two new dungeons (Gemini, with the owner's go-ahead for its downloads), the deep Abyss's pace and
-   Crafting's late job (the owner's choices), an end boss, each early Ascension opening something new,
-   a cape for 100%.
+   cloak each event weekend. Then the deep Abyss eased past stage 400 (the owner's choice): the late
+   climb moves 1.6 to 2 times as fast, and a player without Auto waits at most 108 hours for a big
+   moment past hour 500 (it was a week). Every band to hour 1,000 now meets its longest-wait target;
+   with Auto the big moments still come less often than asked in hours 300–500 (every 29 hours against
+   24) and past hour 500 (every 71 against 48), where only the records and the calendar are left (DESIGN
+   §5.6). **Still to do:** paintings for each
+   stratum and the two new dungeons (the prompts are in `docs/art/gemini.md`), something to reach past
+   stage 500, an end boss, each early Ascension opening something new, a cape for 100%. Crafting's late
+   job stays as it is (the owner's choice; the recommendation is in DESIGN §5.7).
 6. **Playtest log: done** (Settings, exported for `tools/playtest.mjs`). A short playtest with people is
    the owner's.

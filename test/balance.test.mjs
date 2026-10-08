@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { BASE } from '../src/core/modifiers.js';
-import { BALANCE, generateEquipment } from '../src/core/formulas.js';
+import { BALANCE, generateEquipment, enemyBaseStats } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
 import { CAMP_UPGRADES, CAMP_PRICE_KILLS, campCost } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
@@ -49,6 +49,19 @@ test('deep in the Abyss health grows with the depth the armour came from, and dr
     // (it stood still before armour gave health; the health from levels dilutes it a little)
     assert.ok(grew > Math.pow(BALANCE.abyss.dropGrowth, 5) / 2, `health x${grew.toFixed(1)} over five depths`);
     assert.ok(BALANCE.abyss.dropGrowth < Math.pow(BALANCE.enemy.abyssHpGrowth, 10), 'drops stay below the monsters, or the climb runs away');
+});
+
+test('the deep Abyss eases, but its monsters stay ahead of the drops and the records', () => {
+    const e = BALANCE.enemy;
+    assert.ok(e.deepHpGrowth < e.abyssHpGrowth && e.deepAtkGrowth < e.abyssAtkGrowth, 'past deepFrom the monsters grow more slowly');
+    assert.ok(e.deepFrom >= 300, 'the first 150 hours hardly reach it');
+    // the gap a stage, in log power: the monsters' health against a depth's drops (ten stages) and a record (recordStages)
+    const gap = Math.log(e.deepHpGrowth) - Math.log(BALANCE.abyss.dropGrowth) / 10 - Math.log(BASE.recordMult) / BASE.recordStages;
+    assert.ok(gap > 0.02, `gap ${gap.toFixed(4)} a stage: nearer 0.02 the climb runs away`);
+    const below = enemyBaseStats(e.deepFrom);
+    const past = enemyBaseStats(e.deepFrom + 10);
+    assert.ok(Math.abs(past.hp / below.hp - Math.pow(e.deepHpGrowth, 10)) < 1e-6 * past.hp / below.hp, 'ten stages past deepFrom grow by deepHpGrowth^10');
+    assert.ok(enemyBaseStats(e.deepFrom - 1).hp < below.hp, 'no step down at deepFrom');
 });
 
 test('camp prices are the old ones for a new player, and follow the best stage later', () => {

@@ -271,8 +271,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   is purple, so hues turn from there) until each has a painting of its own. The zone keeps the id
   `abyss` and everything else the Abyss had: its scaling, loot, depth and gear tiers.
 
-- **Enemy HP** = `25 × 1.075^(s−1)` to stage 100 (×2.06 per zone), then ×1.085 per stage.
-  **Enemy ATK** = `5 × 1.065^(s−1)`, then ×1.075. **Bosses** ×3 HP, ×1.6 ATK.
+- **Enemy HP** = `25 × 1.075^(s−1)` to stage 100 (×2.06 per zone), then ×1.085 per stage, and past
+  stage 400 ×1.065 (`deepFrom`, `deepHpGrowth`: the deep Abyss eased, §5.6).
+  **Enemy ATK** = `5 × 1.065^(s−1)`, then ×1.075, past 400 ×1.057. **Bosses** ×3 HP, ×1.6 ATK.
 - **Two tiers per zone.** `tier` is the zone's richness (material quantities, gems, boss essence);
   `gearTier` is the tier of gear that drops there. Prestige carries players through the early zones
   far faster than they can smith (stage 60 in ~1.5 h, mithril in ~2–4 h), so the gear tier follows
@@ -652,9 +653,13 @@ gear to wear; a place that waited opens on the return and is named there too.
   can't be dressed up), may grow only as fast as play could in the real time since that number's
   highest value so far, and none may pass a ceiling no save reaches (checked on the first upload too).
   The best stage may grow by its depth (`honestClimb` in `src/core/power.js`): three times the fastest
-  climb in 166 simulated runs of 150 to 400 hours, as a burst plus a rate an hour from the earlier best
-  (from stage 200: 50 stages in an hour, 160 in a day; from 300: 88 in a day). It was 30 plus 60 an hour
-  at any depth, which let a late save gain 1,470 stages in a day against an honest 20 to 50. Trial tiers
+  climb of the simulator's players, as a burst plus a rate an hour from the earlier best. First fitted to
+  166 runs of 150 to 400 hours; from stage 200 refitted in October 2026 to 378 runs of 150 to 1,000
+  hours, because the game had grown faster (Auto, Ascension, the records, the deep Abyss eased) and an
+  honest hero came within 1.3 times of the allowance at stage 300: now from stage 200 about 70 stages in
+  an hour and 240 in a day, from 300 about 210 in a day, past 400 160 and past 500 95, each at least
+  three times the fastest honest climb from there. It was 30 plus 60 an hour at any depth, which let a
+  late save gain 1,470 stages in a day against an honest 20 to 70. Trial tiers
   a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
@@ -1345,7 +1350,7 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | Farming | crop `growMs`, `yield`, `xp`, `seedGold`; `FARMING_PLOTS` | `src/data/farming.js` |
 | Agility | slot `costGold`, `materials`, obstacle `mods`; `MAX_OBSTACLE_LEVEL` | `src/data/agility.js` |
 | Mastery | `MASTERY_XP_DIVISOR` (how slow), `MASTERY_PER_LEVEL` (what each level gives) | `src/data/mastery.js` |
-| The deep Abyss | `BALANCE.abyss.dropGrowth` (drop power per depth), `dropScalingFrom` | `src/core/formulas.js` |
+| The deep Abyss | `BALANCE.abyss.dropGrowth` (drop power per depth), `dropScalingFrom`; past stage 400 the monsters' growth, `BALANCE.enemy.deepFrom`, `deepHpGrowth`, `deepAtkGrowth` | `src/core/formulas.js` |
 | Prestige pacing | `BALANCE.prestige.minRunMs`, `fullRunFraction` | `src/core/formulas.js` |
 | Weekend events | `EVENTS` (bonuses), `EVENT_DAILY_CAP`, `EVENT_MILESTONES`, `EVENT_SHOP` | `src/data/events.js` |
 | The bonfire | `BASE.bonfire*` | `src/core/modifiers.js` |
@@ -1423,19 +1428,31 @@ With Auto, the realistic player, stage 200 comes at 42 hours (57 without), 300 a
 the skiller, twenty randomised policies); the speed-prestiger, the exploit-seeker, reaches stage 200 at
 38 hours, no faster than Auto.
 
-**The late game, now.** Past hour 400 the hero gains about 40 stages in 600 hours, so what is tied to
-stages (records every 25, strata every 25, medals at 400 and 500, Titans) comes a few times in those
-600 hours; the calendar carries the rest: a laurel from the week's Trial each week (seven in 1,000 hours)
-and a festival cloak each event weekend (five of six by hour 1,000). With them a player with Auto meets
-every band's target (hours 300–500 within a few hours of it); one without Auto waits up to a week past
-hour 500. Two ways further, for the owner to choose:
-- **A faster deep Abyss.** Its drops grow ×1.45 a depth against the monsters' ×2.26 (§3.7, measure 6
-  above): the gap sets the late pace. Easing the monsters' growth past stage ~400 only (×1.085 a stage
-  now) would speed the late game without touching the first 150 hours; raising `dropGrowth` speeds the
-  middle too (stage 200 sooner).
+**The late game, now.** Past hour 400 the hero gained about 50 stages in 600 hours (80 to 100 since the
+deep Abyss eased, below), so what is tied to stages (records every 25, strata every 25, medals at 400
+and 500, Titans) comes a few times in those 600 hours; the calendar carries the rest: a laurel from the
+week's Trial each week (seven in 1,000 hours) and a festival cloak each event weekend (five of six by
+hour 1,000). With them a player with Auto meets every band's target (hours 300–500 within a few hours
+of it); one without Auto waited up to a week past hour 500 (108 hours since the easing). Two ways
+further, for the owner to choose:
+- **A faster deep Abyss: done** (the owner's choice, October 2026). Its drops grow ×1.45 a depth against
+  the monsters' ×2.26 (§3.7, measure 6 above), and the gap sets the late pace. Past stage 400 the
+  monsters now grow ×1.065 a stage in health and ×1.057 in attack (×1.085 and ×1.075 before;
+  `BALANCE.enemy.deepFrom`, `deepHpGrowth`, `deepAtkGrowth`), which halves the gap to 0.024 a stage,
+  still above the 0.02 where the climb would run away (`test/balance.test.mjs`). Seeds 1–3, 1,000 hours,
+  after (before): with Auto the best stage is 540 (480) at hour 400 and 620 (530) at hour 1,000, the
+  climb from hour 400 0.13 stage an hour (0.08); without Auto 460 (440) and 560 (490), 0.17 (0.08), and
+  its longest wait for a big moment in hours 500–1,000 is 108 hours (168), inside the target. With Auto
+  the big moments past hour 500 come a little less often than before (every 71 hours, from 62; the
+  longest wait 118, from 120): the last strata and the medal at 500 now come before hour 500, and past
+  stage 500 only the records and the calendar are left. A player with Auto reaches stage 400 at hour 146, so the first 150 hours are as
+  they were. Also tried: ×1.07 (stage 590 by hour 1,000) and ×1.06 (680, at the edge of running away).
+  The leaderboard's allowance was refitted with it (§3.17).
 - **More on the calendar and to reach.** Built so far: the week's Trial with its board, the festival
-  cloaks and the two late dungeons (§3.26, §3.19, §3.11). Still open: an end boss, and paintings for the
-  strata and the two dungeons (they wear borrowed ones under their own light).
+  cloaks and the two late dungeons (§3.26, §3.19, §3.11). Still open: an end boss; something to reach
+  past stage 500, which is Pandemonium without end (a layer or a medal every 50 stages would give the
+  faster deep climb somewhere to arrive); and paintings for the strata and the two dungeons (they wear
+  borrowed ones under their own light; the prompts are in `docs/art/gemini.md`).
 
 ### 5.7 The report card (October 2026)
 
@@ -1484,10 +1501,15 @@ each system left out, against a baseline of 30):
 - **The first prestige at 1.6 hours** is the bot's patience: Prestige opens at stage 30 in a run ten
   minutes old, and the bot waits until a run has gone 20 minutes without a new stage.
 
-**Open, for the owner.** Crafting makes the hero's jewellery only until epic pieces drop: crafted
-jewellery stops at rare (`CRAFT_MAX_RARITY`, §3.4) while the fight's is epic or legendary, so leaving
-Crafting alone costs the bot nothing. Letting it reach epic at high Crafting levels would give it a
-late job, as the refit gave the anvil.
+**Kept as it is, by the owner's choice.** Crafting makes the hero's jewellery only until epic pieces
+drop: crafted jewellery stops at rare (`CRAFT_MAX_RARITY`, §3.4) and at Diamond (tier 6), while the
+fight's is epic or legendary up to Voidstone (tier 7), so leaving Crafting alone costs the bot nothing.
+The recommendation, for whenever it is wanted: let the rarity cap rise with Crafting (epic possible from
+level 75, legendary at 99 as a rare roll, both helped by the quality bonuses Crafting already has), and
+add a Voidstone recipe at level 85 with the gem dropped by the Abyss's bosses from depth 5. Crafting then
+makes pieces that can beat drops late, the essence spent upgrading jewellery has something worth it, and
+the late game gains a skill goal; measure it with `tools/batch.mjs` (30 seeds, without crafting against
+with) before keeping it, as the refit was.
 
 ## 6. Where this differs from the research report
 

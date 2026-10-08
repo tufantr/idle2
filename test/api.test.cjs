@@ -166,8 +166,10 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.equal(climbed(1, 120, 2), false, 'a new player\'s first hours');
     assert.equal(climbed(250, 300, 24), false, 'a good day late in the game');
     assert.equal(climbed(300, 400, 168), false, 'a week late in the game');
-    assert.equal(climbed(250, 450, 24), true, 'two hundred stages in a day, late');
-    assert.equal(climbed(300, 360, 1), true, 'sixty stages in an hour, late (the old allowance let it by)');
+    assert.equal(climbed(250, 500, 24), true, 'two hundred and fifty stages in a day, late');
+    assert.equal(climbed(300, 390, 1), true, 'ninety stages in an hour, late (the old allowance let it by)');
+    assert.equal(climbed(400, 450, 24), false, 'fifty in a day past 400, where the monsters grow more slowly');
+    assert.equal(climbed(600, 700, 24), true, 'a hundred in a day past 600');
 });
 
 test('a save cannot reach the server\'s own objects', async () => {

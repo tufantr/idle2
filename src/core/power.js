@@ -55,11 +55,12 @@ export function powerSummary(rawState, now = Date.now()) {
 }
 
 // The fastest honest climb of the best stage, by depth: the most stages the simulator's players gained
-// from each depth in an hour, four hours and a day (166 runs of 150 to 400 hours, five play styles,
-// with and without Trials; docs/DESIGN.md §3.17) fit `burst + perHour × hours`, from these rows
-// ([stage, burst, perHour], straight lines between them). Early stages fall fast, late ones slowly:
-// about 13 stages in an hour and 50 in a day around stage 200, 10 and 22 past 300.
-const CLIMB = [[0, 60, 10], [50, 35, 6], [100, 25, 4], [150, 20, 2.5], [200, 15, 1.6], [250, 12, 1.2], [300, 10, 0.8]];
+// from each depth in an hour, four hours and a day fit `burst + perHour × hours`, from these rows
+// ([stage, burst, perHour], straight lines between them; docs/DESIGN.md §3.17). First fitted to 166 runs
+// of 150 to 400 hours; from stage 200 refitted in October 2026 to 378 runs of 150 to 1,000 hours on the
+// balance since (Auto, Ascension, the records, the deep Abyss's easing past 400): a hero now gains up to
+// 20 stages in an hour and 70 in a day around stage 250, 10 and 50 past 400, and 20 a day past 500.
+const CLIMB = [[0, 60, 10], [50, 35, 6], [100, 25, 4], [150, 20, 2.5], [200, 20, 2.5], [300, 22, 2], [350, 22, 2], [400, 16, 1.5], [450, 16, 1.5], [500, 10, 0.9]];
 export const CLIMB_MARGIN = 3;   // what the server allows over it: players who tap, and better plans than the bot's
 
 /** The most a best stage of `fromStage` can honestly grow in `hours`, times CLIMB_MARGIN. */

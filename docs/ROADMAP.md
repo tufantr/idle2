@@ -429,6 +429,12 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **A faster deep Abyss** (the owner's choice; DESIGN §5.6): past stage 400 the monsters grow
+      ×1.065 a stage in health and ×1.057 in attack (from ×1.085 and ×1.075), so the late climb keeps
+      moving: by hour 1,000 the simulated hero stands at stage 620 with Auto (530 before) and 560 without
+      (490), and a player without Auto never waits more than 108 hours for a big moment past hour 500
+      (168). Nothing changes before stage 400 (hour ~146 with Auto). The leaderboard's allowance for a
+      climb was refitted to the game as it is now, with three times the fastest honest climb at every depth
 - [x] **The smith refits the reinforcing**: a weapon or piece of armour put on in place of a reinforced
       one takes its anvil levels but one, and the bars in them, so the anvil's work is no longer lost at
       every better drop (the simulated hero ends 150 hours at +8.6 on average, from +7.3, and 10 stages
