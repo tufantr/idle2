@@ -5,7 +5,7 @@ import {
     DUNGEONS, dungeonById, UNIQUES, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, DIRECT_UNIQUE_CHANCE,
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE,
     ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS,
-    TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES, titanStage, TITAN_BANK } from '../data/dungeons.js';
+    TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES, titanStage, TITAN_BANK, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
 import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, BALANCE } from '../core/formulas.js';
 import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RARITIES } from '../data/items.js';
@@ -354,7 +354,8 @@ export function endTitan(game, won) {
         bumpStat(game, 'goldEarned', gold);
         const gem = [...GEM_DROP_TABLE].reverse().find(g => g.tier <= Math.min(6, 1 + Math.floor(level / 2))) || GEM_DROP_TABLE[0];
         state.resources[gem.id] += 2;
-        log(game, `🗿 ${enemy.name} defeated! +${essence} essence, +${gold.toLocaleString()} gold, 2× ${RESOURCES[gem.id].name}; permanent +2% ATK and HP.`, 'achievement');
+        const bonus = TITAN_BONUS.atkMult * (titanBonusUnits(state.titan.kills) - titanBonusUnits(state.titan.kills - 1));   // half from the TITAN_LATE_FROM + 1st on
+        log(game, `🗿 ${enemy.name} defeated! +${essence} essence, +${gold.toLocaleString()} gold, 2× ${RESOURCES[gem.id].name}; permanent +${+(bonus * 100).toFixed(1)}% ATK and HP.`, 'achievement');
         game.emit({ type: 'titan', won: true, level });
     } else {
         const essence = Math.floor(dealt * 4 * level);

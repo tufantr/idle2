@@ -22,19 +22,20 @@ import { escapeHtml as esc, shareInWords } from './format.js';
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;   // 25th, 21st
 const secs = ms => Math.round(ms / 1000);
+const hours = ms => (ms === 3600000 ? 'an hour' : `${ms / 3600000} hours`);
 
 // `art` is the painting, `focus` where its crop looks (CSS background-position), `icon` a sprite key
 // or an emoji for small places, `blurb` one line, `points` the rules in a few short lines.
 export const FEATURES = {
     combat: { name: 'Combat', art: 'meadow', icon: 'item/Weapon/3', blurb: SKILLS.combat.desc,
-        points: [`Your hero fights automatically. Click the monster (or press Space) to strike as well: ${shareInWords(BALANCE.combat.manualHitMult)} of an attack, up to ${1000 / BALANCE.combat.strikeGapMs} a second, and each strike builds a combo of up to +${pc(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack)} damage.`, 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone, rest at the campfire, and fight on.',
+        points: [`Your hero fights automatically. Click the monster (or press Space) to strike as well: ${shareInWords(BALANCE.combat.manualHitMult)} of an attack, up to ${1000 / BALANCE.combat.strikeGapMs} a second, and each strike builds a combo of up to +${pc(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack)} damage.`, 'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone (from its first stage, two stages back, never onto a boss), rest at the campfire, and fight on.',
             `Weapons and armour past copper only drop, mostly of the zone's own tier and for the slots you lack. A boss that leaves no upgrade fills a mark of the gold ring round the boss's node; the ${ordinal(PITY_MARKS)} brings a sure piece for your weakest slot.`,
             `Deeper stages teach more. Past combat level ${BALANCE.rewards.xpPace.from}, each kill teaches less the higher you rise (from ${BALANCE.rewards.xpPace.to}, a ${ordinal(BALANCE.rewards.xpPace.slow)} as much), so level 99 is a long road.`] },
     mining: { name: 'Mining', art: 'caves', icon: 'res/copper_ore', blurb: SKILLS.mining.desc,
         points: ['Pick a vein and your hero keeps digging, even while you are away.', 'Ore becomes bars in Smithing. Now and then a gem turns up.'] },
     smithing: { name: 'Smithing', art: 'forge', icon: 'res/copper_bar', blurb: SKILLS.smithing.desc,
         points: ['Smelt: ore becomes bars.', 'Forge: copper bars become a first set of weapons and armour. Everything stronger drops in the fight.',
-            `Anvil (from Smithing ${ANVIL_LEVEL_PER_UPGRADE}): bars of a piece's own metal reinforce what you wear, up to +${MAX_UPGRADE}, and reroll its bonuses. Each step takes more bars and ${ANVIL_LEVEL_PER_UPGRADE} more levels; mastery of a metal takes bars off.`,
+            `Anvil (from Smithing ${ANVIL_LEVEL_PER_UPGRADE}): bars of a piece's own metal, with essence, reinforce what you wear, up to +${MAX_UPGRADE}, and reroll its bonuses. Each step takes more bars, more essence and ${ANVIL_LEVEL_PER_UPGRADE} more levels; mastery of a metal takes bars off.`,
             'Salvaged weapons and armour give bars of their metal back, and most of what reinforcing them took.', 'Tools make gathering faster.'] },
     woodcutting: { name: 'Woodcutting', art: 'forest', icon: 'res/oak_log', blurb: SKILLS.woodcutting.desc, points: ['Logs feed the kitchen fire, tool handles and bows.'] },
     hunting: { name: 'Hunting', art: 'meadow', focus: 'center 62%', icon: 'res/raw_rabbit', blurb: SKILLS.hunting.desc, points: ['Raw meat is cooked into food, and food keeps you alive in long fights.'] },
@@ -43,7 +44,7 @@ export const FEATURES = {
     fishing: { name: 'Fishing', art: 'river', icon: 'res/raw_trout', blurb: 'Fish for the kitchen: they cook into the best food for their level.',
         points: [`Each catch uses one bait, if you have any, for a ${pc(BAIT_EXTRA_CHANCE)} chance of a second fish.`, 'Bait drops in the Fever Marsh, the Drowned Ruins and the Frozen Wastes. The Shop sells it too.'] },
     firemaking: { name: 'Firemaking', art: 'camp', focus: 'right 70%', icon: 'mon/Magma Slime', blurb: 'Burn logs to light the bonfire.',
-        points: [`While the bonfire burns, every skill earns more XP, combat included (from +${pc(BASE.bonfireXp)}, growing with your level).`, `Each log adds ${BASE.bonfireSecondsPerLogTier} seconds times its tier, up to ${BASE.bonfireMaxMs / 3600000} hours.`] },
+        points: [`While the bonfire burns, every skill earns more XP, combat included (from +${pc(BASE.bonfireXp)}, growing with your level).`, `Each log adds ${BASE.bonfireSecondsPerLogTier} seconds times its tier, up to ${hours(BASE.bonfireMaxMs)}.`] },
     alchemy: { name: 'Alchemy', art: 'lab', icon: 'res/health_potion', blurb: SKILLS.alchemy.desc,
         points: ['Forage herbs, then brew them with a second ingredient.', `Pick a potion on the Combat tab: one bottle lasts ${BASE.basePotionCharges} attacks.`] },
     crafting: { name: 'Crafting', art: 'workshop', icon: 'item/Ring/4', blurb: SKILLS.crafting.desc,
@@ -56,7 +57,7 @@ export const FEATURES = {
     shop: { name: 'Shop', art: 'market', icon: 'gold', blurb: 'Supplies for gold, perks for skill points.',
         points: ['Supplies are priced by your best stage, so gathering always stays worth it.', 'Perks cost one skill point each and last forever.'] },
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',
-        points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence, forever.`,
+        points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence and +${pc(BASE.tokenHp, 1)} health, forever.`,
             `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
             'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. After the first prestige, a run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
             `After ${BALANCE.prestige.autoAfter} prestiges, or two days after your first, the fight's dock gets an Auto switch: it prestiges a run that has spent ${BALANCE.prestige.autoStallMs / 60000} minutes climbing without a new best stage, even while you are away.`] },

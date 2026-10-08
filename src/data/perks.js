@@ -1,5 +1,5 @@
 // Skill-point perks (bought with SP earned from prestige) and the gold shop.
-// Prestige Tokens are never spent: each held token is a permanent +0.5% ATK/DEF, +0.25% HP.
+// Prestige Tokens are never spent: each held token is a permanent +0.4% ATK/DEF, +0.2% HP (BASE.tokenAtk/tokenDef/tokenHp), more with records.
 
 import { NON_COMBAT_SKILLS } from './skills.js';
 

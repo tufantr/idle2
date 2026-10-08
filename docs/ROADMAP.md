@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **The "?" cards say what the code does**: a fall on a zone's first stage goes two stages back, never
+      onto a boss; the bonfire holds up to an hour (the card said "1 hours"); a token gives +0.2% health too;
+      the anvil takes essence as well as bars; a Titan from the 21st on logs the +1% it leaves (the log always
+      said +2%). DESIGN's numbers now match the code: the deep Abyss's drops (×1.45 a depth), the drop tiers,
+      the bestiary (183 kinds), the medals (45), the Zipline and when "Stay on this stage" appears
 - [x] **Strikes cut down** (DESIGN §3.6, the owner's ask): fast clicking took a hero to stage 100 with no
       prestige, food or potion and cleared dungeons in seconds. A strike is now a tenth of an attack, at most
       four a second, and the combo adds at most +10% (it was +90%, with extra crit, 15% lifesteal and echo

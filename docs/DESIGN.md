@@ -281,7 +281,7 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   Dark, the Bone Reaches, the Ember Pits, the Frozen Void, the Writhing Maze, the Shadow Court, the Storm
   Wastes, the Starless Sea, the Iron Halls, the Hollow Throne, the Burning Choir, the Glass Garden, the
   Rotting Deep, the Spatial Rift and Pandemonium (476 on, without end). Each has four monsters and a boss
-  of its own from the DCSS tiles (75 new bestiary pages, 168 kinds in all), a card the first time it is
+  of its own from the DCSS tiles (75 new bestiary pages, 183 kinds in all), a card the first time it is
   reached (its line, its boss as a silhouette), its name over the fight and on the world map's Abyss
   pin, and its own painting behind its fight and on its card (`assets/paint/<stratum id>.webp`, painted
   with Gemini in October 2026; until then each wore a colour grade over the Abyss's). The zone keeps the
@@ -297,9 +297,10 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   crafts when they first get there, and a drop one tier up is the lucky case. The drop-only tiers
   live in the Abyss: Dragonbone from depth 3 (stage 121), Abyssal from depth 5 (stage 141).
 - **Deeper Abyss drops keep pace.** Past depth 5 there is no new tier, so every further depth makes
-  dropped gear **×1.8** stronger (an item level; the card shows "depth N"). Monsters grow ×2.26 per
-  depth (×1.085 per stage), so gear alone never quite keeps up and the climb slows as it goes, but
-  it never stops: without this, every simulated player stalled for good at the stage 200 boss.
+  dropped gear **×1.45** stronger (`BALANCE.abyss.dropGrowth`; an item level, the card shows
+  "depth N"). Monsters grow ×2.26 per depth (×1.085 per stage), so gear alone never quite keeps up
+  and the climb slows as it goes, but it never stops: without this, every simulated player stalled
+  for good at the stage 200 boss.
 
 | Stage | Zone | Enemy | HP | ATK | Gold (first fall) | Combat XP | Loot tier | Tokens if best |
 |---|---|---|---|---|---|---|---|---|
@@ -319,9 +320,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   always), quantity `1 + floor(zone tier / 3)`; a gem 3% (first-fall bosses 30%); essence 10% for 1–2
   (first-fall bosses 3–6 × zone tier / 2).
 - **Gear drops:** 0.2% of regular kills, 50% of a boss's first fall. Tier = the zone's gear tier −1
-  (60%) / same (35%) / +1 (5%). Rarity weights common → legendary: regular 50 / 35 / 12 / 2.5 / 0.5,
-  boss 20 / 40 / 28 / 9 / 3, with epic and legendary ×(1 + 0.15 × (tier − 1)). An AFK fighter sees a
-  few drops an hour and salvages most of them.
+  (25%) / same (65%) / +1 (10%) (`DROP_TIER_OFFSETS`, §3.25). Rarity weights common → legendary:
+  regular 50 / 35 / 12 / 2.5 / 0.5, boss 20 / 40 / 28 / 9 / 3, with epic and legendary
+  ×(1 + 0.15 × (tier − 1)). An AFK fighter sees a few drops an hour and salvages most of them.
 - **Zone loot tables** feed the skills at the zone's tier — e.g. the Forest drops iron ore, coal,
   oak logs and raw fox; the Volcano drops runite ore, yew logs and raw bear. Combat is never a dead end.
 - **Gilded monsters:** one regular monster of the stage ladder in 150 comes gilded (never a boss, a
@@ -532,12 +533,13 @@ pet: +3% ATK and DEF; Sprout, the farming pet: +3% growth speed). The Achievemen
 A pet found also keeps the hero company: Fang (or, until he comes, the first pet found) stands at his
 feet in the fight, and each skill's pet beside him on that skill's stage, bobbing gently.
 
-**The bestiary** (`src/data/bestiary.js`). Every kind of monster (76: the ten zones' five each, then
-the dungeons' own, each listed once where it is first met; the Titans are left out, as each falls
+**The bestiary** (`src/data/bestiary.js`). Every kind of monster (183, `BESTIARY_SIZE`: five for each
+of the ten zones and the fifteen strata below the Abyss's first, then the dungeons' own, each listed
+once where it is first met; the Titans are left out, as each falls
 only once) has a portrait in the Achievements tab's Bestiary (beside the Medals, the Collection and the
 hero's Records: lifetime numbers as big figures, and the chronicle, the hero's firsts with their
 dates, noted from the game's events as they happen, offline too, by `src/systems/chronicle.js`), with how many have fallen and up to three
-stars: one at 10 defeats, two at 100, three at 1,000 (228 in all). Defeats are counted per kind in
+stars: one at 10 defeats, two at 100, three at 1,000 (549 in all). Defeats are counted per kind in
 `stats.killsByMonster` (dungeon elites count too), and the stars total is `stats.bestiaryStars`,
 recounted from the table when a save loads; old saves start with an empty table and see the kinds
 they have stood beside as met. A star is a toast with the monster's sprite. Two medals ride on it:
@@ -546,7 +548,7 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 
 ### 3.14 Achievements, unlocks and the daily crate
 
-- **Achievements** (`src/data/achievements.js`): 36 open and 3 secret, each with a named reward applied through the
+- **Achievements** (`src/data/achievements.js`): 45 (42 open, 3 secret), each with a named reward applied through the
   pipeline **plus** +1% ATK, DEF and skill speed per achievement (Antimatter Dimensions / Cookie
   Clicker "milk" pattern). Dungeon clears, Titans, pets, uniques, the new skills, a finished agility
   course and mastery (500 and 2,500 levels, a first 99) have their own. A test checks that every bonus in the data is well-formed (the Forager perk
@@ -633,8 +635,8 @@ medals' cards show once the player is back). Farming plots run on timestamps and
 tab that ticks less often (browsers slow hidden tabs to once a minute) is plain play, simulated in
 5-second steps; a kill hands the rest of a step to the next monster, and a step is split where a
 boss's clock runs out, so the step size never changes the result. Capped at
-**24 hours** (+2 h per Endurance perk, up to 36 h, +1 h from the Zipline; it was 12 until the check-in
-research found a once-a-day player losing 11 hours a day to it,
+**24 hours** (+2 h per Endurance perk, up to 36 h, and +1 h per level of the Zipline, up to +5 h at
+level 5; it was 12 until the check-in research found a once-a-day player losing 11 hours a day to it,
 `docs/research_notes/robust-and-fun/C_sessions_players.md`). Absences under a minute
 are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
 plots ready to harvest, how often the hero fell and got up, and why work stopped early. Since the
@@ -847,12 +849,12 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   online heart of the game); then Combat, the skills, and the Hall, Events and Settings.
   Inside a screen, a piece opens the first time it means something (`src/systems/disclosure.js`):
   a currency when you hold some, the camp with the gold for its first upgrade, the food row with
-  Cooking, the potion row with Alchemy, "Stay on this stage" after the first defeat, the world map
-  with the second zone, the jewellery slots with Crafting, the bag's tools once there is a bag to
-  tidy, mastery after 20 mastery levels, the mini-game with the first chance to play. What has
-  opened is saved (`state.seen`) and never closes again: a currency spent to zero keeps its place.
-  A loaded save opens with what it has earned, without fanfare; a piece that opens during play
-  glows once where it appears.
+  Cooking, the potion row with Alchemy, "Stay on this stage" after the first defeat or boss escape
+  or once past stage 10, the world map with the second zone, the jewellery slots with Crafting, the
+  bag's tools once there is a bag to tidy, mastery after 20 mastery levels, the mini-game with the
+  first chance to play. What has opened is saved (`state.seen`) and never closes again: a currency
+  spent to zero keeps its place. A loaded save opens with what it has earned, without fanfare; a
+  piece that opens during play glows once where it appears.
 - **One step ahead, no further.** A ladder shows what is unlocked and the next rung as a
   silhouette: mining shows two cards on day one, not eight; the smithy three, not eighteen. The
   same goes for farm plots, agility slots and dungeons.
