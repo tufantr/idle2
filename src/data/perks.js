@@ -31,5 +31,12 @@ export const GOLD_SHOP = [
     { id: 'buy_rabbit',  name: 'Hunter\'s Cache',  desc: '10 raw rabbits.',                gives: { raw_rabbit: 10 },  costKills: 25 },
     { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 fishing bait.',               gives: { fishing_bait: 25 }, costKills: 30 },
     // The open-ended sink: essence at about the rate combat drops it, for upgrades and reforges.
-    { id: 'buy_essence', name: 'Essence Cache',    desc: '10 monster essence for upgrades and reforges.', gives: { essence: 10 }, costKills: 80 }
+    { id: 'buy_essence', name: 'Essence Cache',    desc: '10 monster essence for upgrades and reforges.', gives: { essence: 10 }, costKills: 80 },
+    // Gems for Crafting (docs/research_notes/crafting-gems.md): the three low ones, for gold, so Crafting
+    // can be trained from level 1 at any point of the game, however deep the fight's gems have gone. Melvor
+    // sells Crafting's first material (leather) the same way; the higher gems stay the fight's and the mine's.
+    // Each shows once Crafting is open, for the Crafting levels in `craft` (systems/inventory.js goldShopOpen).
+    { id: 'buy_amethyst', name: 'Amethyst Pouch',  desc: '10 amethysts for Crafting.',     gives: { amethyst: 10 }, costKills: 50,  craft: [1, 9] },
+    { id: 'buy_topaz',    name: 'Topaz Pouch',     desc: '10 topaz for Crafting.',         gives: { topaz: 10 },    costKills: 80,  craft: [10, 24] },
+    { id: 'buy_sapphire', name: 'Sapphire Pouch',  desc: '10 sapphires for Crafting.',     gives: { sapphire: 10 }, costKills: 120, craft: [25, 99] }
 ];

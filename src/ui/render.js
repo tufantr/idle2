@@ -18,7 +18,7 @@ import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/ski
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
-import { goldShopPrice, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
@@ -1312,7 +1312,7 @@ export function renderShop(game, ui) {
     const state = game.state;
     const d = game.derived;
     const perks = perkList(state);
-    const goods = GOLD_SHOP.map(e => {
+    const goods = GOLD_SHOP.filter(e => goldShopOpen(state, e)).map(e => {   // a gem pouch once Crafting is open
         const price = goldShopPrice(game, e);
         const [resId] = Object.keys(e.gives);
         return `<div class="shop-item" title="Priced at ${e.costKills} kills' worth of gold at your best stage">

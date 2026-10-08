@@ -340,7 +340,12 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
 - **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 80
   kills — the open-ended late-game sink) priced in "kills at your best stage" (25–40 regular kills;
   a boss stage prices like its regular monsters), so the price scales with income and can never be
-  resold at a profit (the prototype's Coal Wagon printed +350 gold per purchase).
+  resold at a profit (the prototype's Coal Wagon printed +350 gold per purchase). Once Crafting is open,
+  a **gem pouch** too: ten Amethysts (50 kills) to Crafting 9, ten Topaz (80) from 10 to 24, ten
+  Sapphires (120) from 25 on, one at a time as the level climbs (`craft` on the entry, `goldShopOpen`).
+  The fight's and the mine's gems follow their zone's or rock's tier, so a deep hero found only gems a
+  new crafter cannot cut; the pouches keep Crafting's first forty levels open at any point of the game,
+  as Melvor's shop sells Leather (`docs/research_notes/crafting-gems.md`). The higher gems are never sold.
 - **Gold resets on prestige.** It is run currency, like Clicker Heroes' gold.
 
 ### 3.9 Prestige, tokens, skill points and perks
@@ -1226,7 +1231,9 @@ with a "sensible player" policy: wear what beats what it wears and salvage the c
 stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
 comfortably (while its chests or unique still help — otherwise it keeps fighting at the wall for half
 an hour) and training a skill (Mining and Smithing first while they can't yet make the bars for the
-weapon it wears); put bars and essence into its worn gear at the anvil; challenge the Titan whenever
+weapon it wears; once Crafting is open, every third turn goes to it, with a gem pouch from the shop
+when it has no gem to cut: until October 2026 Crafting never got a turn); put bars and essence into its
+worn gear at the anvil; challenge the Titan whenever
 it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
 materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
 it holds (15% early, ~2% at 7,000 tokens), or when it has gone an hour without a new best in the run
@@ -1526,13 +1533,16 @@ each system left out, against a baseline of 30):
 only until epic pieces dropped: crafted jewellery stopped at rare and at Diamond (tier 6), while the
 fight's is epic or legendary up to Voidstone (tier 7), so leaving Crafting alone cost the bot nothing.
 Now its rarity rises with level (epic from 75, legendary at 99) and the Voidstone recipe at 85 is cut to
-the hero's deepest depth (§3.4). Not measured: the simulator's bot never trains Crafting past level 1,
-in 1,000 hours. It trains Mining and Smithing whenever its weapon's metal is out of their reach (most
-of a run), and at a low Crafting level it can cut only the low gems, which it seldom finds (at hour 25
-it held 1,913 Diamonds and 25 Amethysts). A player would meet the same: the gems a high-level hero finds
-are of no use to a new crafter. Two ways on, when wanted: let the bot train Crafting like the other
-skills, and let a low-level crafter work the gems they have (a Diamond below level 70, for little XP),
-or sell the low gems in the shop.
+the hero's deepest depth (§3.4). The bot then never trained Crafting past level 1: its training went to
+Mining and Smithing while its weapon's metal was out of their reach, and a new crafter could cut only the
+low gems, which a deep hero no longer finds (at hour 25 it held 1,913 Diamonds and 25 Amethysts). Chosen
+by the research (`docs/research_notes/crafting-gems.md`: Melvor and RuneScape keep the lowest gem the
+commonest everywhere, never let a crafter use a gem above their level, and Melvor sells Crafting's first
+material in its shop): the shop sells the three low gems (§3.8, Supplies), and the bot gives Crafting
+one training turn in three. Measured: Crafting 44 after 150 hours (it was 1); 44 to 53 after 1,000 with
+Auto, as the bot trains little once Auto fights for it. Crafting 75 takes 21 hours of crafting and 85
+about 48, so the late jobs are a crafter's; the jewellery the bot wears at the end is dropped, epic and
+legendary, from its own depth. With and without Crafting the pace is within about 4%, near the noise.
 
 ## 6. Where this differs from the research report
 

@@ -429,6 +429,11 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Gem pouches for Crafting** (docs/research_notes/crafting-gems.md): a hero whose fight had gone deep
+      found only gems a new crafter cannot cut (the simulated hero held 1,913 Diamonds and was still
+      Crafting 1). The shop's Supplies now offer ten Amethysts, Topaz or Sapphires for gold, once Crafting
+      is open and one pouch at a time as its level climbs, as Melvor's shop sells Leather; the higher gems
+      stay the fight's and the mine's
 - [x] **A painting for every stratum and the two late dungeons** (the owner's go-ahead): seventeen Gemini
       paintings in the set's style, so the Abyss's fifteen layers below its first and the Sunken Necropolis
       and the Hellforge each have their own place behind the fight, on their cards and in the bestiary,

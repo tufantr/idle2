@@ -10,6 +10,9 @@ import { abyssDropMult } from '../src/core/formulas.js';
 import { resolveAction } from '../src/systems/skilling.js';
 import { onEnemyDeath, spawnEnemy } from '../src/systems/combat.js';
 import { GEM_TIERS, VOIDSTONE_DEPTH } from '../src/data/workshop.js';
+import { GOLD_SHOP } from '../src/data/perks.js';
+import { RESOURCES } from '../src/data/resources.js';
+import { goldShopOpen } from '../src/systems/inventory.js';
 import { addItem, itemScore } from '../src/systems/inventory.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { zoneForStage } from '../src/data/zones.js';
@@ -224,4 +227,24 @@ test('the Voidstone: only deep bosses leave it, and its pieces are cut to the he
     assert.equal(recipe.item.depth, depth);
     const plain = resolveAction({ ...s, combat: { ...s.combat, bestStage: 1 } }, { kind: 'craft', type: 'Ring', bar: 'gold_bar', gem: 'voidstone' });
     assert.ok(Math.abs(recipe.item.power / plain.item.power - abyssDropMult(depth)) < 1e-9, 'as strong as what drops there');
+});
+
+test('the shop sells the low gems for Crafting: once it is open, the pouch for the hero\'s level, never a high gem', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const pouches = () => GOLD_SHOP.filter(e => e.craft && goldShopOpen(s, e)).map(e => e.id);
+    assert.deepEqual(pouches(), [], 'nothing before Crafting is open');
+    s.unlocks.crafting = true;
+    assert.deepEqual(pouches(), ['buy_amethyst']);
+    s.skills.crafting.xp = xpForLevel(12);
+    assert.deepEqual(pouches(), ['buy_topaz']);
+    s.skills.crafting.xp = xpForLevel(60);
+    assert.deepEqual(pouches(), ['buy_sapphire'], 'sapphires from 25 on, a bridge to the emeralds a hero already holds');
+    s.gold = 1e15;
+    s.combat.bestStage = 100;
+    assert.equal(game.buyGoldShopItem('buy_amethyst'), false, 'not the pouch of another level');
+    const before = s.resources.sapphire;
+    assert.equal(game.buyGoldShopItem('buy_sapphire'), true);
+    assert.equal(s.resources.sapphire, before + 10);
+    for (const e of GOLD_SHOP) for (const id of Object.keys(e.gives)) if (RESOURCES[id].category === 'gem') assert.ok(RESOURCES[id].tier <= 3, `${id}: the high gems stay the fight's and the mine's`);
 });

@@ -38,7 +38,7 @@ import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
 import { CAMP_UPGRADES } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
-import { itemUpgradeCost, itemScore, goldShopPrice } from '../src/systems/inventory.js';
+import { itemUpgradeCost, itemScore, goldShopPrice, goldShopOpen } from '../src/systems/inventory.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
 import { resolveAction } from '../src/systems/skilling.js';
@@ -574,9 +574,14 @@ function decide() {
 // After combat stalls (no stage gain), work toward the next gear tier: the skill gating the next
 // metal (smithing, or mining for its ore), then tools and food; fall back to the weakest skill.
 let needTraining = false;
+let trainings = 0;
 function trainWeakest() {
     if (!needTraining) return null;
     needTraining = false;
+    // Crafting has a turn in three once open: the anvil's metal below would otherwise keep every turn on
+    // Mining and Smithing for most of a run, and Crafting never moved past level 1 (DESIGN §5.7).
+    trainings += 1;
+    if (trainings % 3 === 0 && S.unlocks.crafting && !WITHOUT.has('crafting') && lvl('crafting') < 99) { lastTrainedSkill = 'crafting'; return craftTraining(); }
     // The metal the anvil needs for the weapon worn, while Mining or Smithing doesn't reach it yet.
     const weapon = S.equipped.Weapon;
     const target = weapon && (weapon.upgrade || 0) < MAX_UPGRADE ? anvilMetal(weapon.tier) : null;
@@ -607,11 +612,18 @@ function mineForGems(minutes) {
 
 function craftTraining() {
     const bar = JEWEL_BARS.find(b => lvl('crafting') >= b.levelReq && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === b.bar).levelReq);
-    const gemTier = [...GEM_TIERS].reverse().find(g => lvl('crafting') >= g.levelReq && S.resources[g.gem] >= 5);
+    const usable = () => [...GEM_TIERS].reverse().find(g => lvl('crafting') >= g.levelReq && S.resources[g.gem] >= 5);
+    // No gem it can cut: the shop's pouch for its level (data/perks.js), out of gold it can spare.
+    if (!usable()) {
+        const pouch = GOLD_SHOP.find(e => e.craft && goldShopOpen(S, e));
+        for (let i = 0; pouch && i < 5 && S.gold > 2 * goldShopPrice(game, pouch); i++) game.buyGoldShopItem(pouch.id);
+    }
+    const gemTier = usable();
     if (!bar || !gemTier) return mineForGems(30);
     const t = obtain(bar.bar, 5);
     if (t) return t;
-    return { kind: 'craft', type: 'Ring', bar: bar.bar, gem: gemTier.gem, why: `train crafting (${gemTier.gem} rings)` };
+    const end = now + POLICY.trainMin * 60000;
+    return { kind: 'craft', type: 'Ring', bar: bar.bar, gem: gemTier.gem, until: () => now >= end, why: `train crafting (${gemTier.gem} rings)` };
 }
 
 // Starts a task; returns the task actually running. Anything that fails to start (level too low,
@@ -918,7 +930,10 @@ if (JSON_OUT) {
             bestStage: S.combat.bestStage, prestiges: S.prestige.count, tokens: S.prestige.tokens, records: game.derived.records.count, kills: S.stats.kills, deaths: S.stats.deaths,
             titanKills: S.titan.kills, titanTries, pityDrops: S.stats.pityDrops || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
-            obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length
+            obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length,
+            // Crafting: its level, what it made, and the jewellery worn at the end (crafted or dropped)
+            crafting: lvl('crafting'), crafted: S.stats.itemsCrafted || 0,
+            jewels: ['Neck', 'Ring1', 'Ring2', 'Ear1', 'Ear2'].map(slot => S.equipped[slot] ? { slot, tier: S.equipped[slot].tier, rarity: S.equipped[slot].rarity, source: S.equipped[slot].source, depth: S.equipped[slot].depth || 0 } : null)
         },
         cloaks: cloaksBought,
         ascension: { count: S.ascension.count, stars: S.ascension.stars, at: Object.fromEntries([1, 2, 3, 4, 5, 6, 8, 10].map(n => [n, at('ascension', n)])) },

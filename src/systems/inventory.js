@@ -10,6 +10,7 @@ import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
 import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
 import { skillLevel } from '../core/modifiers.js';
+import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
 import { log, bumpStat } from './progress.js';
 
@@ -400,10 +401,17 @@ export function goldShopPrice(game, entry) {
     return Math.ceil(entry.costKills * goldPerKillAtStage(game.state.combat.bestStage));
 }
 
+/** Whether the shop offers an entry now: a gem pouch once Crafting is open, at the levels it serves. */
+export function goldShopOpen(state, entry) {
+    if (!entry?.craft) return !!entry;
+    const level = skillLevel(state, 'crafting');
+    return isUnlocked(state, 'crafting') && level >= entry.craft[0] && level <= entry.craft[1];
+}
+
 export function buyGoldShopItem(game, id) {
     const state = game.state;
     const entry = GOLD_SHOP.find(e => e.id === id);
-    if (!entry) return false;
+    if (!entry || !goldShopOpen(state, entry)) return false;
     const price = goldShopPrice(game, entry);
     if (state.gold < price) { game.emit({ type: 'error', text: 'Not enough gold.' }); return false; }
     state.gold -= price;
