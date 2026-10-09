@@ -660,7 +660,8 @@ export function createScene(root, actions) {
                     banner('<small>Out of time</small><strong>The boss holds out</strong><span>Regroup, then try again</span>', 'defeat', 2200);
                     break;
                 case 'titan':
-                    if (ev.won) banner('<small>Titan defeated</small><strong>+2% ATK and HP, forever</strong>', 'victory', 2400);
+                    if (ev.won) banner(`<small>Titan defeated</small><strong>+${+((ev.bonus || 0) * 100).toFixed(1)}% ATK and HP, forever</strong>`, 'victory', 2400);
+                    else if (ev.reason === 'time') banner(`<small>Time is up</small><strong>The Titan stands</strong><span>${Math.round((ev.dealt || 0) * 100)}% of its health dealt</span>`, 'defeat', 2400);
                     break;
                 case 'dungeonClear':
                     banner(`<small>${esc(dungeonById(ev.dungeon)?.name || 'Dungeon')} cleared${ev.clears > 1 ? ` · ${fmt(ev.clears)}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest</strong>${chestLoot(ev, game.state)}`, 'victory', 2600);

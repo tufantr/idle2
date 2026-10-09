@@ -16,6 +16,7 @@ The first Titan wakes once your best stage reaches {{TITAN_UNLOCK_STAGE}}, and y
 - Strikes help, and so do food and your potion.
 - If the time runs out or your hero falls, the Titan stays standing. You get [[Monster Essence|essence]] for the share of its health you took off, and your best try against it is kept on the Dungeons tab.
 - **Give up** ends the attempt the same way. Closing the game during the fight ends it too, and the attempt is spent.
+- When the fight is over, however it ends, your hero goes back to what he was doing when you challenged the Titan: his work in a skill picks up where it stopped, a rest stays a rest, and a fight on the stage ladder goes on. The screen goes back to where you challenged it from.
 - While the fight lasts your hero cannot travel, enter a dungeon or prestige. Challenging the Titan gives up a [[Dungeons|dungeon run]] under way.
 
 The Dungeons tab shows how much of the Titan's health your hero would take off in the time, and how long he would last without food.

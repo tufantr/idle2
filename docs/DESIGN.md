@@ -518,9 +518,21 @@ player back after a few hours has them waiting. Titan level L fights like stage 
 first 20 (level 1: 2,963 HP; level 10: 2.2 M HP), then 5 stages apart (`titanStage`). A win is
 permanent: **+2% ATK and max HP** per Titan defeated (+1% from the 21st: `titanBonusUnits`), plus
 `8 × L` essence, 30 kills of gold at your best stage and two gems; the next Titan is stronger. A loss
-pays essence for the share of health you took off. A Titan fight never survives a reload. The late
+pays essence for the share of health you took off. The late
 line was halved when the long-term research found Titans falling once in 30–220 hours late in the
 game: they now fall twice as often for the same power over the same stretch of the road.
+
+**After the fight the hero goes back to what he was doing** when he challenged it (`titan.before`,
+`resumeAfterTitan` in `src/systems/dungeon.js`), however it ended (a win, the clock, a fall, Give up):
+his work picks up where it stopped, a rest stays a rest (after a fall at the stages, the rest that ends
+in the fight), and a fight goes on at the stages; a fall in the Titan's fight rests and fights on only
+if he was fighting before it. New work started mid-fight ends it and replaces what he was doing. Until
+October 2026 he was left fighting at the stages whatever he had been doing. A Titan fight never survives
+a reload: the hero is back at what he was doing (a save from before `titan.before` fights on at the
+stages, as it did). A tab put to sleep mid-fight replays the fight, then his work for the rest of the
+time. On screen the fight keeps the screen for its last banner (2.4 s: the win and what it left, "Time
+is up" with the share dealt, or the fall), then goes back to the tab the Titan was challenged from;
+Give up goes back at once (`backFromTitan` in `src/main.js`).
 
 ### 3.13 Pets and the collection
 

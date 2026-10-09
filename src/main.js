@@ -43,6 +43,7 @@ const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something 
 const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
 const AUTOSAVE_MS = 15000;
 const CLOUD_SAVE_MS = 60000;
+const TITAN_HOLD_MS = 2400;      // the Titan's fight keeps the screen this long after it ends (its last banner)
 
 // Browser storage can be blocked (private windows, the game embedded in another page). These are
 // conveniences, so failures are ignored; the save itself goes through core/save.js, which checks too.
@@ -62,6 +63,8 @@ const ui = {
     craftGem: null,
     open: {},            // drawers the player has opened (the battle log, the crop table)
     battleFull: prefs.get('fantasyIdle.battleFull') !== '0', // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
+    battleHoldUntil: 0,  // a fight that ended keeps the screen until then (its last banner shows), when the hero goes back to work
+    titanFrom: null,     // the tab the Titan was challenged from: the screen goes back there after the fight
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -477,6 +480,16 @@ function backToDungeons() {
     else render();
 }
 
+/** After a Titan fight that sent the hero back to his work or his rest: back to the tab it was challenged from. */
+function backFromTitan() {
+    const c = game.state.combat;
+    ui.battleHoldUntil = 0;
+    const from = ui.titanFrom;
+    ui.titanFrom = null;
+    if (ui.tab === 'combat' && !c.active && !c.recovering && from && from !== 'combat') window.FI.switchTab(from);   // he still rests or works, and nothing else was opened
+    else render();
+}
+
 /** A quick pop with a glow on something just drawn: the answer to a press on the armory's buttons. */
 function flourish(selector, glow = 'rgba(253, 230, 138, 0.9)') {
     if (document.body.classList.contains('reduced-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
@@ -646,7 +659,17 @@ function handleEvents(events) {
                     kicker: `${d.name} · ${fmt(ev.clears)} clears`, title: ev.desc, lines: ['Yours for good, through every prestige'] });
                 break;
             }
-            case 'titan': toast(ev.won ? `Titan defeated! Permanent +2% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0')); break;
+            case 'titan': {
+                toast(ev.won ? `Titan defeated! Permanent +${+((ev.bonus || 0) * 100).toFixed(1)}% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0'));
+                // he went back to what he was doing before it (not a fight): the battle keeps the screen while
+                // its banner shows, then the screen goes back to where the challenge was made (Give up: at once)
+                const c = game.state.combat;
+                if (ev.reason !== 'left' && ui.titanFrom && !c.active && !c.recovering) {
+                    ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
+                    setTimeout(backFromTitan, TITAN_HOLD_MS);
+                } else ui.titanFrom = null;
+                break;
+            }
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'ascend':   // tokens given up for Stars: the biggest card there is
                 rewards.celebrate({ key: `ascend:${ev.count}`, kind: 'legend', icon: '<i class="coin-dot stars big" aria-hidden="true"></i>', kicker: `Ascension ${ev.count}`, title: `+${fmt(ev.stars)} Stars`,
@@ -916,9 +939,11 @@ window.FI = {
         const c = game.state.combat;
         const fighting = c.active;
         const inDungeon = c.mode === 'dungeon';
+        const inTitan = c.mode === 'titan';
         game.toggleCombat();
         if (!fighting && c.active) setBattleFull(true);
         if (inDungeon && c.mode !== 'dungeon') { backToDungeons(); return; }   // Leave dungeon: back to the list of them
+        if (inTitan && c.mode !== 'titan') { backFromTitan(); return; }        // Give up: back to where it was challenged, unless he fights on
         render();
     },
     /** After a fall: rest without going back into the fight. */
@@ -947,7 +972,14 @@ window.FI = {
         if (ended) backToDungeons(); else render();
     },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
-    challengeTitan() { if (game.challengeTitan()) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
+    challengeTitan() {
+        const from = ui.tab;
+        if (!game.challengeTitan()) { render(); return; }
+        ui.titanFrom = from;   // when the fight is over and he goes back to his work, the screen goes back too
+        ui.battleHoldUntil = 0;
+        setBattleFull(true);
+        window.FI.switchTab('combat');
+    },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
     /** The seed the farm plants: picked from the bag of seeds, used by every empty plot. */

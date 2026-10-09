@@ -341,7 +341,88 @@ test('the Titan: unlock, hourly cooldown, a loss pays for damage dealt, a win is
     assert.equal(strong.state.stats.titanKills, 1);
     assert.ok(strong.state.resources.essence >= essence + 8);
     assert.ok(strong.mods.atkMult - atkMultBefore >= TITAN_BONUS.atkMult - 1e-9);
-    assert.equal(strong.state.combat.active, true, 'back on the stage ladder, still fighting');
+    assert.equal(strong.state.combat.mode, 'stages');
+    assert.equal(strong.state.combat.active, false, 'resting again, as he was before the fight');
+});
+
+test('after the Titan the hero goes back to what he was doing: his work, his rest or his fight', () => {
+    const titanOver = game => runUntil(game, () => game.state.combat.mode !== 'titan', TITAN_TIME_MS + 5000);
+
+    // at work: the fight stops it, and its end takes it up again where it stopped
+    const miner = newGame({ bestStage: 50, tokens: 20000 });
+    miner.startNodeAction('mining', 'copper_ore');
+    miner.tick(miner.now + 1000);
+    const progress = miner.state.action.progress;
+    assert.ok(progress > 0);
+    assert.equal(miner.challengeTitan(), true);
+    assert.equal(miner.state.action, null, 'no work while the Titan stands');
+    titanOver(miner);
+    const [won] = events(miner, 'titan');
+    assert.equal(won.won, true);
+    assert.equal(won.bonus, TITAN_BONUS.atkMult, 'the event says what the win was worth');
+    assert.equal(miner.state.combat.active, false, 'not left fighting at the stages');
+    assert.equal(miner.state.combat.recovering, false);
+    assert.equal(miner.state.action?.id, 'copper_ore', 'back at the copper');
+    assert.equal(miner.state.action.progress, progress, 'the swing under way when he left goes on');
+    assert.equal(miner.state.titan.before, null);
+    const ore = miner.state.resources.copper_ore;
+    miner.tick(miner.now + 10_000);
+    assert.ok(miner.state.resources.copper_ore > ore, 'mining again');
+
+    // fighting at the stages: he fights on there
+    const fighter = newGame({ bestStage: 50, tokens: 20000 });
+    fighter.state.combat.stage = 30;
+    fighter.toggleCombat();
+    fighter.challengeTitan();
+    titanOver(fighter);
+    assert.equal(fighter.state.combat.active, true, 'back on the stage ladder, still fighting');
+    assert.equal(fighter.state.combat.enemy.stage, fighter.state.combat.stage);
+
+    // Give up: the attempt ends, scored by its damage, and he goes back to his work
+    const quitter = newGame({ bestStage: 50, tokens: 20000 });
+    quitter.startNodeAction('woodcutting', 'normal_log');
+    quitter.challengeTitan();
+    quitter.tick(quitter.now + 3000);
+    quitter.drainEvents();
+    quitter.toggleCombat();
+    const [gaveUp] = events(quitter, 'titan');
+    assert.equal(gaveUp.won, false);
+    assert.ok(gaveUp.dealt > 0, 'what he dealt counts');
+    assert.equal(quitter.state.combat.mode, 'stages');
+    assert.equal(quitter.state.combat.active, false);
+    assert.equal(quitter.state.action?.id, 'normal_log', 'back at the trees');
+
+    // new work in the middle of the fight ends it too, and that work is what he does
+    const changed = newGame({ bestStage: 50, tokens: 20000 });
+    changed.startNodeAction('woodcutting', 'normal_log');
+    changed.challengeTitan();
+    changed.startNodeAction('mining', 'copper_ore');
+    assert.equal(changed.state.combat.mode, 'stages');
+    assert.equal(changed.state.combat.active, false);
+    assert.equal(changed.state.action?.id, 'copper_ore');
+
+    // fallen in the Titan's fight: no rest that ends in a fight at the stages, unless he was in one
+    const fallen = newGame({ bestStage: 50, tokens: 20000 });
+    fallen.startNodeAction('mining', 'copper_ore');
+    fallen.challengeTitan();
+    fallen.state.combat.hp = 1;
+    titanOver(fallen);
+    assert.equal(fallen.state.stats.deaths, 1);
+    assert.equal(fallen.state.combat.recovering, false);
+    assert.equal(fallen.state.combat.active, false);
+    assert.equal(fallen.state.action?.id, 'copper_ore', 'back to work, wounded');
+    const brave = newGame({ bestStage: 50, tokens: 20000 });
+    brave.toggleCombat();
+    brave.challengeTitan();
+    brave.state.combat.hp = 1;
+    titanOver(brave);
+    assert.equal(brave.state.combat.recovering, true, 'he rests, then fights on at the stages');
+    const resting = newGame({ bestStage: 50, tokens: 20000 });
+    resting.state.combat.recovering = true;   // resting after a fall at the stages, to fight on
+    resting.challengeTitan();
+    titanOver(resting);
+    assert.equal(resting.state.combat.active, false);
+    assert.equal(resting.state.combat.recovering, true, 'back to the rest that ends in the fight');
 });
 
 test('late Titans stand closer together and leave half the bonus', () => {
@@ -359,14 +440,36 @@ test('a Titan fight never survives a reload; a dungeon run does', () => {
     game.challengeTitan();
     const reloaded = new Game(JSON.parse(game.serialize()), game.now);
     assert.equal(reloaded.state.combat.mode, 'stages');
+    assert.equal(reloaded.state.combat.active, false, 'resting, as before the fight');
+    assert.equal(reloaded.state.titan.before, null);
+    // he is back at the work he left for it
+    const miner = newGame({ bestStage: 50, tokens: 20000 });
+    miner.startNodeAction('mining', 'copper_ore');
+    miner.challengeTitan();
+    const back = new Game(JSON.parse(miner.serialize()), miner.now);
+    assert.equal(back.state.combat.mode, 'stages');
+    assert.equal(back.state.combat.active, false);
+    assert.equal(back.state.action?.id, 'copper_ore');
+    // a save from before the hero remembered: he fights on at the stages, as he used to
+    const old = JSON.parse(miner.serialize());
+    delete old.titan.before;
+    const oldBack = new Game(old, miner.now);
+    assert.equal(oldBack.state.combat.mode, 'stages');
+    assert.equal(oldBack.state.combat.active, true);
+    // nonsense where the work was: no work, no fight
+    const odd = JSON.parse(miner.serialize());
+    odd.titan.before = { doing: 'work', action: '<b>' };
+    const oddBack = new Game(odd, miner.now);
+    assert.equal(oddBack.state.action, null);
+    assert.equal(oddBack.state.combat.active, false);
 
     const run = newGame({ bestStage: 50, tokens: 20000 });
     run.enterDungeon(warren.id);
     run.state.combat.dungeon.index = 3;
-    const back = new Game(JSON.parse(run.serialize()), run.now);
-    assert.equal(back.state.combat.mode, 'dungeon');
-    assert.equal(back.state.combat.dungeon.index, 3);
-    assert.equal(back.state.combat.enemy.name, warren.monsters[3].name);
+    const inRun = new Game(JSON.parse(run.serialize()), run.now);
+    assert.equal(inRun.state.combat.mode, 'dungeon');
+    assert.equal(inRun.state.combat.dungeon.index, 3);
+    assert.equal(inRun.state.combat.enemy.name, warren.monsters[3].name);
 
     const broken = JSON.parse(run.serialize());
     broken.combat.dungeon = { id: 'no_such_place', index: 2 };
@@ -449,6 +552,24 @@ test('a boss pays its bonus the first time it falls in a run; farming it afterwa
     assert.ok(goldForKill(boss, game.derived.goldMult) > 2.5 * byHealth);
     assert.equal(c.stage, 11, 'and moves you on');
     assert.ok(enemyForStage(10).boss);
+});
+
+test('a Titan fight in a tab put to sleep: the fight ends, then his work fills the rest of the time', () => {
+    const game = newGame({ bestStage: 50, tokens: 20000 });
+    game.startNodeAction('mining', 'copper_ore');
+    game.challengeTitan();
+    game.tick(game.now + 1000);
+    const ore = game.state.resources.copper_ore;
+    const summary = game.tick(game.now + 30 * 60 * 1000);   // a long gap: replayed as time away
+    assert.ok(summary, 'replayed as time away');
+    assert.equal(game.state.combat.mode, 'stages');
+    assert.equal(game.state.titan.kills, 1, 'the Titan fell on the way');
+    assert.equal(game.state.combat.active, false);
+    assert.equal(game.state.action?.id, 'copper_ore');
+    assert.equal(summary.mode, 'skill');
+    assert.equal(summary.stalledReason, null);
+    // about 29 minutes of copper at 3 s a swing (the Focus and gear make it a little faster)
+    assert.ok(game.state.resources.copper_ore - ore > 500, `ore mined: ${game.state.resources.copper_ore - ore}`);
 });
 
 test('a dungeon run on repeat continues offline and the summary reports the clears', () => {

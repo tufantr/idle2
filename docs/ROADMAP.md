@@ -429,6 +429,13 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **After the Titan, back to what he was doing** (DESIGN §3.12, the owner's report): a hero who left his
+      work or his rest for the Titan was left fighting at the stages when it ended. Now his work picks up where
+      it stopped, a rest stays a rest, and only a hero who was fighting fights on; a reload or a tab put to
+      sleep mid-fight does the same. The fight keeps the screen for its last banner (the win, a fall, or a new
+      "Time is up" with the share of health dealt), then the screen goes back to the tab the Titan was
+      challenged from; Give up goes back at once. The win's banner and note say the bonus it really left
+      (+1% from the 21st Titan on; they always said +2%)
 - [x] **The "?" cards say what the code does**: a fall on a zone's first stage goes two stages back, never
       onto a boss; the bonfire holds up to an hour (the card said "1 hours"); a token gives +0.2% health too;
       the anvil takes essence as well as bars; a Titan from the 21st on logs the +1% it leaves (the log always

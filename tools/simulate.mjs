@@ -870,13 +870,9 @@ while (now < totalMs) {
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
     if (task.kind === 'farm' && !task.stage && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
     if (task.kind === 'farm' && now % 60000 < STEP) buyCamp();
-    // The Titan: a sensible player tries it whenever it is awake (it only costs a minute).
-    if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages') {
-        game.challengeTitan();
-        // Leaving a ladder farm for the Titan ends the farm too (or the hero farms that stage for good).
-        if (task.kind === 'farm' && task.stage) game.setFarmMode(false);
-        if (task.kind !== 'combat') task = combatTask();
-    }
+    // The Titan: a sensible player tries it whenever it is awake (it only costs a minute). When the
+    // fight is over the hero goes back to what he was doing, so the task goes on.
+    if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages') game.challengeTitan();
     if (S.combat.mode === 'titan') continue;
     if (taskDone(task) || (task.kind !== 'dungeon' && task.kind !== 'farm' && now - lastDecision > 10 * 60000)) {
         task = apply(decide());

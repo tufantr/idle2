@@ -109,7 +109,8 @@ const eventIcon = (e, scale = 0.5) => sprite(EVENT_ART[e.id], { scale, cls: scal
  */
 export function battleMode(game, ui) {
     const c = game.state.combat;
-    return ui.tab === 'combat' && (c.active || c.recovering) && ui.battleFull !== false;
+    // a fight that just ended keeps the screen a moment (battleHoldUntil: the Titan's, for its banner)
+    return ui.tab === 'combat' && (c.active || c.recovering || (ui.battleHoldUntil || 0) > game.now) && ui.battleFull !== false;
 }
 
 // ---------- sidebar ----------

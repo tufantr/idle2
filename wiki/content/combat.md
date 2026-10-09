@@ -120,7 +120,7 @@ Bosses are where gear comes from, and a run of bad luck has an end. A boss's fir
 ## Staying, retreating and travelling
 
 - **Stay on this stage** (a switch beside the fight) keeps your hero on the stage he is on instead of moving on: to gather a land's loot, or to hold where he wins. A boss you stay on pays like ordinary monsters, no packs form, and the Auto prestige waits while you stay.
-- **Retreat** takes your hero out of the fight. He rests and regains health quickly, and goes back in when you start the fight again. In a dungeon the button says **Leave dungeon** (the run is lost), and at the Titan **Give up** (the attempt ends).
+- **Retreat** takes your hero out of the fight. He rests and regains health quickly, and goes back in when you start the fight again. In a dungeon the button says **Leave dungeon** (the run is lost), and at the Titan **Give up** (the attempt ends, and your hero goes back to what he was doing before it).
 - The **stage path** under the fight shows the {{STAGES_PER_ZONE}} stages of the land you are in. Tap any stage you have reached this run to go there.
 - The **world map** (the Map button, or the M key) shows the lands and the dungeons. **Travel** takes your hero to the first stage of any land reached this run (in the Abyss, to the deepest depth reached), and a dungeon's **Enter** starts a run there. Travelling gives up a dungeon run under way; a Titan fight has to end first.
 

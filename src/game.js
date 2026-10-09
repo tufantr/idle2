@@ -14,7 +14,7 @@ import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, d
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
-import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, titanReady } from './systems/dungeon.js';
+import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, giveUpTitan, titanReady } from './systems/dungeon.js';
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
@@ -215,7 +215,8 @@ export class Game {
 
     enterCombat() { return this._act(() => enterCombat(this)); }
     leaveCombat() { return this._act(() => leaveCombat(this)); }
-    toggleCombat() { return this._act(() => (this.state.combat.active ? leaveCombat(this) : enterCombat(this))); }
+    /** Into the fight, or out of it; out of the Titan's is its Give up (back to what he was doing). */
+    toggleCombat() { return this._act(() => (!this.state.combat.active ? enterCombat(this) : this.state.combat.mode === 'titan' ? giveUpTitan(this) : leaveCombat(this))); }
     clickAttack() { return this._act(() => clickAttack(this)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }

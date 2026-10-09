@@ -13,6 +13,7 @@ import { RESOURCES } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { addItem, dropTypesFor } from './inventory.js';
 import { spawnEnemy, enterCombat } from './combat.js';
+import { resolveAction } from './skilling.js';
 import { log, bumpStat } from './progress.js';
 
 // ---------- enemies ----------
@@ -321,6 +322,10 @@ export function challengeTitan(game) {
     }
     const c = state.combat;
     if (c.mode === 'titan') return false;
+    // what he was doing: when the fight is over he goes back to it (resumeAfterTitan)
+    state.titan.before = c.active ? { doing: 'fight' }
+        : state.action ? { doing: 'work', action: { ...state.action } }
+        : { doing: c.recovering ? 'recover' : 'rest' };
     if (c.mode === 'dungeon') failDungeon(game, 'you left to face the Titan');
     // one attempt used: the bank keeps the others (readyAt never lags more than the bank's hours behind)
     state.titan.readyAt = Math.max(state.titan.readyAt || 0, game.now - (TITAN_BANK - 1) * TITAN_COOLDOWN_MS) + TITAN_COOLDOWN_MS;
@@ -336,8 +341,12 @@ export function challengeTitan(game) {
     return true;
 }
 
-/** End a titan fight. `won` = the titan fell in time. */
-export function endTitan(game, won) {
+/**
+ * End a titan fight. `won` = the titan fell in time; else `reason` says how it ended: 'time', 'fell'
+ * (the hero did) or 'left' (Give up, or other work). The hero goes back to what he was doing when it
+ * began; returns whether that is fighting (on at the stages).
+ */
+export function endTitan(game, won, reason = won ? 'won' : 'time') {
     const state = game.state;
     const c = state.combat;
     const enemy = c.enemy;
@@ -356,15 +365,48 @@ export function endTitan(game, won) {
         state.resources[gem.id] += 2;
         const bonus = TITAN_BONUS.atkMult * (titanBonusUnits(state.titan.kills) - titanBonusUnits(state.titan.kills - 1));   // half from the TITAN_LATE_FROM + 1st on
         log(game, `🗿 ${enemy.name} defeated! +${essence} essence, +${gold.toLocaleString()} gold, 2× ${RESOURCES[gem.id].name}; permanent +${+(bonus * 100).toFixed(1)}% ATK and HP.`, 'achievement');
-        game.emit({ type: 'titan', won: true, level });
+        game.emit({ type: 'titan', won: true, reason, level, bonus });
     } else {
         const essence = Math.floor(dealt * 4 * level);
         state.resources.essence += essence;
         state.titan.bestPct = Math.max(state.titan.bestPct || 0, dealt);
         log(game, `🗿 ${enemy.name} survived with ${Math.round((1 - dealt) * 100)}% health. +${essence} essence for the damage dealt.`, 'combat');
-        game.emit({ type: 'titan', won: false, level, dealt });
+        game.emit({ type: 'titan', won: false, reason, level, dealt });
     }
     returnToStages(game);
+    return resumeAfterTitan(game);
+}
+
+/**
+ * After a Titan fight, back to what the hero was doing when it began (titan.before): a fight goes on
+ * at the stages, work picks up where it stopped, a rest stays a rest (after a fall, a rest that ends
+ * in the fight). Returns whether he fights on. A save from before titan.before fights on, as it did.
+ */
+function resumeAfterTitan(game) {
+    const state = game.state;
+    const c = state.combat;
+    const before = state.titan.before;
+    state.titan.before = null;
+    if (!before || before.doing === 'fight') return true;
+    c.active = false;
+    c.combo = 0;
+    c.recovering = before.doing === 'recover';
+    if (before.doing === 'work' && before.action) {
+        state.action = { ...before.action, stalled: false };
+        const def = resolveAction(state);
+        if (def) game.emit({ type: 'actionStart', label: def.label, skill: def.skill });
+    }
+    game.markDirty();
+    return false;
+}
+
+/** Give up a Titan fight: it ends as a loss, scored by the damage dealt, and he goes back to what he was doing. */
+export function giveUpTitan(game) {
+    const c = game.state.combat;
+    if (c.mode !== 'titan' || !c.active) return false;
+    endTitan(game, false, 'left');
+    game.markDirty();
+    return true;
 }
 
 export { DUNGEONS };

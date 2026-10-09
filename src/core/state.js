@@ -61,7 +61,7 @@ export function createDefaultState(now = Date.now()) {
             pack: null         // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
         },
         dungeons: {},          // id -> { clears, fragments }
-        titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 },
+        titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
         pets: {},
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
@@ -449,7 +449,16 @@ function normalise(data, now) {
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;
     state.prestige.runStartedAt = Math.min(state.prestige.runStartedAt, now);
-    // A titan fight never survives a reload; a dungeon run does (if it still makes sense).
+    // A titan fight never survives a reload: the hero is back at what he was doing when it began (a
+    // save from before titan.before fights on at the stages). A dungeon run does survive, if it still makes sense.
+    const before = isPlainObject(state.titan?.before) ? state.titan.before : null;
+    if (state.combat.mode === 'titan' && before && before.doing !== 'fight') {
+        const work = before.doing === 'work' && isPlainObject(before.action) && typeof before.action.kind === 'string' ? before.action : null;
+        state.combat.active = false;
+        state.combat.recovering = before.doing === 'recover';
+        if (work) state.action = { ...work, progress: Math.max(0, finite(work.progress)), stalled: false };
+    }
+    if (isPlainObject(state.titan)) state.titan.before = null;
     const run = state.combat.dungeon;
     const runDungeon = run ? DUNGEONS.find(d => d.id === run.id) : null;
     if (state.combat.mode !== 'dungeon' || !runDungeon) {
@@ -487,7 +496,7 @@ function normalise(data, now) {
     const savedLevels = Array.isArray(state.agility?.levels) ? state.agility.levels : [];
     const built = AGILITY_SLOTS.map((slot, i) => (slot.obstacles.some(o => o.id === savedCourse[i]) ? savedCourse[i] : null));
     state.agility = { built, levels: built.map((id, i) => (id ? Math.max(1, Math.min(MAX_OBSTACLE_LEVEL, Math.floor(Number(savedLevels[i]) || 1))) : 0)) };
-    if (!state.titan || typeof state.titan !== 'object') state.titan = { kills: 0, readyAt: 0, attempts: 0, bestPct: 0 };
+    if (!state.titan || typeof state.titan !== 'object') state.titan = { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null };
     const ev = state.events;
     for (const key of ['tokens', 'earnedToday', 'progress', 'instanceEarned']) ev[key] = Math.max(0, Math.floor(Number(ev[key]) || 0));
     if (!Array.isArray(ev.milestones)) ev.milestones = [];

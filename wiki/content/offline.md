@@ -10,7 +10,7 @@ Fantasy Idle keeps playing while you are away. When you come back, the game work
 Your hero goes on with whatever he was doing when you left:
 
 - **Work in a skill:** he keeps at it, one action after another, until the time runs out or the materials do (a tool stops once it is made). The action he was halfway through is finished first.
-- **The fight:** he goes on climbing with food, potions, the boss timer, falls and rests just as in play, so a fall early on costs a rest, not your whole absence. A [[Dungeons|dungeon]] keeps going clear after clear, and a lost run sends him back to the stage ladder. A fight with [[The Titan]] does not survive closing the game.
+- **The fight:** he goes on climbing with food, potions, the boss timer, falls and rests just as in play, so a fall early on costs a rest, not your whole absence. A [[Dungeons|dungeon]] keeps going clear after clear, and a lost run sends him back to the stage ladder. A fight with [[The Titan]] does not survive closing the game: your hero goes back to what he was doing before it.
 - **Nothing:** if he was idle, he rests at camp the whole time.
 
 He only ever does one of these: a fight and a skill never run together.

@@ -76,14 +76,18 @@ export function enterCombat(game) {
     game.markDirty();
 }
 
-/** Stop fighting. Leaving mid-dungeon abandons the run; leaving the Titan ends the attempt. */
+/**
+ * Stop fighting. Leaving mid-dungeon abandons the run; leaving the Titan ends the attempt (its Give up
+ * is dungeon.js giveUpTitan, which goes back to what he was doing; this stops him, for new work).
+ */
 export function leaveCombat(game) {
     const c = game.state.combat;
     c.recovering = false;
     if (!c.active) return;
     if (c.mode === 'dungeon') failDungeon(game, 'you left');
-    else if (c.mode === 'titan') endTitan(game, false);
+    else if (c.mode === 'titan') endTitan(game, false, 'left');
     c.active = false;
+    c.recovering = false;   // the Titan's end may have sent him back to a rest that ends in the fight
     c.combo = 0;
     game.markDirty();
 }
@@ -409,13 +413,15 @@ export function onPlayerDeath(game) {
     bumpStat(game, 'deaths');
     const mode = c.mode;
     if (mode !== 'stages') {
+        // a lost run rests, then fights on at the stages; after the Titan, only if he was fighting before it
+        let fightsOn = true;
         if (mode === 'dungeon') failDungeon(game, 'you were defeated', { lost: true });
-        else endTitan(game, false);
+        else fightsOn = endTitan(game, false, 'fell');
         game.emit({ type: 'death', stage: c.stage, mode });
         c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
         c.combo = 0;
         c.active = false;
-        c.recovering = true;
+        if (fightsOn) c.recovering = true;
         game.markDirty();
         return;
     }
@@ -441,7 +447,7 @@ export function onPlayerDeath(game) {
 export function onBossTimeout(game) {
     const c = game.state.combat;
     if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`, { lost: true }); return; }
-    if (c.mode === 'titan') { endTitan(game, false); return; }
+    if (c.mode === 'titan') { endTitan(game, false, 'time'); return; }
     bumpStat(game, 'bossEscapes');
     const back = Math.max(1, c.stage - 1);
     log(game, `⏳ ${c.enemy.name} held out for ${(c.enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
