@@ -117,22 +117,27 @@ test('the clan fight in the game: the week\'s boss, strikes kept and landing in 
     assert.equal(game.state.clanResult, null);
 });
 
-test('felling the clan boss here ends the fight early and pays nothing here; the server decides', () => {
+test('felling the clan boss here ends the fight, pays nothing here, and counts as the whole fight for the server', () => {
     const game = new Game(null, T0);
     game.state.combat.bestStage = 40;
     game.recompute();
     game.toggleCombat();   // fighting at the stages
     const gold = game.state.gold;
     const kills = game.state.stats.kills;
-    game.startClanFight({ week: '2026-W42', hp: 1, maxHp: 1000 });
-    game.tick(game.now + 5000);
+    // regression (the owner's report): a boss nearly down fell to the first swing, and the fight was sent
+    // as the time before that swing, so the server counted no hit and took 1 health off
+    const save = JSON.parse(game.serialize(game.now));
+    game.startClanFight({ week: '2026-W42', hp: 2, maxHp: 1000 });
+    for (let t = 100; t <= 5000; t += 100) game.tick(T0 + t);   // the step the swing lands in, as in play
     const c = game.state.combat;
     assert.equal(c.mode, 'stages');
     assert.equal(c.active, true, 'he was fighting: he fights on at the stages');
     assert.equal(game.state.gold, gold, 'no gold from the clan boss');
     assert.equal(game.state.stats.kills, kills, 'nor a kill');
-    assert.ok(game.state.clanResult.ms < CLAN_FIGHT_MS);
+    assert.equal(game.state.clanResult.ms, CLAN_FIGHT_MS, 'the whole fight');
     assert.equal(game.drainEvents().find(e => e.type === 'clanFight').reason, 'felled');
+    const reckoned = clanAttackFromSave(save, game.state.clanResult.strikes, game.state.clanResult.ms, game.now);
+    assert.ok(reckoned.damage > 2 * 10, `the server's reckoning fells it too, many times over (${reckoned.damage})`);
 });
 
 test('a reload in the middle of a clan fight: the fight is gone, nothing is spent, he is back at his work', () => {

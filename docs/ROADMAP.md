@@ -1022,7 +1022,10 @@ Keeping it running:
       openings (×1.3 to ×2 of watching). No cards or raid levels. The server works out the damage from the
       stored hero and the strike times (a forged list deals no more than a perfect one), and a card shows
       it with the member's place in the clan. Three attacks a day, banked up to six; afterwards the hero goes
-      back to what he was doing and the screen to the Clan tab. Played in a browser at 1280 and 390 px
+      back to what he was doing and the screen to the Clan tab. Played in a browser at 1280 and 390 px.
+      Fixed the same night (the owner's report): a boss nearly down fell on screen to the first swing, and the
+      fight was sent as the time before that swing, so the server took 1 health off; a boss that falls on
+      screen now counts as the whole fight, and the server decides
 - [x] **Gifts from the owner** (README "The API"): one row of SQL gives a player gold, essence or diamonds;
       the save and load answers say a gift waits, the game claims it once and shows a card ("A gift from
       tufan, +12,000,000 gold"). Gifts never show in the clan's reward list, so a page still running older

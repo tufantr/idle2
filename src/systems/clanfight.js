@@ -72,15 +72,19 @@ export function noteClanStrike(state) {
 
 /**
  * The clan fight is over: `reason` 'time' (its clock ran out), 'felled' (the boss's health ran out
- * here; the server decides whether it really fell) or 'left' (Give up, or other work). What the player
- * did waits in state.clanResult until the game has sent it (main.js), even across a reload; the hero
- * goes back to what he was doing. Returns whether he fights on.
+ * here) or 'left' (Give up, or other work). What the player did waits in state.clanResult until the
+ * game has sent it (main.js), even across a reload; the hero goes back to what he was doing. Returns
+ * whether he fights on.
+ *
+ * A boss that falls here counts as the whole fight: the server reckons the full fight's damage and so
+ * decides whether it really fell. Cutting the fight at the fall sent the time before the killing blow
+ * (the clock is counted after a step's attacks), and a boss that fell to the first swing took 1 damage.
  */
 export function endClanFight(game, reason = 'time') {
     const state = game.state;
     const c = state.combat;
     const fight = state.clanFight;
-    const ms = reason === 'time' ? CLAN_FIGHT_MS : clanFightElapsed(state);
+    const ms = reason === 'left' ? clanFightElapsed(state) : CLAN_FIGHT_MS;
     const dealt = fight && c.enemy?.clan ? Math.max(0, fight.hp - Math.max(0, c.enemy.hp)) : 0;
     if (fight) state.clanResult = { week: fight.week, strikes: fight.strikes.slice(0, MAX_STRIKES), ms: Math.round(ms), at: game.now };
     state.clanFight = null;
