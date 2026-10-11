@@ -561,3 +561,18 @@ test('a clan attack is a fight: strikes in the openings add, a forged list no mo
     clock += 24 * 3600 * 1000;
     assert.equal((await (await get('/clan', a)).json()).attacksLeft, 3, 'a new day brings three');
 });
+
+test('attacks given back by hand still land: each attack takes the next free slot of the day', async () => {
+    // regression (the owner's report): slots were the attacks waiting plus ten, so two attacks given back
+    // by hand collided with the morning's slots and every send was refused ("Sending…" for good)
+    const t = await register('given_back');
+    await post('/clans', { name: 'Second Wind', tag: 'SW' }, t);
+    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
+    for (let i = 0; i < 3; i++) assert.equal((await post('/clan/attack', {}, t)).status, 200);
+    assert.equal((await post('/clan/attack', {}, t)).status, 400);
+    if (memory) memory.db.charges.get(memory.db.users.find(u => u.username === 'given_back').id).charges += 2;
+    else await pool.query("UPDATE clan_charges SET charges = charges + 2 WHERE user_id = (SELECT id FROM users WHERE username = 'given_back')");
+    assert.equal((await post('/clan/attack', {}, t)).status, 200, 'the first given back');
+    assert.equal((await post('/clan/attack', {}, t)).status, 200, 'and the second');
+    assert.equal((await post('/clan/attack', {}, t)).status, 400, 'then none');
+});

@@ -1025,7 +1025,9 @@ Keeping it running:
       back to what he was doing and the screen to the Clan tab. Played in a browser at 1280 and 390 px.
       Fixed the same night (the owner's report): a boss nearly down fell on screen to the first swing, and the
       fight was sent as the time before that swing, so the server took 1 health off; a boss that falls on
-      screen now counts as the whole fight, and the server decides
+      screen now counts as the whole fight, and the server decides. And: two attacks given back by hand
+      took the numbers of the morning's, so the server refused them and the game said "Sending…" for good;
+      each attack now takes the next free number of the day
 - [x] **Gifts from the owner** (README "The API"): one row of SQL gives a player gold, essence or diamonds;
       the save and load answers say a gift waits, the game claims it once and shows a card ("A gift from
       tufan, +12,000,000 gold"). Gifts never show in the clan's reward list, so a page still running older

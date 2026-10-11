@@ -452,12 +452,11 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const left = await store.spendCharge(req.user.id, dayNumber(now), perDay, bank);
     if (left === null) return res.status(400).json({ error: `No attacks waiting: ${perDay} more come each day (midnight UTC), up to ${bank}.` });
     const day = dayId(now);
-    const slot = 10 + left;   // unique for the day: the attacks waiting fall with each one, and one given back is deleted
+    let slot;
     try {
-        await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, slot, damage, now });
+        slot = await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, damage, now });
     } catch (err) {
-        await store.refundCharge(req.user.id, bank);
-        if (err.code === '23505') return res.status(409).json({ error: 'Another attack landed at the same moment: try again.' });
+        await store.refundCharge(req.user.id, bank);   // not recorded: the attack waits again
         throw err;
     }
     const after = await store.damageBoss(clanId, boss.week, damage);

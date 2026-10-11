@@ -150,9 +150,10 @@ function createMemoryStore() {
             b.settled = true;
             return true;
         },
-        async recordAttack({ clanId, userId, week, day, slot, damage, now }) {
-            if (db.attacks.some(a => a.userId === userId && a.day === day && a.slot === slot)) throw unique();
+        async recordAttack({ clanId, userId, week, day, damage, now }) {
+            const slot = Math.max(0, ...db.attacks.filter(a => a.userId === userId && a.day === day).map(a => a.slot)) + 1;
             db.attacks.push({ id: ++seq.attacks, clanId, userId, week, day, slot, damage, at: now });
+            return slot;
         },
         async deleteAttack(userId, day, slot) {
             db.attacks = db.attacks.filter(a => !(a.userId === userId && a.day === day && a.slot === slot));

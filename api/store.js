@@ -75,8 +75,8 @@ async function ensureSchema() {
             since BIGINT NOT NULL
         );
     `;
-    // One row per attack; (user, day, slot) is unique, so a player gets three a day even with
-    // parallel requests or by switching clans.
+    // One row per attack, numbered per player and day (slot). How many a player may make is
+    // clan_charges, spent atomically, so parallel requests or a switch of clans give no more.
     await sql`
         CREATE TABLE IF NOT EXISTS clan_attacks (
             id SERIAL PRIMARY KEY,
@@ -325,9 +325,25 @@ async function claimSettlement(clanId, week) {
     return rows.length > 0;
 }
 
-/** Throws a unique violation (code 23505) if that attack slot is already used today. */
-async function recordAttack({ clanId, userId, week, day, slot, damage, now }) {
-    await sql`INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at) VALUES (${clanId}, ${userId}, ${week}, ${day}, ${slot}, ${damage}, ${now})`;
+/**
+ * Record an attack in the player's next slot of the day (slots are unique per player and day; the
+ * attacks waiting, clan_charges, say how many may be made). A parallel attack taking the same slot
+ * means a try at the next. Returns the slot.
+ */
+async function recordAttack({ clanId, userId, week, day, damage, now }) {
+    for (let tries = 0; ; tries++) {
+        try {
+            const { rows } = await sql`
+                INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at)
+                SELECT ${clanId}::int, ${userId}::int, ${week}::varchar, ${day}::varchar, COALESCE(MAX(slot), 0) + 1, ${damage}::bigint, ${now}::bigint
+                FROM clan_attacks WHERE user_id = ${userId}::int AND day = ${day}::varchar
+                RETURNING slot
+            `;
+            return int(rows[0].slot);
+        } catch (err) {
+            if (err.code !== '23505' || tries >= 3) throw err;
+        }
+    }
 }
 
 /** Give an attack slot back (the boss was already down when the attack landed). */
