@@ -24,6 +24,7 @@ of them are checked by the test suite or the balance simulator, not by feel.
 | 6 — Game feel | ✅ Done |
 | 7 — Make it feel like a game | ✅ Done |
 | 8 — Art and polish | ✅ Done |
+| 9 — Live, and the long game | 🚧 Now: [what is next](#phase-9--live-and-the-long-game) |
 
 The six phases of the original plan are built, including the optional mastery, and a four-part code review (combat,
 skilling, saves and API, UI) has been worked through: 28 confirmed bugs fixed, plus several suspected
@@ -40,7 +41,12 @@ owner's decisions: a new weekend event is one entry in `src/data/events.js` plus
 `src/data/dungeons.js` (DESIGN §5.4 lists the balance knobs); the items under
 [Deferred on purpose](#deferred-on-purpose) stay out until players ask for them.
 
-Before this ships, a few things need the owner (a deployment setting, a history clean-up) — see [Decisions for the owner](#decisions-for-the-owner).
+**The game is live** at https://fantasy-idle.vercel.app since 8 October 2026 (a phone can install it),
+with the player wiki at https://fantasy-idle-wiki.vercel.app since the 9th and online play (accounts,
+cloud saves, clans, leaderboards) since the 11th, on Vercel's free plan with a free Neon database in
+Frankfurt. What is next, keeping it running and the long game's last pieces, is
+[Phase 9](#phase-9--live-and-the-long-game); a few things are the owner's (a history clean-up, a domain,
+paid power later): see [Decisions for the owner](#decisions-for-the-owner).
 
 ---
 
@@ -397,7 +403,9 @@ progress as motion, art before words, one stage with a HUD around it.
       Amethyst" (and "Forge a Iron Sword") now get the right article, and the gem no longer lands
       in the battle log
 
-### Still to do
+### Landed after the first pass
+
+The phase's last seven to-do items come first; after them, everything that landed since, newest first.
 
 - [x] **The phone's Next card in view**: it sat at the end of the scrolling tab strip, off screen,
       so a new player on a phone saw no goal. It is its own slot now: beside the title on a phone
@@ -482,6 +490,10 @@ progress as motion, art before words, one stage with a HUD around it.
       first perk to learn. A climb still going is left alone. One who watches now prestiges at about 14
       minutes and stands at stage 40 after an hour (30 before); one who taps, 79 (60). Superseded the
       same day by the teaching prestige above
+- [x] **The game is live** (the owner's go-ahead; README "Deploy"): https://fantasy-idle.vercel.app, the Vercel
+      project `fantasy-idle`, deployed with the Vercel CLI from a `git archive` of the branch (so `art/`, `runs/`
+      and `shots/` never go up), first from 2f1ab7e on 8 October 2026 and on the owner's word after each change
+      since; a phone can install it from the browser (`manifest.json`)
 - [x] **Gem pouches for Crafting** (docs/research_notes/crafting-gems.md): a hero whose fight had gone deep
       found only gems a new crafter cannot cut (the simulated hero held 1,913 Diamonds and was still
       Crafting 1). The shop's Supplies now offer ten Amethysts, Topaz or Sapphires for gold, once Crafting
@@ -983,6 +995,47 @@ progress as motion, art before words, one stage with a HUD around it.
 **Exit:** every place a player sees has a painting or a sprite, not an emoji; a new player's first
 screen is one fight and one small panel at 1280 and 390 px; `tools/shots.mjs` passes both modes.
 
+---
+
+## Phase 9 — Live, and the long game
+
+The game went live on 8 October 2026, the wiki on the 9th and online play on the 11th (Phase 8's list has
+each). What is left: keeping it running for real players, one rule to settle, and the long game's last
+pieces from the research (`docs/research_notes/robust-and-fun/README.md`, DESIGN §5.6).
+
+### Still to do
+
+Keeping it running:
+
+- [ ] **Cloud saves less often** (S): a logged-in game uploads every minute while it is open, and each
+      upload wakes the free database, which may be awake 100 compute-hours a month (about 17 days). Upload
+      every few minutes, when the tab is hidden or closed and after big moments; the local save stays as it is
+- [ ] **The API's queries on a real Postgres** (S): the login limits and the clan boss shares changed after
+      the last check against PostgreSQL 16 (README "The API" has the command). The live tables were made
+      without an error; the queries run for the first time when players use them
+- [ ] **A watch on the live side** (S): Neon's usage page, Vercel's runtime errors and `/api/health` after
+      each deploy, and a backup beyond Neon's six-hour restore window (a weekly export)
+- [ ] **A custom domain** (the owner's purchase): its records in Cloudflare's DNS, set to "DNS only"
+- [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
+
+A rule to settle (the owner's call):
+
+- [ ] **Retreat during a boss** (S): leaving a boss fight keeps the boss's lost health and its time left
+      while the hero heals at camp, so retreating, resting and coming back beats a boss he could not beat in
+      one go. Either that is the way (a choice for a player who is watching), or a boss heals and its clock
+      starts again when the hero leaves
+
+The long game (the research's last items):
+
+- [ ] **Something to reach past stage 500** (M): past it only the records and the calendar are left;
+      Pandemonium could bring a layer or a medal every 50 stages
+- [ ] **An end boss** (M)
+- [ ] **Early Ascensions that each open something new** (M)
+- [ ] **A cape for 100% completion** (S)
+
+**Exit:** a month of real players with no lost save, the free database within its month, and a big
+moment at least every 48 hours of play past stage 500.
+
 ## Deferred on purpose
 
 Ranged/Magic combat styles with Fletching/Runecrafting (L); Township or Summoning-scale systems;
@@ -994,10 +1047,9 @@ later, not only for the online clan side, the game's most important part: see
 
 ## Decisions for the owner
 
-1. **Set `JWT_SECRET` in Vercel before deploying this branch.** The API now refuses to issue tokens
-   without it (the old code silently used a public hard-coded secret). Accounts created with the old
-   API keep working — passwords are unchanged, players just log in again, and an old cloud save is
-   migrated on load like a local one.
+1. **`JWT_SECRET` in Vercel: done** (11 October 2026, Production and Preview, a Secret). The API refuses
+   to issue tokens without it (the old code silently used a public hard-coded secret). Changing it signs
+   every player out.
 2. **Monetization and hosting.** For now the game is free with nothing for sale, which fits Vercel's
    Hobby plan (non-commercial). The owner's intent for later (October 2026): players will be able to
    spend money to get stronger. The clan (guild) section is the most important part of the game,
@@ -1005,11 +1057,12 @@ later, not only for the online clan side, the game's most important part: see
    rest; shipping comes first, later. When it comes, the research's warning stands: paid power plus an
    online side needs that side to be server-authoritative (the server decides fights and rewards,
    since a browser save can be edited), and selling anything needs a commercial hosting plan (Vercel
-   Pro or another host). Clans and leaderboards also need `POSTGRES_URL` (Vercel Postgres); tables are
-   created on the first request.
-3. **`api/node_modules` is still committed** (1,099 files). `.gitignore` keeps it tracked until a
-   preview deployment confirms Vercel installs dependencies from `api/package.json`; then remove it
-   with `git rm -r --cached api/node_modules`.
+   Pro or another host). Clans and leaderboards run on a free Neon database since 11 October 2026 (README
+   "The API"); its limits are in Phase 9.
+3. **`api/node_modules` is still committed** (1,099 files), and can go now: every production build
+   shows Vercel installing the API's packages from `api/package.json` itself (the CLI never uploads
+   `node_modules`; a deploy sends 288 files). Remove it with `git rm -r --cached api/node_modules`; the
+   tests then need `npm ci --prefix api` once. It also slows git on the owner's iCloud-synced disk.
 4. **Old database row in git history.** `api/fantasy-idle.db` (removed in this change) held a username
    and a bcrypt password hash; it is still in the repository's history. If that password is used
    anywhere else, change it.

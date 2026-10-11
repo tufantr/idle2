@@ -86,5 +86,5 @@ medians and percentiles: `node tools/batch.mjs --seeds=30 --hours=150` (add `--a
 
 ## Ideas not done yet
 
-The open items are the [Still to do](docs/ROADMAP.md#still-to-do) list at the end of Phase 8 in the
-roadmap; tick them there as they land.
+The open items are the [Still to do](docs/ROADMAP.md#still-to-do) list in Phase 9 of the roadmap;
+tick them there as they land.
