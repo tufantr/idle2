@@ -176,15 +176,23 @@ function createMemoryStore() {
             db.rewards.push({ id: ++seq.rewards, userId, kind, payload: payloadJson, createdAt: now, claimedAt: 0, dedupe });
         },
         async unclaimedRewards(userId) {
-            return db.rewards.filter(r => r.userId === userId && !r.claimedAt).map(r => ({ id: r.id, kind: r.kind, payload: r.payload, createdAt: r.createdAt }));
+            return db.rewards.filter(r => r.userId === userId && !r.claimedAt && r.kind !== 'gift').map(r => ({ id: r.id, kind: r.kind, payload: r.payload, createdAt: r.createdAt }));
         },
         async claimRewards(userId, ids, now) {
             const claimed = [];
             for (const id of ids) {
-                const r = db.rewards.find(x => x.id === id && x.userId === userId && !x.claimedAt);
+                const r = db.rewards.find(x => x.id === id && x.userId === userId && !x.claimedAt && x.kind !== 'gift');
                 if (r) { r.claimedAt = now; claimed.push({ id: r.id, kind: r.kind, payload: r.payload }); }
             }
             return claimed;
+        },
+        async unclaimedGiftCount(userId) {
+            return db.rewards.filter(r => r.userId === userId && r.kind === 'gift' && !r.claimedAt).length;
+        },
+        async claimGifts(userId, now) {
+            const waiting = db.rewards.filter(r => r.userId === userId && r.kind === 'gift' && !r.claimedAt);
+            for (const r of waiting) r.claimedAt = now;
+            return waiting.map(r => ({ id: r.id, kind: r.kind, payload: r.payload }));
         }
     };
     return store;

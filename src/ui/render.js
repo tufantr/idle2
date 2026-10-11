@@ -1947,7 +1947,7 @@ export function renderSettings(game, ui, cloud) {
     return `<div class="two-col">
         <section class="glass-panel ${painted('study', 'left 45%')}">
             <div class="panel-header"><h2>Cloud save</h2><span class="muted small">${cloud?.loggedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest (local only)'}</span></div>
-            <p class="muted small">${cloud?.loggedIn ? 'Your save is uploaded every minute and on important events. Another device loads whichever save has more play time.' : 'Sign in to keep your save in the cloud and play from any device. Your local save is kept either way.'}</p>
+            <p class="muted small">${cloud?.loggedIn ? 'Your save is uploaded every ten minutes while you play, and when you leave the page. Another device loads whichever save has more play time.' : 'Sign in to keep your save in the cloud and play from any device. Your local save is kept either way.'}</p>
             ${cloud?.loggedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save to cloud now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>

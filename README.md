@@ -51,6 +51,19 @@ On Vercel, both are set by the owner, once:
 https://fantasy-idle.vercel.app/api/health then answers `{"ok":true,"db":true,"secret":true,"game":true}`;
 a `false` names the missing part (`game`: the function could not load the game's stat code).
 
+**A gift to a player** (gold, essence or diamonds) is one row in the database. In Vercel → Storage →
+`fantasy-idle-db` → Open in Neon → SQL Editor (the label in the key makes a second run give nothing):
+
+```sql
+INSERT INTO rewards (user_id, kind, payload, created_at, dedupe)
+SELECT id, 'gift', '{"gold":12000000,"text":"A gift from tufan"}', (extract(epoch from now()) * 1000)::bigint, 'gift:' || id || ':first-gold'
+FROM users WHERE lower(username) = lower('Yarraksalih')
+ON CONFLICT (dedupe) DO NOTHING;
+```
+
+The player's game claims it at its next cloud save or load (a reload at the latest), adds it and shows a
+card; each gift is paid once. Gift gold is that run's, like all gold.
+
 The API imports the game's own stat code (`src/core/power.js`, ES modules — `src/package.json` marks
 them as such) so that clan damage and leaderboard numbers are computed on the server from the stored
 save. It needs Node 20.19+ or 22+.
@@ -62,6 +75,7 @@ save. It needs Node 20.19+ or 22+.
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
 | `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss and board; attack (3 a day, damage computed on the server); the owner removes a member |
 | `GET /api/rewards`, `POST /api/rewards/claim` | clan rewards, claimed once |
+| `POST /api/gifts/claim` | the owner's gifts to a player (below), claimed by the game when a save or load says some wait |
 | `POST /api/leaderboard/consent`, `GET /api/leaderboard` | opt in or out; boards by best stage, total level, Titans or dungeon clears |
 
 ## Deploy

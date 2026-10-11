@@ -109,3 +109,45 @@ test('hard reset clears backups except the one written just before it', () => {
     clearLocal();
     assert.deepEqual(listBackups().map(b => b.slot), ['reset']);
 });
+
+test("a gift from the owner adds gold to this run, uncounted as earned; nonsense amounts add nothing", () => {
+    const game = new Game(null, 1);
+    const earned = game.state.stats.goldEarned;
+    const rewards = game.state.stats.clanRewards || 0;
+    const text = game.applyReward({ id: 7, kind: 'gift', gold: 12000000, text: 'A gift from tufan' });
+    assert.equal(game.state.gold, 12000000);
+    assert.equal(text, 'A gift from tufan: +12,000,000 gold');
+    assert.equal(game.state.stats.goldEarned, earned, 'a gift is not gold earned (the Capitalist medal)');
+    assert.equal(game.state.stats.clanRewards || 0, rewards, 'nor a clan reward');
+    const before = { gold: game.state.gold, essence: game.state.resources.essence };
+    assert.equal(game.applyReward({ kind: 'gift', gold: Infinity, essence: -5, diamond: 'lots' }), 'A gift: nothing');
+    assert.deepEqual({ gold: game.state.gold, essence: game.state.resources.essence }, before);
+    assert.equal(game.applyReward({ kind: 'participation', essence: 3, text: 'Clan reward' }), 'Clan reward: +3 essence');
+    assert.equal(game.state.stats.clanRewards, rewards + 1);
+});
+
+test('cloud uploads ask the page to outlive the request only when the body fits; the load answer carries the gifts waiting', async () => {
+    const calls = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+        calls.push({ url, init });
+        const body = url.endsWith('/load') ? { state: null, serverNow: 5, gifts: 2 } : { success: true, gifts: 0 };
+        return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6InR1ZmFuIn0.b');
+        await cloud.push({ version: 3, note: 'small' }, { keepalive: true });
+        assert.equal(calls.at(-1).init.keepalive, true);
+        await cloud.push({ version: 3, note: 'x'.repeat(70000) }, { keepalive: true });
+        assert.equal(calls.at(-1).init.keepalive, false, 'over the 64 KB a closing page may send: a plain request');
+        await cloud.push({ version: 3 });
+        assert.equal(calls.at(-1).init.keepalive, false);
+        assert.equal((await cloud.pull(10)).gifts, 2);
+        await cloud.claimGifts();
+        assert.equal(calls.at(-1).url, '/api/gifts/claim');
+        assert.equal(calls.at(-1).init.method, 'POST');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});

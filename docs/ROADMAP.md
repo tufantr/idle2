@@ -1007,9 +1007,17 @@ pieces from the research (`docs/research_notes/robust-and-fun/README.md`, DESIGN
 
 Keeping it running:
 
-- [ ] **Cloud saves less often** (S): a logged-in game uploads every minute while it is open, and each
-      upload wakes the free database, which may be awake 100 compute-hours a month (about 17 days). Upload
-      every few minutes, when the tab is hidden or closed and after big moments; the local save stays as it is
+- [x] **Cloud saves less often** (the owner's ask, for up to five testers; DESIGN §3.17): a logged-in game
+      uploaded every minute from every open page, and each upload woke the free database (100 compute-hours a
+      month, about 17 days awake). Now it uploads every ten minutes while the player is around (the page in
+      view and touched in the last ten minutes) and once on leaving the page (a request that outlives a
+      closing page); a page left open in the background uploads nothing more, and the Clan tab polls only in
+      view. Checked in a browser with its clock driven: one upload at sign-in, one ten minutes on with the
+      player there, none for twenty idle minutes or an hour hidden, one on leaving
+- [x] **Gifts from the owner** (README "The API"): one row of SQL gives a player gold, essence or diamonds;
+      the save and load answers say a gift waits, the game claims it once and shows a card ("A gift from
+      tufan, +12,000,000 gold"). Gifts never show in the clan's reward list, so a page still running older
+      code can't claim one and lose it
 - [ ] **The API's queries on a real Postgres** (S): the login limits and the clan boss shares changed after
       the last check against PostgreSQL 16 (README "The API" has the command). The live tables were made
       without an error; the queries run for the first time when players use them

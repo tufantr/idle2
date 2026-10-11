@@ -678,7 +678,13 @@ gear to wear; a place that waited opens on the return and is named there too.
   refused.
 - **Cloud (optional):** the game works as a guest. Signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
-  version-checked saves. The client uploads every 60 s. When a local and a cloud save disagree it
+  version-checked saves. The client uploads every ten minutes while the player is around (the page in
+  view and touched in the last ten minutes), and once on leaving the page (hidden or closed: a keepalive
+  request, under the 64 KB browsers allow); a page left open in the background uploads nothing more, as the
+  next load replays that time from the last upload, and the local save stays current every 15 s. That is
+  sized for the free database, which sleeps after five minutes without a request and may be awake 100
+  compute-hours a month: a few testers playing keep it awake for a part of their play, not around the
+  clock (it was every 60 s, from every open page). When a local and a cloud save disagree it
   prefers more play time, and asks the player if the save times disagree with that (compared from
   before offline progress) or if the saves come from two different games. Nothing is uploaded while
   the question is open. On a static host without the API, sign-in says cloud saves are unavailable
@@ -739,7 +745,12 @@ with the game's own stat code; the client never submits damage or scores.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
   level, Titans or dungeon clears, all time or this week (from each player's first save of the week).
   The numbers are computed once per upload and stored, so a board is one query.
-- **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open.
+- **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open
+  and in view.
+- **Gifts:** the owner gives a player gold, essence or diamonds with one row in `rewards` (kind `gift`,
+  README "The API"). The save and load answers say how many wait; the game claims them all through
+  `/api/gifts/claim`, adds them (gift gold is this run's and not counted as earned) and shows a card.
+  Gifts never appear in the clan's reward list, so a page still running older code can't claim one.
   A Discord invite link appears if `DISCORD_INVITE` (`src/data/social.js`) is set — there is no in-game
   chat.
 

@@ -149,12 +149,14 @@ export class CloudClient {
 
     get loggedIn() { return !!this.token; }
 
-    async request(path, { method = 'GET', body = null, auth = true } = {}) {
+    /** `keepalive`: the request outlives the page (an upload as it closes; browsers allow 64 KB that way). */
+    async request(path, { method = 'GET', body = null, auth = true, keepalive = false } = {}) {
         const headers = { 'Content-Type': 'application/json' };
         if (auth && this.token) headers.Authorization = `Bearer ${this.token}`;
+        const text = body ? JSON.stringify(body) : undefined;
         let res;
         try {
-            res = await fetch(`${this.baseUrl}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+            res = await fetch(`${this.baseUrl}${path}`, { method, headers, body: text, keepalive: keepalive && (text?.length || 0) < 60000 });
         } catch (err) {
             this.available = false;
             throw new Error('Cloud server unreachable — playing locally.');
@@ -211,12 +213,16 @@ export class CloudClient {
             state.meta.savedAt = now - away;
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
-        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn };
+        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0 };
     }
 
-    async push(stateObject) {
-        return this.request('/save', { method: 'POST', body: { state: stateObject } });
+    /** Upload the save. The answer says how many gifts wait for this player ({ gifts }). */
+    async push(stateObject, { keepalive = false } = {}) {
+        return this.request('/save', { method: 'POST', body: { state: stateObject }, keepalive });
     }
+
+    /** Claim the gifts waiting on the server: [{ id, kind, gold?, essence?, diamond?, text? }]. */
+    claimGifts() { return this.request('/gifts/claim', { method: 'POST', body: {} }); }
 
     // ----- social (clans, rewards, leaderboards) -----
     clans(search = '') { return this.request(`/clans?search=${encodeURIComponent(search)}`); }

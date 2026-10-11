@@ -483,3 +483,46 @@ test('with no database the connection fails on first use, not when the API loads
         for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
     }
 });
+
+/** The owner's gift (README "The API"): one row in rewards, as the SQL there adds it. */
+async function giveGift(username, payload, dedupe = null) {
+    if (memory) {
+        const user = memory.db.users.find(u => u.username === username);
+        return memory.addReward(user.id, 'gift', payload, clock, dedupe);
+    }
+    await pool.query('INSERT INTO rewards (user_id, kind, payload, created_at, dedupe) SELECT id, $2, $3, $4, $5 FROM users WHERE username = $1 ON CONFLICT (dedupe) DO NOTHING',
+        [username, 'gift', payload, clock, dedupe]);
+}
+
+test("the owner's gifts: counted on save and load, claimed once by the game, never through the clan's list", async () => {
+    const token = await register('gift_taker');
+    assert.equal((await (await post('/save', { state: heroSave({ bestStage: 30 }) }, token)).json()).gifts, 0);
+    await giveGift('gift_taker', JSON.stringify({ gold: 12000000, text: 'A gift from tufan' }), 'gift:test:first-gold');
+    await giveGift('gift_taker', JSON.stringify({ gold: 12000000 }), 'gift:test:first-gold');   // the same key again: nothing
+    const saved = await (await post('/save', { state: heroSave({ bestStage: 30 }) }, token)).json();
+    assert.equal(saved.gifts, 1, 'the save answer says one waits');
+    assert.equal((await (await get('/load', token)).json()).gifts, 1, 'so does the load answer');
+
+    // a page running older code sees only the clan's rewards and cannot claim a gift by its id
+    const listed = await (await get('/rewards', token)).json();
+    assert.equal(listed.rewards.length, 0);
+    const giftId = memory ? memory.db.rewards.find(r => r.kind === 'gift').id : (await pool.query("SELECT id FROM rewards WHERE kind = 'gift'")).rows[0].id;
+    assert.equal((await (await post('/rewards/claim', { ids: [giftId] }, token)).json()).rewards.length, 0);
+
+    const first = await (await post('/gifts/claim', {}, token)).json();
+    assert.equal(first.gifts.length, 1);
+    assert.equal(first.gifts[0].kind, 'gift');
+    assert.equal(first.gifts[0].gold, 12000000);
+    assert.equal(first.gifts[0].text, 'A gift from tufan');
+    assert.equal((await (await post('/gifts/claim', {}, token)).json()).gifts.length, 0, 'paid once');
+    assert.equal((await (await get('/load', token)).json()).gifts, 0);
+
+    // a payload that isn't JSON claims as an empty gift, and can't rename itself
+    await giveGift('gift_taker', 'not json', 'gift:test:broken');
+    await giveGift('gift_taker', JSON.stringify({ kind: 'lastHit', id: 1, essence: 5 }), 'gift:test:renamed');
+    const odd = (await (await post('/gifts/claim', {}, token)).json()).gifts;
+    assert.equal(odd.length, 2);
+    assert.ok(odd.every(g => g.kind === 'gift'));
+    assert.equal(odd.find(g => g.essence).essence, 5);
+    assert.equal((await post('/gifts/claim', {})).status, 401, 'a token is needed');
+});

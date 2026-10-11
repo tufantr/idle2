@@ -42,7 +42,13 @@ const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
 const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
 const AUTOSAVE_MS = 15000;
-const CLOUD_SAVE_MS = 60000;
+// Cloud saves, sized for a free database that sleeps after five minutes without a request (README "The
+// API"): every ten minutes while the player is around (the page in view, touched in the last ten minutes),
+// and once on leaving the page. A page left open in the background uploads nothing more: the hero's time
+// there is replayed from the last upload on the next load anyway, and the local save is always current.
+const CLOUD_SAVE_MS = 10 * 60000;
+const CLOUD_AWAY_MS = 10 * 60000;    // no touch for this long: nobody is there, nothing more to upload
+const CLOUD_LEAVE_GAP_MS = 60000;    // leaving within a minute of an upload sends no other
 const TITAN_HOLD_MS = 2400;      // the Titan's fight keeps the screen this long after it ends (its last banner)
 
 // Browser storage can be blocked (private windows, the game embedded in another page). These are
@@ -170,6 +176,8 @@ if (!cloud.loggedIn) bootSavedAt = null;   // no boot sync: a later login compar
 let lastSave = Date.now();
 let lastBackup = Date.now();
 let lastCloudSave = Date.now();
+let lastPresenceAt = Date.now();   // the player's last touch, or the page coming back into view
+const playerAround = now => !document.hidden && now - lastPresenceAt < CLOUD_AWAY_MS;
 
 /** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
 function advance(now) {
@@ -191,8 +199,8 @@ setInterval(() => {
     handleEvents(game.drainEvents());
     if (now - lastSave > AUTOSAVE_MS) save(now);
     if (now - lastBackup > BACKUP_INTERVAL_MS) { lastBackup = now; rotateBackup(game.serialize(now), now); }
-    if (cloud.loggedIn && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
-    if (ui.tab === 'clan' && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
+    if (cloud.loggedIn && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
+    if (ui.tab === 'clan' && !document.hidden && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
     const pressing = pointer.down && now - pointer.downAt < 1000;
     if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
@@ -227,7 +235,10 @@ function paintGold(now = performance.now()) {
 }
 requestAnimationFrame(frame);
 
-document.addEventListener('visibilitychange', () => { game.setAttending(!document.hidden); if (document.hidden) save(Date.now()); });
+document.addEventListener('visibilitychange', () => {
+    game.setAttending(!document.hidden);
+    if (document.hidden) { save(Date.now()); cloudSaveOnLeave(); } else lastPresenceAt = Date.now();
+});
 // The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
 let resizeQueued = false;
 window.addEventListener('resize', () => {
@@ -235,7 +246,7 @@ window.addEventListener('resize', () => {
     resizeQueued = true;
     requestAnimationFrame(() => { resizeQueued = false; render(); });
 });
-window.addEventListener('pagehide', () => save(Date.now()));
+window.addEventListener('pagehide', () => { save(Date.now()); cloudSaveOnLeave(); });
 window.addEventListener('beforeunload', () => save(Date.now()));
 
 // A press in progress: re-rendering now would replace the button under the pointer and lose the click.
@@ -324,6 +335,7 @@ document.addEventListener('change', event => {
 let lastInputNote = 0;
 const noteInput = () => {
     const now = Date.now();
+    lastPresenceAt = now;
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
         advance(now); // the first click after a long absence still gets its welcome-back report
@@ -782,16 +794,44 @@ function save(now) {
     saveLocal(game.serialize(now));
 }
 
-async function cloudSave(announce = true) {
+async function cloudSave(announce = true, { keepalive = false } = {}) {
     if (!cloud.loggedIn || pendingConflict) return; // never overwrite the cloud while the player is choosing
     lastCloudSave = Date.now();
     try {
-        await cloud.push(JSON.parse(game.serialize(Date.now())));
+        const answer = await cloud.push(JSON.parse(game.serialize(Date.now())), { keepalive });
         ui.cloudStatus = `Cloud save OK at ${new Date().toLocaleTimeString()}`;
         if (announce) toast('Saved to cloud', 'info');
+        if (answer?.gifts > 0) claimGifts();
     } catch (err) {
         ui.cloudStatus = `Cloud save failed: ${err.message}`;
         if (announce) toast(ui.cloudStatus, 'error');
+    }
+}
+
+/** Leaving the page (another tab, the phone's home screen, closing it): one upload, unless one went just now. */
+function cloudSaveOnLeave() {
+    if (!cloud.loggedIn || pendingConflict || !game.state.settings.cloudSync || Date.now() - lastCloudSave < CLOUD_LEAVE_GAP_MS) return;
+    cloudSave(false, { keepalive: true });
+}
+
+/** Gifts waiting on the server (the owner's, README "The API"): claimed once, added to the save, shown as a card. */
+let claimingGifts = false;
+async function claimGifts() {
+    if (claimingGifts || !cloud.loggedIn || pendingConflict) return;
+    claimingGifts = true;
+    try {
+        const { gifts = [] } = await cloud.claimGifts();
+        for (const gift of gifts) {
+            const text = game.applyReward(gift);
+            const gold = Math.floor(Number(gift.gold) || 0);
+            rewards.celebrate({ key: `gift:${gift.id}`, kind: 'unlock', icon: sprite(gold > 0 ? 'gold' : 'crate', { scale: 2 }),
+                kicker: gift.text || 'A gift', title: text.slice(text.indexOf(': ') + 2), ms: 5000 });   // the card escapes its words
+        }
+        if (gifts.length) { save(Date.now()); cloudSave(false); render(); }
+    } catch (err) {
+        ui.cloudStatus = err.message;   // it waits on the server for the next save
+    } finally {
+        claimingGifts = false;
     }
 }
 
@@ -846,7 +886,7 @@ async function syncFromCloud() {
     try {
         const boot = bootSavedAt;
         bootSavedAt = null;   // used once, by the boot sync: a failed or later sync compares with the live save
-        const { state: remote } = await cloud.pull(Date.now());
+        const { state: remote, gifts } = await cloud.pull(Date.now());
         const live = game.state;
         const local = boot ? { ...live, meta: { ...live.meta, savedAt: boot } } : live;
         const choice = chooseSave(live.stats.kills || live.meta.playtimeMs > 60000 ? local : null, remote);
@@ -861,6 +901,7 @@ async function syncFromCloud() {
         } else {
             await cloudSave(false);
         }
+        if (gifts > 0) claimGifts();
     } catch (err) {
         ui.cloudStatus = err.message;
         toast(err.message, 'error');

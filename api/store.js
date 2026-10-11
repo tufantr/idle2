@@ -372,8 +372,11 @@ async function addReward(userId, kind, payloadJson, now, dedupe = null) {
     await sql`INSERT INTO rewards (user_id, kind, payload, created_at, dedupe) VALUES (${userId}, ${kind}, ${payloadJson}, ${now}, ${dedupe}) ON CONFLICT (dedupe) DO NOTHING`;
 }
 
+// A gift (kind 'gift') is the owner's: one line of SQL adds it (README "The API"). The game claims it by
+// itself through claimGifts, never from the clan's list below, so a page still running older code (which
+// knows no gifts) can't claim one and drop it.
 async function unclaimedRewards(userId) {
-    const { rows } = await sql`SELECT id, kind, payload, created_at FROM rewards WHERE user_id = ${userId} AND claimed_at = 0 ORDER BY id ASC`;
+    const { rows } = await sql`SELECT id, kind, payload, created_at FROM rewards WHERE user_id = ${userId} AND claimed_at = 0 AND kind <> 'gift' ORDER BY id ASC`;
     return rows.map(r => ({ id: r.id, kind: r.kind, payload: r.payload, createdAt: int(r.created_at) }));
 }
 
@@ -383,12 +386,28 @@ async function claimRewards(userId, ids, now) {
     for (const id of ids) {
         const { rows } = await sql`
             UPDATE rewards SET claimed_at = ${now}
-            WHERE id = ${id} AND user_id = ${userId} AND claimed_at = 0
+            WHERE id = ${id} AND user_id = ${userId} AND claimed_at = 0 AND kind <> 'gift'
             RETURNING id, kind, payload
         `;
         if (rows[0]) claimed.push({ id: rows[0].id, kind: rows[0].kind, payload: rows[0].payload });
     }
     return claimed;
+}
+
+/** Gifts waiting for this player (the save and load answers carry the count). */
+async function unclaimedGiftCount(userId) {
+    const { rows } = await sql`SELECT count(*)::int AS n FROM rewards WHERE user_id = ${userId} AND kind = 'gift' AND claimed_at = 0`;
+    return int(rows[0] && rows[0].n);
+}
+
+/** Claim every gift waiting for this player; returns only the ones this call claimed (a double claim pays once). */
+async function claimGifts(userId, now) {
+    const { rows } = await sql`
+        UPDATE rewards SET claimed_at = ${now}
+        WHERE user_id = ${userId} AND kind = 'gift' AND claimed_at = 0
+        RETURNING id, kind, payload
+    `;
+    return rows.map(r => ({ id: r.id, kind: r.kind, payload: r.payload }));
 }
 
 module.exports = {
@@ -398,5 +417,5 @@ module.exports = {
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, removeShare, damageBoss, markBossKilled, unsettledBosses, claimSettlement, recordAttack, deleteAttack, attacksToday, weeklyDamage,
     authFailures, noteAuthFailure, clearAuthFailures,
-    addReward, unclaimedRewards, claimRewards
+    addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts
 };

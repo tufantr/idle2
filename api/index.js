@@ -255,14 +255,15 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null);
     // "This week" leaderboards count from each player's first save of the week.
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(metrics));
-    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0 });
+    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id) });
 }));
 
 app.get('/api/load', authenticateToken, route('load', async (req, res) => {
     const current = await store.getSave(req.user.id);
+    const gifts = await store.unclaimedGiftCount(req.user.id);   // waiting gifts: the game claims them next
     // serverNow lets the client measure time away on the server's clock, not its own.
-    if (!current || !current.state) return res.json({ state: null, serverNow: Date.now() });
-    res.json({ state: JSON.parse(current.state), lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn });
+    if (!current || !current.state) return res.json({ state: null, serverNow: Date.now(), gifts });
+    res.json({ state: JSON.parse(current.state), lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts });
 }));
 
 // ---------- clans ----------
@@ -462,6 +463,14 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
 app.get('/api/rewards', authenticateToken, route('rewards', async (req, res) => {
     const rows = await store.unclaimedRewards(req.user.id);
     res.json({ rewards: rows.map(r => ({ id: r.id, kind: r.kind, ...JSON.parse(r.payload) })) });
+}));
+
+// Gifts from the owner (README "The API"), claimed all at once by the game when a save or load says some
+// wait. A payload that isn't JSON claims as an empty gift rather than failing after the claim.
+app.post('/api/gifts/claim', authenticateToken, route('claim gifts', async (req, res) => {
+    const claimed = await store.claimGifts(req.user.id, Date.now());
+    const parse = text => { try { const v = JSON.parse(text); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
+    res.json({ gifts: claimed.map(r => ({ ...parse(r.payload), id: r.id, kind: r.kind })) });
 }));
 
 app.post('/api/rewards/claim', authenticateToken, route('claim rewards', async (req, res) => {
