@@ -429,6 +429,12 @@ progress as motion, art before words, one stage with a HUD around it.
       with a rope, seven-league boots, a zipline, a hurdle, a mud pit, a rooftop, a waterfall, a
       boulder with holds, a rope bridge, stones across lava, a cloud); the resting hero's campfire
       is a sprite too
+- [x] **Online play is on** (the owner's ask, README "The API"): accounts, cloud saves, clans and the
+      leaderboards work on the live game. A free Neon database in Frankfurt, added from the Vercel project's
+      Storage tab for Production and Preview, and the API moved to Frankfurt beside it; `/api/health` says
+      whether the database, the signing secret and the game's code are all there. Played end to end in a
+      browser on a local server first: register, cloud save, a reload, a clan with two players, the boss,
+      the boards, a wrong password turned away
 - [x] **After the Titan, back to what he was doing** (DESIGN §3.12, the owner's report): a hero who left his
       work or his rest for the Titan was left fighting at the stages when it ended. Now his work picks up where
       it stopped, a rest stays a rest, and only a hero who was fighting fights on; a reload or a tab put to
