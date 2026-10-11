@@ -33,10 +33,23 @@ saves aren't available on that server.
 ## The API (cloud saves, clans, leaderboards)
 
 `api/index.js` is an Express app deployed as a Vercel serverless function (`vercel.json` routes
-`/api/*` to it). It needs:
+`/api/*` to it and runs it in Frankfurt, `fra1`). It needs:
 
-- `POSTGRES_URL` (and the other `@vercel/postgres` variables) — tables are created on the first request
+- a Postgres database: `DATABASE_URL` or `POSTGRES_URL`, a pooled connection string — tables are
+  created on the first request
 - `JWT_SECRET` — **required in production**; the API refuses to sign tokens without it
+
+On Vercel, both are set by the owner, once:
+
+1. Project `fantasy-idle` → **Storage** → **Create Database** → **Neon** (free plan), region
+   **Frankfurt** (next to the function), then **Connect Project** for Production and Preview. Leave
+   Development unticked: `vercel link` would copy the database password into the deploy folder.
+2. Project → **Settings** → **Environment Variables**: `JWT_SECRET`, a long random value (for example
+   from `openssl rand -hex 32`), for Production and Preview.
+3. Deploy again (below): a deployment keeps the variables it was built with.
+
+https://fantasy-idle.vercel.app/api/health then answers `{"ok":true,"db":true,"secret":true,"game":true}`;
+a `false` names the missing part (`game`: the function could not load the game's stat code).
 
 The API imports the game's own stat code (`src/core/power.js`, ES modules — `src/package.json` marks
 them as such) so that clan damage and leaderboard numbers are computed on the server from the stored
@@ -62,7 +75,7 @@ rm -rf /tmp/fi-deploy && mkdir /tmp/fi-deploy && git archive claude/intelligent-
 cd /tmp/fi-deploy && npx vercel link --yes --project fantasy-idle --scope skinbaba1-3986s-projects && npx vercel deploy --prod --yes
 ```
 
-Without `POSTGRES_URL` and `JWT_SECRET` (above) the API answers "Database unavailable" and the game
+Without a database and `JWT_SECRET` (above) the API answers "Database unavailable" and the game
 plays as a guest with its save in the browser.
 
 ## The wiki

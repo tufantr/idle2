@@ -29,6 +29,17 @@ function ensureSchema() {
     if (!schemaPromise) schemaPromise = store.ensureSchema().catch(err => { schemaPromise = null; throw err; });
     return schemaPromise;
 }
+// Whether the online side works, for the owner and the deploy check: the database answers (and has
+// its tables), the signing secret is set, and the game's stat code loads in the function. Booleans
+// only, nothing secret; it answers before the schema gate below so it can say which part is missing.
+app.get('/api/health', async (req, res) => {
+    const ok = fn => fn().then(() => true, err => { console.error('health:', err && err.message); return false; });
+    const [db, game] = await Promise.all([ok(ensureSchema), ok(engine)]);
+    const secret = !!JWT_SECRET;
+    res.set('Cache-Control', 'no-store');
+    res.status(db && secret && game ? 200 : 503).json({ ok: db && secret && game, db, secret, game, region: process.env.VERCEL_REGION || null });
+});
+
 app.use('/api', async (req, res, next) => {
     try { await ensureSchema(); next(); } catch (err) {
         console.error('schema failed', err);

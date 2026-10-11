@@ -684,7 +684,9 @@ gear to wear; a place that waited opens on the return and is named there too.
   the question is open. On a static host without the API, sign-in says cloud saves are unavailable
   instead of failing.
 - **Server secret:** `JWT_SECRET` must be set outside local development (`NODE_ENV=development`);
-  tokens are HS256 only.
+  tokens are HS256 only. The owner sets it and adds the database (README "The API"); neither is in the
+  repository. `GET /api/health` says whether the database, the secret and the game's stat code are
+  there (booleans only).
 - **Time away is measured on the server's clock** for cloud saves: `/api/load` returns the time of the
   last upload and the server's current time, and the client replays exactly that gap, so changing the
   device clock doesn't buy offline progress.
@@ -1716,8 +1718,8 @@ wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki
                       static site from src/ and assets/ (pages/*.mjs: tables, infoboxes and cross-links from the
                       data; content/**/*.md: the written explanations, with {{ }} numbers read from the game;
                       lib/: Markdown, layout, search, link check). test/wiki.test.mjs keeps it building
-api/                  Express API for Vercel on Vercel Postgres: index.js (routes: accounts, saves, clans,
-                      rewards, leaderboards) · store.js (every query) · database.js (the connection)
+api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
+                      clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
