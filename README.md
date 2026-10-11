@@ -73,7 +73,7 @@ save. It needs Node 20.19+ or 22+.
 | `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days) |
 | `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected |
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
-| `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss and board; attack (3 a day, damage computed on the server); the owner removes a member |
+| `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss and board; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6); the owner removes a member |
 | `GET /api/rewards`, `POST /api/rewards/claim` | clan rewards, claimed once |
 | `POST /api/gifts/claim` | the owner's gifts to a player (below), claimed by the game when a save or load says some wait |
 | `POST /api/leaderboard/consent`, `GET /api/leaderboard` | opt in or out; boards by best stage, total level, Titans or dungeon clears |

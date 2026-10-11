@@ -11,6 +11,7 @@ import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TI
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
+import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD } from '../data/social.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
@@ -81,7 +82,8 @@ export const FEATURES = {
     events: { name: 'Events', art: 'festival', icon: 'res/starfruit', blurb: 'A festival every weekend, with its own tokens and shop.',
         points: ['One event runs each weekend, Friday to Monday (UTC), and brings its own bonuses.', `Every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token, up to ${EVENT_DAILY_CAP} a day.`, 'Tokens keep between events. The event shop opens while one runs.'] },
     clan: { name: 'Clan', art: 'clanhall', icon: 'item/Shield/4', blurb: 'Join a clan and fight a weekly boss together.',
-        points: ['Each week the clan fights one shared boss. Every member gets three attacks a day.', 'An attack deals what your saved hero would deal in 60 seconds, worked out on the server from your cloud save.', 'Everyone who fought is rewarded with essence and diamonds, with more for the top three and the last hit.'] },
+        points: ['Each week the clan fights one shared boss, a land\'s ruler.', `An attack is a ${CLAN_ATTACK_SECONDS} second fight against it. Strike when its guard drops: only then do strikes land, ${CLAN_GUARD.mult} times as hard.`,
+            `${CLAN_ATTACKS_PER_DAY} attacks a day; those not used wait, up to ${CLAN_ATTACK_BANK}. The server works out the damage from your cloud save.`, 'Everyone who fought is rewarded with essence and diamonds, with more for the top three and the last hit.'] },
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
     camp: { name: 'Camp', art: 'camp', icon: 'mon/Magma Slime', blurb: 'Upgrades for this run, bought with gold.',
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.',

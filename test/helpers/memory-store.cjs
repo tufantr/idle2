@@ -3,7 +3,7 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map() };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map() };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
@@ -159,6 +159,21 @@ function createMemoryStore() {
         },
         async attacksToday(userId, day) {
             return db.attacks.filter(a => a.userId === userId && a.day === day).length;
+        },
+        async chargesNow(userId, day, perDay, bank) {
+            const row = db.charges.get(userId);
+            return row ? Math.min(bank, row.charges + perDay * Math.max(0, day - row.day)) : perDay;
+        },
+        async spendCharge(userId, day, perDay, bank) {
+            const row = db.charges.get(userId) || { charges: perDay, day };
+            const waiting = Math.min(bank, row.charges + perDay * Math.max(0, day - row.day));
+            if (waiting <= 0) return null;
+            db.charges.set(userId, { charges: waiting - 1, day: Math.max(row.day, day) });
+            return waiting - 1;
+        },
+        async refundCharge(userId, bank) {
+            const row = db.charges.get(userId);
+            if (row) row.charges = Math.min(bank, row.charges + 1);
         },
         async weeklyDamage(clanId, week) {
             const byUser = new Map();

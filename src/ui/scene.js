@@ -3,7 +3,9 @@
 // here is presentation: the game state is only read, and the player's clicks go out through
 // the `actions` callbacks.
 
-import { zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
+import { ZONES, zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
+import { clanBossFor } from '../data/social.js';
+import { clanGuardOpen } from '../systems/clanfight.js';
 import { dungeonById } from '../data/dungeons.js';
 import { RARITIES, PITY_MARKS } from '../data/items.js';
 import { laggingSlot, PITY_LAG } from '../systems/inventory.js';
@@ -276,6 +278,7 @@ export function createScene(root, actions) {
 
     let sceneDrawn = false;   // the first draw sets the place without fading it in
     let lastTick = 0;         // the boss clock's last second ticked
+    let lastGuard = false;    // the clan boss's guard was down at the last frame
 
     // A few stages before a new land (a zone, or a stratum of the Abyss), fetch its painting, so stepping
     // into it shows it at once.
@@ -294,6 +297,7 @@ export function createScene(root, actions) {
     function sceneFor(state) {
         const c = state.combat;
         if (c.mode === 'titan') return 'titan';
+        if (c.mode === 'clan') return landScene(ZONES.find(z => z.id === clanBossFor(state.clanFight?.week).zone) || ZONES[0]);   // the week's boss on its own land
         if (c.mode === 'dungeon') return DUNGEON_ART[c.dungeon?.id] || 'dungeon';
         return landScene(zoneForStage(c.stage));
     }
@@ -324,6 +328,8 @@ export function createScene(root, actions) {
             });
         } else if (c.mode === 'titan') {
             nodes = [{ label: 'T', state: 'now', boss: true, title: 'The Titan', portrait: sprite(monsterSpriteKey(c.enemy) || 'titan/0', { scale: 0.75, cls: 'soft' }) }];
+        } else if (c.mode === 'clan') {
+            nodes = [{ label: 'C', state: 'now', boss: true, title: 'The clan boss', portrait: sprite(`mon/${c.enemy?.baseName || ''}`, { scale: 0.75, cls: 'soft', fallback: '' }) }];
         } else {
             const start = Math.floor((c.stage - 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE + 1;
             // The bosses' due (data/items.js PITY_MARKS): a gold ring round the boss fills a mark with each
@@ -376,6 +382,7 @@ export function createScene(root, actions) {
     // the monster's line: its attack, the time between its blows, and the gold it is worth
     const META_ICON = { atk: sprite('item/Weapon/3', { scale: 0.5, cls: 'soft res-spr' }), time: sprite('perk/endurance', { scale: 0.5, cls: 'soft res-spr' }), gold: sprite('gold', { scale: 0.5, cls: 'soft res-spr' }) };
     function foeMeta(state, d, enemy) {
+        if (enemy.clan) return '<span class="clan-guard-hint" title="Strikes land only while its guard is down">Strike when its guard drops</span>';
         const payout = killPayout(state, enemy);
         const gold = goldForKill(payout.full ? enemy : { ...enemy, boss: false }, d.goldMult) * (enemy.gilded ? BALANCE.rewards.gildedGoldMult : 1);
         return `<span title="Attack">${META_ICON.atk} ${fmt(enemy.atk)}</span><span title="Time between its attacks">${META_ICON.time} ${seconds(enemy.interval)}</span><span title="Gold for the kill">${META_ICON.gold} ${fmt(gold)}</span>`;
@@ -413,7 +420,7 @@ export function createScene(root, actions) {
             actions.sound?.('rare');
         }
         if (enemy.boss && c.active) {
-            const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : c.mode === 'dungeon' ? 'Dungeon boss' : `Boss · stage ${c.stage}`;
+            const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : `Boss · stage ${c.stage}`;
             banner(`<small>${label}</small><strong>${esc(enemy.name.replace(' (Boss)', ''))}</strong>`, 'boss', 2200);
             move(el.battle, 'shake');
             actions.sound?.('boss');
@@ -481,6 +488,10 @@ export function createScene(root, actions) {
             } else if (c.mode === 'titan') {
                 setMarkup(el.zone, `${sprite('titan/0', { scale: 0.75, cls: 'soft res-spr' })} Titan challenge`);
                 setText(el.stage, `Level ${titanLevel(state)}`);
+            } else if (c.mode === 'clan') {
+                const clan = ui?.social?.clan;
+                setMarkup(el.zone, `${sprite('item/Shield/4', { scale: 0.75, cls: 'soft res-spr' })} Clan boss`);
+                setText(el.stage, clan ? `${clan.name} [${clan.tag}]` : 'This week');
             } else {
                 setMarkup(el.zone, esc(zoneForStage(c.stage).name));   // a stratum's name in the Abyss (data/strata.js)
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
@@ -494,7 +505,7 @@ export function createScene(root, actions) {
                 if (el.trial.title !== trial.rule) el.trial.title = trial.rule;
             }
             // The zone's name opens the world map, once there is a second zone to travel to.
-            const mapped = c.mode !== 'titan' && seen(state, 'world_map');   // in a dungeon too: its gate is on the map
+            const mapped = c.mode !== 'titan' && c.mode !== 'clan' && seen(state, 'world_map');   // in a dungeon too: its gate is on the map
             el.zone.disabled = !mapped;
             el.zone.title = mapped ? 'Open the world map' : '';
             renderPath(state);
@@ -546,6 +557,15 @@ export function createScene(root, actions) {
             el.hero.classList.toggle('low', heroPct < 30);
             el.battle.classList.toggle('danger', c.active && heroPct < 30);
             el.battle.classList.toggle('boss-fight', c.active && !!c.enemy?.boss);   // the place darkens while a boss stands
+            // the clan boss's guard (systems/clanfight.js): its openings glow, and the first moment of each says so
+            const guard = c.active && clanGuardOpen(state);
+            el.battle.classList.toggle('guard-down', guard);
+            if (guard && !lastGuard) {
+                const { hero, foe } = anchor();   // between the two, clear of the boss's health and the hits
+                spawnFx('dmg guard-cue', 'Strike now!', (hero.x + foe.x) / 2, foe.mid - 4, 1300);
+                actions.sound?.('tick');
+            }
+            lastGuard = guard;
             el.heroAtk.style.width = c.active ? `${Math.min(100, c.playerTimer / d.attackInterval * 100)}%` : '0%';
 
             const foePct = Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));
@@ -617,6 +637,15 @@ export function createScene(root, actions) {
                     spawnFx('dmg dodge', 'Dodge!', hero.x, hero.top + 4);
                     break;
                 }
+                case 'glance': {   // a strike while the clan boss's guard is up
+                    const { foe } = anchor();
+                    move(el.heroSprite, 'jab');
+                    spawnFx('dmg glance', 'Blocked', foe.x + jitter(20), foe.top + 8 + Math.random() * 10, 600);
+                    break;
+                }
+                case 'clanFight':   // over: the server reckons the attack, and its card follows
+                    banner(`<small>Clan boss</small><strong>${ev.reason === 'felled' ? 'It staggers!' : ev.reason === 'left' ? 'You step back' : 'Time is up'}</strong><span>To the clan…</span>`, ev.reason === 'felled' ? 'victory' : 'boss', 2400);
+                    break;
                 case 'kill': {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;

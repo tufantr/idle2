@@ -13,7 +13,7 @@ import { RESOURCES } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { addItem, dropTypesFor } from './inventory.js';
 import { spawnEnemy, enterCombat } from './combat.js';
-import { resolveAction } from './skilling.js';
+import { doingNow, resumeDoing } from './resume.js';
 import { log, bumpStat } from './progress.js';
 
 // ---------- enemies ----------
@@ -91,7 +91,7 @@ export function enterDungeon(game, id) {
     if (!d) return false;
     if (!dungeonUnlocked(state, d)) { game.emit({ type: 'error', text: `Reach stage ${d.unlockStage} to open ${d.name}.` }); return false; }
     const c = state.combat;
-    if (c.mode === 'titan') { game.emit({ type: 'error', text: 'Finish the Titan fight first.' }); return false; }
+    if (c.mode === 'titan' || c.mode === 'clan') { game.emit({ type: 'error', text: `Finish the ${c.mode === 'clan' ? 'clan' : 'Titan'} fight first.` }); return false; }
     if (c.mode === 'dungeon') {
         if (c.dungeon?.id === id) return true;
         failDungeon(game, `you left for ${d.name}`);
@@ -322,10 +322,8 @@ export function challengeTitan(game) {
     }
     const c = state.combat;
     if (c.mode === 'titan') return false;
-    // what he was doing: when the fight is over he goes back to it (resumeAfterTitan)
-    state.titan.before = c.active ? { doing: 'fight' }
-        : state.action ? { doing: 'work', action: { ...state.action } }
-        : { doing: c.recovering ? 'recover' : 'rest' };
+    if (c.mode === 'clan') { game.emit({ type: 'error', text: 'Finish the clan fight first.' }); return false; }
+    state.titan.before = doingNow(state);   // what he was doing: when the fight is over he goes back to it
     if (c.mode === 'dungeon') failDungeon(game, 'you left to face the Titan');
     // one attempt used: the bank keeps the others (readyAt never lags more than the bank's hours behind)
     state.titan.readyAt = Math.max(state.titan.readyAt || 0, game.now - (TITAN_BANK - 1) * TITAN_COOLDOWN_MS) + TITAN_COOLDOWN_MS;
@@ -374,30 +372,10 @@ export function endTitan(game, won, reason = won ? 'won' : 'time') {
         game.emit({ type: 'titan', won: false, reason, level, dealt });
     }
     returnToStages(game);
-    return resumeAfterTitan(game);
-}
-
-/**
- * After a Titan fight, back to what the hero was doing when it began (titan.before): a fight goes on
- * at the stages, work picks up where it stopped, a rest stays a rest (after a fall, a rest that ends
- * in the fight). Returns whether he fights on. A save from before titan.before fights on, as it did.
- */
-function resumeAfterTitan(game) {
-    const state = game.state;
-    const c = state.combat;
+    // back to what the hero was doing when it began (titan.before; a save from before it fights on)
     const before = state.titan.before;
     state.titan.before = null;
-    if (!before || before.doing === 'fight') return true;
-    c.active = false;
-    c.combo = 0;
-    c.recovering = before.doing === 'recover';
-    if (before.doing === 'work' && before.action) {
-        state.action = { ...before.action, stalled: false };
-        const def = resolveAction(state);
-        if (def) game.emit({ type: 'actionStart', label: def.label, skill: def.skill });
-    }
-    game.markDirty();
-    return false;
+    return resumeDoing(game, before);
 }
 
 /** Give up a Titan fight: it ends as a loss, scored by the damage dealt, and he goes back to what he was doing. */

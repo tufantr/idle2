@@ -15,6 +15,7 @@ import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
 import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, giveUpTitan, titanReady } from './systems/dungeon.js';
+import { startClanFight, giveUpClanFight, clearClanResult } from './systems/clanfight.js';
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
@@ -215,8 +216,14 @@ export class Game {
 
     enterCombat() { return this._act(() => enterCombat(this)); }
     leaveCombat() { return this._act(() => leaveCombat(this)); }
-    /** Into the fight, or out of it; out of the Titan's is its Give up (back to what he was doing). */
-    toggleCombat() { return this._act(() => (!this.state.combat.active ? enterCombat(this) : this.state.combat.mode === 'titan' ? giveUpTitan(this) : leaveCombat(this))); }
+    /** Into the fight, or out of it; out of the Titan's or the clan boss's is its Give up (back to what he was doing). */
+    toggleCombat() {
+        return this._act(() => {
+            const c = this.state.combat;
+            if (!c.active) return enterCombat(this);
+            return c.mode === 'titan' ? giveUpTitan(this) : c.mode === 'clan' ? giveUpClanFight(this) : leaveCombat(this);
+        });
+    }
     clickAttack() { return this._act(() => clickAttack(this)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
@@ -264,6 +271,10 @@ export class Game {
     assembleUnique(id) { return this._act(() => assembleUnique(this, id)); }
     titanReady() { return titanReady(this.state, this.now); }
     challengeTitan() { return this._act(() => challengeTitan(this)); }
+    /** A clan attack: a short fight against the week's clan boss ({ week, hp, maxHp }, the server's; systems/clanfight.js). */
+    startClanFight(boss) { return this._act(() => startClanFight(this, boss)); }
+    /** The server has the last clan attack: forget it. */
+    clearClanResult() { return this._act(() => clearClanResult(this)); }
 
     canPrestige() { return canPrestige(this.state, this.now); }
     /** The dock's Prestige glows: the first as soon as it may be made, a later one at its wall (systems/prestige.js). */

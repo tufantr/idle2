@@ -21,7 +21,7 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
-import { CLAN_POLL_MS } from './data/social.js';
+import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
@@ -70,7 +70,7 @@ const ui = {
     open: {},            // drawers the player has opened (the battle log, the crop table)
     battleFull: prefs.get('fantasyIdle.battleFull') !== '0', // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
     battleHoldUntil: 0,  // a fight that ended keeps the screen until then (its last banner shows), when the hero goes back to work
-    titanFrom: null,     // the tab the Titan was challenged from: the screen goes back there after the fight
+    fightFrom: null,     // the tab a Titan or clan boss fight was begun from: the screen goes back there after it
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -197,6 +197,7 @@ setInterval(() => {
         game.now = now;
     }
     handleEvents(game.drainEvents());
+    if (game.state.clanResult && cloud.loggedIn && !pendingConflict) sendClanResult();   // a clan attack fought, not yet sent
     if (now - lastSave > AUTOSAVE_MS) save(now);
     if (now - lastBackup > BACKUP_INTERVAL_MS) { lastBackup = now; rotateBackup(game.serialize(now), now); }
     if (cloud.loggedIn && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
@@ -363,7 +364,7 @@ document.addEventListener('keydown', event => {
     if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
     const c = game.state.combat;
-    if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
+    if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
     else if (event.key === ' ' && ui.tab === 'combat' && c.active && !target?.closest?.('button, a, [role="button"]')) {
         event.preventDefault();
         if (!event.repeat) document.querySelector('#scene .foe')?.click();
@@ -492,12 +493,12 @@ function backToDungeons() {
     else render();
 }
 
-/** After a Titan fight that sent the hero back to his work or his rest: back to the tab it was challenged from. */
-function backFromTitan() {
+/** After a Titan or clan boss fight that sent the hero back to his work or his rest: back to the tab it was begun from. */
+function backFromFight() {
     const c = game.state.combat;
     ui.battleHoldUntil = 0;
-    const from = ui.titanFrom;
-    ui.titanFrom = null;
+    const from = ui.fightFrom;
+    ui.fightFrom = null;
     if (ui.tab === 'combat' && !c.active && !c.recovering && from && from !== 'combat') window.FI.switchTab(from);   // he still rests or works, and nothing else was opened
     else render();
 }
@@ -548,6 +549,7 @@ function soundFor(ev, onCombat) {
         case 'unique': return ['legendary'];
         case 'dungeonClear': return ['chest'];
         case 'titan': return [ev.won ? 'victory' : 'defeat'];
+        case 'glance': return onCombat ? ['dodge'] : null;   // a strike off the clan boss's guard
         case 'minigameWin': return ['gold'];
         case 'harvest': return ['drop'];
         case 'obstacleBuilt': return ['unlock'];
@@ -676,10 +678,19 @@ function handleEvents(events) {
                 // he went back to what he was doing before it (not a fight): the battle keeps the screen while
                 // its banner shows, then the screen goes back to where the challenge was made (Give up: at once)
                 const c = game.state.combat;
-                if (ev.reason !== 'left' && ui.titanFrom && !c.active && !c.recovering) {
+                if (ev.reason !== 'left' && ui.fightFrom && !c.active && !c.recovering) {
                     ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
-                    setTimeout(backFromTitan, TITAN_HOLD_MS);
-                } else ui.titanFrom = null;
+                    setTimeout(backFromFight, TITAN_HOLD_MS);
+                } else ui.fightFrom = null;
+                break;
+            }
+            case 'clanFight': {   // the clan fight is over: what was done is sent (sendClanResult), and the screen goes back as after the Titan
+                const c = game.state.combat;
+                if (ev.reason !== 'left' && ui.fightFrom && !c.active && !c.recovering) {
+                    ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
+                    setTimeout(backFromFight, TITAN_HOLD_MS);
+                } else ui.fightFrom = null;
+                sendClanResult(true);
                 break;
             }
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
@@ -837,6 +848,39 @@ async function claimGifts() {
 
 // ---------- clans, rewards, leaderboards ----------
 
+/**
+ * Send the clan attack fought (game.state.clanResult) to the server, which reckons its damage from the
+ * stored hero and the strikes; show what it did. On a lost connection it waits and goes again; when the
+ * server refuses it for good (no attacks waiting, the boss already down, no clan any more) it is dropped.
+ */
+let sendingClan = false;
+let clanRetryAt = 0;
+async function sendClanResult(now = false) {
+    const result = game.state.clanResult;
+    if (!result || sendingClan || !cloud.loggedIn || (!now && Date.now() < clanRetryAt)) return;
+    sendingClan = true;
+    try {
+        const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms });
+        game.clearClanResult();
+        save(Date.now());
+        if (ui.social.boss) Object.assign(ui.social.boss, { hp: answer.hp, maxHp: answer.maxHp, killed: !!answer.killed });
+        ui.social.attacksLeft = answer.attacksLeft;
+        ui.social.fetchedAt = 0;   // the Clan tab brings its board up to date when it is next shown
+        const look = clanBossFor(answer.week || result.week);
+        const lines = [answer.killed ? 'The boss is down!' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
+            answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : ''].filter(Boolean);
+        rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
+            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: 4200 });
+        sound.play(answer.killed ? 'victory' : 'chest');
+        render();
+    } catch (err) {
+        if (err.status >= 400 && err.status < 500 && err.status !== 409) { game.clearClanResult(); toast(err.message, 'info'); render(); }
+        else clanRetryAt = Date.now() + 30000;   // the connection, or the server busy: again in a while
+    } finally {
+        sendingClan = false;
+    }
+}
+
 async function refreshSocial() {
     if (!cloud.loggedIn) return;
     const social = ui.social;
@@ -946,13 +990,38 @@ window.FI = {
     },
     joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
     leaveClan() { askConfirm('Leave your clan?', 'Your damage this week stays on its board.', 'Leave clan', () => socialAction(() => cloud.leaveClan(), 'You left the clan')); },
-    async clanAttack() {
+    /**
+     * A clan attack: the hero fights the week's clan boss on screen (systems/clanfight.js), and when it
+     * is over the game sends what the player did (sendClanResult). The server fights with the stored
+     * hero, so he goes up first.
+     */
+    async clanFight() {
+        if (!cloud.loggedIn || ui.social.attacking || game.state.combat.mode === 'clan') return;
         ui.social.attacking = true;
         render();
-        await cloudSave(false); // the server attacks with the stored save, so upload the hero first
-        await socialAction(() => cloud.clanAttack(), r => `Hit the clan boss for ${fmt(r.damage)}${r.killed ? ' — and brought it down!' : ''}`);
-        ui.social.attacking = false;
-        render();
+        try {
+            if (game.state.clanResult) await sendClanResult(true);   // the last attack first
+            if (game.state.clanResult) return;                        // still not sent: it is retried, and this waits
+            await cloudSave(false);
+            const mine = await cloud.myClan();
+            Object.assign(ui.social, { clan: mine.clan, members: mine.members || [], boss: mine.boss || null, board: mine.board || [], attacksLeft: mine.attacksLeft || 0,
+                attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6 });
+            const boss = mine.boss;
+            if (!mine.clan || !boss) { toast('Join a clan first.', 'info'); return; }
+            if (boss.killed) { toast("This week's boss is already defeated.", 'info'); return; }
+            if (!(mine.attacksLeft > 0)) { toast(`No attacks waiting: ${ui.social.attacksPerDay} more come each day.`, 'info'); return; }
+            const from = ui.tab;
+            if (!game.startClanFight({ week: boss.week, hp: boss.hp, maxHp: boss.maxHp })) return;
+            ui.fightFrom = from;   // when it is over and he goes back to his work, the screen goes back too
+            ui.battleHoldUntil = 0;
+            setBattleFull(true);
+            window.FI.switchTab('combat');
+        } catch (err) {
+            toast(err.message, 'error');
+        } finally {
+            ui.social.attacking = false;
+            render();
+        }
     },
     async claimRewards() {
         const ids = ui.social.rewards.map(r => r.id);
@@ -980,11 +1049,11 @@ window.FI = {
         const c = game.state.combat;
         const fighting = c.active;
         const inDungeon = c.mode === 'dungeon';
-        const inTitan = c.mode === 'titan';
+        const special = c.mode === 'titan' || c.mode === 'clan' ? c.mode : null;
         game.toggleCombat();
         if (!fighting && c.active) setBattleFull(true);
         if (inDungeon && c.mode !== 'dungeon') { backToDungeons(); return; }   // Leave dungeon: back to the list of them
-        if (inTitan && c.mode !== 'titan') { backFromTitan(); return; }        // Give up: back to where it was challenged, unless he fights on
+        if (special && c.mode !== special) { backFromFight(); return; }        // Give up: back to where it was begun, unless he fights on
         render();
     },
     /** After a fall: rest without going back into the fight. */
@@ -1016,7 +1085,7 @@ window.FI = {
     challengeTitan() {
         const from = ui.tab;
         if (!game.challengeTitan()) { render(); return; }
-        ui.titanFrom = from;   // when the fight is over and he goes back to his work, the screen goes back too
+        ui.fightFrom = from;   // when the fight is over and he goes back to his work, the screen goes back too
         ui.battleHoldUntil = 0;
         setBattleFull(true);
         window.FI.switchTab('combat');

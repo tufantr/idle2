@@ -100,6 +100,14 @@ async function ensureSchema() {
             claimed_at BIGINT DEFAULT 0
         );
     `;
+    // Clan attacks waiting (banked): a day's worth comes each day, up to a cap (api/index.js).
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_charges (
+            user_id INTEGER PRIMARY KEY,
+            charges SMALLINT NOT NULL,
+            day INTEGER NOT NULL
+        );
+    `;
     // Rewards that may be paid once per player per week (whatever clans they were in) carry a key.
     await sql`ALTER TABLE rewards ADD COLUMN IF NOT EXISTS dedupe VARCHAR(80)`;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS rewards_dedupe ON rewards (dedupe)`;
@@ -332,6 +340,34 @@ async function attacksToday(userId, day) {
     return int(rows[0] && rows[0].n);
 }
 
+// ---------- clan attacks waiting ----------
+// One row per player: the attacks waiting, as of `day` (UTC days since 1970). Each new day adds `perDay`,
+// up to `bank`; a player without a row has a day's worth.
+
+/** Attacks waiting for a player on `day`, without spending one. */
+async function chargesNow(userId, day, perDay, bank) {
+    const { rows } = await sql`SELECT charges, day FROM clan_charges WHERE user_id = ${userId}`;
+    if (!rows[0]) return perDay;
+    return Math.min(bank, int(rows[0].charges) + perDay * Math.max(0, day - int(rows[0].day)));
+}
+
+/** Spend one attack (atomically: parallel requests can't spend the same one). Returns those left, or null if none waited. */
+async function spendCharge(userId, day, perDay, bank) {
+    await sql`INSERT INTO clan_charges (user_id, charges, day) VALUES (${userId}, ${perDay}, ${day}) ON CONFLICT (user_id) DO NOTHING`;
+    const { rows } = await sql`
+        UPDATE clan_charges
+        SET charges = LEAST(${bank}::int, charges + ${perDay}::int * GREATEST(0, ${day}::int - day)) - 1, day = GREATEST(day, ${day}::int)
+        WHERE user_id = ${userId} AND LEAST(${bank}::int, charges + ${perDay}::int * GREATEST(0, ${day}::int - day)) > 0
+        RETURNING charges
+    `;
+    return rows[0] ? int(rows[0].charges) : null;
+}
+
+/** Give a spent attack back (the boss was already down when it landed). */
+async function refundCharge(userId, bank) {
+    await sql`UPDATE clan_charges SET charges = LEAST(${bank}::int, charges + 1) WHERE user_id = ${userId}`;
+}
+
 /** Total damage per user for a clan's week, highest first. */
 async function weeklyDamage(clanId, week) {
     const { rows } = await sql`
@@ -416,6 +452,7 @@ module.exports = {
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, removeShare, damageBoss, markBossKilled, unsettledBosses, claimSettlement, recordAttack, deleteAttack, attacksToday, weeklyDamage,
+    chargesNow, spendCharge, refundCharge,
     authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts
 };

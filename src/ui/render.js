@@ -29,7 +29,7 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE } from '../data/social.js';
+import { DISCORD_INVITE, clanBossFor } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
@@ -302,7 +302,7 @@ export function pageTitle(game) {
 
 function fightingWhere(state) {
     const c = state.combat;
-    if (c.mode === 'titan') return c.enemy?.name || 'the Titan';
+    if (c.mode === 'titan' || c.mode === 'clan') return c.enemy?.name || (c.mode === 'clan' ? 'the clan boss' : 'the Titan');
     const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
     if (run) return choosingAfterClear(state) ? `${run.name} cleared` : `${run.name} ${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}`;
     return `${zoneForStage(c.stage).name} stage ${c.stage}`;
@@ -392,7 +392,7 @@ function renderCamp(game) {
 }
 
 /** What a prestige waits for (a prestige would end it): "Titan fight" or "dungeon run". */
-const afterWhat = preview => (preview.blockedBy === 'titan' ? 'Titan fight' : 'dungeon run');
+const afterWhat = preview => (preview.blockedBy === 'titan' ? 'Titan fight' : preview.blockedBy === 'clan' ? 'clan fight' : 'dungeon run');
 
 /** Prestige, in one line: what a prestige would pay now, and the button. The rules are behind the "?". */
 function renderPrestigeStrip(game) {
@@ -438,6 +438,7 @@ function zoneFacts(game) {
     const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
     if (run) return '';   // the run panel (renderRunPanel) has the clears, the fragments and the repeat switch
     if (c.mode === 'titan') return '<div class="muted small">Deal as much damage as you can before the timer runs out. Clicking the Titan helps.</div>';
+    if (c.mode === 'clan') return '<div class="muted small">Strike when its guard drops: only then do strikes land.</div>';
     const zone = zoneForStage(c.stage);
     return `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
 }
@@ -455,7 +456,7 @@ function combatMain(game) {
 function combatOrders(game, ui) {
     const state = game.state;
     const c = state.combat;
-    const leave = c.mode === 'dungeon' ? 'Leave dungeon' : c.mode === 'titan' ? 'Give up' : 'Retreat';
+    const leave = c.mode === 'dungeon' ? 'Leave dungeon' : c.mode === 'titan' || c.mode === 'clan' ? 'Give up' : 'Retreat';
     const orders = [
         // at the chest after a clear the run panel offers the two ways on instead
         c.active && !choosingAfterClear(state) ? `<button class="mini-btn retreat-btn" onclick="FI.toggleCombat()">${ICON_FLAG} ${leave}</button>` : '',
@@ -463,7 +464,7 @@ function combatOrders(game, ui) {
         !c.active && c.recovering ? `<button class="mini-btn retreat-btn" onclick="FI.stayAtCamp()" title="Rest without going back into the fight">${ICON_MOON} Stay at camp</button>` : '',
         // Folded away mid-fight: one button brings the full screen back.
         c.active && !battleMode(game, ui) ? `<button class="mini-btn expand-btn" onclick="FI.battleFull(true)" title="Let the fight fill the screen">${ICON_EXPAND} Full screen</button>` : '',
-        c.mode !== 'titan' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">${ICON_MAP} Map</button>` : '',
+        c.mode !== 'titan' && c.mode !== 'clan' && seen(state, 'world_map') ? `<button class="mini-btn map-btn" onclick="FI.openMap()">${ICON_MAP} Map</button>` : '',
         c.mode === 'stages' && seen(state, 'stage_nav') ? `<label class="toggle stay-toggle" title="Stay on this stage instead of moving on: for gathering its loot"><input type="checkbox" onchange="FI.toggleFarm(this.checked)" ${c.farmMode ? 'checked' : ''}> Stay on this stage</label>` : ''
     ].filter(Boolean);
     return orders.length ? `<div class="combat-side">${orders.join('')}</div>` : '';
@@ -2035,13 +2036,7 @@ export function renderClan(game, ui, cloud) {
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
             <div class="panel-header"><div><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
-            ${boss ? `<div class="clan-boss">
-                <div><b>${sprite('mon/Elder Dragon', { scale: 0.75, cls: 'soft res-spr', fallback: '🐉' })} This week's boss</b> <span class="muted small">(${esc(boss.week)} · ${boss.killed ? `defeated${boss.lastHit ? ` — last hit by ${esc(boss.lastHit)}` : ''}` : `ends in ${duration(boss.endsInMs)}`})</span></div>
-                <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
-                <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
-                <div class="btn-row"><button class="prestige-btn" onclick="FI.clanAttack()" ${social.attacksLeft > 0 && !boss.killed && !social.attacking ? '' : 'disabled'}>${ATK_ICON} Attack (${social.attacksLeft}/${social.attacksPerDay} left today)</button>
-                    <span class="muted small">Your hero hits for about ${fmt((social.members || []).find(m => m.you)?.attackDamage || 0)} per attack.</span></div>
-            </div>` : ''}
+            ${boss ? clanBossPanel(game, social, boss, pct) : ''}
             <div class="two-col">
                 <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table clan-board"><thead><tr><th>#</th><th>Member</th><th>Damage</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
                 <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table clan-members"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th>Per attack</th></tr></thead><tbody>${members}</tbody></table></div></div>
@@ -2052,6 +2047,32 @@ export function renderClan(game, ui, cloud) {
         ${status || rewards ? `<section class="glass-panel ${painted('clanhall', 'center 70%')}">${status}${rewards}</section>` : ''}
         ${body}
         ${renderLeaderboard(social)}`;
+}
+
+/**
+ * The week's clan boss (data/social.js clanBossFor): its portrait and health, the fight button (a clan
+ * attack is a short fight on screen, systems/clanfight.js) and the attacks waiting as pips. The rules
+ * are behind the Clan's "?".
+ */
+function clanBossPanel(game, social, boss, pct) {
+    const look = clanBossFor(boss.week);
+    const waiting = Math.max(0, Number(social.attacksLeft) || 0);
+    const bank = Math.max(waiting, Number(social.attackBank) || 6);
+    const fighting = game.state.combat.mode === 'clan';
+    const pending = !!game.state.clanResult;
+    const pips = Array.from({ length: bank }, (_, i) => `<i class="clan-pip${i < waiting ? ' on' : ''}"></i>`).join('');
+    const ready = waiting > 0 && !boss.killed && !social.attacking && !fighting && !pending;
+    return `<div class="clan-boss${ready ? ' ready' : ''}">
+        <span class="clan-boss-face">${sprite(`mon/${look.name}`, { scale: 2, cls: boss.killed ? 'soft silhouette' : 'soft', fallback: '🐉' })}</span>
+        <div class="clan-boss-text">
+            <div><b>${esc(look.name)}</b> <span class="muted small">${boss.killed ? `defeated${boss.lastHit ? ` · last hit by ${esc(boss.lastHit)}` : ''}` : `this week's boss · ends in ${duration(boss.endsInMs)}`}</span></div>
+            <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
+            <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
+            <div class="btn-row">${fighting ? '<span class="status-pill fighting">Fighting now</span>'
+                : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : 'Fight the boss'}</button>`}
+                <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${Number(social.attacksPerDay) || 3} more come each day, up to ${bank}">${pips}</span></div>
+        </div>
+    </div>`;
 }
 
 const BOARD_METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans', dungeonClears: 'Dungeon clears', weeklyTrial: "Week's Trial" };

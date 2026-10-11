@@ -881,7 +881,20 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .data-table .locked-row { opacity: 0.5; }
 .data-table td.wrap { white-space: normal; min-width: 12rem; overflow-wrap: anywhere; }
 .data-table .you-row { background: rgba(214, 170, 92, 0.12); }
-.clan-boss { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; border-color: rgba(239, 68, 68, 0.4); }
+.clan-boss { display: flex; gap: 0.8rem; align-items: center; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; border-color: rgba(239, 68, 68, 0.4); }
+.clan-boss-face { flex: none; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: radial-gradient(circle at 50% 60%, rgba(239, 68, 68, 0.28), rgba(0, 0, 0, 0.35) 70%); border: 1px solid rgba(239, 68, 68, 0.45); }
+.clan-boss-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.clan-boss.ready .clan-boss-face { box-shadow: 0 0 14px rgba(251, 191, 36, 0.55); }
+.clan-attacks { display: inline-flex; gap: 4px; align-items: center; }
+.clan-pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(251, 191, 36, 0.55); background: rgba(0, 0, 0, 0.35); }
+.clan-pip.on { background: radial-gradient(circle at 40% 35%, #fde68a, #d97706); box-shadow: 0 0 6px rgba(251, 191, 36, 0.7); }
+/* the clan boss fight (systems/clanfight.js): the boss glows while its guard is down, strikes then land */
+.clan-guard-hint { color: #fde68a; font-size: 0.78rem; }
+.battle.guard-down .foe .fighter-sprite { filter: drop-shadow(0 0 8px rgba(253, 224, 71, 0.95)) drop-shadow(0 0 22px rgba(250, 204, 21, 0.6)) brightness(1.2); }
+.dmg.guard-cue { font-family: var(--font-display); font-size: 1.35rem; color: #fde047; text-shadow: 0 2px 0 #713f12, 0 0 14px rgba(250, 204, 21, 0.95); animation: dmgRise 1.3s ease-out forwards; }
+.dmg.glance { font-size: 0.85rem; font-style: italic; color: #cbd5e1; opacity: 0.85; }
+@media (max-width: 600px) { .clan-boss-face { width: 56px; height: 56px; } .clan-boss-face .spr { transform: scale(0.8); } }
+
 .event-panel { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .chip.festival::before { display: none; }  /* the token sprite is its coin */
 .chip.festival b { color: #fde68a; }

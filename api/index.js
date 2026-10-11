@@ -103,6 +103,7 @@ function isoWeek(ms) {
     return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 const dayId = ms => new Date(ms).toISOString().slice(0, 10);
+const dayNumber = ms => Math.floor(ms / DAY);   // UTC days since 1970: clan attacks come with each new one
 /** Milliseconds until the next Monday 00:00 UTC. */
 function msToWeekEnd(ms) {
     const d = new Date(ms);
@@ -267,14 +268,15 @@ app.get('/api/load', authenticateToken, route('load', async (req, res) => {
 }));
 
 // ---------- clans ----------
-// A clan fights one shared boss a week. Each member may attack three times a day; an attack deals
-// the damage the member's stored save would do in 60 seconds (computed here, not sent by the
-// client). The boss's health is sized from the members' power when the week's boss appears.
+// A clan fights one shared boss a week. An attack is a short fight against it in the game
+// (CLAN_ATTACK_SECONDS, src/systems/clanfight.js): the page sends only when the player struck, and the
+// damage is reckoned here from the member's stored save and those strikes (src/core/power.js
+// clanAttackFromSave), never sent by the client. Three attacks come each day and wait, up to six. The
+// boss's health is sized from the members' power when the week's boss appears.
 
 const CLAN_NAME_RE = /^[A-Za-z0-9 '_-]{3,32}$/;
 const CLAN_TAG_RE = /^[A-Za-z0-9]{2,5}$/;
 const MAX_MEMBERS = 20;
-const ATTACKS_PER_DAY = 3;
 const BOSS_ATTACKS_TO_KILL = 12;   // the boss holds about four days of everyone attacking every time
 const MIN_BOSS_HP = 1000;
 // Damage and boss health stay exact integers in JavaScript and fit Postgres BIGINT, whatever a save says.
@@ -411,43 +413,55 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     const [clan, rawMembers, boss] = await Promise.all([store.getClan(clanId), store.clanMembers(clanId), currentBoss(clanId, now)]);
     const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = await store.weeklyDamage(clanId, boss.week);
-    const used = await store.attacksToday(req.user.id, dayId(now));
+    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds } = await engine();
+    const attacksLeft = await store.chargesNow(req.user.id, dayNumber(now), perDay, bank);
     const lastHit = boss.lastHitUser ? members.find(m => m.userId === boss.lastHitUser) : null;
     res.json({
         clan: { ...clan, isOwner: clan.ownerId === req.user.id },
         members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: safeDamage(m.power?.attackDamage) })),
         boss: { week: boss.week, maxHp: boss.maxHp, hp: boss.hp, killed: boss.killedAt > 0, lastHit: lastHit ? lastHit.username : null, endsInMs: msToWeekEnd(now) },
         board: board.map(r => ({ username: r.username, damage: r.damage, attacks: r.attacks, you: r.userId === req.user.id })),
-        attacksLeft: Math.max(0, ATTACKS_PER_DAY - used),
-        attacksPerDay: ATTACKS_PER_DAY,
+        attacksLeft,
+        attacksPerDay: perDay,
+        attackBank: bank,
+        fightSeconds: seconds,
         maxMembers: MAX_MEMBERS
     });
 }));
 
 app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req, res) => {
     const now = Date.now();
+    const eng = await engine();
+    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank } = eng;
     const membership = await store.membershipOf(req.user.id);
     if (!membership) return res.status(400).json({ error: 'Join a clan first.' });
     const clanId = membership.clanId;
-    const day = dayId(now);
-    const used = await store.attacksToday(req.user.id, day);
-    const noneLeft = () => res.status(400).json({ error: 'No attacks left today — they refresh at midnight UTC.' });
-    if (used >= ATTACKS_PER_DAY) return noneLeft();
     const save = await store.getSave(req.user.id);
     if (!save || !save.state) return res.status(400).json({ error: 'Save to the cloud first: the attack uses your stored hero.' });
     const boss = await currentBoss(clanId, now);
     const defeated = () => res.status(400).json({ error: 'This week\'s boss is already defeated.' });
     if (boss.hp <= 0) return defeated();
-    const damage = Math.max(1, safeDamage(parseMetrics(save.metrics)?.attackDamage));
-    const slot = used + 1;
+    // The fight as the player fought it: when they struck, and how long it lasted (a page from before
+    // the fight sends neither: a whole fight without a strike). The damage is reckoned here, from the
+    // stored hero; no save can deal more than twice what its best stage allows.
+    const body = req.body || {};
+    let fight = null;
+    try { fight = eng.clanAttackFromSave(JSON.parse(save.state), body.strikes, body.ms, now); } catch (err) { console.error('clan fight failed', err); }
+    const cap = safeDamage(eng.plausibleAttackDamage(parseMetrics(save.metrics)?.bestStage) * 2) || MAX_ATTACK_DAMAGE;
+    const damage = Math.max(1, Math.min(safeDamage(fight?.damage), cap));
+    const left = await store.spendCharge(req.user.id, dayNumber(now), perDay, bank);
+    if (left === null) return res.status(400).json({ error: `No attacks waiting: ${perDay} more come each day (midnight UTC), up to ${bank}.` });
+    const day = dayId(now);
+    const slot = 10 + left;   // unique for the day: the attacks waiting fall with each one, and one given back is deleted
     try {
         await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, slot, damage, now });
     } catch (err) {
-        if (err.code === '23505') return noneLeft(); // a parallel request took this slot
+        await store.refundCharge(req.user.id, bank);
+        if (err.code === '23505') return res.status(409).json({ error: 'Another attack landed at the same moment: try again.' });
         throw err;
     }
     const after = await store.damageBoss(clanId, boss.week, damage);
-    if (!after) { await store.deleteAttack(req.user.id, day, slot); return defeated(); } // it fell to a parallel hit
+    if (!after) { await store.deleteAttack(req.user.id, day, slot); await store.refundCharge(req.user.id, bank); return defeated(); } // it fell to a parallel hit
     const killed = after.hp <= 0 && await store.markBossKilled(clanId, boss.week, req.user.id, now);
     if (killed) {
         for (const row of await store.weeklyDamage(clanId, boss.week)) {
@@ -455,7 +469,11 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
         }
         await store.addReward(req.user.id, 'lastHit', JSON.stringify({ ...REWARDS.lastHit, week: boss.week }), now, `lastHit:${req.user.id}:${boss.week}`);
     }
-    res.json({ damage, hp: after.hp, maxHp: boss.maxHp, killed, attacksLeft: ATTACKS_PER_DAY - used - 1 });
+    const board = await store.weeklyDamage(clanId, boss.week);
+    res.json({
+        damage, strikes: fight?.guarded || 0, hp: after.hp, maxHp: boss.maxHp, killed, attacksLeft: left,
+        rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: boss.week
+    });
 }));
 
 // ---------- rewards ----------

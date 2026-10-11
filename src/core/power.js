@@ -3,15 +3,16 @@
 // submits a number another player sees.
 
 import { migrateState } from './state.js';
-import { deriveStats } from './modifiers.js';
+import { deriveStats, BASE } from './modifiers.js';
 import { levelForXp } from './xp.js';
 import { enemyBaseStats, BALANCE } from './formulas.js';
 import { TRIALS, WEEK_MS, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
+import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK } from '../data/social.js';
+
+export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK };   // the server reads them here
 
 /** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
 export const trialWeekStart = now => weeklyTrialAt(now).start;
-
-export const CLAN_ATTACK_SECONDS = 60;
 
 /** Expected damage per second: attack × crit expectation ÷ interval. No dice. */
 export function expectedDps(derived) {
@@ -19,21 +20,80 @@ export function expectedDps(derived) {
     return derived.atk * critMult / (derived.attackInterval / 1000);
 }
 
-/** Summary of a stored save for social features. Accepts any raw save object. */
-export function powerSummary(rawState, now = Date.now()) {
+/** The hero of a stored save as the server judges it: no Focus, timed boosts, potion or Trial, so numbers are stable. */
+function stableState(rawState, now) {
     const state = migrateState(rawState, now);
-    // Focus and timed boosts depend on when the save was made; leave them out so numbers are stable.
     state.meta.lastInputAt = now;
     state.meta.lastActiveAt = now;
     for (const mg of Object.values(state.minigame)) mg.boostUntil = 0;
     state.bonfire.until = 0;
     state.combat.potion = 'none';
     state.trials.active = null;   // a Trial's rule handicaps a run, not the hero the boards compare
+    return state;
+}
+
+/** Is the clan boss's guard down `ms` into a fight? */
+export function clanGuardDown(ms) {
+    const t = ms - CLAN_GUARD.first;
+    return t >= 0 && t % CLAN_GUARD.every < CLAN_GUARD.open;
+}
+
+/**
+ * The strikes a fight of `ms` could really hold, from what a page sent: numbers inside the fight, in
+ * time order, at most one per BALANCE.combat.strikeGapMs (the game's own rule). The rest are dropped,
+ * so a forged list deals no more than a perfect player's.
+ */
+export function cleanStrikes(raw, ms = CLAN_FIGHT_MS) {
+    if (!Array.isArray(raw)) return [];
+    const gap = BALANCE.combat.strikeGapMs;
+    const times = raw.slice(0, 2000).filter(t => typeof t === 'number' && Number.isFinite(t) && t >= 0 && t <= ms).sort((a, b) => a - b);
+    const kept = [];
+    for (const t of times) if (!kept.length || t - kept[kept.length - 1] >= gap) kept.push(Math.round(t));
+    return kept;
+}
+
+/**
+ * Damage of a clan fight of `ms` milliseconds for the hero `derived`, with its strikes (ms into the
+ * fight, cleaned). Expected values, no dice: the hero attacks every attackInterval from the start; a
+ * strike while the guard is down is CLAN_GUARD.mult × BALANCE.combat.manualHitMult of an attack and
+ * builds the combo, which raises every hit as it does in a fight (systems/combat.js); one at another
+ * time glances off.
+ */
+export function clanFightDamage(derived, strikes, ms = CLAN_FIGHT_MS) {
+    const b = BALANCE.combat;
+    const hit = derived.atk * (1 + Math.min(BASE.caps.critChance, derived.critChance) * (derived.critDmg - 1));
+    const interval = Math.max(1, derived.attackInterval);
+    const step = 50;
+    let combo = 0, lastStrike = -Infinity, nextAttack = interval, s = 0;
+    let base = 0, struck = 0, guarded = 0;
+    for (let t = 0; t <= ms; t += step) {
+        if (combo > 0 && t - lastStrike > b.comboDecayAfterMs) combo = Math.max(0, combo - (0.05 + combo / 100));
+        for (; s < strikes.length && strikes[s] < t + step; s++) {
+            if (!clanGuardDown(strikes[s])) continue;   // it glances off the guard
+            combo = Math.min(b.comboMax, combo + 1 / (1 + combo / 40));
+            lastStrike = strikes[s];
+            guarded++;
+            struck += hit * b.manualHitMult * CLAN_GUARD.mult * (1 + Math.min(b.comboMax, combo) * b.comboDmgPerStack);
+        }
+        for (; nextAttack < t + step && nextAttack <= ms; nextAttack += interval) base += hit * (1 + Math.min(b.comboMax, combo) * b.comboDmgPerStack);
+    }
+    return { damage: Math.floor(base + struck), base: Math.floor(base), struck: Math.floor(struck), strikes: strikes.length, guarded };
+}
+
+/** A clan attack from a stored save (the server's reckoning): `strikes` and `ms` as the page sent them. */
+export function clanAttackFromSave(rawState, strikes, ms = CLAN_FIGHT_MS, now = Date.now()) {
+    const fightMs = Math.max(0, Math.min(CLAN_FIGHT_MS, Number.isFinite(Number(ms)) ? Number(ms) : CLAN_FIGHT_MS));
+    return clanFightDamage(deriveStats(stableState(rawState, now)), cleanStrikes(strikes, fightMs), fightMs);
+}
+
+/** Summary of a stored save for social features. Accepts any raw save object. */
+export function powerSummary(rawState, now = Date.now()) {
+    const state = stableState(rawState, now);
     const derived = deriveStats(state);
     const totalLevel = Object.values(state.skills).reduce((sum, s) => sum + levelForXp(s.xp), 0);
     return {
         dps: expectedDps(derived),
-        attackDamage: Math.floor(expectedDps(derived) * CLAN_ATTACK_SECONDS),
+        attackDamage: clanFightDamage(derived, []).damage,   // a clan fight without a strike (sizes the boss)
         bestStage: state.combat.bestStage,
         totalLevel,
         totalXp: Object.values(state.skills).reduce((sum, s) => sum + (s.xp || 0), 0),

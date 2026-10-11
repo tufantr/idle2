@@ -16,6 +16,8 @@ import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 import { trialBite } from '../data/trials.js';
 import { stratumStartingAt } from '../data/strata.js';
 import { checkTrial } from './trials.js';
+import { clanBossEnemy, endClanFight, noteClanStrike, clanGuardOpen } from './clanfight.js';
+import { CLAN_GUARD } from '../data/social.js';
 
 const FIRST_GILDED_STAGE = 7;
 
@@ -39,6 +41,7 @@ export function spawnEnemy(game) {
     if (choosingAfterClear(state)) { c.enemy = null; return; }
     if (c.mode === 'dungeon' && c.dungeon) c.enemy = dungeonEnemy(c.dungeon);
     else if (c.mode === 'titan') c.enemy = titanEnemy(state);
+    else if (c.mode === 'clan') c.enemy = clanBossEnemy(state);
     else {
         c.mode = 'stages';
         c.enemy = enemyForStage(c.stage);
@@ -86,6 +89,7 @@ export function leaveCombat(game) {
     if (!c.active) return;
     if (c.mode === 'dungeon') failDungeon(game, 'you left');
     else if (c.mode === 'titan') endTitan(game, false, 'left');
+    else if (c.mode === 'clan') endClanFight(game, 'left');
     c.active = false;
     c.recovering = false;   // the Titan's end may have sent him back to a rest that ends in the fight
     c.combo = 0;
@@ -108,7 +112,7 @@ export function setStage(game, stage) {
  */
 export function travelTo(game, stage) {
     const c = game.state.combat;
-    if (c.mode === 'titan') { game.emit({ type: 'error', text: 'Finish the Titan fight first.' }); return false; }
+    if (c.mode === 'titan' || c.mode === 'clan') { game.emit({ type: 'error', text: `Finish the ${c.mode === 'clan' ? 'clan' : 'Titan'} fight first.` }); return false; }
     if (c.mode === 'dungeon') failDungeon(game, 'you left for the stages');
     setStage(game, stage);
     return true;
@@ -186,11 +190,12 @@ export function playerAttack(game, { manual = false } = {}) {
     const enemy = c.enemy;
     if (!enemy || enemy.hp <= 0) return 0;
 
-    const potionActive = ensurePotion(game);
+    const clan = c.mode === 'clan';   // the clan boss: no potion (the server's reckoning has none), strikes land harder in its openings
+    const potionActive = !clan && ensurePotion(game);
     const combo = c.combo || 0;
     const critChance = Math.min(BASE.caps.critChance, d.critChance);
     const isCrit = rng.chance(critChance);
-    let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult : 1);
+    let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult * (clan ? CLAN_GUARD.mult : 1) : 1);
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
     enemy.hp -= dmg;
 
@@ -349,6 +354,7 @@ function countKind(game, enemy) {
 export function onEnemyDeath(game) {
     const state = game.state;
     const c = state.combat;
+    if (c.mode === 'clan') { endClanFight(game, 'felled'); game.markDirty(); return; }   // the clan's boss: the server reckons the attack, nothing drops here
     const d = game.derived;
     const enemy = c.enemy;
 
@@ -416,6 +422,7 @@ export function onPlayerDeath(game) {
         // a lost run rests, then fights on at the stages; after the Titan, only if he was fighting before it
         let fightsOn = true;
         if (mode === 'dungeon') failDungeon(game, 'you were defeated', { lost: true });
+        else if (mode === 'clan') fightsOn = endClanFight(game, 'left');   // the clan boss doesn't hit back; this is for safety
         else fightsOn = endTitan(game, false, 'fell');
         game.emit({ type: 'death', stage: c.stage, mode });
         c.hp = Math.max(1, Math.floor(game.derived.maxHp * BALANCE.combat.deathHpFraction));
@@ -448,6 +455,7 @@ export function onBossTimeout(game) {
     const c = game.state.combat;
     if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`, { lost: true }); return; }
     if (c.mode === 'titan') { endTitan(game, false, 'time'); return; }
+    if (c.mode === 'clan') { endClanFight(game, 'time'); return; }
     bumpStat(game, 'bossEscapes');
     const back = Math.max(1, c.stage - 1);
     log(game, `⏳ ${c.enemy.name} held out for ${(c.enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
@@ -466,6 +474,10 @@ export function clickAttack(game) {
     if (game.now - (c.lastClickAt || 0) < BALANCE.combat.strikeGapMs) return false;   // faster clicking (or an auto-clicker) adds nothing
     c.lastClickAt = game.now;
     bumpStat(game, 'strikes');   // the player's own strikes (the guide's hand leaves the monster after three)
+    if (c.mode === 'clan') {   // the clan boss: every strike's time is kept; one lands only while its guard is down
+        noteClanStrike(state);
+        if (!clanGuardOpen(state)) { game.emit({ type: 'glance' }); return true; }
+    }
     c.combo = Math.min(BALANCE.combat.comboMax, (c.combo || 0) + 1 / (1 + (c.combo || 0) / 40));
     c.lastComboAt = game.now;
     playerAttack(game, { manual: true });

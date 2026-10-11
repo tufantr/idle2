@@ -1014,6 +1014,15 @@ Keeping it running:
       closing page); a page left open in the background uploads nothing more, and the Clan tab polls only in
       view. Checked in a browser with its clock driven: one upload at sign-in, one ten minutes on with the
       player there, none for twenty idle minutes or an hour hidden, one on leaving
+- [x] **The clan attack is a fight on screen** (the owner's ask, after the Tap Titans 2 research; DESIGN §3.18):
+      "Fight the boss" takes the hero into a 30-second fight against the week's clan boss, full screen like
+      the Titan's, on the boss's own land (the ten lands' rulers take turns). The boss drops its guard for two
+      seconds in every six: it glows, "Strike now!", and only then do strikes land, harder, and build the
+      combo; at other times they are blocked, so an auto-clicker gets no more than a player clicking in the
+      openings (×1.3 to ×2 of watching). No cards or raid levels. The server works out the damage from the
+      stored hero and the strike times (a forged list deals no more than a perfect one), and a card shows
+      it with the member's place in the clan. Three attacks a day, banked up to six; afterwards the hero goes
+      back to what he was doing and the screen to the Clan tab. Played in a browser at 1280 and 390 px
 - [x] **Gifts from the owner** (README "The API"): one row of SQL gives a player gold, essence or diamonds;
       the save and load answers say a gift waits, the game claims it once and shows a card ("A gift from
       tufan, +12,000,000 gold"). Gifts never show in the clan's reward list, so a page still running older

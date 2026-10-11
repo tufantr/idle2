@@ -21,6 +21,7 @@ import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
 import { capeEarned, festivalCloak, FESTIVAL_CLOAKS } from '../data/capes.js';
 import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
+import { CLAN_FIGHT_MS } from '../data/social.js';
 
 export const SAVE_VERSION = 3;
 
@@ -62,6 +63,8 @@ export function createDefaultState(now = Date.now()) {
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
+        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }
+        clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at }
         pets: {},
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
@@ -449,16 +452,25 @@ function normalise(data, now) {
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;
     state.prestige.runStartedAt = Math.min(state.prestige.runStartedAt, now);
-    // A titan fight never survives a reload: the hero is back at what he was doing when it began (a
-    // save from before titan.before fights on at the stages). A dungeon run does survive, if it still makes sense.
-    const before = isPlainObject(state.titan?.before) ? state.titan.before : null;
-    if (state.combat.mode === 'titan' && before && before.doing !== 'fight') {
+    // A Titan or clan boss fight never survives a reload (a clan attack not finished is not spent): the
+    // hero is back at what he was doing when it began (a save from before titan.before fights on at the
+    // stages). A dungeon run does survive, if it still makes sense.
+    const mode = state.combat.mode;
+    const kept = mode === 'titan' ? state.titan?.before : mode === 'clan' ? state.clanFight?.before : null;
+    const before = isPlainObject(kept) ? kept : null;
+    if ((mode === 'titan' || mode === 'clan') && before && before.doing !== 'fight') {
         const work = before.doing === 'work' && isPlainObject(before.action) && typeof before.action.kind === 'string' ? before.action : null;
         state.combat.active = false;
         state.combat.recovering = before.doing === 'recover';
         if (work) state.action = { ...work, progress: Math.max(0, finite(work.progress)), stalled: false };
     }
     if (isPlainObject(state.titan)) state.titan.before = null;
+    state.clanFight = null;
+    // a clan attack fought and not yet sent waits to be sent (the server cleans its strikes again)
+    const sent = state.clanResult;
+    state.clanResult = isPlainObject(sent) && typeof sent.week === 'string' && Array.isArray(sent.strikes)
+        ? { week: sent.week.slice(0, 10), strikes: sent.strikes.slice(0, 200).map(Number).filter(Number.isFinite), ms: Math.max(0, Math.min(CLAN_FIGHT_MS, finite(sent.ms))), at: finite(sent.at) }
+        : null;
     const run = state.combat.dungeon;
     const runDungeon = run ? DUNGEONS.find(d => d.id === run.id) : null;
     if (state.combat.mode !== 'dungeon' || !runDungeon) {

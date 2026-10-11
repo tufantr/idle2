@@ -733,11 +733,27 @@ with the game's own stat code; the client never submits damage or scores.
   12 × the combined attack of members who aren't flagged, each member's counted no higher than their
   best stage allows, capped so no save can overflow it. Each member's share is kept: one who leaves or
   is removed before fighting that week takes it away again (a stranger could join just before Monday
-  with a huge save, size the boss and leave). Every
-  member has **three attacks a day** (enforced by a unique
-  per-player-per-day slot, so parallel requests or switching clans don't add more); an attack uploads
-  the save and deals what that hero does in 60 seconds (`expectedDps × 60`, no dice, Focus, potions or
-  timed boosts). Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
+  with a huge save, size the boss and leave). The ten lands' rulers take turns as the boss, one an ISO
+  week (`clanBossFor`, `src/data/social.js`); the server keeps only its health.
+- **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
+  `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
+  (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen like the Titan's (`state.combat.mode` =
+  `clan`), on the boss's land's painting. The hero attacks by himself; the boss never hits back. It drops
+  its guard for 2 s every 6 s from the 4th (`CLAN_GUARD`): it glows, "Strike now!" pops, and only then do
+  strikes land (2.5 × a fight's strike) and build the combo; at other times they glance off, so an
+  auto-clicker gets no more than a player clicking fast in the openings: ×1.3 to ×2 of a hero who only
+  watches, by attack speed (`test/clanfight.test.mjs`). No cards, raid levels or dust: the hero is the
+  deck (Tap Titans 2's raid system was weighed and left out). The page keeps only the strike times; when
+  the fight ends (time, Give up, or the boss's health running out on screen) they wait in
+  `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
+  and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
+  rule inside the fight, expected values, no dice, Focus, potions or timed boosts), never more than twice
+  what the save's best stage allows; a forged list deals no more than a perfect player. A card shows the
+  damage and the member's place in the clan that week. A fight in progress never survives a reload (the
+  attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
+  Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
+  atomically, so parallel requests can't spend one twice); an attack given back if the boss was already
+  down. Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
   when the boss falls, 50 essence and a diamond for the last hit, and when the week ends 50 essence for
   taking part plus 100 / 60 / 30 essence and a diamond for the top three. Claiming twice pays once; a
   week is settled by whichever request claims it first, and weekly, kill and last-hit rewards are paid

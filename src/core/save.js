@@ -174,7 +174,7 @@ export class CloudClient {
         }
         let data = {};
         try { data = await res.json(); } catch { /* empty body */ }
-        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+        if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { status: res.status });
         return data;
     }
 
@@ -231,7 +231,8 @@ export class CloudClient {
     leaveClan() { return this.request('/clans/leave', { method: 'POST', body: {} }); }
     kickMember(username) { return this.request('/clan/kick', { method: 'POST', body: { username } }); }
     myClan() { return this.request('/clan'); }
-    clanAttack() { return this.request('/clan/attack', { method: 'POST', body: {} }); }
+    /** A clan attack as it was fought: when the player struck (ms into the fight) and how long it lasted. */
+    clanAttack({ strikes = [], ms } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms } }); }
     rewards() { return this.request('/rewards'); }
     claimRewards(ids) { return this.request('/rewards/claim', { method: 'POST', body: { ids } }); }
     leaderboard(metric, period) { return this.request(`/leaderboard?metric=${encodeURIComponent(metric)}&period=${encodeURIComponent(period)}`); }

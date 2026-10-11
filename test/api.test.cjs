@@ -526,3 +526,38 @@ test("the owner's gifts: counted on save and load, claimed once by the game, nev
     assert.equal(odd.find(g => g.essence).essence, 5);
     assert.equal((await post('/gifts/claim', {})).status, 401, 'a token is needed');
 });
+
+test('a clan attack is a fight: strikes in the openings add, a forged list no more than a perfect one, attacks wait up to six', async () => {
+    const a = await register('guard_breaker');
+    await post('/clans', { name: 'Guard Breakers', tag: 'GB' }, a);
+    await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, a);
+    const view = await (await get('/clan', a)).json();
+    assert.equal(view.attacksLeft, 3);
+    assert.equal(view.attackBank, 6);
+    assert.equal(view.fightSeconds, 30);
+    const plain = view.members[0].attackDamage;
+    const quarters = Array.from({ length: 121 }, (_, i) => i * 250);
+    const openings = quarters.filter(t => t >= 4000 && (t - 4000) % 6000 < 2000);
+
+    const fought = await (await post('/clan/attack', { strikes: openings, ms: 30000 }, a)).json();
+    assert.ok(fought.damage > plain, `strikes in the openings add (${fought.damage} > ${plain})`);
+    assert.equal(fought.strikes, openings.length, 'every strike in an opening landed');
+    assert.deepEqual([fought.rank, fought.of, fought.attacksLeft], [1, 1, 2]);
+    const forged = await (await post('/clan/attack', { strikes: Array.from({ length: 5000 }, (_, i) => i * 6), ms: 30000, damage: 1e15 }, a)).json();
+    assert.ok(forged.damage <= fought.damage, 'a forged list deals no more than a perfect player');
+    const early = await (await post('/clan/attack', { strikes: [], ms: 5000 }, a)).json();
+    assert.ok(early.damage < plain, 'a fight given up early deals less');
+    const none = await post('/clan/attack', {}, a);
+    assert.equal(none.status, 400);
+    assert.match((await none.json()).error, /3 more come each day/);
+
+    // two quiet days: six wait, and not more
+    clock += 2 * 24 * 3600 * 1000;
+    assert.equal((await (await get('/clan', a)).json()).attacksLeft, 6);
+    clock += 3 * 24 * 3600 * 1000;
+    assert.equal((await (await get('/clan', a)).json()).attacksLeft, 6, 'the bank holds six');
+    for (let i = 0; i < 6; i++) assert.equal((await post('/clan/attack', {}, a)).status, 200, `attack ${i + 1} of the six waiting`);
+    assert.equal((await post('/clan/attack', {}, a)).status, 400, 'then none');
+    clock += 24 * 3600 * 1000;
+    assert.equal((await (await get('/clan', a)).json()).attacksLeft, 3, 'a new day brings three');
+});

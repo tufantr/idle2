@@ -13,7 +13,7 @@ export function prestigeWaitMs(state, now) {
 }
 
 /** What a prestige would end, so it waits: the Titan fight (the hour's attempt would be lost) or a dungeon run. */
-export const prestigeBlockedBy = state => (state.combat.mode === 'titan' || state.combat.mode === 'dungeon' ? state.combat.mode : null);
+export const prestigeBlockedBy = state => (['titan', 'dungeon', 'clan'].includes(state.combat.mode) ? state.combat.mode : null);
 
 // A run must reach stage 10 and, after the first prestige, last ten minutes. Without the time rule a
 // run that starts past stage 10 (anyone whose best is 100+) could be prestiged again at once, for
