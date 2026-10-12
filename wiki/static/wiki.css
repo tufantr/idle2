@@ -164,9 +164,11 @@ h1 {
 
 /* ---------- tables ---------- */
 .table-wrap { max-width: 100%; overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.22); }
+/* a wide table starts below the infobox, where it has the page's whole width (ui.mjs table's `wide`) */
+.table-wrap.wide { clear: right; }
 .wt { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .wt caption { padding: 0.5rem 0.8rem; text-align: left; color: var(--muted); }
-.wt th { position: sticky; top: 0; padding: 0.55rem 0.7rem; text-align: left; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; color: var(--heading); background: #221a12; border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+.wt th { padding: 0.55rem 0.7rem; text-align: left; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; color: var(--heading); background: #221a12; border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
 .wt td { padding: 0.45rem 0.7rem; border-top: 1px solid rgba(214, 170, 92, 0.08); vertical-align: middle; }
 .wt tbody tr:nth-child(even) td { background: rgba(255, 236, 200, 0.022); }
 .wt tbody tr:hover td { background: rgba(214, 170, 92, 0.07); }

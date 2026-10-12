@@ -23,6 +23,8 @@ import { GEAR_TIERS, RARITIES, BAG_SIZE, salvageEssence } from '../src/data/item
 import { salvageBars, anvilMetal, ANVIL_REFUND } from '../src/data/workshop.js';
 import { masteryActions, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL } from '../src/data/mastery.js';
 import { addMasteryXp, masteryLevel } from '../src/systems/mastery.js';
+import { dungeonById } from '../src/data/dungeons.js';
+import { onDungeonKill } from '../src/systems/dungeon.js';
 
 rng.setSource(seededRandom(2026));
 const T0 = 1_760_000_000_000;
@@ -436,4 +438,25 @@ test('a skill\'s mastery checkpoint is reached once, not again on the next level
     up(open.key);
     up(open.key);
     assert.deepEqual(fired, [0.5]);
+});
+
+test('a dungeon chest\'s gear is of the chest\'s tier, never a tier either side as a monster\'s drop', () => {
+    const warren = dungeonById('goblin_warren');
+    const tiers = [];
+    // the chest's gear roll comes up; the rolls after it read, as a monster drop's tier offset, -1, 0 and +1
+    for (const roll of [0, 0.5, 0.99]) {
+        const game = new Game(null, T0);
+        const c = game.state.combat;
+        c.mode = 'dungeon';
+        c.dungeon = { id: warren.id, index: warren.monsters.length, repeat: true, choiceLeft: 0 };   // the boss falls
+        let first = true;
+        rng.setSource(() => (first ? (first = false, 0) : roll));
+        try {
+            onDungeonKill(game);
+        } finally {
+            rng.setSource(seededRandom(2026));
+        }
+        tiers.push(game.drainEvents().find(e => e.type === 'dungeonClear')?.item?.tier);
+    }
+    assert.deepEqual(tiers, [warren.chestTier, warren.chestTier, warren.chestTier], `Goblin Warren's chest gear is ${GEAR_TIERS[warren.chestTier - 1].name}`);
 });

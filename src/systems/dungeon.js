@@ -226,7 +226,9 @@ function completeDungeon(game, d) {
     let kept = null;
     const zone = zoneForStage(d.stage);
     if (rng.chance(CHEST_GEAR_CHANCE * dropMult)) {
-        const item = generateDrop(d.chestTier, true, state.idCounter++, zone.depth, dropTypesFor(state, d.chestTier));   // as strong as the dungeon's depth in the Abyss, like its monsters' drops
+        // of the chest's own tier (not a tier either side, as a monster's drop), as strong as the dungeon's
+        // depth in the Abyss, like its monsters' drops
+        const item = generateDrop(d.chestTier, true, state.idCounter++, zone.depth, dropTypesFor(state, d.chestTier), { tier: d.chestTier });
         bumpStat(game, 'itemsDropped');
         const result = addItem(game, item);
         if (result.kept) kept = item;

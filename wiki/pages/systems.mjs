@@ -94,7 +94,8 @@ function formulasPage(help) {
                 `a strike: ${pct(BALANCE.combat.manualHitMult, 0)} of an attack; the combo adds ${pct(BALANCE.combat.comboDmgPerStack, 0)} a stack, up to ${BALANCE.combat.comboMax} stacks`
             ])),
             section('Rewards', f('A kill', [
-                `gold = the monster's health × ${r.goldPerHp} (a boss × ${r.bossGoldMult}, a gilded monster × ${r.gildedGoldMult})`,
+                `gold = the monster's full health × ${r.goldPerHp} (a boss × ${r.bossGoldMult}, a gilded monster × ${r.gildedGoldMult});`,
+                `       on stages 1–${e.ease.to}, the health before the gentler start`,
                 `combat XP = ${r.xpBase} × stage^${r.xpExp} (a boss × ${r.bossXpMult}), tripled at combat level 1 and back to normal by level ${r.fastStart.below},`,
                 `            divided from level ${r.xpPace.from} on, up to ÷${r.xpPace.slow} at ${r.xpPace.to}`
             ]) + f('A prestige', [

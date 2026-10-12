@@ -1,14 +1,14 @@
 // Equipment: how gear works, every tier (with the hero wearing its set), jewellery and the unique items.
 
 import { GEAR_TIERS, TIER_WEAR_LEVEL, SLOT_STATS, STAT_UNIT, TYPE_NAMES, RARITIES, AFFIXES, JEWEL_POWER, SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST,
-    DROP_TYPE_WEIGHTS, DROP_TIER_OFFSETS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, GEAR_DROP_CHANCE, JEWEL_DROP_MIN_RANK, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT,
+    DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, GEAR_DROP_CHANCE, JEWEL_DROP_MIN_RANK, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT,
     PITY_MARKS, MAX_UPGRADE, UPGRADE_STEP, BAG_SIZE, MAX_REFORGE_MULT, EQUIP_SLOTS, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY } from '../../src/data/items.js';
 import { ZONES, STAGES_PER_ZONE } from '../../src/data/zones.js';
 import { DUNGEONS, UNIQUES, FRAGMENTS_PER_UNIQUE } from '../../src/data/dungeons.js';
 import { RESOURCES } from '../../src/data/resources.js';
 import { GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, METALS, anvilMetal, anvilBarMult, reinforceCost } from '../../src/data/workshop.js';
 import { BALANCE } from '../../src/core/formulas.js';
-import { depthStage } from '../lib/xref.mjs';
+import { depthStage, tierShare, ABYSS_BANDS } from '../lib/xref.mjs';
 import { path, res, icon, link, table, infobox, section, tiles, navbox, fmt, pct, esc, heroSprite } from '../lib/ui.mjs';
 
 const sec = { section: 'Equipment', sectionPath: '/equipment' };
@@ -18,14 +18,19 @@ const pieceName = (type, tier) => (CRAFTING_TYPES.includes(type) ? `${GEAR_TIERS
 const stat = (type, power, quality, key) => Math.round(STAT_UNIT * power * quality * SLOT_STATS[type][key]);
 const tierLink = t => link(path.tier(GEAR_TIERS[t - 1].name), GEAR_TIERS[t - 1].name, `item/Weapon/${t}`);
 
-/** Where gear of `tier` drops: lands whose own tier it is (or one off), the Abyss's depths, dungeon chests. */
+/**
+ * Where gear of `tier` drops, by the game's rule (a place's gear tier moved by an offset: lib/xref.mjs
+ * tierShare): every land and every run of the Abyss's depths of one gear tier that drops it, with the share
+ * of the place's gear that is of this tier; the places whose own tier it is; the dungeon chests of the tier.
+ */
 function dropsOf(tier) {
-    const own = ZONES.filter(z => z.gearTier === tier && z.id !== 'abyss');
-    const near = ZONES.filter(z => Math.abs(z.gearTier - tier) === 1 && z.id !== 'abyss');
-    const abyss = tier === 5 ? `Abyss depths 1–2 (stages ${depthStage(1)}–${depthStage(3) - 1})` : tier === 6 ? `Abyss depths 3–4 (stages ${depthStage(3)}–${depthStage(5) - 1})` : tier === 7 ? `the Abyss from depth 5 (stage ${depthStage(5)} on)` : '';
-    const chests = DUNGEONS.filter(d => d.chestTier === tier);
-    return { own, near, abyss, chests };
+    const lands = ZONES.map((z, i) => ({ zone: z, from: i * STAGES_PER_ZONE + 1, to: (i + 1) * STAGES_PER_ZONE, gearTier: z.gearTier }));
+    const depths = ABYSS_BANDS.map(b => ({ band: b, from: depthStage(b.from), to: b.to ? depthStage(b.to + 1) - 1 : null, gearTier: b.gearTier }));
+    const places = [...lands, ...depths].map(p => ({ ...p, share: tierShare(p.gearTier, tier) })).filter(p => p.share > 0);
+    return { places, own: places.filter(p => p.gearTier === tier), chests: DUNGEONS.filter(d => d.chestTier === tier) };
 }
+const placeName = p => (p.zone ? link(path.zone(p.zone.id), esc(p.zone.name)) : `${link('/zones', 'The Abyss')}, depth${p.band.to === p.band.from ? ` ${p.band.from}` : p.band.to ? `s ${p.band.from}–${p.band.to}` : `s ${p.band.from}+`}`);
+const placeStages = p => `${p.from}${p.to ? `–${p.to}` : '+'}`;
 
 function heroInSet(tier, scale = 3) {
     const equipped = Object.fromEntries(SMITHING_TYPES.map(type => [type, { type, tier }]));
@@ -43,12 +48,10 @@ function tierPage(t, help) {
     });
     const anvilRows = SMITHING_TYPES.map(type => {
         const at = n => reinforceCost({ type, tier: t.tier, upgrade: n - 1 });
-        return [`<span class="act">${icon(`item/${type}/${t.tier}`, 1)}<span>${esc(TYPE_NAMES[type])}</span></span>`, ...[1, 5, 10].map(n => `${at(n).bars} bars, ${at(n).essence} essence`)];
+        return [`<span class="act">${icon(`item/${type}/${t.tier}`, 1)}<span>${esc(TYPE_NAMES[type])}</span></span>`, ...[1, 5, 10].map(n => `${at(n).bars} bar${at(n).bars === 1 ? '' : 's'}, ${at(n).essence} essence`)];
     });
-    const where = [
-        d.own.length ? `<li>Most of the gear dropped in ${d.own.map(z => link(path.zone(z.id), esc(z.name))).join(', ')} (${pct(DROP_TIER_OFFSETS.find(o => o.offset === 0).weight / 100, 0)} of drops there).</li>` : '',
-        d.near.length ? `<li>Now and then in ${d.near.map(z => link(path.zone(z.id), esc(z.name))).join(', ')}, a tier below or above.</li>` : '',
-        d.abyss ? `<li>${d.abyss}.</li>` : '',
+    const where = table(['Place', 'Stages', 'Share of its gear #'], d.places.map(p => [placeName(p), placeStages(p), pct(p.share, 0)]), { sort: false });
+    const more = [
         d.chests.length ? `<li>The chests of ${d.chests.map(x => link(path.dungeon(x.id), esc(x.name))).join(', ')}.</li>` : '',
         t.tier === 1 ? `<li>Forged from copper bars in ${link('/skills/smithing#forging', 'Smithing')}.</li>` : ''
     ].join('');
@@ -60,8 +63,8 @@ function tierPage(t, help) {
         }),
         body: [
             help.prose(path.tier(t.name)),
-            section('Pieces', `<p>Attack and defence of each piece before reinforcing, for a common and a legendary roll (each piece also varies ${pct(0.05, 0)} either way). Deeper than Abyss depth 5, dropped pieces are stronger still.</p>${table(['Piece', 'Attack, common #', 'Defence, common #', 'Attack, legendary #', 'Defence, legendary #'], rows)}`),
-            section('Where it comes from', `<ul>${where}</ul>`),
+            section('Pieces', `<p>Attack and defence of each piece before reinforcing, for a common and a legendary roll (each piece also varies ${pct(0.05, 0)} either way). Deeper than Abyss depth ${BALANCE.abyss.dropScalingFrom}, dropped pieces are stronger still.</p>${table(['Piece', 'Attack, common #', 'Defence, common #', 'Attack, legendary #', 'Defence, legendary #'], rows, { wide: true })}`),
+            section('Where it comes from', `<p>Gear drops mostly of the place's own tier, now and then a tier below or above it. Of the gear that drops in each of these places, this share is ${esc(t.name)}:</p>${where}${more ? `<ul>${more}</ul>` : ''}`),
             section('At the anvil', `<p>${esc(t.name)} weapons and armour are reinforced and rerolled with ${res(metal.bar)}${mult > 1 ? `, ${mult} times as many as a runite piece` : ''}. What reinforcing to +1, +5 and +10 costs:</p>${table(['Piece', '+1', '+5', '+10'], anvilRows, { sort: false })}`)
         ].join('\n'),
         navbox: navbox('Gear tiers', GEAR_TIERS.map(x => tierLink(x.tier)))
@@ -69,9 +72,9 @@ function tierPage(t, help) {
 }
 
 function overviewPage(help) {
-    const tiers = table(['Tier #', 'Gear', 'Power #', 'Wear from level #', 'Drops in', 'Anvil bars'], GEAR_TIERS.map(t => {
+    const tiers = table(['Tier #', 'Gear', 'Power #', 'Wear from level #', 'Mostly drops in', 'Anvil bars'], GEAR_TIERS.map(t => {
         const d = dropsOf(t.tier);
-        const where = [...d.own.map(z => link(path.zone(z.id), esc(z.name))), d.abyss ? 'the Abyss' : ''].filter(Boolean).join(', ') || '–';
+        const where = d.own.map(p => `${placeName(p)} <small>${placeStages(p)}</small>`).join(', ') || '–';
         return [t.tier, tierLink(t.tier), `×${t.power}`, TIER_WEAR_LEVEL[t.tier], where, `${res(anvilMetal(t.tier).bar, { name: false })}${anvilBarMult(t.tier) > 1 ? ` ×${anvilBarMult(t.tier)}` : ''}`];
     }), { sort: false });
     const slots = table(['Piece', 'Slots', 'Attack weight #', 'Defence weight #', 'Bars (forge, anvil) #'], ALL_TYPES.map(type => [`<span class="act">${icon(`item/${type}/3`, 1)}<span>${esc(TYPE_NAMES[type])}</span></span>`, type === 'Ring' || type === 'Ear' ? '2' : '1', SLOT_STATS[type].atk, SLOT_STATS[type].def, SMITHING_BAR_COST[type] ?? '–']), { sort: false });

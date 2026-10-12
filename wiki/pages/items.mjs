@@ -5,10 +5,11 @@ import { RESOURCES, sellValue, foodsByHealing } from '../../src/data/resources.j
 import { SKILLS } from '../../src/data/skills.js';
 import { GEM_TIERS, METALS, JEWEL_BARS, TOOLS, ANVIL_LEVEL_PER_UPGRADE } from '../../src/data/workshop.js';
 import { GEAR_TIERS } from '../../src/data/items.js';
+import { CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE } from '../../src/data/dungeons.js';
 import { BALANCE } from '../../src/core/formulas.js';
 import { BASE } from '../../src/core/modifiers.js';
 import { BAIT_EXTRA_CHANCE } from '../../src/systems/skilling.js';
-import { buildXref, actionRow, ACTION_HEAD, fmtLand, voidstoneText, gemChances, skillLink, actionAnchor } from '../lib/xref.mjs';
+import { buildXref, actionRow, ACTION_HEAD, fmtLand, voidstoneText, gemChances, skillLink, actionAnchor, harvestXp, titanLeaves } from '../lib/xref.mjs';
 import { path, res, resList, resIcon, icon, link, table, infobox, section, tiles, navbox, fmt, pct, time, esc, callout } from '../lib/ui.mjs';
 
 const sec = { section: 'Items', sectionPath: '/items' };
@@ -40,10 +41,11 @@ function lead(r) {
     if (made.length) parts.push(`made in ${[...new Set(made)].join(', ')}`);
     if (s.farming) parts.push('grown on the farm');
     if (s.lands) parts.push(`dropped in ${s.lands.length === 1 ? 'one land' : `${s.lands.length} lands`}`);
-    if (s.gems) parts.push('found while mining and in the fight');
+    if (s.essence) parts.push('left by monsters and dungeon chests', 'salvaged from gear');
+    if (s.gems) parts.push(s.gems.some(g => g.kind === 'mining') ? 'found while mining and in the fight' : 'found in the fight');
     if (s.shop) parts.push('sold in the Shop');
     if (parts.length > 1) parts.push(`and ${parts.pop()}`);
-    const what = r.desc ? `${esc(r.desc)}. ` : '';
+    const what = r.desc && r.category !== 'potion' ? `${esc(r.desc)}. ` : '';   // a potion's says what it gives, below
     return `${what}${esc(r.name)} ${r.category === 'food' ? `heals ${fmt(r.heals)} health. It is ` : r.category === 'potion' ? `gives ${esc(r.desc || '')} in a fight. It is ` : 'is '}${parts.length ? parts.join(parts.length > 2 ? ', ' : ' ') : 'found in the fight'}.`;
 }
 
@@ -52,29 +54,37 @@ function sourcesHtml(r) {
     const out = [];
     if (s.actions) out.push(section('Gathered and made', table(ACTION_HEAD, s.actions.map(a => actionRow(a)))));
     if (s.farming) {
-        out.push(section('Grown', table(['Crop', 'Farming level #', 'Grows in #', 'Harvest', 'XP #', 'Seeds #'],
-            s.farming.map(({ crop: c }) => [link(`${path.skill('farming')}#crop-${c.id}`, esc(c.name)), c.levelReq, time(c.growMs), `${c.yield[0]}–${c.yield[1]}`, fmt(c.xp), `${fmt(c.seedGold)} gold`]))));
+        out.push(section('Grown', table(['Crop', 'Farming level #', 'Grows in #', 'Harvest', 'XP a harvest #', 'Seeds #'],
+            s.farming.map(({ crop: c }) => [link(`${path.skill('farming')}#crop-${c.id}`, esc(c.name)), c.levelReq, time(c.growMs), `${c.yield[0]}–${c.yield[1]}`, fmt(Math.round(harvestXp(c))), `${fmt(c.seedGold)} gold`]))));
     }
     if (s.lands) {
         out.push(section('Dropped in the fight', `<p>A monster leaves a material ${pct(BALANCE.rewards.materialDropChance, 0)} of the time (more with drop chance bonuses), and a boss on its first fall always does. In these lands, ${esc(r.name)} is this share of the materials:</p>`
             + table(['Land', 'Share of drops #', 'Chance a kill #', 'Each drop #'], s.lands.map(d => [fmtLand(d), pct(d.share), pct(d.share * BALANCE.rewards.materialDropChance), `${d.qty}`]))));
     }
     if (s.chests) {
-        const rows = s.chests.map(c => [link(path.dungeon(c.dungeon.id), esc(c.dungeon.name), `mon/${c.dungeon.boss.name}`), c.gem ? 'the chest\'s gem, half the time' : `${pct(c.share)} of each of 3 picks`, c.gem ? '1' : `${c.qty}`]);
+        const rows = s.chests.map(c => [link(path.dungeon(c.dungeon.id), esc(c.dungeon.name), `mon/${c.dungeon.boss.name}`), c.gem ? `the chest's gem, ${pct(CHEST_GEM_CHANCE, 0)} of the time` : `${pct(c.share)} of each of ${CHEST_MATERIAL_ROLLS} picks`, c.gem ? '1' : `${c.qty}`]);
         out.push(section('Dungeon chests', table(['Dungeon', 'Chance', 'Amount #'], rows)));
     }
     if (s.gems) {
+        const lands = (list, last = ', ') => list.map(z => link(path.zone(z.id), esc(z.name))).join(', ').replace(/, (?!.*, )/, last);
         const lines = s.gems.map(g => g.kind === 'mining'
             ? `<li><strong>While mining</strong>: each ore has a ${pct(gemChances.mining, 0)} chance of a gem, of a tier near the rock's: ${g.rocks.map(n => res(n.produces)).join(', ')}.</li>`
             : g.kind === 'monsters'
-                ? `<li><strong>From monsters</strong>: each kill has a ${pct(gemChances.monster, 0)} chance of a gem (a boss's first fall ten times that), of a tier near the land's: ${g.lands.map(z => link(path.zone(z.id), esc(z.name))).join(', ')}.</li>`
+                ? `<li><strong>From monsters</strong>: each kill has a ${pct(gemChances.monster, 0)} chance of a gem (a boss's first fall ten times that), of a tier near the land's: ${lands(g.lands)}.</li>`
                 : `<li><strong>The deep Abyss</strong>: ${voidstoneText}</li>`);
+        for (const c of s.crate || []) {
+            const when = [c.lands.length ? `one in every crate while your best stage is in ${lands(c.lands, ' or ')}` : '', c.great.length ? `one more in a great crate while it is in ${lands(c.great, ' or ')}` : ''].filter(Boolean).join('; ');
+            lines.push(`<li><strong>The ${link('/daily-crate', 'daily crate')}</strong>: ${when}.</li>`);
+        }
+        for (const t of s.titan || []) lines.push(`<li><strong>${link('/titan', 'The Titan')}</strong>: ${t.qty} when Titan ${t.from}${t.to === null ? ' or any after it' : t.to > t.from ? `${t.to === t.from + 1 ? ' or' : ' to'} ${t.to}` : ''} falls.</li>`);
         out.push(section('Found', `<ul>${lines.join('')}</ul>`));
     }
     if (s.essence) {
+        const rw = BALANCE.rewards;
         out.push(section('Found', `<ul>
-            <li><strong>Monsters</strong>: ${pct(BALANCE.rewards.essenceDropChance, 0)} of kills leave 1–2; a boss's first fall leaves ${BALANCE.rewards.bossEssence[0]}–${BALANCE.rewards.bossEssence[1]} times half the land's tier; a gilded monster ${BALANCE.rewards.gildedEssence[0]}–${BALANCE.rewards.gildedEssence[1]}.</li>
+            <li><strong>Monsters</strong>: ${pct(rw.essenceDropChance, 0)} of kills leave 1–2; a boss's first fall leaves ${rw.bossEssence[0]}–${rw.bossEssence[1]} and a gilded monster ${rw.gildedEssence[0]}–${rw.gildedEssence[1]}, each times half the land's tier.</li>
             <li><strong>Salvaging</strong> gear you don't need (see [[Equipment]]).</li>
+            <li><strong>${link('/titan', 'The Titan')}</strong>: ${titanLeaves(1).essence} when the first falls, more for each after it, and some for the damage dealt when it stands.</li>
             <li><strong>Dungeon chests</strong>, the <strong>daily crate</strong>, the <strong>Shop</strong> and the <strong>weekend events</strong>.</li></ul>`.replace('[[Equipment]]', link('/equipment', 'Equipment'))));
     }
     if (s.shop) out.push(section('Bought', table(['Supply', 'Gives #', 'Price'], s.shop.map(({ entry: e, qty }) => [link('/shop', esc(e.name)), fmt(qty), `${e.costKills} kills' worth of gold at your best stage`]))));
@@ -89,12 +99,10 @@ function usesHtml(r) {
     const u = xref().uses[r.id] || {};
     const out = [];
     if (u.actions) {
-        const rows = u.actions.map(a => {
-            const row = actionRow(a, { show: 'makes' });
-            row[6] = `${a.takes > 1 ? `${a.takes}× · ` : ''}${a.action.produces ? res(a.action.produces) : '–'}`;
-            return row;
-        });
-        out.push(section('Used to make', table(['Action', 'Skill', 'Level #', 'Time #', 'XP #', 'XP/hour #', 'Makes'], rows)));
+        // how many of this one action takes, and what it makes (a log burnt makes bonfire time)
+        const makes = a => (a.produces ? res(a.produces) : a.bonfireLog ? `${BASE.bonfireSecondsPerLogTier * RESOURCES[a.bonfireLog].tier} s of bonfire` : '–');
+        const rows = u.actions.map(a => [...actionRow(a, { show: 'makes' }).slice(0, 6), a.takes, makes(a.action)]);
+        out.push(section('Used to make', table(['Action', 'Skill', 'Level #', 'Time #', 'XP #', 'XP/hour #', 'Takes #', 'Makes'], rows, { wide: true })));
     }
     if (u.burn) out.push(section('Burned', `<p>${skillLink('firemaking')}: burning one gives ${fmt(u.burn[0].action.xp)} XP (level ${u.burn[0].action.levelReq}) and keeps the bonfire lit ${BASE.bonfireSecondsPerLogTier * r.tier} seconds longer (${BASE.bonfireSecondsPerLogTier} seconds a tier).</p>`));
     if (u.fuel) out.push(section('Cooking fuel', `<p>Every dish in ${skillLink('cooking')} burns one log: the cook takes the lowest kind of log you have, so better logs are kept for better jobs.</p>`));

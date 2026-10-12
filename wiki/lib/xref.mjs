@@ -5,20 +5,93 @@
 import { RESOURCES } from '../../src/data/resources.js';
 import { SKILLS } from '../../src/data/skills.js';
 import { SMELTING_RECIPES, TOOLS, METALS, GEM_TIERS, JEWEL_BARS, VOIDSTONE_DEPTH, VOIDSTONE_CHANCE } from '../../src/data/workshop.js';
-import { ZONES, STAGES_PER_ZONE, GEM_DROP_TABLE } from '../../src/data/zones.js';
+import { ZONES, STAGES_PER_ZONE, GEM_DROP_TABLE, abyssGearTier } from '../../src/data/zones.js';
 import { DUNGEONS } from '../../src/data/dungeons.js';
 import { CROPS } from '../../src/data/farming.js';
 import { AGILITY_SLOTS } from '../../src/data/agility.js';
 import { GOLD_SHOP } from '../../src/data/perks.js';
 import { EVENT_SHOP, EVENT_MILESTONES } from '../../src/data/events.js';
-import { BALANCE } from '../../src/core/formulas.js';
+import { GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS } from '../../src/data/items.js';
+import { BALANCE, goldPerKillAtStage } from '../../src/core/formulas.js';
 import { zoneForStage } from '../../src/data/zones.js';
 import { GEM_FIND_CHANCE } from '../../src/systems/skilling.js';
+import { titanEnemy, endTitan } from '../../src/systems/dungeon.js';
+import { Game } from '../../src/game.js';
 import { path, pct, time, fmt, res, resList, link, esc } from './ui.mjs';
 import { skillIcon } from '../pages/nav.mjs';
 
 const skillLink = (id, anchor = '') => link(`${path.skill(id)}${anchor ? `#${anchor}` : ''}`, esc(SKILLS[id].name), skillIcon(id));
 export const actionAnchor = id => `action-${id.replace(/_/g, '-')}`;
+
+/** The XP an average harvest of a crop pays: every crop harvested pays the crop's XP (systems/farming.js). */
+export const harvestXp = c => c.xp * (c.yield[0] + c.yield[1]) / 2;
+
+// ---------- gear: which tier drops where ----------
+
+/**
+ * The share of a place's gear drops that is of `tier`, where the place's gear tier is `gearTier`: a drop is
+ * of the place's tier moved by an offset, and kept within the tiers (core/formulas.js generateDrop).
+ */
+export function tierShare(gearTier, tier) {
+    const total = DROP_TIER_OFFSETS.reduce((s, o) => s + o.weight, 0);
+    return DROP_TIER_OFFSETS.filter(o => Math.max(1, Math.min(MAX_GEAR_TIER, gearTier + o.offset)) === tier).reduce((s, o) => s + o.weight, 0) / total;
+}
+
+/** The tiers a place of gear tier `gearTier` drops, with their shares: [{ tier, share }], the lowest first. */
+export const tierShares = gearTier => GEAR_TIERS.map(t => ({ tier: t.tier, share: tierShare(gearTier, t.tier) })).filter(x => x.share > 0);
+
+/** Stages `from` to `to` in runs of one gear tier (the Abyss's rises with its depth): [{ from, to, gearTier }]. */
+export function gearBands(from, to) {
+    const bands = [];
+    for (let stage = from; stage <= to; stage++) {
+        const gearTier = zoneForStage(stage).gearTier;
+        const last = bands[bands.length - 1];
+        if (last && last.gearTier === gearTier) last.to = stage;
+        else bands.push({ from: stage, to: stage, gearTier });
+    }
+    return bands;
+}
+
+/** The Abyss's depths in runs of one gear tier: [{ from, to (null: on for ever), gearTier }], depth 1 first. */
+export const ABYSS_BANDS = (() => {
+    const bands = [];
+    for (let depth = 1; depth <= 20; depth++) {
+        const gearTier = abyssGearTier(depth);
+        const last = bands[bands.length - 1];
+        if (last && last.gearTier === gearTier) last.to = depth;
+        else bands.push({ from: depth, to: depth, gearTier });
+    }
+    bands[bands.length - 1].to = null;   // the last tier goes on for ever
+    return bands;
+})();
+
+// ---------- the Titan ----------
+
+export const TITANS_SHOWN = 30;
+const titanCache = new Map();
+/**
+ * What felling Titan `level` leaves besides its lasting bonus, worked out by the game itself (systems/
+ * dungeon.js endTitan, for a hero whose best stage is 1): { essence, gems: [[id, qty]], goldKills }. Its
+ * kill also pays as a boss's first fall (gold, XP and loot), not counted here.
+ */
+export function titanLeaves(level) {
+    if (titanCache.has(level)) return titanCache.get(level);
+    const game = new Game(null, Date.UTC(2026, 0, 6));
+    const s = game.state;
+    s.titan.kills = level - 1;
+    s.combat.mode = 'titan';
+    s.combat.enemy = { ...titanEnemy(s), hp: 0 };
+    const before = { ...s.resources, gold: s.gold };
+    endTitan(game, true);
+    const gained = id => (s.resources[id] || 0) - (before[id] || 0);
+    const out = {
+        essence: gained('essence'),
+        gems: Object.keys(s.resources).filter(id => RESOURCES[id]?.category === 'gem' && gained(id) > 0).map(id => [id, gained(id)]),
+        goldKills: Math.round((s.gold - before.gold) / goldPerKillAtStage(s.combat.bestStage, game.derived.goldMult))
+    };
+    titanCache.set(level, out);
+    return out;
+}
 
 /** The lands (and the Abyss) that drop `id`, with its share of a land's material drops. */
 function landDrops(id) {
@@ -87,6 +160,28 @@ export function buildXref() {
     }
     add(sources, 'voidstone', 'gems', { kind: 'voidstone' });
     add(sources, 'essence', 'essence', {});
+    // the daily crate's gem: the best one of the tier of the land where your best stage is, and a great crate's
+    // one of the next tier up besides (systems/daily.js claimDaily)
+    const crateGem = z => [...GEM_DROP_TABLE].reverse().find(g => g.tier <= z.tier) || GEM_DROP_TABLE[0];
+    const greatGem = z => GEM_DROP_TABLE.find(g => g.tier > crateGem(z).tier) || crateGem(z);
+    for (const g of GEM_DROP_TABLE) {
+        const lands = ZONES.filter(z => crateGem(z).id === g.id);
+        const great = ZONES.filter(z => greatGem(z).id === g.id && crateGem(z).id !== g.id);
+        if (lands.length || great.length) add(sources, g.id, 'crate', { lands, great });
+    }
+    // the Titan's pair of gems, by the Titans that leave them (TITANS_SHOWN of them; the last kind goes on)
+    for (let level = 1; level <= TITANS_SHOWN; level++) {
+        for (const [id, qty] of titanLeaves(level).gems) {
+            const rows = ((sources[id] ||= {}).titan ||= []);
+            const last = rows[rows.length - 1];
+            if (last && last.to === level - 1 && last.qty === qty) last.to = level;
+            else rows.push({ from: level, to: level, qty });
+        }
+    }
+    for (const rows of Object.values(sources).map(s => s.titan).filter(Boolean)) {
+        const last = rows[rows.length - 1];
+        if (last.to === TITANS_SHOWN) last.to = null;
+    }
 
     // ---------- shops and events ----------
     for (const e of GOLD_SHOP) for (const [id, qty] of Object.entries(e.gives)) add(sources, id, 'shop', { entry: e, qty });

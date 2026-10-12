@@ -8,7 +8,8 @@
 //   node wiki/build.mjs --out <dir>     # somewhere else
 //   node wiki/build.mjs --serve [port]  # builds, then serves it at http://localhost:8010 with clean URLs
 //
-// Fails (exit 1) when a link lands nowhere, a {{ }} expression breaks, or a page shows undefined or NaN.
+// Fails (exit 1) when a link or a picture lands nowhere, a {{ }} expression breaks, or a page shows
+// undefined, NaN, Infinity or a number with an exponent.
 
 import { readFile, writeFile, mkdir, readdir, copyFile, rm, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -116,6 +117,11 @@ export async function build({ out = OUT, quiet = false, assets = true } = {}) {
     const html = new Map();
     for (const page of site.pages.values()) html.set(page.path, site.render(page, nav, assetsVersion));
     site.checkLinks(html);
+    // every picture a page names is one of the game's (copied below): the banners, tiles and card thumbs in
+    // its style attributes as much as its links
+    const pictures = new Map();   // a picture's address -> the first page that names it
+    for (const [path, h] of html) for (const m of h.matchAll(/(?:href|src)="(\/assets\/[^"#?]+)|url\((\/assets\/[^)"'#?]+)/g)) if (!pictures.has(m[1] || m[2])) pictures.set(m[1] || m[2], path);
+    for (const [pic, path] of pictures) if (!(await stat(join(ROOT, decodeURIComponent(pic))).catch(() => null))?.isFile()) site.problems.push(`${path}: no picture at ${pic}`);
     for (const [path, h] of html) {
         const file = path === '/' ? join(out, 'index.html') : join(out, `${path.slice(1)}.html`);
         await mkdir(dirname(file), { recursive: true });

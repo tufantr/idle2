@@ -1071,6 +1071,16 @@ Keeping it running:
         rewards are paid before a week is marked settled; "this week" boards count from where the player
         stood when the week began; the Clan tab polls only while someone is there; a body that isn't JSON
         gets a JSON answer; the health check asks the database every time.
+      The wiki was checked the same way after the game (three reviewers: the written pages, the skills, guides
+      and FAQ, and the generated tables with the site in a browser at 1280 and 390 px). Its pages now say
+      what the game does after the sweep, and older slips are gone: Farming's XP is a harvest's (a crop's,
+      shown before, read 6 to 8 times too low an hour), each gear tier names where it really drops (the
+      Abyss's bands included), numbers past a million are written as the game writes them (2.23Qi, not
+      2230Q), dungeon monsters show their gold, XP and drops, deep bosses their Voidstone, the Titan's
+      table what each one pays, search finds "abyss", "titan" or "knight" first, no page opens scrolled
+      down, and no table hides a column on a laptop. In the game, a dungeon chest's gear is of the chest's
+      tier, as DESIGN §3.11 says (it was a tier either side, like a monster's drop). The wiki's test now
+      checks its pictures, its numbers against the game's, Farming's XP an hour and the search index.
       Not done, for later: a crafting tool in the hero's hands at the Crafting stage (an atlas cell to draw),
       and claiming gifts and clan rewards in two steps (an answer lost in the network loses them today)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,

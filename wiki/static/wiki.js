@@ -12,8 +12,10 @@
     document.addEventListener('click', e => {
         if (document.body.classList.contains('nav-open') && !e.target.closest('.side') && !e.target.closest('.menu-btn')) setNav(false);
     });
-    // keep the current page in sight in the menu
-    document.querySelector('.side a[aria-current="page"]')?.scrollIntoView({ block: 'center' });
+    // keep the current page in sight in the menu (the menu only: scrollIntoView moved the page down too)
+    const current = document.querySelector('.side a[aria-current="page"]');
+    const side = document.querySelector('.side');
+    if (current && side) side.scrollTop = current.offsetTop - (side.clientHeight - current.offsetHeight) / 2;
 
     // ---------- search ----------
     const input = document.getElementById('q');
@@ -21,17 +23,20 @@
     let index = null;
     let loading = null;
     let picked = -1;
-    const load = () => (loading ||= fetch('/search.json').then(r => r.json()).then(data => { index = data.map(p => ({ ...p, lt: p.t.toLowerCase() })); }).catch(() => { index = []; }));
+    // a page's names: its title and its other names (Gear for Equipment), each without a leading "the"
+    const bare = s => s.replace(/^the\s+/, '');
+    const load = () => (loading ||= fetch('/search.json').then(r => r.json()).then(data => { index = data.map(p => ({ ...p, names: [p.t.toLowerCase(), ...(p.a || [])].map(bare) })); }).catch(() => { index = []; }));
     const escape = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
     function score(p, words, q) {
-        if (p.lt === q) return 1000;
+        const names = p.names;
+        if (names.includes(bare(q))) return 1000;
         let s = 0;
-        if (p.lt.startsWith(q)) s += 400;
-        else if (p.lt.includes(q)) s += 250;
+        if (names.some(n => n.startsWith(bare(q)))) s += 400;
+        else if (names.some(n => n.includes(q))) s += 250;
         for (const w of words) {
-            if (p.lt.split(/[\s'’-]+/).some(t => t.startsWith(w))) s += 60;
-            else if (p.lt.includes(w)) s += 30;
+            if (names.some(n => n.split(/[\s'’-]+/).some(t => t.startsWith(w)))) s += 60;
+            else if (names.some(n => n.includes(w))) s += 30;
             else if (p.k.includes(w)) s += 20;
             else if (p.s.toLowerCase().includes(w)) s += 5;
             else return 0;   // every word must be found somewhere
@@ -98,12 +103,14 @@
     }
 
     // ---------- sortable tables ----------
+    // a cell's number: the game's short forms (src/ui/format.js: 2.35M, 1.26Qa, 2.23Qi …) and times (2.5 s,
+    // 10 min, 1 h 30 min, 2.1 days) read as what they say
+    const UNITS = { K: 1e3, M: 1e6, B: 1e9, T: 1e12, Qa: 1e15, Qi: 1e18, Sx: 1e21, Sp: 1e24, Oc: 1e27, No: 1e30, min: 60, h: 3600, days: 86400 };
     const cellValue = td => {
         const text = td.textContent.replace(/[,\s]/g, '').replace(/^[+×x]/, '');
-        const m = /^(-?\d+(?:\.\d+)?)(K|M|B|T|Q|%|s|min|h)?/.exec(text);
+        const m = /^(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)(Qa|Qi|Sx|Sp|Oc|No|days|min|K|M|B|T|%|s|h)?(?:(\d+)min)?/.exec(text);
         if (!m) return null;
-        const mult = { K: 1e3, M: 1e6, B: 1e9, T: 1e12, Q: 1e15, min: 60, h: 3600 }[m[2]] || 1;
-        return Number(m[1]) * mult;
+        return Number(m[1]) * (UNITS[m[2]] || 1) + Number(m[3] || 0) * 60;
     };
     for (const table of document.querySelectorAll('table.sortable')) {
         const heads = [...table.querySelectorAll('thead th')];

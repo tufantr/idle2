@@ -3,6 +3,7 @@
 // written by convention and checked once the whole site is built (wiki/lib/site.mjs checkLinks).
 
 import { sprite, resIcon, toolIcon, heroSprite, spriteStyle, hasSprite } from '../../src/ui/sprites.js';
+import { fmt as gameFmt } from '../../src/ui/format.js';
 import { RESOURCES } from '../../src/data/resources.js';
 import { slugify } from './md.mjs';
 
@@ -10,16 +11,15 @@ export { sprite, resIcon, toolIcon, heroSprite, spriteStyle, hasSprite, slugify 
 
 export const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** A whole number with separators, or a short form past a million (1.25M, 3.4B). */
+/**
+ * A whole number with separators, or from a million on the game's own short form (1.25M, 3.40B, 2.23Qi:
+ * src/ui/format.js). Nothing at all is a dash; a number that is not one (NaN, Infinity) is written as it is,
+ * so the build stops on it (wiki/lib/site.mjs checkLinks).
+ */
 export function fmt(n, { short = true } = {}) {
-    if (n === null || n === undefined || Number.isNaN(n)) return '–';
-    const abs = Math.abs(n);
-    if (short && abs >= 1e6) {
-        const units = [[1e15, 'Q'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
-        const [div, u] = units.find(([d]) => abs >= d);
-        const v = n / div;
-        return `${v >= 100 ? Math.round(v) : v >= 10 ? v.toFixed(1).replace(/\.0$/, '') : v.toFixed(2).replace(/\.?0+$/, '')}${u}`;
-    }
+    if (n === null || n === undefined) return '–';
+    if (!Number.isFinite(n)) return String(n);
+    if (short && Math.abs(n) >= 1e6) return gameFmt(n);
     if (!Number.isInteger(n)) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
     return n.toLocaleString('en-US');
 }
@@ -85,14 +85,16 @@ export function link(href, text, iconKey = null, scale = 0.625) {
 
 /**
  * A table. `head` is a list of column titles (a title ending in "#" is a number column); `rows` lists of
- * cells (HTML). Sortable by clicking a column title (wiki.js), unless `sort` is false.
+ * cells (HTML). Sortable by clicking a column title (wiki.js), unless `sort` is false. A `wide` table starts
+ * below the page's infobox, where it has the page's whole width (beside it, its last columns would hide
+ * behind a sideways scroll on a laptop's screen).
  */
-export function table(head, rows, { sort = true, cls = '', caption = '' } = {}) {
+export function table(head, rows, { sort = true, cls = '', caption = '', wide = false } = {}) {
     if (!rows.length) return '';
     const cols = head.map(h => ({ num: /#$/.test(h), title: h.replace(/\s*#$/, '') }));
     const th = cols.map(c => `<th${c.num ? ' class="num"' : ''}>${c.title}</th>`).join('');
     const body = rows.map(r => `<tr>${r.map((cell, i) => `<td${cols[i]?.num ? ' class="num"' : ''}>${cell ?? ''}</td>`).join('')}</tr>`).join('');
-    return `<div class="table-wrap"><table class="wt${sort ? ' sortable' : ''}${cls ? ` ${cls}` : ''}">${caption ? `<caption>${caption}</caption>` : ''}<thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
+    return `<div class="table-wrap${wide ? ' wide' : ''}"><table class="wt${sort ? ' sortable' : ''}${cls ? ` ${cls}` : ''}">${caption ? `<caption>${caption}</caption>` : ''}<thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 /** The infobox beside a page's text: a title, a picture, and rows of label and value. */

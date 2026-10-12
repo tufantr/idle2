@@ -3,10 +3,12 @@
 
 import { SKILLS, GATHERING_SKILLS, PRODUCTION_SKILLS } from '../../src/data/skills.js';
 import { RESOURCES } from '../../src/data/resources.js';
-import { SMITH_INTERVAL, CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, SMITH_SLOT_OFFSET, smithLevelReq, reinforceCost, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND, VOIDSTONE_DEPTH } from '../../src/data/workshop.js';
-import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES } from '../../src/data/items.js';
+import { SMITH_INTERVAL, CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, SMITH_SLOT_OFFSET, smithLevelReq, reinforceCost, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
+import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES, GEAR_TIERS } from '../../src/data/items.js';
 import { CROPS, FARMING_PLOTS } from '../../src/data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL, obstacleUpgradeGold, obstacleUpgradeLevelReq } from '../../src/data/agility.js';
+import { courseDef } from '../../src/systems/agility.js';
+import { BALANCE } from '../../src/core/formulas.js';
 import { PETS, PET_BASE, COMBAT_PET_SECONDS } from '../../src/data/pets.js';
 import { CAPES } from '../../src/data/capes.js';
 import { ACHIEVEMENTS } from '../../src/data/achievements.js';
@@ -18,7 +20,7 @@ import { XP_FOR_MAX_LEVEL } from '../../src/core/xp.js';
 import { FEATURES } from '../../src/ui/features.js';
 import { medalArt } from '../../src/ui/render.js';
 import { SKILL_ORDER, skillIcon } from './nav.mjs';
-import { actionAnchor } from '../lib/xref.mjs';
+import { actionAnchor, harvestXp } from '../lib/xref.mjs';
 import { path, res, resList, resIcon, icon, link, table, infobox, section, tiles, navbox, fmt, pct, time, esc, heroSprite, paintStyle } from '../lib/ui.mjs';
 
 const sec = { section: 'Skills', sectionPath: '/skills' };
@@ -63,28 +65,31 @@ function masterySection(id) {
     const actions = masteryActions(id);
     if (!actions.length) return '';
     const produces = ['mining', 'woodcutting', 'fishing', 'hunting', 'cooking', 'alchemy', 'firemaking', 'smithing'].includes(id);
-    const recipes = ['cooking', 'alchemy', 'firemaking', 'smithing'].includes(id);
+    const recipes = ['cooking', 'alchemy', 'firemaking', 'smithing', 'crafting'].includes(id);   // a jewel takes a bar and a gem
     return section('Mastery', `<p>Each of the ${actions.length} actions below has its own ${link('/mastery', 'mastery')}, from 1 to 99, earned by doing it. Every level adds ${pct(MASTERY_PER_LEVEL.speed, 1)} speed${produces ? `, ${pct(MASTERY_PER_LEVEL.double, 2)} chance of a double` : ''}${recipes ? ` and ${pct(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients` : ''}.</p>`
         + `<p class="chips">${actions.map(a => `<span class="chip">${esc(a.name)} <small>${a.levelReq}</small></span>`).join('')}</p>`);
 }
 
-function petSection(id) {
+export function petSection(id) {
     const pet = PETS.find(p => p.skill === id);
     if (!pet) return '';
     const hours = level => fmt(Math.round(PET_BASE / level / 3600));
+    const kills = level => fmt(Math.round(PET_BASE / COMBAT_PET_SECONDS / level));
     const when = id === 'farming'
         ? `A pet finds you as you harvest: each harvest's chance is its crop's growing time in seconds × your Farming level ÷ ${fmt(PET_BASE)}, so slow crops are likelier.`
-        : `A pet finds you while you train: on average after ${hours(50)} hours of ${esc(SKILLS[id].name)} at level 50, or ${hours(99)} hours at 99.`;
+        : id === 'combat'
+            ? `A pet finds you as you fight: each kill counts as ${COMBAT_PET_SECONDS} seconds of training, so on average after ${kills(50)} kills at combat level 50, or ${kills(99)} at 99.`
+            : `A pet finds you while you train: on average after ${hours(50)} hours of ${esc(SKILLS[id].name)} at level 50, or ${hours(99)} hours at 99.`;
     return section('Pet', `<div class="feature-row">${icon(`pet/${pet.id}`, 2)}<div><p><strong>${esc(pet.name)}</strong>: ${esc(pet.desc)}, for good.</p><p>${when} See ${link('/pets', 'Pets')}.</p></div></div>`);
 }
 
-function capeSection(id) {
+export function capeSection(id) {
     const cape = CAPES.find(c => c.skill === id);
     if (!cape) return '';
     return section('Skill cape', `<div class="feature-row">${capeHero(id)}<div><p>Level 99 earns the ${esc(SKILLS[id].name)} cape: <strong>${esc(cape.perk.charAt(0).toLowerCase() + cape.perk.slice(1))}</strong>, for good. Your hero puts it on at once. See ${link('/capes', 'Skill capes')}.</p></div></div>`);
 }
 
-function medalsSection(id) {
+export function medalsSection(id) {
     const list = ACHIEVEMENTS.filter(a => a.req.type === 'skillLevel' && a.req.skill === id || (id === 'smithing' || id === 'crafting') && a.id === 'artisan' || id === 'agility' && a.id === 'architect');
     if (!list.length) return '';
     return section('Medals', table(['Medal', 'For', 'Reward'], list.map(a => [`<span class="act">${medalArt(a, 1)} <a href="/medals#${a.id}">${esc(a.name)}</a></span>`, esc(a.desc), esc(a.reward)]), { sort: false }));
@@ -119,17 +124,19 @@ function smithingSections() {
         return [`<span class="act">${icon(`item/${type}/1`, 1)}<span>Copper ${esc(TYPE_NAMES[type])}</span></span>`, smithLevelReq(copper, type), SMITHING_BAR_COST[type], fmt(copper.xpPerBar * SMITHING_BAR_COST[type]), Math.round(base * SLOT_STATS[type].atk), Math.round(base * SLOT_STATS[type].def)];
     }));
     const steps = Array.from({ length: MAX_UPGRADE }, (_, i) => i + 1);
-    const anvil = table(['Reinforce to', 'Smithing level #', ...SMITHING_TYPES.map(t => `${esc(TYPE_NAMES[t])} bars #`), 'Essence (× tier) #'], steps.map(n => {
+    const anvil = table(['Reinforce to', 'Smithing level #', ...SMITHING_TYPES.map(t => `${esc(TYPE_NAMES[t])} #`), 'Essence #'], steps.map(n => {
         const costs = SMITHING_TYPES.map(type => reinforceCost({ type, tier: 1, upgrade: n - 1 }));
-        return [`+${n}`, costs[0].level, ...costs.map(c => c.bars), Math.ceil(2 * n)];
+        return [`+${n}`, costs[0].level, ...costs.map(c => c.bars), costs[0].essence];
     }), { sort: false });
+    // what salvage gives back past runite: more of the last metal's bars
+    const past = GEAR_TIERS.filter(t => anvilBarMult(t.tier) > 1);
     const metals = table(['Metal', 'Smelted at #', 'Works gear of', 'XP per bar #'], METALS.map(m => [res(m.bar), SMELTING_RECIPES.find(r => r.produces === m.bar)?.levelReq ?? '–', m.tier < METALS.length ? link(path.tier(m.name), `${m.name}`) : `${link(path.tier('Runite'), 'Runite')}, ${link(path.tier('Dragonbone'), 'Dragonbone')} (×2), ${link(path.tier('Abyssal'), 'Abyssal')} (×3)`, fmt(m.xpPerBar)]));
     return [
-        section('Smelting', `<p>Ore (and coal, from iron on) becomes bars.</p>${smelt}`),
+        section('Smelting', `<p>Ore becomes bars, with coal for the ${SMELTING_RECIPES.filter(r => r.consumes.coal).map(r => r.name.replace(/ Bar$/, '').toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')} bars.</p>${smelt}`),
         section('Forging', `<p>Copper bars forge a first set of weapons and armour. Every stronger piece drops in the fight (${link('/equipment', 'Equipment')}). A forged piece rolls its quality: common to rare.</p>${forge}`),
-        section('The anvil', `<p>From Smithing ${ANVIL_LEVEL_PER_UPGRADE}, the anvil works the weapons and armour you wear, with bars of the piece's own metal: <strong>reinforce</strong> it (+1 to +${MAX_UPGRADE}, each level adds to its attack and defence) or <strong>reroll</strong> its bonuses. Each step of reinforcing takes ${ANVIL_BAR_GROWTH} times the bars of the last and ${ANVIL_LEVEL_PER_UPGRADE} more Smithing levels; the essence grows with the piece's tier. Dragonbone and Abyssal pieces take runite bars, two and three times as many. Mastery of a metal takes bars off the work.</p>${anvil}<p class="muted">Bars shown for one piece; multiply the essence by the piece's tier.</p>`),
+        section('The anvil', `<p>From Smithing ${ANVIL_LEVEL_PER_UPGRADE}, the anvil works the weapons and armour you wear, with bars of the piece's own metal: <strong>reinforce</strong> it (+1 to +${MAX_UPGRADE}, each level adds to its attack and defence) or <strong>reroll</strong> its bonuses. Each step of reinforcing takes ${ANVIL_BAR_GROWTH} times the bars of the last and ${ANVIL_LEVEL_PER_UPGRADE} more Smithing levels; the essence grows with the piece's tier. Dragonbone and Abyssal pieces take runite bars, two and three times as many. Mastery of a metal takes bars off the work.</p>${anvil}<p class="muted">The bars each kind of piece takes, and the essence for a tier-1 piece: multiply it by the piece's tier.</p>`),
         section('Metals', `<p>Working a metal at the anvil pays its XP per bar, and grows that metal's mastery.</p>${metals}`),
-        section('Salvage', `<p>A weapon or piece of armour you salvage gives bars of its metal back: one for a common piece up to five for a legendary, and ${pct(ANVIL_REFUND, 0)} of the bars reinforcing it took. A forged copper piece gives back part of what it was made from.</p>`)
+        section('Salvage', `<p>A weapon or piece of armour you salvage gives bars of its metal back: one for a common piece up to five for a legendary (${past.map(t => t.name).join(' and ')} give ${esc(anvilMetal(past[0].tier).name.toLowerCase())} bars, ${past.map(t => `×${anvilBarMult(t.tier)}`).join(' and ')}), and ${pct(ANVIL_REFUND, 0)} of the bars reinforcing it took. A forged copper piece gives back part of what it was made from.</p>`)
     ].join('\n');
 }
 
@@ -143,7 +150,7 @@ function craftingSections() {
     const best = [[1, CRAFT_MAX_RARITY], ...[...CRAFT_RARITY_LEVELS].reverse()].map(([lv, r]) => `<li>From level ${lv}: up to <strong>${esc(RARITIES.find(x => x.id === r).name)}</strong></li>`).join('');
     const pouches = GOLD_SHOP.filter(e => e.craft).map(e => `<li>${link('/shop', esc(e.name))}: ${resList(e.gives)}, while Crafting is ${e.craft[0]}–${e.craft[1]}</li>`).join('');
     return [
-        section('Jewellery', `<p>A ring, earring or amulet is a precious bar set with a gem: ${JEWEL_BARS.map(b => `${res(b.bar)} from level ${b.levelReq}${b.powerMult > 1 ? ` (+${pct(b.powerMult - 1, 0)} power)` : ''}`).join(', ')}. The gem sets the piece's tier and power; rings come first, amulets last. A Voidstone piece is cut to the depth of the Abyss you have reached (from depth ${VOIDSTONE_DEPTH} it grows with it).</p>${jewels}
+        section('Jewellery', `<p>A ring, earring or amulet is a precious bar set with a gem: ${JEWEL_BARS.map(b => `${res(b.bar)} from level ${b.levelReq}${b.powerMult > 1 ? ` (+${pct(b.powerMult - 1, 0)} power)` : ''}`).join(', ')}. The gem sets the piece's tier and power; rings come first, amulets last. A Voidstone piece is cut to the deepest depth of the Abyss you have reached: past depth ${BALANCE.abyss.dropScalingFrom}, every depth makes it ${BALANCE.abyss.dropGrowth} times as strong, like the gear that drops there.</p>${jewels}
             <p>The best quality a piece can roll rises with your level:</p><ul>${best}</ul>`, { id: 'jewellery' }),
         section('Gem pouches', `<p>So that Crafting can be trained at any point, the Shop sells the low gems for gold, one pouch at a time as your level climbs:</p><ul>${pouches}</ul>`)
     ].join('\n');
@@ -151,10 +158,10 @@ function craftingSections() {
 
 function farmingSections() {
     const plots = FARMING_PLOTS.map((lv, i) => `<span class="chip">Plot ${i + 1} <small>level ${lv}</small></span>`).join('');
-    const rows = CROPS.map(c => [`<span id="crop-${c.id}" class="act">${card(c.id) || resIcon(c.produces, { scale: 1 })}<span>${esc(c.name)}</span></span>`, c.levelReq, time(c.growMs), `${c.yield[0]}–${c.yield[1]} ${res(c.produces, { name: true })}`, fmt(c.xp), fmt(c.seedGold), xpHour(c.xp, c.growMs)]);
+    const rows = CROPS.map(c => [`<span id="crop-${c.id}" class="act">${card(c.id) || resIcon(c.produces, { scale: 1 })}<span>${esc(c.name)}</span></span>`, c.levelReq, time(c.growMs), `${c.yield[0]}–${c.yield[1]} ${res(c.produces, { name: true })}`, fmt(c.xp), fmt(Math.round(harvestXp(c))), fmt(c.seedGold), xpHour(harvestXp(c), c.growMs)]);
     return [
         section('Plots', `<p>Plots open with your Farming level:</p><p class="chips">${plots}</p>`),
-        section('Crops', `<p>Seeds are bought with gold as you plant. A crop grows on the clock, while you do anything else and while you are away.</p>${table(['Crop', 'Level #', 'Grows in #', 'Harvest', 'XP #', 'Seeds (gold) #', 'XP/hour a plot #'], rows)}`)
+        section('Crops', `<p>Seeds are bought with gold as you plant. A crop grows on the clock, while you do anything else and while you are away. Every crop you harvest pays its XP, so a harvest of an average size pays the XP shown, before bonuses.</p>${table(['Crop', 'Level #', 'Grows in #', 'Harvest', 'XP a crop #', 'XP a harvest #', 'Seeds (gold) #', 'XP/hour a plot #'], rows, { wide: true })}`)
     ].join('\n');
 }
 
@@ -163,9 +170,14 @@ function agilitySections() {
         + table(['Obstacle', 'Bonus', 'Time #', 'XP #'], s.obstacles.map(o => [`<span id="${o.id.replace(/_/g, '-')}" class="act">${icon(`obstacle/${o.id}`, 1)} ${esc(o.name)}</span>`, esc(o.desc), time(o.interval), fmt(o.xp)]), { sort: false }), { level: 3, id: `slot-${i + 1}` })).join('\n');
     const levels = Array.from({ length: MAX_OBSTACLE_LEVEL - 1 }, (_, i) => i + 2);
     const upgrades = table(['Slot', ...levels.map(l => `Level ${l}`)], AGILITY_SLOTS.map((s, i) => [`Slot ${i + 1}`, ...levels.map(l => `${fmt(obstacleUpgradeGold(i, l - 1))} gold<br><small>Agility ${obstacleUpgradeLevelReq(i, l)}</small>`)]), { sort: false });
+    // what a level adds to an obstacle's XP in a run, read from the game's course (systems/agility.js), on the
+    // obstacle with the most XP so that rounding hides nothing
+    const top = AGILITY_SLOTS.flatMap(s => s.obstacles).reduce((a, b) => (b.xp > a.xp ? b : a));
+    const courseXp = level => courseDef({ agility: { built: [top.id], levels: [level] } }).xp;
+    const xpPerLevel = (courseXp(MAX_OBSTACLE_LEVEL) / courseXp(1) - 1) / (MAX_OBSTACLE_LEVEL - 1);
     return [
         section('The course', `<p>The course has ${AGILITY_SLOTS.length} slots, one obstacle in each. Every obstacle built is a bonus for good: it stays through prestige. Running the course takes as long as its obstacles together and pays their XP.</p>${slots}`),
-        section('Upgrades', `<p>A built obstacle can be raised to level ${MAX_OBSTACLE_LEVEL}: its bonus counts once per level. An upgrade costs gold only, and needs Agility levels:</p>${upgrades}`)
+        section('Upgrades', `<p>A built obstacle can be raised to level ${MAX_OBSTACLE_LEVEL}: its bonus counts once per level, and each level adds ${pct(xpPerLevel, 0)} of its XP to a run. An upgrade costs gold only, and needs Agility levels:</p>${upgrades}`)
     ].join('\n');
 }
 
@@ -225,6 +237,7 @@ export default {
             path: path.skill(id), title: SKILLS[id].name, ...sec, icon: skillIcon(id), art: FEATURES[id]?.art || '', focus: FEATURES[id]?.focus || '',
             summary: `${SKILLS[id].name} in Fantasy Idle: ${SKILLS[id].desc}`,
             aliases: { smithing: ['Smelting', 'Anvil', 'Forging', 'Reinforcing'], firemaking: ['Bonfire'], crafting: ['Jewellery crafting'], agility: ['Obstacles', 'Agility course'], farming: ['Crops', 'Plots', 'Seeds'] }[id] || [],
+            keywords: calculator(id) ? ['level calculator'] : [],
             build: help => skillPage(id, help)
         })),
         { path: '/tools', title: 'Tools', section: 'Items', sectionPath: '/items', icon: 'tool/axe', summary: 'Pickaxes, axes, bows, rods, tinderboxes and hoes: what each tier gives and costs.', aliases: ['Pickaxe', 'Axe', 'Bow', 'Fishing rod', 'Tinderbox', 'Hoe'], build: toolsPage }

@@ -1,7 +1,7 @@
 // The wiki as a set of pages: each registered once (its path, title, section and picture), then given its
 // body; the layout every page shares (the top bar with search, the side navigation, the footer); the
 // search index; and the checks run on the finished site (every link lands on a page, no page shows
-// "undefined" or "NaN").
+// "undefined", "NaN", "Infinity" or a number with an exponent).
 
 import { esc, icon, spriteStyle, hero } from './ui.mjs';
 import { slugify } from './md.mjs';
@@ -119,12 +119,16 @@ ${siteUrl ? `<meta property="og:url" content="${siteUrl}${page.path === '/' ? ''
 `;
     }
 
-    /** One entry per page for the search box: title, path, section, keywords and the picture's atlas cell. */
+    /**
+     * One entry per page for the search box: title, path, section, other names (ranked as the title is),
+     * keywords and the picture's atlas cell.
+     */
     function searchIndex() {
         return [...pages.values()].filter(p => !p.hidden).map(p => ({
             t: p.title,
             u: p.path,
             s: p.section || '',
+            a: p.aliases.map(a => a.toLowerCase()),
             k: [...p.aliases, ...p.keywords].join(' ').toLowerCase(),
             p: p.icon ? spriteStyle(p.icon) || '' : ''
         }));
@@ -148,7 +152,8 @@ ${siteUrl ? `<meta property="og:url" content="${siteUrl}${page.path === '/' ? ''
                 if (!html.has(target)) { problems.push(`${from}: link to missing page ${url}`); continue; }
                 if (hash && !ids.get(target).has(hash)) problems.push(`${from}: link to missing anchor ${url}`);
             }
-            if (/\bundefined\b|\bNaN\b|\[object Object\]/.test(h.replace(/<script[\s\S]*?<\/script>/g, ''))) problems.push(`${from}: shows undefined, NaN or [object Object]`);
+            // a number gone wrong: undefined, NaN, Infinity or one written with an exponent ("1e+25")
+            if (/\bundefined\b|\bNaN\b|\bInfinity\b|\d(?:\.\d+)?e[+-]\d+|\[object Object\]/.test(h.replace(/<script[\s\S]*?<\/script>/g, ''))) problems.push(`${from}: shows undefined, NaN, Infinity, a number with an exponent or [object Object]`);
         }
     }
 
