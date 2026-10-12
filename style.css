@@ -891,6 +891,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .clan-pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(251, 191, 36, 0.55); background: rgba(0, 0, 0, 0.35); }
 .clan-pip.on { background: radial-gradient(circle at 40% 35%, #fde68a, #d97706); box-shadow: 0 0 6px rgba(251, 191, 36, 0.7); }
 .status-pill.clan-next { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--heading); }   /* a felled boss: when the next comes */
+.clan-level { display: inline-block; margin-left: 0.3rem; padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid rgba(251, 191, 36, 0.5); color: var(--heading); font-size: 0.72rem; vertical-align: middle; }
 /* the clan boss fight (systems/clanfight.js): the boss glows while its guard is down, strikes then land */
 .clan-guard-hint { color: #fde68a; font-size: 0.78rem; }
 .battle.guard-down .foe .fighter-sprite { filter: drop-shadow(0 0 8px rgba(253, 224, 71, 0.95)) drop-shadow(0 0 22px rgba(250, 204, 21, 0.6)) brightness(1.2); }

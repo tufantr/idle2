@@ -1092,6 +1092,14 @@ Keeping it running:
       ceiling on a hit as in RuneScape's 200 or Guild Wars's guild lords); the owner chose the cap alone. A
       boss that has fallen shows how long until the next (Monday, 00:00 UTC). That week's boss was brought
       back to full health by hand
+- [x] **The clan boss comes back stronger: one kill a day** (the owner's design, 13 October 2026; DESIGN
+      §3.18): the week's boss, sized on Monday morning, fell that evening, since heroes grew 5 to 80 times in
+      a day. Now a felled boss is down until midnight UTC, then back as the next level at twice the health
+      (1× Monday … 64× Sunday); one not felled stays as it is; Monday starts over at level 1. Each level's
+      kill pays those who fought it. Monday's boss counts only members who played that past week. The cap
+      of a seventh is lifted (it hid honest players' real damage): an account flagged for impossible numbers
+      deals at most 1% of the boss an attack instead. Other games' guild bosses were looked at first (Hero
+      Wars, Clicker Heroes, Tap Titans 2, Raid: Shadow Legends, AFK Arena)
 - [x] **The server's save is the game** (the owner's ask, 13 October 2026: "just like any normal online
       game"; DESIGN §3.17): signed in, the game plays the server's save and never asks. "Two saves found"
       is gone; it came up on a plain reload, because the upload a page sends as it closes is a second newer

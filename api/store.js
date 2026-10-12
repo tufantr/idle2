@@ -125,6 +125,10 @@ async function ensureSchema() {
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS clan_attacks_fight ON clan_attacks (user_id, fight_at)`;
     // The kill's rewards paid (they are paid after the kill is marked, and paid again if that failed).
     await sql`ALTER TABLE clan_bosses ADD COLUMN IF NOT EXISTS kill_paid BOOLEAN DEFAULT FALSE`;
+    // A felled boss comes back the next day (UTC) twice as strong, until the week ends (api/index.js): its
+    // level, and each attack's, so a kill pays those who fought that level. Older rows are level 1.
+    await sql`ALTER TABLE clan_bosses ADD COLUMN IF NOT EXISTS level SMALLINT DEFAULT 1`;
+    await sql`ALTER TABLE clan_attacks ADD COLUMN IF NOT EXISTS level SMALLINT DEFAULT 1`;
     // Names are one account whatever their case ("Tufan" and "tufan"). Made only if the names already
     // there allow it: a failure here must not stop the API (createUser checks as well).
     try { await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username))`; } catch (err) {
@@ -286,21 +290,21 @@ async function removeMember(userId) {
 /** Members with their stored numbers, oldest member first. */
 async function clanMembers(clanId) {
     const { rows } = await sql`
-        SELECT u.id, u.username, u.metrics, u.flags, m.joined_at
+        SELECT u.id, u.username, u.metrics, u.flags, u.last_saved, m.joined_at
         FROM clan_members m JOIN users u ON u.id = m.user_id
         WHERE m.clan_id = ${clanId} ORDER BY m.joined_at ASC, u.id ASC
     `;
-    return rows.map(r => ({ userId: r.id, username: r.username, metrics: r.metrics || null, flags: r.flags || '[]', joinedAt: int(r.joined_at) }));
+    return rows.map(r => ({ userId: r.id, username: r.username, metrics: r.metrics || null, flags: r.flags || '[]', lastSaved: int(r.last_saved), joinedAt: int(r.joined_at) }));
 }
 
 // ---------- the weekly clan boss ----------
 
 function bossRow(r) {
-    return r ? { clanId: r.clan_id, week: r.week, maxHp: int(r.max_hp), hp: int(r.hp), killedAt: int(r.killed_at), lastHitUser: r.last_hit_user || null, settled: !!r.settled, killPaid: !!r.kill_paid } : null;
+    return r ? { clanId: r.clan_id, week: r.week, level: int(r.level) || 1, maxHp: int(r.max_hp), hp: int(r.hp), killedAt: int(r.killed_at), lastHitUser: r.last_hit_user || null, settled: !!r.settled, killPaid: !!r.kill_paid } : null;
 }
 
 async function getBoss(clanId, week) {
-    const { rows } = await sql`SELECT clan_id, week, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week = ${week}`;
+    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week = ${week}`;
     return bossRow(rows[0]);
 }
 
@@ -335,7 +339,7 @@ async function damageBoss(clanId, week, damage) {
     const { rows } = await sql`
         UPDATE clan_bosses SET hp = GREATEST(0, hp - ${damage})
         WHERE clan_id = ${clanId} AND week = ${week} AND hp > 0
-        RETURNING clan_id, week, max_hp, hp, killed_at, last_hit_user, settled
+        RETURNING clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid
     `;
     return bossRow(rows[0]);
 }
@@ -350,6 +354,19 @@ async function markBossKilled(clanId, week, userId, now) {
     return rows.length > 0;
 }
 
+/**
+ * The felled boss back as the next level, at `maxHp` and full health: once (the caller who moves it gets
+ * true), and only after its kill was paid (a payout half done is finished first, by the caller).
+ */
+async function nextLevel(clanId, week, level, killedAt, maxHp) {
+    const { rows } = await sql`
+        UPDATE clan_bosses SET level = ${level + 1}, max_hp = ${maxHp}::bigint, hp = ${maxHp}::bigint, killed_at = 0, last_hit_user = NULL, kill_paid = FALSE
+        WHERE clan_id = ${clanId} AND week = ${week} AND level = ${level} AND killed_at = ${killedAt}::bigint AND kill_paid = TRUE
+        RETURNING clan_id
+    `;
+    return rows.length > 0;
+}
+
 /** The kill's rewards are paid (each with its own dedupe key, so paying them again paid nothing twice). */
 async function markKillPaid(clanId, week) {
     await sql`UPDATE clan_bosses SET kill_paid = TRUE WHERE clan_id = ${clanId} AND week = ${week}`;
@@ -357,7 +374,7 @@ async function markKillPaid(clanId, week) {
 
 /** Earlier weeks of this clan that have not paid out their weekly rewards yet. */
 async function unsettledBosses(clanId, beforeWeek) {
-    const { rows } = await sql`SELECT clan_id, week, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week < ${beforeWeek} AND settled = FALSE`;
+    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week < ${beforeWeek} AND settled = FALSE`;
     return rows.map(bossRow);
 }
 
@@ -377,12 +394,12 @@ async function claimSettlement(clanId, week) {
  * means a try at the next. Returns the slot. With `fightAt` (the fight's own mark), the same fight
  * recorded already throws a unique violation on the constraint clan_attacks_fight.
  */
-async function recordAttack({ clanId, userId, week, day, damage, now, fightAt = null }) {
+async function recordAttack({ clanId, userId, week, day, damage, now, fightAt = null, level = 1 }) {
     for (let tries = 0; ; tries++) {
         try {
             const { rows } = await sql`
-                INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at, fight_at)
-                SELECT ${clanId}::int, ${userId}::int, ${week}::varchar, ${day}::varchar, COALESCE(MAX(slot), 0) + 1, ${damage}::bigint, ${now}::bigint, ${fightAt}::bigint
+                INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at, fight_at, level)
+                SELECT ${clanId}::int, ${userId}::int, ${week}::varchar, ${day}::varchar, COALESCE(MAX(slot), 0) + 1, ${damage}::bigint, ${now}::bigint, ${fightAt}::bigint, ${level}::smallint
                 FROM clan_attacks WHERE user_id = ${userId}::int AND day = ${day}::varchar
                 RETURNING slot
             `;
@@ -435,6 +452,12 @@ async function spendCharge(userId, day, perDay, bank) {
 /** Give a spent attack back (the boss was already down when it landed). */
 async function refundCharge(userId, bank) {
     await sql`UPDATE clan_charges SET charges = LEAST(${bank}::int, charges + 1) WHERE user_id = ${userId}`;
+}
+
+/** Who fought a level of a clan's week (its kill pays them). */
+async function levelFighters(clanId, week, level) {
+    const { rows } = await sql`SELECT DISTINCT user_id FROM clan_attacks WHERE clan_id = ${clanId} AND week = ${week} AND level = ${level}`;
+    return rows.map(r => r.user_id);
 }
 
 /** Total damage per user for a clan's week, highest first. */
@@ -540,8 +563,8 @@ module.exports = {
     createUser, findUserByName, userNameOf, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
-    getBoss, createBoss, bossShares, resizeBoss, damageBoss, markBossKilled, markKillPaid, unsettledBosses, claimSettlement,
-    recordAttack, attackByFight, deleteAttack, attacksToday, weeklyDamage,
+    getBoss, createBoss, bossShares, resizeBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
+    recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts

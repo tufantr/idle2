@@ -2082,14 +2082,17 @@ function clanBossPanel(game, social, boss, pct) {
     const pending = !!game.state.clanResult;
     const pips = Array.from({ length: bank }, (_, i) => `<i class="clan-pip${i < waiting ? ' on' : ''}"></i>`).join('');
     const ready = waiting > 0 && !boss.killed && !social.attacking && !fighting && !titanFight && !pending;
+    // felled: back at midnight UTC as the next level, or (on the week's last day) a new boss on Monday
+    const lastDay = !(boss.nextInMs > 0) || boss.nextInMs >= boss.endsInMs;
+    const comes = lastDay ? `A new boss in ${duration(boss.endsInMs)}` : `Level ${(boss.level || 1) + 1} in ${duration(boss.nextInMs)}`;
     return `<div class="clan-boss${ready ? ' ready' : ''}">
         <span class="clan-boss-face">${sprite(`mon/${look.name}`, { scale: 2, cls: boss.killed ? 'soft silhouette' : 'soft', fallback: '🐉' })}</span>
         <div class="clan-boss-text">
-            <div><b>${esc(look.name)}</b> <span class="muted small">${boss.killed ? `defeated${boss.lastHit ? ` · last hit by ${esc(boss.lastHit)}` : ''}` : `this week's boss · ends in ${duration(boss.endsInMs)}`}</span></div>
+            <div><b>${esc(look.name)}</b>${boss.level ? ` <span class="clan-level">Level ${boss.level}</span>` : ''} <span class="muted small">${boss.killed ? `defeated${boss.lastHit ? ` · last hit by ${esc(boss.lastHit)}` : ''}` : `this week's boss · ends in ${duration(boss.endsInMs)}`}</span></div>
             <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
             <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
             <div class="btn-row">${fighting ? '<span class="status-pill fighting">Fighting now</span>'
-                : boss.killed && !pending ? `<span class="status-pill clan-next">${glyph('time')} Next boss in ${duration(boss.endsInMs)}</span>`
+                : boss.killed && !pending ? `<span class="status-pill clan-next">${glyph('time')} ${comes}</span>`
                 : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : 'Fight the boss'}</button>`}
                 <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${Number(social.attacksPerDay) || 3} more come each day, up to ${bank}">${pips}</span></div>
         </div>

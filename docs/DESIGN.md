@@ -766,7 +766,8 @@ with the game's own stat code; the client never submits damage or scores.
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
   places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
 - **The weekly clan boss** (ISO weeks, UTC). Its health is set when the week's boss first appears:
-  12 × the combined attack of members who aren't flagged, each member's at its best of the past week
+  12 × the combined attack of members who aren't flagged and have played (uploaded) in the past week
+  (one away doesn't make it bigger for the rest), each member's at its best of the past week
   (a weak save uploaded just before Monday doesn't shrink the boss) and counted no higher than their best
   stage allows, capped so no save can overflow it. Each member's share is kept all week, and the boss is
   the size of the clan as it is: one who leaves or is removed takes away all of their share but the
@@ -774,6 +775,17 @@ with the game's own stat code; the client never submits damage or scores.
   once and leave), and one who comes back the same week brings it back (leaving and rejoining in turn
   used to shrink the boss to 1 health). A member left in a clan deleted under them is let out of it. The ten lands' rulers take turns as the boss, one an ISO
   week (`clanBossFor`, `src/data/social.js`); the server keeps only its health.
+- **Levels: one kill a day** (October 2026, the owner's design, after a boss sized on Monday morning fell
+  that evening: heroes grew 5 to 80 times in that day). A felled boss stays down until the next UTC
+  midnight, then comes back as the next level at twice the health (`BOSS_LEVEL_GROWTH`), full: 1× on
+  Monday, then 2×, 4×… up to 64× on Sunday if it falls every day. One not felled stays as it is, damage
+  and all; Monday brings a new boss at level 1, sized again. At most one kill a day, so at most seven a
+  week, which also bounds what a cheat could farm (no top level needed). Each level's kill pays everyone
+  who fought that level (attacks carry their level) and the last hit; level 1 keeps the reward keys from
+  before levels, so an older week is never paid twice. A member leaving resizes the current level from
+  the level-1 shares. Other games looked at: Hero Wars' guild boss beaten again at full health, Clicker
+  Heroes' Immortals stronger after each kill, Tap Titans 2's raid levels, Raid: Shadow Legends' daily
+  Clan Boss with damage chests.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
   (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen like the Titan's (`state.combat.mode` =
@@ -787,16 +799,13 @@ with the game's own stat code; the client never submits damage or scores.
   `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
   and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
   rule inside the fight, expected values, no dice, Focus, potions or timed boosts), never more than twice
-  what the save's best stage allows; a forged list deals no more than a perfect player. **One attack takes
-  at most a seventh of the boss's health** (`CLAN_MIN_ATTACKS_TO_FELL`, October 2026, after a forged save
-  felled a boss with one attack of the 100T ceiling): every boss takes at least seven attacks, more than
-  the six anyone can bank, so no save fells one alone in a sitting. The owner chose a cap over bans (the
-  cap holds whatever a save says; items and tokens in a save are not checked, and a flagged account still
-  attacks). The best honest fight stays under it, even alone in a clan: the boss is sized at twelve of each
-  member's attacks without a strike and perfect strikes add at most 60% (12/7 is 1.71); the answer says
-  `capped` and the card "Capped" when an attack hits it. A card shows the
-  damage and the member's place in the clan that week. A felled boss shows when the next comes (the week
-  ends Monday 00:00 UTC). A fight in progress never survives a reload (the
+  what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
+  for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
+  October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
+  cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real
+  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`,
+  the card why). A card shows the damage and the member's place in the clan that week; a felled boss
+  shows which level comes back and when ("Level 2 in 5h 12m", or a new boss on Monday). A fight in progress never survives a reload (the
   attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
   atomically, so parallel requests can't spend one twice); an attack given back if the boss was already

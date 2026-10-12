@@ -21,7 +21,7 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml } from './ui/format.js';
 import { SKILLS } from './data/skills.js';
-import { CLAN_POLL_MS, CLAN_MIN_ATTACKS_TO_FELL, clanBossFor } from './data/social.js';
+import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
@@ -976,9 +976,9 @@ async function sendClanResult(now = false) {
         ui.social.attacksLeft = answer.attacksLeft;
         ui.social.fetchedAt = 0;   // the Clan tab brings its board up to date when it is next shown
         const look = clanBossFor(answer.week || result.week);
-        const lines = [answer.killed ? 'The boss is down!' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
+        const lines = [answer.killed ? (answer.level ? 'The boss is down! It comes back at midnight UTC, twice as strong' : 'The boss is down!') : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
             answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-            answer.capped ? `Capped: one attack takes at most 1/${CLAN_MIN_ATTACKS_TO_FELL} of its health` : ''].filter(Boolean);
+            answer.capped ? 'Capped: this account\'s save showed impossible numbers' : ''].filter(Boolean);
         rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
             kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: 4200 });
         sound.play(answer.killed ? 'victory' : 'chest');
