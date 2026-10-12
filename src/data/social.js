@@ -16,6 +16,12 @@ export const CLAN_ATTACK_BANK = 6;
 export const CLAN_ATTACK_SECONDS = 30;
 export const CLAN_FIGHT_MS = CLAN_ATTACK_SECONDS * 1000;
 export const CLAN_GUARD = { first: 4000, every: 6000, open: 2000, mult: 2.5 };
+// One attack takes at most 1/CLAN_MIN_ATTACKS_TO_FELL of the boss's health, whatever a save says (a forged
+// one once dealt the 100T ceiling and felled a boss at once), so every boss takes at least this many
+// attacks: more than the CLAN_ATTACK_BANK, so no one fells it alone in one sitting. An honest attack stays
+// under it even alone in a clan: the boss is sized at 12 of each member's attacks without a strike
+// (api/index.js), and perfect strikes add at most 60% (12/7 is 1.71).
+export const CLAN_MIN_ATTACKS_TO_FELL = 7;
 
 /**
  * The week's clan boss: the ten lands' rulers in turn, one a week (ISO weeks, as the server counts

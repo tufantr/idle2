@@ -2090,6 +2090,7 @@ function clanBossPanel(game, social, boss, pct) {
             <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
             <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
             <div class="btn-row">${fighting ? '<span class="status-pill fighting">Fighting now</span>'
+                : boss.killed && !pending ? `<span class="status-pill clan-next">${glyph('time')} Next boss in ${duration(boss.endsInMs)}</span>`
                 : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : 'Fight the boss'}</button>`}
                 <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${Number(social.attacksPerDay) || 3} more come each day, up to ${bank}">${pips}</span></div>
         </div>

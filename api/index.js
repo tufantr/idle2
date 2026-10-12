@@ -532,7 +532,7 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
 app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req, res) => {
     const now = Date.now();
     const eng = await engine();
-    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank } = eng;
+    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_MIN_ATTACKS_TO_FELL: fewest } = eng;
     const mine = await clanOf(req.user.id);
     if (!mine) return res.status(400).json({ error: 'Join a clan first.' });
     const clanId = mine.clan.id;
@@ -558,11 +558,13 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     if (boss.hp <= 0) return defeated();
     // The fight as the player fought it: when they struck, and how long it lasted (a page from before
     // the fight sends neither: a whole fight without a strike). The damage is reckoned here, from the
-    // stored hero; no save can deal more than twice what its best stage allows.
+    // stored hero; no save can deal more than twice what its best stage allows, nor more than 1/7 of the
+    // boss's health (CLAN_MIN_ATTACKS_TO_FELL), so no save fells a boss alone in a sitting.
     let fight = null;
     try { fight = eng.clanAttackFromSave(JSON.parse(save.state), body.strikes, body.ms, now); } catch (err) { console.error('clan fight failed', err); }
     const cap = safeDamage(eng.plausibleAttackDamage(parseMetrics(save.metrics)?.bestStage) * 2) || MAX_ATTACK_DAMAGE;
-    const damage = Math.max(1, Math.min(safeDamage(fight?.damage), cap));
+    const reckoned = Math.max(1, Math.min(safeDamage(fight?.damage), cap));
+    const damage = Math.min(reckoned, Math.max(1, Math.ceil(boss.maxHp / fewest)));
     const left = await store.spendCharge(req.user.id, dayNumber(now), perDay, bank);
     if (left === null) return res.status(400).json({ error: `No attacks waiting: ${perDay} more come each day (midnight UTC), up to ${bank}.` });
     const day = dayId(now);
@@ -583,7 +585,7 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     if (killed) await payKill(clanId, { ...after, killedAt: now, lastHitUser: req.user.id }, now);
     const board = await store.weeklyDamage(clanId, boss.week);
     res.json({
-        damage, strikes: fight?.guarded || 0, hp: after.hp, maxHp: boss.maxHp, killed, attacksLeft: left,
+        damage, capped: damage < reckoned, strikes: fight?.guarded || 0, hp: after.hp, maxHp: boss.maxHp, killed, attacksLeft: left,
         rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: boss.week
     });
 }));

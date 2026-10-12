@@ -770,8 +770,16 @@ with the game's own stat code; the client never submits damage or scores.
   `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
   and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
   rule inside the fight, expected values, no dice, Focus, potions or timed boosts), never more than twice
-  what the save's best stage allows; a forged list deals no more than a perfect player. A card shows the
-  damage and the member's place in the clan that week. A fight in progress never survives a reload (the
+  what the save's best stage allows; a forged list deals no more than a perfect player. **One attack takes
+  at most a seventh of the boss's health** (`CLAN_MIN_ATTACKS_TO_FELL`, October 2026, after a forged save
+  felled a boss with one attack of the 100T ceiling): every boss takes at least seven attacks, more than
+  the six anyone can bank, so no save fells one alone in a sitting. The owner chose a cap over bans (the
+  cap holds whatever a save says; items and tokens in a save are not checked, and a flagged account still
+  attacks). The best honest fight stays under it, even alone in a clan: the boss is sized at twelve of each
+  member's attacks without a strike and perfect strikes add at most 60% (12/7 is 1.71); the answer says
+  `capped` and the card "Capped" when an attack hits it. A card shows the
+  damage and the member's place in the clan that week. A felled boss shows when the next comes (the week
+  ends Monday 00:00 UTC). A fight in progress never survives a reload (the
   attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
   atomically, so parallel requests can't spend one twice); an attack given back if the boss was already

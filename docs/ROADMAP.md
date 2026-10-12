@@ -1083,6 +1083,15 @@ Keeping it running:
       checks its pictures, its numbers against the game's, Farming's XP an hour and the search index.
       Not done, for later: a crafting tool in the hero's hands at the Crafting stage (an atlas cell to draw),
       and claiming gifts and clan rewards in two steps (an answer lost in the network loses them today)
+- [x] **A cap on clan damage** (the owner's report, 13 October 2026: a forged save felled the week's boss
+      with one attack of 100T, and the tab said nothing of when the next would come; DESIGN §3.18): one
+      attack takes at most a seventh of the boss's health, whatever the save says, so every boss takes at
+      least seven attacks, more than anyone can bank. No bans: the best fight an honest player can fight
+      stays under it, even alone in a clan, and the attack card says "Capped" when one hits it. Other
+      games were looked at first (bans and reports in Tap Titans 2, numbers clamped by the server, a
+      ceiling on a hit as in RuneScape's 200 or Guild Wars's guild lords); the owner chose the cap alone. A
+      boss that has fallen shows how long until the next (Monday, 00:00 UTC). That week's boss was brought
+      back to full health by hand
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

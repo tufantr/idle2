@@ -577,6 +577,42 @@ test('attacks given back by hand still land: each attack takes the next free slo
     assert.equal((await post('/clan/attack', {}, t)).status, 400, 'then none');
 });
 
+test('one attack takes at most a seventh of the boss: a forged save cannot fell it alone, the best honest fight is never capped', async () => {
+    // regression (the owner's report): a forged save joined after the boss appeared and felled it with one
+    // attack of 100T, the most any attack could deal
+    const WEEK = 7 * 24 * 3600 * 1000;
+    const monday = Date.UTC(2026, 8, 28);
+    clock = monday + Math.ceil((clock - monday) / WEEK) * WEEK + 3600 * 1000;   // Monday 01:00 UTC: two days of one boss
+    const host = await register('seventh_host');
+    const { clanId } = await (await post('/clans', { name: 'Sevenths', tag: 'SVN' }, host)).json();
+    await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, host);
+    const { maxHp } = (await (await get('/clan', host)).json()).boss;
+    const most = Math.ceil(maxHp / 7);
+
+    const forger = await register('forged_giant');
+    await post('/save', { state: heroSave({ tokens: 1e19, bestStage: 400 }) }, forger);
+    await post('/clans/join', { clanId }, forger);   // after the boss appeared: adds nothing to it
+    for (let day = 0; day < 2; day++) {
+        for (let i = 0; i < 3; i++) {
+            const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, forger)).json();
+            assert.equal(hit.damage, most, `day ${day + 1}, attack ${i + 1}: a seventh of ${maxHp}`);
+            assert.equal(hit.capped, true);
+            assert.equal(hit.killed, false);
+        }
+        clock += 24 * 3600 * 1000;
+    }
+    const boss = (await (await get('/clan', host)).json()).boss;
+    assert.equal(boss.killed, false, 'six attacks, the most anyone can bank, leave it standing');
+    assert.equal(boss.hp, maxHp - 6 * most);
+    assert.ok(boss.endsInMs > 0 && boss.endsInMs < WEEK);
+
+    // alone in the clan when it was sized, the host's perfect fight stays under the cap
+    const quarters = Array.from({ length: 121 }, (_, i) => i * 250);
+    const best = await (await post('/clan/attack', { strikes: quarters, ms: 30000 }, host)).json();
+    assert.equal(best.capped, false, `${best.damage} of ${maxHp}`);
+    assert.ok(best.damage < most);
+});
+
 // ---------- the October 2026 bug sweep (docs/ROADMAP.md, Phase 9) ----------
 
 test('an upload made over a cloud save the game had not seen is refused (409), and one over the right one is stored', async () => {

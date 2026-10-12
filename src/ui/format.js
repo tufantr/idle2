@@ -28,6 +28,7 @@ export function duration(ms) {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
+    if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
     if (h) return `${h}h ${m}m`;
     if (m) return `${m}m ${sec}s`;
     return `${sec}s`;
