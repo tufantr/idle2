@@ -244,7 +244,7 @@ setInterval(() => {
         if (!tickErrorShown) { toast('Something went wrong in the game loop — details in the console.', 'error'); tickErrorShown = true; }
         game.now = now;
     }
-    handleEvents(game.drainEvents());
+    try { handleEvents(game.drainEvents()); } catch (err) { console.error('Events failed', err); }   // never at the cost of the save below
     if (game.state.clanResult && cloud.loggedIn && cloudReady && !pendingConflict) sendClanResult();   // a clan attack fought, not yet sent
     if (now - lastSave > AUTOSAVE_MS) save(now);
     // (not while a save that couldn't be read waits to be restored: these would write over its backups)
@@ -262,12 +262,15 @@ setInterval(() => {
 }, TICK_MS);
 
 function frame(now) {
-    patchLive(game, ui);
-    scene.frame(game);
-    stage.frame(game);
-    guide.frame({ modal: !!ui.modalOpen, card: !!document.querySelector('#celebrate .celebration') });
-    paintGold(now);
+    // (the next frame is asked for first: a frame that throws must not stop the scene for the session)
     requestAnimationFrame(frame);
+    try {
+        patchLive(game, ui);
+        scene.frame(game);
+        stage.frame(game);
+        guide.frame({ modal: !!ui.modalOpen, card: !!document.querySelector('#celebrate .celebration') });
+        paintGold(now);
+    } catch (err) { console.error('Frame failed', err); }
 }
 
 // The gold counter rolls up to a new total instead of jumping (and drops at once when gold is spent).

@@ -33,7 +33,7 @@ Reaching Cooking {{achievementById('chef').req.level}} earns the {{achievementBy
 
 ## The Fasting Trial
 
-In the {{trialById('fasting').name}} [[Trials|Trial]] your hero eats nothing, and no health comes back while he fights: no regeneration and no lifesteal. He still heals while he rests out of the fight.
+In the {{trialById('fasting').name}} [[Trials|Trial]] your hero eats nothing, and no health comes back while he fights: no regeneration, no lifesteal and no level-up's refill. He still heals while he rests out of the fight.
 
 ## The best food for your level
 

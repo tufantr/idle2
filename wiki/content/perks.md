@@ -16,7 +16,7 @@ Your first prestige brings your first point, or {{BALANCE.prestige.spPerPrestige
 
 - Each level of a perk costs one skill point. You buy one level at a time, up to the perk's limit (the table below).
 - A level can't be taken back, but it is never wasted either: what you buy is yours for good.
-- A perk's bonus adds to the same kind of bonus from everywhere else. Knight's attack, for example, joins the attack bonuses from your [[Combat|Combat level]], [[Medals|medals]], [[Pets|pets]] and [[Equipment|gear]], and the total multiplies your attack.
+- A perk's bonus adds to the same kind of bonus from everywhere else. Knight's attack, for example, joins the attack bonuses from your [[Combat|Combat level]], [[Medals|medals]], [[Pets|pets]] and potions, and the total multiplies the attack of your fists and [[Equipment|gear]].
 - Filling every perk except Paragon takes {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + p.max, 0)}} skill points.
 
 ## Good first picks

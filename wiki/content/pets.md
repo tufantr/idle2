@@ -23,6 +23,6 @@ A pet's bonus counts for good from the moment it finds you (the table below has 
 
 ## Your companion
 
-A pet keeps your hero company too. In the fight, one pet stands at your hero's feet: the one you pick in the Hall's Collection (tap a found pet there to take it along), or else {{PETS.find(p => p.skill === 'combat').name}}, or else the first pet you found. On a skill's tab, that skill's own pet stands beside your hero while you work, once you have found it (until then, your companion does). You can pat your pet by tapping it.
+A pet keeps your hero company too. In the fight, one pet stands at your hero's feet: the one you pick in the Hall's Collection (tap a found pet there to take it along), or else {{PETS.find(p => p.skill === 'combat').name}}, or else another pet you have found. On a skill's tab, that skill's own pet stands beside your hero while you work, once you have found it (until then, your companion does). You can pat your pet by tapping it.
 
 The Collection shows every pet: the ones you have found by name, and the rest as silhouettes, with how long one might take at your level.

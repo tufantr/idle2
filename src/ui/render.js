@@ -2027,7 +2027,9 @@ export function renderClan(game, ui, cloud) {
         : '';
     const discord = DISCORD_INVITE ? `<a class="mini-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Clan chat on Discord</a>` : '';
     let body = '';
-    if (!social.clan) {
+    // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
+    if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
+    else if (!social.clan) {
         const rows = (social.clans || []).map(c => `<tr><td class="wrap"><b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">

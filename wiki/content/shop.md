@@ -3,7 +3,7 @@ path: /shop
 keywords: shop, supplies, gold shop, buy, prices, coal wagon, firewood bundle, herb pouch, hunter's cache, bait tin, essence cache, gem pouch, amethyst pouch, topaz pouch, sapphire pouch, sell, selling, gem pouches
 aliases: Supplies, Gold shop, Gem pouches
 ---
-The Shop sells supplies for gold: coal, logs, herbs, meat, bait, essence and, for [[Crafting]], gems. It opens early, after the first boss falls. Besides the supplies it holds your [[Prestige|prestige]] panel and the [[Perks]] you buy with skill points. The table below lists every supply.
+The Shop sells supplies for gold: coal, logs, herbs, meat, bait, essence and, for [[Crafting]], gems. It opens early, after the first boss falls. Once [[Prestige|prestige]] has opened it also holds your prestige panel, and after your first prestige the [[Perks]] you buy with skill points. The table below lists every supply.
 
 ## Prices follow your best stage
 

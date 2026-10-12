@@ -19,7 +19,7 @@ Other places answer work in a skill: [[Smithing]] once you have mined some ore, 
 
 The breathers count only the time you are there: the page in view, or a click or key press in the last few minutes. Time away and a tab left in the background do not count.
 
-Nothing opens while your hero is fighting a boss, either: the boss is the moment, and a place that is due waits until the fight with it is over.
+Nothing opens while your hero is fighting a boss on his way up, either (a boss you stay on holds nothing back): the boss is the moment, and a place that is due waits until the fight with it is over.
 
 ## Coming back
 

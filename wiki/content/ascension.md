@@ -8,7 +8,7 @@ Ascension is the reset above prestige. It is a [[Prestige|prestige]] that also g
 
 From best stage {{ASCEND_FROM}}, the prestige dialog has an "Or ascend" row: the Stars an Ascension would pay you, what every prestige would pay after it, and an Ascend button. The button asks once more, in a dialog of its own, before anything happens, and a backup of your save is kept in Settings. Once you have ascended, the row stays open for good.
 
-An Ascension needs everything a prestige needs (a run of {{BALANCE.prestige.minRunMs / 60000}} minutes that reached stage {{BALANCE.prestige.minStage}}, and no [[The Titan|Titan]] fight or [[Dungeons|dungeon]] run under way), and enough tokens to be worth at least one Star: {{fmt(Math.ceil(STAR_BASE * 10 ** (1 / STARS_PER_DECADE)))}}.
+An Ascension needs everything a prestige needs (a run of {{BALANCE.prestige.minRunMs / 60000}} minutes that reached stage {{BALANCE.prestige.minStage}}, and no [[The Titan|Titan]] fight, clan fight or [[Dungeons|dungeon]] run under way), and enough tokens to be worth at least one Star: {{fmt(Math.ceil(STAR_BASE * 10 ** (1 / STARS_PER_DECADE)))}}.
 
 ## What it gives up, and what it pays
 

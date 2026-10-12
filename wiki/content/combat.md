@@ -27,13 +27,13 @@ On the stage ladder a fall sends your hero back to the first stage of the land h
 
 While he rests, **Stay at camp** keeps him out of the fight; starting work in a skill does the same.
 
-In a [[Dungeons|dungeon]] a fall loses the run, and at [[The Titan]] it ends the attempt. Either way he rests, then fights on at the stage he left.
+In a [[Dungeons|dungeon]] a fall loses the run: he rests, then fights on at the stage he left. At [[The Titan]] a fall ends the attempt, and he goes back to what he was doing when you challenged it: his work, his rest, or (after a rest) the fight at the stage he left.
 
 ## Health and regeneration
 
 Your hero's health is {{BASE.baseHp}} at combat level 1 and {{BASE.hpPerCombatLevel}} more for every level after (the table below), plus one for every {{1 / BASE.hpPerDef}} defence his gear carries. Health bonuses then multiply it: [[Perks]], [[Medals]], the [[Camp]]'s Hearth, the Health Potion, prestige tokens and more.
 
-Health does not refill between monsters. While he fights your hero regains {{pct(BALANCE.combat.regenInCombat)}} of his health a second. Out of the fight (resting, retreated or working in a skill) he regains {{pct(BALANCE.combat.regenResting, 0)}} a second, from empty to full in {{time(1000 / BALANCE.combat.regenResting)}}. A combat level-up fills his health at once. [[Food]] and lifesteal do the rest in a long fight.
+Health does not refill between monsters. While he fights your hero regains {{pct(BALANCE.combat.regenInCombat)}} of his health a second. Out of the fight (resting, retreated or working in a skill) he regains {{pct(BALANCE.combat.regenResting, 0)}} a second, from empty to full in {{time(1000 / BALANCE.combat.regenResting)}}. A combat level-up fills his health at once (not while fighting in the Fasting [[Trials|Trial]]). [[Food]] and lifesteal do the rest in a long fight.
 
 ## Attack, defence and damage
 
@@ -105,7 +105,7 @@ Each kill rolls for loot from the land it is in. A boss's first fall in a run is
 - From depth {{VOIDSTONE_DEPTH}} of the Abyss (stage {{AUTHORED_STAGES + (VOIDSTONE_DEPTH - 1) * STAGES_PER_ZONE + 1}}), a boss's first fall (and a Titan that deep) also leaves a [[Voidstone]] {{pct(VOIDSTONE_CHANCE, 0)}} of the time. Nothing else gives one.
 - Drop chance bonuses (the Fortune perk, medals, dungeon milestones, weekend events) raise these chances.
 - Which piece of gear drops, and how its tier, rarity and kind are picked, is on [[Equipment]].
-- A new hero's first kill leaves him a sword, and the first boss he ever beats always leaves a piece of armour.
+- A new hero's first kill leaves him a sword, and the first boss he beats to move on (not one he stays on) always leaves a piece of armour.
 
 ## Gilded monsters
 

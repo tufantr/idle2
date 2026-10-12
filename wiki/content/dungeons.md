@@ -18,7 +18,7 @@ There are no packs and no gilded monsters in a dungeon, and a [[Prestige|prestig
 
 ## Losing a run
 
-A run is lost, with no chest, when your hero falls, when the boss outlasts its timer, or when you leave: **Leave dungeon**, travelling on the world map, entering another dungeon, challenging [[The Titan]] or starting work in a skill. Your hero goes back to the stage he left, after a rest if he fell (**Leave dungeon** also takes him out of the fight). Whatever the kills paid is kept.
+A run is lost, with no chest, when your hero falls, when the boss outlasts its timer, or when you leave: **Leave dungeon**, travelling on the world map, entering another dungeon, challenging [[The Titan]], fighting the clan boss or starting work in a skill. Your hero goes back to the stage he left, after a rest if he fell (**Leave dungeon** also takes him out of the fight). Whatever the kills paid is kept.
 
 > Tip: the Dungeons tab and the world map tell you how a boss fight would go, from your hero's numbers without food, regeneration, lifesteal or combo: how long the boss would take to fall against its timer, and how long your hero would last. Green is ready, amber is close, red is not yet.
 

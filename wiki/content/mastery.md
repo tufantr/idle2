@@ -17,7 +17,7 @@ Every action you repeat has a **mastery** of its own, from level 1 to {{MASTERY_
 
 Each time you complete an action, its mastery gains one mastery XP for every second the action takes at base speed, before any speed bonus. An hour spent on anything is worth the same, and anything that makes you faster (tools, perks, boosts) makes you master faster too. At the anvil, every bar worked counts as a second.
 
-Mastery levels follow the skills' [[XP table]], divided by {{MASTERY_XP_DIVISOR}}. The first levels come in minutes, and level {{MASTERY_MAX_LEVEL}} takes about {{Math.round(xpForLevel(MASTERY_MAX_LEVEL) / MASTERY_XP_DIVISOR / 3600)}} hours on one action at base speed, usually long after the skill itself has reached {{MAX_LEVEL}}. The log notes each action's mastery at {{MASTERY_MILESTONES.join(', ').replace(/, (?=[^,]*$)/, ' and ')}}, and level {{MASTERY_MAX_LEVEL}} gets a card. Mastery grows while you are away too, as your hero keeps working.
+Mastery levels follow the skills' [[XP table]], divided by {{MASTERY_XP_DIVISOR}}. The first levels come in minutes, and level {{MASTERY_MAX_LEVEL}} takes about {{Math.round(xpForLevel(MASTERY_MAX_LEVEL) / MASTERY_XP_DIVISOR / 3600)}} hours on one action at base speed, usually before the skill itself reaches {{MAX_LEVEL}}; all of a skill's actions together take longer than its {{MAX_LEVEL}}. The log notes each action's mastery at {{MASTERY_MILESTONES.join(', ').replace(/, (?=[^,]*$)/, ' and ')}}, and level {{MASTERY_MAX_LEVEL}} gets a card. Mastery grows while you are away too, as your hero keeps working.
 
 ## What a mastery level gives
 

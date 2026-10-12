@@ -45,7 +45,7 @@ It waits a few seconds before it comes, so if you were about to do the thing any
 
 Your hero starts with bare fists. The first monster you beat leaves a **Rusty Sword**, rising out of it in a beam of light, and a **▲ Equip** button appears in the fight's dock. Tap it, and your hero hits much harder at once.
 
-From then on the same button appears whenever the bag holds something better than what your hero wears, and a green ▲ marks better gear in the Inventory. The first boss you beat always leaves a piece of armour: a helm, a body or a shield. More on gear in [[/equipment|Equipment]].
+From then on the same button appears whenever the bag holds something better than what your hero wears, and a green ▲ marks better gear in the Inventory. The first boss you beat to move on always leaves a piece of armour: a helm, a body or a shield (a boss beaten while **Stay on this stage** is on doesn't count). More on gear in [[/equipment|Equipment]].
 
 ## The camp
 
@@ -83,7 +83,7 @@ Places you reach by fighting open one at a time, with a breather between them so
 4. [[/skills/alchemy|Alchemy]]: {{UNLOCKS.find(u => u.id === 'alchemy').task.replace(/^./, c => c.toLowerCase())}}.
 5. The [[/shop|Shop]]: {{UNLOCKS.find(u => u.id === 'shop').task.replace(/^./, c => c.toLowerCase())}}.
 6. Achievements, the hall of [[/medals|medals]]: {{UNLOCKS.find(u => u.id === 'achievements').task.replace(/^./, c => c.toLowerCase())}}.
-7. The [[/clans|Clan]], after your first prestige.
+7. The [[/clans|Clan]], after your first prestige, once your best stage is {{[...Array(1000).keys()].find(s => UNLOCKS.find(u => u.id === 'clan').requires({ prestige: { count: 1 }, combat: { bestStage: s } }))}}.
 8. The [[/events|weekend events]], after your first prestige, when a festival is on or near.
 9. [[/skills/agility|Agility]]: {{UNLOCKS.find(u => u.id === 'agility').task.replace(/^./, c => c.toLowerCase())}}.
 
@@ -117,7 +117,7 @@ The next run starts at {{pct(BALANCE.prestige.startStageFraction, 0)}} of your b
 
 [[/skills/mining|Mining]] is open from the start. Tap the **Copper Vein** and your hero digs {{res('copper_ore')}}, one every {{SKILLS.mining.nodes[0].interval / 1000}} seconds at first, even while you are away.
 
-Your hero does one thing at a time. Starting work takes your hero out of the fight, and going back to the fight stops the work.
+Your hero does one thing at a time. Starting work takes your hero out of the fight, and going back to the fight stops the work. Work your hero has no materials for is refused instead: a message says what is missing, and the fight goes on.
 
 A little mining opens [[/skills/smithing|Smithing]], which works in steps:
 

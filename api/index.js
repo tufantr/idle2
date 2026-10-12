@@ -157,7 +157,7 @@ app.post('/api/register', async (req, res) => {
 
     try {
         // every registration counts, before any work is done
-        if (await store.takeAttempt(`register:${clientIp(req)}`, Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
+        if (await store.takeAttempt(`register:${clientIp(req)}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
         const hash = await bcrypt.hash(password, 10);
         const id = await store.createUser(username, hash);
         res.json({ token: signToken({ id, username }), message: 'Registration successful' });

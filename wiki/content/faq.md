@@ -39,7 +39,7 @@ Places open one at a time as you play. The sidebar's **Next** card shows the nex
 
 ### Can my hero fight and train at the same time?
 
-No: your hero does one thing at a time, and starting one stops the other. Some things run on the clock whatever your hero is doing: [[/skills/farming|Farming]] plots grow, the bonfire burns, daily crates ripen and the Titan's attempts wait for you.
+No: your hero does one thing at a time, and starting one stops the other. While your hero fights, work whose materials are short is refused with a message saying what is missing, and the fight goes on. Some things run on the clock whatever your hero is doing: [[/skills/farming|Farming]] plots grow, the bonfire burns, daily crates ripen and the Titan's attempts wait for you.
 
 ## Fighting
 
@@ -117,11 +117,11 @@ Forging makes a first set of copper weapons and armour. Everything stronger drop
 
 - **Weapons and armour** are reinforced at the anvil in [[/skills/smithing|Smithing]] (from Smithing {{ANVIL_LEVEL_PER_UPGRADE}}) with bars of the piece's own metal and essence: +{{pct(UPGRADE_STEP, 0)}} base stats a level, up to +{{MAX_UPGRADE}}. The anvil also rerolls a piece's bonuses.
 - **Jewellery** is upgraded in the Inventory with essence and gold, and reforged there to reroll its bonuses. See [[/equipment/jewellery|Jewellery]].
-- A better piece of the same kind takes over the old one's reinforcing, less one level, when you put it on.
+- A weapon or piece of armour put on in place of a reinforced one of the same kind takes over its anvil levels, less one. Jewellery keeps its upgrades on the piece.
 
 ### Why did a drop disappear?
 
-It was most likely salvaged. To start with, common drops are salvaged as they land unless they would be an upgrade; once a few pieces have dropped, the Inventory shows this auto-salvage setting ({{AUTO_SALVAGE_OPTIONS.join(', ')}}). A full bag ({{BAG_SIZE}} pieces) salvages its weakest unlocked piece, never one that would be an upgrade. Salvaging gives essence, and weapons and armour give bars of their metal too. Locked pieces are never sold or salvaged.
+It was most likely salvaged. To start with, common drops are salvaged as they land unless they would be an upgrade; once a few pieces have dropped, the Inventory shows this auto-salvage setting ({{AUTO_SALVAGE_OPTIONS.join(', ')}}). A full bag ({{BAG_SIZE}} pieces) salvages its weakest unlocked piece, never the best upgrade for a slot; that can be a piece you have just forged or crafted, and the log says so. A dropped piece salvages for essence, a forged or crafted one gives back part of what it was made from, and weapons and armour give bars of their metal too. Locked pieces are never sold or salvaged.
 
 ### What is essence for, and where do I get it?
 
@@ -135,7 +135,7 @@ Mine it at the **Coal Seam**, from Mining {{SKILLS.mining.nodes.find(n => n.id =
 
 ### Where do gems come from?
 
-- **Mining**: each ore has a {{pct(GEM_FIND_CHANCE, 0)}} chance of a gem, of about the rock's tier.
+- **Mining**: each swing has a {{pct(GEM_FIND_CHANCE, 0)}} chance of a gem, of about the rock's tier.
 - **Monsters**: {{pct(BALANCE.rewards.gemDropChance, 0)}} of kills, far more often a boss's first fall. A gilded monster always leaves one. Diamonds also drop in the [[Skyreach Spire]] and [[/zones/abyss|the Abyss]].
 - **Dungeon chests** ({{pct(CHEST_GEM_CHANCE, 0)}} of clears), the **Titan** (gems with each win) and the **daily crate** (a gem, and a better one besides in a great crate).
 - **The Shop**: once Crafting is open, a pouch of {{GOLD_SHOP.filter(e => e.craft).map(e => RESOURCES[Object.keys(e.gives)[0]].name).join(', ').replace(/, ([^,]*)$/, ' or $1')}}, whichever fits your Crafting level.
@@ -163,8 +163,8 @@ Burning logs in [[/skills/firemaking|Firemaking]] feeds the bonfire: each log ad
 
 ### What are the weekend events?
 
-Every weekend, from {{['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][EVENT_START_DAY]}} to {{['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][(EVENT_START_DAY + EVENT_LENGTH_HOURS / 24) % 7]}} (UTC), one of {{EVENTS.length}} festivals runs with bonuses of its own. Every {{EVENT_ACTIONS_PER_TOKEN}} actions or kills earn a Festival Token, up to {{EVENT_DAILY_CAP}} a day, for the event's shop and milestones, and each festival sells a cloak for {{FESTIVAL_CLOAK_COST}} tokens. The Events place opens after your first prestige. See [[/events|Weekend events]].
+Every weekend, from {{['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][EVENT_START_DAY]}} to {{['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][(EVENT_START_DAY + EVENT_LENGTH_HOURS / 24) % 7]}} (UTC), one of {{EVENTS.length}} festivals runs with bonuses of its own. Every {{EVENT_ACTIONS_PER_TOKEN}} actions or kills earn a Festival Token, up to {{EVENT_DAILY_CAP}} a day, for the event's shop and milestones, and each festival sells a cloak for {{FESTIVAL_CLOAK_COST}} tokens. The Events place opens after your first prestige, when a festival is on or a day away. See [[/events|Weekend events]].
 
 ### How do clans and leaderboards work?
 
-They need an account, so sign in first. The Clan place opens after your first prestige. Join a clan or start one: each week the clan fights a boss together, every member attacking a few times a day with the hero from their cloud save, and everyone who fought shares the rewards. The leaderboards are opt-in. See [[/clans|Clans and leaderboards]].
+They need an account, so sign in first. The Clan place opens after your first prestige, once your best stage is {{[...Array(1000).keys()].find(s => UNLOCKS.find(u => u.id === 'clan').requires({ prestige: { count: 1 }, combat: { bestStage: s } }))}}. Join a clan or start one: each week the clan fights a boss together, every member attacking a few times a day with the hero from their cloud save, and everyone who fought shares the rewards. The leaderboards are opt-in. See [[/clans|Clans and leaderboards]].

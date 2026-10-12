@@ -24,6 +24,6 @@ It draws on [[/skills/smithing|Smithing]] for bars, [[/skills/mining|Mining]] an
 
 ## Training tips
 
-- **Use the best gems you have plenty of.** Every piece takes the same time and pays its gem's XP, so higher gems level you faster; the pouches keep the low ones coming.
+- **Use the best gems you have plenty of.** Every piece takes the same time and pays its gem's XP, and a higher gem never pays less; the pouches keep the low ones coming.
 - **Keep the good pieces, salvage the rest.** A crafted piece salvaged gives back about {{pct(SALVAGE_MATERIAL_RETURN, 0)}} of its bar and gem.
 - **Be patient past the middle levels.** Crafting's late gems take the biggest XP cut of any skill ([[Skills|Melvor pace]]).

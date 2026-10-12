@@ -30,7 +30,7 @@ Each rule is in the table below. A few of them in more detail:
 - **{{TRIALS.find(t => t.id === 'rusted').name}}:** everything your gear gives is cut, its bonuses as well as its attack and defence.
 - **{{TRIALS.find(t => t.id === 'swift_bosses').name}}:** a stage boss gives you {{BALANCE.combat.bossTimeMs * TRIALS.find(t => t.id === 'swift_bosses').bite.bossTime / 1000}} seconds instead of {{BALANCE.combat.bossTimeMs / 1000}}.
 - **{{TRIALS.find(t => t.id === 'no_camp').name}}:** the [[Camp|camp]] has no levels, and none can be bought.
-- **{{TRIALS.find(t => t.id === 'fasting').name}}:** your hero eats nothing and gets no health back while fighting, from regeneration or lifesteal. Resting after a fall still heals.
+- **{{TRIALS.find(t => t.id === 'fasting').name}}:** your hero eats nothing and gets no health back while fighting, from regeneration, lifesteal or a level-up. Resting after a fall still heals.
 - **{{TRIALS.find(t => t.id === 'faithless').name}}:** your tokens give nothing during the run, though the run still earns tokens. Tokens are most of a late hero's power, which is why its tiers ask for the lowest stages.
 
 ## The week's Trial

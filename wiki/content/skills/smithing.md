@@ -6,7 +6,7 @@ Smithing is the workshop at the heart of the game: it turns ore into bars, bars 
 
 ## What it is for
 
-- **Bars.** Smelting turns ore (and [[Coal]], from iron up) into bars. Copper, iron, mithril, adamant and runite bars work gear at the anvil; [[Silver Bar|silver]] and [[Gold Bar|gold]] bars are for jewellery in [[/skills/crafting|Crafting]]; and bars of all kinds go into tools, bows, rods and the [[/skills/agility|agility]] course.
+- **Bars.** Smelting turns ore into bars, with [[Coal]] for the {{SMELTING_RECIPES.filter(r => r.consumes.coal).map(r => r.name.replace(/ Bar$/, '').toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}} bars. Copper, iron, mithril, adamant and runite bars work gear at the anvil and go into tools, bows, rods and the [[/skills/agility|agility]] course; [[Silver Bar|silver]] and [[Gold Bar|gold]] bars are only for jewellery in [[/skills/crafting|Crafting]].
 - **Tools.** Pickaxes, axes, tinderboxes and hoes are forged here, each tier faster than the last (see [[Tools]]).
 - **A first set of gear.** Copper bars forge a weapon and armour for a new hero. Every stronger piece drops in the fight ([[Equipment]]).
 - **The anvil.** From Smithing {{ANVIL_LEVEL_PER_UPGRADE}}, the weapons and armour you wear can be reinforced, up to +{{MAX_UPGRADE}} (each level +{{pct(UPGRADE_STEP, 0)}} to the piece's attack and defence), and their bonuses rerolled. Both take bars of the piece's own metal and [[Monster Essence|essence]].
@@ -17,7 +17,7 @@ Smelting and forging are actions like any other: your hero keeps at it until the
 
 Two rules keep the anvil's work from going to waste:
 - **Refitting.** A new weapon or piece of armour worn in place of a reinforced one of the same kind takes over its anvil levels, all but one, and the old piece comes off plain.
-- **Salvaging.** A salvaged weapon or piece of armour gives back bars of its metal, plus {{pct(ANVIL_REFUND, 0)}} of the bars that reinforcing it took. Before you can smelt a metal, salvage is where its bars come from.
+- **Salvaging.** A salvaged weapon or piece of armour gives back bars of its metal, plus {{pct(ANVIL_REFUND, 0)}} of the bars its reinforcing took, each as the metal it was: a refit carries the work over, so copper bars that went into an old piece come back as copper. Before you can smelt a metal, salvage is where its bars come from.
 
 ## Training tips
 

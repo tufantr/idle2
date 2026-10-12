@@ -43,7 +43,7 @@ export const SKILLS = {
     },
     fishing: {
         id: 'fishing', name: 'Fishing', icon: '🎣', color: '#38bdf8', tool: 'rod',
-        desc: 'Fish for the kitchen — they cook into the best food per level. Bait from combat makes a second catch likely.',
+        desc: 'Fish for the kitchen — they cook into food a little better than meat of their level. Bait from combat makes a second catch likely.',
         nodes: [
             { id: 'raw_shrimp',     name: 'Shrimp Shallows', levelReq: 1,  interval: 3600, xp: 11,  produces: 'raw_shrimp' },
             { id: 'raw_trout',      name: 'Trout Stream',    levelReq: 15, interval: 3600, xp: 21,  produces: 'raw_trout' },

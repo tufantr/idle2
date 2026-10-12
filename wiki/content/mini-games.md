@@ -7,14 +7,14 @@ Three things reward the way you play: mini-games for when you are watching, Focu
 
 ## Mini-games
 
-While your hero works at a gathering or production skill ({{NON_COMBAT_SKILLS.map(id => link(path.skill(id), SKILLS[id].name)).join(', ')}}), a chance to play turns up on that skill's tab now and then: the first one soon after you start, then one every {{BALANCE.minigame.opportunityEveryMs[0] / 60000}} to {{BALANCE.minigame.opportunityEveryMs[1] / 60000}} minutes or so while you work at it. A chance waits {{BALANCE.minigame.opportunityWindowMs / 1000}} seconds for you to start it, and then you have a few seconds to play. Each skill has its own game, of four kinds:
+While your hero works at a gathering or production skill ({{NON_COMBAT_SKILLS.map(id => link(path.skill(id), SKILLS[id].name)).join(', ')}}), a chance to play turns up on that skill's tab now and then: the first one soon after you start, then one every {{BALANCE.minigame.opportunityEveryMs[0] / 60000}} to {{BALANCE.minigame.opportunityEveryMs[1] / 60000}} minutes or so. These skills share one clock: a chance in one holds the others back, so switching skills does not bring the next one sooner. A chance waits {{BALANCE.minigame.opportunityWindowMs / 1000}} seconds for you to start it, and then you have a few seconds to play. Each skill has its own game, of four kinds:
 
 - **Mining and Woodcutting:** tap when the marker sweeps through the glowing zone.
 - **Hunting and Fishing:** loose the arrow or strike when the target crosses the zone.
 - **Cooking and Firemaking:** tap the flame to keep the heat inside the band, then finish.
 - **Alchemy:** drag the stabiliser into the glowing channel, then lock the brew.
 
-A win makes that skill +{{pct(BALANCE.minigame.baseBonus, 0)}} faster for {{BALANCE.minigame.boostMs / 1000}} seconds. Every win in a row adds {{pct(BALANCE.minigame.streakBonus, 0)}} more, up to +{{pct(BALANCE.minigame.maxBonus, 0)}} on a streak of {{1 + Math.round((BALANCE.minigame.maxBonus - BALANCE.minigame.baseBonus) / BALANCE.minigame.streakBonus)}}. A miss, or giving up a game you started, ends the streak; letting a chance pass by costs nothing at all.
+A win makes that skill +{{pct(BALANCE.minigame.baseBonus, 0)}} faster for {{BALANCE.minigame.boostMs / 1000}} seconds. Every win in a row adds {{pct(BALANCE.minigame.streakBonus, 0)}} more, up to +{{pct(BALANCE.minigame.maxBonus, 0)}} on a streak of {{1 + Math.round((BALANCE.minigame.maxBonus - BALANCE.minigame.baseBonus) / BALANCE.minigame.streakBonus)}}. A miss, or giving up a game you started (its Skip button, or closing or reloading the page before it is over), ends the streak; letting a chance pass by costs nothing at all.
 
 - The boost is for that skill only, and it runs on the clock: switch skills or leave, and it still ends on time.
 - Chances only come while you are there, never during [[/offline|offline progress]].

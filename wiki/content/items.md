@@ -6,6 +6,6 @@ aliases: Item list, All items
 Items are everything your hero gathers, makes and wins that stacks in the Inventory's Materials panel: ores and bars, gems, logs, raw and cooked food, crops, herbs, potions, [[Monster Essence]] and [[Fishing Bait]]. Each has a page of its own saying where it comes from and what it is for, and the lists below have them all, by kind.
 
 - Items are kept when you prestige: only gold and the [[Camp]] start over.
-- Tap an item in the Inventory to see it and sell it, for a small fixed price set by its kind and tier ([[Shop]]). Essence cannot be sold.
+- Tap an item in the Inventory to see it and sell it, for a small fixed price set by its kind and tier ([[Shop]]). Essence and bait cannot be sold.
 - Gear does not stack: weapons, armour and jewellery are on [[Equipment]], [[Jewellery]] and [[Unique items]]. Tools are not items either: you keep the best tier you have made of each ([[Tools]]).
 - What food and potions do in the fight is on [[Food]] and [[Potions]].

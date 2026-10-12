@@ -48,7 +48,7 @@ export const UNLOCKS = [
     { id: 'alchemy',      pace: true, hint: 'Reach Stage 15 to unlock Alchemy', task: 'Reach stage 15', tab: 'combat', requires: s => s.combat.bestStage >= 15, progress: s => s.combat.bestStage / 15 },
     { id: 'shop',         pace: true, hint: 'Beat the Stage 10 boss to unlock the Shop', task: 'Beat the stage 10 boss', tab: 'combat', requires: s => s.combat.bestStage >= 11, progress: s => s.combat.bestStage / 11 },
     { id: 'achievements', pace: true, hint: 'Earn five medals to open the Hall', task: 'Earn five medals', tab: 'combat', requires: s => Object.keys(s.achievements || {}).length >= 5, progress: s => Object.keys(s.achievements || {}).length / 5 },
-    { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', task: 'Brew 10 times, or Cooking 15', tab: 'alchemy', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411,
+    { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', task: 'Use Alchemy 10×, or Cooking 15', tab: 'alchemy', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411,
       progress: s => Math.max((s.stats.actionsBySkill.alchemy || 0) / 10, s.skills.cooking.xp / 2411) },
     { id: 'clan',         pace: true, hint: 'Prestige once to join a clan', task: 'Prestige once', tab: 'combat', requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 25, progress: s => Math.min(1, s.prestige.count) * Math.min(1, s.combat.bestStage / 25) },
     { id: 'events',       pace: true, hint: 'After a first prestige, the weekend festival opens when one is on or near', task: 'A festival, after a prestige', tab: 'combat',

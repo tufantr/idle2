@@ -6,7 +6,7 @@ Fishing brings in raw fish for the kitchen. It opens soon after you {{UNLOCKS.fi
 
 ## What it is for
 
-Fish cook into the best [[Food|food]] for their level: each heals a little more than the meat of the same level from [[/skills/hunting|Hunting]]. Fishing feeds only [[/skills/cooking|Cooking]], and Cooking feeds the fight, where your hero eats when health runs low.
+Fish cook into [[Food|food]] that heals a little more than the meat of the same level from [[/skills/hunting|Hunting]]. Fishing feeds only [[/skills/cooking|Cooking]], and Cooking feeds the fight, where your hero eats when health runs low.
 
 ## How it works
 
@@ -21,5 +21,5 @@ Pick a spot and your hero fishes on and on, while you are away too; the spots ne
 
 - **Bring bait.** More fish for the same time means more food for the same XP, and nothing is lost when you run out: the catches simply go on without it.
 - **Make a rod** once Crafting is open: the first needs Crafting {{TOOLS.rod.tiers[0].levelReq}} ({{resList(TOOLS.rod.tiers[0].consumes)}}).
-- **Cook what you catch.** A spot's fish cooks into the best food for its level, so fishing and cooking together keep your hero fed deep into the fight.
+- **Cook what you catch.** A spot's fish cooks into better food than the meat of its level, so fishing and cooking together keep your hero fed deep into the fight.
 - **Weekends help.** During the {{EVENTS.find(e => e.id === 'harvest_festival').name}}, fishing is +{{pct(EVENTS.find(e => e.id === 'harvest_festival').mods.skillSpeed.fishing, 0)}} faster, and {{EVENTS.find(e => e.id === 'miners_rush').name}} speeds up every gathering skill.

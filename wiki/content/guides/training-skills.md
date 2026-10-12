@@ -8,7 +8,7 @@ order: 30
 summary: How the skills feed each other, a sensible early order, tools, mastery, pets and capes, Focus, mini-games and the bonfire, and training while you are away.
 keywords: skilling, skills, training, gathering, production, tools, mastery, pets, capes, focus, bonfire, mini-games, forager, scholar, afk
 ---
-Your hero has {{SKILL_IDS.length}} [[/skills|skills]]. Combat levels come from fighting; the rest you train by picking an action and letting your hero work. Only one thing happens at a time: starting work takes your hero out of the fight, and going back to the fight stops the work. [[/skills/farming|Farming]] is the exception: its plots grow on the clock while your hero does anything else.
+Your hero has {{SKILL_IDS.length}} [[/skills|skills]]. Combat levels come from fighting; the rest you train by picking an action and letting your hero work. Only one thing happens at a time: starting work takes your hero out of the fight (work whose materials are short is refused, and the fight goes on), and going back to the fight stops the work. [[/skills/farming|Farming]] is the exception: its plots grow on the clock while your hero does anything else.
 
 ## How the skills feed each other
 
@@ -20,7 +20,7 @@ Almost everything one skill makes, another skill uses.
 - **[[/skills/alchemy|Alchemy]]** forages herbs and brews them with a second ingredient into [[/potions|potions]]: {{SKILLS.alchemy.nodes.filter(n => n.consumes).map(n => `${n.name} (${Object.keys(n.consumes).map(id => RESOURCES[id].name).join(' + ')})`).join(', ')}}.
 - **[[/skills/farming|Farming]]** grows crops for Cooking (potatoes, cabbages, pumpkins and starfruit) and herbs for Alchemy ({{CROPS.filter(c => RESOURCES[c.produces].category === 'herb').map(c => c.name).join(', ')}}).
 - **[[/skills/crafting|Crafting]]** sets a gem in a silver or gold bar to make [[/equipment/jewellery|jewellery]], and makes bows for Hunting and rods for Fishing.
-- **[[/skills/agility|Agility]]** builds a course of lasting bonuses from gold, logs and bars, and you train it by running the course.
+- **[[/skills/agility|Agility]]** builds a course of lasting bonuses from gold, logs and bars (and diamonds for the last slot), and you train it by running the course.
 - **The fight** feeds the skills back. Each place drops materials of its own (ore, logs, meat, fish, herbs, fishing bait), and monsters leave gems and essence.
 
 ## A sensible early order
@@ -54,16 +54,16 @@ Each tier is made from bars and logs, in order, starting at level {{TOOLS.pickax
 
 ## Mastery
 
-Every action has its own [[/mastery|mastery]], from 1 to {{MASTERY_MAX_LEVEL}}, earned by doing it. An hour on any action is worth the same, and faster actions master faster.
+Every action has its own [[/mastery|mastery]], from 1 to {{MASTERY_MAX_LEVEL}}, earned by doing it. An hour on any action is worth the same, and speed bonuses make it master faster.
 
 - Each mastery level makes that action {{pct(MASTERY_PER_LEVEL.speed, 1)}} faster ({{pct(MASTERY_PER_LEVEL.speed * (MASTERY_MAX_LEVEL - 1), 1)}} at {{MASTERY_MAX_LEVEL}}).
 - Gathering, cooking, brewing, smelting and burning also gain {{pct(MASTERY_PER_LEVEL.double, 2)}} chance of a double a level. Actions that use ingredients gain {{pct(MASTERY_PER_LEVEL.preserve, 1)}} chance a level to keep them.
 - At {{MASTERY_CHECKPOINTS.map(c => pct(c.at, 0)).join(', ')}} of a skill's whole mastery, every action of that skill gets faster for good: {{MASTERY_CHECKPOINTS.map(c => '+' + pct(c.speed, 0)).join(', ')}}.
-- Mastery is permanent. You will reach level {{MAX_LEVEL}} in a skill long before its best action is mastered, so mastery is the long tail of skilling.
+- Mastery is permanent. One action reaches mastery {{MASTERY_MAX_LEVEL}} after about {{Math.round(xpForLevel(MASTERY_MAX_LEVEL) / MASTERY_XP_DIVISOR / 3600)}} hours of it at base speed, usually before its skill reaches {{MAX_LEVEL}}; all of a skill's actions together take longer than its {{MAX_LEVEL}}, so mastery is the long tail of skilling.
 
 ## Pets and capes
 
-Each skill has a [[/pets|pet]], {{PETS.length}} in all, found at random while you train it. The chance on each action grows with your level in the skill and with the length of the action: at level {{MAX_LEVEL}}, a pet comes after about {{time(PET_BASE / MAX_LEVEL * 1000)}} of training on average, sooner with faster actions. A pet is kept forever and gives a small bonus to its skill, such as {{PETS.find(p => p.id === 'pebble').desc}} from Pebble, the mining pet.
+Each skill has a [[/pets|pet]], {{PETS.length}} in all, found at random while you train it. The chance on each action grows with your level in the skill and with the length of the action: at level {{MAX_LEVEL}}, a pet comes after about {{time(PET_BASE / MAX_LEVEL * 1000)}} of training on average, sooner with speed bonuses. A pet is kept forever and gives a small bonus to its skill, such as {{PETS.find(p => p.id === 'pebble').desc}} from Pebble, the mining pet.
 
 Level {{MAX_LEVEL}} in a skill earns its [[/capes|cape]]: a lasting bonus to that skill (for Mining, {{CAPES.find(c => c.skill === 'mining').perk.charAt(0).toLowerCase() + CAPES.find(c => c.skill === 'mining').perk.slice(1)}}) and a cloak your hero can wear. Level {{(() => { let l = 1; while (xpForLevel(l) < xpForLevel(MAX_LEVEL) / 2) l++; return l; })()}} is about halfway to {{MAX_LEVEL}} in XP; see the [[/xp-table|XP table]].
 
@@ -94,4 +94,4 @@ Two [[/perks|perks]], bought with skill points from prestige, are made for skill
 
 ## Medals for skillers
 
-Many [[/medals|medals]] reward skilling, and each also adds +{{pct(ACHIEVEMENT_GLOBAL_BONUS, 0)}} to every skill's speed. Level {{ACHIEVEMENTS.find(a => a.id === 'excavator').req.level}} in a gathering skill earns one with a speed bonus in it ({{['excavator', 'lumberjack'].map(id => ACHIEVEMENTS.find(a => a.id === id)).map(a => `${a.name}: ${a.reward}`).join('; ')}}), and mastery has its own: {{['practised', 'polymath', 'grandmaster'].map(id => ACHIEVEMENTS.find(a => a.id === id)).map(a => `${a.name} (${a.desc.charAt(0).toLowerCase()}${a.desc.slice(1)}: ${a.reward})`).join(', ')}}.
+Many [[/medals|medals]] reward skilling, and each also adds +{{pct(ACHIEVEMENT_GLOBAL_BONUS, 0)}} to every skill's speed. Level {{ACHIEVEMENTS.find(a => a.id === 'excavator').req.level}} in a gathering skill earns one with a speed bonus in it ({{['excavator', 'lumberjack', 'angler', 'tracker'].map(id => ACHIEVEMENTS.find(a => a.id === id)).map(a => `${a.name}: ${a.reward}`).join('; ')}}), and mastery has its own: {{['practised', 'polymath', 'grandmaster'].map(id => ACHIEVEMENTS.find(a => a.id === id)).map(a => `${a.name} (${a.desc.charAt(0).toLowerCase()}${a.desc.slice(1)}: ${a.reward})`).join(', ')}}.

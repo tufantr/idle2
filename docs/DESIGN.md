@@ -763,7 +763,7 @@ with the game's own stat code; the client never submits damage or scores.
   `clan`), on the boss's land's painting. The hero attacks by himself; the boss never hits back. It drops
   its guard for 2 s every 6 s from the 4th (`CLAN_GUARD`): it glows, "Strike now!" pops, and only then do
   strikes land (2.5 × a fight's strike) and build the combo; at other times they glance off, so an
-  auto-clicker gets no more than a player clicking fast in the openings: ×1.3 to ×2 of a hero who only
+  auto-clicker gets no more than a player clicking fast in the openings: ×1.3 to ×1.6 of a hero who only
   watches, by attack speed (`test/clanfight.test.mjs`). No cards, raid levels or dust: the hero is the
   deck (Tap Titans 2's raid system was weighed and left out). The page keeps only the strike times; when
   the fight ends (time, Give up, or the boss's health running out on screen) they wait in

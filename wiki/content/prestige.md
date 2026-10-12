@@ -9,7 +9,7 @@ A prestige ends your run and trades it for power that lasts. Your hero goes back
 - The Prestige place opens once you {{UNLOCKS.find(u => u.id === 'prestige').task.toLowerCase()}}. Its button sits in the fight's dock, on the [[Combat]] tab and on the Prestige panel of the [[Shop]].
 - **The first prestige** can be made as soon as it opens: it needs no long run. A guiding hand points at the glowing Prestige button, then at "Prestige now" in the dialog, and afterwards at Perks and the first perk your new skill point buys.
 - **Every later prestige** needs a run that has reached stage {{BALANCE.prestige.minStage}} and lasted at least {{BALANCE.prestige.minRunMs / 60000}} minutes. Until then the button says how long is left.
-- A prestige waits while a [[The Titan|Titan]] fight or a [[Dungeons|dungeon]] run is under way, since it would end it. The button says "after the Titan fight" or "after the dungeon run".
+- A prestige waits while a [[The Titan|Titan]] fight, a clan fight or a [[Dungeons|dungeon]] run is under way, since it would end it. The button says "after the Titan fight", "after the clan fight" or "after the dungeon run".
 
 The prestige dialog shows everything before you commit: the tokens and skill points you would get, the stage the next run starts at, and what stays. When you confirm, a backup of your save is kept in Settings first.
 

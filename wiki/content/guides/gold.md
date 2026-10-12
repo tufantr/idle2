@@ -14,7 +14,7 @@ Gold is the money of a run. You earn it mostly by fighting, and you spend it on 
 
 **Kills.** Every monster pays {{pct(BALANCE.rewards.goldPerHp, 0)}} of its health in gold, so deeper stages pay far more. On the gentle first stages the monsters are softer than usual, but they still pay as if at full strength.
 
-{{table(['Stage #', 'Gold per kill #'], [10, 25, 50, 100, 150, 200, 300].map(s => [s, fmt(goldPerKillAtStage(s))]), { sort: false })}}
+{{table(['Stage #', 'Gold per kill #'], [11, 25, 51, 101, 151, 201, 301].map(s => [s, fmt(goldPerKillAtStage(s))]), { sort: false })}}
 
 - **Bosses** pay {{BALANCE.rewards.bossGoldMult}} times as much on their first fall in a run, the kill that moves you on, on top of their {{BALANCE.enemy.bossHpMult}} times the health: {{BALANCE.enemy.bossHpMult * BALANCE.rewards.bossGoldMult}} times an ordinary monster of the stage. Farmed after that, a boss pays like the ordinary monsters its health is worth, so there is no point parking on one.
 - **Gilded monsters**: about one ordinary monster in {{Math.round(1 / BALANCE.rewards.gildedChance)}} on the stage ladder arrives gilded, with a banner and a chime. It is the same fight for {{BALANCE.rewards.gildedGoldMult}}× the gold and {{BALANCE.rewards.gildedXpMult}}× the XP, plus a gem and some [[/items/essence|essence]] for certain.
@@ -39,7 +39,7 @@ The camp is packed up at each prestige. Once your best stage passes about {{(() 
 
 The [[/shop|Shop]] sells supplies: coal, logs, herbs, rabbits, fishing bait and essence. Each is priced in kills' worth of gold at your best stage, from {{Math.min(...GOLD_SHOP.filter(e => !e.craft).map(e => e.costKills))}} to {{Math.max(...GOLD_SHOP.filter(e => !e.craft).map(e => e.costKills))}} kills, so a pack costs about the same share of your income at any point in the game. The Essence Cache ({{GOLD_SHOP.find(e => e.id === 'buy_essence').gives.essence}} essence for {{GOLD_SHOP.find(e => e.id === 'buy_essence').costKills}} kills) is the one you can always use more of.
 
-Once Crafting is open, the Shop also sells a pouch of gems for the Crafting levels you are at: {{GOLD_SHOP.filter(e => e.craft).map(e => `the ${e.name} (Crafting ${e.craft[1] >= MAX_LEVEL ? `${e.craft[0]} and up` : `${e.craft[0]} to ${e.craft[1]}`}, ${e.costKills} kills)`).join(', ').replace(/, ([^,]*)$/, ' and $1')}}.
+Once Crafting is open, the Shop also sells a pouch of gems for the Crafting levels you are at: {{GOLD_SHOP.filter(e => e.craft).map(e => `the ${e.name} for ${e.costKills} kills (Crafting ${e.craft[1] >= MAX_LEVEL ? `${e.craft[0]} and up` : `${e.craft[0]} to ${e.craft[1]}`})`).join(', ').replace(/, ([^,]*)$/, ' and $1')}}.
 
 ### Seeds
 
@@ -47,7 +47,7 @@ Once Crafting is open, the Shop also sells a pouch of gems for the Crafting leve
 
 ### The agility course
 
-[[/skills/agility|Agility]] obstacles are the biggest gold sinks in the game, and their bonuses last forever. Agility opens once you have climbed far enough with {{fmt(AGILITY_SLOTS[0].costGold / 2)}} gold in hand, half the price of a first obstacle (see [[/places|Places and unlocks]]). Building one costs {{fmt(AGILITY_SLOTS[0].costGold)}} gold in the first slot and {{fmt(AGILITY_SLOTS[AGILITY_SLOTS.length - 1].costGold)}} in the last, plus logs and bars. Each obstacle can then be upgraded to level {{MAX_OBSTACLE_LEVEL}} for gold alone, each level costing {{obstacleUpgradeGold(0, 2) / obstacleUpgradeGold(0, 1)}}× the one before: the final upgrade of the last slot costs {{fmt(obstacleUpgradeGold(AGILITY_SLOTS.length - 1, MAX_OBSTACLE_LEVEL - 1))}}. The whole course at level {{MAX_OBSTACLE_LEVEL}} comes to about {{fmt(AGILITY_SLOTS.reduce((sum, s, i) => { let t = s.costGold; for (let l = 1; l < MAX_OBSTACLE_LEVEL; l++) t += obstacleUpgradeGold(i, l); return sum + t; }, 0))}} gold.
+[[/skills/agility|Agility]] obstacles are the biggest gold sinks in the game, and their bonuses last forever. Agility opens once you have climbed far enough with {{fmt(AGILITY_SLOTS[0].costGold / 2)}} gold in hand, half the price of a first obstacle (see [[/places|Places and unlocks]]). Building one costs {{fmt(AGILITY_SLOTS[0].costGold)}} gold in the first slot and {{fmt(AGILITY_SLOTS[AGILITY_SLOTS.length - 1].costGold)}} in the last, plus logs and bars (and diamonds for the last). Each obstacle can then be upgraded to level {{MAX_OBSTACLE_LEVEL}} for gold alone, each level costing {{obstacleUpgradeGold(0, 2) / obstacleUpgradeGold(0, 1)}}× the one before: the final upgrade of the last slot costs {{fmt(obstacleUpgradeGold(AGILITY_SLOTS.length - 1, MAX_OBSTACLE_LEVEL - 1))}}. The whole course at level {{MAX_OBSTACLE_LEVEL}} comes to about {{fmt(AGILITY_SLOTS.reduce((sum, s, i) => { let t = s.costGold; for (let l = 1; l < MAX_OBSTACLE_LEVEL; l++) t += obstacleUpgradeGold(i, l); return sum + t; }, 0))}} gold.
 
 Since gold resets at prestige, an obstacle has to be bought within one run: save up in a run that goes deep.
 

@@ -47,7 +47,7 @@ export const ACHIEVEMENTS = [
     { id: 'architect',    name: 'Course Architect',  desc: 'Build all six agility obstacles', req: stat('obstaclesBuilt', 6),   reward: '+5% gold from combat',    mods: { goldMult: 0.05 } },
     { id: 'sharpshooter', name: 'Sharpshooter',      desc: 'Win 50 skill mini-games',         req: stat('minigameWins', 50),    reward: 'Mini-game boosts last 20% longer', mods: { boostDuration: 0.20 } },
     { id: 'practised',    name: 'Well Practised',    desc: 'Gain 500 mastery levels',         req: stat('masteryLevels', 500),  reward: '+5% speed in every skill', mods: { skillSpeed: everySkill(0.05) } },
-    { id: 'polymath',     name: 'Polymath',          desc: 'Gain 2,500 mastery levels',       req: stat('masteryLevels', 2500), reward: '+5% double chance in every skill', mods: { doubleChance: everySkill(0.05) } },
+    { id: 'polymath',     name: 'Polymath',          desc: 'Gain 2,500 mastery levels',       req: stat('masteryLevels', 2500), reward: '+5% double chance in every skill (not on gear, nor the course)', mods: { doubleChance: everySkill(0.05) } },
     { id: 'grandmaster',  name: 'Grandmaster',       desc: 'Reach mastery 99 in any action',  req: stat('masteries99', 1),      reward: '+5% XP from all skills',  mods: { xpMult: 0.05 } },
     { id: 'legend',       name: 'Living Legend',     desc: 'Equip a Legendary item',          req: stat('legendariesEquipped', 1), reward: '+5% Crit Chance',      mods: { critChance: 0.05 } },
     { id: 'delver',       name: 'Dungeon Delver',    desc: 'Clear 10 dungeons',               req: stat('dungeonClears', 10),   reward: '+5% gold from combat',    mods: { goldMult: 0.05 } },

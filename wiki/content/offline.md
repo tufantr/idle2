@@ -10,7 +10,7 @@ Fantasy Idle keeps playing while you are away. When you come back, the game work
 Your hero goes on with whatever he was doing when you left:
 
 - **Work in a skill:** he keeps at it, one action after another, until the time runs out or the materials do (a tool stops once it is made). The action he was halfway through is finished first.
-- **The fight:** he goes on climbing with food, potions, the boss timer, falls and rests just as in play, so a fall early on costs a rest, not your whole absence. A [[Dungeons|dungeon]] keeps going clear after clear, and a lost run sends him back to the stage ladder. A fight with [[The Titan]] does not survive closing the game: your hero goes back to what he was doing before it.
+- **The fight:** he goes on climbing with food, potions, the boss timer, falls and rests just as in play, so a fall early on costs a rest, not your whole absence. A [[Dungeons|dungeon]] keeps going clear after clear, and a lost run sends him back to the stage ladder. A fight with [[The Titan]] does not survive closing the game: it counts as a Give up (the damage done still pays its essence), and your hero goes back to what he was doing before it.
 - **Nothing:** if he was idle, he rests at camp the whole time.
 
 He only ever does one of these: a fight and a skill never run together.
@@ -40,17 +40,17 @@ Time with the page out of sight does not count toward the breaks between new pla
 
 ## Saving
 
-The game saves by itself, on this device, several times a minute, whenever the page is hidden or closed, and at once after a prestige. There is nothing to press.
+The game saves by itself, on this device, several times a minute, whenever the page is hidden or closed, and at once after a prestige. There is nothing to press. The game plays in one tab at a time: open it in a second tab or window and it plays there, while the first one stops (its **Play here** button takes it back), so the two never save over each other.
 
 **Backups.** Settings keeps backups you can restore at any time: three automatic ones, taken in turn as you play, one taken as the game loads (before the time away is added), one before each prestige you make (the Auto switch's take none), and one before a hard reset, an import or a restore.
 
 **Export and import.** In Settings, **Copy export string** puts your whole game into a line of text, copied for you and shown in the box. To load one, paste it into the box and press **Import string**; your current game is backed up first. A string from a newer version of the game cannot be loaded.
 
-**Hard reset** wipes your save and starts the game over. One backup is kept in Settings in case you change your mind.
+**Hard reset** wipes your save and starts the game over. While you are signed in it starts your cloud save over too, so the old game does not come back from there. One backup is kept in Settings, on this device, in case you change your mind.
 
 ## Cloud saves
 
-Sign in with a username and a password (**Log in / register** in Settings) to keep your save on the game's server as well. While you are signed in it is uploaded regularly as you play (Settings shows when it last was), and **Save to cloud now** does it at once. On another device, the save with more play time is the one loaded; if the two saves disagree in a way that could lose progress, the game asks which to keep. Time away from a cloud save is measured by the server's clock. Your save on the device is kept either way, and playing without an account is fine.
+Sign in with a username and a password (**Log in / register** in Settings) to keep your save on the game's server as well. When the game loads or you sign in, it first compares itself with your cloud save: the one with more play time is played, and if the two disagree in a way that could lose progress, the game asks which to keep. Only then does it upload: every ten minutes while you play and when you leave the page (Settings shows when it last did), and **Save to cloud now** does it at once. If another device has saved in the meantime, the server refuses the upload and the game asks again which to keep, so an older game never goes over a newer one. Time away from a cloud save is measured by the server's clock. Your save on the device is kept either way, and playing without an account is fine.
 
 [[Clans and leaderboards]] need an account.
 
