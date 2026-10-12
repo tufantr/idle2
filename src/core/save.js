@@ -1,7 +1,7 @@
-// Persistence: local saves (namespaced, versioned), export/import strings, and the cloud API client.
-// The cloud layer is optional: with no backend reachable the game runs as a local/guest save.
+// Persistence: local saves (namespaced, versioned), backups, and the cloud API client. Signed in, the
+// server's save is the game (syncChoice); a guest's game lives in this browser, with its backups.
 
-import { migrateState, looksLikeSave, SAVE_VERSION } from './state.js';
+import { migrateState } from './state.js';
 
 export const LOCAL_KEY = 'fantasyIdle.save.v2';
 export const LEGACY_KEY = 'fantasyIdleSaveLocal';
@@ -9,8 +9,6 @@ export const TOKEN_KEY = 'fantasyIdle.jwt';
 // The cloud save this device last saw (its server time) and whose: an upload names it, and the server
 // refuses one made over a save it hasn't seen (another device's).
 export const CLOUD_BASE_KEY = 'fantasyIdle.cloudBase';
-export const EXPORT_PREFIX = 'FI2:';          // base64 JSON
-export const COMPRESSED_PREFIX = 'FI3:';      // base64 deflate(JSON)
 export const BACKUP_PREFIX = 'fantasyIdle.backup.';
 // Three rotating snapshots taken every 10 minutes, plus one taken on load and one before each prestige.
 export const AUTO_BACKUP_SLOTS = ['auto0', 'auto1', 'auto2'];
@@ -110,54 +108,6 @@ export function restoreBackup(slot, now = Date.now()) {
     return migrateState(JSON.parse(backup.json), now);
 }
 
-// ---------- export / import ----------
-
-function toBase64(bytes) {
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-    return btoa(binary);
-}
-function fromBase64(text) {
-    const binary = atob(text);
-    return Uint8Array.from(binary, c => c.charCodeAt(0));
-}
-
-export function exportString(json) {
-    return EXPORT_PREFIX + toBase64(new TextEncoder().encode(json));
-}
-
-/** Compressed export (deflate). Falls back to the plain format where CompressionStream is missing. */
-export async function exportStringCompressed(json) {
-    if (typeof CompressionStream === 'undefined') return exportString(json);
-    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('deflate'));
-    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-    return COMPRESSED_PREFIX + toBase64(bytes);
-}
-
-function checkVersion(parsed, now) {
-    // a string of another game's JSON (or a number, a list, null) is not a save: it would replace the game with a fresh hero
-    if (!looksLikeSave(parsed)) throw new Error('Not a Fantasy Idle save string.');
-    if (parsed.version > SAVE_VERSION) throw new Error('This save comes from a newer version of the game.');
-    return migrateState(parsed, now);
-}
-
-export function importString(text, now = Date.now()) {
-    const trimmed = String(text || '').trim();
-    if (!trimmed.startsWith(EXPORT_PREFIX)) throw new Error('Not a Fantasy Idle save string.');
-    const parsed = JSON.parse(new TextDecoder().decode(fromBase64(trimmed.slice(EXPORT_PREFIX.length))));
-    return checkVersion(parsed, now);
-}
-
-/** Accepts both the plain (FI2:) and compressed (FI3:) formats. */
-export async function importStringAsync(text, now = Date.now()) {
-    const trimmed = String(text || '').trim();
-    if (!trimmed.startsWith(COMPRESSED_PREFIX)) return importString(trimmed, now);
-    if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot read compressed saves.');
-    const stream = new Blob([fromBase64(trimmed.slice(COMPRESSED_PREFIX.length))]).stream().pipeThrough(new DecompressionStream('deflate'));
-    const parsed = JSON.parse(await new Response(stream).text());
-    return checkVersion(parsed, now);
-}
-
 // ---------- cloud ----------
 
 export class CloudClient {
@@ -254,8 +204,8 @@ export class CloudClient {
 
     /**
      * Upload the save over the cloud save this page has seen (`base`): if another device has uploaded
-     * since, the server refuses it (an error with status 409) and the game asks which to keep. The
-     * answer says how many gifts wait for this player ({ gifts }).
+     * since, the server refuses it (an error with status 409) and the game looks at the server again
+     * (syncChoice). The answer says how many gifts wait for this player ({ gifts }).
      */
     async push(stateObject, { keepalive = false } = {}) {
         const answer = await this.request('/save', { method: 'POST', body: { state: stateObject, ...(this.base === null ? {} : { base: this.base }) }, keepalive });
@@ -288,16 +238,29 @@ function decodeUsername(token) {
     } catch { return null; }
 }
 
+/** Has this game been played (a kill, or a minute in it)? An untouched one gives way to the server's. */
+export function played(state) {
+    return !!(state?.stats?.kills || state?.meta?.playtimeMs > 60000);
+}
+
+/** Does `live` hold everything the server's `remote` has (the same game, as far in every count), so keeping it loses nothing? */
+export function aheadOf(live, remote) {
+    const xp = s => Object.values(s.skills || {}).reduce((n, k) => n + (Number(k?.xp) || 0), 0);
+    const counts = s => [s.combat?.bestStage || 0, s.prestige?.count || 0, s.ascension?.count || 0, s.stats?.kills || 0, xp(s)];
+    const mine = counts(live);
+    return live.meta?.createdAt === remote.meta?.createdAt && counts(remote).every((v, i) => v <= mine[i]);
+}
+
 /**
- * Decide which of two saves to keep. Playtime is the primary signal (it only grows), the save
- * timestamp the tiebreaker; `conflict` is true when the signals disagree so the UI can ask.
+ * The game a signed-in player plays after looking at the server: the server's save is the game, as in any
+ * online game, and nobody is asked. This device's game is kept (and uploaded) only when it is the server's
+ * carried on: the server's save unchanged since this device last saw it (`known`, its lastSaved then) and
+ * the same game, or this game already holding all the server's has (the upload this page sent as it closed,
+ * or one whose answer was lost). Returns 'local' or 'cloud'. No server save: this game is the account's first.
  */
-export function chooseSave(local, cloud) {
-    if (!local) return { pick: 'cloud', conflict: false };
-    if (!cloud) return { pick: 'local', conflict: false };
-    const byPlaytime = (cloud.meta.playtimeMs || 0) > (local.meta.playtimeMs || 0) ? 'cloud' : 'local';
-    const byTime = (cloud.meta.savedAt || 0) > (local.meta.savedAt || 0) ? 'cloud' : 'local';
-    // Two different games (a guest save meeting an account's save) are never merged silently.
-    const sameGame = (cloud.meta.createdAt || 0) === (local.meta.createdAt || 0);
-    return { pick: byPlaytime, conflict: byPlaytime !== byTime || !sameGame };
+export function syncChoice(live, remote, lastSaved, known = null) {
+    if (!remote) return 'local';
+    if (!played(live)) return 'cloud';
+    if (known !== null && known === lastSaved && live.meta?.createdAt === remote.meta?.createdAt) return 'local';
+    return aheadOf(live, remote) ? 'local' : 'cloud';
 }

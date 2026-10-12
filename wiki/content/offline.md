@@ -1,7 +1,7 @@
 ---
 path: /offline
-keywords: offline, offline progress, away, idle, afk, welcome back, cap, endurance, zipline, background, background tab, phone, save, saving, autosave, backup, backups, restore, export, import, save string, cloud, cloud save, account, sign in, log in, register, local storage, hard reset, wipe, saves
-aliases: Offline progress, Saves, Cloud save, Backups, Export, Import, Welcome back
+keywords: offline, offline progress, away, idle, afk, welcome back, cap, endurance, zipline, background, background tab, phone, save, saving, autosave, backup, backups, restore, cloud, cloud save, server, server save, account, sign in, log in, register, local storage, hard reset, wipe, saves
+aliases: Offline progress, Saves, Cloud save, Backups, Welcome back
 ---
 Fantasy Idle keeps playing while you are away. When you come back, the game works through the time you were gone with the same rules as play, and a welcome-back report tells you what happened. This page also explains how your game is saved, and how to keep it safe.
 
@@ -42,15 +42,15 @@ Time with the page out of sight does not count toward the breaks between new pla
 
 The game saves by itself, on this device, several times a minute, whenever the page is hidden or closed, and at once after a prestige. There is nothing to press. The game plays in one tab at a time: open it in a second tab or window and it plays there, while the first one stops (its **Play here** button takes it back), so the two never save over each other.
 
-**Backups.** Settings keeps backups you can restore at any time: three automatic ones, taken in turn as you play, one taken as the game loads (before the time away is added), one before each prestige you make (the Auto switch's take none), and one before a hard reset, an import or a restore.
+**Backups.** Without an account, Settings keeps backups you can restore at any time: three automatic ones, taken in turn as you play, one taken as the game loads (before the time away is added), one before each prestige you make (the Auto switch's take none), and one before a hard reset or a restore. Signed in, your game is the one on the server, and Settings shows no backups.
 
-**Export and import.** In Settings, **Copy export string** puts your whole game into a line of text, copied for you and shown in the box. To load one, paste it into the box and press **Import string**; your current game is backed up first. A string from a newer version of the game cannot be loaded.
-
-**Hard reset** wipes your save and starts the game over. While you are signed in it starts your cloud save over too, so the old game does not come back from there. One backup is kept in Settings, on this device, in case you change your mind.
+**Hard reset** wipes your save and starts the game over. While you are signed in it starts your save on the server over too, so the old game does not come back from there, and it cannot be undone. Without an account, one backup is kept in Settings in case you change your mind.
 
 ## Cloud saves
 
-Sign in with a username and a password (**Log in / register** in Settings) to keep your save on the game's server as well. When the game loads or you sign in, it first compares itself with your cloud save: the one with more play time is played, and if the two disagree in a way that could lose progress, the game asks which to keep. Only then does it upload: every ten minutes while you play and when you leave the page (Settings shows when it last did), and **Save to cloud now** does it at once. If another device has saved in the meantime, the server refuses the upload and the game asks again which to keep, so an older game never goes over a newer one. Time away from a cloud save is measured by the server's clock. Your save on the device is kept either way, and playing without an account is fine.
+Sign in with a username and a password (**Log in / register** in Settings) and your game lives on the game's server, as in any online game: any device you sign in on plays it. When the game loads or you sign in, it plays the save on the server, and never asks you to choose. The game on your device is kept only when it is that same game played further (the minutes since the last upload, say). It uploads every ten minutes while you play and when you leave the page (Settings shows when it last did), and **Save now** does it at once. If you played on another device in the meantime, the game carries on from there and tells you so; an older game never goes over a newer one. Time away is measured by the server's clock.
+
+Signing in to an account that already has a save plays that save: a game you started as a guest on this device does not replace it. Playing without an account is fine; your game then lives in this browser.
 
 [[Clans and leaderboards]] need an account.
 
@@ -58,4 +58,4 @@ Sign in with a username and a password (**Log in / register** in Settings) to ke
 
 Without an account your save lives only in this browser's storage on this device, and its backups with it. Clearing the browser's site data (cookies and site data, or history with them), a private window, or a browser that clears storage by itself will delete them all. On some phones a game added to the home screen keeps a save of its own, apart from the browser's.
 
-> Warning: if you play without an account, copy an export string now and then and keep it somewhere safe, or sign in for cloud saves.
+> Warning: if you play without an account, nothing keeps your game safe from a cleared browser. Sign in to keep it on the server.

@@ -1963,19 +1963,18 @@ function lookPicks(state) {
 export function renderSettings(game, ui, cloud) {
     const state = game.state;
     const played = duration(state.meta.playtimeMs);
+    const signedIn = !!cloud?.loggedIn;
     return `<div class="two-col">
         <section class="glass-panel ${painted('study', 'left 45%')}">
-            <div class="panel-header"><h2>Cloud save</h2><span class="muted small">${cloud?.loggedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest (local only)'}</span></div>
-            <p class="muted small">${cloud?.loggedIn ? 'Your save is uploaded every ten minutes while you play, and when you leave the page. Another device loads whichever save has more play time.' : 'Sign in to keep your save in the cloud and play from any device. Your local save is kept either way.'}</p>
-            ${cloud?.loggedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save to cloud now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
+            <div class="panel-header"><h2>Account</h2><span class="muted small">${signedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest'}</span></div>
+            <p class="muted small">${signedIn ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'Your game is kept in this browser only. Sign in to keep it on the server and play it on any device.'}</p>
+            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>
         <section class="glass-panel ${painted('study', 'right 45%')}">
-            <div class="panel-header"><h2>Save file</h2><span class="muted small">Played ${played}</span></div>
-            <div class="btn-row"><button class="mini-btn" onclick="FI.exportSave()">Copy export string</button><button class="mini-btn" onclick="FI.importSavePrompt()">Import string</button></div>
-            <textarea id="save-io" class="save-io" placeholder="Paste a save string here, then press Import." rows="3" oninput="FI.setSaveIo(this.value)">${esc(ui.saveIo || '')}</textarea>
+            <div class="panel-header"><h2>Your save</h2><span class="muted small">Played ${played}</span></div>
             <div class="btn-row"><button class="mini-btn danger" onclick="FI.hardReset()">Hard reset (wipe save)</button></div>
-            ${renderBackups()}
+            ${signedIn ? '' : renderBackups()}
         </section>
     </div>
     <section class="glass-panel ${painted('study', 'center 70%')}">
@@ -2311,7 +2310,7 @@ export function renderAuthModal(message = '') {
     return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
         <div class="modal-header">Cloud save</div>
         <div class="modal-body">
-            <p class="muted small">Create an account to sync your save across devices, or keep playing as a guest with a local save.</p>
+            <p class="muted small">Create an account to keep your game on the server and play it on any device, or keep playing as a guest in this browser.</p>
             <div class="auth-error" id="auth-error">${esc(message)}</div>
             <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('login')">
                 <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input">
@@ -2320,20 +2319,6 @@ export function renderAuthModal(message = '') {
             </form>
         </div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Play as guest</button></div>
-    </div>`;
-}
-
-export function renderConflictModal(local, cloud, suggested = null) {
-    const line = s => `${duration(s.meta.playtimeMs)} played · best stage ${s.combat.bestStage} · saved ${new Date(s.meta.savedAt).toLocaleString()}`;
-    const more = side => (suggested === side ? ' <span class="keep-text">· more progress</span>' : '');
-    return `<div class="modal-content ${painted('study', 'right 45%')}">
-        <div class="modal-header">Two saves found</div>
-        <div class="modal-body">
-            <div class="prestige-box"><h4>This device${more('local')}</h4><span>${line(local)}</span></div>
-            <div class="prestige-box"><h4>Cloud${more('cloud')}</h4><span>${line(cloud)}</span></div>
-            <p class="muted small">Pick the one to keep. The other is replaced; nothing is uploaded until you choose.</p>
-        </div>
-        <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.resolveConflict('local')">Keep this device</button><button class="modal-btn btn-confirm" onclick="FI.resolveConflict('cloud')">Use cloud save</button></div>
     </div>`;
 }
 

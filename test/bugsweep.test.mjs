@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { migrateState, MAX_STAGE } from '../src/core/state.js';
-import { importString, loadLocal, localLoadProblem, LOCAL_KEY, LEGACY_KEY } from '../src/core/save.js';
+import { loadLocal, localLoadProblem, LOCAL_KEY, LEGACY_KEY } from '../src/core/save.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { BALANCE } from '../src/core/formulas.js';
 import { BASE } from '../src/core/modifiers.js';
@@ -155,15 +155,6 @@ test('back after a day away: the crates that ripened are waiting before the welc
     const back = new Game(save(game), T0);
     back.resumeFromSave(T0 + 30 * HOUR);
     assert.ok(back.state.daily.banked >= 1);
-});
-
-test('an export string of something that is not a save is refused, not loaded as a fresh hero', () => {
-    const encode = text => `FI2:${Buffer.from(text).toString('base64')}`;
-    for (const text of ['123', '"text"', '[]', '{}', 'null', '{"gold": 999}']) {
-        assert.throws(() => importString(encode(text), T0), /Not a Fantasy Idle save/, text);
-    }
-    const game = new Game(null, T0);
-    assert.equal(importString(encode(game.serialize()), T0).version, 3, 'a real save still loads');
 });
 
 test('an unreadable save is kept and reported, never replaced by the prototype\'s save behind it', () => {

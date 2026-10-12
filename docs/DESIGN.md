@@ -674,18 +674,21 @@ gear to wear; a place that waited opens on the return and is named there too.
   Broken records (an unknown dungeon, a missing Titan or pet record) load as defaults. Loading also
   takes each value only if it has the default's type, drops keys the game doesn't know (including
   `__proto__`, which could otherwise reach every object on the page or the server), and rebuilds
-  every item from the game's own tables. A shared save string can't inject markup or break the save:
+  every item from the game's own tables. A save edited by hand can't inject markup or break the save:
   keys that would throw when read as text or a number (an own `toString` or `valueOf`) are dropped
   before anything reads it, numbers are kept within what play can reach (stages up to 10,000, past which
   a monster's health is no number; laurels, Titans, tokens, affixes), and the counts the medals read are
   rebuilt from what the save holds. A save that can't be read is kept as a copy and the game starts
-  fresh, pointing at the backups; it never falls back to the prototype's save behind it.
+  fresh, pointing a guest at the backups (signed in, the server's save loads); it never falls back to the
+  prototype's save behind it.
 - **One tab plays:** a tab opened later takes the save over; the older one stops and says so, with "Play
   here" (two tabs saved their own games over each other's, and whichever wrote last won).
 - **Backups:** three rotating automatic backups (every 10 minutes) plus one on load, one before each
-  prestige the player makes (Auto's take none) and one before a hard reset, restorable from Settings.
-- **Export/import:** `FI3:` compressed text (or `FI2:` base64 JSON); saves from a newer version are
-  refused, and so is a string of anything that isn't a save of this game.
+  prestige the player makes (Auto's take none) and one before a hard reset, restorable from Settings by a
+  guest. Signed in, Settings shows none: restoring one rolled the server's game back.
+- **No export or import** (removed in October 2026, the owner's ask: everything through the server's save,
+  as in any online game). Copy-and-paste save strings let a game be rolled back or carried between
+  accounts.
 - **Cloud (optional):** the game works as a guest. Signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
   version-checked saves. The client uploads every ten minutes while the player is around (the page in
@@ -694,13 +697,20 @@ gear to wear; a place that waited opens on the return and is named there too.
   next load replays that time from the last upload, and the local save stays current every 15 s. That is
   sized for the free database, which sleeps after five minutes without a request and may be awake 100
   compute-hours a month: a few testers playing keep it awake for a part of their play, not around the
-  clock (it was every 60 s, from every open page). When a local and a cloud save disagree it
-  prefers more play time, and asks the player if the save times disagree with that (compared from
-  before offline progress) or if the saves come from two different games. Nothing is uploaded until a
-  sync has compared the game with the cloud and chosen (at sign-in, at load, and after a long time
-  hidden), nor while the question is open; a sync that fails is tried again, never followed by a blind
-  upload. Each upload names the cloud save the game last saw, and the server refuses one made over
-  another device's newer save (409): the game then asks, unless it already holds all that save has.
+  clock (it was every 60 s, from every open page). **Signed in, the server's save
+  is the game** (October 2026, the owner's ask: "just like any normal online game"; `syncChoice` in
+  `src/core/save.js`). At load, at sign-in and after a long time hidden the game looks at the server's save
+  and plays it; nobody is asked. This device's game is kept (and uploaded) only when it is the server's
+  carried on: the server's save unchanged since this device last saw it (its time, noted on the device for
+  each account) and the same game, or this game holding everything the server's has (the upload a page
+  sends as it closes, or one whose answer was lost). So a guest's game gives way to an account's save, and
+  another device's newer play wins over this one's whatever the play time. It used to compare play time
+  with the save times and ask ("Two saves found") when they disagreed: the upload a page sends as it
+  closes is a second newer than its last local save, so a reload asked about two copies of one game.
+  Nothing is uploaded until a sync has chosen; a sync that fails is tried again, never followed by a blind
+  upload. Each upload names the server's save the game last saw, and the server refuses one made over
+  another device's newer save (409): the game then looks again and carries on from the server's save (a
+  toast says so), unless it already holds all that save has.
   The boot's welcome-back waits for the sync, so it never acts on the other game. A hard reset while
   signed in resets the cloud save too. On a static host without the API, sign-in says cloud saves are
   unavailable instead of failing.
@@ -1754,8 +1764,8 @@ style.css             styles: theme tokens and components (dark fantasy), the ba
                       phone layout, reduced motion
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
 src/game.js           Game facade: state + tick + every player action (no DOM)
-src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, export,
-                      cloud client) · power (server-side numbers) · text (articles for names)
+src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, the
+                      cloud client, which save is played) · power (server-side numbers) · text (articles for names)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)

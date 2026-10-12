@@ -8,7 +8,7 @@ Clans are the game's online side. Join one, and every week the whole clan fights
 
 Clans and leaderboards work through an account and the cloud:
 - **An account.** Sign in, or register a new one, from the Clan tab or from "Log in / register" in Settings. You can play without one; your save on this device is kept either way.
-- **A [[Offline progress and saves|cloud save]].** Once you are signed in, your save goes up to the cloud every ten minutes while you play and when you leave the page, and another device loads whichever save has more play time, asking you first when the two don't agree. Everything other players see of you, your clan attacks and your place on a board, is worked out on the server from that saved hero, never from numbers your game sends.
+- **A [[Offline progress and saves|cloud save]].** Once you are signed in, your game lives on the server: it goes up every ten minutes while you play and when you leave the page, and any device you sign in on plays it. Everything other players see of you, your clan attacks and your place on a board, is worked out on the server from that saved hero, never from numbers your game sends.
 
 The Clan tab itself opens once you have [[Prestige|prestiged]] and reached stage {{[...Array(1000).keys()].find(s => UNLOCKS.find(u => u.id === 'clan').requires({ prestige: { count: 1 }, combat: { bestStage: s } }))}} (see [[Places and unlocks]]). Until you sign in, it only shows what a clan is.
 

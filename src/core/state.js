@@ -137,19 +137,14 @@ export function migrateState(raw, now = Date.now()) {
 }
 
 // Keys a save may never carry. An own "toString" or "valueOf" that isn't a function (all a JSON text can
-// hold) makes the value throw wherever the game reads it as a number or as text: a save shared as a
-// string, or pushed to the server, could then stop the game loading, or wipe the server's record of the
+// hold) makes the value throw wherever the game reads it as a number or as text: a save edited by hand,
+// or pushed to the server, could then stop the game loading, or wipe the server's record of the
 // hero's highs. The others would reach an object's prototype.
 const POISON_KEYS = new Set(['toString', 'valueOf', 'toLocaleString', '__proto__', 'constructor', 'prototype']);
 
 /** A deep copy of a loaded save without those keys (and as plain data: what JSON can hold). */
 function cleanCopy(raw) {
     return JSON.parse(JSON.stringify(raw, (key, value) => (POISON_KEYS.has(key) ? undefined : value)));
-}
-
-/** Does a value look like a save of this game, of any version (export strings are checked with it)? */
-export function looksLikeSave(data) {
-    return isPlainObject(data) && (isPlainObject(data.meta) || isPrototypeSave(data));
 }
 
 /**

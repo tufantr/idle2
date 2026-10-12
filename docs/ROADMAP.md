@@ -102,7 +102,7 @@ What a returning player touches first: offline, onboarding, saves, the daily loo
 - [x] Predicate-based unlocks with a next-goal hint; developer unlock-all switch
 - [x] Achievement multiplier (+1% per achievement) and 20 achievements
 - [x] Daily crate (20 h, no streaks)
-- [x] Versioned save, prototype-save migration, export/import string
+- [x] Versioned save, prototype-save migration, export/import string (the strings were removed in Phase 9)
 - [x] Mini-games as timed opportunities
 - [x] Number formatting (K/M/B), toasts instead of `alert()`, reduced-motion option, mobile tab strip
 - [x] **Idle "focus" bonus**: +15% skill and attack speed after 60 s without input, also offline
@@ -1092,6 +1092,14 @@ Keeping it running:
       ceiling on a hit as in RuneScape's 200 or Guild Wars's guild lords); the owner chose the cap alone. A
       boss that has fallen shows how long until the next (Monday, 00:00 UTC). That week's boss was brought
       back to full health by hand
+- [x] **The server's save is the game** (the owner's ask, 13 October 2026: "just like any normal online
+      game"; DESIGN §3.17): signed in, the game plays the server's save and never asks. "Two saves found"
+      is gone; it came up on a plain reload, because the upload a page sends as it closes is a second newer
+      than its last local save. This device's game is kept only when it is the server's carried on (the
+      server's unchanged since this device saw it, or this game holding all it has); otherwise the
+      server's wins, whatever the play time, and a page that finds another device played on carries on
+      from there with a toast. Export and import strings are gone from Settings, and a signed-in player's
+      Settings show no local backups (a restore rolled the server's game back); a guest keeps them
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

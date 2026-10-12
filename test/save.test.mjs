@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, exportString, importString, exportStringCompressed, importStringAsync, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, chooseSave, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -52,42 +52,34 @@ test('a corrupted save is kept under a backup key instead of being overwritten',
     assert.equal(localStorage.getItem(`${LOCAL_KEY}.corrupt.42`), '{not json');
 });
 
-test('export strings round-trip and reject garbage and future versions', () => {
-    const game = new Game(null, 1);
-    game.state.gold = 4242;
-    const text = exportString(game.serialize());
-    assert.ok(text.startsWith('FI2:'));
-    assert.equal(importString(text).gold, 4242);
-    assert.throws(() => importString('hello'));
-    const future = { ...createDefaultState(1), version: 999 };
-    assert.throws(() => importString(exportString(JSON.stringify(future))), /newer version/);
-});
-
-test('cloud conflict choice uses playtime first and flags disagreement', () => {
-    const a = createDefaultState(1); a.meta.playtimeMs = 10; a.meta.savedAt = 100;
-    const b = createDefaultState(1); b.meta.playtimeMs = 20; b.meta.savedAt = 200;
-    assert.deepEqual(chooseSave(a, b), { pick: 'cloud', conflict: false });
-    b.meta.savedAt = 50;
-    assert.deepEqual(chooseSave(a, b), { pick: 'cloud', conflict: true });
-    assert.deepEqual(chooseSave(null, b), { pick: 'cloud', conflict: false });
-    assert.deepEqual(chooseSave(a, null), { pick: 'local', conflict: false });
-    // More progress but older is a conflict whichever side has it.
-    b.meta.savedAt = 200; a.meta.playtimeMs = 30;
-    assert.deepEqual(chooseSave(a, b), { pick: 'local', conflict: true });
-    // Two different games are never merged silently.
-    const other = createDefaultState(2); other.meta.playtimeMs = 5; other.meta.savedAt = 50;
-    assert.deepEqual(chooseSave(a, other), { pick: 'local', conflict: true });
-});
-
-test('compressed export strings round-trip and are smaller', async () => {
-    const game = new Game(null, 1);
-    game.state.gold = 999;
-    const json = game.serialize();
-    const text = await exportStringCompressed(json);
-    assert.ok(text.startsWith('FI3:'));
-    assert.ok(text.length < exportString(json).length / 2, `${text.length} vs ${exportString(json).length}`);
-    assert.equal((await importStringAsync(text)).gold, 999);
-    assert.equal((await importStringAsync(exportString(json))).gold, 999, 'old FI2 strings still import');
+test("signed in, the server's save is the game: this device's is kept only when it is that one carried on", () => {
+    const server = createDefaultState(1);
+    server.stats.kills = 50; server.meta.playtimeMs = 3_600_000; server.combat.bestStage = 20;
+    const here = structuredClone(server);   // the same game, played on
+    here.stats.kills = 60; here.meta.playtimeMs = 3_700_000;
+    assert.equal(syncChoice(here, null, 0, null), 'local', 'no server save yet: this game is the account\'s first');
+    assert.equal(syncChoice(createDefaultState(1), server, 500, 500), 'cloud', 'nothing played here: the server\'s');
+    assert.equal(syncChoice(here, server, 500, 500), 'local', 'the server unchanged since this device saw it: this game goes up');
+    // regression (the owner's report, "Two saves found"): the page uploaded as it closed, a second after its
+    // last local save, and the next load asked which to keep. Both hold the same play: no question, nothing lost.
+    const closing = structuredClone(here);
+    closing.meta.savedAt += 1000;
+    assert.equal(syncChoice(here, closing, 900, 500), 'local');
+    // another device played on: the server's save, whatever this one has, more play time included
+    const elsewhere = structuredClone(server);
+    elsewhere.stats.kills = 70; elsewhere.combat.bestStage = 25;
+    assert.equal(syncChoice(here, elsewhere, 900, 500), 'cloud');
+    here.meta.playtimeMs = 9_000_000;
+    assert.equal(syncChoice(here, elsewhere, 900, 500), 'cloud');
+    // a guest's game meeting an account's save (another game): the account's, even with nothing changed there
+    const guest = createDefaultState(2);
+    guest.stats.kills = 999;
+    assert.equal(syncChoice(guest, server, 500, 500), 'cloud');
+    assert.equal(syncChoice(guest, server, 500, null), 'cloud');
+    // a device that never saw this account's save, holding all of it and more of the same game: kept
+    assert.equal(syncChoice(here, server, 500, null), 'local');
+    assert.equal(aheadOf(here, server), true);
+    assert.equal(aheadOf(server, here), false);
 });
 
 test('backups rotate through three slots and can be restored', () => {

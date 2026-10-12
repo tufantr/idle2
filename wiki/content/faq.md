@@ -19,11 +19,11 @@ Yes. Whatever your hero was doing when you left, the fight or a skill, carries o
 
 ### Where is my save? Is there a cloud save?
 
-Your save lives in this browser, on this device. It is saved automatically as you play and whenever you leave the page, and Settings keeps a few automatic backups you can restore. Clearing the browser's site data deletes it, so keep a copy: Settings can **copy an export string**, a line of text you can store anywhere and import later. For a cloud save, sign in (on the title card, or in Settings under Cloud save). Your save is then uploaded as you play, and another device loads whichever save has more play time, asking you when it cannot tell. When your save comes from the cloud, the time you were away is measured by the server's clock, not your device's.
+Without an account, your save lives in this browser, on this device: it is saved automatically as you play and whenever you leave the page, and Settings keeps a few automatic backups you can restore. Clearing the browser's site data deletes it all. Sign in (on the title card, or in Settings under Account) and your game lives on the server instead, as in any online game: it is uploaded as you play, and any device you sign in on plays it. The time you were away is then measured by the server's clock, not your device's.
 
 ### Can I play on my phone, or install it like an app?
 
-Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Some phones keep a home-screen app's storage apart from the browser's, so sign in for a cloud save (or move your save with an export string) to keep the same hero.
+Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Some phones keep a home-screen app's storage apart from the browser's, so sign in to keep the same hero in both.
 
 ### How do I turn off motion or sound?
 

@@ -2,10 +2,10 @@
 
 import { Game } from './game.js';
 import {
-    loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
+    loadLocal, saveLocal, clearLocal, CloudClient, syncChoice,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle } from './ui/features.js';
@@ -76,7 +76,6 @@ const ui = {
     invSelected: null,   // the item on the table in the inventory (an item id)
     invPreview: null,    // the item under the pointer, shown instead while hovered
     cloudStatus: '',
-    saveIo: '',          // contents of the export/import box, kept across re-renders
     lastRender: 0,
     renderedRevision: -1,
     modalOpen: false,
@@ -107,12 +106,13 @@ function freshSocial() {
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
-// The cloud is written only once a sync has compared this game with it and chosen (an upload before
-// that put a guest's or a stale game over the account's). A failed sync is tried again.
+// Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
+// looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
+// failed sync is tried again.
 let cloudReady = false;
+let synced = false;           // this page has played a game it looked up on the server: one taken later is another device's play
 let syncing = false;
 let syncRetryAt = 0;
-let resyncChanged = false;   // an upload was refused: the cloud changed under this page (another device)
 let heldReport = null;       // the boot's welcome-back, held until the sync has chosen which game is played
 const SYNC_RETRY_MS = 45000;
 let syncFailNoted = false;
@@ -149,9 +149,6 @@ function becomePassive() {
         <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="location.reload()">Play here</button></div></div>`, 'elsewhere');
 }
 window.addEventListener('storage', event => { if (event.key === OWNER_KEY && event.newValue && event.newValue !== TAB_ID) becomePassive(); });
-// When the local save was last written. Offline progress moves the game's clock to now, so the first
-// cloud sync compares the cloud copy with this instead (or the local save would always look newer).
-let bootSavedAt = loaded ? loaded.meta.savedAt : null;
 
 // The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
 const scene = createScene(document.getElementById('scene'), {
@@ -211,12 +208,11 @@ const bootReport = offlineSummary && (offlineSummary.mode !== 'rest' || offlineS
 // once, it stayed up over the cloud's game, and its buttons acted on that game's items).
 if (bootReport && cloud.loggedIn) heldReport = bootReport;
 else if (bootReport) openModal(renderWelcomeBack(bootReport, game), 'offline');
-if (loadProblem) setTimeout(() => askConfirm('Your save could not be read', 'A copy of it was kept, and the game started fresh. Your backups are in Settings: restore one to carry on where you were.', 'Open Settings', () => window.FI.switchTab('settings')), 0);
+if (loadProblem && !cloud.loggedIn) setTimeout(() => askConfirm('Your save could not be read', 'A copy of it was kept, and the game started fresh. Your backups are in Settings: restore one to carry on where you were.', 'Open Settings', () => window.FI.switchTab('settings')), 0);
 if (cloud.loggedIn) syncFromCloud();
 // A new player meets the game first, not a login form: a title card, then straight into a fight.
 // Signing in stays one click away (on the card, and in the header once there is progress to keep).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
-if (!cloud.loggedIn) bootSavedAt = null;   // no boot sync: a later login compares the cloud with the live save
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -245,13 +241,13 @@ setInterval(() => {
         game.now = now;
     }
     try { handleEvents(game.drainEvents()); } catch (err) { console.error('Events failed', err); }   // never at the cost of the save below
-    if (game.state.clanResult && cloud.loggedIn && cloudReady && !pendingConflict) sendClanResult();   // a clan attack fought, not yet sent
+    if (game.state.clanResult && cloud.loggedIn && cloudReady) sendClanResult();   // a clan attack fought, not yet sent
     if (now - lastSave > AUTOSAVE_MS) save(now);
     // (not while a save that couldn't be read waits to be restored: these would write over its backups)
     if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem) { lastBackup = now; rotateBackup(game.serialize(now), now); }
     // the sync that failed, tried again (until it has chosen, nothing is uploaded)
-    if (cloud.loggedIn && !cloudReady && !syncing && !pendingConflict && !document.hidden && now >= syncRetryAt) syncFromCloud({ changed: resyncChanged });
-    if (cloud.loggedIn && cloudReady && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
+    if (cloud.loggedIn && !cloudReady && !syncing && !document.hidden && now >= syncRetryAt) syncFromCloud();
+    if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
     // the Clan tab's board, only while someone is there (an untouched page kept the free database awake)
     if (ui.tab === 'clan' && playerAround(now) && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
@@ -299,7 +295,7 @@ document.addEventListener('visibilitychange', () => {
     lastPresenceAt = Date.now();
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
-    if (cloud.loggedIn && cloudReady && !pendingConflict && hiddenAt && Date.now() - hiddenAt >= CLOUD_AWAY_MS) syncFromCloud();
+    if (cloud.loggedIn && cloudReady && hiddenAt && Date.now() - hiddenAt >= CLOUD_AWAY_MS) syncFromCloud();
 });
 // The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
 let resizeQueued = false;
@@ -425,7 +421,7 @@ document.addEventListener('keydown', event => {
         event.preventDefault();
         target.click();
     }
-    if (event.key === 'Escape' && ui.modalOpen && !['conflict', 'elsewhere'].includes(ui.modalOpen)) closeModal(); // a conflict needs a choice; another tab plays
+    if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'elsewhere') closeModal(); // another tab plays
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
     // holding it does nothing more).
@@ -881,14 +877,14 @@ function save(now) {
 }
 
 /**
- * Upload the game. Only once a sync has chosen it over the cloud's (`sync` is that sync's own upload),
- * never while the player chooses, one at a time. The server refuses an upload made over a cloud save
- * this page hasn't seen (another device's): then the two are compared again, and the player asked.
+ * Upload the game. Only once a sync has chosen it over the server's (`sync` is that sync's own upload),
+ * one at a time. The server refuses an upload made over a save this page hasn't seen (another device's):
+ * then the game looks at the server again, and plays its save unless this one already holds all it has.
  */
 let pushing = false;
 let giftsWaiting = false;   // an upload's answer said gifts wait: claimed when the page is in view (their card shows)
 async function cloudSave(announce = true, { keepalive = false, sync = false } = {}) {
-    if (!cloud.loggedIn || pendingConflict || passive || pushing) return;
+    if (!cloud.loggedIn || passive || pushing) return;
     if (!cloudReady && !sync) { if (announce) toast('Checking the cloud save first…', 'info'); return; }
     pushing = true;
     lastCloudSave = Date.now();
@@ -899,9 +895,8 @@ async function cloudSave(announce = true, { keepalive = false, sync = false } = 
         giftsWaiting = answer?.gifts > 0;
         if (giftsWaiting) claimGifts();
     } catch (err) {
-        if (err.status === 409) {   // another device saved meanwhile: compare again before anything goes up
+        if (err.status === 409) {   // another device saved meanwhile: look at the server again before anything goes up
             cloudReady = false;
-            resyncChanged = true;
             syncRetryAt = 0;
             return;
         }
@@ -914,7 +909,7 @@ async function cloudSave(announce = true, { keepalive = false, sync = false } = 
 
 /** Leaving the page (another tab, the phone's home screen, closing it): one upload, unless one went just now. */
 function cloudSaveOnLeave() {
-    if (!cloud.loggedIn || !cloudReady || passive || pendingConflict || !game.state.settings.cloudSync || Date.now() - lastCloudSave < CLOUD_LEAVE_GAP_MS) return;
+    if (!cloud.loggedIn || !cloudReady || passive || !game.state.settings.cloudSync || Date.now() - lastCloudSave < CLOUD_LEAVE_GAP_MS) return;
     cloudSave(false, { keepalive: true });
 }
 
@@ -922,7 +917,7 @@ function cloudSaveOnLeave() {
 let claimingGifts = false;
 async function claimGifts() {
     // (not into a game the sync may yet replace, nor while hidden: its card would show to nobody)
-    if (claimingGifts || !cloud.loggedIn || !cloudReady || passive || pendingConflict || document.hidden) return;
+    if (claimingGifts || !cloud.loggedIn || !cloudReady || passive || document.hidden) return;
     claimingGifts = true;
     try {
         const { gifts = [] } = await cloud.claimGifts();
@@ -1022,14 +1017,6 @@ async function socialAction(fn, success) {
     }
 }
 
-let pendingConflict = null;
-/** Does `live` hold everything the cloud's `remote` has (the same game, as far in every count), so keeping it loses nothing? */
-function aheadOf(live, remote) {
-    const xp = s => Object.values(s.skills || {}).reduce((n, k) => n + (Number(k?.xp) || 0), 0);
-    const counts = s => [s.combat?.bestStage || 0, s.prestige?.count || 0, s.ascension?.count || 0, s.stats?.kills || 0, xp(s)];
-    const mine = counts(live);
-    return live.meta?.createdAt === remote.meta?.createdAt && counts(remote).every((v, i) => v <= mine[i]);
-}
 /** The boot's welcome-back, held while the sync chose: this game is the one played, so it shows now. */
 function showHeldReport() {
     const report = heldReport;
@@ -1037,44 +1024,31 @@ function showHeldReport() {
     if (report) openModal(renderWelcomeBack(report, game), 'offline');
 }
 /**
- * Compare this game with the cloud's and choose: the newer one is played (and this one uploaded), or the
- * player is asked. `changed`: an upload was refused, the cloud changed under this page. Until it has
- * chosen nothing goes up; a failed one is tried again (the loop), never followed by a blind upload.
+ * Look at the server's save and play it: the server's save is the game, as in any online game, and the
+ * player is never asked. This one is kept (and uploaded) only when it is the server's carried on
+ * (syncChoice). Until it has chosen nothing goes up; a failed one is tried again (the loop), never
+ * followed by a blind upload.
  */
-async function syncFromCloud({ changed = false } = {}) {
+async function syncFromCloud() {
     if (syncing || !cloud.loggedIn) return;
     syncing = true;
-    const wasReady = cloudReady;
-    const seenBase = cloud.base;
+    const before = synced;
+    // the server's save as this device last saw it: this page's look, or (at load) the one noted last time
+    const known = cloud.base ?? cloud.knownBase()?.at ?? null;
     cloudReady = false;
-    resyncChanged = false;
     try {
-        const boot = bootSavedAt;
-        bootSavedAt = null;   // used once, by the boot sync: a failed or later sync compares with the live save
         const { state: remote, lastSaved, gifts } = await cloud.pull(Date.now());
-        const live = game.state;
-        const local = boot ? { ...live, meta: { ...live.meta, savedAt: boot } } : live;
-        const played = !!(live.stats.kills || live.meta.playtimeMs > 60000);
-        let choice = chooseSave(played ? local : null, remote);
-        // Another device saved since this page last saw the cloud: this game keeps going only if it already
-        // has all that one has (an answer this page lost, say); else the player chooses.
-        const elsewhere = changed || (wasReady && seenBase !== null && lastSaved !== seenBase);
-        if (elsewhere && remote && played) choice = aheadOf(live, remote) ? { pick: 'local', conflict: false } : { pick: choice.pick, conflict: true };
-        if (choice.conflict && remote) {
-            pendingConflict = { remote };
-            openModal(renderConflictModal(local, remote, choice.pick), 'conflict');
-            return;   // the cloud is ready again with the player's choice (FI.resolveConflict)
-        }
-        if (choice.pick === 'cloud' && remote) {
+        if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
             heldReport = null;
             cloudReady = true;
             adoptState(remote);
-            toast('Cloud save loaded', 'info');
+            if (before) toast('Your game was played on another device: carrying on from there', 'info');
         } else {
             showHeldReport();
             cloudReady = true;
             await cloudSave(false, { sync: true });
         }
+        synced = true;
         syncRetryAt = 0;
         syncFailNoted = false;
         giftsWaiting = gifts > 0;
@@ -1381,28 +1355,8 @@ window.FI = {
         if (game.state.settings.sound) { sound.unlock(); sound.play('click'); }
         render();
     },
-    async exportSave() {
-        const text = await exportStringCompressed(game.serialize(Date.now()));
-        ui.saveIo = text;
-        const box = document.getElementById('save-io');
-        if (box) box.value = text;
-        navigator.clipboard?.writeText(text).then(() => toast('Save string copied to clipboard', 'info')).catch(() => toast('Save string placed in the box below', 'info'));
-    },
-    setSaveIo(value) { ui.saveIo = value; },
-    async importSavePrompt() {
-        try {
-            const state = await importStringAsync(ui.saveIo || document.getElementById('save-io')?.value || '');
-            writeBackup(game.serialize(Date.now()), 'reset', 'Before import');
-            ui.saveIo = '';
-            adoptState(state);
-            toast('Save imported', 'info');
-        } catch (err) {
-            // the game's own refusals say what is wrong; the browser's (bad base64, broken JSON) don't
-            const ours = /save|version|compressed/i.test(err.message) && !/atob|JSON|token|position|fetch|execute/i.test(err.message);
-            toast(ours ? err.message : "That isn't a whole Fantasy Idle save string: copy all of it, and try again.", 'error');
-        }
-    },
     restoreBackup(slot) {
+        if (cloud.loggedIn) return;   // signed in, the server's save is the game: no rolling it back from here
         askConfirm('Restore this backup?', 'Your current progress will be replaced. A backup of it is kept.', 'Restore backup', () => {
             try {
                 const state = restoreBackup(slot, Date.now());
@@ -1413,9 +1367,10 @@ window.FI = {
         });
     },
     hardReset() {
-        // Signed in, the fresh game goes to the cloud too: the old one came back from there on the next load.
-        const where = cloud.loggedIn ? ', here and in your cloud save' : '';
-        askConfirm('Wipe your save?', `The game starts over from the beginning${where}. One backup is kept in Settings in case you change your mind.`, 'Wipe save', () => {
+        // Signed in, the fresh game goes to the server too: the old one came back from there on the next load.
+        const what = cloud.loggedIn ? 'The game starts over from the beginning, on the server too. This cannot be undone.'
+            : 'The game starts over from the beginning. One backup is kept in Settings in case you change your mind.';
+        askConfirm('Wipe your save?', what, 'Wipe save', () => {
             writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
             clearLocal();
             prefs.remove('fantasyIdle.tab');
@@ -1463,7 +1418,8 @@ window.FI = {
         try {
             if (kind === 'login') await cloud.login(user, pass); else await cloud.register(user, pass);
             ui.social = freshSocial(); // nothing from the previous account carries over
-            cloudReady = false;        // nothing goes up before the sync below has compared this game with the account's
+            cloudReady = false;        // nothing goes up before the sync below has looked at the account's save
+            synced = false;
             closeModal();
             toast(`Signed in as ${cloud.username}`, 'info');
             await syncFromCloud();
@@ -1473,6 +1429,7 @@ window.FI = {
     logout() {
         cloud.logout();
         cloudReady = false;
+        synced = false;
         heldReport = null;
         game.clearClanResult();   // an attack not sent belongs to that account (it went to the next one to sign in)
         ui.cloudStatus = '';
@@ -1481,15 +1438,6 @@ window.FI = {
         render();
     },
     cloudSaveNow() { cloudSave(true); },
-    resolveConflict(pick) {
-        closeModal();
-        if (!pendingConflict) return;
-        const { remote } = pendingConflict;
-        pendingConflict = null;
-        cloudReady = true;
-        if (pick === 'cloud') { heldReport = null; adoptState(remote); } else { showHeldReport(); cloudSave(false); }
-        render();
-    },
     game: () => game
 };
 
