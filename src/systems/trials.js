@@ -83,9 +83,11 @@ export function checkTrial(game) {
     const trial = activeTrial(state);
     if (!trial) return;
     const stage = state.combat.maxStage;
+    // the week first: a new week's bar is the best from before it (an offline replay crossing Monday
+    // used to set it after this stage was counted, one stage too high)
+    const week = syncWeekly(state, game.now);
     if (stage > (state.trials.best[trial.id] || 0)) state.trials.best[trial.id] = stage;
     let records = 0;
-    const week = syncWeekly(state, game.now);
     if (week.id === trial.id && stage > (week.best || 0)) week.best = stage;   // this week's best in it: the week's board (api)
     if (week.id === trial.id && !week.won && stage >= Math.max(week.bar + 1, trial.first)) {
         week.won = true;

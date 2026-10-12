@@ -160,7 +160,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     game.silent = wasSilent;
     // Medals earned while away took effect as they came; their cards show now.
     for (const ach of ACHIEVEMENTS) {
-        if (state.achievements?.[ach.id] && !medalsBefore.has(ach.id)) game.emit({ type: 'achievement', id: ach.id, name: ach.name, reward: ach.reward, secret: !!ach.secret });
+        if (state.achievements?.[ach.id] && !medalsBefore.has(ach.id)) game.emit({ type: 'achievement', id: ach.id, name: ach.name, reward: ach.reward, secret: !!ach.secret, replayed: true });
     }
 
     const summary = { elapsed, simulated, capped: elapsed > cap, mode, stalledReason, ...diff(before, state) };

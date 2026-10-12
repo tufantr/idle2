@@ -1,11 +1,14 @@
 // Persistence: local saves (namespaced, versioned), export/import strings, and the cloud API client.
 // The cloud layer is optional: with no backend reachable the game runs as a local/guest save.
 
-import { migrateState, SAVE_VERSION } from './state.js';
+import { migrateState, looksLikeSave, SAVE_VERSION } from './state.js';
 
 export const LOCAL_KEY = 'fantasyIdle.save.v2';
 export const LEGACY_KEY = 'fantasyIdleSaveLocal';
 export const TOKEN_KEY = 'fantasyIdle.jwt';
+// The cloud save this device last saw (its server time) and whose: an upload names it, and the server
+// refuses one made over a save it hasn't seen (another device's).
+export const CLOUD_BASE_KEY = 'fantasyIdle.cloudBase';
 export const EXPORT_PREFIX = 'FI2:';          // base64 JSON
 export const COMPRESSED_PREFIX = 'FI3:';      // base64 deflate(JSON)
 export const BACKUP_PREFIX = 'fantasyIdle.backup.';
@@ -17,10 +20,15 @@ function storage() {
     try { return globalThis.localStorage || null; } catch { return null; }
 }
 
+let loadProblem = null;
+/** The key of the local save the last loadLocal couldn't read, or null (main.js offers the backups). */
+export function localLoadProblem() { return loadProblem; }
+
 /** Load the best available local save (current format first, then the original prototype's). Returns a migrated state or null. */
 export function loadLocal(now = Date.now()) {
     const store = storage();
     if (!store) return null;
+    loadProblem = null;
     for (const key of [LOCAL_KEY, LEGACY_KEY]) {
         const raw = store.getItem(key);
         if (!raw) continue;
@@ -30,6 +38,10 @@ export function loadLocal(now = Date.now()) {
             // Keep the unreadable save instead of letting the next autosave overwrite it.
             console.error(`Save in ${key} is unreadable; kept a copy`, err);
             try { store.setItem(`${key}.corrupt.${now}`, raw); } catch { /* storage full */ }
+            // and never fall back to the prototype's save behind it: that was migrated long ago, and the
+            // game would autosave a years-old hero over this one
+            loadProblem = key;
+            return null;
         }
     }
     return null;
@@ -44,6 +56,7 @@ export function saveLocal(json) {
 export function clearLocal() {
     const store = storage();
     if (!store) return;
+    backupsListed = null;
     store.removeItem(LOCAL_KEY);
     store.removeItem(LEGACY_KEY);
     // Every backup goes except the one written just before a hard reset, so a reset can be undone.
@@ -63,6 +76,7 @@ export function writeBackup(json, slot, label, now = Date.now()) {
     try {
         const summary = describeState(JSON.parse(json));
         store.setItem(BACKUP_PREFIX + slot, JSON.stringify({ at: now, label, summary, json }));
+        backupsListed = null;
         return true;
     } catch (err) { console.error('Backup failed', err); return false; }
 }
@@ -78,11 +92,16 @@ export function rotateBackup(json, now = Date.now()) {
     return writeBackup(json, oldest.slot, 'Automatic', now);
 }
 
+// The list as last read, until a backup is written: each read parsed six whole saves, and Settings
+// read it every time it was drawn.
+let backupsListed = null;
+/** The backups, newest first: { slot, at, label, summary } (restoreBackup reads the save itself). */
 export function listBackups() {
-    return [...AUTO_BACKUP_SLOTS, 'load', 'prestige', 'reset']
-        .map(slot => ({ slot, ...readBackup(slot) }))
+    backupsListed ||= [...AUTO_BACKUP_SLOTS, 'load', 'prestige', 'reset']
+        .map(slot => { const b = readBackup(slot); return b ? { slot, at: b.at, label: b.label, summary: b.summary } : { slot }; })
         .filter(b => b.at)
         .sort((a, b) => b.at - a.at);
+    return backupsListed;
 }
 
 export function restoreBackup(slot, now = Date.now()) {
@@ -116,6 +135,8 @@ export async function exportStringCompressed(json) {
 }
 
 function checkVersion(parsed, now) {
+    // a string of another game's JSON (or a number, a list, null) is not a save: it would replace the game with a fresh hero
+    if (!looksLikeSave(parsed)) throw new Error('Not a Fantasy Idle save string.');
     if (parsed.version > SAVE_VERSION) throw new Error('This save comes from a newer version of the game.');
     return migrateState(parsed, now);
 }
@@ -145,6 +166,19 @@ export class CloudClient {
         this.token = storage()?.getItem(TOKEN_KEY) || null;
         this.username = this.token ? decodeUsername(this.token) : null;
         this.available = null; // unknown until the first request
+        this.base = null;      // the cloud save this page has seen (pull or push), as the server's lastSaved
+    }
+
+    /** The cloud save this device saw last time, for this account ({ at, savedAt } or null). */
+    knownBase() {
+        try {
+            const known = JSON.parse(storage()?.getItem(CLOUD_BASE_KEY) || 'null');
+            return known && known.user === this.username && Number.isFinite(known.at) ? known : null;
+        } catch { return null; }
+    }
+    noteBase(at, savedAt = null) {
+        this.base = at;
+        try { storage()?.setItem(CLOUD_BASE_KEY, JSON.stringify({ user: this.username, at, savedAt })); } catch { /* storage full */ }
     }
 
     get loggedIn() { return !!this.token; }
@@ -181,6 +215,7 @@ export class CloudClient {
     setToken(token) {
         this.token = token;
         this.username = token ? decodeUsername(token) : null;
+        this.base = null;   // another account (or none): nothing seen of its cloud yet
         const store = storage();
         if (!store) return;
         if (token) store.setItem(TOKEN_KEY, token); else store.removeItem(TOKEN_KEY);
@@ -213,12 +248,19 @@ export class CloudClient {
             state.meta.savedAt = now - away;
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
+        this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null);
         return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0 };
     }
 
-    /** Upload the save. The answer says how many gifts wait for this player ({ gifts }). */
+    /**
+     * Upload the save over the cloud save this page has seen (`base`): if another device has uploaded
+     * since, the server refuses it (an error with status 409) and the game asks which to keep. The
+     * answer says how many gifts wait for this player ({ gifts }).
+     */
     async push(stateObject, { keepalive = false } = {}) {
-        return this.request('/save', { method: 'POST', body: { state: stateObject }, keepalive });
+        const answer = await this.request('/save', { method: 'POST', body: { state: stateObject, ...(this.base === null ? {} : { base: this.base }) }, keepalive });
+        if (Number.isFinite(answer?.timestamp)) this.noteBase(answer.timestamp, stateObject?.meta?.savedAt ?? null);
+        return answer;
     }
 
     /** Claim the gifts waiting on the server: [{ id, kind, gold?, essence?, diamond?, text? }]. */
@@ -232,7 +274,7 @@ export class CloudClient {
     kickMember(username) { return this.request('/clan/kick', { method: 'POST', body: { username } }); }
     myClan() { return this.request('/clan'); }
     /** A clan attack as it was fought: when the player struck (ms into the fight) and how long it lasted. */
-    clanAttack({ strikes = [], ms } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms } }); }
+    clanAttack({ strikes = [], ms, at } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms, fightAt: at } }); }   // `at`: the fight's own mark, so a resend is never a second attack
     rewards() { return this.request('/rewards'); }
     claimRewards(ids) { return this.request('/rewards/claim', { method: 'POST', body: { ids } }); }
     leaderboard(metric, period) { return this.request(`/leaderboard?metric=${encodeURIComponent(metric)}&period=${encodeURIComponent(period)}`); }

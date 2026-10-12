@@ -7,8 +7,8 @@ import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MA
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
-import { TRIALS, TRIAL_TIERS, trialById, trialTarget } from '../data/trials.js';
-import { xpForLevel, levelForXp } from './xp.js';
+import { TRIALS, TRIAL_TIERS, trialById, trialTarget, trialTiersCleared } from '../data/trials.js';
+import { xpForLevel, levelForXp, MAX_LEVEL } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
 import { TOOLS } from '../data/workshop.js';
@@ -92,7 +92,11 @@ export function createDefaultState(now = Date.now()) {
             gildedKills: 0,
             petPats: 0, greatCrates: 0, recoveries: 0, // for the secret medals: pats for the pet, great crates opened, falls got up from
             strikes: 0,            // the player's own strikes on monsters (systems/guide.js)
-            codexFound: 0          // pages of the gear codex filled
+            codexFound: 0,         // pages of the gear codex filled
+            // the Trials' and the Ascension's counts (medals read them: a count without a default here was
+            // dropped on every load, so Trial Master asked for twenty tiers in one sitting)
+            trialTiers: 0, trialsStarted: 0, laurels: 0, ascensions: 0, masteryCheckpoints: 0,
+            bossFalls: 0           // bosses beaten at the stages for their full payout (the first leaves armour: systems/combat.js)
         },
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
@@ -124,12 +128,28 @@ export function createDefaultState(now = Date.now()) {
  */
 export function migrateState(raw, now = Date.now()) {
     if (!raw || typeof raw !== 'object') return createDefaultState(now);
-    let data = raw;
+    let data = cleanCopy(raw);
     // Each old shape is known by its own marks, not by a version number a damaged save may have lost
     // (a v3 save with no version used to be read as the prototype, and lost nearly everything).
     if (isPrototypeSave(data)) data = migrateV1(data, now);
     else if (Number(data.version) === 2 || (isPlainObject(data.daily) && 'lastClaim' in data.daily && !('nextAt' in data.daily))) data = migrateV2(data, now);
     return normalise(data, now);
+}
+
+// Keys a save may never carry. An own "toString" or "valueOf" that isn't a function (all a JSON text can
+// hold) makes the value throw wherever the game reads it as a number or as text: a save shared as a
+// string, or pushed to the server, could then stop the game loading, or wipe the server's record of the
+// hero's highs. The others would reach an object's prototype.
+const POISON_KEYS = new Set(['toString', 'valueOf', 'toLocaleString', '__proto__', 'constructor', 'prototype']);
+
+/** A deep copy of a loaded save without those keys (and as plain data: what JSON can hold). */
+function cleanCopy(raw) {
+    return JSON.parse(JSON.stringify(raw, (key, value) => (POISON_KEYS.has(key) ? undefined : value)));
+}
+
+/** Does a value look like a save of this game, of any version (export strings are checked with it)? */
+export function looksLikeSave(data) {
+    return isPlainObject(data) && (isPlainObject(data.meta) || isPrototypeSave(data));
 }
 
 /**
@@ -243,6 +263,10 @@ export function clampTimers(state, now) {
     }
     if (isPlainObject(state.bonfire)) state.bonfire.until = upTo(state.bonfire.until, now + 60 * 60 * 1000);   // BASE.bonfireMaxMs
     if (isPlainObject(state.ascension)) state.ascension.lastAt = upTo(state.ascension.lastAt, now);   // the Ascension's day of rest from it
+    if (isPlainObject(state.prestige)) {   // the run's ten minutes and the Auto switch's two days count from these
+        state.prestige.runStartedAt = upTo(state.prestige.runStartedAt, now);
+        state.prestige.firstAt = upTo(state.prestige.firstAt, now);
+    }
     if (isPlainObject(state.combat)) {
         state.combat.lastClickAt = upTo(state.combat.lastClickAt, now);
         state.combat.lastComboAt = upTo(state.combat.lastComboAt, now);
@@ -258,8 +282,7 @@ export function clampTimers(state, now) {
     if (isPlainObject(state.meta)) {
         state.meta.lastInputAt = upTo(state.meta.lastInputAt, now);
         state.meta.lastActiveAt = upTo(state.meta.lastActiveAt, now);
-        // attended time began with the paced places; a save from before counts all its play as attended
-        if (!(typeof state.meta.attendedMs === 'number' && Number.isFinite(state.meta.attendedMs) && state.meta.attendedMs >= 0)) state.meta.attendedMs = Math.max(0, finite(state.meta.playtimeMs));
+        state.meta.attendedMs = Math.max(0, finite(state.meta.attendedMs));
         state.meta.lastPlaceAt = Math.max(0, Math.min(state.meta.attendedMs, finite(state.meta.lastPlaceAt)));
     }
     return state;
@@ -267,8 +290,19 @@ export function clampTimers(state, now) {
 const UNIQUE_COLOR = '#f97316';
 // Every stat an item's affix may name: the random affixes and the uniques' fixed ones.
 const AFFIX_STATS = new Set([...AFFIXES.map(a => a.stat), ...Object.values(UNIQUES).flatMap(u => u.affixes.map(a => a.stat))]);
+// No affix rolls above about +35% (a unique's best); +100% is far beyond any, and keeps a hand-made one sane.
+const AFFIX_MAX = 1;
 const finite = (v, fallback = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const intIn = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.floor(finite(v, fallback))));
+// A time a Date can hold (±8.64e15 ms): a bigger one throws when it is written out as a date.
+const isDateTime = v => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 8.64e15;
+// Text from a save: a string as it is, a number as its digits, anything else as nothing.
+const text = v => (typeof v === 'string' ? v : typeof v === 'number' && Number.isFinite(v) ? String(v) : '');
+// The deepest stage a save may hold: past about 10,000 a monster's health is more than a number holds,
+// and the fight would never end (core/formulas.js enemyForStage). No hero comes near it.
+export const MAX_STAGE = 10000;
+// Titans beaten: the next one stands at titanStage(kills + 1), which must stay below MAX_STAGE.
+const MAX_TITAN_KILLS = 1900;
 
 /**
  * A piece of gear from a save, rebuilt from what the game knows: its type, tier, rarity, colour and
@@ -276,17 +310,18 @@ const intIn = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.floor(fini
  * for something that isn't an item. `ids` keeps ids unique (the UI finds items by id).
  */
 function sanitizeItem(raw, ids, nextId) {
-    if (!isPlainObject(raw) || !Object.hasOwn(TYPE_SLOTS, raw.type)) return null;
+    if (!isPlainObject(raw) || typeof raw.type !== 'string' || !Object.hasOwn(TYPE_SLOTS, raw.type)) return null;
     let id = raw.id;
     if (!Number.isSafeInteger(id) || id <= 0 || id > ITEM_ID_CAP || ids.has(id)) id = nextId();
     ids.add(id);
-    const rarity = RARITY_BY_ID[raw.rarity] || RARITIES[0];
+    const rarity = (typeof raw.rarity === 'string' && Object.hasOwn(RARITY_BY_ID, raw.rarity) && RARITY_BY_ID[raw.rarity]) || RARITIES[0];
     const uniqueId = typeof raw.uniqueId === 'string' && Object.hasOwn(UNIQUES, raw.uniqueId) ? raw.uniqueId : undefined;
     const source = ['crafted', 'drop', 'unique'].includes(raw.source) ? raw.source : 'drop';
+    // an affix's value as big as any piece can roll (a bigger one, or one below nothing, is hand-made)
     const affixes = (Array.isArray(raw.affixes) ? raw.affixes : [])
         .filter(a => isPlainObject(a) && AFFIX_STATS.has(a.stat) && Number.isFinite(a.value))
         .slice(0, 6)
-        .map(a => ({ id: String(a.id ?? a.stat).slice(0, 32), name: String(a.name ?? a.stat).slice(0, 40), stat: a.stat, value: a.value, format: 'pct' }));
+        .map(a => ({ id: (text(a.id) || a.stat).slice(0, 32), name: (text(a.name) || a.stat).slice(0, 40), stat: a.stat, value: Math.max(0, Math.min(AFFIX_MAX, a.value)), format: 'pct' }));
     let materials = null;
     if (isPlainObject(raw.materials)) {
         materials = {};
@@ -294,17 +329,34 @@ function sanitizeItem(raw, ids, nextId) {
     }
     const item = {
         id, type: raw.type, tier: intIn(raw.tier, 1, MAX_GEAR_TIER, 1),
-        name: String(raw.name ?? '').slice(0, 80),
+        name: text(raw.name).slice(0, 80),
         rarity: rarity.id, color: uniqueId ? UNIQUE_COLOR : rarity.color, icon: TYPE_ICONS[raw.type],
         atk: Math.max(0, finite(raw.atk)), def: Math.max(0, finite(raw.def)),
         affixes, upgrade: intIn(raw.upgrade, 0, MAX_UPGRADE, 0), reforges: intIn(raw.reforges, 0, 1e6, 0),
         locked: raw.locked === true, value: Math.max(0, finite(raw.value)), source, materials
     };
     if (uniqueId) item.uniqueId = uniqueId;
-    const barsIn = Math.floor(finite(raw.barsIn));   // bars spent reinforcing it at the anvil (systems/anvil.js)
+    const barsIn = Math.floor(finite(raw.barsIn));   // bars of its own metal spent reinforcing it at the anvil (systems/anvil.js)
     if (barsIn > 0) item.barsIn = Math.min(barsIn, 1e7);
+    // other metals' bars a refit brought to it, and the essence the anvil took (data/workshop.js carryAnvilWork)
+    if (isPlainObject(raw.barsCarried)) {
+        const carried = {};
+        for (const [bar, qty] of Object.entries(raw.barsCarried)) if (RESOURCES[bar]?.category === 'bar' && finite(qty) >= 1) carried[bar] = Math.min(Math.floor(qty), 1e7);
+        if (Object.keys(carried).length) item.barsCarried = carried;
+    }
+    if (finite(raw.essenceIn, -1) >= 0) item.essenceIn = Math.min(Math.floor(raw.essenceIn), 1e9);
     if (Number.isSafeInteger(raw.depth) && raw.depth > 0) item.depth = raw.depth;
     return item;
+}
+
+/** The work under way, from a save: what it names as plain values, its progress in ms, or null. */
+function cleanAction(raw) {
+    if (!isPlainObject(raw) || typeof raw.kind !== 'string') return null;
+    const action = {};
+    for (const [key, value] of Object.entries(raw)) if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) action[key] = value;
+    action.progress = Math.max(0, finite(raw.progress));   // a progress that wasn't a number never finished
+    action.stalled = raw.stalled === true;
+    return action;
 }
 
 const LOG_TYPES = new Set(['info', 'system', 'level', 'achievement', 'unlock', 'loot', 'craft', 'death', 'prestige', 'boss', 'combat', 'daily', 'minigame']);
@@ -314,10 +366,18 @@ function normalise(data, now) {
     const base = createDefaultState(now);
     const state = mergeInto(base, data);
     state.version = SAVE_VERSION;
-    // Keys the game doesn't know (an older version's, or anything added by hand) are dropped.
+    // Attended time began with the paced places: a save from before it counts all its play as attended
+    // (the default 0 is merged in first, so this reads the save itself).
+    const attended = data?.meta?.attendedMs;
+    if (!(typeof attended === 'number' && Number.isFinite(attended) && attended >= 0)) state.meta.attendedMs = Math.max(0, finite(state.meta.playtimeMs));
+    // Top-level keys and counts the game doesn't know (an older version's, or anything added by hand) are dropped.
     const known = createDefaultState(now);
     for (const key of Object.keys(state)) if (!Object.hasOwn(known, key)) delete state[key];
     for (const key of Object.keys(state.stats)) if (!Object.hasOwn(known.stats, key)) delete state.stats[key];
+    // every count is a number of things done: never below nothing
+    for (const [key, value] of Object.entries(known.stats)) if (typeof value === 'number') state.stats[key] = Math.max(0, finite(state.stats[key]));
+    // a save from before the bosses' falls were counted: its boss kills stand for them (its first armour came)
+    if (typeof data?.stats?.bossFalls !== 'number') state.stats.bossFalls = state.stats.bossKills;
     for (const id of Object.keys(RESOURCES)) {
         const v = Number(state.resources[id]);
         state.resources[id] = Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
@@ -363,7 +423,7 @@ function normalise(data, now) {
     state.log = (Array.isArray(state.log) ? state.log : [])
         .filter(e => isPlainObject(e) && typeof e.text === 'string')
         .slice(-60)
-        .map(e => ({ t: finite(e.t, now), type: LOG_TYPES.has(e.type) ? e.type : 'info', text: e.text.slice(0, 300) }));
+        .map(e => ({ t: isDateTime(e.t) ? e.t : now, type: LOG_TYPES.has(e.type) ? e.type : 'info', text: e.text.slice(0, 300) }));
     for (const key of Object.keys(state.stats.actionsBySkill)) if (!SKILL_IDS.includes(key)) delete state.stats.actionsBySkill[key];
     for (const id of SKILL_IDS) state.stats.actionsBySkill[id] = Math.max(0, finite(state.stats.actionsBySkill[id]));
     // The bestiary: known kinds only, whole numbers; its stars follow from the counts.
@@ -382,10 +442,10 @@ function normalise(data, now) {
         state[group] = {};
         for (const [key, value] of Object.entries(saved)) if (value === true && /^[a-z0-9_]{1,40}$/.test(key)) state[group][key] = true;
     }
-    // The chronicle: known kinds, with times; a save from before it begins at the save's creation.
+    // The chronicle: known kinds, with times a date can hold; a save from before it begins at the save's creation.
     const story = Array.isArray(data?.chronicle) ? data.chronicle : [{ t: finite(state.meta.createdAt, now), kind: 'start', id: '' }];
-    state.chronicle = story.filter(e => isPlainObject(e) && CHRONICLE_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))
-        .slice(-CHRONICLE_MAX).map(e => ({ t: Number(e.t), kind: e.kind, id: String(e.id ?? '').slice(0, 40) }));
+    state.chronicle = story.filter(e => isPlainObject(e) && CHRONICLE_KINDS.has(e.kind) && isDateTime(e.t))
+        .slice(-CHRONICLE_MAX).map(e => ({ t: e.t, kind: e.kind, id: text(e.id).slice(0, 40) }));
     // The gear codex: known pages only, and every piece worn or carried counts (saves from before it).
     const pages = isPlainObject(state.codex) ? state.codex : {};
     state.codex = {};
@@ -394,7 +454,7 @@ function normalise(data, now) {
     state.stats.codexFound = Object.keys(state.codex).length;
     if (!['auto', 'none'].includes(state.combat.autoEat) && !(RESOURCES[state.combat.autoEat]?.heals > 0)) state.combat.autoEat = 'auto';
     if (state.combat.potion !== 'none' && RESOURCES[state.combat.potion]?.category !== 'potion') state.combat.potion = 'none';
-    if (state.action !== null && !(isPlainObject(state.action) && typeof state.action.kind === 'string')) state.action = null;
+    state.action = cleanAction(state.action);
     if (typeof state.settings.forceEvent !== 'string') state.settings.forceEvent = null;
     const volume = Number(state.settings.volume);
     state.settings.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
@@ -406,10 +466,19 @@ function normalise(data, now) {
     state.gold = Math.max(0, Number(state.gold) || 0);
     state.combat.enemy = null; // always respawned on load
     state.combat.hp = Math.max(1, Number(state.combat.hp) || 100);
-    state.combat.stage = Math.max(1, Math.floor(Number(state.combat.stage) || 1));
-    state.combat.maxStage = Math.max(state.combat.stage, Math.floor(Number(state.combat.maxStage) || 1));
-    state.combat.bestStage = Math.max(state.combat.maxStage, Math.floor(Number(state.combat.bestStage) || 1));
+    state.combat.stage = intIn(state.combat.stage, 1, MAX_STAGE, 1);
+    state.combat.maxStage = Math.max(state.combat.stage, intIn(state.combat.maxStage, 1, MAX_STAGE, 1));
+    state.combat.bestStage = Math.max(state.combat.maxStage, intIn(state.combat.bestStage, 1, MAX_STAGE, 1));
+    state.stats.maxStage = Math.min(MAX_STAGE, Math.max(1, state.stats.maxStage));
     state.combat.combo = 0;
+    // the fight's clocks within what they can be: a boss's time, the minute of regrouping, the swings
+    state.combat.bossTimeLeft = Math.max(0, Math.min(BALANCE.combat.bossTimeMs, finite(state.combat.bossTimeLeft)));
+    state.combat.regroupLeft = Math.max(0, Math.min(BALANCE.combat.regroupMs, finite(state.combat.regroupLeft)));
+    state.combat.playerTimer = Math.max(0, finite(state.combat.playerTimer));
+    state.combat.enemyTimer = Math.max(0, finite(state.combat.enemyTimer));
+    state.combat.potionCharges = Math.max(0, Math.floor(finite(state.combat.potionCharges)));
+    // work and a fight are never both under way (a save with both ran them at once): the fight goes on
+    if (state.action && state.combat.active) state.action = null;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
     const pack = state.combat.pack;
@@ -428,7 +497,8 @@ function normalise(data, now) {
     };
     // Trials: a known one active, and whole tiers in range for each
     const trials = isPlainObject(data?.trials) ? data.trials : {};
-    state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {}, best: {}, laurels: Math.min(1e5, Math.max(0, Math.floor(Number(trials.laurels) || 0))), weekly: null };
+    // (a laurel comes once a week: 5,000 is a century of them, and keeps the records' power a number)
+    state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {}, best: {}, laurels: Math.min(5000, Math.max(0, Math.floor(Number(trials.laurels) || 0))), weekly: null };
     for (const t of TRIALS) {
         const n = Math.floor(Number(trials.cleared?.[t.id]) || 0);
         if (n > 0) state.trials.cleared[t.id] = Math.min(TRIAL_TIERS, n);
@@ -441,9 +511,15 @@ function normalise(data, now) {
         const stage = v => Math.min(1e6, Math.max(0, Math.floor(Number(v) || 0)));
         state.trials.weekly = { start: Number(w.start), id: w.id, bar: stage(w.bar), won: w.won === true, best: stage(w.best) };
     }
+    // The counts the medals read, at least what the save holds (Trial Master's and Ascendant's were
+    // dropped on every load before they had defaults); skills at 99 counted again for the same reason.
+    state.stats.trialTiers = Math.max(state.stats.trialTiers, trialTiersCleared(state));
+    state.stats.ascensions = Math.max(state.stats.ascensions, state.ascension.count);
+    state.stats.laurels = Math.max(state.stats.laurels, state.trials.laurels);
+    state.stats.skills99 = SKILL_IDS.filter(id => levelForXp(state.skills[id].xp) >= MAX_LEVEL).length;
     state.playtest = (Array.isArray(data?.playtest) ? data.playtest : [])
-        .filter(e => isPlainObject(e) && PLAYTEST_KINDS.has(e.kind) && Number.isFinite(Number(e.t)))
-        .slice(-PLAYTEST_MAX).map(e => ({ t: Number(e.t), kind: e.kind, what: String(e.what ?? '').slice(0, 60), cls: ['major', 'medium', 'minor'].includes(e.cls) ? e.cls : 'minor' }));
+        .filter(e => isPlainObject(e) && PLAYTEST_KINDS.has(e.kind) && isDateTime(e.t))
+        .slice(-PLAYTEST_MAX).map(e => ({ t: e.t, kind: e.kind, what: text(e.what).slice(0, 60), cls: ['major', 'medium', 'minor'].includes(e.cls) ? e.cls : 'minor' }));
     state.combat.recovering = state.combat.recovering === true && !state.combat.active && !state.action;
     // When the first prestige was (the Auto switch comes two days after it at the latest); a save from
     // before it was kept starts the two days now.
@@ -452,6 +528,13 @@ function normalise(data, now) {
     // Saves from before the ten-minute run rule may prestige at once; a start time can't be in the future.
     if (!Number.isFinite(data?.prestige?.runStartedAt)) state.prestige.runStartedAt = 0;
     state.prestige.runStartedAt = Math.min(state.prestige.runStartedAt, now);
+    // Whole counts, none below nothing: tokens below nothing took the hero's health below nothing, and a
+    // negative stage claimed skill points twice over.
+    const p = state.prestige;
+    p.tokens = Math.min(1e15, Math.max(0, Math.floor(p.tokens)));
+    p.skillPoints = Math.min(1e9, Math.max(0, Math.floor(p.skillPoints)));
+    p.count = Math.min(1e7, Math.max(0, Math.floor(p.count)));
+    p.spClaimedStage = Math.max(0, Math.min(state.combat.bestStage, Math.floor(p.spClaimedStage)));
     // A Titan or clan boss fight never survives a reload (a clan attack not finished is not spent): the
     // hero is back at what he was doing when it began (a save from before titan.before fights on at the
     // stages). A dungeon run does survive, if it still makes sense.
@@ -459,10 +542,10 @@ function normalise(data, now) {
     const kept = mode === 'titan' ? state.titan?.before : mode === 'clan' ? state.clanFight?.before : null;
     const before = isPlainObject(kept) ? kept : null;
     if ((mode === 'titan' || mode === 'clan') && before && before.doing !== 'fight') {
-        const work = before.doing === 'work' && isPlainObject(before.action) && typeof before.action.kind === 'string' ? before.action : null;
+        const work = before.doing === 'work' ? cleanAction(before.action) : null;
         state.combat.active = false;
         state.combat.recovering = before.doing === 'recover';
-        if (work) state.action = { ...work, progress: Math.max(0, finite(work.progress)), stalled: false };
+        if (work) state.action = { ...work, stalled: false };
     }
     if (isPlainObject(state.titan)) state.titan.before = null;
     state.clanFight = null;
@@ -511,24 +594,38 @@ function normalise(data, now) {
     if (!state.titan || typeof state.titan !== 'object') state.titan = { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null };
     const ev = state.events;
     for (const key of ['tokens', 'earnedToday', 'progress', 'instanceEarned']) ev[key] = Math.max(0, Math.floor(Number(ev[key]) || 0));
-    if (!Array.isArray(ev.milestones)) ev.milestones = [];
+    // the event's milestones paid (token counts) and which weekend they belong to
+    ev.milestones = (Array.isArray(ev.milestones) ? ev.milestones : []).filter(m => Number.isFinite(m)).slice(0, 100);
+    if (typeof ev.instance !== 'string') ev.instance = null;
     // festival cloaks bought (data/capes.js): only the known events', and none worn that is not owned
     const cloaks = isPlainObject(ev.cloaks) ? ev.cloaks : {};
     ev.cloaks = {};
     for (const c of FESTIVAL_CLOAKS) if (cloaks[c.event] === true) ev.cloaks[c.event] = true;
     if (festivalCloak(state.hero.cape) && !capeEarned(state, state.hero.cape)) state.hero.cape = '';
     if (!state.pets || typeof state.pets !== 'object') state.pets = {};
-    state.titan.kills = Math.max(0, Math.floor(Number(state.titan.kills) || 0));
+    state.titan.kills = intIn(state.titan.kills, 0, MAX_TITAN_KILLS, 0);
+    state.titan.attempts = Math.max(0, Math.floor(finite(state.titan.attempts)));
+    state.titan.bestPct = Math.max(0, Math.min(1, finite(state.titan.bestPct)));
     if (!Number.isFinite(Number(state.titan.readyAt))) state.titan.readyAt = 0;
     state.daily.banked = Math.max(0, Math.min(DAILY_MAX_BANKED, Math.floor(Number(state.daily.banked) || 0)));
+    state.daily.claimed = Math.max(0, Math.floor(finite(state.daily.claimed)));   // every so many crates is a great one
     if (!Number.isFinite(Number(state.daily.nextAt))) state.daily.nextAt = now + DAILY_INTERVAL_MS;
     for (const perk of PERKS) state.perks[perk.id] = Math.min(perk.max, Math.max(0, Math.floor(Number(state.perks[perk.id]) || 0)));
     // camp levels as whole numbers in range: a negative one multiplied the hero's health to nothing
     for (const u of CAMP_UPGRADES) state.camp[u.id] = Math.min(u.max, Math.max(0, Math.floor(Number(state.camp[u.id]) || 0)));
-    // Mini-game challenges never survive a reload.
+    // Mini-game challenges never survive a reload: one left open counts as missed (it ends the streak, and
+    // the next chance comes in the usual minutes; a reload used to give a fresh chance at once).
+    const mgRules = BALANCE.minigame;
     for (const id of NON_COMBAT_SKILLS) {
         const mg = state.minigame[id];
+        if (mg.challenge) {
+            mg.streak = 0;
+            mg.opportunityUntil = 0;
+            mg.nextOpportunityAt = now + mgRules.opportunityEveryMs[0];
+        }
         mg.challenge = null;
+        mg.streak = intIn(mg.streak, 0, 5, 0);
+        mg.bonus = Math.max(0, Math.min(mgRules.maxBonus, finite(mg.bonus)));
         if (mg.boostUntil < now) { mg.boostUntil = 0; mg.bonus = 0; }
     }
     return clampTimers(state, now);

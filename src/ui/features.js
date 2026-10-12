@@ -83,7 +83,7 @@ export const FEATURES = {
         points: ['One event runs each weekend, Friday to Monday (UTC), and brings its own bonuses.', `Every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token, up to ${EVENT_DAILY_CAP} a day.`, 'Tokens keep between events. The event shop opens while one runs.'] },
     clan: { name: 'Clan', art: 'clanhall', icon: 'item/Shield/4', blurb: 'Join a clan and fight a weekly boss together.',
         points: ['Each week the clan fights one shared boss, a land\'s ruler.', `An attack is a ${CLAN_ATTACK_SECONDS} second fight against it. Strike when its guard drops: only then do strikes land, ${CLAN_GUARD.mult} times as hard.`,
-            `${CLAN_ATTACKS_PER_DAY} attacks a day; those not used wait, up to ${CLAN_ATTACK_BANK}. The server works out the damage from your cloud save.`, 'Everyone who fought is rewarded with essence and diamonds, with more for the top three and the last hit.'] },
+            `${CLAN_ATTACKS_PER_DAY} attacks a day; those not used wait, up to ${CLAN_ATTACK_BANK}. The server works out the damage from your cloud save.`, 'When the boss falls, everyone who fought gets essence and diamonds, and the last hit more. At the week\'s end everyone who fought gets essence, and the top three a diamond too.'] },
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
     camp: { name: 'Camp', art: 'camp', icon: 'mon/Magma Slime', blurb: 'Upgrades for this run, bought with gold.',
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.',
@@ -92,7 +92,7 @@ export const FEATURES = {
         points: [`Each mastery level adds +${pc(MASTERY_PER_LEVEL.speed, 1)} speed to that action.`, `Gathering and cooking also gain +${pc(MASTERY_PER_LEVEL.double, 2)} chance of a double; recipes gain +${pc(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients.`,
             `At ${MASTERY_CHECKPOINTS.map(c => `${Math.round(c.at * 100)}%`).join(', ')} of a skill's whole mastery, every action of it gets faster: ${MASTERY_CHECKPOINTS.map(c => `+${Math.round(c.speed * 100)}%`).join(', ')}.`, 'Mastery is permanent.'] },
     minigames: { name: 'A chance to play', art: 'forest', icon: 'res/topaz', blurb: 'Every few minutes of work, a short game appears.',
-        points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Skipping costs nothing.'] }
+        points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Letting a chance pass costs nothing; a miss or a skip ends the streak.'] }
 };
 
 // Every skill's card ends with what its 99 brings: its cape (data/capes.js), worn by the hero.

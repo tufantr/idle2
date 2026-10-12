@@ -148,7 +148,7 @@ export const SKILLS = {
 for (const [id, skill] of Object.entries(SKILLS)) paceList(id, skill.nodes);
 
 export function skillNode(skillId, nodeId) {
-    const skill = SKILLS[skillId];
+    const skill = Object.hasOwn(SKILLS, skillId) ? SKILLS[skillId] : null;   // not 'constructor', from a save
     if (!skill) return null;
     return skill.nodes.find(node => node.id === nodeId) || null;
 }

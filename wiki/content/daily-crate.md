@@ -9,7 +9,7 @@ A supply crate ripens every {{time(DAILY_INTERVAL_MS)}}, and up to {{DAILY_MAX_B
 
 When a crate is ripe, a crate button shows at the top of the screen with the number waiting, and the welcome-back report lists it too. Open them one at a time. On a phone the crate sits in the bar at the bottom, and between crates it counts down to the next one.
 
-While all {{DAILY_MAX_BANKED}} are waiting no more pile up, and the time toward the next one is lost: open one to start the clock again.
+While all {{DAILY_MAX_BANKED}} are waiting no more pile up, but the clock keeps going round: once you open one, the next comes at most {{time(DAILY_INTERVAL_MS)}} later, often sooner.
 
 ## What is inside
 

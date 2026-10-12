@@ -42,7 +42,7 @@ Time with the page out of sight does not count toward the breaks between new pla
 
 The game saves by itself, on this device, several times a minute, whenever the page is hidden or closed, and at once after a prestige. There is nothing to press.
 
-**Backups.** Settings keeps backups you can restore at any time: three automatic ones, taken in turn as you play, one taken as the game loads (before the time away is added), one before each prestige, and one before a hard reset, an import or a restore.
+**Backups.** Settings keeps backups you can restore at any time: three automatic ones, taken in turn as you play, one taken as the game loads (before the time away is added), one before each prestige you make (the Auto switch's take none), and one before a hard reset, an import or a restore.
 
 **Export and import.** In Settings, **Copy export string** puts your whole game into a line of text, copied for you and shown in the box. To load one, paste it into the box and press **Import string**; your current game is backed up first. A string from a newer version of the game cannot be loaded.
 

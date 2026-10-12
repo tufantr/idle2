@@ -5,7 +5,7 @@ import {
     BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
     SMITHING_TYPES, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
 } from '../data/items.js';
-import { salvageBars } from '../data/workshop.js';
+import { salvageBars, carryAnvilWork, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
 import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
@@ -114,7 +114,10 @@ function neededInBag(state) {
     const byType = {};
     for (const item of state.inventory) (byType[item.type] ||= []).push(item);
     for (const [type, items] of Object.entries(byType)) {
-        const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
+        // ranked as each would be worn (refitted, as isUpgrade judges them): by raw score a spare
+        // reinforced piece could crowd out the real upgrade, and the bag-full rule salvaged it
+        const worn = state.equipped[weakestSlotFor(state, type)];
+        const best = items.sort((a, b) => scoreInPlaceOf(b, worn) - scoreInPlaceOf(a, worn)).slice(0, (TYPE_SLOTS[type] || []).length);
         for (const item of best) if (isUpgrade(state, item)) needed.add(item);
     }
     return needed;
@@ -179,6 +182,11 @@ export function salvagePreview(item) {
     }
     const bars = salvageBars(item);
     if (bars) materials[bars.bar] = (materials[bars.bar] || 0) + bars.qty;
+    // and the share of the other metals a refit brought to it, each as itself
+    for (const [bar, qty] of Object.entries(item.barsCarried || {})) {
+        const back = Math.floor(ANVIL_REFUND * qty);
+        if (back > 0) materials[bar] = (materials[bar] || 0) + back;
+    }
     return { essence, materials };
 }
 
@@ -255,10 +263,9 @@ export function equipItem(game, id, requestedSlot = null) {
     const previous = state.equipped[slot];
     const refit = refitLevel(item, previous);   // the smith refits the reinforcing (above)
     if (previous && refit > (item.upgrade || 0)) {
+        carryAnvilWork(item, previous);   // the bars and essence that went in, as they were (data/workshop.js)
         item.upgrade = refit;
-        item.barsIn = (item.barsIn || 0) + (previous.barsIn || 0);
         previous.upgrade = 0;
-        previous.barsIn = 0;
         game.emit({ type: 'refit', item, from: previous, level: refit });
     }
     state.equipped[slot] = item;
@@ -386,6 +393,7 @@ export function setAutoSalvage(game, rarity) {
 export function sellResource(game, id, amount = 1) {
     const state = game.state;
     if (!RESOURCES[id] || id === 'essence') return 0;
+    if (!(sellValue(id) > 0)) return 0;   // nothing pays for it (bait, say): selling would only throw it away
     const qty = Math.min(Math.floor(amount), Math.floor(state.resources[id] || 0));
     if (qty <= 0) return 0;
     const gold = sellValue(id) * qty;

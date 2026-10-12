@@ -75,7 +75,7 @@ function resolveBase(state, action) {
             };
         }
         case 'tool': {
-            const tool = TOOLS[action.tool];
+            const tool = Object.hasOwn(TOOLS, action.tool) ? TOOLS[action.tool] : null;   // not 'toString', from a save
             const tierDef = tool?.tiers.find(t => t.tier === action.tier);
             if (!tierDef) return null;
             return {
@@ -116,7 +116,17 @@ function setAction(game, action, def) {
         stopAction(game);
         return true;
     }
-    if (state.combat.active || state.combat.recovering) leaveCombat(game);
+    if (state.combat.active || state.combat.recovering) {
+        // Work that can't be done (its inputs are short) doesn't take the hero out of a fight or his rest
+        // to stand waiting for materials that won't come: say what is missing instead.
+        const check = canComplete(state, def);
+        if (!check.ok) {
+            const need = check.missing.map(m => (m.anyLog ? 'logs to burn' : RESOURCES[m.id]?.name || m.id)).join(' and ');
+            game.emit({ type: 'error', text: `Not enough ${need} for ${def.label}.` });
+            return false;
+        }
+        leaveCombat(game);
+    }
     state.action = { ...action, progress: 0, stalled: false };
     game.emit({ type: 'actionStart', label: def.label, skill: def.skill });
     game.markDirty();
@@ -221,12 +231,15 @@ export function completeAction(game, def, { offline = false } = {}) {
         const times = rng.chance(doubleChance) ? 2 : 1;
         const addMs = BASE.bonfireSecondsPerLogTier * 1000 * RESOURCES[def.bonfireLog].tier * times;
         const now = game.now;
+        const wasLit = (state.bonfire.until || 0) > now;
         state.bonfire.until = Math.min(now + BASE.bonfireMaxMs, Math.max(state.bonfire.until || 0, now) + addMs);
         bumpStat(game, 'logsBurnt');
         if (times === 2) grantXp(game, skill, def.xp * derived.xpMult);
         if (!offline && times === 2) game.emit({ type: 'doubleDrop', resource: def.bonfireLog });
         made = { burnt: def.bonfireLog, qty: times };
-        game.markDirty();
+        // its XP bonus starts now: worked out again only when it was out (every log used to, and a day
+        // of firemaking away took seconds to replay)
+        if (!wasLit) game.markDirty();
     } else if (def.kind === 'agility') {
         bumpStat(game, 'courseRuns');
     } else if (def.kind === 'node' || def.kind === 'smelt') {
@@ -255,11 +268,16 @@ export function completeAction(game, def, { offline = false } = {}) {
         const maxRarity = def.kind === 'craft' ? craftMaxRarity(skillLevel(state, 'crafting')) : CRAFT_MAX_RARITY;   // jewellery's rises with Crafting
         const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, maxRarity, materials: def.consumes, source: 'crafted' }, state.idCounter++);
         if (def.item.depth) item.depth = def.item.depth;
-        addItem(game, item);
+        const { kept } = addItem(game, item);
         bumpStat(game, 'itemsCrafted');
         made = { item };
-        game.emit({ type: 'itemCrafted', item });
-        if (!offline || item.rarity !== 'common') log(game, `${item.icon} Made ${item.rarity === 'common' ? '' : item.rarity + ' '}${item.name}`, 'craft');
+        const named = `${item.rarity === 'common' ? '' : item.rarity + ' '}${item.name}`;
+        if (kept) {
+            game.emit({ type: 'itemCrafted', item });
+            if (!offline || item.rarity !== 'common') log(game, `${item.icon} Made ${named}`, 'craft');
+        } else if (!offline || item.rarity !== 'common') {
+            log(game, `${item.icon} Made ${named}, and salvaged it at once: the bag is full.`, 'craft');   // it used to vanish with a "Made" card
+        }
     } else if (def.kind === 'tool') {
         state.tools[def.tool] = def.tier;
         log(game, `${TOOLS[def.tool].icon} Made ${withArticle(TOOLS[def.tool].tiers.find(t => t.tier === def.tier).name)}!`, 'craft');

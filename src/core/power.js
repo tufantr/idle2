@@ -142,7 +142,7 @@ export function honestClimb(fromStage, hours) {
 
 /**
  * The most damage a clan attack can plausibly deal for a hero whose best stage is `bestStage`: felling
- * a boss 40 stages beyond it in 5 seconds, for the whole minute. Honest heroes stay far below it (at
+ * a boss 40 stages beyond it in 5 seconds, for the whole fight. Honest heroes stay far below it (at
  * most ~12% of it over 150 simulated hours), so only a save whose gear no play could have made goes
  * past it. The server flags such saves and never sizes a clan boss beyond it.
  */

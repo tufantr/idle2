@@ -57,9 +57,12 @@ a `false` names the missing part (`game`: the function could not load the game's
 ```sql
 INSERT INTO rewards (user_id, kind, payload, created_at, dedupe)
 SELECT id, 'gift', '{"gold":12000000,"text":"A gift from tufan"}', (extract(epoch from now()) * 1000)::bigint, 'gift:' || id || ':first-gold'
-FROM users WHERE lower(username) = lower('Yarraksalih')
+FROM users WHERE username = 'Yarraksalih'
 ON CONFLICT (dedupe) DO NOTHING;
 ```
+
+(The name exactly as the account spells it: names are one account whatever their case now, but two older
+accounts could differ only in case, and a match in any case would pay both.)
 
 The player's game claims it at its next cloud save or load (a reload at the latest), adds it and shows a
 card; each gift is paid once. Gift gold is that run's, like all gold.

@@ -6,7 +6,7 @@
 
 import { SMITHING_TYPES, MAX_UPGRADE } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
-import { reinforceCost, rerollCost } from '../data/workshop.js';
+import { reinforceCost, rerollCost, anvilEssenceSpent } from '../data/workshop.js';
 import { forgeKey } from '../data/mastery.js';
 import { skillLevel } from '../core/modifiers.js';
 import { rerollAffixes } from '../core/formulas.js';
@@ -62,6 +62,7 @@ export function reinforceItem(game, id) {
     const cost = anvilCost(game.state, item, 'reinforce');
     if (!cost.ok) return refuse(game, item, cost);
     pay(game, cost);
+    item.essenceIn = anvilEssenceSpent(item) + cost.essence;   // what went in, for salvage (data/workshop.js)
     item.upgrade = (item.upgrade || 0) + 1;
     item.barsIn = (item.barsIn || 0) + cost.bars;
     bumpStat(game, 'reinforced');

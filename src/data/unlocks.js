@@ -23,7 +23,7 @@ export const UNLOCKS = [
     // Smithing answers mining (ore that monsters drop doesn't open it for a hero who only fights);
     // a migrated prototype save, with no action stats and no kills, opens it with the ore it holds.
     { id: 'smithing',     hint: 'Mine 5 ore to unlock Smithing', task: 'Mine 5 ore', tab: 'mining', requires: s => (s.stats.actionsBySkill.mining || 0) >= 5 || (heldOre(s) >= 5 && !s.stats.kills),
-      progress: s => Math.max((s.stats.actionsBySkill.mining || 0), heldOre(s)) / 5 },
+      progress: s => (s.stats.kills ? (s.stats.actionsBySkill.mining || 0) : Math.max((s.stats.actionsBySkill.mining || 0), heldOre(s))) / 5 },   // as `requires` counts it
     { id: 'woodcutting',  hint: 'Smelt your first bar to unlock Woodcutting', task: 'Smelt a bar', tab: 'smithing', requires: s => s.stats.barsSmelted >= 1, progress: s => s.stats.barsSmelted / 1 },
     { id: 'hunting',      pace: true, hint: 'Reach Stage 5 to unlock Hunting', task: 'Reach stage 5', tab: 'combat', requires: s => s.combat.maxStage >= 5, progress: s => s.combat.maxStage / 5 },
     { id: 'cooking',      hint: 'Hunt your first animal to unlock Cooking', task: 'Hunt an animal', tab: 'hunting', requires: s => s.stats.actionsBySkill.hunting >= 1, progress: s => (s.stats.actionsBySkill.hunting || 0) / 1 },
@@ -50,7 +50,7 @@ export const UNLOCKS = [
     { id: 'achievements', pace: true, hint: 'Earn five medals to open the Hall', task: 'Earn five medals', tab: 'combat', requires: s => Object.keys(s.achievements || {}).length >= 5, progress: s => Object.keys(s.achievements || {}).length / 5 },
     { id: 'farming',      hint: 'Use Alchemy 10 times or reach Cooking 15 to unlock Farming', task: 'Brew 10 times, or Cooking 15', tab: 'alchemy', requires: s => (s.stats.actionsBySkill.alchemy || 0) >= 10 || s.skills.cooking.xp >= 2411,
       progress: s => Math.max((s.stats.actionsBySkill.alchemy || 0) / 10, s.skills.cooking.xp / 2411) },
-    { id: 'clan',         pace: true, hint: 'Prestige once to join a clan', task: 'Prestige once', tab: 'combat', requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 25, progress: s => Math.min(1, s.prestige.count) },
+    { id: 'clan',         pace: true, hint: 'Prestige once to join a clan', task: 'Prestige once', tab: 'combat', requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 25, progress: s => Math.min(1, s.prestige.count) * Math.min(1, s.combat.bestStage / 25) },
     { id: 'events',       pace: true, hint: 'After a first prestige, the weekend festival opens when one is on or near', task: 'A festival, after a prestige', tab: 'combat',
       requires: s => s.prestige.count >= 1 && s.combat.bestStage >= 18 && festivalNear(s.meta.lastActiveAt || 0), progress: s => (s.prestige.count >= 1 ? 0.5 : 0) },
     { id: 'agility',      pace: true, hint: 'Reach Stage 35 with Woodcutting and Smithing open, and half the gold for a first obstacle in hand', task: 'Stage 35 and 10,000 gold', tab: 'combat',
@@ -127,7 +127,8 @@ export function evaluateUnlocks(state) {
         state.meta.lastPlaceAt = state.meta.attendedMs || 0;
         newly.push(def.id);
     };
-    if (state.combat.active && state.combat.enemy?.boss) return newly;   // the boss fight is the moment
+    // the boss fight is the moment (not a boss farmed on "stay on this stage": that held every place back)
+    if (state.combat.active && state.combat.enemy?.boss && !state.combat.farmMode) return newly;
     if (sinceLastPlace(state) < WORK_GAP_MS) return newly;
     const earned = UNLOCKS.find(def => !def.always && !def.pace && !state.unlocks[def.id] && def.requires?.(state));
     if (earned) open(earned);

@@ -1,6 +1,6 @@
 // API tests against an in-memory stand-in for the data layer (test/helpers/memory-store.cjs).
-// The real `api/store.js` is replaced in the require cache before the app loads; the real SQL is
-// checked against Postgres by tools/api-postgres-check.cjs.
+// The real `api/store.js` is replaced in the require cache before the app loads; with
+// API_TEST_DATABASE_URL set (below), the same tests run the real SQL against a Postgres instead.
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -575,4 +575,181 @@ test('attacks given back by hand still land: each attack takes the next free slo
     assert.equal((await post('/clan/attack', {}, t)).status, 200, 'the first given back');
     assert.equal((await post('/clan/attack', {}, t)).status, 200, 'and the second');
     assert.equal((await post('/clan/attack', {}, t)).status, 400, 'then none');
+});
+
+// ---------- the October 2026 bug sweep (docs/ROADMAP.md, Phase 9) ----------
+
+test('an upload made over a cloud save the game had not seen is refused (409), and one over the right one is stored', async () => {
+    const t = await register('two_devices');
+    const first = await (await post('/save', { state: heroSave({ bestStage: 40 }) }, t)).json();
+    const laptop = (await (await get('/load', t)).json()).lastSaved;
+    clock += 60 * 1000;
+    // the phone saves on top of what it saw
+    const phone = await post('/save', { state: heroSave({ bestStage: 80 }), base: laptop }, t);
+    assert.equal(phone.status, 200);
+    clock += 60 * 1000;
+    // the laptop, left open, uploads its older game over the cloud save it last saw: refused
+    const stale = await post('/save', { state: heroSave({ bestStage: 40 }), base: laptop }, t);
+    assert.equal(stale.status, 409);
+    assert.equal((await (await get('/load', t)).json()).state.combat.bestStage, 80, 'the newer game stays');
+    // after looking again (load), its upload goes over the save it now has seen
+    const seen = (await (await get('/load', t)).json()).lastSaved;
+    assert.equal((await post('/save', { state: heroSave({ bestStage: 81 }), base: seen }, t)).status, 200);
+    // a page from before the check sends no base, and is stored as ever
+    assert.equal((await post('/save', { state: heroSave({ bestStage: 82 }) }, t)).status, 200);
+    // two uploads over the same save at once: one is stored, the other refused
+    const now = (await (await get('/load', t)).json()).lastSaved;
+    clock += 1000;
+    const both = await Promise.all([post('/save', { state: heroSave({ bestStage: 90 }), base: now }, t), post('/save', { state: heroSave({ bestStage: 91 }), base: now }, t)]);
+    assert.deepEqual(both.map(r => r.status).sort(), [200, 409]);
+    assert.ok(first.success);
+});
+
+test('password guesses sent all at once are counted before they are checked: ten get an answer, the rest wait', async () => {
+    await register('rushed_hero');
+    const from = { 'X-Forwarded-For': '192.0.2.44' };
+    const answers = await Promise.all(Array.from({ length: 30 }, (_, i) => post('/login', { username: 'rushed_hero', password: `guess ${i}` }, null, from)));
+    assert.ok(answers.filter(r => r.status === 400).length <= 10, `${answers.filter(r => r.status === 400).length} checked`);
+    assert.ok(answers.filter(r => r.status === 429).length >= 20);
+    // the player, from their own address, still gets in: ten wrong guesses elsewhere don't lock them out
+    assert.equal((await post('/login', { username: 'rushed_hero', password: 'correct horse' }, null, { 'X-Forwarded-For': '198.51.100.200' })).status, 200);
+    // and accounts made all at once from one address are counted the same way
+    const farm = { 'X-Forwarded-For': '203.0.113.99' };
+    const made = await Promise.all(Array.from({ length: 25 }, (_, i) => post('/register', { username: `rush_farm_${i}`, password: 'correct horse' }, null, farm)));
+    assert.ok(made.filter(r => r.status === 200).length <= 10, `${made.filter(r => r.status === 200).length} accounts`);
+    clock += 61 * 60 * 1000;
+});
+
+test("leaving and coming back doesn't shrink the week's boss; a stranger who hits it once and leaves takes their part away", async () => {
+    const owner = await register('steady_owner');
+    const friend = await register('steady_friend');
+    await post('/save', { state: heroSave({ tokens: 300, bestStage: 60 }) }, owner);
+    await post('/save', { state: heroSave({ tokens: 300, bestStage: 60 }) }, friend);
+    const { clanId } = await (await post('/clans', { name: 'Steady Hands', tag: 'STDY' }, owner)).json();
+    await post('/clans/join', { clanId }, friend);
+    const sized = (await (await get('/clan', owner)).json()).boss.maxHp;
+    await post('/clans/leave', {}, friend);
+    await post('/clans/join', { clanId }, friend);
+    assert.equal((await (await get('/clan', owner)).json()).boss.maxHp, sized, 'the same boss as before');
+
+    const host = await register('wary_host');
+    const stranger = await register('drive_by_two');
+    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, host);
+    await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, stranger);
+    const wary = (await (await post('/clans', { name: 'Wary Folk', tag: 'WARY' }, host)).json()).clanId;
+    await post('/clans/join', { clanId: wary }, stranger);
+    const big = (await (await get('/clan', host)).json()).boss.maxHp;
+    const hit = await (await post('/clan/attack', { strikes: [], ms: 0 }, stranger)).json();   // given up at once: the least damage
+    await post('/clans/leave', {}, stranger);
+    const after = (await (await get('/clan', host)).json());
+    const hostShare = after.members.find(m => m.username === 'wary_host').attackDamage * 12;
+    assert.ok(after.boss.maxHp < big / 2, `${after.boss.maxHp} vs ${big}`);
+    assert.equal(after.boss.maxHp, Math.max(1000, hostShare + hit.damage), 'their part goes, all but what they dealt');
+});
+
+test('a clan fight sent twice (its answer lost) is one attack: answered again, one attack spent', async () => {
+    const t = await register('twice_sent');
+    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
+    await post('/clans', { name: 'Once Only', tag: 'ONCE' }, t);
+    const fight = { strikes: [4100, 4400], ms: 30000, fightAt: clock - 1000 };
+    const first = await post('/clan/attack', fight, t);
+    assert.equal(first.status, 200);
+    const one = await first.json();
+    const again = await post('/clan/attack', fight, t);
+    assert.equal(again.status, 200);
+    const two = await again.json();
+    assert.equal(two.damage, one.damage);
+    assert.equal(two.attacksLeft, one.attacksLeft, 'no second attack spent');
+    assert.equal((await (await get('/clan', t)).json()).board[0].attacks, 1);
+    // both at once: still one
+    const other = { ...fight, fightAt: clock - 500 };
+    const pair = await Promise.all([post('/clan/attack', other, t), post('/clan/attack', other, t)]);
+    assert.deepEqual(pair.map(r => r.status), [200, 200]);
+    assert.equal((await (await get('/clan', t)).json()).board[0].attacks, 2);
+});
+
+test('a name is one account whatever its case', async () => {
+    await register('CaseHero');
+    assert.equal((await post('/register', { username: 'casehero', password: 'correct horse' })).status, 400);
+    const res = await post('/login', { username: 'CASEHERO', password: 'correct horse' });
+    assert.equal(res.status, 200);
+});
+
+test('a member left in a clan deleted under them is let out of it', async () => {
+    const t = await register('left_behind');
+    const { clanId } = await (await post('/clans', { name: 'Vanished', tag: 'VAN' }, t)).json();
+    // its last member left as this one joined: the clan is gone, the membership not (made by hand here)
+    if (memory) memory.db.clans = memory.db.clans.filter(c => c.id !== clanId);
+    else await pool.query('DELETE FROM clans WHERE id = $1', [clanId]);
+    const view = await get('/clan', t);
+    assert.equal(view.status, 200);
+    assert.equal((await view.json()).clan, null);
+    assert.equal((await post('/clans', { name: 'Found Again', tag: 'FND' }, t)).status, 200, 'free to start another');
+});
+
+test("a felled boss's rewards are paid even if the payout stopped half way", async () => {
+    const t = await register('patient_slayer');
+    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
+    await post('/clans', { name: 'Patient Ones', tag: 'PAT' }, t);
+    await post('/clan/attack', {}, t);
+    // the boss fell, and the server stopped before paying (marked, not paid)
+    if (memory) {
+        const boss = memory.db.bosses.find(b => b.clanId === memory.db.members.find(m => m.userId === memory.db.users.find(u => u.username === 'patient_slayer').id).clanId);
+        Object.assign(boss, { hp: 0, killedAt: clock, lastHitUser: memory.db.users.find(u => u.username === 'patient_slayer').id, killPaid: false });
+    } else {
+        await pool.query("UPDATE clan_bosses SET hp = 0, killed_at = $1, last_hit_user = (SELECT id FROM users WHERE username = 'patient_slayer'), kill_paid = FALSE WHERE clan_id = (SELECT clan_id FROM clan_members WHERE user_id = (SELECT id FROM users WHERE username = 'patient_slayer'))", [clock]);
+    }
+    await get('/clan', t);
+    await get('/clan', t);
+    const rewards = (await (await get('/rewards', t)).json()).rewards;
+    assert.equal(rewards.filter(r => r.kind === 'kill').length, 1);
+    assert.equal(rewards.filter(r => r.kind === 'lastHit').length, 1);
+});
+
+test('a token whose name is no longer its account\'s is refused', async () => {
+    const t = await register('renamed_one');
+    assert.equal((await get('/load', t)).status, 200);
+    if (memory) memory.db.users.find(u => u.username === 'renamed_one').username = 'someone_else';
+    else await pool.query("UPDATE users SET username = 'someone_else' WHERE username = 'renamed_one'");
+    clock += 11 * 60 * 1000;   // past the instance's memory of names
+    assert.equal((await get('/load', t)).status, 401);
+});
+
+test('the health check asks the database every time, and a body that is not JSON gets a JSON answer', async () => {
+    if (memory) {
+        const ping = memory.ping;
+        memory.ping = async () => { throw new Error('down'); };
+        const res = await get('/health');
+        assert.equal(res.status, 503);
+        assert.equal((await res.json()).db, false);
+        memory.ping = ping;
+    }
+    const t = await register('broken_json');
+    const res = await fetch(`${base}/save`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` }, body: '{"state": {' });
+    assert.equal(res.status, 400);
+    assert.match(res.headers.get('content-type') || '', /json/);
+});
+
+test("this week's board counts from where the player stood when the week began, not from the week's first upload", async () => {
+    const t = await register('weekly_honest');
+    await post('/leaderboard/consent', { optIn: true }, t);
+    await post('/save', { state: heroSave({ bestStage: 200 }) }, t);
+    clock += 7 * 24 * 3600 * 1000;   // a new week
+    await post('/save', { state: heroSave({ bestStage: 1 }) }, t);    // an empty save first
+    await post('/save', { state: heroSave({ bestStage: 205 }) }, t);
+    clock += 61 * 1000;
+    const board = await (await get('/leaderboard?metric=bestStage&period=week', t)).json();
+    assert.equal(board.me.value, 5, 'five stages this week, not 204');
+});
+
+test("the boss is sized from each member's attack at its best this week (a weak save just before Monday doesn't shrink it)", async () => {
+    const t = await register('sly_sizer');
+    await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, t);
+    const strong = (await (await get('/load', t)).json());
+    assert.ok(strong.state);
+    await post('/save', { state: heroSave({ tokens: 0, bestStage: 120 }) }, t);   // weak, just before the boss is made
+    await post('/clans', { name: 'Sly Ones', tag: 'SLY' }, t);
+    const view = await (await get('/clan', t)).json();
+    const weakShare = view.members[0].attackDamage * 12;
+    assert.ok(view.boss.maxHp > weakShare, `${view.boss.maxHp} > ${weakShare}`);
 });

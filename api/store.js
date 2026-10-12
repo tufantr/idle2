@@ -119,18 +119,47 @@ async function ensureSchema() {
             PRIMARY KEY (user_id, week)
         );
     `;
+    // A clan fight's own mark (the time it ended, from the game): sent again after a lost answer, it is
+    // the same attack, never a second one. Older attacks have none (NULLs never collide).
+    await sql`ALTER TABLE clan_attacks ADD COLUMN IF NOT EXISTS fight_at BIGINT`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS clan_attacks_fight ON clan_attacks (user_id, fight_at)`;
+    // The kill's rewards paid (they are paid after the kill is marked, and paid again if that failed).
+    await sql`ALTER TABLE clan_bosses ADD COLUMN IF NOT EXISTS kill_paid BOOLEAN DEFAULT FALSE`;
+    // Names are one account whatever their case ("Tufan" and "tufan"). Made only if the names already
+    // there allow it: a failure here must not stop the API (createUser checks as well).
+    try { await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username))`; } catch (err) {
+        console.error('users_username_lower not made (names that differ only in case?)', err && err.message);
+    }
+}
+
+/** The database answers (the health check asks it every time, not once per instance). */
+async function ping() {
+    await sql`SELECT 1`;
 }
 
 // ---------- users and saves ----------
 
+/** Throws a unique violation (23505) for a name taken in any case. */
 async function createUser(username, hash) {
+    const { rows: taken } = await sql`SELECT 1 FROM users WHERE lower(username) = lower(${username}) LIMIT 1`;
+    if (taken.length) throw Object.assign(new Error('Username already exists'), { code: '23505' });
     const { rows } = await sql`INSERT INTO users (username, password_hash) VALUES (${username}, ${hash}) RETURNING id`;
     return rows[0].id;
 }
 
+/** The account of a name, whatever its case (the one spelled exactly so first, where two older ones differ only in case). */
 async function findUserByName(username) {
-    const { rows } = await sql`SELECT id, username, password_hash FROM users WHERE username = ${username}`;
+    const { rows } = await sql`
+        SELECT id, username, password_hash FROM users WHERE lower(username) = lower(${username})
+        ORDER BY (username = ${username}) DESC, id ASC LIMIT 1
+    `;
     return rows[0] || null;
+}
+
+/** The name an account id has now (a token is checked against it), or null. */
+async function userNameOf(userId) {
+    const { rows } = await sql`SELECT username FROM users WHERE id = ${userId}`;
+    return rows[0] ? rows[0].username : null;
 }
 
 async function getSave(userId) {
@@ -140,8 +169,21 @@ async function getSave(userId) {
     return { state: row.game_state || null, lastSaved: int(row.last_saved), flags: row.flags || '[]', optIn: !!row.leaderboard_opt_in, metrics: row.metrics || null };
 }
 
-async function putSave(userId, stateJson, savedAt, flagsJson, metricsJson) {
-    await sql`UPDATE users SET game_state = ${stateJson}, last_saved = ${savedAt}, flags = ${flagsJson}, metrics = ${metricsJson} WHERE id = ${userId}`;
+/**
+ * Store a save. With `base` (the last_saved the uploading game had seen), only over that save: another
+ * device's upload since then makes it refuse (returns false), so a stale game never replaces a newer one.
+ */
+async function putSave(userId, stateJson, savedAt, flagsJson, metricsJson, base = null) {
+    if (base === null) {
+        await sql`UPDATE users SET game_state = ${stateJson}, last_saved = ${savedAt}, flags = ${flagsJson}, metrics = ${metricsJson} WHERE id = ${userId}`;
+        return true;
+    }
+    const { rows } = await sql`
+        UPDATE users SET game_state = ${stateJson}, last_saved = ${savedAt}, flags = ${flagsJson}, metrics = ${metricsJson}
+        WHERE id = ${userId} AND COALESCE(last_saved, 0) = ${base}::bigint
+        RETURNING id
+    `;
+    return rows.length > 0;
 }
 
 async function setOptIn(userId, optIn) {
@@ -172,7 +214,7 @@ async function putSnapshotIfMissing(userId, week, metricsJson) {
 // ---------- clans ----------
 
 async function listClans(search, limit) {
-    const pattern = `%${search || ''}%`;
+    const pattern = `%${String(search || '').replace(/[\\%_]/g, '\\$&')}%`;   // a % or _ typed is a letter, not a wildcard
     const { rows } = await sql`
         SELECT c.id, c.name, c.tag, c.description, c.looking_for, COUNT(m.user_id) AS members
         FROM clans c LEFT JOIN clan_members m ON m.clan_id = c.id
@@ -254,11 +296,11 @@ async function clanMembers(clanId) {
 // ---------- the weekly clan boss ----------
 
 function bossRow(r) {
-    return r ? { clanId: r.clan_id, week: r.week, maxHp: int(r.max_hp), hp: int(r.hp), killedAt: int(r.killed_at), lastHitUser: r.last_hit_user || null, settled: !!r.settled } : null;
+    return r ? { clanId: r.clan_id, week: r.week, maxHp: int(r.max_hp), hp: int(r.hp), killedAt: int(r.killed_at), lastHitUser: r.last_hit_user || null, settled: !!r.settled, killPaid: !!r.kill_paid } : null;
 }
 
 async function getBoss(clanId, week) {
-    const { rows } = await sql`SELECT clan_id, week, max_hp, hp, killed_at, last_hit_user, settled FROM clan_bosses WHERE clan_id = ${clanId} AND week = ${week}`;
+    const { rows } = await sql`SELECT clan_id, week, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week = ${week}`;
     return bossRow(rows[0]);
 }
 
@@ -271,22 +313,21 @@ async function createBoss(clanId, week, maxHp, shares = []) {
     return getBoss(clanId, week);
 }
 
+/** Each member's part of the week's boss as it was sized: [{ userId, share }] (kept all week, whoever leaves). */
+async function bossShares(clanId, week) {
+    const { rows } = await sql`SELECT user_id, share FROM clan_boss_shares WHERE clan_id = ${clanId} AND week = ${week}`;
+    return rows.map(r => ({ userId: r.user_id, share: int(r.share) }));
+}
+
 /**
- * A member leaves the clan (or is removed): if they have not fought this week's boss, their share of
- * its health goes with them. Returns the health taken off.
+ * Give the week's boss a new full health (api/index.js works it out from the shares of those in the
+ * clan now), moving its health by as much, never to nothing: a boss already felled stays as it is.
  */
-async function removeShare(clanId, week, userId, minHp) {
-    const { rows } = await sql`
-        DELETE FROM clan_boss_shares
-        WHERE clan_id = ${clanId} AND week = ${week} AND user_id = ${userId}
-          AND NOT EXISTS (SELECT 1 FROM clan_attacks a WHERE a.clan_id = ${clanId} AND a.week = ${week} AND a.user_id = ${userId})
-        RETURNING share
+async function resizeBoss(clanId, week, maxHp) {
+    await sql`
+        UPDATE clan_bosses SET hp = GREATEST(1::bigint, hp + (${maxHp}::bigint - max_hp)), max_hp = ${maxHp}::bigint
+        WHERE clan_id = ${clanId} AND week = ${week} AND hp > 0
     `;
-    const share = int(rows[0] && rows[0].share);
-    if (share > 0) {
-        await sql`UPDATE clan_bosses SET max_hp = GREATEST(${minHp}::bigint, max_hp - ${share}::bigint), hp = GREATEST(1::bigint, hp - ${share}::bigint) WHERE clan_id = ${clanId} AND week = ${week} AND hp > 0`;
-    }
-    return share;
 }
 
 /** Apply damage atomically; returns the boss after the hit. */
@@ -309,9 +350,14 @@ async function markBossKilled(clanId, week, userId, now) {
     return rows.length > 0;
 }
 
+/** The kill's rewards are paid (each with its own dedupe key, so paying them again paid nothing twice). */
+async function markKillPaid(clanId, week) {
+    await sql`UPDATE clan_bosses SET kill_paid = TRUE WHERE clan_id = ${clanId} AND week = ${week}`;
+}
+
 /** Earlier weeks of this clan that have not paid out their weekly rewards yet. */
 async function unsettledBosses(clanId, beforeWeek) {
-    const { rows } = await sql`SELECT clan_id, week, max_hp, hp, killed_at, last_hit_user, settled FROM clan_bosses WHERE clan_id = ${clanId} AND week < ${beforeWeek} AND settled = FALSE`;
+    const { rows } = await sql`SELECT clan_id, week, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week < ${beforeWeek} AND settled = FALSE`;
     return rows.map(bossRow);
 }
 
@@ -328,22 +374,29 @@ async function claimSettlement(clanId, week) {
 /**
  * Record an attack in the player's next slot of the day (slots are unique per player and day; the
  * attacks waiting, clan_charges, say how many may be made). A parallel attack taking the same slot
- * means a try at the next. Returns the slot.
+ * means a try at the next. Returns the slot. With `fightAt` (the fight's own mark), the same fight
+ * recorded already throws a unique violation on the constraint clan_attacks_fight.
  */
-async function recordAttack({ clanId, userId, week, day, damage, now }) {
+async function recordAttack({ clanId, userId, week, day, damage, now, fightAt = null }) {
     for (let tries = 0; ; tries++) {
         try {
             const { rows } = await sql`
-                INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at)
-                SELECT ${clanId}::int, ${userId}::int, ${week}::varchar, ${day}::varchar, COALESCE(MAX(slot), 0) + 1, ${damage}::bigint, ${now}::bigint
+                INSERT INTO clan_attacks (clan_id, user_id, week, day, slot, damage, at, fight_at)
+                SELECT ${clanId}::int, ${userId}::int, ${week}::varchar, ${day}::varchar, COALESCE(MAX(slot), 0) + 1, ${damage}::bigint, ${now}::bigint, ${fightAt}::bigint
                 FROM clan_attacks WHERE user_id = ${userId}::int AND day = ${day}::varchar
                 RETURNING slot
             `;
             return int(rows[0].slot);
         } catch (err) {
-            if (err.code !== '23505' || tries >= 3) throw err;
+            if (err.code !== '23505' || err.constraint === 'clan_attacks_fight' || tries >= 3) throw err;
         }
     }
+}
+
+/** The attack recorded for a fight (its mark), or null: { clanId, week, damage, at }. */
+async function attackByFight(userId, fightAt) {
+    const { rows } = await sql`SELECT clan_id, week, damage, at FROM clan_attacks WHERE user_id = ${userId} AND fight_at = ${fightAt}::bigint`;
+    return rows[0] ? { clanId: rows[0].clan_id, week: rows[0].week, damage: int(rows[0].damage), at: int(rows[0].at) } : null;
 }
 
 /** Give an attack slot back (the boss was already down when the attack landed). */
@@ -396,6 +449,26 @@ async function weeklyDamage(clanId, week) {
 }
 
 // ---------- rate limiting ----------
+
+/**
+ * Count one more try under `key` and return the count in its window, in one statement: checked before
+ * the password is (the count read first and added after the check let a burst of parallel tries all in).
+ */
+async function takeAttempt(key, now, windowMs) {
+    const { rows } = await sql`
+        INSERT INTO auth_attempts (key, count, since) VALUES (${key}, 1, ${now})
+        ON CONFLICT (key) DO UPDATE SET
+            count = CASE WHEN ${now}::bigint - auth_attempts.since >= ${windowMs}::bigint THEN 1 ELSE auth_attempts.count + 1 END,
+            since = CASE WHEN ${now}::bigint - auth_attempts.since >= ${windowMs}::bigint THEN ${now}::bigint ELSE auth_attempts.since END
+        RETURNING count
+    `;
+    return int(rows[0] && rows[0].count);
+}
+
+/** A try that turned out right gives its count back. */
+async function refundAttempt(key) {
+    await sql`UPDATE auth_attempts SET count = GREATEST(0, count - 1) WHERE key = ${key}`;
+}
 
 /** Failures counted under `key` within the window (0 once it has passed). */
 async function authFailures(key, now, windowMs) {
@@ -463,12 +536,13 @@ async function claimGifts(userId, now) {
 }
 
 module.exports = {
-    ensureSchema,
-    createUser, findUserByName, getSave, putSave, setOptIn, leaderboardRows,
+    ensureSchema, ping,
+    createUser, findUserByName, userNameOf, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
-    getBoss, createBoss, removeShare, damageBoss, markBossKilled, unsettledBosses, claimSettlement, recordAttack, deleteAttack, attacksToday, weeklyDamage,
+    getBoss, createBoss, bossShares, resizeBoss, damageBoss, markBossKilled, markKillPaid, unsettledBosses, claimSettlement,
+    recordAttack, attackByFight, deleteAttack, attacksToday, weeklyDamage,
     chargesNow, spendCharge, refundCharge,
-    authFailures, noteAuthFailure, clearAuthFailures,
+    takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts
 };

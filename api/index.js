@@ -34,7 +34,8 @@ function ensureSchema() {
 // only, nothing secret; it answers before the schema gate below so it can say which part is missing.
 app.get('/api/health', async (req, res) => {
     const ok = fn => fn().then(() => true, err => { console.error('health:', err && err.message); return false; });
-    const [db, game] = await Promise.all([ok(ensureSchema), ok(engine)]);
+    // the database asked every time (the schema is made once per instance, and said yes ever after)
+    const [db, game] = await Promise.all([ok(() => ensureSchema().then(() => store.ping())), ok(engine)]);
     const secret = !!JWT_SECRET;
     res.set('Cache-Control', 'no-store');
     res.status(db && secret && game ? 200 : 503).json({ ok: db && secret && game, db, secret, game, region: process.env.VERCEL_REGION || null });
@@ -66,6 +67,18 @@ function validateCredentials(body) {
     return null;
 }
 
+// A token names an account by id and name; the name must still be that id's (a database made anew under
+// the same secret would otherwise hand an old token whoever has that id now). Kept a while per instance.
+const NAME_CHECK_MS = 10 * 60 * 1000;
+const namesSeen = new Map();
+async function tokenStillValid(user) {
+    const seen = namesSeen.get(user.id);
+    if (seen && Date.now() - seen.at < NAME_CHECK_MS) return seen.name === user.username;
+    const name = await store.userNameOf(user.id);
+    namesSeen.set(user.id, { name, at: Date.now() });
+    return name !== null && name === user.username;
+}
+
 const authenticateToken = (req, res, next) => {
     if (!requireSecret(res)) return;
     const authHeader = req.headers['authorization'];
@@ -74,8 +87,14 @@ const authenticateToken = (req, res, next) => {
 
     jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] }, (err, user) => {
         if (err || !user || !Number.isInteger(user.id)) return res.sendStatus(403);
-        req.user = user;
-        next();
+        tokenStillValid(user).then(valid => {
+            if (!valid) return res.sendStatus(401);
+            req.user = user;
+            next();
+        }, error => {
+            console.error('token check failed', error);
+            res.status(503).json({ error: 'Database unavailable' });
+        });
     });
 };
 
@@ -114,11 +133,15 @@ function msToWeekEnd(ms) {
 
 // ---------- accounts and saves ----------
 
-// Rate limits: password guessing stops after a few tries per name and per address, and one address
-// cannot make accounts by the hundred. A name with no account still costs a bcrypt check, so the time
-// a wrong guess takes doesn't tell whether the name exists.
+// Rate limits: password guessing stops after a few tries per name from one address, and a looser limit
+// per name from everywhere and per address; one address cannot make accounts by the hundred. Each try is
+// counted before the password is checked, in one statement (counted after, a burst of parallel tries all
+// got in). Ten wrong tries from anywhere no longer lock a player out: from their own address they still
+// get in. A name with no account still costs a bcrypt check, so the time a wrong guess takes doesn't tell
+// whether the name exists.
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
-const MAX_NAME_FAILURES = 10;
+const MAX_NAME_FAILURES = 10;    // per name, from one address
+const MAX_NAME_TOTAL = 100;      // per name, from every address
 const MAX_IP_FAILURES = 50;
 const REGISTER_WINDOW_MS = 60 * 60 * 1000;
 const MAX_REGISTRATIONS = 10;
@@ -133,9 +156,8 @@ app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const regKey = `register:${clientIp(req)}`;
-        if (await store.authFailures(regKey, Date.now(), REGISTER_WINDOW_MS) >= MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
-        await store.noteAuthFailure(regKey, Date.now(), REGISTER_WINDOW_MS);   // every registration counts
+        // every registration counts, before any work is done
+        if (await store.takeAttempt(`register:${clientIp(req)}`, Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
         const hash = await bcrypt.hash(password, 10);
         const id = await store.createUser(username, hash);
         res.json({ token: signToken({ id, username }), message: 'Registration successful' });
@@ -153,19 +175,19 @@ app.post('/api/login', route('login', async (req, res) => {
     const { username, password } = req.body || {};
     if (typeof username !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Invalid credentials' });
     const now = Date.now();
-    const nameKey = `login:name:${username.toLowerCase().slice(0, 64)}`;
-    const ipKey = `login:ip:${clientIp(req)}`;
-    if (await store.authFailures(nameKey, now, AUTH_WINDOW_MS) >= MAX_NAME_FAILURES || await store.authFailures(ipKey, now, AUTH_WINDOW_MS) >= MAX_IP_FAILURES) {
-        return res.status(429).json(TOO_MANY);
-    }
+    const name = username.toLowerCase().slice(0, 64);
+    const ip = clientIp(req);
+    const keys = { nameIp: `login:name:${name}:${ip}`.slice(0, 120), name: `login:name:${name}`, ip: `login:ip:${ip}`.slice(0, 120) };
+    const counts = {};
+    for (const [k, key] of Object.entries(keys)) counts[k] = await store.takeAttempt(key, now, AUTH_WINDOW_MS);
+    if (counts.nameIp > MAX_NAME_FAILURES || counts.name > MAX_NAME_TOTAL || counts.ip > MAX_IP_FAILURES) return res.status(429).json(TOO_MANY);
     const user = await store.findUserByName(username);
     const validPassword = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
-    if (!user || !validPassword) {
-        await store.noteAuthFailure(nameKey, now, AUTH_WINDOW_MS);
-        await store.noteAuthFailure(ipKey, now, AUTH_WINDOW_MS);
-        return res.status(400).json({ error: 'Invalid credentials' });
-    }
-    await store.clearAuthFailures(nameKey);
+    if (!user || !validPassword) return res.status(400).json({ error: 'Invalid credentials' });
+    // the right password: the tries from here are forgotten, and this one is given back to the others
+    await store.clearAuthFailures(keys.nameIp);
+    await store.refundAttempt(keys.name);
+    await store.refundAttempt(keys.ip);
     res.json({ token: signToken(user), message: 'Login successful' });
 }));
 
@@ -233,17 +255,33 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     if (!Number.isInteger(state.version) || state.version < 1 || state.version > MAX_SAVE_VERSION) {
         return res.status(400).json({ error: 'Unsupported save version' });
     }
+    // The cloud save the game had seen (`base`, its last_saved): an upload made over another device's
+    // newer one is refused, and the game asks the player which to keep (src/main.js). A page from before
+    // this sends none, and its upload is stored as before.
+    const base = Number.isSafeInteger(req.body.base) && req.body.base >= 0 ? req.body.base : null;
     const savedAt = Date.now();
     const current = await store.getSave(req.user.id);
+    if (base !== null && current && (current.lastSaved || 0) !== base) return res.status(409).json({ error: 'Another device saved since this game last looked.', lastSaved: current.lastSaved || 0 });
     // The numbers other players see (boards, clan damage) are computed here, once per upload.
     const eng = await engine();
+    const previous = parseMetrics(current && current.metrics);
     let metrics = null;
     try { metrics = eng.powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
     let newFlags = [];
     if (metrics) {
-        const checked = plausibilityFlags(parseMetrics(current && current.metrics)?.peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
+        const checked = plausibilityFlags(previous?.peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
         newFlags = checked.flags;
         metrics.peaks = checked.peaks;
+        // the hero's attack at its best this past week: the clan boss is sized from it, so a weak save
+        // uploaded just before Monday doesn't make the week's boss small (an Ascension's dip lasts a week)
+        const was = previous?.attackPeak;
+        const attack = safeDamage(metrics.attackDamage);
+        metrics.attackPeak = was && Number.isFinite(was.v) && was.v > attack && savedAt - num(was.at) < 7 * DAY ? was : { v: attack, at: savedAt };
+    } else if (previous) {
+        // a save the server can't read keeps the numbers (and the highs) it had: wiping them let the next
+        // forged save skip the growth checks
+        metrics = previous;
+        newFlags.push('a save the server could not read');
     }
     // The developer switches (every place open, a weekend event forced on) only work on a local host;
     // a save that carries them was not played by the rules the boards compare.
@@ -253,9 +291,11 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     try { flags = JSON.parse((current && current.flags) || '[]'); } catch { flags = []; }
     if (!Array.isArray(flags)) flags = [];
     if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason }))].slice(-20);
-    await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null);
-    // "This week" leaderboards count from each player's first save of the week.
-    if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(metrics));
+    const stored = await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null, base);
+    if (!stored) return res.status(409).json({ error: 'Another device saved since this game last looked.' });   // a parallel upload got there first
+    // "This week" leaderboards count from where the player stood when the week began: the numbers stored
+    // before this upload (the first upload of the week, an empty one say, made the whole week's gain).
+    if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(previous || metrics));
     res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id) });
 }));
 
@@ -297,10 +337,26 @@ function parseMetrics(json) {
     try { const m = json ? JSON.parse(json) : null; return m && typeof m === 'object' ? m : null; } catch { return null; }
 }
 
-/** Pay the weekly rewards (participation, top three) of any finished week of this clan, at most once. */
+/**
+ * The kill's rewards (everyone who fought, and the last hit), paid once the kill is marked. Each reward
+ * has its own dedupe key, so paying again pays nothing twice: a payout that failed half way is finished
+ * by the next look at the clan (kill_paid says it is done).
+ */
+async function payKill(clanId, boss, now) {
+    for (const row of await store.weeklyDamage(clanId, boss.week)) {
+        await store.addReward(row.userId, 'kill', JSON.stringify({ ...REWARDS.kill, week: boss.week }), now, `kill:${row.userId}:${boss.week}`);
+    }
+    if (boss.lastHitUser) await store.addReward(boss.lastHitUser, 'lastHit', JSON.stringify({ ...REWARDS.lastHit, week: boss.week }), now, `lastHit:${boss.lastHitUser}:${boss.week}`);
+    await store.markKillPaid(clanId, boss.week);
+}
+
+/**
+ * Pay the weekly rewards (participation, top three) of any finished week of this clan, then mark it
+ * settled: paid first (the dedupe keys pay each once), so a failure half way leaves it to be finished.
+ */
 async function settleOldWeeks(clanId, now) {
     for (const boss of await store.unsettledBosses(clanId, isoWeek(now))) {
-        if (!(await store.claimSettlement(clanId, boss.week))) continue; // a parallel request is paying it
+        if (boss.killedAt > 0 && !boss.killPaid) await payKill(clanId, boss, now);
         const board = await store.weeklyDamage(clanId, boss.week);
         for (const [i, row] of board.entries()) {
             // Once per player per week, even if they fought for several clans that week.
@@ -309,8 +365,49 @@ async function settleOldWeeks(clanId, now) {
                 await store.addReward(row.userId, 'top', JSON.stringify({ ...REWARDS.top[i], text: `Clan boss: #${i + 1} damage in ${boss.week}`, week: boss.week }), now, `top:${row.userId}:${boss.week}`);
             }
         }
+        await store.claimSettlement(clanId, boss.week);
     }
 }
+
+/** A member's part of a boss: their attack at its best this week, never more than their best stage allows. */
+function shareOf(m, plausibleAttackDamage) {
+    const metrics = parseMetrics(m.metrics);
+    const attack = Math.max(safeDamage(metrics?.attackDamage), safeDamage(metrics?.attackPeak?.v));
+    const damage = Math.min(attack, safeDamage(plausibleAttackDamage(metrics?.bestStage)));
+    return Math.min(MAX_BOSS_HP, damage * BOSS_ATTACKS_TO_KILL);
+}
+
+/**
+ * The week's boss made the size of the clan as it is now: the parts of those in it, and of those who left
+ * no more than the damage they dealt. Leaving no longer takes a part that coming back doesn't return
+ * (leave and come back, each member in turn, and the boss had 1 health), and a stranger who joins, hits it
+ * once and leaves takes their whole part with them.
+ */
+async function resizeBoss(clanId, now) {
+    const week = isoWeek(now);
+    const boss = await store.getBoss(clanId, week);
+    if (!boss || boss.hp <= 0) return;
+    const [shares, members, board] = await Promise.all([store.bossShares(clanId, week), store.clanMembers(clanId), store.weeklyDamage(clanId, week)]);
+    if (!shares.length) return;
+    const here = new Set(members.map(m => m.userId));
+    const dealt = new Map(board.map(r => [r.userId, r.damage]));
+    const total = shares.reduce((sum, sh) => sum + (here.has(sh.userId) ? sh.share : Math.min(sh.share, dealt.get(sh.userId) || 0)), 0);
+    await store.resizeBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total)));
+}
+
+/**
+ * The player's clan, if it still exists: a member left in a clan deleted under them (its last member
+ * left as they joined) is taken out of it, so they can make or join another.
+ */
+async function clanOf(userId) {
+    const membership = await store.membershipOf(userId);
+    if (!membership) return null;
+    const clan = await store.getClan(membership.clanId);
+    if (clan) return { membership, clan };
+    await store.removeMember(userId);
+    return null;
+}
+const validId = id => Number.isInteger(id) && id > 0 && id < 2 ** 31;   // a Postgres integer (a bigger one was a 500)
 
 async function currentBoss(clanId, now) {
     const week = isoWeek(now);
@@ -321,11 +418,7 @@ async function currentBoss(clanId, now) {
         // (or is removed) before fighting takes theirs away again.
         const { plausibleAttackDamage } = await engine();
         const members = (await store.clanMembers(clanId)).filter(m => !recentlyFlagged(m.flags, now));
-        const shares = members.map(m => {
-            const metrics = parseMetrics(m.metrics);
-            const damage = Math.min(safeDamage(metrics?.attackDamage), safeDamage(plausibleAttackDamage(metrics?.bestStage)));
-            return { userId: m.userId, share: Math.min(MAX_BOSS_HP, damage * BOSS_ATTACKS_TO_KILL) };
-        }).filter(s => s.share > 0);
+        const shares = members.map(m => ({ userId: m.userId, share: shareOf(m, plausibleAttackDamage) })).filter(sh => sh.share > 0);
         const total = shares.reduce((sum, s) => sum + s.share, 0);
         boss = await store.createBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total)), shares);
     }
@@ -343,7 +436,7 @@ app.post('/api/clans', authenticateToken, route('create clan', async (req, res) 
     const tag = cleanText(body.tag, 5).toUpperCase();
     if (!CLAN_NAME_RE.test(name)) return res.status(400).json({ error: 'Clan names are 3-32 letters, numbers, spaces, \' _ or -.' });
     if (!CLAN_TAG_RE.test(tag)) return res.status(400).json({ error: 'Tags are 2-5 letters or numbers.' });
-    if (await store.membershipOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
+    if (await clanOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
     const now = Date.now();
     let clanId;
     try {
@@ -364,53 +457,60 @@ app.post('/api/clans', authenticateToken, route('create clan', async (req, res) 
 
 app.post('/api/clans/join', authenticateToken, route('join clan', async (req, res) => {
     const clanId = parseInt((req.body || {}).clanId, 10);
-    const clan = Number.isInteger(clanId) ? await store.getClan(clanId) : null;
+    const clan = validId(clanId) ? await store.getClan(clanId) : null;
     if (!clan) return res.status(404).json({ error: 'No such clan.' });
-    if (await store.membershipOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
+    if (await clanOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
     let joined;
     try { joined = await store.addMember(clanId, req.user.id, Date.now(), MAX_MEMBERS); } catch (err) {
         if (err.code === '23505') return res.status(400).json({ error: 'Leave your clan first.' });
         throw err;
     }
     if (!joined) return res.status(400).json({ error: 'That clan is full.' });
+    // its last member may have left it as this one joined: then it is gone, and so is the membership
+    if (!(await store.getClan(clanId))) { await store.removeMember(req.user.id); return res.status(404).json({ error: 'No such clan.' }); }
+    await resizeBoss(clanId, Date.now());   // back in the clan the same week: their part of its boss comes back
     res.json({ clanId });
 }));
 
 // The owner can remove a member (a griefer, or someone long gone). Their damage stays on the board.
 app.post('/api/clan/kick', authenticateToken, route('kick', async (req, res) => {
-    const membership = await store.membershipOf(req.user.id);
-    if (!membership) return res.status(400).json({ error: 'You are not in a clan.' });
-    const clan = await store.getClan(membership.clanId);
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
+    const { membership, clan } = mine;
     // 409, not 403: the client reads 401 and 403 as a lost session and would log the player out.
-    if (!clan || clan.ownerId !== req.user.id) return res.status(409).json({ error: 'Only the clan owner can remove members.' });
+    if (clan.ownerId !== req.user.id) return res.status(409).json({ error: 'Only the clan owner can remove members.' });
     const username = String((req.body || {}).username || '');
     const target = (await store.clanMembers(membership.clanId)).find(m => m.username === username);
     if (!target) return res.status(404).json({ error: 'No such member.' });
     if (target.userId === req.user.id) return res.status(400).json({ error: 'Leave the clan instead.' });
-    await store.removeShare(membership.clanId, isoWeek(Date.now()), target.userId, MIN_BOSS_HP);   // their part of this week's boss goes with them, if they never fought it
     await store.removeMember(target.userId);
+    await resizeBoss(membership.clanId, Date.now());   // their part of this week's boss goes with them, but what they dealt
     res.json({ removed: username });
 }));
 
 app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, res) => {
-    const membership = await store.membershipOf(req.user.id);
-    if (!membership) return res.status(400).json({ error: 'You are not in a clan.' });
-    const clan = await store.getClan(membership.clanId);
-    await store.removeShare(membership.clanId, isoWeek(Date.now()), req.user.id, MIN_BOSS_HP);   // their part of this week's boss goes with them, if they never fought it
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
+    const { membership, clan } = mine;
     await store.removeMember(req.user.id);
     const rest = await store.clanMembers(membership.clanId);
     if (!rest.length) await store.deleteClan(membership.clanId);
-    else if (clan && clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, rest[0].userId); // the longest-serving member
+    else {
+        if (clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, rest[0].userId); // the longest-serving member
+        await resizeBoss(membership.clanId, Date.now());   // their part of this week's boss goes with them, but what they dealt
+    }
     res.json({ left: true });
 }));
 
 app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     const now = Date.now();
-    const membership = await store.membershipOf(req.user.id);
-    if (!membership) return res.json({ clan: null });
-    const clanId = membership.clanId;
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.json({ clan: null });
+    const { clan } = mine;
+    const clanId = clan.id;
     await settleOldWeeks(clanId, now);
-    const [clan, rawMembers, boss] = await Promise.all([store.getClan(clanId), store.clanMembers(clanId), currentBoss(clanId, now)]);
+    const [rawMembers, boss] = await Promise.all([store.clanMembers(clanId), currentBoss(clanId, now)]);
+    if (boss.killedAt > 0 && !boss.killPaid) await payKill(clanId, boss, now);   // a payout that failed half way
     const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = await store.weeklyDamage(clanId, boss.week);
     const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds } = await engine();
@@ -433,9 +533,24 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const now = Date.now();
     const eng = await engine();
     const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank } = eng;
-    const membership = await store.membershipOf(req.user.id);
-    if (!membership) return res.status(400).json({ error: 'Join a clan first.' });
-    const clanId = membership.clanId;
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'Join a clan first.' });
+    const clanId = mine.clan.id;
+    const body = req.body || {};
+    // The fight's own mark (when it ended, in the game): sent again after an answer was lost, it is the
+    // attack already made, answered again as it was, and no second attack is spent.
+    const fightAt = Number.isSafeInteger(body.fightAt) && body.fightAt > 0 ? body.fightAt : null;
+    const answerAgain = async earlier => {
+        const boss = await store.getBoss(earlier.clanId, earlier.week);
+        const board = await store.weeklyDamage(earlier.clanId, earlier.week);
+        return res.json({
+            damage: earlier.damage, strikes: 0, hp: boss ? boss.hp : 0, maxHp: boss ? boss.maxHp : 0,
+            killed: !!boss && boss.killedAt === earlier.at && boss.lastHitUser === req.user.id,
+            attacksLeft: await store.chargesNow(req.user.id, dayNumber(now), perDay, bank),
+            rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: earlier.week, again: true
+        });
+    };
+    if (fightAt) { const earlier = await store.attackByFight(req.user.id, fightAt); if (earlier) return answerAgain(earlier); }
     const save = await store.getSave(req.user.id);
     if (!save || !save.state) return res.status(400).json({ error: 'Save to the cloud first: the attack uses your stored hero.' });
     const boss = await currentBoss(clanId, now);
@@ -444,7 +559,6 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     // The fight as the player fought it: when they struck, and how long it lasted (a page from before
     // the fight sends neither: a whole fight without a strike). The damage is reckoned here, from the
     // stored hero; no save can deal more than twice what its best stage allows.
-    const body = req.body || {};
     let fight = null;
     try { fight = eng.clanAttackFromSave(JSON.parse(save.state), body.strikes, body.ms, now); } catch (err) { console.error('clan fight failed', err); }
     const cap = safeDamage(eng.plausibleAttackDamage(parseMetrics(save.metrics)?.bestStage) * 2) || MAX_ATTACK_DAMAGE;
@@ -454,20 +568,19 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const day = dayId(now);
     let slot;
     try {
-        slot = await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, damage, now });
+        slot = await store.recordAttack({ clanId, userId: req.user.id, week: boss.week, day, damage, now, fightAt });
     } catch (err) {
         await store.refundCharge(req.user.id, bank);   // not recorded: the attack waits again
+        if (err.code === '23505' && err.constraint === 'clan_attacks_fight') {   // the same fight, sent twice at once
+            const earlier = await store.attackByFight(req.user.id, fightAt);
+            if (earlier) return answerAgain(earlier);
+        }
         throw err;
     }
     const after = await store.damageBoss(clanId, boss.week, damage);
     if (!after) { await store.deleteAttack(req.user.id, day, slot); await store.refundCharge(req.user.id, bank); return defeated(); } // it fell to a parallel hit
     const killed = after.hp <= 0 && await store.markBossKilled(clanId, boss.week, req.user.id, now);
-    if (killed) {
-        for (const row of await store.weeklyDamage(clanId, boss.week)) {
-            await store.addReward(row.userId, 'kill', JSON.stringify({ ...REWARDS.kill, week: boss.week }), now, `kill:${row.userId}:${boss.week}`);
-        }
-        await store.addReward(req.user.id, 'lastHit', JSON.stringify({ ...REWARDS.lastHit, week: boss.week }), now, `lastHit:${req.user.id}:${boss.week}`);
-    }
+    if (killed) await payKill(clanId, { ...after, killedAt: now, lastHitUser: req.user.id }, now);
     const board = await store.weeklyDamage(clanId, boss.week);
     res.json({
         damage, strikes: fight?.guarded || 0, hp: after.hp, maxHp: boss.maxHp, killed, attacksLeft: left,
@@ -491,7 +604,7 @@ app.post('/api/gifts/claim', authenticateToken, route('claim gifts', async (req,
 }));
 
 app.post('/api/rewards/claim', authenticateToken, route('claim rewards', async (req, res) => {
-    const ids = Array.isArray((req.body || {}).ids) ? req.body.ids.map(n => parseInt(n, 10)).filter(Number.isInteger).slice(0, 100) : [];
+    const ids = Array.isArray((req.body || {}).ids) ? req.body.ids.map(n => parseInt(n, 10)).filter(validId).slice(0, 100) : [];
     const claimed = await store.claimRewards(req.user.id, ids, Date.now());
     res.json({ rewards: claimed.map(r => ({ id: r.id, kind: r.kind, ...JSON.parse(r.payload) })) });
 }));
@@ -545,6 +658,15 @@ app.get('/api/leaderboard', authenticateToken, route('leaderboard', async (req, 
         me: mine >= 0 ? { rank: mine + 1, value: rows.entries[mine].value } : null
     });
 }));
+
+// A body that isn't JSON (or is too big) is the sender's mistake: a JSON answer saying so, not Express's
+// own HTML page (which shows its stack outside production, and which the game reads as "no cloud here").
+app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
+    if (err && err.type === 'entity.parse.failed') return res.status(400).json({ error: 'That request was not valid JSON.' });
+    if (err && err.type === 'entity.too.large') return res.status(413).json({ error: 'That save is too large.' });
+    console.error('request failed', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+});
 
 // VERY IMPORTANT FOR VERCEL
 module.exports = app;

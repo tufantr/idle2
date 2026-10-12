@@ -11,6 +11,7 @@ import { PERKS, GOLD_SHOP } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
+import { STRATA } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
@@ -237,7 +238,7 @@ export function renderHeader(game, ui, cloud) {
     const chips = [
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
-        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${d.tokenPowerPct}%</i></div>` : '',
+        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
         seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${d.tokenMult.toFixed(2)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${starGain(d.stars).toFixed(1)}</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
@@ -275,7 +276,7 @@ export function renderHeader(game, ui, cloud) {
     // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
     // leave-full-screen button. Both fold the fight back into the page; it goes on.
     const full = battleMode(game, ui);
-    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${ui.fresh?.size ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
+    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
     const screen = full ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.battleFull(false)" aria-label="Leave full screen" title="Leave full screen (Esc). The fight goes on.">${ICON_SHRINK}</button>` : '';
     return `
         <div class="header-row">
@@ -329,13 +330,16 @@ function renderLoadout(game) {
     const noPotions = !potions.some(p => state.resources[p.id] > 0);
     // Auto eats from every food carried, so those tiles light up with it; food that won't be eaten
     // (None picked, or another food) is dimmed, and so is a potion that isn't the one picked.
-    const foodState = f => (c.autoEat === 'auto' ? (state.resources[f.id] > 0 ? 'in-play' : '') : c.autoEat === f.id ? '' : 'idle');
+    // (in the Fasting Trial nothing is eaten, and the clan boss fight takes no potion: their rows say so)
+    const fasting = !!trialBite(state).noFood;
+    const clanFight = c.mode === 'clan';
+    const foodState = f => (fasting ? 'idle' : c.autoEat === 'auto' ? (state.resources[f.id] > 0 ? 'in-play' : '') : c.autoEat === f.id ? '' : 'idle');
     const foodRow = [
         pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat from all your food, whichever best fits the missing health'),
         pick(c.autoEat === 'none', "FI.setAutoEat('none')", word('None'), 'Never eat automatically'),
         ...foods.map(f => pick(c.autoEat === f.id, `FI.setAutoEat('${f.id}')`,
             `${resIcon(f.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[f.id] || 0)}</span><span class="pick-sub">+${Math.round(f.heals * d.foodMult)}</span>`,
-            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)${c.autoEat === 'auto' ? '. Auto eats it when it fits best' : '. Pick it to eat only this'}`,
+            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)${fasting ? '. Nothing is eaten in this Trial' : c.autoEat === 'auto' ? '. Auto eats it when it fits best' : '. Pick it to eat only this'}`,
             foodState(f))),
         noFood ? goTile('cooking', 'Cook', 'No food left: cook some') : ''
     ].join('');
@@ -346,9 +350,9 @@ function renderLoadout(game) {
             `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`, c.potion === p.id ? '' : 'idle')),
         noPotions ? goTile('alchemy', 'Brew', 'No potions left: brew some') : ''
     ].join('');
-    const potionNote = c.potion !== 'none' ? (c.potionCharges > 0 ? `${c.potionCharges} attacks left` : (state.resources[c.potion] > 0 ? 'drinks on the next attack' : 'none left')) : '';
+    const potionNote = clanFight ? 'none against the clan boss' : c.potion !== 'none' ? (c.potionCharges > 0 ? `${c.potionCharges} attacks left` : (state.resources[c.potion] > 0 ? 'drinks on the next attack' : 'none left')) : '';
     return `${showFood ? `<div class="loadout">
-            <div class="loadout-label">Food <span class="muted small">eaten below ${pct(d.autoEatThreshold)} health</span></div>
+            <div class="loadout-label">Food <span class="muted small">${fasting ? 'none is eaten in this Trial' : `eaten below ${pct(d.autoEatThreshold)} health`}</span></div>
             <div class="pick-row">${foodRow}</div>
         </div>` : ''}
         ${showPotions ? `<div class="loadout">
@@ -440,7 +444,7 @@ function zoneFacts(game) {
     if (c.mode === 'titan') return '<div class="muted small">Deal as much damage as you can before the timer runs out. Clicking the Titan helps.</div>';
     if (c.mode === 'clan') return '<div class="muted small">Strike when its guard drops: only then do strikes land.</div>';
     const zone = zoneForStage(c.stage);
-    return `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually one tier below this, sometimes this tier, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
+    return `<div class="zone-facts"><span class="muted small">Drops here</span>${zone.loot.map(l => `<span class="fact" title="${esc(res(l.id).name)}">${resIcon(l.id, { scale: 0.75 })}</span>`).join('')}${seen(state, 'gear') ? `<span class="fact-text muted small" title="Gear that drops here is usually of this tier, sometimes one below, rarely one above">· gear tier <b>${zone.gearTier}</b></span>` : ''}</div>`;
 }
 
 /** The fight's main column: food and potion first, then what drops here. */
@@ -1083,7 +1087,7 @@ function itemTile(state, item, { slot = null, selected = false } = {}) {
     const wearable = canWear(state, item);
     const better = !slot && wearable && isUpgrade(state, item);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
-    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? '<i class="tile-lock" aria-hidden="true">🔒</i>' : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
+    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
 
 function dollSlot(state, slot, selectedId) {
@@ -1110,11 +1114,13 @@ function bankTile(id, state, picked) {
 }
 
 /** The picked material: what it is, how many, and selling it. */
-function bankDetail(id, state) {
+function bankDetail(id, state, derived) {
     const r = res(id);
-    const about = [r.category, r.heals ? `heals ${r.heals}` : '', r.desc ? esc(r.desc) : ''].filter(Boolean).join(' · ');
+    // food heals as the fight heals it (Chef and Gourmet included)
+    const about = [r.category, r.heals ? `heals ${Math.round(r.heals * (derived?.foodMult || 1))}` : '', r.desc ? esc(r.desc) : ''].filter(Boolean).join(' · ');
     const sell = id === 'essence'
         ? '<span class="muted small">Upgrades and reforges gear</span>'
+        : !(sellValue(id) > 0) ? '<span class="muted small">No one buys it: it is kept for its use</span>'
         : `<div class="res-actions"><span class="muted small">${coinIcon()} ${sellValue(id)} each</span><button class="mini-btn" onclick="FI.sellRes('${id}',1)">Sell 1</button><button class="mini-btn" onclick="FI.sellRes('${id}',10)">10</button><button class="mini-btn" onclick="FI.sellRes('${id}',1e9)">All</button></div>`;
     return `<div class="bank-detail" style="--r:${r.color}">
         <div class="bank-detail-art">${resIcon(id, { scale: 2 })}</div>
@@ -1173,7 +1179,7 @@ export function renderItemDetail(game, id) {
                 <div class="detail-name">${esc(item.name)}${up ? ` +${up}` : ''}</div>
                 <div class="detail-sub">${esc(rarity?.name || item.rarity)} ${esc(TYPE_NAMES[item.type] || item.type)} · tier ${Number(item.tier)}${item.depth ? ` · depth ${Number(item.depth)}` : ''} · ${source}${slot ? ' · worn' : ''}</div>
             </div>
-            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${item.locked ? '🔒' : '🔓'}</button>
+            <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${glyph('lock', { scale: 0.75 })}</button>
         </div>
         <div class="detail-stats">${atk ? `<span class="item-atk">${ATK_ICON} ${fmt(atk)} ATK</span>` : ''}${def ? `<span class="item-def">${DEF_ICON} ${fmt(def)} DEF</span>` : ''}${def * BASE.hpPerDef >= 1 ? `<span class="item-hp" title="Armour adds health: one for every ${Math.round(1 / BASE.hpPerDef)} defence, raised by your health bonuses">${glyph('heart')} +${fmt(Math.floor(def * BASE.hpPerDef))}</span>` : ''}${atk || def ? '' : '<span class="muted">No base stats</span>'}</div>
         ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}</li>`).join('')}</ul>` : ''}
@@ -1255,7 +1261,7 @@ export function renderInventory(game, ui) {
             ${filters ? `<div class="filter-row">${['all', ...categories].map(c => `<button class="mini-btn ${filter === c ? 'active' : ''}" onclick="FI.invFilter('${c}')">${c}</button>`).join('')}</div>` : ''}
         </div>
         ${resources.length ? `<div class="bank-grid">${resources.map(id => bankTile(id, state, picked)).join('')}</div>
-        ${picked ? bankDetail(picked, state) : '<p class="muted small bank-hint">Tap a material to see it and sell it.</p>'}`
+        ${picked ? bankDetail(picked, state, game.derived) : '<p class="muted small bank-hint">Tap a material to see it and sell it.</p>'}`
         : '<div class="empty-state">Nothing here yet. What you mine, cut, hunt and win in fights lands here.</div>'}
     </section>`;
 }
@@ -1263,7 +1269,7 @@ export function renderInventory(game, ui) {
 // ---------- ranks ----------
 
 // The cloak's colour as a dot (the rank names it; the colour is what the hero wears).
-const CLOAK_COLORS = { red: '#c0362c', green: '#3fa34d', blue: '#3b6fd8', purple: '#a35ad6', gold: '#e9b23a', white: '#e8e4da', black: '#26222b' };
+const CLOAK_COLORS = { red: '#c0362c', green: '#3fa34d', blue: '#3b6fd8', purple: '#a35ad6', gold: '#e9b23a', white: '#e8e4da', black: '#26222b', dragon: '#b4532a', cyan: '#3cc8d8', void: '#5b2a86' };
 
 /** The hero's rank (data/ranks.js), with how far the next one is: a small badge in his cloak's colour. */
 function rankBadge(state) {
@@ -1284,7 +1290,7 @@ function perkList(state) {
     return PERKS.map(p => {
         const level = state.perks[p.id] || 0;
         const action = level >= p.max ? '<span class="perk-max">Max</span>'
-            : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp > 0 ? '' : 'disabled'} title="${sp > 0 ? 'Costs 1 skill point' : 'Needs a skill point: every prestige brings more'}">${level ? 'Upgrade' : 'Learn'}</button>`;
+            : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp > 0 ? '' : 'disabled'} title="${sp > 0 ? 'Costs 1 skill point' : 'Needs a skill point: a prestige whose run reached half your best brings one'}">${level ? 'Upgrade' : 'Learn'}</button>`;
         return `<div class="shop-item">
             <div class="perk-art">${sprite(`perk/${p.id}`, { scale: 2, fallback: p.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</div>
             <div class="shop-item-info"><span class="shop-item-name">${esc(p.name)} <span class="muted small">${level}/${p.max}</span></span><span class="shop-item-desc">${esc(p.desc)}</span></div>
@@ -1298,7 +1304,7 @@ function perkPurse(state) {
     const sp = state.prestige.skillPoints;
     return sp > 0
         ? `You have <b class="sp-text">${sp} skill point${sp === 1 ? '' : 's'}</b><span class="purse-rule">. Each perk level costs one, and lasts forever</span>.`
-        : 'No skill points now. Every prestige brings more; perks last forever.';
+        : 'No skill points now. A prestige whose run reached half your best brings one; perks last forever.';
 }
 
 /** Perks in a window, opened from the SP chip on any screen, the prestige strip or the fight's dock. */
@@ -1326,28 +1332,33 @@ export function renderShop(game, ui) {
         </div>`;
     }).join('');
     const preview = game.prestigePreview();
-    return `${banner('shop')}
-    <section class="glass-panel ${painted('market', 'center 55%')}">
-        <div class="panel-header"><h2>Supplies</h2></div>
-        <div class="shop-grid">${goods}</div>
-    </section>
-    <div class="two-col">
+    // Prestige shows here once its place has opened, and the perks once there are skill points to know
+    // of (DESIGN §3.22): the Shop opens first, and offered a 1-token prestige past the guided first one.
+    const prestigeOpen = isUnlocked(state, 'prestige');
+    const perksOpen = seen(state, 'skill_points');
+    const prestigePanel = !prestigeOpen ? '' : `
         <section class="glass-panel prestige-panel" style="${artStyle('prestige')}">
             <div class="panel-header"><h2>Prestige ${aboutButton('prestige')}</h2>${rankBadge(state)}</div>
             <div class="prestige-stats">
-                <div><b>${fmt(state.prestige.tokens)}</b><span>tokens held: +${d.tokenPowerPct}% attack and defence</span></div>
+                <div><b>${fmt(state.prestige.tokens)}</b><span>tokens held: +${fmt(d.tokenPowerPct)}% attack and defence</span></div>
                 <div><b>${state.prestige.skillPoints}</b><span>skill points to spend</span></div>
                 <div><b>+${preview.tokens}</b><span>tokens for this run (best stage ${state.combat.maxStage})</span></div>
                 <div><b>${preview.startStage}</b><span>is the stage the next run starts at</span></div>
             </div>
             <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : preview.blockedBy ? `Prestige after the ${afterWhat(preview)}` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
-        </section>
+        </section>`;
+    const perksPanel = !perksOpen ? '' : `
         <section class="glass-panel ${painted('library', 'center 40%')}">
             <div class="panel-header"><h2>Perks</h2></div>
-            <p class="small perk-purse" title="+1 skill point per prestige, +1 per 25 stages of your record">${perkPurse(state)}</p>
+            <p class="small perk-purse" title="+1 skill point for a prestige whose run reached half your best stage, +1 per ${BALANCE.prestige.spStageStep} stages of your record">${perkPurse(state)}</p>
             <div class="shop-list">${perks}</div>
-        </section>
-    </div>`;
+        </section>`;
+    return `${banner('shop')}
+    <section class="glass-panel ${painted('market', 'center 55%')}">
+        <div class="panel-header"><h2>Supplies</h2></div>
+        <div class="shop-grid">${goods}</div>
+    </section>
+    ${prestigePanel || perksPanel ? `<div class="two-col">${prestigePanel}${perksPanel}</div>` : ''}`;
 }
 
 // ---------- achievements ----------
@@ -1518,7 +1529,10 @@ function renderRecords(game) {
 function chronicleLine(e) {
     switch (e.kind) {
         case 'start': return ['campfire', 'The adventure began'];
-        case 'zone': { const z = ZONES.find(x => x.id === e.id); return z ? [`mon/${z.boss}`, `Reached ${z.name}`] : null; }
+        case 'zone': {   // a zone, or a stratum of the Abyss below its first (data/strata.js)
+            const z = ZONES.find(x => x.id === e.id) || STRATA.find(x => x.id === e.id);
+            return z ? [`mon/${z.boss}`, `Reached ${z.name}`] : null;
+        }
         case 'pet': { const p = PETS.find(x => x.id === e.id); return p ? [`pet/${p.id}`, `${p.name} joined the hero`] : null; }
         case 'unique': { const u = UNIQUES[e.id]; return u ? [`uniq/${e.id}`, `Won the ${u.name}`] : null; }
         case 'dungeon': { const d = dungeonById(e.id); return d ? [`mon/${d.boss.name}`, `First clear of the ${d.name}`] : null; }
@@ -1531,13 +1545,16 @@ function chronicleLine(e) {
 }
 
 /** The hero's story, newest first: a date, a picture and a line for each first. */
+// (made once: a formatter built for every line made the Records slow to draw with many firsts)
+const DAY_MONTH = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const DAY_MONTH_YEAR = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 function renderChronicle(state) {
     const year = new Date().getFullYear();
     const rows = [...(state.chronicle || [])].reverse().map(e => {
         const line = chronicleLine(e);
-        if (!line) return '';
         const d = new Date(e.t);
-        const date = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(d.getFullYear() === year ? {} : { year: 'numeric' }) });
+        if (!line || Number.isNaN(d.getTime())) return '';
+        const date = (d.getFullYear() === year ? DAY_MONTH : DAY_MONTH_YEAR).format(d);
         return `<li><time datetime="${d.toISOString()}">${esc(date)}</time><span class="ch-art">${sprite(line[0], { scale: 1 })}</span><span class="ch-text">${esc(line[1])}</span></li>`;
     }).join('');
     return rows ? `<section class="glass-panel ${painted('study', 'center 40%')}">
@@ -1811,6 +1828,7 @@ export function renderDungeons(game) {
             <div class="titan-text"><b>${esc(titanEnemy(state).name)}</b> · level ${tl}${state.titan.kills ? ` · ${state.titan.kills} defeated: +${Math.round(TITAN_BONUS.atkMult * 100 * titanBonusUnits(state.titan.kills))}% attack and health` : ''}${state.titan.bestPct ? ` · best try ${Math.round(state.titan.bestPct * 100)}%` : ''}
                 <div class="small ${readinessClass(titanFight.killSeconds, TITAN_TIME_MS / 1000, titanFight.surviveSeconds)}">You would deal about ${Math.round(titanPct * 100)}% of its health in ${TITAN_TIME_MS / 1000} s${titanFight.surviveSeconds < TITAN_TIME_MS / 1000 ? `, and last about ${Math.round(titanFight.surviveSeconds)} s without food` : ''}.</div></div>
             ${c.mode === 'titan' ? '<span class="status-pill fighting">Fighting now</span>'
+                : c.mode === 'clan' ? '<span class="muted small">After the clan fight</span>'
                 : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">${sprite('titan/0', { scale: 0.625, cls: 'soft res-spr' })} Challenge (${TITAN_TIME_MS / 1000} s)${titanCharges(state, game.now) > 1 ? ` ×${titanCharges(state, game.now)}` : ''}</button>`
                 : `<button class="mini-btn" disabled>Rests for ${duration(state.titan.readyAt - game.now)}</button>`}
         </div>`;
@@ -1834,7 +1852,7 @@ export function renderDungeons(game) {
                     <div class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></div><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
                 <div class="muted small">${record.clears} clear${record.clears === 1 ? '' : 's'}${next ? ` · at ${next.clears}: ${next.desc}` : ' · every bonus earned'}${done.length ? ` · earned: ${done.join('; ')}` : ''}</div>
                 <div class="btn-row">
-                    ${here ? (choosingAfterClear(state) ? '<button class="prestige-btn" onclick="FI.openRunChoice()">Cleared: keep going?</button>' : '<button class="mini-btn danger" onclick="FI.toggleCombat()">Leave dungeon</button>') : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
+                    ${here ? (choosingAfterClear(state) ? '<button class="prestige-btn" onclick="FI.openRunChoice()">Cleared: keep going?</button>' : '<button class="mini-btn danger" onclick="FI.toggleCombat()">Leave dungeon</button>') : ['titan', 'clan'].includes(c.mode) ? '<span class="muted small">After the fight</span>' : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
                     ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${ownsUnique(state, d.unique) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique) ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
                 </div>`
                 : `<div class="req">Opens at stage ${d.unlockStage}</div>`}
@@ -1977,7 +1995,7 @@ export function renderSettings(game, ui, cloud) {
 
 function renderBackups() {
     const backups = listBackups();
-    if (!backups.length) return '<p class="muted small">Backups appear here every 10 minutes, on load and before each prestige.</p>';
+    if (!backups.length) return '<p class="muted small">Backups appear here every 10 minutes, on load and before each prestige you make.</p>';
     return `<h3 class="section-title">Backups</h3><div class="backup-list">${backups.map(b => `<div class="backup-row">
         <div><b>${esc(b.label || b.slot)}</b><div class="muted small">${new Date(b.at).toLocaleString()} · best stage ${b.summary?.bestStage ?? '?'} · ${duration(b.summary?.playtimeMs || 0)} played</div></div>
         <button class="mini-btn" onclick="FI.restoreBackup('${b.slot}')">Restore</button>
@@ -2000,7 +2018,7 @@ export function renderClan(game, ui, cloud) {
         </section>`;
     }
     if (cloud.available === false) {
-        return `${banner('clan')}<section class="glass-panel ${painted('clanhall')}"><p class="warn">The clan server isn't reachable from here — clans need the game's API (the Vercel deployment).</p></section>`;
+        return `${banner('clan')}<section class="glass-panel ${painted('clanhall')}"><p class="warn">The clan server can't be reached just now.</p><div class="btn-row"><button class="mini-btn" onclick="FI.refreshSocial()">Try again</button></div></section>`;
     }
     const status = social.error ? `<p class="warn small">${esc(social.error)}</p>` : social.loading && !social.loaded ? '<p class="muted small">Loading…</p>' : '';
     const rewards = (social.rewards || []).length
@@ -2034,7 +2052,7 @@ export function renderClan(game, ui, cloud) {
         const canKick = !!c.isOwner;
         const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${fmt(Number(m.attackDamage) || 0)}</td></tr>`).join('');
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
-            <div class="panel-header"><div><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
+            <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? clanBossPanel(game, social, boss, pct) : ''}
             <div class="two-col">
@@ -2059,9 +2077,10 @@ function clanBossPanel(game, social, boss, pct) {
     const waiting = Math.max(0, Number(social.attacksLeft) || 0);
     const bank = Math.max(waiting, Number(social.attackBank) || 6);
     const fighting = game.state.combat.mode === 'clan';
+    const titanFight = game.state.combat.mode === 'titan';   // refused meanwhile (systems/clanfight.js)
     const pending = !!game.state.clanResult;
     const pips = Array.from({ length: bank }, (_, i) => `<i class="clan-pip${i < waiting ? ' on' : ''}"></i>`).join('');
-    const ready = waiting > 0 && !boss.killed && !social.attacking && !fighting && !pending;
+    const ready = waiting > 0 && !boss.killed && !social.attacking && !fighting && !titanFight && !pending;
     return `<div class="clan-boss${ready ? ' ready' : ''}">
         <span class="clan-boss-face">${sprite(`mon/${look.name}`, { scale: 2, cls: boss.killed ? 'soft silhouette' : 'soft', fallback: '🐉' })}</span>
         <div class="clan-boss-text">
@@ -2236,12 +2255,14 @@ export function renderWelcomeBack(summary, game) {
         ? `<div class="wb-wall"><span>Climbed to stage <b>${fmt(run.stage)}</b>, then held there for <b>${duration(Math.min(run.stallMs, summary.simulated))}</b></span><i class="wb-wall-bar" style="--climb:${(100 * Math.max(0, 1 - run.stallMs / summary.simulated)).toFixed(0)}%" aria-hidden="true"></i></div>` : '';
     // What is ready now, each one a tap away (it closes this and does the thing).
     const ready = [];
-    const preview = game.canPrestige() && !state.settings.autoPrestige ? game.prestigePreview() : null;
+    // (only what the hero can do now: places opened, and nothing a fight under way refuses)
+    const special = ['titan', 'clan'].includes(state.combat.mode);
+    const preview = isUnlocked(state, 'prestige') && game.canPrestige() && !state.settings.autoPrestige ? game.prestigePreview() : null;
     if (preview && preview.tokens > 0) ready.push(['FI.openPrestige()', sprite(FEATURES.prestige.icon, { scale: 0.75 }), `Prestige: +${fmt(preview.tokens)} tokens`]);
     if (state.daily?.banked > 0) ready.push(['FI.claimDaily()', sprite('crate', { scale: 0.75 }), `${state.daily.banked > 1 ? `${state.daily.banked} crates` : 'A crate'} to open`]);
-    if (game.titanReady()) ready.push(['FI.challengeTitan()', sprite('titan/0', { scale: 0.75 }), 'The Titan is awake']);
+    if (isUnlocked(state, 'dungeons') && !special && game.titanReady()) ready.push(['FI.challengeTitan()', sprite('titan/0', { scale: 0.75 }), 'The Titan is awake']);
     if (state.prestige.skillPoints > 0) ready.push(['FI.openPerks()', sprite('perk/knight', { scale: 0.75 }), `${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'} to spend`]);
-    const upgrade = findUpgrade(state);
+    const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
     if (upgrade) ready.push([`FI.equip(${Number(upgrade.item.id)})`, sprite(itemSpriteKey(upgrade.item), { scale: 0.75, fallback: esc(upgrade.item.icon) }), `Wear the ${esc(upgrade.item.name)}`]);
     const readyRow = ready.length ? `<div class="wb-ready">${ready.map(([act, art, text]) => `<button class="wb-ready-btn" onclick="FI.collectOffline(); ${act}">${art}<span>${text}</span></button>`).join('')}</div>` : '';
     // the hero who did the work, with the tool of it in hand (the sword after a fight), and the pet

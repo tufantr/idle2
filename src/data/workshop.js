@@ -60,6 +60,39 @@ export function rerollCost(item) {
     const times = Math.min(MAX_REFORGE_MULT, 1 + (item.reforges || 0));
     return { bar: metal.bar, bars, essence: 3 * tier * times, level: ANVIL_LEVEL_PER_UPGRADE, xp: bars * metal.xpPerBar, metal };
 }
+/**
+ * The essence the anvil took to reinforce `item` to its level: as kept (item.essenceIn), or for a piece
+ * from before that was kept, what its levels cost at its own tier.
+ */
+export function anvilEssenceSpent(item) {
+    if (Number.isFinite(item.essenceIn)) return item.essenceIn;
+    let essence = 0;
+    for (let level = 1; level <= (item.upgrade || 0); level++) essence += reinforceCost({ ...item, upgrade: level - 1 }).essence;
+    return essence;
+}
+
+/**
+ * A refit (systems/inventory.js equipItem) moves the anvil's work from the piece taken off (`from`) to
+ * the one put on (`to`): the bars that went in, each metal kept as itself (`barsIn` for the piece's own
+ * metal, `barsCarried` for others), and the essence. Salvage gives back a share of what was really spent;
+ * before, the bars of a copper piece came back as the new piece's runite, and its essence at the new tier.
+ * Call it before the levels move.
+ */
+export function carryAnvilWork(to, from) {
+    const ownBar = anvilMetal(to.tier).bar;
+    const carried = { ...(to.barsCarried || {}) };
+    const add = (bar, qty) => { if (qty > 0) carried[bar] = (carried[bar] || 0) + qty; };
+    for (const [bar, qty] of Object.entries(from.barsCarried || {})) add(bar, qty);
+    add(anvilMetal(from.tier).bar, from.barsIn || 0);
+    to.barsIn = (to.barsIn || 0) + (carried[ownBar] || 0);
+    delete carried[ownBar];
+    to.essenceIn = anvilEssenceSpent(to) + anvilEssenceSpent(from);
+    if (Object.keys(carried).length) to.barsCarried = carried; else delete to.barsCarried;
+    from.barsIn = 0;
+    from.essenceIn = 0;
+    delete from.barsCarried;
+}
+
 // Salvaging a weapon or a piece of armour gives bars of its metal back: one for a common piece, five
 // for a legendary (more past runite), and three quarters of the bars reinforcing it took.
 export const ANVIL_REFUND = 0.75;

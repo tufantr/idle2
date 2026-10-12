@@ -1032,9 +1032,52 @@ Keeping it running:
       the save and load answers say a gift waits, the game claims it once and shows a card ("A gift from
       tufan, +12,000,000 gold"). Gifts never show in the clan's reward list, so a page still running older
       code can't claim one and lose it
-- [ ] **The API's queries on a real Postgres** (S): the login limits and the clan boss shares changed after
-      the last check against PostgreSQL 16 (README "The API" has the command). The live tables were made
-      without an error; the queries run for the first time when players use them
+- [x] **The bug sweep** (the owner's ask, 12 October 2026: every line, every connection): eleven reviewers
+      read the game part by part and one played it in a browser at 1280 and 390 px; each finding was
+      reproduced before it was fixed, and `test/bugsweep.test.mjs` and the end of `test/api.test.cjs` keep
+      them fixed. What changed, by the player's eye:
+      - Saves: no two tabs, no stale device and no login can put an older game over a newer one any more.
+        The game uploads only once it has compared itself with the cloud (a failed check is tried again,
+        never followed by a blind upload); the server refuses an upload made over a cloud save the game
+        hadn't seen, and the game then asks which to keep; a tab opened later takes the save over and the
+        older one says so ("Play here"). The boot's welcome-back waits for that check, so it never acts on
+        the other game. A save that can't be read keeps a copy and points at the backups (it used to fall
+        back to the prototype's save); an export string of anything else is refused; a hand-made or
+        shared save can no longer stop the game loading or turn its numbers to NaN. A hard reset while
+        signed in resets the cloud save too (it came back on the next load), and says so.
+      - Medals: Trial Master and Ascendant count across reloads (their counts were dropped on every load),
+        and old saves get the counts back from what they hold.
+      - Fights: a Swift Bosses boss that comes on mid-step keeps its 3 seconds in a background tab (it had
+        about 10); the regroup's minute is timed per attack; the first boss's armour comes with its first
+        real fall; the clan fight on screen is the hero the server reckons (no potion, Focus or Trial in
+        it); Fasting's level-ups bring no health back; a Titan fight the page closed on pays for its
+        damage.
+      - Gear and skills: moving a reinforcement to a piece of another metal keeps the bars and essence as
+        they went in (salvage turned copper into runite and essence before); a piece forged into a full
+        bag that is salvaged at once says so; bait can't be sold away for nothing; a mini-game chance comes
+        on one clock for all the skills (switching skills kept a boost up nearly all the time); a missed
+        mini-game is heard; clicking work whose materials are short no longer stops the fight; a day of
+        firemaking away replays in a fifth of a second (it took seconds).
+      - Screens: the Shop shows Prestige and the perks only once they have opened; the welcome-back offers
+        only what can be done; Space strikes in the fight even after a click on a button; toasts go under
+        a card on a phone; a boss's head no longer covers its health bar; coins and work pops stay under
+        dialogs; cards wait while the page is hidden; the Records show the Abyss's depths; the top three
+        ranks' badges have their colours; the lock is the atlas's glyph, not an emoji.
+      - The server: login and registration limits count each try before checking it (a burst of parallel
+        tries all got in), and ten wrong guesses from elsewhere no longer lock a player out; a name is one
+        account whatever its case; leaving and coming back doesn't shrink the week's boss, and a stranger
+        who hits it once and leaves takes their part away; the boss is sized from each member's best attack
+        of the week; a clan fight sent twice is one attack; a member stranded in a deleted clan is let out;
+        rewards are paid before a week is marked settled; "this week" boards count from where the player
+        stood when the week began; the Clan tab polls only while someone is there; a body that isn't JSON
+        gets a JSON answer; the health check asks the database every time.
+      Not done, for later: a crafting tool in the hero's hands at the Crafting stage (an atlas cell to draw),
+      and claiming gifts and clan rewards in two steps (an answer lost in the network loses them today)
+- [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
+      the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
+      after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by
+      reading and against the in-memory store only; the live tables gain the new columns on the first
+      request after the deploy
 - [ ] **A watch on the live side** (S): Neon's usage page, Vercel's runtime errors and `/api/health` after
       each deploy, and a backup beyond Neon's six-hour restore window (a weekly export)
 - [ ] **A custom domain** (the owner's purchase): its records in Cloudflare's DNS, set to "DNS only"

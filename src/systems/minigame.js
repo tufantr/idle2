@@ -19,10 +19,24 @@ export const MINIGAME_CONFIG = {
     firemaking:  { icon: '🔥', label: 'Stoke the Fire', desc: 'Tap to keep the flame in the perfect band.',      type: 'heat', accent: '#f97316', actionText: 'Stoke' }
 };
 
-function scheduleNext(mg, now) {
+function scheduleNext(game, skillId, now) {
     const [min, max] = BALANCE.minigame.opportunityEveryMs;
+    const mg = game.state.minigame[skillId];
     mg.nextOpportunityAt = now + rng.int(min, max);
     mg.opportunityUntil = 0;
+    holdChances(game.state, mg.nextOpportunityAt);
+}
+
+/**
+ * One clock for every skill's chances: none comes before `at`. With a clock per skill, a player who
+ * switched skills found a chance waiting in each and kept a boost up nearly all the time; now a chance
+ * comes every few minutes of work, whichever skill it is.
+ */
+function holdChances(state, at) {
+    for (const id of NON_COMBAT_SKILLS) {
+        const mg = state.minigame[id];
+        if (mg) mg.nextOpportunityAt = Math.max(mg.nextOpportunityAt || 0, at);
+    }
 }
 
 /** Called each tick for the skill currently being trained. */
@@ -36,9 +50,10 @@ export function tickMinigame(game, skillId) {
         return;
     }
     if (!mg.nextOpportunityAt) { mg.nextOpportunityAt = now + rng.int(45000, 90000); return; } // first chance comes quickly
-    if (mg.opportunityUntil && mg.opportunityUntil <= now) { scheduleNext(mg, now); return; }
+    if (mg.opportunityUntil && mg.opportunityUntil <= now) { scheduleNext(game, skillId, now); return; }
     if (!mg.opportunityUntil && now >= mg.nextOpportunityAt) {
         mg.opportunityUntil = now + BALANCE.minigame.opportunityWindowMs;
+        holdChances(game.state, now + BALANCE.minigame.opportunityEveryMs[0]);   // the other skills wait their turn
         game.emit({ type: 'minigameReady', skill: skillId });
     }
 }
@@ -132,7 +147,7 @@ function rewardMinigame(game, skillId) {
     mg.boostUntil = game.now + boostMs;
     mg.challenge = null;
     bumpStat(game, 'minigameWins');
-    scheduleNext(mg, game.now);
+    scheduleNext(game, skillId, game.now);
     log(game, `${MINIGAME_CONFIG[skillId].icon} Perfect! +${Math.round(mg.bonus * 100)}% ${skillId} speed for ${Math.round(boostMs / 1000)}s.`, 'minigame');
     game.emit({ type: 'minigameWin', skill: skillId, bonus: mg.bonus });
     game.markDirty();
@@ -143,6 +158,6 @@ export function failMinigame(game, skillId, { silent = false } = {}) {
     if (!mg) return;
     mg.challenge = null;
     mg.streak = 0;
-    scheduleNext(mg, game.now);
+    scheduleNext(game, skillId, game.now);
     if (!silent) game.emit({ type: 'minigameFail', skill: skillId });
 }

@@ -10,24 +10,32 @@ function createMemoryStore() {
     const store = {
         db,
         async ensureSchema() {},
+        async ping() {},
 
         async createUser(username, hash) {
-            if (db.users.some(u => u.username === username)) throw unique();
+            if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) throw unique('users_username_lower');
             const row = { id: ++seq.users, username, password_hash: hash, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null };
             db.users.push(row);
             return row.id;
         },
         async findUserByName(username) {
-            const u = db.users.find(x => x.username === username);
+            const same = db.users.filter(x => x.username.toLowerCase() === username.toLowerCase())
+                .sort((a, b) => (b.username === username) - (a.username === username) || a.id - b.id);
+            const u = same[0];
             return u ? { id: u.id, username: u.username, password_hash: u.password_hash } : null;
+        },
+        async userNameOf(userId) {
+            return db.users.find(x => x.id === userId)?.username ?? null;
         },
         async getSave(userId) {
             const u = db.users.find(x => x.id === userId);
             return u ? { state: u.game_state, lastSaved: u.last_saved, flags: u.flags, optIn: u.optIn, metrics: u.metrics } : null;
         },
-        async putSave(userId, stateJson, savedAt, flagsJson, metricsJson) {
+        async putSave(userId, stateJson, savedAt, flagsJson, metricsJson, base = null) {
             const u = db.users.find(x => x.id === userId);
-            if (u) Object.assign(u, { game_state: stateJson, last_saved: savedAt, flags: flagsJson, metrics: metricsJson });
+            if (!u || (base !== null && (u.last_saved || 0) !== base)) return false;
+            Object.assign(u, { game_state: stateJson, last_saved: savedAt, flags: flagsJson, metrics: metricsJson });
+            return true;
         },
         async setOptIn(userId, optIn) {
             const u = db.users.find(x => x.id === userId);
@@ -105,19 +113,31 @@ function createMemoryStore() {
         },
         async createBoss(clanId, week, maxHp, shares = []) {
             if (!db.bosses.some(x => x.clanId === clanId && x.week === week)) {
-                db.bosses.push({ clanId, week, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false });
+                db.bosses.push({ clanId, week, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false, killPaid: false });
                 for (const s of shares) db.shares.push({ clanId, week, userId: s.userId, share: s.share });
             }
             return store.getBoss(clanId, week);
         },
-        async removeShare(clanId, week, userId, minHp) {
-            if (db.attacks.some(a => a.clanId === clanId && a.week === week && a.userId === userId)) return 0;
-            const i = db.shares.findIndex(s => s.clanId === clanId && s.week === week && s.userId === userId);
-            if (i < 0) return 0;
-            const [{ share }] = db.shares.splice(i, 1);
+        async bossShares(clanId, week) {
+            return db.shares.filter(s => s.clanId === clanId && s.week === week).map(s => ({ userId: s.userId, share: s.share }));
+        },
+        async resizeBoss(clanId, week, maxHp) {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week && x.hp > 0);
-            if (b && share > 0) { b.maxHp = Math.max(minHp, b.maxHp - share); b.hp = Math.max(1, b.hp - share); }
-            return share;
+            if (b) { b.hp = Math.max(1, b.hp + (maxHp - b.maxHp)); b.maxHp = maxHp; }
+        },
+        async markKillPaid(clanId, week) {
+            const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
+            if (b) b.killPaid = true;
+        },
+        async takeAttempt(key, now, windowMs) {
+            const r = db.auth.get(key);
+            const next = r && now - r.since < windowMs ? { count: r.count + 1, since: r.since } : { count: 1, since: now };
+            db.auth.set(key, next);
+            return next.count;
+        },
+        async refundAttempt(key) {
+            const r = db.auth.get(key);
+            if (r) r.count = Math.max(0, r.count - 1);
         },
         async authFailures(key, now, windowMs) {
             const r = db.auth.get(key);
@@ -150,10 +170,15 @@ function createMemoryStore() {
             b.settled = true;
             return true;
         },
-        async recordAttack({ clanId, userId, week, day, damage, now }) {
+        async recordAttack({ clanId, userId, week, day, damage, now, fightAt = null }) {
+            if (fightAt !== null && db.attacks.some(a => a.userId === userId && a.fightAt === fightAt)) throw unique('clan_attacks_fight');
             const slot = Math.max(0, ...db.attacks.filter(a => a.userId === userId && a.day === day).map(a => a.slot)) + 1;
-            db.attacks.push({ id: ++seq.attacks, clanId, userId, week, day, slot, damage, at: now });
+            db.attacks.push({ id: ++seq.attacks, clanId, userId, week, day, slot, damage, at: now, fightAt });
             return slot;
+        },
+        async attackByFight(userId, fightAt) {
+            const a = db.attacks.find(x => x.userId === userId && x.fightAt === fightAt);
+            return a ? { clanId: a.clanId, week: a.week, damage: a.damage, at: a.at } : null;
         },
         async deleteAttack(userId, day, slot) {
             db.attacks = db.attacks.filter(a => !(a.userId === userId && a.day === day && a.slot === slot));

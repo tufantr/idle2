@@ -59,8 +59,12 @@ export function addMasteryXp(game, skillId, key, amount) {
     }
     game.emit({ type: 'masteryLevel', skill: skillId, key, name: action?.name || key, level: after, from: before });
     // a checkpoint of the skill's whole mastery passed: its actions are faster for good (data/mastery.js)
-    const share = masteryShare(state, skillId);
-    const shareBefore = share - (Math.min(after, MASTERY_MAX_LEVEL) - before) / (masteryActions(skillId).length * (MASTERY_MAX_LEVEL - 1));
+    // (the shares from whole level counts, worked out as masteryShare does: a share found by subtracting
+    // fractions came out a hair short of a checkpoint it had already passed, and it was passed again)
+    const total = masteryActions(skillId).length * (MASTERY_MAX_LEVEL - 1);
+    const levelsNow = Math.round(masteryShare(state, skillId) * total);
+    const share = levelsNow / total;
+    const shareBefore = (levelsNow - (Math.min(after, MASTERY_MAX_LEVEL) - Math.min(before, MASTERY_MAX_LEVEL))) / total;
     for (const c of MASTERY_CHECKPOINTS) {
         if (shareBefore >= c.at || share < c.at) continue;
         bumpStat(game, 'masteryCheckpoints');

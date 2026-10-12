@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, exportString, importString, exportStringCompressed, importStringAsync, rotateBackup, writeBackup, listBackups, restoreBackup, CloudClient, chooseSave, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, exportString, importString, exportStringCompressed, importStringAsync, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, chooseSave, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -98,7 +98,7 @@ test('backups rotate through three slots and can be restored', () => {
     }
     const autos = listBackups().filter(b => b.slot.startsWith('auto'));
     assert.equal(autos.length, 3);
-    assert.deepEqual(autos.map(b => JSON.parse(b.json).gold), [5, 4, 3], 'newest first, oldest overwritten');
+    assert.deepEqual(autos.map(b => JSON.parse(readBackup(b.slot).json).gold), [5, 4, 3], 'newest first, oldest overwritten');
     assert.equal(restoreBackup(autos[0].slot).gold, 5);
 });
 

@@ -200,7 +200,7 @@ test('the Voidstone: only deep bosses leave it, and its pieces are cut to the he
         let found = 0;
         for (let i = 0; i < n; i++) {
             c.stage = c.maxStage = c.bestStage = stage;
-            game.state.stats.bossKills = 5;   // not the first boss ever
+            game.state.stats.bossKills = game.state.stats.bossFalls = 5;   // not the first boss ever
             spawnEnemy(game);
             assert.ok(c.enemy.boss);
             const before = game.state.resources.voidstone;

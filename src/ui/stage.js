@@ -130,7 +130,7 @@ export function createStage(root, { sound = () => {}, pat = () => {} } = {}) {
             const state = game.state;
             if (shownSkill !== skill) { shownSkill = skill; el.stage.dataset.skill = skill; }
             const look = skill === 'agility' ? { bare: true } : { tool: skill };
-            const hk = `${skill}|${heroLayers(state, look).join(',')}`;
+            const hk = `${skill}|${phone()}|${heroLayers(state, look).join(',')}`;   // (the size too: a phone turned, a window resized)
             if (hk !== heroKey) { heroKey = hk; el.figure.innerHTML = heroSprite(state, { scale: phone() ? 3 : 4, ...look }); }
             // the skill's own pet, once found, keeps him company at work
             // the skill's own pet keeps the hero company at work, or else the pet picked for the fight
@@ -171,7 +171,7 @@ export function createStage(root, { sound = () => {}, pat = () => {} } = {}) {
             if (!working) { fill(0); el.hero.style.transform = ''; return; }
             const p = clamp01(state.action.progress / intervalFor(action, game.derived));
             fill(p);
-            if (reduced()) return;
+            if (reduced()) { el.hero.style.transform = ''; return; }   // motion turned off mid-swing: he stands straight
             el.hero.style.transform = shownSkill === 'agility' ? stride(p, t) : swing(p);
             // the strike lands (on the course, the leap): the target takes the hit once per action
             const beat = Math.floor((state.stats.actionsBySkill[shownSkill] || 0));

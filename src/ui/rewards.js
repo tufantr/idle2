@@ -23,7 +23,7 @@ const CONFETTI_COLORS = ['#fcd34d', '#f59e0b', '#fde68a', '#f472b6', '#60a5fa', 
 export function unlocksAtLevel(skill, level) {
     const found = [];
     const add = (icon, name) => found.push({ icon, name });
-    for (const n of SKILLS[skill]?.nodes || []) if (n.levelReq === level) add(n.produces ? resIcon(n.produces) : SKILLS[skill].icon, n.name);
+    for (const n of SKILLS[skill]?.nodes || []) if (n.levelReq === level) add(n.produces ? resIcon(n.produces) : n.bonfireLog ? resIcon(n.bonfireLog) : SKILLS[skill].icon, n.name);   // a log to burn shows as its log
     if (skill === 'smithing') {
         for (const r of SMELTING_RECIPES) if (r.levelReq === level) add(resIcon(r.produces), r.name);
         if (level === ANVIL_LEVEL_PER_UPGRADE) add(sprite('item/Weapon/3', { scale: 0.625, cls: 'soft res-spr', fallback: '⚒️' }), 'The anvil');
@@ -178,6 +178,8 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
         }
         root.appendChild(node);
         requestAnimationFrame(() => {
+            // a card already replaced (two in one moment) or a hidden page measures as the corner: no confetti from there
+            if (!node.isConnected || document.hidden) return;
             const box = node.getBoundingClientRect();
             confetti(box.left + box.width / 2, box.top + box.height * 0.35);
         });
@@ -185,6 +187,8 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
     }
 
     function next() {
+        // nobody is looking: the cards wait for the player's return instead of passing unseen
+        if (document.hidden) { clearTimeout(timer); timer = setTimeout(next, 1000); return; }
         if (blocked()) { // a dialog came up: let the current card go, keep the rest for later
             showing = null;
             const node = root.querySelector('.celebration');
@@ -203,7 +207,8 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
     return {
         /** Queue a card: { key?, kind, icon, kicker, title, lines?: [html pills], note?: text, ms? }. A card with the same key replaces the queued one. */
         celebrate(card) {
-            if (document.hidden) return; // nobody is watching; the toast and the log keep the record
+            // nobody is watching: the toast and the log keep the record, but a new place's card waits for the return
+            if (document.hidden && card.kind !== 'unlock') return;
             if (showing && card.key && showing.key === card.key) { show(card); return; }
             const same = card.key ? queue.findIndex(q => q.key === card.key) : -1;
             if (same >= 0) queue[same] = card; else queue.push(card);
@@ -212,7 +217,7 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
         },
         /** The dialog that held the cards back has closed. */
         resume() {
-            if (!showing && queue.length && !blocked()) next();
+            if (!showing && queue.length && !blocked() && !document.hidden) next();
         }
     };
 }

@@ -378,6 +378,23 @@ export function endTitan(game, won, reason = won ? 'won' : 'time') {
     return resumeDoing(game, before);
 }
 
+/**
+ * A Titan fight the page closed on (a reload): its attempt was spent when it began, so it is scored as a
+ * Give up, by the damage the saved Titan had taken (`enemy`, the save's), quietly. The fight itself does
+ * not come back (core/state.js).
+ */
+export function scoreTitanCutShort(game, enemy) {
+    const state = game.state;
+    if (!enemy || typeof enemy !== 'object' || !(Number(enemy.maxHp) > 0)) return;
+    const dealt = Math.max(0, Math.min(1, 1 - Math.max(0, Number(enemy.hp) || 0) / Number(enemy.maxHp)));
+    if (!(dealt > 0) || dealt >= 1) return;   // nothing done, or a fall the fight didn't live to count
+    const essence = Math.floor(dealt * 4 * titanLevel(state));
+    state.resources.essence += essence;
+    state.titan.bestPct = Math.max(state.titan.bestPct || 0, dealt);
+    log(game, `🗿 The Titan fight ended when the game closed: ${Math.round(dealt * 100)}% of its health taken. +${essence} essence.`, 'combat');
+    game.markDirty();
+}
+
 /** Give up a Titan fight: it ends as a loss, scored by the damage dealt, and he goes back to what he was doing. */
 export function giveUpTitan(game) {
     const c = game.state.combat;

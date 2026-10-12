@@ -7,6 +7,7 @@ import { evaluateDisclosures } from './disclosure.js';
 import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
 import { petForSkill, petChance } from '../data/pets.js';
 import { capeFor } from '../data/capes.js';
+import { trialBite } from '../data/trials.js';
 import { rng } from '../core/rng.js';
 
 const LOG_LIMIT = 60;
@@ -28,8 +29,10 @@ export function grantXp(game, skillId, amount) {
     if (after > before) {
         game.emit({ type: 'levelUp', skill: skillId, level: after, from: before });
         // A combat level-up restores the hero's health (each level adds to it): the first levels, which
-        // come every few kills, carry a new hero through his first fights.
-        if (skillId === 'combat' && game.state.combat.hp > 0 && game.recompute) { game.recompute(); game.state.combat.hp = game.derived.maxHp; }
+        // come every few kills, carry a new hero through his first fights. Not in the Fasting Trial's
+        // fights, where no health comes back.
+        const fasting = trialBite(game.state).noRegen && game.state.combat.active;
+        if (skillId === 'combat' && game.state.combat.hp > 0 && game.recompute && !fasting) { game.recompute(); game.state.combat.hp = game.derived.maxHp; }
         log(game, `${SKILLS[skillId].icon} ${SKILLS[skillId].name} level ${after}!`, 'level');
         if (after >= MAX_LEVEL) {
             game.state.stats.skills99 = Object.values(game.state.skills).filter(s => levelForXp(s.xp) >= MAX_LEVEL).length;

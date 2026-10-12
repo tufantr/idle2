@@ -205,7 +205,7 @@ export function createScene(root, actions) {
     const standRoom = () => Math.floor(((el.foeStand.clientHeight || 0) + ATLAS_CELL / 2) / ATLAS_CELL);
     /** A boss is drawn one size up, where the stand has room for it (a short window keeps it at the others' size). */
     function bossScale(scale) {
-        if (!document.body.classList.contains('battle-full')) return scale + 1;
+        // in the page as on the full screen: drawn one size up regardless, its head covered its own health
         return Math.max(scale, Math.min(scale + 1, standRoom()));
     }
 
@@ -432,7 +432,8 @@ export function createScene(root, actions) {
     el.foe.addEventListener('click', event => {
         if (lastEnemy?.chest) { actions.chest?.(); return; }   // the chest after a clear: the choice again
         if (!actions.strike()) return;
-        move(el.foeSprite, 'hurt');
+        // a strike the clan boss's guard blocks ("Blocked") doesn't make it flinch
+        if (!lastEnemy?.clan || el.battle.classList.contains('guard-down')) move(el.foeSprite, 'hurt');
         if (event.clientX === undefined || (event.clientX === 0 && event.clientY === 0)) return; // keyboard
         const box = el.fx.getBoundingClientRect();
         fxBudget = Math.max(fxBudget, 1);
@@ -695,8 +696,8 @@ export function createScene(root, actions) {
                 case 'dungeonClear':
                     banner(`<small>${esc(dungeonById(ev.dungeon)?.name || 'Dungeon')} cleared${ev.clears > 1 ? ` · ${fmt(ev.clears)}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest</strong>${chestLoot(ev, game.state)}`, 'victory', 2600);
                     break;
-                case 'prestige':
-                    banner(`<small>Prestige</small><strong>+${fmt(ev.tokens)} tokens</strong>`, 'victory', 2400);
+                case 'prestige':   // an Ascension's tokens were given up for Stars: no tokens banner (main.js shows its card)
+                    if (!ev.ascend) banner(`<small>Prestige</small><strong>+${fmt(ev.tokens)} tokens</strong>`, 'victory', 2400);
                     break;
                 default:
                     break;

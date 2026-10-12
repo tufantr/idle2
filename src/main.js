@@ -3,7 +3,7 @@
 import { Game } from './game.js';
 import {
     loadLocal, saveLocal, clearLocal, exportStringCompressed, importStringAsync, CloudClient, chooseSave,
-    writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS
+    writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConflictModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
@@ -33,7 +33,7 @@ import { RESOURCES } from './data/resources.js';
 import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { STRATA, STRATUM_STAGES } from './data/strata.js';
-import { nextTrialTarget } from './systems/trials.js';
+import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
 
 const BASE_RECORD_MULT = BASE.recordMult;
@@ -107,8 +107,48 @@ function freshSocial() {
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
-const loaded = loadLocal(Date.now());
-let game = withDevFlags(new Game(loaded, Date.now()));
+// The cloud is written only once a sync has compared this game with it and chosen (an upload before
+// that put a guest's or a stale game over the account's). A failed sync is tried again.
+let cloudReady = false;
+let syncing = false;
+let syncRetryAt = 0;
+let resyncChanged = false;   // an upload was refused: the cloud changed under this page (another device)
+let heldReport = null;       // the boot's welcome-back, held until the sync has chosen which game is played
+const SYNC_RETRY_MS = 45000;
+let syncFailNoted = false;
+let loaded = loadLocal(Date.now());
+// A save that can't be read (save.js keeps a copy) or can't be run: the game starts fresh, the automatic
+// backups are left alone, and the player is shown where the backups are.
+let loadProblem = !!localLoadProblem();
+let game;
+try {
+    game = withDevFlags(new Game(loaded, Date.now()));
+} catch (err) {
+    console.error('The save could not be started; kept a copy', err);
+    try { localStorage.setItem(`${LOCAL_KEY}.corrupt.${Date.now()}`, localStorage.getItem(LOCAL_KEY) || ''); } catch { /* storage full */ }
+    loaded = null;
+    loadProblem = true;
+    game = withDevFlags(new Game(null, Date.now()));
+}
+
+// One tab plays the save: a tab opened later takes it over, and the older one stops. Two tabs used to
+// save their own games over each other's, and whichever wrote last won, often the forgotten one.
+const TAB_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+const OWNER_KEY = 'fantasyIdle.owner';
+let passive = false;
+try { localStorage.setItem(OWNER_KEY, TAB_ID); } catch { /* no storage: this tab is all there is */ }
+function ownsSave() {
+    try { const owner = localStorage.getItem(OWNER_KEY); return !owner || owner === TAB_ID; } catch { return true; }
+}
+function becomePassive() {
+    if (passive) return;
+    passive = true;
+    ui.modalQueue = [];
+    showModal(`<div class="modal-content"><div class="modal-header">Playing in another tab</div>
+        <div class="modal-body"><p>The game was opened in another tab or window, and it plays there now. This one has stopped, so the two can't save over each other.</p></div>
+        <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="location.reload()">Play here</button></div></div>`, 'elsewhere');
+}
+window.addEventListener('storage', event => { if (event.key === OWNER_KEY && event.newValue && event.newValue !== TAB_ID) becomePassive(); });
 // When the local save was last written. Offline progress moves the game's clock to now, so the first
 // cloud sync compares the cloud copy with this instead (or the local save would always look newer).
 let bootSavedAt = loaded ? loaded.meta.savedAt : null;
@@ -166,7 +206,12 @@ function withDevFlags(g) {
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
 const offlineSummary = game.resumeFromSave(Date.now());
-if (offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000)) openModal(renderWelcomeBack(offlineSummary, game), 'offline');
+const bootReport = offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000) ? offlineSummary : null;
+// Signed in, the cloud may hold a newer game: this one's report waits until the sync has chosen (shown at
+// once, it stayed up over the cloud's game, and its buttons acted on that game's items).
+if (bootReport && cloud.loggedIn) heldReport = bootReport;
+else if (bootReport) openModal(renderWelcomeBack(bootReport, game), 'offline');
+if (loadProblem) setTimeout(() => askConfirm('Your save could not be read', 'A copy of it was kept, and the game started fresh. Your backups are in Settings: restore one to carry on where you were.', 'Open Settings', () => window.FI.switchTab('settings')), 0);
 if (cloud.loggedIn) syncFromCloud();
 // A new player meets the game first, not a login form: a title card, then straight into a fight.
 // Signing in stays one click away (on the card, and in the header once there is progress to keep).
@@ -187,7 +232,10 @@ function advance(now) {
 
 let tickErrorShown = false;
 setInterval(() => {
+    if (passive) return;   // the game plays in another tab now
     const now = Date.now();
+    // The clock turned back: the save clocks start again from now (they waited for it to catch up).
+    if (now < lastSave - 5000) lastSave = lastBackup = lastCloudSave = now;
     // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
     try {
         advance(now);
@@ -197,11 +245,15 @@ setInterval(() => {
         game.now = now;
     }
     handleEvents(game.drainEvents());
-    if (game.state.clanResult && cloud.loggedIn && !pendingConflict) sendClanResult();   // a clan attack fought, not yet sent
+    if (game.state.clanResult && cloud.loggedIn && cloudReady && !pendingConflict) sendClanResult();   // a clan attack fought, not yet sent
     if (now - lastSave > AUTOSAVE_MS) save(now);
-    if (now - lastBackup > BACKUP_INTERVAL_MS) { lastBackup = now; rotateBackup(game.serialize(now), now); }
-    if (cloud.loggedIn && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
-    if (ui.tab === 'clan' && !document.hidden && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
+    // (not while a save that couldn't be read waits to be restored: these would write over its backups)
+    if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem) { lastBackup = now; rotateBackup(game.serialize(now), now); }
+    // the sync that failed, tried again (until it has chosen, nothing is uploaded)
+    if (cloud.loggedIn && !cloudReady && !syncing && !pendingConflict && !document.hidden && now >= syncRetryAt) syncFromCloud({ changed: resyncChanged });
+    if (cloud.loggedIn && cloudReady && !pendingConflict && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
+    // the Clan tab's board, only while someone is there (an untouched page kept the free database awake)
+    if (ui.tab === 'clan' && playerAround(now) && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
     const pressing = pointer.down && now - pointer.downAt < 1000;
     if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
@@ -236,9 +288,15 @@ function paintGold(now = performance.now()) {
 }
 requestAnimationFrame(frame);
 
+let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
+    if (passive) return;
     game.setAttending(!document.hidden);
-    if (document.hidden) { save(Date.now()); cloudSaveOnLeave(); } else lastPresenceAt = Date.now();
+    if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
+    lastPresenceAt = Date.now();
+    if (giftsWaiting) claimGifts();   // noticed while the page was hidden
+    // Back after a long while: another device may have played meanwhile. Look before uploading again.
+    if (cloud.loggedIn && cloudReady && !pendingConflict && hiddenAt && Date.now() - hiddenAt >= CLOUD_AWAY_MS) syncFromCloud();
 });
 // The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
 let resizeQueued = false;
@@ -261,6 +319,13 @@ document.addEventListener('pointerdown', event => {
     if (button && !button.disabled && !button.classList.contains('foe') && !button.closest('.foe')) sound.play('click');
 }, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
+// A button clicked with the mouse or a finger lets the focus go once its click is done: kept, Space (the
+// fight's strike key) and Enter pressed it again, and a click on a camp upgrade bought three more. A
+// press from the keyboard (a click with no count) keeps the focus where the keys are.
+// (the button now focused: a render in the click may have put the focus on the button drawn in its place)
+document.addEventListener('click', event => {
+    if (event.detail > 0 && event.target?.closest?.('button')) document.activeElement?.closest?.('button')?.blur();
+});
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
 // bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
@@ -357,7 +422,7 @@ document.addEventListener('keydown', event => {
         event.preventDefault();
         target.click();
     }
-    if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'conflict') closeModal(); // a conflict needs a choice
+    if (event.key === 'Escape' && ui.modalOpen && !['conflict', 'elsewhere'].includes(ui.modalOpen)) closeModal(); // a conflict needs a choice; another tab plays
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
     // holding it does nothing more).
@@ -415,7 +480,8 @@ function paintBrand() {
 function bumpPurse() {
     const s = game.state;
     const purse = { tokens: s.prestige.tokens, sp: s.prestige.skillPoints, essence: s.resources.essence };
-    if (lastPurse && !document.body.classList.contains('reduced-motion')) {
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (lastPurse && !still) {
         for (const [key, value] of Object.entries(purse)) {
             if (value === lastPurse[key]) continue;
             document.querySelector(`.chip.${key}`)?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.14)', boxShadow: '0 0 18px rgba(251, 191, 36, 0.55)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360, easing: 'ease-out' });
@@ -551,6 +617,7 @@ function soundFor(ev, onCombat) {
         case 'titan': return [ev.won ? 'victory' : 'defeat'];
         case 'glance': return onCombat ? ['dodge'] : null;   // a strike off the clan boss's guard
         case 'minigameWin': return ['gold'];
+        case 'minigameFail': return ['dodge'];
         case 'harvest': return ['drop'];
         case 'obstacleBuilt': return ['unlock'];
         case 'bestiaryStar': return isUnlocked(game.state, 'achievements') ? ['gold'] : null;
@@ -571,7 +638,8 @@ function handleEvents(events) {
     // Places that open in the same moment share one card (and one sound), so nothing queues up.
     const unlocked = events.filter(ev => ev.type === 'unlock').map(ev => ev.id);
     if (unlocked.length) {
-        for (const id of unlocked) markFresh(id === 'prestige' ? 'shop' : id, true);
+        // (Prestige is in the Shop: it is marked new there, if the Shop is open; a dot for a closed Shop led nowhere)
+        for (const id of unlocked) if (id !== 'prestige' || isUnlocked(game.state, 'shop')) markFresh(id === 'prestige' ? 'shop' : id, true);
         rewards.celebrate(unlockCelebration(unlocked));
         sound.play('unlock');
     }
@@ -627,7 +695,7 @@ function handleEvents(events) {
                     if (trial) toast(`Trial: ${trial.name}. ${trial.rule}`, 'prestige', pic(trial.icon));
                 } else if (trial) {
                     rewards.celebrate({ key: `trial:${trial.id}`, kind: 'prestige', icon: sprite(trial.icon, { scale: 2 }), kicker: 'A Trial begins', title: trial.name,
-                        lines: [trial.rule, `Stage ${nextTrialTarget(game.state, trial)} for a record`, paid] });
+                        lines: [trial.rule, nextTrialTarget(game.state, trial) !== null ? `Stage ${nextTrialTarget(game.state, trial)} for a record` : `Stage ${weeklyGoal(game.state, Date.now()).target} for this week's laurel`, paid] });
                 } else {
                     rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
                         lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
@@ -637,6 +705,7 @@ function handleEvents(events) {
             }
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
             case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
+            case 'minigameFail': toast('Missed: the streak starts again', 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
             case 'dungeonClear':   // the first clear of a visit asks (dungeonChoice); while it repeats, a note every tenth
                 if (game.state.combat.dungeon?.repeat && ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate'));
@@ -780,7 +849,8 @@ function showModal(html, key) {
     // The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
     // scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
     const touch = !!window.matchMedia?.('(hover: none)').matches;
-    const first = root.querySelector('[data-autofocus]') || root.querySelector(touch ? 'button.btn-confirm, button' : 'input, button.btn-confirm, button');
+    // (one selector at a time: a list matched the first button in the dialog, and Enter on the welcome-back opened Prestige)
+    const first = root.querySelector('[data-autofocus]') || (!touch && root.querySelector('input')) || root.querySelector('button.btn-confirm') || root.querySelector('button');
     first?.focus({ preventScroll: true });
     for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
 }
@@ -801,34 +871,55 @@ function closeModal() {
 // ---------- persistence ----------
 
 function save(now) {
+    if (passive) return;
+    if (!ownsSave()) { becomePassive(); return; }   // another tab took the save (its storage event may not have come)
     lastSave = now;
     saveLocal(game.serialize(now));
 }
 
-async function cloudSave(announce = true, { keepalive = false } = {}) {
-    if (!cloud.loggedIn || pendingConflict) return; // never overwrite the cloud while the player is choosing
+/**
+ * Upload the game. Only once a sync has chosen it over the cloud's (`sync` is that sync's own upload),
+ * never while the player chooses, one at a time. The server refuses an upload made over a cloud save
+ * this page hasn't seen (another device's): then the two are compared again, and the player asked.
+ */
+let pushing = false;
+let giftsWaiting = false;   // an upload's answer said gifts wait: claimed when the page is in view (their card shows)
+async function cloudSave(announce = true, { keepalive = false, sync = false } = {}) {
+    if (!cloud.loggedIn || pendingConflict || passive || pushing) return;
+    if (!cloudReady && !sync) { if (announce) toast('Checking the cloud save first…', 'info'); return; }
+    pushing = true;
     lastCloudSave = Date.now();
     try {
         const answer = await cloud.push(JSON.parse(game.serialize(Date.now())), { keepalive });
         ui.cloudStatus = `Cloud save OK at ${new Date().toLocaleTimeString()}`;
         if (announce) toast('Saved to cloud', 'info');
-        if (answer?.gifts > 0) claimGifts();
+        giftsWaiting = answer?.gifts > 0;
+        if (giftsWaiting) claimGifts();
     } catch (err) {
+        if (err.status === 409) {   // another device saved meanwhile: compare again before anything goes up
+            cloudReady = false;
+            resyncChanged = true;
+            syncRetryAt = 0;
+            return;
+        }
         ui.cloudStatus = `Cloud save failed: ${err.message}`;
         if (announce) toast(ui.cloudStatus, 'error');
+    } finally {
+        pushing = false;
     }
 }
 
 /** Leaving the page (another tab, the phone's home screen, closing it): one upload, unless one went just now. */
 function cloudSaveOnLeave() {
-    if (!cloud.loggedIn || pendingConflict || !game.state.settings.cloudSync || Date.now() - lastCloudSave < CLOUD_LEAVE_GAP_MS) return;
+    if (!cloud.loggedIn || !cloudReady || passive || pendingConflict || !game.state.settings.cloudSync || Date.now() - lastCloudSave < CLOUD_LEAVE_GAP_MS) return;
     cloudSave(false, { keepalive: true });
 }
 
 /** Gifts waiting on the server (the owner's, README "The API"): claimed once, added to the save, shown as a card. */
 let claimingGifts = false;
 async function claimGifts() {
-    if (claimingGifts || !cloud.loggedIn || pendingConflict) return;
+    // (not into a game the sync may yet replace, nor while hidden: its card would show to nobody)
+    if (claimingGifts || !cloud.loggedIn || !cloudReady || passive || pendingConflict || document.hidden) return;
     claimingGifts = true;
     try {
         const { gifts = [] } = await cloud.claimGifts();
@@ -836,8 +927,9 @@ async function claimGifts() {
             const text = game.applyReward(gift);
             const gold = Math.floor(Number(gift.gold) || 0);
             rewards.celebrate({ key: `gift:${gift.id}`, kind: 'unlock', icon: sprite(gold > 0 ? 'gold' : 'crate', { scale: 2 }),
-                kicker: gift.text || 'A gift', title: text.slice(text.indexOf(': ') + 2), ms: 5000 });   // the card escapes its words
+                kicker: gift.text || 'A gift', title: text.slice(text.lastIndexOf(': ') + 2), ms: 5000 });   // what came, after the gift's own words (which may hold a colon); the card escapes them
         }
+        giftsWaiting = false;
         if (gifts.length) { save(Date.now()); cloudSave(false); render(); }
     } catch (err) {
         ui.cloudStatus = err.message;   // it waits on the server for the next save
@@ -857,10 +949,11 @@ let sendingClan = false;
 let clanRetryAt = 0;
 async function sendClanResult(now = false) {
     const result = game.state.clanResult;
-    if (!result || sendingClan || !cloud.loggedIn || (!now && Date.now() < clanRetryAt)) return;
+    if (!result || sendingClan || !cloud.loggedIn || !cloudReady || passive || (!now && Date.now() < clanRetryAt)) return;
     sendingClan = true;
     try {
-        const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms });
+        // the fight's own mark goes with it: sent again after a lost answer, the server counts it once
+        const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms, at: result.at });
         game.clearClanResult();
         save(Date.now());
         if (ui.social.boss) Object.assign(ui.social.boss, { hp: answer.hp, maxHp: answer.maxHp, killed: !!answer.killed });
@@ -874,7 +967,7 @@ async function sendClanResult(now = false) {
         sound.play(answer.killed ? 'victory' : 'chest');
         render();
     } catch (err) {
-        if (err.status >= 400 && err.status < 500 && err.status !== 409) { game.clearClanResult(); toast(err.message, 'info'); render(); }
+        if (err.status >= 400 && err.status < 500) { game.clearClanResult(); toast(err.message, 'info'); render(); }   // refused for good
         else clanRetryAt = Date.now() + 30000;   // the connection, or the server busy: again in a while
     } finally {
         sendingClan = false;
@@ -926,29 +1019,70 @@ async function socialAction(fn, success) {
 }
 
 let pendingConflict = null;
-async function syncFromCloud() {
+/** Does `live` hold everything the cloud's `remote` has (the same game, as far in every count), so keeping it loses nothing? */
+function aheadOf(live, remote) {
+    const xp = s => Object.values(s.skills || {}).reduce((n, k) => n + (Number(k?.xp) || 0), 0);
+    const counts = s => [s.combat?.bestStage || 0, s.prestige?.count || 0, s.ascension?.count || 0, s.stats?.kills || 0, xp(s)];
+    const mine = counts(live);
+    return live.meta?.createdAt === remote.meta?.createdAt && counts(remote).every((v, i) => v <= mine[i]);
+}
+/** The boot's welcome-back, held while the sync chose: this game is the one played, so it shows now. */
+function showHeldReport() {
+    const report = heldReport;
+    heldReport = null;
+    if (report) openModal(renderWelcomeBack(report, game), 'offline');
+}
+/**
+ * Compare this game with the cloud's and choose: the newer one is played (and this one uploaded), or the
+ * player is asked. `changed`: an upload was refused, the cloud changed under this page. Until it has
+ * chosen nothing goes up; a failed one is tried again (the loop), never followed by a blind upload.
+ */
+async function syncFromCloud({ changed = false } = {}) {
+    if (syncing || !cloud.loggedIn) return;
+    syncing = true;
+    const wasReady = cloudReady;
+    const seenBase = cloud.base;
+    cloudReady = false;
+    resyncChanged = false;
     try {
         const boot = bootSavedAt;
         bootSavedAt = null;   // used once, by the boot sync: a failed or later sync compares with the live save
-        const { state: remote, gifts } = await cloud.pull(Date.now());
+        const { state: remote, lastSaved, gifts } = await cloud.pull(Date.now());
         const live = game.state;
         const local = boot ? { ...live, meta: { ...live.meta, savedAt: boot } } : live;
-        const choice = chooseSave(live.stats.kills || live.meta.playtimeMs > 60000 ? local : null, remote);
+        const played = !!(live.stats.kills || live.meta.playtimeMs > 60000);
+        let choice = chooseSave(played ? local : null, remote);
+        // Another device saved since this page last saw the cloud: this game keeps going only if it already
+        // has all that one has (an answer this page lost, say); else the player chooses.
+        const elsewhere = changed || (wasReady && seenBase !== null && lastSaved !== seenBase);
+        if (elsewhere && remote && played) choice = aheadOf(live, remote) ? { pick: 'local', conflict: false } : { pick: choice.pick, conflict: true };
         if (choice.conflict && remote) {
             pendingConflict = { remote };
             openModal(renderConflictModal(local, remote, choice.pick), 'conflict');
-            return;
+            return;   // the cloud is ready again with the player's choice (FI.resolveConflict)
         }
         if (choice.pick === 'cloud' && remote) {
+            heldReport = null;
+            cloudReady = true;
             adoptState(remote);
             toast('Cloud save loaded', 'info');
         } else {
-            await cloudSave(false);
+            showHeldReport();
+            cloudReady = true;
+            await cloudSave(false, { sync: true });
         }
-        if (gifts > 0) claimGifts();
+        syncRetryAt = 0;
+        syncFailNoted = false;
+        giftsWaiting = gifts > 0;
+        if (giftsWaiting) claimGifts();
     } catch (err) {
         ui.cloudStatus = err.message;
-        toast(err.message, 'error');
+        syncRetryAt = Date.now() + SYNC_RETRY_MS;   // again in a while; nothing goes up meanwhile
+        showHeldReport();
+        if (!syncFailNoted) toast(`${err.message} The cloud save is checked again shortly.`, 'error');
+        syncFailNoted = true;
+    } finally {
+        syncing = false;
     }
 }
 
@@ -997,6 +1131,7 @@ window.FI = {
      */
     async clanFight() {
         if (!cloud.loggedIn || ui.social.attacking || game.state.combat.mode === 'clan') return;
+        if (!cloudReady) { toast('Checking the cloud save first…', 'info'); return; }   // the server fights with the stored hero
         ui.social.attacking = true;
         render();
         try {
@@ -1152,7 +1287,7 @@ window.FI = {
     buyShop(id) { if (game.buyGoldShopItem(id) !== false) sound.play('buy'); render(); },
     buyPerk(id) { if (game.buyPerk(id) !== false) sound.play('buy'); render(); },
 
-    openPrestige() { if (game.canPrestige()) openModal(renderPrestigeModal(game), 'prestige'); },
+    openPrestige() { if (isUnlocked(game.state, 'prestige') && game.canPrestige()) openModal(renderPrestigeModal(game), 'prestige'); },
     confirmPrestige() {
         const trial = document.querySelector('.prestige-modal input[name="trial"]:checked')?.value;   // a Trial picked in the dialog
         writeBackup(game.serialize(Date.now()), 'prestige', `Before prestige ${game.state.prestige.count + 1}`);
@@ -1257,7 +1392,11 @@ window.FI = {
             ui.saveIo = '';
             adoptState(state);
             toast('Save imported', 'info');
-        } catch (err) { toast(err.message, 'error'); }
+        } catch (err) {
+            // the game's own refusals say what is wrong; the browser's (bad base64, broken JSON) don't
+            const ours = /save|version|compressed/i.test(err.message) && !/atob|JSON|token|position|fetch|execute/i.test(err.message);
+            toast(ours ? err.message : "That isn't a whole Fantasy Idle save string: copy all of it, and try again.", 'error');
+        }
     },
     restoreBackup(slot) {
         askConfirm('Restore this backup?', 'Your current progress will be replaced. A backup of it is kept.', 'Restore backup', () => {
@@ -1270,12 +1409,16 @@ window.FI = {
         });
     },
     hardReset() {
-        askConfirm('Wipe your save?', 'The game starts over from the beginning. One backup is kept in Settings in case you change your mind.', 'Wipe save', () => {
+        // Signed in, the fresh game goes to the cloud too: the old one came back from there on the next load.
+        const where = cloud.loggedIn ? ', here and in your cloud save' : '';
+        askConfirm('Wipe your save?', `The game starts over from the beginning${where}. One backup is kept in Settings in case you change your mind.`, 'Wipe save', () => {
             writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
             clearLocal();
             prefs.remove('fantasyIdle.tab');
+            for (const id of [...ui.fresh]) markFresh(id, false);   // no "new" marks from the old game
             game = withDevFlags(new Game(null, Date.now()));
             save(Date.now());
+            if (cloud.loggedIn) cloudSave(false);
             render();
             toast('Save wiped. Fresh start!', 'info');
         });
@@ -1316,20 +1459,31 @@ window.FI = {
         try {
             if (kind === 'login') await cloud.login(user, pass); else await cloud.register(user, pass);
             ui.social = freshSocial(); // nothing from the previous account carries over
+            cloudReady = false;        // nothing goes up before the sync below has compared this game with the account's
             closeModal();
             toast(`Signed in as ${cloud.username}`, 'info');
             await syncFromCloud();
             render();
         } catch (e) { if (err) err.textContent = e.message; }
     },
-    logout() { cloud.logout(); ui.cloudStatus = ''; ui.social = freshSocial(); toast('Logged out — playing locally', 'info'); render(); },
+    logout() {
+        cloud.logout();
+        cloudReady = false;
+        heldReport = null;
+        game.clearClanResult();   // an attack not sent belongs to that account (it went to the next one to sign in)
+        ui.cloudStatus = '';
+        ui.social = freshSocial();
+        toast('Logged out — playing locally', 'info');
+        render();
+    },
     cloudSaveNow() { cloudSave(true); },
     resolveConflict(pick) {
         closeModal();
         if (!pendingConflict) return;
         const { remote } = pendingConflict;
         pendingConflict = null;
-        if (pick === 'cloud') adoptState(remote); else cloudSave(false);
+        cloudReady = true;
+        if (pick === 'cloud') { heldReport = null; adoptState(remote); } else { showHeldReport(); cloudSave(false); }
         render();
     },
     game: () => game

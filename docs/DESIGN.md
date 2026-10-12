@@ -121,7 +121,7 @@ let offline progress run overnight.
 
 ### 3.2 Resources and dependencies
 
-`src/data/resources.js` defines 73 resources, and a test checks that every one has a consumer. Who
+`src/data/resources.js` defines 74 resources, and a test checks that every one has a consumer. Who
 consumes what:
 
 | Resource | Made by | Consumed by |
@@ -228,7 +228,7 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 
 `src/systems/combat.js`, formulas in `src/core/formulas.js`, stats in `src/core/modifiers.js`.
 
-- **Timers:** player and enemy attack on independent timers (player 1.5 s base, min 0.5 s; enemy
+- **Timers:** player and enemy attack on independent timers (player 1.5 s base, at least 0.75 s with attack speed's +100% cap; enemy
   2.2 s at stage 1, −8 ms per stage, min 1.3 s). Large time steps resolve attacks in time order.
 - **Player stats:** `ATK = (5 + gear ATK) × (1 + Σ ATK%) × token layer × camp layer`; DEF likewise
   without the unarmed 5; `max HP = (100 + 12 × (combat level − 1)) × (1 + Σ HP%) × token layer × camp layer`.
@@ -484,8 +484,8 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 - **Monsters pay like ladder monsters of the same health** (the boss too, §3.6), so the chest is the
   whole bonus: one **fragment** (3% chance of three), `0.5 × zone tier` essence, three material
   picks from the zone, a gem 50% of the time, and boss-quality gear of the chest tier 4% of the time,
-  as strong as the dungeon's depth in the Abyss makes it (like its monsters' own drops: ×3.2 in the
-  Citadel, ×61 in the Maw; before, chest gear ignored the depth and was weaker than the drops beside
+  as strong as the dungeon's depth in the Abyss makes it (like its monsters' own drops: ×2.1 in the
+  Citadel, ×13.5 in the Maw; before, chest gear ignored the depth and was weaker than the drops beside
   it). A strong hero clears a run in well under a minute, so a chest is never a jackpot.
 - **Uniques:** 50 fragments assemble the dungeon's unique; a chest holds it outright 0.2% of the time.
   Uniques are Legendary with fixed affixes (the Crown: +15% gold find, +4% crit, +5% HP) and 10% more
@@ -576,10 +576,11 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   shown in the Hall's Collection. The Armourer medal comes at 40 pages.
 - **Completion** (`src/systems/completion.js`; `robust-and-fun/B_longterm_motivation.md` §8.2 item 8):
   how much of the game is done, as one figure with a decimal on the Hall's banner ("7.8% done"), and its
-  parts as bars at the top of Records. Ten parts of equal weight, each its share done: skill levels to
+  parts as bars at the top of Records. Eleven parts of equal weight, each its share done: skill levels to
   99, mastery to 99 on every action, the bestiary's stars, the codex, the medals, the pets, the uniques,
-  the first 20 Titans, the Trials' tiers and the agility course's slots. The whole counts every part from
-  the start, so it only rises; Records names only the parts the player has met. A cape for 100% is still
+  the first 20 Titans, the Trials' tiers, the agility course's slots and the festival cloaks. The whole
+  counts every part from the start, so it only rises (a unique the player unlocks and sells away is the
+  one thing that lowers it); Records names only the parts the player has met. A cape for 100% is still
   to come.
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
   when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
@@ -626,7 +627,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 
 - **Mini-games** (`src/systems/minigame.js`) are **opportunities**, not a job: while you train a
   gathering or production skill, a first chance appears after 45–90 seconds and then one every 3–6
-  minutes, each open for 20 seconds.
+  minutes, each open for 20 seconds, on one clock for all the skills (with a clock each, a player who
+  switched skills found a chance waiting in each and kept a boost up nearly all the time). A challenge
+  left open by a reload counts as missed.
   A win gives +35% skill speed for 90 seconds (+5% per consecutive win, up to +55%); a miss costs
   nothing but the streak. A fully attentive player gains roughly +15% on average.
 - **Focus** (Clicker Heroes' idle ancients): after **60 seconds without a click or key press** the hero
@@ -671,11 +674,18 @@ gear to wear; a place that waited opens on the return and is named there too.
   Broken records (an unknown dungeon, a missing Titan or pet record) load as defaults. Loading also
   takes each value only if it has the default's type, drops keys the game doesn't know (including
   `__proto__`, which could otherwise reach every object on the page or the server), and rebuilds
-  every item from the game's own tables. A shared save string can't inject markup or break the save.
+  every item from the game's own tables. A shared save string can't inject markup or break the save:
+  keys that would throw when read as text or a number (an own `toString` or `valueOf`) are dropped
+  before anything reads it, numbers are kept within what play can reach (stages up to 10,000, past which
+  a monster's health is no number; laurels, Titans, tokens, affixes), and the counts the medals read are
+  rebuilt from what the save holds. A save that can't be read is kept as a copy and the game starts
+  fresh, pointing at the backups; it never falls back to the prototype's save behind it.
+- **One tab plays:** a tab opened later takes the save over; the older one stops and says so, with "Play
+  here" (two tabs saved their own games over each other's, and whichever wrote last won).
 - **Backups:** three rotating automatic backups (every 10 minutes) plus one on load, one before each
-  prestige and one before a hard reset, restorable from Settings.
+  prestige the player makes (Auto's take none) and one before a hard reset, restorable from Settings.
 - **Export/import:** `FI3:` compressed text (or `FI2:` base64 JSON); saves from a newer version are
-  refused.
+  refused, and so is a string of anything that isn't a save of this game.
 - **Cloud (optional):** the game works as a guest. Signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
   version-checked saves. The client uploads every ten minutes while the player is around (the page in
@@ -686,9 +696,14 @@ gear to wear; a place that waited opens on the return and is named there too.
   compute-hours a month: a few testers playing keep it awake for a part of their play, not around the
   clock (it was every 60 s, from every open page). When a local and a cloud save disagree it
   prefers more play time, and asks the player if the save times disagree with that (compared from
-  before offline progress) or if the saves come from two different games. Nothing is uploaded while
-  the question is open. On a static host without the API, sign-in says cloud saves are unavailable
-  instead of failing.
+  before offline progress) or if the saves come from two different games. Nothing is uploaded until a
+  sync has compared the game with the cloud and chosen (at sign-in, at load, and after a long time
+  hidden), nor while the question is open; a sync that fails is tried again, never followed by a blind
+  upload. Each upload names the cloud save the game last saw, and the server refuses one made over
+  another device's newer save (409): the game then asks, unless it already holds all that save has.
+  The boot's welcome-back waits for the sync, so it never acts on the other game. A hard reset while
+  signed in resets the cloud save too. On a static host without the API, sign-in says cloud saves are
+  unavailable instead of failing.
 - **Server secret:** `JWT_SECRET` must be set outside local development (`NODE_ENV=development`);
   tokens are HS256 only. The owner sets it and adds the database (README "The API"); neither is in the
   repository. `GET /api/health` says whether the database, the secret and the game's stat code are
@@ -715,9 +730,13 @@ gear to wear; a place that waited opens on the return and is named there too.
   for 30 days. A determined cheat can still fake a save that grows plausibly, or a first upload just
   under the ceilings; that is the limit of a client-side game, until the online side decides fights
   and rewards itself.
-- **Rate limits:** ten wrong passwords for a name (or fifty from an address) in 15 minutes and logins
-  wait; an address makes at most ten accounts an hour. A name with no account still costs a bcrypt
-  check, so the time a guess takes doesn't tell whether the name exists. A business-rule refusal
+- **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
+  address) in 15 minutes and logins wait; an address makes at most ten accounts an hour. Each try is
+  counted before the password is checked, in one statement, so a burst of parallel tries can't slip past,
+  and wrong guesses from elsewhere don't lock a player out at home. A name is one account whatever its
+  case. A name with no account still costs a bcrypt check, so the time a guess takes doesn't tell
+  whether the name exists. A token is checked against its account's name, and a body that isn't JSON
+  gets a JSON answer. A business-rule refusal
   answers 409, never 403, which the client reads as a lost session.
 
 ### 3.18 Clans and leaderboards
@@ -730,10 +749,13 @@ with the game's own stat code; the client never submits damage or scores.
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
   places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
 - **The weekly clan boss** (ISO weeks, UTC). Its health is set when the week's boss first appears:
-  12 × the combined attack of members who aren't flagged, each member's counted no higher than their
-  best stage allows, capped so no save can overflow it. Each member's share is kept: one who leaves or
-  is removed before fighting that week takes it away again (a stranger could join just before Monday
-  with a huge save, size the boss and leave). The ten lands' rulers take turns as the boss, one an ISO
+  12 × the combined attack of members who aren't flagged, each member's at its best of the past week
+  (a weak save uploaded just before Monday doesn't shrink the boss) and counted no higher than their best
+  stage allows, capped so no save can overflow it. Each member's share is kept all week, and the boss is
+  the size of the clan as it is: one who leaves or is removed takes away all of their share but the
+  damage they dealt (a stranger could join just before Monday with a huge save, size the boss, hit it
+  once and leave), and one who comes back the same week brings it back (leaving and rejoining in turn
+  used to shrink the boss to 1 health). A member left in a clan deleted under them is let out of it. The ten lands' rulers take turns as the boss, one an ISO
   week (`clanBossFor`, `src/data/social.js`); the server keeps only its health.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
@@ -753,13 +775,17 @@ with the game's own stat code; the client never submits damage or scores.
   attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
   atomically, so parallel requests can't spend one twice); an attack given back if the boss was already
-  down. Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
+  down. Each fight carries its own mark (the time it ended): sent again after an answer was lost, it is
+  answered again as it was, and no second attack is spent. Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
   when the boss falls, 50 essence and a diamond for the last hit, and when the week ends 50 essence for
   taking part plus 100 / 60 / 30 essence and a diamond for the top three. Claiming twice pays once; a
-  week is settled by whichever request claims it first, and weekly, kill and last-hit rewards are paid
-  once per player per week even for someone who fought for several clans.
+  week's rewards and a kill's are paid before they are marked done (each reward has its own key, so
+  paying again pays nothing twice, and a payout that failed half way is finished by the next look), and
+  weekly, kill and last-hit rewards are paid once per player per week even for someone who fought for
+  several clans.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
-  level, Titans or dungeon clears, all time or this week (from each player's first save of the week).
+  level, Titans or dungeon clears, all time or this week (from where each player stood when the week
+  began: the numbers stored before their first upload of the week, not that upload's).
   The numbers are computed once per upload and stored, so a board is one query.
 - **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open
   and in view.
@@ -810,7 +836,7 @@ pool: every repeatable action has its own level from 1 to 99, earned by doing it
 
 - **Which actions:** every gathering, cooking, firemaking and alchemy node, every smelting recipe, and
   one mastery per metal for forging and per gem for jewellery (all pieces of that metal or gem share
-  it) — 77 in all. Tools, the agility course and farming have none.
+  it) — 79 in all. Tools, the agility course and farming have none.
 - **Mastery XP** per action = the action's base time in seconds, so an hour on anything is worth the
   same; faster actions (tools, boosts) master faster. Levels use the skill XP table ÷ 72: level 25
   after about two minutes, 50 after ~25 minutes, 75 after ~5 hours, 90 after ~21 hours and 99 after
@@ -1254,7 +1280,8 @@ Rules:
 
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
    `skillSpeed[skill]` and so on.
-2. **Layers multiply:** content layer × **token layer** (`1 + 0.005 × tokens`) × **camp layer**.
+2. **Layers multiply:** content layer × **token layer** (`1 + 0.004 × tokens × records` for attack and
+   defence, `0.002` for health; records ×1.05 each, §3.9) × **camp layer**.
    Health's base is `100 + 12 × (combat level − 1) + 0.05 × gear defence` (`BASE.hpPerDef`: armour
    carries one point of health for every 20 defence) before its layers multiply it. Gear is the only
    source that grows with depth, so health from armour is what keeps a deep hero from falling to

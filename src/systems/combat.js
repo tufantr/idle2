@@ -274,7 +274,7 @@ function rollLoot(game, enemy, payout) {
         // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone,
         // and the kind leans toward what the hero lacks. The first boss a hero ever beats always leaves
         // a piece (his first armour, as a rule).
-        const firstBoss = boss && !enemy.titan && state.combat.mode === 'stages' && state.stats.bossKills === 1 && roll === 0;
+        const firstBoss = boss && !enemy.titan && state.combat.mode === 'stages' && state.stats.bossFalls === 1 && roll === 0;
         const gearChance = firstBoss ? 1 : (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
         if (rng.chance(gearChance)) {
             const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth, firstBoss ? FIRST_ARMOUR : dropTypesFor(state, zone.gearTier));
@@ -367,6 +367,8 @@ export function onEnemyDeath(game) {
     bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'kills');
     if (enemy.boss) bumpStat(game, 'bossKills');
+    // a boss's fall that moves the hero on (its full payout): the first one ever leaves his first armour
+    if (payout.full && !enemy.titan && c.mode === 'stages') bumpStat(game, 'bossFalls');
     if (enemy.gilded) bumpStat(game, 'gildedKills');
     countKind(game, enemy);
     grantXp(game, 'combat', xp);
@@ -518,19 +520,36 @@ export function tickCombat(game, dt) {
     if (c.combo > 0 && game.now - (c.lastComboAt || 0) > BALANCE.combat.comboDecayAfterMs) {
         c.combo = Math.max(0, c.combo - (0.05 + c.combo / 100) * (dt / 50));
     }
-    if (c.regroupLeft > 0) c.regroupLeft = Math.max(0, c.regroupLeft - dt);
+    // The regroup's minute ends at a moment in this step (ms from its start): each attack sees what is left
+    // of it at its own moment, so a kill early in a long step doesn't move the hero on to the boss early.
+    let regroupEnd = c.regroupLeft > 0 ? c.regroupLeft : 0;
 
     const bossAtStart = c.enemy.boss ? c.enemy : null;
     c.playerTimer += dt;
     c.enemyTimer += dt;
     let guard = 0;
     while (c.active && guard++ < 400) {
-        const pReady = c.playerTimer >= d.attackInterval;
-        const eReady = c.enemyTimer >= c.enemy.interval;
-        if (!pReady && !eReady) break;
-        // Resolve whichever attack comes first in time order.
+        // How long before the step's end each side's next attack falls (below 0: not in this step).
         const pOver = c.playerTimer - d.attackInterval;
         const eOver = c.enemyTimer - c.enemy.interval;
+        // A boss that came on during this step has its deadline inside it (a bossTimeLeft below 0 is that
+        // long before the step's end). With no attack before the deadline, it escapes there, and the rest
+        // of the step goes on (a 3-s Swift boss used to get the rest of a 5-s step and the whole next one).
+        if (c.enemy.boss && c.enemy !== bossAtStart && c.bossTimeLeft < 0 && Math.max(pOver, eOver) <= -c.bossTimeLeft) {
+            const rest = -c.bossTimeLeft;
+            onBossTimeout(game);
+            if (c.regroupLeft > 0) regroupEnd = dt - rest + c.regroupLeft;
+            if (!c.active || !c.enemy) break;
+            c.playerTimer = rest;
+            c.enemyTimer = rest;
+            continue;
+        }
+        const pReady = pOver >= 0;
+        const eReady = eOver >= 0;
+        if (!pReady && !eReady) break;
+        // Resolve whichever attack comes first in time order.
+        const at = dt - Math.max(pReady ? pOver : -Infinity, eReady ? eOver : -Infinity);   // its moment in the step
+        const regroupBefore = regroupEnd > 0 ? (c.regroupLeft = Math.max(0, regroupEnd - at)) : 0;
         if (pReady && (!eReady || pOver >= eOver)) {
             c.playerTimer -= d.attackInterval;
             tryEat(game);
@@ -549,7 +568,11 @@ export function tickCombat(game, dt) {
             tryEat(game);
             enemyAttack(game);
         }
+        // the fight's own rules changed the regroup at this moment: a boss beaten ends it, a new one starts it
+        if (regroupBefore > 0 && !(c.regroupLeft > 0)) regroupEnd = 0;
+        else if (c.regroupLeft > regroupBefore) regroupEnd = at + c.regroupLeft;
     }
+    if (regroupEnd > 0) c.regroupLeft = Math.max(0, regroupEnd - dt);
 
     // Boss timer counts fighting time only, so it behaves the same offline and online.
     if (bossAtStart && c.active && c.enemy === bossAtStart) {

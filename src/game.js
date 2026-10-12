@@ -14,7 +14,7 @@ import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, d
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
-import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, giveUpTitan, titanReady } from './systems/dungeon.js';
+import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, giveUpTitan, titanReady, scoreTitanCutShort } from './systems/dungeon.js';
 import { startClanFight, giveUpClanFight, clearClanResult } from './systems/clanfight.js';
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
@@ -53,6 +53,8 @@ export class Game {
         this.derived = null;
         this.mods = null;
         this.recompute();
+        // a Titan fight the page closed on is scored as a Give up (its attempt was spent as it began)
+        if (state?.combat?.mode === 'titan') scoreTitanCutShort(this, state.combat.enemy);
         if (!this.state.combat.enemy) spawnEnemy(this);
         evaluateDisclosures(this.state); // a loaded save opens with what it has earned, without fanfare
     }
@@ -79,8 +81,11 @@ export class Game {
 
     // ----- infrastructure -----
     emit(event) {
-        noteChronicle(this.state, event, this.now);   // the hero's story is kept while away too
-        playtestEvent(this.state, event, this.now);   // and the playtest log, when it is on
+        // (a card shown again for something noted as it happened while away is not noted twice)
+        if (!event.replayed) {
+            noteChronicle(this.state, event, this.now);   // the hero's story is kept while away too
+            playtestEvent(this.state, event, this.now);   // and the playtest log, when it is on
+        }
         if (this.silent) return;
         this.events.push(event);
         if (!QUIET_EVENTS.has(event.type)) this.revision++;
@@ -90,6 +95,7 @@ export class Game {
 
     /** Any click or key press: ends focus (the idle bonus) until the player leaves the game alone again. */
     noteInput(now = Date.now()) {
+        if (!Number.isFinite(now)) return;
         if (now > this.now) this.tick(now); // the time up to this input was still idle: simulate it first
         this.state.meta.lastInputAt = now;
         if (this.derived?.focused) { this.recompute(); this.revision++; }
@@ -104,6 +110,7 @@ export class Game {
 
     /** Advance the simulation to `now`. Returns the offline summary if a long gap was replayed. */
     tick(now) {
+        if (!Number.isFinite(now)) return null;   // a clock that isn't a number would spoil every time kept
         let offlineSummary = null;
         let dt = now - this.now;
         if (dt < -5000) {   // the clock was turned back: carry on from the new time (it used to freeze until it caught up)
@@ -157,9 +164,11 @@ export class Game {
 
     /** Apply offline progress from the saved timestamp (call once after loading). */
     resumeFromSave(now) {
+        if (!Number.isFinite(now)) return null;
         this.now = now;
         this.recompute();
         const summary = applyOffline(this, now);
+        accrueDaily(this.state, now);   // the crates that ripened while away wait now (the welcome-back offers them)
         checkAchievements(this);
         this._returned(summary);
         checkUnlocks(this);
@@ -227,8 +236,8 @@ export class Game {
     clickAttack() { return this._act(() => clickAttack(this)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
-    setStage(stage) { return this._act(() => setStage(this, stage)); }
-    travel(stage) { return this._act(() => travelTo(this, stage)); }
+    setStage(stage) { return Number.isFinite(stage) ? this._act(() => setStage(this, stage)) : false; }
+    travel(stage) { return Number.isFinite(stage) ? this._act(() => travelTo(this, stage)) : false; }
     setFarmMode(on) { this.state.combat.farmMode = !!on; }
 
     equipItem(id, slot) { return this._act(() => equipItem(this, id, slot)); }
@@ -236,7 +245,7 @@ export class Game {
     sellItem(id) { return this._act(() => sellItem(this, id)); }
     sellAllItems(rarity) { return this._act(() => sellAllItems(this, rarity)); }
     upgradeItem(id) { return this._act(() => upgradeItem(this, id)); }
-    sellResource(id, amount) { return this._act(() => sellResource(this, id, amount)); }
+    sellResource(id, amount) { return Number.isFinite(amount) ? this._act(() => sellResource(this, id, amount)) : 0; }
     buyGoldShopItem(id) { return this._act(() => buyGoldShopItem(this, id)); }
     salvageItem(id) { return this._act(() => salvageItem(this, id)); }
     salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
@@ -251,10 +260,10 @@ export class Game {
     plant(plot, crop) { return this._act(() => plant(this, plot, crop)); }
     plantAll(crop) { return this._act(() => plantAll(this, crop)); }
     harvest(plot) { return this._act(() => harvest(this, plot)); }
-    harvestAll(opts) { return this._act(() => harvestAll(this, opts)); }
+    harvestAll(opts) { return this._act(() => harvestAll(this, opts ?? undefined)); }
     buildObstacle(id) { return this._act(() => buildObstacle(this, id)); }
     upgradeObstacle(slot) { return this._act(() => upgradeObstacle(this, slot)); }
-    applyReward(reward) { return this._act(() => applyReward(this, reward)); }
+    applyReward(reward) { return reward && typeof reward === 'object' ? this._act(() => applyReward(this, reward)) : null; }
     eventId(now = this.now) { const s = eventStatus(this.state, now); return s.active ? s.event.id : null; }
     eventStatus() { return eventStatus(this.state, this.now); }
     buyEventItem(id) { return this._act(() => buyEventItem(this, id)); }
@@ -281,7 +290,8 @@ export class Game {
     prestigeReady() { return prestigeReady(this.state, this.now); }
     prestigePreview() { return prestigePreview(this); }
     /** Prestige. With `resume`, a hero who was fighting (or resting to fight on) walks straight into the new run's first fight. */
-    prestige({ resume = false } = {}) {
+    prestige(opts) {
+        const resume = !!opts?.resume;
         return this._act(() => {
             const fighting = this.state.combat.active || this.state.combat.recovering;
             const done = doPrestige(this);

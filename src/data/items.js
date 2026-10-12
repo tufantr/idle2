@@ -143,8 +143,12 @@ export const DROP_HIGH_RARITY_PER_TIER = 0.15; // epic/legendary weight x(1 + 0.
 export const BAG_SIZE = 40;
 export const AUTO_SALVAGE_OPTIONS = ['off', 'common', 'uncommon', 'rare'];
 
-/** Half of the essence spent upgrading an item comes back when it is salvaged. */
+/**
+ * Half of the essence spent upgrading an item comes back when it is salvaged: what the anvil kept count
+ * of (item.essenceIn, data/workshop.js), else what its levels cost at its tier.
+ */
 export function upgradeEssenceRefund(item) {
+    if (Number.isFinite(item.essenceIn)) return Math.floor(item.essenceIn / 2);
     const upgrade = item.upgrade || 0;
     return Math.floor(0.5 * (item.tier || 1) * upgrade * (upgrade + 1));
 }

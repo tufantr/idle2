@@ -93,7 +93,7 @@ test('a dry run of bosses at the frontier ends in a sure piece for the weakest s
     const game = new Game(null, T0);
     const s = game.state;
     game.enterCombat();
-    s.stats.bossKills = 5;   // past the first boss's armour
+    s.stats.bossKills = s.stats.bossFalls = 5;   // past the first boss's armour
     for (const type of SMITHING_TYPES) s.equipped[type] = piece(game, type, 2, { rarity: 'legendary', upgrade: 10 });
     s.equipped.Gloves = piece(game, 'Gloves', 1);   // the weakest slot
     s.combat.pity = 0;
@@ -131,7 +131,7 @@ test('deep in the Abyss, a boss whose drops the hero has outgrown marks nothing'
     const game = new Game(null, T0);
     const s = game.state;
     game.enterCombat();
-    s.stats.bossKills = 5;
+    s.stats.bossKills = s.stats.bossFalls = 5;
     // gear from depth 18, re-climbing past depth 6 (both tier 7: only the depth tells them apart)
     for (const type of SMITHING_TYPES) s.equipped[type] = generateDrop(7, true, s.idCounter++, 18, [{ type, weight: 1 }], { tier: 7 });
     const shallow = Array.from({ length: 400 }, (_, i) => i + 1).find(st => st % 10 === 0 && zoneForStage(st).depth === 6);

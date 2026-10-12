@@ -119,8 +119,8 @@ export function collectModifiers(state) {
     const mods = emptyMods();
 
     // Equipment: base stats scaled by upgrade level, plus affixes (all of it times a Trial's `gear`,
-    // nothing in Rusted Gear: data/trials.js).
-    const gearShare = trialBite(state).gear ?? 1;
+    // nothing in Rusted Gear: data/trials.js). Not in the clan boss fight, which leaves the Trial out.
+    const gearShare = state.combat.mode === 'clan' ? 1 : trialBite(state).gear ?? 1;
     for (const slot of EQUIP_SLOTS) {
         const item = state.equipped[slot];
         if (!item || !gearShare) continue;
@@ -172,8 +172,12 @@ export function collectModifiers(state) {
         if (id) addMods(mods, obstacleById(id)?.mods, Math.max(1, state.agility.levels?.[slot] || 1));
     });
 
+    // The clan boss fight is fought by the hero the server reckons it with (core/power.js stableState): no
+    // potion, no Focus, no Trial's rule. With them the boss could fall on screen and stand on the server.
+    const clanFight = state.combat.mode === 'clan';
+
     // Active potion (only while it has charges).
-    if (state.combat.potion !== 'none' && state.combat.potionCharges > 0) addMods(mods, POTION_EFFECTS[state.combat.potion]);
+    if (!clanFight && state.combat.potion !== 'none' && state.combat.potionCharges > 0) addMods(mods, POTION_EFFECTS[state.combat.potion]);
 
     // Tools.
     for (const [toolId, tool] of Object.entries(TOOLS)) {
@@ -202,11 +206,13 @@ export function collectModifiers(state) {
     mods.focused = isFocused(state, now);
     if (mods.focused) {
         for (const id of Object.keys(mods.skillSpeed)) if (id !== 'farming') mods.skillSpeed[id] += BASE.focusSkillSpeed;
-        mods.attackSpeed += BASE.focusAttackSpeed;
+        if (!clanFight) mods.attackSpeed += BASE.focusAttackSpeed;
     }
 
     return mods;
 }
+
+const RECORDS_CAP = 2000;
 
 /** The hero's records: { stages, uniques, count, mult } — 25-stage steps of the best stage, dungeon uniques held. */
 export function recordsOf(state) {
@@ -216,16 +222,18 @@ export function recordsOf(state) {
     const trials = trialTiersCleared(state);   // each Trial tier cleared (data/trials.js)
     const laurels = laurelsOf(state);          // and each week's Trial beaten
     const count = stages + held.size + trials + laurels;
-    return { stages, uniques: held.size, trials, laurels, count, mult: Math.pow(BASE.recordMult, count) };
+    // (counted up to RECORDS_CAP for the power: far past any hero's, and short of where 1.05^count stops being a number)
+    return { stages, uniques: held.size, trials, laurels, count, mult: Math.pow(BASE.recordMult, Math.min(count, RECORDS_CAP)) };
 }
 
 /** Turn the modifier object into the numbers the combat system uses. */
 export function deriveStats(state, mods = collectModifiers(state)) {
     const combatLevel = skillLevel(state, 'combat');
     const records = recordsOf(state);
-    const bite = trialBite(state);   // the run's Trial, if any (data/trials.js)
+    const bite = state.combat.mode === 'clan' ? {} : trialBite(state);   // the run's Trial, if any (data/trials.js); not in the clan fight
     // what the tokens are worth, records counted (nothing in the Faithless Trial)
-    const tokens = bite.noTokens ? 0 : (state.prestige.tokens || 0) * records.mult;
+    const held = state.prestige.tokens || 0;
+    const tokens = bite.noTokens || !(held > 0) ? 0 : held * records.mult;
     const tokenLayerAtk = 1 + BASE.tokenAtk * tokens;
     const tokenLayerDef = 1 + BASE.tokenDef * tokens;
     const tokenLayerHp = 1 + BASE.tokenHp * tokens;
@@ -237,7 +245,8 @@ export function deriveStats(state, mods = collectModifiers(state)) {
     const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk;
     const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def;
     const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * (bite.heroHp ?? 1);
-    const attackSpeed = Math.min(BASE.caps.attackSpeed, mods.attackSpeed);
+    // nothing makes the hero slower than his base (a hand-made affix below nothing made him never swing, or swing at the cap)
+    const attackSpeed = Math.max(0, Math.min(BASE.caps.attackSpeed, mods.attackSpeed));
 
     return {
         combatLevel,
@@ -277,7 +286,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
 
 /** Effective interval (ms) for an action of a skill; `extraSpeed` is the action's own (mastery). */
 export function actionInterval(baseInterval, derived, skillId, extraSpeed = 0) {
-    const speed = (derived.skillSpeed[skillId] || 0) + extraSpeed;
+    const speed = Math.max(0, (derived.skillSpeed[skillId] || 0) + extraSpeed);   // never slower than the base
     return Math.max(250, Math.round(baseInterval / (1 + speed)));
 }
 
