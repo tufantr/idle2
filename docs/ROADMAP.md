@@ -1100,6 +1100,12 @@ Keeping it running:
       server's wins, whatever the play time, and a page that finds another device played on carries on
       from there with a toast. Export and import strings are gone from Settings, and a signed-in player's
       Settings show no local backups (a restore rolled the server's game back); a guest keeps them
+- [x] **An account is required** (the owner's call, 13 October 2026; DESIGN §3.17): on the live site a
+      sign-in stands in front of the game, with no guest button. A new player sees the title card first;
+      its Begin asks for an account (Enter registers), and the first fight starts once it is made. Logging
+      out uploads the game first and leaves a fresh one in the browser, so an account registered there next
+      starts its own game, not a copy. A local host still plays as a guest, for the tools and screenshots.
+      Checked in a browser under a made-up hostname and on 127.0.0.1
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

@@ -76,6 +76,7 @@ const ui = {
     invSelected: null,   // the item on the table in the inventory (an item id)
     invPreview: null,    // the item under the pointer, shown instead while hovered
     cloudStatus: '',
+    beginAfterSignIn: false,   // the title card's Begin asked for an account: its first fight starts once it is made
     lastRender: 0,
     renderedRevision: -1,
     modalOpen: false,
@@ -106,6 +107,12 @@ function freshSocial() {
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
+// A local development host (tools/serve.py, the screenshot and test tools): dev flags work there, and the
+// game plays as a guest. Anywhere else the game needs an account (the owner's call, October 2026: the
+// server's save is the game, as in any online game), and a sign-in stands in front of it until there is one.
+const DEV_HOST = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
+const SIGN_IN_REQUIRED = !DEV_HOST;
+const needsSignIn = () => SIGN_IN_REQUIRED && !cloud.loggedIn;
 // Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
 // looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
 // failed sync is tried again.
@@ -188,8 +195,7 @@ const guide = createGuide(document.body);
 // that picked them up before is cleaned (the server also flags an upload that has them on).
 function withDevFlags(g) {
     g.setAttending(!document.hidden);   // every game made here starts knowing whether the page is in view
-    const devHost = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
-    if (!devHost) {
+    if (!DEV_HOST) {
         g.state.settings.devUnlockAll = false;
         g.state.settings.forceEvent = null;
         return g;
@@ -206,13 +212,14 @@ const offlineSummary = game.resumeFromSave(Date.now());
 const bootReport = offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000) ? offlineSummary : null;
 // Signed in, the cloud may hold a newer game: this one's report waits until the sync has chosen (shown at
 // once, it stayed up over the cloud's game, and its buttons acted on that game's items).
-if (bootReport && cloud.loggedIn) heldReport = bootReport;
+if (bootReport && (cloud.loggedIn || SIGN_IN_REQUIRED)) heldReport = bootReport;
 else if (bootReport) openModal(renderWelcomeBack(bootReport, game), 'offline');
-if (loadProblem && !cloud.loggedIn) setTimeout(() => askConfirm('Your save could not be read', 'A copy of it was kept, and the game started fresh. Your backups are in Settings: restore one to carry on where you were.', 'Open Settings', () => window.FI.switchTab('settings')), 0);
+if (loadProblem && !cloud.loggedIn && !SIGN_IN_REQUIRED) setTimeout(() => askConfirm('Your save could not be read', 'A copy of it was kept, and the game started fresh. Your backups are in Settings: restore one to carry on where you were.', 'Open Settings', () => window.FI.switchTab('settings')), 0);
 if (cloud.loggedIn) syncFromCloud();
 // A new player meets the game first, not a login form: a title card, then straight into a fight.
 // Signing in stays one click away (on the card, and in the header once there is progress to keep).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
+if (needsSignIn() && !ui.modalOpen) openSignIn();   // a returning player meets the sign-in (a new one, the title card first)
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -242,6 +249,7 @@ setInterval(() => {
     }
     try { handleEvents(game.drainEvents()); } catch (err) { console.error('Events failed', err); }   // never at the cost of the save below
     if (game.state.clanResult && cloud.loggedIn && cloudReady) sendClanResult();   // a clan attack fought, not yet sent
+    if (needsSignIn() && !ui.modalOpen) openSignIn();   // signed out, or a session that expired: the game waits for an account
     if (now - lastSave > AUTOSAVE_MS) save(now);
     // (not while a save that couldn't be read waits to be restored: these would write over its backups)
     if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem) { lastBackup = now; rotateBackup(game.serialize(now), now); }
@@ -421,7 +429,7 @@ document.addEventListener('keydown', event => {
         event.preventDefault();
         target.click();
     }
-    if (event.key === 'Escape' && ui.modalOpen && ui.modalOpen !== 'elsewhere') closeModal(); // another tab plays
+    if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game needs an account
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
     // holding it does nothing more).
@@ -852,6 +860,16 @@ function showModal(html, key) {
     const first = root.querySelector('[data-autofocus]') || (!touch && root.querySelector('input')) || root.querySelector('button.btn-confirm') || root.querySelector('button');
     first?.focus({ preventScroll: true });
     for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
+}
+/** A new hero's first fight, from the title card (or the account made from it). */
+function startAdventure() {
+    sound.play('unlock');
+    if (!game.state.combat.active && !game.state.action) { game.toggleCombat(); setBattleFull(true); }
+    render();
+}
+/** The sign-in the game waits behind (SIGN_IN_REQUIRED): no guest button, and Escape leaves it up. */
+function openSignIn(register = false) {
+    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register }), 'signin');
 }
 let pendingConfirm = null;
 /** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
@@ -1389,7 +1407,10 @@ window.FI = {
         onYes?.();
     },
 
-    openAuth() { if (ui.modalOpen === 'intro') closeModal(); openModal(renderAuthModal(), 'auth'); },
+    openAuth() {
+        if (ui.modalOpen === 'intro') closeModal();
+        if (SIGN_IN_REQUIRED) openSignIn(); else openModal(renderAuthModal(), 'auth');
+    },
     collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
     /** The title card's arrows: the next or the previous look, tried on at once. */
     turnLook(step) {
@@ -1406,9 +1427,8 @@ window.FI = {
         if (name.trim()) game.setHeroName(name);   // optional: without one he is "You"
         closeModal();
         sound.unlock();
-        sound.play('unlock');
-        if (!game.state.combat.active && !game.state.action) { game.toggleCombat(); setBattleFull(true); }
-        render();
+        if (needsSignIn()) { ui.beginAfterSignIn = true; openSignIn(true); return; }   // an account first; the fight once it is made
+        startAdventure();
     },
     async auth(kind) {
         const user = document.getElementById('auth-user')?.value.trim();
@@ -1423,10 +1443,17 @@ window.FI = {
             closeModal();
             toast(`Signed in as ${cloud.username}`, 'info');
             await syncFromCloud();
+            // from the title card: a new account's hero goes into the first fight (an account with a save plays it)
+            if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();
+            ui.beginAfterSignIn = false;
             render();
-        } catch (e) { if (err) err.textContent = e.message; }
+        } catch (e) {
+            // (the client's own words for an unreachable server say the game plays locally: here it can't)
+            if (err) err.textContent = SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message;
+        }
     },
-    logout() {
+    async logout() {
+        if (cloudReady) await cloudSave(false);   // the latest play goes up first: this browser keeps none of it
         cloud.logout();
         cloudReady = false;
         synced = false;
@@ -1434,7 +1461,15 @@ window.FI = {
         game.clearClanResult();   // an attack not sent belongs to that account (it went to the next one to sign in)
         ui.cloudStatus = '';
         ui.social = freshSocial();
-        toast('Logged out — playing locally', 'info');
+        if (SIGN_IN_REQUIRED) {
+            // A fresh game behind the sign-in: an account registered here next starts its own, not a copy of this one.
+            clearLocal();
+            prefs.remove('fantasyIdle.tab');
+            for (const id of [...ui.fresh]) markFresh(id, false);
+            game = withDevFlags(new Game(null, Date.now()));
+            save(Date.now());
+            openSignIn();
+        } else toast('Logged out — playing locally', 'info');
         render();
     },
     cloudSaveNow() { cloudSave(true); },

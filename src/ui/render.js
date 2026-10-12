@@ -2306,19 +2306,26 @@ export function renderIntroModal(state) {
     </div>`;
 }
 
-export function renderAuthModal(message = '') {
+/**
+ * Log in or register. `required`: the game waits behind it (no guest button); `register`: a new player from
+ * the title card, so Register is the button Enter presses.
+ */
+export function renderAuthModal(message = '', { required = false, register = false } = {}) {
+    const first = register ? 'register' : 'login';
+    const label = { login: 'Log in', register: 'Register' };
+    const other = first === 'login' ? 'register' : 'login';
     return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
-        <div class="modal-header">Cloud save</div>
+        <div class="modal-header">${register ? 'Make your account' : required ? 'Sign in to play' : 'Cloud save'}</div>
         <div class="modal-body">
-            <p class="muted small">Create an account to keep your game on the server and play it on any device, or keep playing as a guest in this browser.</p>
+            <p class="muted small">${required ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'Create an account to keep your game on the server and play it on any device, or keep playing as a guest in this browser.'}</p>
             <div class="auth-error" id="auth-error">${esc(message)}</div>
-            <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('login')">
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('${first}')">
                 <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input">
-                <input type="password" id="auth-pass" placeholder="Password" autocomplete="current-password" class="text-input">
-                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Log in</button><button type="button" class="modal-btn btn-register" onclick="FI.auth('register')">Register</button></div>
+                <input type="password" id="auth-pass" placeholder="Password" autocomplete="${register ? 'new-password' : 'current-password'}" class="text-input">
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.auth('${other}')">${register ? 'Log in instead' : label[other]}</button></div>
             </form>
         </div>
-        <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Play as guest</button></div>
+        ${required ? '' : '<div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Play as guest</button></div>'}
     </div>`;
 }
 

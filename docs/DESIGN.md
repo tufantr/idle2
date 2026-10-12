@@ -685,11 +685,18 @@ gear to wear; a place that waited opens on the return and is named there too.
   here" (two tabs saved their own games over each other's, and whichever wrote last won).
 - **Backups:** three rotating automatic backups (every 10 minutes) plus one on load, one before each
   prestige the player makes (Auto's take none) and one before a hard reset, restorable from Settings by a
-  guest. Signed in, Settings shows none: restoring one rolled the server's game back.
+  guest (a local development host: the live game needs an account). Signed in, Settings shows none:
+  restoring one rolled the server's game back.
 - **No export or import** (removed in October 2026, the owner's ask: everything through the server's save,
   as in any online game). Copy-and-paste save strings let a game be rolled back or carried between
   accounts.
-- **Cloud (optional):** the game works as a guest. Signing in uses the real API (`api/index.js`):
+- **An account is required** on the live site (October 2026, the owner's call): until there is one, a
+  sign-in stands in front of the game, with no guest button. A new player sees the title card first; its
+  Begin asks for an account, and the first fight starts once it is made. Logging out uploads the game first
+  and leaves a fresh one in the browser, so an account registered there next starts its own game, not a
+  copy of the last one. A local development host (`DEV_HOST` in `src/main.js`: the tools, the screenshots)
+  still plays as a guest.
+- **Cloud:** signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
   version-checked saves. The client uploads every ten minutes while the player is around (the page in
   view and touched in the last ten minutes), and once on leaving the page (hidden or closed: a keepalive
@@ -1748,7 +1755,7 @@ disagreed, the implementation follows the simulator:
 | `stage^1.5` tokens spent in a doubling-cost shop | Plateaued after 3–6 prestiges |
 | Token shop ("Blade of Damocles", "Book of Shadows") | Replaced by held tokens + perks |
 | Coal Wagon at a loss-making price, Healing Potion | Infinite gold loop; HP already refilled |
-| Mock login ("Local Login Success") | Replaced by guest play + a real optional account |
+| Mock login ("Local Login Success") | Replaced by a real account (required on the live site since October 2026) |
 | Clan tab with fake players and chat, "Clan War Raid" | Placeholder UI implied features that don't exist; a clan system is on the roadmap |
 | Fish foods in the auto-eat list, duplicate `auto-eat-select` | Items that didn't exist |
 | Forced unlock override and hidden tutorial banner | Replaced by predicate unlocks and a goal hint |

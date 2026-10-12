@@ -19,11 +19,11 @@ Yes. Whatever your hero was doing when you left, the fight or a skill, carries o
 
 ### Where is my save? Is there a cloud save?
 
-Without an account, your save lives in this browser, on this device: it is saved automatically as you play and whenever you leave the page, and Settings keeps a few automatic backups you can restore. Clearing the browser's site data deletes it all. Sign in (on the title card, or in Settings under Account) and your game lives on the server instead, as in any online game: it is uploaded as you play, and any device you sign in on plays it. The time you were away is then measured by the server's clock, not your device's.
+On the game's server. You play with an account, as in any online game, and any device you sign in on plays your game. The game keeps a copy in the browser as you play and uploads it every ten minutes and when you leave the page. The time you were away is measured by the server's clock, not your device's. See [[/offline|Offline progress and saves]].
 
 ### Can I play on my phone, or install it like an app?
 
-Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Some phones keep a home-screen app's storage apart from the browser's, so sign in to keep the same hero in both.
+Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Sign in there with the same account to play the same hero.
 
 ### How do I turn off motion or sound?
 

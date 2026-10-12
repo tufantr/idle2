@@ -2,8 +2,9 @@
 
 A browser idle RPG in the spirit of Melvor Idle, made to look and feel like a game: a battle scene
 with pixel sprites on painted backdrops, a skill stage, sound, rewards with motion. Plain ES modules,
-no build step, no framework. Static site, plus an optional Express API on Vercel for cloud saves,
-clans and leaderboards (see README.md).
+no build step, no framework. Static site, plus an Express API on Vercel for accounts, saves, clans and
+leaderboards (see README.md). The live game needs an account and plays the server's save; a local host
+(tools/serve.py, the tools) plays as a guest.
 
 Work on the branch `claude/intelligent-einstein-y5i5iq` (main holds the old game) and push there.
 
