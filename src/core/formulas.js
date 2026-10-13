@@ -122,10 +122,13 @@ export const BALANCE = {
     minigame: {
         opportunityEveryMs: [180000, 360000], // a chance appears every 3-6 minutes of active skilling
         opportunityWindowMs: 20000,
-        boostMs: 90000,
-        baseBonus: 0.35,
-        streakBonus: 0.05,
-        maxBonus: 0.55         // reached on a 5-win streak
+        // A win: the skill works twice as fast for a short while, each win of a streak 5 s longer (the owner's
+        // ask, October 2026: +35% for 90 s, added to the other speed bonuses and costing Focus, came to about
+        // 12% more work, and was hardly seen). Once in 3-6 minutes, ~15% more work for a player who plays
+        // every chance: the active-to-idle target of about 1.5x holds.
+        speedMult: 2,
+        boostMs: 45000,
+        streakMs: 5000
     }
 };
 

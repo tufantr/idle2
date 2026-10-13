@@ -14,6 +14,9 @@ import { levelForXp } from '../core/xp.js';
 import { BALANCE } from '../core/formulas.js';
 import { TRIALS_FROM } from '../data/trials.js';
 import { ASCEND_FROM } from '../data/ascension.js';
+import { potionsFor } from '../data/potions.js';
+
+const WORK_POTIONS = potionsFor('work');
 
 // The Auto switch, earned (systems/prestige.js autoPrestigeEarned, which this mirrors to stay free of it).
 const autoEarned = s => s.prestige.count >= BALANCE.prestige.autoAfter
@@ -40,6 +43,8 @@ export const DISCLOSURES = [
     { id: 'world_map',    when: s => s.combat.bestStage > STAGES_PER_ZONE },                                                     // a second zone to travel to
     { id: 'food',         when: s => !!s.unlocks.cooking || owns(s, 'food') },
     { id: 'potions',      when: s => !!s.unlocks.alchemy || owns(s, 'potion') },
+    // the work potion's row on the skill tabs, once there is one to pick (data/potions.js)
+    { id: 'work_potions', when: s => WORK_POTIONS.some(id => s.resources[id] > 0) || (s.workPotion?.id || 'none') !== 'none' },
     { id: 'gear',         when: s => s.stats.itemsDropped > 0 || s.stats.itemsCrafted > 0 || gear(s).length > 0 },
     { id: 'pity',         when: s => (s.combat.pity || 0) >= 2 || (s.stats.pityDrops || 0) > 0 },   // the bosses' due: a ring round the boss's node, once it has marks worth seeing
     // the armory

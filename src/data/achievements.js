@@ -37,7 +37,7 @@ export const ACHIEVEMENTS = [
     { id: 'green_thumb',  name: 'Green Thumb',       desc: 'Reach Farming level 25',          req: skillLevel('farming', 25),   reward: '+10% farming yield',      mods: { farmYield: 0.10 } },
     { id: 'acrobat',      name: 'Acrobat',           desc: 'Reach Agility level 25',          req: skillLevel('agility', 25),   reward: '+10% Agility speed',      mods: { skillSpeed: { agility: 0.10 } } },
     { id: 'chef',         name: 'Chef',              desc: 'Reach Cooking level 40',          req: skillLevel('cooking', 40),   reward: '+10% food healing',       mods: { foodMult: 0.10 } },
-    { id: 'alchemist',    name: 'Alchemist',         desc: 'Reach Alchemy level 40',          req: skillLevel('alchemy', 40),   reward: 'Potions last 25% longer', mods: { potionCharges: 0.25 } },
+    { id: 'alchemist',    name: 'Alchemist',         desc: 'Reach Alchemy level 40',          req: skillLevel('alchemy', 40),   reward: 'Potions last 25% longer', mods: { potionDuration: 0.25 } },
     { id: 'blacksmith',   name: 'Master Smith',      desc: 'Reach Smithing level 50',         req: skillLevel('smithing', 50),  reward: '+5% quality on forged and crafted gear', mods: { craftQuality: 0.05 } },
     { id: 'jeweller',     name: 'Jeweller',          desc: 'Reach Crafting level 50',         req: skillLevel('crafting', 50),  reward: '+5% quality on forged and crafted gear', mods: { craftQuality: 0.05 } },
     { id: 'veteran',      name: 'Veteran',           desc: 'Reach Combat level 50',           req: skillLevel('combat', 50),    reward: '+5% Max HP, +5% DEF',     mods: { hpMult: 0.05, defMult: 0.05 } },

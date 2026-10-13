@@ -5,7 +5,8 @@ import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS } from '../data/items.js';
 import { addItem, dropTypesFor, isUpgrade, laggingSlot, PITY_LAG } from './inventory.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
-import { RESOURCES, foodsByHealing } from '../data/resources.js';
+import { RESOURCES, foodsByHealing, foodHeal } from '../data/resources.js';
+import { spendFightPotion } from './potions.js';
 import { rng } from '../core/rng.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { dungeonEnemy, titanEnemy, onDungeonKill, failDungeon, endTitan, choosingAfterClear, tickDungeonChoice } from './dungeon.js';
@@ -118,7 +119,7 @@ export function travelTo(game, stage) {
     return true;
 }
 
-function chooseFood(state, missing, foodMult) {
+function chooseFood(state, missing, derived) {
     const rule = state.combat.autoEat;
     if (rule === 'none') return null;
     if (rule !== 'auto') return state.resources[rule] > 0 ? rule : null;
@@ -127,7 +128,7 @@ function chooseFood(state, missing, foodMult) {
     for (const res of foodsByHealing()) {
         if (!(state.resources[res.id] > 0)) continue;
         best = res.id;
-        if (res.heals * foodMult >= missing) return res.id;
+        if (foodHeal(res, derived) >= missing) return res.id;
     }
     return best;
 }
@@ -139,42 +140,17 @@ export function tryEat(game) {
     let eaten = 0;
     if (trialBite(state).noFood) return 0;   // the Fasting Trial: nothing is eaten
     while (state.combat.hp > 0 && state.combat.hp < d.maxHp * d.autoEatThreshold && eaten < 5) {
-        const food = chooseFood(state, d.maxHp - state.combat.hp, d.foodMult);
+        const food = chooseFood(state, d.maxHp - state.combat.hp, d);
         if (!food) break;
         state.resources[food] -= 1;
-        state.combat.hp = Math.min(d.maxHp, state.combat.hp + Math.round(RESOURCES[food].heals * d.foodMult));
+        state.combat.hp = Math.min(d.maxHp, state.combat.hp + foodHeal(RESOURCES[food], d));
         eaten++;
     }
     return eaten;
 }
 
-/** Keep the selected potion charged; returns true if a potion effect is active. */
-export function ensurePotion(game) {
-    const state = game.state;
-    const c = state.combat;
-    if (c.potion === 'none') { c.potionCharges = 0; return false; }
-    if (c.potionCharges > 0) return true;
-    if (state.resources[c.potion] > 0) {
-        state.resources[c.potion] -= 1;
-        c.potionCharges = game.derived.potionCharges;
-        game.markDirty();
-        return true;
-    }
-    return false;
-}
-
-export function setPotion(game, id) {
-    const state = game.state;
-    if (id !== 'none' && RESOURCES[id]?.category !== 'potion') return;
-    if (state.combat.potion !== id) {
-        state.combat.potion = id;
-        state.combat.potionCharges = 0;
-        game.markDirty();
-    }
-}
-
 export function setAutoEat(game, rule) {
-    if (rule !== 'auto' && rule !== 'none' && !(RESOURCES[rule]?.heals > 0)) return;   // only food is eaten
+    if (rule !== 'auto' && rule !== 'none' && !(RESOURCES[rule]?.heal > 0)) return;   // only food is eaten
     game.state.combat.autoEat = rule;
 }
 
@@ -190,8 +166,7 @@ export function playerAttack(game, { manual = false } = {}) {
     const enemy = c.enemy;
     if (!enemy || enemy.hp <= 0) return 0;
 
-    const clan = c.mode === 'clan';   // the clan boss: no potion (the server's reckoning has none), strikes land harder in its openings
-    const potionActive = !clan && ensurePotion(game);
+    const clan = c.mode === 'clan';   // the clan boss: strikes land harder in its openings (and no potion works there: core/modifiers.js)
     const combo = c.combo || 0;
     const critChance = Math.min(BASE.caps.critChance, d.critChance);
     const isCrit = rng.chance(critChance);
@@ -201,12 +176,6 @@ export function playerAttack(game, { manual = false } = {}) {
 
     const lifesteal = trialBite(game.state).noRegen ? 0 : Math.min(BASE.caps.lifesteal, d.lifesteal);   // none in Fasting
     if (lifesteal > 0) c.hp = Math.min(d.maxHp, c.hp + Math.round(dmg * lifesteal));
-
-    if (potionActive && !manual) {
-        c.potionCharges -= 1;
-        // The next potion at once, so no attack (and none of a Health Potion's health) is lost between two.
-        if (c.potionCharges <= 0) { c.potionCharges = 0; ensurePotion(game); game.markDirty(); }
-    }
 
     game.emit({ type: 'hit', dmg, crit: isCrit, manual });
     if (enemy.hp <= 0) onEnemyDeath(game);
@@ -515,6 +484,7 @@ export function tickCombat(game, dt) {
         return;
     }
     if (choosingAfterClear(state)) { tickDungeonChoice(game, dt); return; }   // waiting at the chest after a clear
+    spendFightPotion(game, dt);   // the fight potion's dose runs while he fights (systems/potions.js)
     if (!c.enemy) spawnEnemy(game);
 
     if (c.combo > 0 && game.now - (c.lastComboAt || 0) > BALANCE.combat.comboDecayAfterMs) {

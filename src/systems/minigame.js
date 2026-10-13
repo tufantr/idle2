@@ -1,6 +1,7 @@
 // Skill mini-games as timed opportunities: while you train a skill, a chance to play appears
-// every few minutes; success grants a large speed boost for a while. Cadence-limited so that
-// a fully active player earns roughly 1.5x an idle one, not 2x forever (see research notes).
+// every few minutes; success makes the skill work twice as fast for a short while, and its end says
+// what that added. Cadence-limited so that a fully active player earns roughly 1.5x an idle one, not
+// 2x forever (see research notes).
 
 import { NON_COMBAT_SKILLS } from '../data/skills.js';
 import { BALANCE } from '../core/formulas.js';
@@ -44,7 +45,7 @@ export function tickMinigame(game, skillId) {
     if (!NON_COMBAT_SKILLS.includes(skillId)) return;
     const mg = game.state.minigame[skillId];
     const now = game.now;
-    if (mg.boostUntil && mg.boostUntil <= now) { mg.boostUntil = 0; mg.bonus = 0; game.markDirty(); }
+    if (mg.boostUntil && mg.boostUntil <= now) endBoost(game, skillId, mg);
     if (mg.challenge) {
         if (mg.challenge.expiresAt <= now) { failMinigame(game, skillId, { silent: true }); }
         return;
@@ -67,9 +68,33 @@ export function expireMinigames(game) {
     for (const id of NON_COMBAT_SKILLS) {
         const mg = game.state.minigame[id];
         if (!mg) continue;
-        if (mg.boostUntil && mg.boostUntil <= now) { mg.boostUntil = 0; mg.bonus = 0; game.markDirty(); }
+        if (mg.boostUntil && mg.boostUntil <= now) endBoost(game, id, mg);
         if (mg.challenge && mg.challenge.expiresAt <= now) failMinigame(game, id, { silent: true });
     }
+}
+
+/** A boost has run out: say what it added (twice as fast, so half of what was made meanwhile), and clear it. */
+function endBoost(game, skillId, mg) {
+    const qty = Math.floor((mg.gainQty || 0) / 2);
+    const xp = Math.floor((mg.gainXp || 0) / 2);
+    if (qty > 0 || xp > 0) game.emit({ type: 'minigameBoostOver', skill: skillId, id: mg.gainId || '', qty, xp });
+    mg.boostUntil = 0;
+    mg.mult = 0;
+    mg.gainId = '';
+    mg.gainQty = 0;
+    mg.gainXp = 0;
+    game.markDirty();
+}
+
+/** What a skill action made while its boost ran (systems/skilling.js): the main thing made, and the XP. */
+export function noteBoostGain(game, skillId, made, xp) {
+    const mg = game.state.minigame[skillId];
+    if (!mg || !(mg.boostUntil > game.now)) return;
+    if (made?.id && made.qty > 0) {
+        if (mg.gainId !== made.id) { mg.gainId = made.id; mg.gainQty = 0; }   // another node: count the new one
+        mg.gainQty += made.qty;
+    }
+    mg.gainXp += Math.max(0, xp || 0);
 }
 
 export function hasOpportunity(state, skillId, now) {
@@ -142,14 +167,15 @@ function rewardMinigame(game, skillId) {
     const b = BALANCE.minigame;
     const mg = game.state.minigame[skillId];
     mg.streak = Math.min(5, mg.streak + 1);
-    mg.bonus = Math.min(b.maxBonus, b.baseBonus + (mg.streak - 1) * b.streakBonus);
-    const boostMs = Math.round(b.boostMs * game.derived.boostDurationMult);
+    mg.mult = b.speedMult;
+    const boostMs = Math.round((b.boostMs + (mg.streak - 1) * b.streakMs) * game.derived.boostDurationMult);
+    if (!(mg.boostUntil > game.now)) { mg.gainId = ''; mg.gainQty = 0; mg.gainXp = 0; }   // a fresh boost counts from nothing
     mg.boostUntil = game.now + boostMs;
     mg.challenge = null;
     bumpStat(game, 'minigameWins');
     scheduleNext(game, skillId, game.now);
-    log(game, `${MINIGAME_CONFIG[skillId].icon} Perfect! +${Math.round(mg.bonus * 100)}% ${skillId} speed for ${Math.round(boostMs / 1000)}s.`, 'minigame');
-    game.emit({ type: 'minigameWin', skill: skillId, bonus: mg.bonus });
+    log(game, `${MINIGAME_CONFIG[skillId].icon} Perfect! ${skillId} works ×${mg.mult} as fast for ${Math.round(boostMs / 1000)}s.`, 'minigame');
+    game.emit({ type: 'minigameWin', skill: skillId, mult: mg.mult, ms: boostMs });
     game.markDirty();
 }
 

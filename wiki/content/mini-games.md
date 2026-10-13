@@ -14,7 +14,7 @@ While your hero works at a gathering or production skill ({{NON_COMBAT_SKILLS.ma
 - **Cooking and Firemaking:** tap the flame to keep the heat inside the band, then finish.
 - **Alchemy:** drag the stabiliser into the glowing channel, then lock the brew.
 
-A win makes that skill +{{pct(BALANCE.minigame.baseBonus, 0)}} faster for {{BALANCE.minigame.boostMs / 1000}} seconds. Every win in a row adds {{pct(BALANCE.minigame.streakBonus, 0)}} more, up to +{{pct(BALANCE.minigame.maxBonus, 0)}} on a streak of {{1 + Math.round((BALANCE.minigame.maxBonus - BALANCE.minigame.baseBonus) / BALANCE.minigame.streakBonus)}}. A miss, or giving up a game you started (its Skip button, or closing or reloading the page before it is over), ends the streak; letting a chance pass by costs nothing at all.
+A win makes that skill work **{{BALANCE.minigame.speedMult}} times as fast** for {{BALANCE.minigame.boostMs / 1000}} seconds, on top of every other speed bonus: its card glows with a ×{{BALANCE.minigame.speedMult}} and its bar shines. Every win in a row makes the next boost {{BALANCE.minigame.streakMs / 1000}} seconds longer, up to {{(BALANCE.minigame.boostMs + 4 * BALANCE.minigame.streakMs) / 1000}} seconds on a streak of 5. When the boost ends, a line says what it added: the extra ore, logs or fish, and the extra XP. A miss, or giving up a game you started (its Skip button, or closing or reloading the page before it is over), ends the streak; letting a chance pass by costs nothing at all.
 
 - The boost is for that skill only, and it runs on the clock: switch skills or leave, and it still ends on time.
 - Chances only come while you are there, never during [[/offline|offline progress]].
@@ -27,7 +27,7 @@ After {{BASE.focusAfterMs / 1000}} seconds without a click, a tap or a key press
 - +{{pct(BASE.focusSkillSpeed, 0)}} speed in every skill but [[Farming]];
 - +{{pct(BASE.focusAttackSpeed, 0)}} attack speed in the fight.
 
-Your next click, tap or key press ends it, until you leave the game alone again. Striking a monster is input too, so in a long fight Focus and strikes take turns. Focus also works through offline progress, where nobody clicks at all, so leaving the game alone has a reward of its own.
+Your next click, tap or key press ends it, until you leave the game alone again, except in a mini-game: playing one keeps your Focus. Striking a monster is input too, so in a long fight Focus and strikes take turns. Focus also works through offline progress, where nobody clicks at all, so leaving the game alone has a reward of its own.
 
 ## The bonfire
 

@@ -404,11 +404,13 @@ document.addEventListener('change', event => {
     if (event.target?.matches?.('select, input[type="checkbox"], input[type="radio"]')) { event.target.blur(); render(); }
 });
 
-// Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone.
+// Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone. Not a
+// mini-game's: playing one took Focus's +15% away for a minute, and ate into what the win gave.
 let lastInputNote = 0;
-const noteInput = () => {
+const noteInput = event => {
     const now = Date.now();
     lastPresenceAt = now;
+    if (event?.target?.closest?.('.minigame-panel')) return;
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
         advance(now); // the first click after a long absence still gets its welcome-back report
@@ -417,7 +419,7 @@ const noteInput = () => {
 };
 document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
 document.addEventListener('keydown', event => {
-    noteInput();
+    noteInput(event);
     sound.unlock();
     pointer.keyAt = Date.now();
     // Keyboard access for the clickable cards (role="button"). A key held down presses once: held, it
@@ -711,7 +713,12 @@ function handleEvents(events) {
                 break;
             }
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
-            case 'minigameWin': toast(`Perfect! +${Math.round(ev.bonus * 100)}% speed`, 'minigame'); break;
+            case 'minigameWin': toast(`Perfect! ×${ev.mult} speed for ${Math.round(ev.ms / 1000)}s`, 'minigame'); break;
+            case 'minigameBoostOver': {   // what the ×2 added, in the skill's own goods
+                const what = [ev.qty > 0 && RESOURCES[ev.id] ? `+${fmt(ev.qty)} ${RESOURCES[ev.id].name}` : '', ev.xp > 0 ? `+${fmt(ev.xp)} XP` : ''].filter(Boolean).join(', ');
+                if (what) toast(`The ×2 brought ${what}`, 'minigame', ev.qty > 0 && RESOURCES[ev.id] ? resIcon(ev.id) : tabIcon(ev.skill, 0.625));
+                break;
+            }
             case 'minigameFail': toast('Missed: the streak starts again', 'minigame'); break;
             case 'error': toast(ev.text, 'error'); break;
             case 'dungeonClear':   // the first clear of a visit asks (dungeonChoice); while it repeats, a note every tenth
@@ -1200,6 +1207,7 @@ window.FI = {
     },
     setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },
+    setWorkPotion(id) { game.setWorkPotion(id); render(); },
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
@@ -1264,6 +1272,8 @@ window.FI = {
         render();
     },
     salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
+    salvageWeaker() { const r = game.salvageWeaker(); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} weaker than what you wear (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
+    buyBagUpgrade() { if (game.buyBagUpgrade()) { sound.play('buy'); toast('Five more slots in the bag', 'info'); } render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },

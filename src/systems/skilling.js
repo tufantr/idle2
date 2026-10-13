@@ -17,6 +17,7 @@ import { withArticle } from '../core/text.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
+import { noteBoostGain } from './minigame.js';
 
 export const GEM_FIND_CHANCE = 0.02;   // a gem now and then while mining (exported for the wiki)
 export const BAIT_EXTRA_CHANCE = 0.5;   // each catch uses one bait, if you have any, for this chance of a second fish
@@ -234,7 +235,7 @@ export function completeAction(game, def, { offline = false } = {}) {
         const wasLit = (state.bonfire.until || 0) > now;
         state.bonfire.until = Math.min(now + BASE.bonfireMaxMs, Math.max(state.bonfire.until || 0, now) + addMs);
         bumpStat(game, 'logsBurnt');
-        if (times === 2) grantXp(game, skill, def.xp * derived.xpMult);
+        if (times === 2) grantXp(game, skill, def.xp * derived.xpMult * (derived.skillXpMult || 1));
         if (!offline && times === 2) game.emit({ type: 'doubleDrop', resource: def.bonfireLog });
         made = { burnt: def.bonfireLog, qty: times };
         // its XP bonus starts now: worked out again only when it was out (every log used to, and a day
@@ -286,10 +287,12 @@ export function completeAction(game, def, { offline = false } = {}) {
         game.markDirty();    // its speed and doubles count from now (the hoe's too, with no action to start)
     }
 
-    grantXp(game, skill, def.xp * derived.xpMult);
+    grantXp(game, skill, def.xp * derived.xpMult * (derived.skillXpMult || 1));   // a Scholar's Tonic's on top
     if (mastery) addMasteryXp(game, skill, mastery.key, def.interval / 1000);
     rollPet(game, skill, def.interval);
     eventProgress(game, 1);
-    game.emit({ type: 'actionComplete', skill, made, xp: def.xp * derived.xpMult * (def.bonfireLog ? made.qty : 1) });   // a log burnt twice paid twice
+    const xp = def.xp * derived.xpMult * (derived.skillXpMult || 1) * (def.bonfireLog ? made.qty : 1);   // a log burnt twice paid twice
+    noteBoostGain(game, skill, made, xp);   // a mini-game's ×2 running: what it made, for the line at its end
+    game.emit({ type: 'actionComplete', skill, made, xp });
     return true;
 }

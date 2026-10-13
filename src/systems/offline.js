@@ -3,6 +3,7 @@
 
 import { resolveAction, completeAction, canComplete, intervalFor } from './skilling.js';
 import { tickCombat } from './combat.js';
+import { spendWorkPotion } from './potions.js';
 import { tickAutoPrestige } from './prestige.js';
 import { masteryLevel } from './mastery.js';
 import { isFocused, bonfireLit } from '../core/modifiers.js';
@@ -91,6 +92,7 @@ function replayWork(game, from, duration) {
         if (!canComplete(state, def).ok) { stalledReason = `ran out of materials for ${def.label}`; break; }
         game.now += interval;
         if (!completeAction(game, def, { offline: true })) break;
+        spendWorkPotion(game, interval);   // the work potion's dose runs with the work, as online
         remaining -= interval;
         if (!state.action) { stalledReason = 'the tool was finished'; break; } // one-off actions (tools)
         expireMinigames(game);    // a mini-game boost lasts its own time, not the whole absence

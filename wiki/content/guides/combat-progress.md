@@ -41,13 +41,13 @@ The [[/camp|camp]] multiplies your hero's attack (the Whetstone), defence (the A
 Against ordinary stages, health is the limit, and food is more health.
 
 - Cook food and keep it on **Auto** in the fight's Food row. Your hero eats when health falls below {{pct(BASE.baseAutoEatThreshold, 0)}}, picking the smallest dish that fills the gap.
-- Better food heals more: a Roast Rabbit heals {{RESOURCES.cooked_rabbit.heals}}, a Shark Fillet {{fmt(RESOURCES.cooked_shark.heals)}}. See [[/food|Food]].
+- Better food heals more: a Roast Rabbit heals {{pct(RESOURCES.cooked_rabbit.heal, 0)}} of your health, a Shark Fillet {{pct(RESOURCES.cooked_shark.heal, 0)}}. See [[/food|Food]].
 - Without food, health comes back slowly while fighting ({{pct(BALANCE.combat.regenInCombat, 1)}} of the maximum a second) and quickly at rest ({{pct(BALANCE.combat.regenResting, 0)}} a second).
 - The Gourmet [[/perks|perk]] makes your hero eat sooner and food heal more.
 
 ## 4. Drink a potion
 
-[[/skills/alchemy|Alchemy]] brews {{Object.values(RESOURCES).filter(r => r.category === 'potion').length}} [[/potions|potions]]. Pick one in the fight's Potion row. A bottle lasts {{BASE.basePotionCharges}} of your hero's attacks (your strikes are free), and the next opens by itself.
+[[/skills/alchemy|Alchemy]] brews {{Object.values(RESOURCES).filter(r => r.category === 'potion').length}} [[/potions|potions]]. Pick one in the fight's Potion row. A bottle lasts {{POTION_MINUTES}} minutes of fighting, and the next opens by itself; a potion multiplies what it raises, more as your Alchemy grows.
 
 | Potion | Effect | Good against |
 | --- | --- | --- |

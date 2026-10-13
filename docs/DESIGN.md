@@ -129,14 +129,14 @@ consumes what:
 | Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite) |
 | Bars | Smelting, salvaging weapons and armour | Forging copper (1–5 per piece), the anvil (reinforcing and rerolling worn gear), tools, bows, jewellery (silver/gold only) |
 | Gems | Mining (2%), zone drops, chests | Jewellery |
-| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows and rods, agility obstacles, Defense potion (oak) |
+| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows and rods, agility obstacles, potions (normal: Gatherer's, oak: Defense, willow: Scholar's) |
 | Raw meat | Hunting, zone drops | Cooking; Evasion potion (raw fox) |
 | Raw fish | Fishing, zone drops | Cooking |
 | Crops | Farming | Cooking (one potato, or two of the others, per dish) |
 | Food | Cooking (meat, fish, farm dishes) | Combat auto-eat (smallest dish that fills the gap); Health potion (roast boar) |
 | Herbs | Alchemy foraging, Farming, zone drops | Potions |
 | Fishing bait | Zone drops (Marsh, Ruins, Frozen Wastes), the Shop | Fishing: one per catch, 50% chance of a second fish |
-| Potions | Alchemy | Combat buffs (15 charges each) |
+| Potions | Alchemy | Fight potions (attack, defence, health, dodge, gold and drops) and work potions (speed, skill XP), 5 minutes of their work a bottle |
 | Essence | Combat, salvaging drops, dungeon chests, the Titan, daily crates | The anvil, jewellery upgrades and reforges |
 
 Sell prices: `base[category] × 1.6^(tier−1)` with bases ore 3, bar 8, gem 25, log 2, raw 3, food 6,
@@ -218,10 +218,15 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   its bars back (whole bars, fair on average). Either way, half of the essence spent upgrading the
   item comes back. A dropped weapon or piece of armour also gives bars of its metal (1 common … 5
   legendary, ×2 / ×3 past runite), and any of them three quarters of the bars reinforcing it took.
-- **Bag and lock:** 40 rolled items. Overflow auto-salvages the weakest unlocked item, but never the
+- **Bag and lock:** 40 rolled items, and 5 more for each bag upgrade bought with gold (up to 12, a bag
+  of 100), priced like the gold shop at 150 kills' worth of gold at the best stage, ×1.5 each time
+  (`BAG_UPGRADE`; October 2026, the owner's ask: the bag sat at 40/40, and gold piles up). Overflow
+  auto-salvages the weakest unlocked item, but never the
   best upgrade for a slot — if nothing else can go, the bag overflows instead (a bag full of locked
   items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /
-  common / uncommon / rare) salvages low drops on arrival unless they are upgrades. Locked items are
+  common / uncommon / rare / weaker) salvages low drops on arrival unless they are upgrades; Weaker
+  takes any drop that wouldn't improve what is worn, whatever its rarity (never a dungeon's unique: it
+  is a record), and the bag's "Salvage weaker" button does the same for what it holds. Locked items are
   never sold or salvaged. Nothing is ever silently deleted.
 
 ### 3.6 Combat
@@ -238,8 +243,25 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   made the player immune until a boss's ×2 ATK suddenly killed them — every wall was a boss.
 - **Crits:** 5% × 1.5 base; affixes add. **Dodge**, **lifesteal** from affixes/potions.
 - **HP:** no refill between enemies. Regen 0.1% of max HP per second in combat, 2% per second out of
-  combat. **Auto-eat** below 50% HP (Gourmet perk raises it), "Auto" picks the smallest food that
-  fills the gap. **Potions** hold 15 charges; one is used per player attack.
+  combat. **Food heals a share of max HP** (12% for a roast rabbit to 46% for a leviathan feast, Gourmet
+  and Chef on top), so it never goes stale: a fixed 40-1,100 HP healed 2% of a stage-160 hero (the
+  owner's report, October 2026). **Auto-eat** below 25% HP (Gourmet raises it); "Auto" picks the smallest
+  food that fills the gap. The line was half: with a dish healing a share, a hero at the line ate through
+  a stock in minutes for little, and in the simulator food at half cost more cooking than it saved; at a
+  quarter it pays for itself (a safety net more than a speed-up: a death costs a stage and a minute).
+- **Potions** (`src/data/potions.js`, `src/systems/potions.js`; the owner's ask, October 2026, after +20%
+  for 15 attacks, about 17 seconds, did nothing anyone could see): a bottle lasts **5 minutes of its
+  work** (the Alchemist medal: 25% longer), its clock running only while that work does, and the next is
+  drunk at once. **Fight potions** (picked under the fight; none in the clan boss's fight) multiply
+  attack, defence or max HP after every other bonus (×1.25 at the Alchemy level they are brewed at, ×2.5
+  at 99), add dodge (+15% to +30%, under the cap), or gold and drop chance (×1.25 to ×1.5, the Fortune
+  Draught). **Work potions** (picked on a skill's tab) multiply the speed of every skill but Farming (the
+  Gatherer's Draught) or its XP (the Scholar's Tonic), ×1.25 to ×1.5. Sized with the simulator over 30
+  seeds (`--without=food,potions,consumables`): a bot that brews an attack potion and cooks reaches stage
+  100 in 3.3 h, 120 in 6.1 h and 150 in 13.5 h, against 4.7, 7.8 and 15.3 h for one that makes neither
+  (the game before: 4.7, 7.6 and 16.4 h), the time spent brewing and cooking counted. The three potions
+  added then (Gatherer's, Scholar's, Fortune) have stand-in card pictures, other potions' paintings
+  recoloured (`tools/cards.py --recolour`), until Gemini paints their own.
 - **Clicks and combo** (cut in October 2026, the owner: fast clicking took his hero to stage 100 with no
   prestige, food or potion, and cleared dungeons in seconds that the Dungeons tab called out of reach):
   a strike lands a tenth of an attack (`BALANCE.combat.manualHitMult`), at most one every 250 ms
@@ -395,7 +417,10 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   three minutes without a new best stage (`BALANCE.prestige.readyStallMs`: an early run's stages come in
   seconds, so three minutes is a wall), and the first prestige at once (§3.24).
 - **Skill points:** 1 per prestige for a run that reached at least half your all-time best, plus 1
-  for every 25 stages of all-time best (each threshold pays once). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
+  for every 25 stages of all-time best (each threshold pays once). **A perk level costs more as the
+  perk climbs** (`perkLevelCost`; October 2026, the owner: at one point a level, every perk was soon
+  full): levels 1-5 cost 1 point, 6-10 cost 2, and so on, never more than 5, so a 25-level perk costs 75
+  and the 117 levels outside Paragon 269 (levels bought before kept what they cost). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
   (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
   and food healing), Fortune (+5% gold and drop chance), and Paragon (+1% ATK, DEF and HP, 200 levels)
   so skill points always have a use once the others are full.
@@ -630,8 +655,13 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   minutes, each open for 20 seconds, on one clock for all the skills (with a clock each, a player who
   switched skills found a chance waiting in each and kept a boost up nearly all the time). A challenge
   left open by a reload counts as missed.
-  A win gives +35% skill speed for 90 seconds (+5% per consecutive win, up to +55%); a miss costs
-  nothing but the streak. A fully attentive player gains roughly +15% on average.
+  A win makes the skill **×2 as fast for 45 seconds** (each win of a streak 5 s longer, up to 65 s): the
+  ×2 multiplies after every other speed bonus, the working card glows with a ×2 and its bar shines, and
+  the boost's end says what it added (half of what the skill made meanwhile: "+14 copper ore, +340 XP").
+  Playing a mini-game doesn't end Focus. Until October 2026 a win gave +35% (+5% a streak win, up to +55%)
+  for 90 s, added to the other speed bonuses, and the clicks cost Focus's +15% for a minute: at a stage-160
+  hero's speeds a win came to about 12% more work over those 90 s, and players didn't feel it (the owner's
+  report). A miss costs nothing but the streak. A fully attentive player gains roughly +15% on average.
 - **Focus** (Clicker Heroes' idle ancients): after **60 seconds without a click or key press** the hero
   settles in — +15% skill speed and +15% attack speed until the next input. It also applies to offline
   progress, so leaving the game alone is never strictly worse than clicking.

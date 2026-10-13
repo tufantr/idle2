@@ -12,6 +12,7 @@ import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js'
 import { NON_COMBAT_SKILLS, SPEED_SKILLS } from '../data/skills.js';
 import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { RESOURCES } from '../data/resources.js';
+import { POTIONS, potionStrength } from '../data/potions.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
@@ -47,8 +48,9 @@ export const BASE = {
     recordStages: 25,
     recordMult: 1.05,
     baseOfflineHours: 24,       // a day: a player who comes back once a day loses nothing (12 until the check-in research)
-    baseAutoEatThreshold: 0.5,
-    basePotionCharges: 15,
+    // eat below a quarter of max health: a dish heals a share of it, and a line at half ate through a stock in
+    // minutes for little (the simulator: a quarter makes food worth its cooking, half doesn't)
+    baseAutoEatThreshold: 0.25,
     // Focus: after a minute without input the hero settles in (Clicker Heroes' idle ancients).
     // It also applies to offline progress, so idle play is never strictly worse than clicking.
     focusAfterMs: 60000,
@@ -77,24 +79,19 @@ export function isFocused(state, now = state.meta.lastActiveAt || Date.now()) {
     return now - lastInput >= BASE.focusAfterMs;
 }
 
-const POTION_EFFECTS = {
-    accuracy_potion: { atkMult: 0.20 },
-    defense_potion:  { defMult: 0.20 },
-    evasion_potion:  { dodge: 0.15 },
-    health_potion:   { hpMult: 0.25 }
-};
 
 function emptyMods() {
     const skillSpeed = {};
     const doubleChance = {};
     for (const id of SPEED_SKILLS) { skillSpeed[id] = 0; doubleChance[id] = 0; }
     return {
+        skillMult: {},   // per skill, multiplying its speed after every bonus (a mini-game's ×2)
         gearAtk: 0, gearDef: 0,
         atkMult: 0, defMult: 0, hpMult: 0,
         critChance: 0, critDmg: 0, attackSpeed: 0, dodge: 0, lifesteal: 0,
         goldMult: 0, dropMult: 0, combatXpMult: 0, xpMult: 0,
         skillSpeed, doubleChance,
-        foodMult: 0, autoEatThreshold: 0, potionCharges: 0, offlineHours: 0,
+        foodMult: 0, autoEatThreshold: 0, potionDuration: 0, offlineHours: 0,
         boostDuration: 0, craftQuality: 0, tokenMult: 0, farmYield: 0, gildedChance: 0, petChance: 0
     };
 }
@@ -112,6 +109,26 @@ function addMods(target, mods, scale = 1) {
 
 export function skillLevel(state, skillId) {
     return levelForXp(state.skills[skillId]?.xp || 0);
+}
+
+/**
+ * What the potions working now do (data/potions.js): multipliers (atk, def, hp, fortune, speed, xp) and a
+ * dodge chance. The fight potion only while its dose lasts, and never in the clan boss's fight; the work
+ * potion likewise. Their strength grows with Alchemy.
+ */
+export function potionEffects(state, clanFight = state.combat?.mode === 'clan') {
+    const e = { atk: 1, def: 1, hp: 1, fortune: 1, speed: 1, xp: 1, dodge: 0 };
+    const alchemy = skillLevel(state, 'alchemy');
+    const apply = id => {
+        const p = POTIONS[id];
+        const s = potionStrength(id, alchemy);
+        if (p.effect === 'dodge') e.dodge += s; else e[p.effect] *= 1 + s;
+    };
+    const fight = state.combat?.potion;
+    if (!clanFight && POTIONS[fight]?.use === 'fight' && state.combat.potionMs > 0) apply(fight);
+    const work = state.workPotion?.id;
+    if (POTIONS[work]?.use === 'work' && state.workPotion.ms > 0) apply(work);
+    return e;
 }
 
 /** Collect every bonus source into a flat modifier object. */
@@ -176,8 +193,8 @@ export function collectModifiers(state) {
     // potion, no Focus, no Trial's rule. With them the boss could fall on screen and stand on the server.
     const clanFight = state.combat.mode === 'clan';
 
-    // Active potion (only while it has charges).
-    if (!clanFight && state.combat.potion !== 'none' && state.combat.potionCharges > 0) addMods(mods, POTION_EFFECTS[state.combat.potion]);
+    // Potions (data/potions.js): they multiply, after every other bonus (deriveStats); the work potion's speed here.
+    mods.potions = potionEffects(state, clanFight);
 
     // Tools.
     for (const [toolId, tool] of Object.entries(TOOLS)) {
@@ -187,11 +204,15 @@ export function collectModifiers(state) {
         mods.doubleChance[tool.skill] += TOOL_DOUBLE_PER_TIER * tier;
     }
 
-    // Mini-game boosts (timed, per skill).
+    // Mini-game boosts (timed, per skill) and the work potion: they multiply a skill's speed, after every
+    // other bonus, in every skill but Farming (its plots grow on the clock).
     const now = state.meta.lastActiveAt || Date.now();
-    for (const id of NON_COMBAT_SKILLS) {
+    for (const id of SPEED_SKILLS) {
+        if (id === 'farming') continue;
         const mg = state.minigame[id];
-        if (mg && mg.boostUntil > now) mods.skillSpeed[id] += mg.bonus;
+        const boost = mg && mg.boostUntil > now ? Math.max(1, mg.mult || 1) : 1;
+        const m = boost * mods.potions.speed;
+        if (m !== 1) mods.skillMult[id] = m;
     }
 
     // The bonfire.
@@ -242,9 +263,10 @@ export function deriveStats(state, mods = collectModifiers(state)) {
     const camp = { atk: 1, def: 1, hp: 1 };
     if (!bite.noCamp) for (const upgrade of CAMP_UPGRADES) camp[upgrade.stat] *= campMultiplier(upgrade, state.camp?.[upgrade.id] || 0);
 
-    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk;
-    const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def;
-    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * (bite.heroHp ?? 1);
+    const brew = mods.potions || potionEffects(state);
+    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk * brew.atk;
+    const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def * brew.def;
+    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * brew.hp * (bite.heroHp ?? 1);
     // nothing makes the hero slower than his base (a hand-made affix below nothing made him never swing, or swing at the cap)
     const attackSpeed = Math.max(0, Math.min(BASE.caps.attackSpeed, mods.attackSpeed));
 
@@ -256,15 +278,16 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         critChance: Math.min(BASE.caps.critChance, BASE.baseCritChance + mods.critChance),
         critDmg: BASE.baseCritDmg + mods.critDmg,
         attackInterval: Math.max(BASE.minAttackInterval, Math.round(BASE.baseAttackInterval / (1 + attackSpeed))),
-        dodge: Math.min(BASE.caps.dodge, mods.dodge),
+        dodge: Math.min(BASE.caps.dodge, mods.dodge + brew.dodge),
         lifesteal: Math.min(BASE.caps.lifesteal, mods.lifesteal),
-        goldMult: 1 + mods.goldMult,
-        dropMult: 1 + mods.dropMult,
+        goldMult: (1 + mods.goldMult) * brew.fortune,
+        dropMult: (1 + mods.dropMult) * brew.fortune,
+        skillXpMult: brew.xp,   // a work potion's: skill XP only (systems/skilling.js)
         combatXpMult: 1 + mods.combatXpMult + mods.xpMult,
         xpMult: 1 + mods.xpMult,
         foodMult: 1 + mods.foodMult,
         autoEatThreshold: Math.min(0.9, BASE.baseAutoEatThreshold + mods.autoEatThreshold),
-        potionCharges: Math.round(BASE.basePotionCharges * (1 + mods.potionCharges)),
+        potionDuration: 1 + mods.potionDuration,   // how long a dose lasts, as a share of POTION_MINUTES (the Alchemist medal: longer)
         offlineMs: (BASE.baseOfflineHours + mods.offlineHours) * 3600 * 1000,
         boostDurationMult: 1 + mods.boostDuration,
         craftQuality: mods.craftQuality,
@@ -274,6 +297,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         gildedMult: 1 + mods.gildedChance,   // how much more often gilded monsters come
         petMult: 1 + mods.petChance,         // how much likelier a pet is to find the hero
         skillSpeed: mods.skillSpeed,
+        skillMult: mods.skillMult,
         doubleChance: mods.doubleChance,
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),
         records,
@@ -287,10 +311,6 @@ export function deriveStats(state, mods = collectModifiers(state)) {
 /** Effective interval (ms) for an action of a skill; `extraSpeed` is the action's own (mastery). */
 export function actionInterval(baseInterval, derived, skillId, extraSpeed = 0) {
     const speed = Math.max(0, (derived.skillSpeed[skillId] || 0) + extraSpeed);   // never slower than the base
-    return Math.max(250, Math.round(baseInterval / (1 + speed)));
+    return Math.max(250, Math.round(baseInterval / ((1 + speed) * (derived.skillMult?.[skillId] || 1))));
 }
 
-export function potionInfo(id) {
-    const res = RESOURCES[id];
-    return res ? { id, name: res.name, desc: res.desc } : null;
-}

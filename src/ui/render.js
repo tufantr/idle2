@@ -3,11 +3,13 @@
 // are patched every frame. Nothing in here mutates game state — handlers call window.FI.
 
 import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
-import { RESOURCES, orderedByTier, foodsByHealing, sellValue } from '../data/resources.js';
+import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
+import { potionsFor, potionStrength, potionEffectText } from '../data/potions.js';
+import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { anvilCost, onAnvil } from '../systems/anvil.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
-import { PERKS, GOLD_SHOP } from '../data/perks.js';
+import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
@@ -19,7 +21,7 @@ import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/ski
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
-import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
@@ -321,7 +323,9 @@ function renderLoadout(game) {
     const pick = (on, onclick, inner, title, state = '') => `<button class="pick${on ? ' on' : ''}${state ? ` ${state}` : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
     const word = w => `<span class="pick-word">${w}</span>`;
     const foods = foodsByHealing().filter(f => state.resources[f.id] > 0 || c.autoEat === f.id);
-    const potions = orderedByTier('potion').filter(p => state.resources[p.id] > 0 || c.potion === p.id);
+    const potions = potionsFor('fight').map(id => RESOURCES[id]).filter(p => state.resources[p.id] > 0 || c.potion === p.id);
+    const alchemy = skillLevel(state, 'alchemy');
+    const does = id => potionEffectText(id, potionStrength(id, alchemy));   // what a potion does at this hero's Alchemy
     // With none in the bag, the row ends in one more tile that goes to where they are made.
     const goTile = (tab, word, label) => (isUnlocked(state, tab)
         ? `<button class="pick pick-go" onclick="FI.switchTab('${tab}')" title="${label}" aria-label="${label}">${tabIcon(tab, 1)}<span class="pick-sub">${word}</span></button>`
@@ -338,8 +342,8 @@ function renderLoadout(game) {
         pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat from all your food, whichever best fits the missing health'),
         pick(c.autoEat === 'none', "FI.setAutoEat('none')", word('None'), 'Never eat automatically'),
         ...foods.map(f => pick(c.autoEat === f.id, `FI.setAutoEat('${f.id}')`,
-            `${resIcon(f.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[f.id] || 0)}</span><span class="pick-sub">+${Math.round(f.heals * d.foodMult)}</span>`,
-            `${f.name}: heals ${Math.round(f.heals * d.foodMult)} HP (${fmt(state.resources[f.id] || 0)} left)${fasting ? '. Nothing is eaten in this Trial' : c.autoEat === 'auto' ? '. Auto eats it when it fits best' : '. Pick it to eat only this'}`,
+            `${resIcon(f.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[f.id] || 0)}</span><span class="pick-sub">+${pct(f.heal * d.foodMult)}</span>`,
+            `${f.name}: heals ${pct(f.heal * d.foodMult)} of your health, ${fmt(foodHeal(f, d))} now (${fmt(state.resources[f.id] || 0)} left)${fasting ? '. Nothing is eaten in this Trial' : c.autoEat === 'auto' ? '. Auto eats it when it fits best' : '. Pick it to eat only this'}`,
             foodState(f))),
         noFood ? goTile('cooking', 'Cook', 'No food left: cook some') : ''
     ].join('');
@@ -347,10 +351,10 @@ function renderLoadout(game) {
         pick(c.potion === 'none', "FI.setPotion('none')", word('None'), 'No potion'),
         ...potions.map(p => pick(c.potion === p.id, `FI.setPotion('${p.id}')`,
             `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
-            `${p.name}: ${p.desc} (${fmt(state.resources[p.id] || 0)} left)`, c.potion === p.id ? '' : 'idle')),
+            `${p.name}: ${does(p.id)} for ${duration(doseMs(d))} of fighting (${fmt(state.resources[p.id] || 0)} left)`, c.potion === p.id ? '' : 'idle')),
         noPotions ? goTile('alchemy', 'Brew', 'No potions left: brew some') : ''
     ].join('');
-    const potionNote = clanFight ? 'none against the clan boss' : c.potion !== 'none' ? (c.potionCharges > 0 ? `${c.potionCharges} attacks left` : (state.resources[c.potion] > 0 ? 'drinks on the next attack' : 'none left')) : '';
+    const potionNote = clanFight ? 'none against the clan boss' : c.potion !== 'none' ? (c.potionMs > 0 ? `${does(c.potion)} · ${duration(c.potionMs)} left` : (state.resources[c.potion] > 0 ? 'drunk as the fight starts' : 'none left')) : '';
     return `${showFood ? `<div class="loadout">
             <div class="loadout-label">Food <span class="muted small">${fasting ? 'none is eaten in this Trial' : `eaten below ${pct(d.autoEatThreshold)} health`}</span></div>
             <div class="pick-row">${foodRow}</div>
@@ -359,6 +363,25 @@ function renderLoadout(game) {
             <div class="loadout-label">Potion${potionNote ? ` <span class="muted small">${potionNote}</span>` : ''}</div>
             <div class="pick-row">${potionRow}</div>
         </div>` : ''}`;
+}
+
+/** The work potion, picked on a skill's tab once there are any (a fight potion is picked under the fight). */
+function workPotionRow(game) {
+    const state = game.state;
+    if (!seen(state, 'work_potions')) return '';
+    const w = state.workPotion || { id: 'none', ms: 0 };
+    const alchemy = skillLevel(state, 'alchemy');
+    const does = id => potionEffectText(id, potionStrength(id, alchemy));
+    const potions = potionsFor('work').map(id => RESOURCES[id]).filter(p => state.resources[p.id] > 0 || w.id === p.id);
+    const pick = (on, onclick, inner, title, cls = '') => `<button class="pick${on ? ' on' : ''}${cls ? ` ${cls}` : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
+    const row = [
+        pick(w.id === 'none', "FI.setWorkPotion('none')", '<span class="pick-word">None</span>', 'No work potion'),
+        ...potions.map(p => pick(w.id === p.id, `FI.setWorkPotion('${p.id}')`,
+            `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
+            `${p.name}: ${does(p.id)} for ${duration(doseMs(game.derived))} of work (${fmt(state.resources[p.id] || 0)} left)`, w.id === p.id ? '' : 'idle'))
+    ].join('');
+    const note = w.id !== 'none' ? (w.ms > 0 ? `${does(w.id)} · ${duration(w.ms)} left` : (state.resources[w.id] > 0 ? 'drunk as the work starts' : 'none left')) : '';
+    return `<div class="loadout work-potion"><div class="loadout-label">Work potion${note ? ` <span class="muted small">${note}</span>` : ''}</div><div class="pick-row">${row}</div></div>`;
 }
 
 /**
@@ -842,7 +865,8 @@ export function renderSkill(game, ui, skillId) {
         ${xpHeader(game, skillId, bait + toolBadge(game, skillId))}
         ${skillExtras(game, skillId)}
         ${NON_COMBAT_SKILLS.includes(skillId) ? renderMinigame(game, skillId) : ''}
-        <div class="node-grid">${cards}</div>
+        ${skillId !== 'farming' ? workPotionRow(game) : ''}
+        <div class="node-grid${state.minigame[skillId]?.boostUntil > game.now ? ' boosted' : ''}">${cards}</div>
     </section>`;
 }
 
@@ -861,7 +885,7 @@ export function renderMinigame(game, skillId) {
     const opportunity = hasOpportunity(state, skillId, now);
     const ch = mg.challenge;
     if (!ch && !opportunity) {
-        if (boostLeft > 0) return `<div class="minigame-line live" style="--minigame-accent:${conf.accent}">${glyph('spark')} ${conf.label}: <b>+${Math.round(mg.bonus * 100)}% speed</b> · ${Math.ceil(boostLeft / 1000)}s</div>`;
+        if (boostLeft > 0) return `<div class="minigame-line live" style="--minigame-accent:${conf.accent}">${glyph('spark')} ${conf.label}: <b>×${mg.mult || BALANCE.minigame.speedMult} speed</b> · ${Math.ceil(boostLeft / 1000)}s</div>`;
         if (!training) return '';
         const wait = Math.max(0, (mg.nextOpportunityAt || now) - now);
         return `<div class="minigame-line" style="--minigame-accent:${conf.accent}">${tabIcon(skillId, 0.625)} ${conf.label} <span class="muted">· next chance ${wait < 1000 ? 'in a moment' : `in about ${duration(wait)}`}</span> ${aboutButton('minigames')}</div>`;
@@ -893,7 +917,7 @@ export function renderMinigame(game, skillId) {
     return `<div class="minigame-panel" style="--minigame-accent:${conf.accent}">
         <div class="minigame-header">
             <div class="minigame-title">${tabIcon(skillId, 0.75)} ${conf.label} ${aboutButton('minigames')}</div>
-            <div class="minigame-boost-pill ${boostLeft > 0 ? 'live' : ''}">${boostLeft > 0 ? `+${Math.round(mg.bonus * 100)}% speed · ${Math.ceil(boostLeft / 1000)}s` : `Win: +${Math.round(BALANCE.minigame.baseBonus * 100)}–${Math.round(BALANCE.minigame.maxBonus * 100)}% speed`}${mg.streak > 1 ? ` · streak ${mg.streak}` : ''}</div>
+            <div class="minigame-boost-pill ${boostLeft > 0 ? 'live' : ''}">${boostLeft > 0 ? `×${mg.mult || BALANCE.minigame.speedMult} speed · ${Math.ceil(boostLeft / 1000)}s` : `Win: ×${BALANCE.minigame.speedMult} speed for ${Math.round((BALANCE.minigame.boostMs + Math.max(0, mg.streak) * BALANCE.minigame.streakMs) / 1000)}s`}${mg.streak > 1 ? ` · streak ${mg.streak}` : ''}</div>
         </div>
         ${body}
     </div>`;
@@ -960,6 +984,7 @@ export function renderSmithing(game, ui) {
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
         ${xpHeader(game, 'smithing')}
+        ${workPotionRow(game)}
         ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ...(anvil ? [['anvil', 'Anvil']] : []), ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
         ${body}
     </section>`;
@@ -1050,6 +1075,7 @@ export function renderCrafting(game, ui) {
     const tools = ['bow', 'rod'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
     return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
         ${xpHeader(game, 'crafting')}
+        ${workPotionRow(game)}
         <div class="forge-bar">
             ${materialPicks('Setting', bars.map(b => ({ id: b.bar, name: `${b.name} setting`, have: state.resources[b.bar] })), bar.bar, 'FI.selectCraftBar')}
             ${materialPicks('Gem', gems.map(g => ({ id: g.gem, name: res(g.gem).name, have: state.resources[g.gem] })), gem.gem, 'FI.selectCraftGem')}
@@ -1200,7 +1226,8 @@ export function renderInventory(game, ui) {
     const selectedId = findItem(state, ui.invSelected) ? ui.invSelected : null;
     const shownId = findItem(state, ui.invPreview) ? ui.invPreview : selectedId;
     const items = [...state.inventory].sort((a, b) => itemScore(b) - itemScore(a));
-    const size = bagSize();
+    const size = bagSize(state);
+    const roomPrice = bagUpgradePrice(game);   // null once the bag is as big as it gets
     const hasGear = items.length > 0 || EQUIP_SLOTS.some(slot => state.equipped[slot]);
     // A new bag shows a row or two of cells; the whole grid comes once the bag is in use.
     const cells = seen(state, 'bag_tools') ? size : Math.min(size, Math.max(8, Math.ceil((items.length + 1) / 8) * 8));
@@ -1214,6 +1241,7 @@ export function renderInventory(game, ui) {
     const picked = ui.resSelected && state.resources[ui.resSelected] > 0 ? ui.resSelected : null;
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
+    const hasWeaker = items.some(i => !i.locked && !i.uniqueId && !isUpgrade(state, i));
     const doll = seen(state, 'jewellery') ? DOLL.jewelled : DOLL.plain;
     const stat = (icon, value, label, title) => `<span title="${title}">${icon} <b>${value}</b> ${label}</span>`;
     return `<div class="armory${hasGear ? '' : ' bare'}">
@@ -1242,16 +1270,18 @@ export function renderInventory(game, ui) {
             <div class="panel-header"><h2>Bag <span class="muted">${items.length}/${size}</span></h2>
                 ${seen(state, 'bag_tools') ? `<div class="btn-row">
                     <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>${resIcon('essence')} Salvage commons</button>
+                    <button class="mini-btn" onclick="FI.salvageWeaker()" ${hasWeaker ? '' : 'disabled'} title="Salvage everything in the bag that wouldn't improve what you wear (never a locked item or a dungeon's unique)">${resIcon('essence')} Salvage weaker</button>
                     <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell commons</button>
+                    ${roomPrice !== null ? `<button class="gold-btn bag-room" onclick="FI.buyBagUpgrade()" ${state.gold >= roomPrice ? '' : 'disabled'} title="Five more slots in the bag (it holds ${size} now)">+5 slots ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(roomPrice)}</button>` : ''}
                 </div>` : ''}
             </div>
             <div class="bag-grid">${bag}</div>
             ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Bosses drop some, and a smith can forge it.</p>'}
-            ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality is salvaged for essence as it lands: never an upgrade, never a locked item. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
+            ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality (or with Weaker, any drop weaker than what you wear) is salvaged for essence as it lands: never an upgrade, never a locked item or a dungeon's unique. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
                 <span>${resIcon('essence')} Auto-salvage drops up to</span>
                 <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
                     const r = RARITIES.find(x => x.id === o);
-                    return `<button class="rarity-pill${o === auto ? ' on' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}">${o === 'off' ? 'Off' : esc(r.name)}</button>`;
+                    return `<button class="rarity-pill${o === auto ? ' on' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}"${o === 'weaker' ? ' title="Any drop weaker than what you wear, whatever its rarity"' : ''}>${o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : esc(r.name)}</button>`;
                 }).join('')}</span>
             </div>` : ''}
         </section>
@@ -1283,14 +1313,15 @@ function rankBadge(state) {
 // ---------- shop ----------
 
 /** The perks as item cards (the Shop shows them, and so does the dialog opened from the fight). */
-// Every perk level costs one skill point, so the price is said once, above the list; a row's button
-// says what it does (Learn, then Upgrade) and is lit only while there are points to spend.
+// A level costs more as a perk climbs (perkLevelCost): a row's button says what it does (Learn, then
+// Upgrade) and what its next level costs, and is lit only while there are points enough.
 function perkList(state) {
     const sp = state.prestige.skillPoints;
     return PERKS.map(p => {
         const level = state.perks[p.id] || 0;
+        const cost = perkLevelCost(level + 1);
         const action = level >= p.max ? '<span class="perk-max">Max</span>'
-            : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp > 0 ? '' : 'disabled'} title="${sp > 0 ? 'Costs 1 skill point' : 'Needs a skill point: a prestige whose run reached half your best brings one'}">${level ? 'Upgrade' : 'Learn'}</button>`;
+            : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp >= cost ? '' : 'disabled'} title="${sp >= cost ? `Costs ${cost} skill point${cost === 1 ? '' : 's'}` : `Needs ${cost} skill point${cost === 1 ? '' : 's'}: a prestige whose run reached half your best brings one`}">${level ? 'Upgrade' : 'Learn'} <span class="perk-cost">${cost} SP</span></button>`;
         return `<div class="shop-item">
             <div class="perk-art">${sprite(`perk/${p.id}`, { scale: 2, fallback: p.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</div>
             <div class="shop-item-info"><span class="shop-item-name">${esc(p.name)} <span class="muted small">${level}/${p.max}</span></span><span class="shop-item-desc">${esc(p.desc)}</span></div>
@@ -1303,7 +1334,7 @@ function perkList(state) {
 function perkPurse(state) {
     const sp = state.prestige.skillPoints;
     return sp > 0
-        ? `You have <b class="sp-text">${sp} skill point${sp === 1 ? '' : 's'}</b><span class="purse-rule">. Each perk level costs one, and lasts forever</span>.`
+        ? `You have <b class="sp-text">${sp} skill point${sp === 1 ? '' : 's'}</b><span class="purse-rule">. A level costs more as a perk climbs, and lasts forever</span>.`
         : 'No skill points now. A prestige whose run reached half your best brings one; perks last forever.';
 }
 
@@ -2085,6 +2116,10 @@ function clanBossPanel(game, social, boss, pct) {
     // felled: back at midnight UTC as the next level, or (on the week's last day) a new boss on Monday
     const lastDay = !(boss.nextInMs > 0) || boss.nextInMs >= boss.endsInMs;
     const comes = lastDay ? `A new boss in ${duration(boss.endsInMs)}` : `Level ${(boss.level || 1) + 1} in ${duration(boss.nextInMs)}`;
+    // attacks come at midnight UTC: until the bank is full, when the next ones come
+    const perDay = Number(social.attacksPerDay) || 3;
+    const refillMs = boss.nextInMs > 0 ? boss.nextInMs : 86400000 - (Date.now() % 86400000);
+    const refill = waiting < bank ? `<span class="clan-refill" title="${perDay} attacks come each day at midnight UTC, up to ${bank}">${glyph('time')} +${Math.min(perDay, bank - waiting)} in ${duration(refillMs)}</span>` : '';
     return `<div class="clan-boss${ready ? ' ready' : ''}">
         <span class="clan-boss-face">${sprite(`mon/${look.name}`, { scale: 2, cls: boss.killed ? 'soft silhouette' : 'soft', fallback: '🐉' })}</span>
         <div class="clan-boss-text">
@@ -2093,8 +2128,8 @@ function clanBossPanel(game, social, boss, pct) {
             <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
             <div class="btn-row">${fighting ? '<span class="status-pill fighting">Fighting now</span>'
                 : boss.killed && !pending ? `<span class="status-pill clan-next">${glyph('time')} ${comes}</span>`
-                : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : 'Fight the boss'}</button>`}
-                <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${Number(social.attacksPerDay) || 3} more come each day, up to ${bank}">${pips}</span></div>
+                : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : waiting > 0 ? 'Fight the boss' : `Attacks in ${duration(refillMs)}`}</button>`}
+                <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${perDay} more come each day, up to ${bank}">${pips}</span>${refill}</div>
         </div>
     </div>`;
 }

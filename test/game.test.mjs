@@ -207,7 +207,7 @@ test('gold shop has no buy-low/sell-high loop (the old Coal Wagon printed gold)'
     }
 });
 
-test('mini-games only start on an opportunity, and a win boosts skill speed', () => {
+test('mini-games only start on an opportunity; a win makes the skill twice as fast, and its end says what that added', () => {
     const game = new Game(null, T0);
     game.startNodeAction('mining', 'copper_ore');
     assert.equal(game.startMinigame('mining'), false, 'no opportunity yet');
@@ -218,9 +218,16 @@ test('mini-games only start on an opportunity, and a win boosts skill speed', ()
     assert.ok(game.startMinigame('mining'));
     mg.challenge.zoneStart = 0; // widen the target zone so the tap is guaranteed to land
     mg.challenge.zoneWidth = 1;
-    const speedBefore = game.derived.skillSpeed.mining;
+    const before = actionInterval(3000, game.derived, 'mining');
     assert.ok(game.resolveMinigame('mining'));
-    assert.ok(game.derived.skillSpeed.mining > speedBefore);
+    assert.equal(game.derived.skillMult.mining, 2);
+    assert.ok(Math.abs(actionInterval(3000, game.derived, 'mining') - before / 2) <= 1, 'twice as fast, after every other bonus');
+    game.drainEvents();
+    const events = [];
+    for (let i = 0; i < 600 && mg.boostUntil; i++) { now += 100; game.tick(now); events.push(...game.drainEvents()); }
+    const over = events.find(e => e.type === 'minigameBoostOver');
+    assert.ok(over && over.id === 'copper_ore' && over.qty > 0 && over.xp > 0, JSON.stringify(over));
+    assert.equal(game.derived.skillMult.mining || 1, 1, 'and then back to its pace');
 });
 
 test('daily crate is available on a fresh save and then waits 20 hours', () => {

@@ -2,8 +2,8 @@
 
 import {
     TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, upgradeCost, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
-    BAG_SIZE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
-    SMITHING_TYPES, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
+    BAG_SIZE, BAG_UPGRADE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
+    SMITHING_TYPES, AUTO_SALVAGE_OPTIONS, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
 } from '../data/items.js';
 import { salvageBars, carryAnvilWork, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
@@ -123,8 +123,29 @@ function neededInBag(state) {
     return needed;
 }
 
-export function bagSize() {
-    return BAG_SIZE;
+/** The bag's room: BAG_SIZE, and BAG_UPGRADE.slots more for each upgrade bought. */
+export function bagSize(state) {
+    return BAG_SIZE + BAG_UPGRADE.slots * Math.max(0, Math.min(BAG_UPGRADE.max, state?.bagUpgrades || 0));
+}
+
+/** Gold for the next bag upgrade (kills' worth of gold at the best stage, rising each time), or null at the most. */
+export function bagUpgradePrice(game) {
+    const bought = game.state.bagUpgrades || 0;
+    if (bought >= BAG_UPGRADE.max) return null;
+    return Math.ceil(BAG_UPGRADE.kills * Math.pow(BAG_UPGRADE.growth, bought) * goldPerKillAtStage(game.state.combat.bestStage));
+}
+
+export function buyBagUpgrade(game) {
+    const state = game.state;
+    const price = bagUpgradePrice(game);
+    if (price === null) { game.emit({ type: 'error', text: 'The bag is as big as it gets.' }); return false; }
+    if (state.gold < price) { game.emit({ type: 'error', text: 'Not enough gold.' }); return false; }
+    state.gold -= price;
+    bumpStat(game, 'goldSpent', price);
+    state.bagUpgrades = (state.bagUpgrades || 0) + 1;
+    log(game, `🎒 The bag holds ${bagSize(state)} now.`, 'info');
+    game.markDirty();
+    return true;
 }
 
 // ---------- adding items: the bag rules ----------
@@ -149,12 +170,14 @@ export function addItem(game, item) {
     const state = game.state;
     markCodex(state, item);   // found, even if it is salvaged as it lands
     const filter = state.settings.autoSalvage || 'off';
-    if (item.source !== 'crafted' && filter !== 'off' && rarityIndex(item.rarity) <= rarityIndex(filter) && !isUpgrade(state, item)) {
+    // 'weaker': whatever its rarity, a drop that wouldn't improve what is worn (never a dungeon's unique: it is a record)
+    const caught = filter === 'weaker' ? !item.uniqueId : rarityIndex(item.rarity) <= rarityIndex(filter);
+    if (item.source !== 'crafted' && filter !== 'off' && caught && !isUpgrade(state, item)) {
         const gained = salvageObject(game, item, { auto: true });
         return { kept: false, salvaged: item, gained };
     }
     state.inventory.push(item);
-    if (state.inventory.length <= bagSize()) return { kept: true, salvaged: null };
+    if (state.inventory.length <= bagSize(state)) return { kept: true, salvaged: null };
 
     // Any unlocked item can go except the ones worth equipping. If nothing can (the bag is all locked
     // items and upgrades), allow the overflow: an upgrade is never salvaged behind your back.
@@ -217,6 +240,23 @@ export function salvageItem(game, id) {
     if (found.item.locked) { game.emit({ type: 'error', text: 'Unlock the item first.' }); return null; }
     state.inventory.splice(found.index, 1);
     return salvageObject(game, found.item);
+}
+
+/**
+ * Salvage every unlocked item in the bag that wouldn't improve what is worn (the bag's own button; crafted
+ * gear too, since it was asked for), never a dungeon's unique: it is a record.
+ */
+export function salvageWeaker(game) {
+    const state = game.state;
+    const needed = neededInBag(state);
+    const doomed = state.inventory.filter(i => !i.locked && !i.uniqueId && !needed.has(i) && !isUpgrade(state, i));
+    let essence = 0;
+    for (const item of doomed) {
+        state.inventory.splice(state.inventory.indexOf(item), 1);
+        essence += salvageObject(game, item, { quiet: true }).essence;
+    }
+    if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'} weaker than what you wear (+${essence} essence).`, 'loot');
+    return { count: doomed.length, essence };
 }
 
 /** Salvage every unlocked item in the bag at or below a rarity. */
@@ -384,6 +424,7 @@ export function toggleLock(game, id) {
 }
 
 export function setAutoSalvage(game, rarity) {
+    if (!AUTO_SALVAGE_OPTIONS.includes(rarity)) return;
     game.state.settings.autoSalvage = rarity;
     game.markDirty();
 }

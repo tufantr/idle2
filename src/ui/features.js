@@ -15,6 +15,7 @@ import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
+import { POTION_MINUTES } from '../data/potions.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
@@ -47,7 +48,7 @@ export const FEATURES = {
     firemaking: { name: 'Firemaking', art: 'camp', focus: 'right 70%', icon: 'mon/Magma Slime', blurb: 'Burn logs to light the bonfire.',
         points: [`While the bonfire burns, every skill earns more XP, combat included (from +${pc(BASE.bonfireXp)}, growing with your level).`, `Each log adds ${BASE.bonfireSecondsPerLogTier} seconds times its tier, up to ${hours(BASE.bonfireMaxMs)}.`] },
     alchemy: { name: 'Alchemy', art: 'lab', icon: 'res/health_potion', blurb: SKILLS.alchemy.desc,
-        points: ['Forage herbs, then brew them with a second ingredient.', `Pick a potion on the Combat tab: one bottle lasts ${BASE.basePotionCharges} attacks.`] },
+        points: ['Forage herbs, then brew them with a second ingredient.', `A fight potion is picked under the fight, a work potion on a skill's tab. A bottle lasts ${POTION_MINUTES} minutes of that work, and the next is drunk as it runs out.`, 'Every potion grows stronger as your Alchemy does.'] },
     crafting: { name: 'Crafting', art: 'workshop', icon: 'item/Ring/4', blurb: SKILLS.crafting.desc,
         points: ['Jewellery is a precious bar set with a gem. It adds a little attack and defence and carries the most bonuses.', 'Gems turn up while mining and drop from monsters.', 'Bows and rods make hunting and fishing faster.'] },
     farming: { name: 'Farming', art: 'farm', icon: 'farm/growing', blurb: 'Plots grow on the clock while you do something else.',
@@ -92,7 +93,7 @@ export const FEATURES = {
         points: [`Each mastery level adds +${pc(MASTERY_PER_LEVEL.speed, 1)} speed to that action.`, `Gathering and cooking also gain +${pc(MASTERY_PER_LEVEL.double, 2)} chance of a double; recipes gain +${pc(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients.`,
             `At ${MASTERY_CHECKPOINTS.map(c => `${Math.round(c.at * 100)}%`).join(', ')} of a skill's whole mastery, every action of it gets faster: ${MASTERY_CHECKPOINTS.map(c => `+${Math.round(c.speed * 100)}%`).join(', ')}.`, 'Mastery is permanent.'] },
     minigames: { name: 'A chance to play', art: 'forest', icon: 'res/topaz', blurb: 'Every few minutes of work, a short game appears.',
-        points: [`Win it for +${pc(BALANCE.minigame.baseBonus)} to +${pc(BALANCE.minigame.maxBonus)} speed in that skill for ${secs(BALANCE.minigame.boostMs)} seconds.`, 'A streak of wins raises the bonus. Letting a chance pass costs nothing; a miss or a skip ends the streak.'] }
+        points: [`Win it and that skill works ×${BALANCE.minigame.speedMult} as fast for ${secs(BALANCE.minigame.boostMs)} seconds; when it ends, a line says what it added.`, `Each win in a row makes the next boost ${secs(BALANCE.minigame.streakMs)} seconds longer. Letting a chance pass costs nothing; a miss or a skip ends the streak. Playing keeps your Focus.`] }
 };
 
 // Every skill's card ends with what its 99 brings: its cape (data/capes.js), worn by the hero.

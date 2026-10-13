@@ -1,7 +1,7 @@
 // Prestige: convert this run's best stage into permanent tokens and skill points.
 
 import { tokensForStage, prestigeStartStage, skillPointsForStages, BALANCE } from '../core/formulas.js';
-import { PERKS } from '../data/perks.js';
+import { PERKS, perkLevelCost } from '../data/perks.js';
 import { spawnEnemy, leaveCombat, enterCombat } from './combat.js';
 import { resetCamp } from './camp.js';
 import { log, bumpStat } from './progress.js';
@@ -92,9 +92,10 @@ export function buyPerk(game, perkId) {
     const state = game.state;
     const perk = PERKS.find(p => p.id === perkId);
     if (!perk) return false;
-    if (state.prestige.skillPoints < 1) { game.emit({ type: 'error', text: 'No skill points. Prestige to earn more.' }); return false; }
     if ((state.perks[perkId] || 0) >= perk.max) { game.emit({ type: 'error', text: `${perk.name} is maxed out.` }); return false; }
-    state.prestige.skillPoints -= 1;
+    const cost = perkLevelCost((state.perks[perkId] || 0) + 1);
+    if (state.prestige.skillPoints < cost) { game.emit({ type: 'error', text: `${perk.name}'s next level costs ${cost} skill point${cost === 1 ? '' : 's'}. Prestige to earn more.` }); return false; }
+    state.prestige.skillPoints -= cost;
     state.perks[perkId] = (state.perks[perkId] || 0) + 1;
     game.markDirty();
     return true;

@@ -58,13 +58,13 @@ The gear codex in the Hall keeps a page for every kind of gear at every tier: {{
 
 ## The bag
 
-The bag holds {{BAG_SIZE}} pieces besides what your hero wears. When it is full and a new piece comes in, the weakest piece that is neither locked nor an upgrade is salvaged, and that may be the new one. If everything left is locked or an upgrade, the bag takes one more rather than lose an upgrade: nothing is ever thrown away behind your back.
+The bag holds {{BAG_SIZE}} pieces besides what your hero wears, and {{BAG_UPGRADE.slots}} more for each bag upgrade you buy with gold, the button by the bag's tools (up to {{BAG_SIZE + BAG_UPGRADE.slots * BAG_UPGRADE.max}}; each costs more than the last, and its price follows your best stage, like the Shop's). When it is full and a new piece comes in, the weakest piece that is neither locked nor an upgrade is salvaged, and that may be the new one. If everything left is locked or an upgrade, the bag takes one more rather than lose an upgrade: nothing is ever thrown away behind your back.
 
 A green ▲ marks a piece that beats what your hero wears, and the fight's dock offers the best of them with a one-tap **Equip**. **Salvage commons** and **Sell commons** clear the bag's unlocked common pieces in one go. Gear cannot be changed during a dungeon run.
 
 ## Auto-salvage and locking
 
-- **Auto-salvage** salvages dropped gear up to a rarity as it lands: {{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : RARITIES.find(r => r.id === o).name)).join(', ')}}. It starts at Common, and the switch shows under the bag once a few pieces have dropped. It never takes an upgrade, nor anything you made.
+- **Auto-salvage** salvages dropped gear up to a rarity as it lands, or with Weaker any drop weaker than what you wear, whatever its rarity: {{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : RARITIES.find(r => r.id === o).name)).join(', ')}}. It starts at Common, and the switch shows under the bag once a few pieces have dropped. It never takes an upgrade, nor anything you made.
 - **Locking** a piece (the padlock in its detail) keeps it from being sold or salvaged, by hand or by the bag. The first copy of a unique arrives locked.
 
 ## The anvil

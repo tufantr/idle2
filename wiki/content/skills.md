@@ -24,7 +24,7 @@ Besides fighting, your hero has {{SKILL_IDS.length - 1}} skills to train, each f
 An action takes its base time divided by one plus all your speed bonuses together. They come from:
 - **[[Tools]]:** each tier gives its skill +{{pct(TOOL_SPEED_PER_TIER, 0)}} speed and +{{pct(TOOL_DOUBLE_PER_TIER, 0)}} chance of a double yield. You make the next tier as your levels allow, and it replaces the old one.
 - **[[Mastery]]** of the action itself, the skill's [[Pets|pet]], every [[Medals|medal]] (+{{pct(ACHIEVEMENT_GLOBAL_BONUS, 0)}} each), the Forager [[Perks|perk]], agility obstacles and [[Weekend events|weekend events]].
-- **Mini-games:** while you gather or produce, a chance to play turns up every {{BALANCE.minigame.opportunityEveryMs.map(ms => ms / 60000).join('–')}} minutes. Win it for +{{pct(BALANCE.minigame.baseBonus, 0)}} to +{{pct(BALANCE.minigame.maxBonus, 0)}} speed in that skill for {{BALANCE.minigame.boostMs / 1000}} seconds; letting it pass costs nothing (a miss or a skip ends a streak).
+- **Mini-games:** while you gather or produce, a chance to play turns up every {{BALANCE.minigame.opportunityEveryMs.map(ms => ms / 60000).join('–')}} minutes. Win it and that skill works {{BALANCE.minigame.speedMult}} times as fast for {{BALANCE.minigame.boostMs / 1000}} seconds (longer on a streak); letting it pass costs nothing (a miss or a skip ends a streak).
 - **Focus:** leave the game alone for {{BASE.focusAfterMs / 1000}} seconds and your hero settles in, with +{{pct(BASE.focusSkillSpeed, 0)}} speed in every skill but Farming until your next click or key. It counts while you are away too.
 
 More on the last two in [[Mini-games and Focus]].

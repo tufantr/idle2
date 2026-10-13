@@ -3,7 +3,7 @@ path: /food
 keywords: food, eat, eating, auto-eat, auto eat, healing, heal, cooking, fish, meat, dishes, gourmet, chef, fasting
 aliases: Auto-eat, Healing, Eating
 ---
-Food keeps your hero alive in a long fight. It is cooked in [[Cooking]], every dish burning one log, from raw meat ([[Hunting]]), fish ([[Fishing]]) and crops ([[Farming]]), and raw meat and some fish also drop in the fight ([[Zones]]). Food is kept when you prestige. The table below lists every food, what it heals and what it is cooked from.
+Food keeps your hero alive in a long fight. It is cooked in [[Cooking]], every dish burning one log, from raw meat ([[Hunting]]), fish ([[Fishing]]) and crops ([[Farming]]), and raw meat and some fish also drop in the fight ([[Zones]]). Food is kept when you prestige. Every food heals a share of your hero's max health, so a dish stays as good however strong he grows. The table below lists every food, what it heals and what it is cooked from.
 
 ## Auto-eat
 
@@ -15,11 +15,11 @@ What he eats is set by the Food row on the Combat tab and in the fight's dock:
 - **One food:** pick a food to eat only that one.
 - **None:** he never eats.
 
-Each food you carry shows in the row with what it heals, your bonuses counted. Food works the same in [[Dungeons|dungeon runs]], against [[The Titan]] and while you are away.
+Each food you carry shows in the row with the share it heals, your bonuses counted; hover over it to see how much health that is now. Food works the same in [[Dungeons|dungeon runs]], against [[The Titan]] and while you are away.
 
 ## Healing and regeneration
 
-A food heals the amount in the table below, raised by your food bonuses, and never past full health. The bonuses add up: the Gourmet perk and the Chef medal.
+A food heals its share of your hero's max health, as in the table below, raised by your food bonuses, and never past full health: a {{res('cooked_shark')}} that heals {{pct(RESOURCES.cooked_shark.heal, 0)}} gives a hero of 10,000 health {{fmt(Math.round(10000 * RESOURCES.cooked_shark.heal))}}. The bonuses add up: the Gourmet perk and the Chef medal. Food is what lets a hero hold out a little longer at his wall, or through a boss's fight.
 
 Food is for the fight itself. While fighting your hero regains only {{pct(BALANCE.combat.regenInCombat)}} of his health a second; out of the fight he regains {{pct(BALANCE.combat.regenResting, 0)}} a second, so resting refills him in under a minute. Lifesteal and a combat level-up heal him too (see [[Combat]]).
 
@@ -37,10 +37,10 @@ In the {{trialById('fasting').name}} [[Trials|Trial]] your hero eats nothing, an
 
 ## The best food for your level
 
-Fish heal a little more than the meat of the same level: {{res('cooked_shrimp')}} heals {{RESOURCES.cooked_shrimp.heals}} where {{res('cooked_rabbit')}} heals {{RESOURCES.cooked_rabbit.heals}}, and {{res('cooked_leviathan')}} {{fmt(RESOURCES.cooked_leviathan.heals)}} where {{res('cooked_dragon')}} heals {{fmt(RESOURCES.cooked_dragon.heals)}}. The farm's dishes, most of them from two crops, heal well for their level too. The best food each new Cooking level brings:
+Fish heal a little more than the meat of the same level: {{res('cooked_shrimp')}} heals {{pct(RESOURCES.cooked_shrimp.heal, 0)}} where {{res('cooked_rabbit')}} heals {{pct(RESOURCES.cooked_rabbit.heal, 0)}}, and {{res('cooked_leviathan')}} {{pct(RESOURCES.cooked_leviathan.heal, 0)}} where {{res('cooked_dragon')}} heals {{pct(RESOURCES.cooked_dragon.heal, 0)}}. The farm's dishes, most of them from two crops, heal well for their level too. The best food each new Cooking level brings:
 
 {{(() => {
-    const heals = n => RESOURCES[n.produces].heals;
+    const heals = n => RESOURCES[n.produces].heal;
     const best = SKILLS.cooking.nodes.filter(n => heals(n)).sort((a, b) => a.levelReq - b.levelReq || heals(b) - heals(a)).reduce((list, n) => (list.length && heals(n) <= heals(list.at(-1)) ? list : [...list, n]), []);
     const source = id => {
         for (const s of ['fishing', 'hunting']) {
@@ -50,5 +50,5 @@ Fish heal a little more than the meat of the same level: {{res('cooked_shrimp')}
         const crop = CROPS.find(c => c.produces === id);
         return crop ? `${link(path.skill('farming'), SKILLS.farming.name)} ${crop.levelReq}` : '';
     };
-    return table(['Cooking level #', 'Food', 'Heals #', 'Cooked from', 'Raw food from'], best.map(n => [n.levelReq, res(n.produces), fmt(heals(n)), resList(n.consumes), Object.keys(n.consumes).map(source).join(', ')]), { sort: false });
+    return table(['Cooking level #', 'Food', 'Heals (of max health)', 'Cooked from', 'Raw food from'], best.map(n => [n.levelReq, res(n.produces), pct(heals(n), 0), resList(n.consumes), Object.keys(n.consumes).map(source).join(', ')]), { sort: false });
 })()}}

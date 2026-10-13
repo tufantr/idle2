@@ -1114,6 +1114,25 @@ Keeping it running:
       out uploads the game first and leaves a fresh one in the browser, so an account registered there next
       starts its own game, not a copy. A local host still plays as a guest, for the tools and screenshots.
       Checked in a browser under a made-up hostname and on 127.0.0.1
+- [x] **Food and potions that matter** (the owner's ask, 13 October 2026, after a look at the numbers: the best
+      food healed 2% of a stage-160 hero, a potion lasted 17 seconds; DESIGN §3.6): food heals a share of max
+      health (12% to 46%), eaten below a quarter of it; a potion lasts 5 minutes of its work, multiplies what
+      it raises and grows with Alchemy (×1.25 when first brewed, ×2.5 at 99). Work potions on the skill tabs:
+      the Gatherer's Draught (faster work in every skill but Farming) and the Scholar's Tonic (skill XP), and
+      a Fortune Draught for the fight (gold and drops); their icons are Dungeon Crawl's potions, and their
+      card pictures stand-ins, other potion paintings recoloured, until Gemini paints them. Sized with the
+      simulator over 30 seeds: a player who brews and cooks reaches stage 100 about 30% sooner than one who
+      makes neither, stage 120 about 20% and stage 150 about 12%; one who makes neither plays as before
+- [x] **Perks cost more as they climb** (the owner's ask): levels 1-5 cost 1 point, 6-10 cost 2, up to 5;
+      a 25-level perk costs 75, and the button shows the next level's price. Levels already bought stay
+- [x] **A bigger bag for gold** (the owner's ask: the bag sat at 40/40): +5 slots a purchase, up to 100,
+      each dearer than the last; and a Weaker auto-salvage, with a "Salvage weaker" button, for anything
+      that wouldn't improve what is worn (never a unique)
+- [x] **A mini-game's win is felt** (the owner: "I don't feel anything"): ×2 speed for 45 seconds (5 s more
+      a streak win), multiplying every other bonus; the working card glows with a ×2 and its bar shines, and
+      the boost's end says what it added ("+14 copper ore, +340 XP"). Playing one keeps Focus
+- [x] **When the next clan attacks come**: until the bank is full the Clan tab shows "+3 in 5h 12m" by the
+      attack pips, and with none left the button says when they come
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

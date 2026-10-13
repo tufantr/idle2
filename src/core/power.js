@@ -28,6 +28,7 @@ function stableState(rawState, now) {
     for (const mg of Object.values(state.minigame)) mg.boostUntil = 0;
     state.bonfire.until = 0;
     state.combat.potion = 'none';
+    state.workPotion = { id: 'none', ms: 0 };
     state.trials.active = null;   // a Trial's rule handicaps a run, not the hero the boards compare
     return state;
 }

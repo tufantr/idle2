@@ -105,14 +105,17 @@ export const SKILLS = {
     },
     alchemy: {
         id: 'alchemy', name: 'Alchemy', icon: '🧪', color: '#10b981',
-        desc: 'Forage herbs, then brew them with a secondary ingredient into combat potions.',
+        desc: 'Forage herbs, then brew them with a secondary ingredient into potions for the fight and for work.',
         nodes: [
             { id: 'guam_leaf',        name: 'Forage Guam',        levelReq: 1,  interval: 3500, xp: 10,  produces: 'guam_leaf' },
             { id: 'accuracy_potion',  name: 'Accuracy Potion',    levelReq: 5,  interval: 2500, xp: 30,  produces: 'accuracy_potion', consumes: { guam_leaf: 1, copper_ore: 1 } },
+            { id: 'gatherers_draught', name: "Gatherer's Draught", levelReq: 10, interval: 2500, xp: 34, produces: 'gatherers_draught', consumes: { guam_leaf: 1, normal_log: 1 } },
             { id: 'marrentill_leaf',  name: 'Forage Marrentill',  levelReq: 15, interval: 3800, xp: 24,  produces: 'marrentill_leaf' },
             { id: 'defense_potion',   name: 'Defense Potion',     levelReq: 20, interval: 2600, xp: 55,  produces: 'defense_potion',  consumes: { marrentill_leaf: 1, oak_log: 1 } },
+            { id: 'scholars_tonic',   name: "Scholar's Tonic",    levelReq: 28, interval: 2700, xp: 62,  produces: 'scholars_tonic',  consumes: { marrentill_leaf: 2, willow_log: 1 } },
             { id: 'tarromin_leaf',    name: 'Forage Tarromin',    levelReq: 35, interval: 4200, xp: 45,  produces: 'tarromin_leaf' },
             { id: 'evasion_potion',   name: 'Evasion Potion',     levelReq: 40, interval: 2800, xp: 95,  produces: 'evasion_potion',  consumes: { tarromin_leaf: 1, raw_fox: 1 } },
+            { id: 'fortune_draught',  name: 'Fortune Draught',    levelReq: 48, interval: 2900, xp: 110, produces: 'fortune_draught', consumes: { tarromin_leaf: 1, silver_bar: 1 } },
             { id: 'harralander_leaf', name: 'Forage Harralander', levelReq: 55, interval: 4600, xp: 75,  produces: 'harralander_leaf' },
             { id: 'health_potion',    name: 'Health Potion',      levelReq: 60, interval: 3000, xp: 150, produces: 'health_potion',   consumes: { harralander_leaf: 1, cooked_boar: 1 } }
         ]

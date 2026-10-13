@@ -6,7 +6,7 @@ Alchemy makes [[Potions|potions]] for the fight. It has two kinds of action: **f
 
 ## What it is for
 
-Potions make your hero stronger in combat for a while. Pick one on the [[Combat]] tab: a bottle lasts {{BASE.basePotionCharges}} of your hero's own attacks (your strikes don't use it up), and when it runs out the next bottle is opened at once, while you have any.
+Potions make your hero stronger for a while: fight potions while he fights, picked on the [[Combat]] tab, and work potions while he works, picked on a skill's tab. A bottle lasts {{POTION_MINUTES}} minutes of that work, and when it runs out the next is opened at once, while you have any. Every potion grows stronger as your Alchemy does (see [[/potions|Potions]]).
 
 | Potion | Gives |
 | --- | --- |

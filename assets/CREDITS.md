@@ -50,5 +50,8 @@ study, supply table, war table).
 
 `paint/cards/*.webp`, the ninety pictures on the action cards, are AI-generated with Google Gemini
 too, nine to a sheet from the prompts in `tools/cards.py`, and cut out and scaled by that script.
+Three more (the Gatherer's Draught, the Scholar's Tonic and the Fortune Draught) are, for now, those
+paintings of the Evasion and Defense Potions with their flasks recoloured by `tools/cards.py
+--recolour`; the three potions' icons are DCSS potion tiles (CC0, as above), packed by `tools/atlas.py`.
 
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

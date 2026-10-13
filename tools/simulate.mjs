@@ -33,6 +33,7 @@ import { anvilCost } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
 import { zoneForStage } from '../src/data/zones.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
+import { POTIONS, potionLevel } from '../src/data/potions.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
@@ -65,8 +66,10 @@ const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
 // --without=dungeons,titan,farming,agility,anvil,camp,perks,crafting,essence: the bot leaves those alone
-// (restricted play: what each system is worth, robust-and-fun/D §2.3).
+// (restricted play: what each system is worth, robust-and-fun/D §2.3). food, potions, or consumables (both):
+// it neither makes nor uses them, and eats nothing (what they are worth to a push, DESIGN §3.6).
 const WITHOUT = new Set(String(args.without || '').split(',').filter(Boolean));
+if (WITHOUT.has('consumables')) { WITHOUT.add('food'); WITHOUT.add('potions'); }
 const NO_DUNGEONS = !!args['no-dungeons'] || WITHOUT.has('dungeons');
 // Controls for dungeon balance: spend the dungeon half hours on the ladder instead.
 //   --farm-ladder       farm the highest comfortable stage of the run (farm mode)
@@ -78,7 +81,8 @@ const SPEED_PRESTIGE = !!args['speed-prestige'];
 // The bot's own thresholds. --vary=N draws a different sensible player for each N (D §2.2 P10): how
 // much a run must add before it prestiges, how long a stall lasts, how long it farms a dungeon, its
 // share of time for agility, how long it trains, and the order it buys perks in.
-const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60,
+// potionStock: fight potions kept in stock (a dose is POTION_MINUTES of fighting); workStock: work potions.
+const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60, potionStock: 12, workStock: 6, foodStock: 60,
     perkOrder: ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'] };
 if (args.vary) {
     const r = seededRandom(1_000_003 * Number(args.vary));
@@ -212,6 +216,16 @@ function obtain(id, qty) {
         return { kind: 'node', skill: 'cooking', node: node.id, until: () => S.resources[id] >= qty, why: `cook ${qty} ${res.name}` };
     }
     if (res.category === 'gem') return { kind: 'node', skill: 'mining', node: bestNode('mining').id, until: () => S.resources[id] >= qty, why: `mine for ${res.name}` };
+    if (res.category === 'herb' || res.category === 'potion') {   // Alchemy: herbs foraged, potions brewed from them
+        const node = nodeFor('alchemy', id);
+        if (!node || lvl('alchemy') < node.levelReq) return train('alchemy');
+        const need = qty - (S.resources[id] || 0);
+        for (const [inId, inQty] of Object.entries(node.consumes || {})) {
+            const t = obtain(inId, inQty * need);
+            if (t) return t;
+        }
+        return { kind: 'node', skill: 'alchemy', node: node.id, until: () => S.resources[id] >= qty, why: `${res.category === 'herb' ? 'forage' : 'brew'} ${qty} ${res.name}` };
+    }
     return null;
 }
 
@@ -289,7 +303,7 @@ function toolTask() {
 }
 
 function foodTask() {
-    if (!S.unlocks.hunting) return null;
+    if (WITHOUT.has('food') || !S.unlocks.hunting) return null;
     // The bot cooks hunted meat (fish and farm dishes are left to real players).
     const best = [...orderedByTier('food')].reverse().find(f => {
         const n = nodeFor('cooking', f.id);
@@ -297,10 +311,31 @@ function foodTask() {
         return hunt && lvl('cooking') >= n.levelReq && lvl('hunting') >= hunt.levelReq;
     });
     if (!best) return null;
-    const stock = orderedByTier('food').reduce((sum, f) => sum + (S.resources[f.id] || 0) * f.heals, 0);
-    const target = 60 * best.heals;
-    if (stock >= target) return null;
-    return obtain(best.id, (S.resources[best.id] || 0) + Math.ceil((target - stock) / best.heals));
+    // (a dish heals a share of max health: the stock is counted in dishes, the better ones counting more)
+    const stock = orderedByTier('food').reduce((sum, f) => sum + (S.resources[f.id] || 0) * f.heal / best.heal, 0);
+    if (stock >= POLICY.foodStock) return null;
+    return obtain(best.id, (S.resources[best.id] || 0) + Math.ceil(POLICY.foodStock - stock));
+}
+
+// Potions (data/potions.js): the strongest attack potion the bot can brew for the fight, kept in stock, and
+// the Gatherer's Draught for work. Attack is what moves the wall; the others are left to real players.
+// (asked for before Alchemy reaches them: obtain() trains Alchemy up to the level first)
+const fightPotion = () => 'accuracy_potion';
+const workPotion = () => (lvl('alchemy') >= potionLevel('gatherers_draught') ? 'gatherers_draught' : null);
+function drinkPotions() {
+    if (WITHOUT.has('potions')) return;
+    const fight = fightPotion();
+    if (fight && S.combat.potion !== fight && S.resources[fight] > 0) game.setPotion(fight);
+    const work = workPotion();
+    if (work && S.workPotion.id !== work && S.resources[work] > 0) game.setWorkPotion(work);
+}
+function potionTask() {
+    if (WITHOUT.has('potions') || !S.unlocks.alchemy) return null;
+    const fight = fightPotion();
+    if (fight && (S.resources[fight] || 0) < POLICY.potionStock / 2) { const t = obtain(fight, POLICY.potionStock); if (t) return t; }
+    const work = workPotion();
+    if (work && (S.resources[work] || 0) < POLICY.workStock / 2) { const t = obtain(work, POLICY.workStock); if (t) return t; }
+    return null;
 }
 
 function jewelTask() {
@@ -571,7 +606,10 @@ function decide() {
         if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) prestigeNow();
     }
     for (const d of DUNGEONS) if (S.dungeons[d.id].fragments >= FRAGMENTS_PER_UNIQUE && game.assembleUnique(d.id)) milestone('unique', d.unique);
-    return gearTask() || agilityTask() || toolTask() || foodTask() || jewelTask() || stallTask() || combatTask();
+    drinkPotions();
+    if (WITHOUT.has('food') && S.combat.autoEat !== 'none') game.setAutoEat('none');
+    // (potions before food: a stock of food is eaten as the hero fights, and its task would always come first)
+    return gearTask() || agilityTask() || toolTask() || potionTask() || foodTask() || jewelTask() || stallTask() || combatTask();
 }
 
 // After combat stalls (no stage gain), work toward the next gear tier: the skill gating the next

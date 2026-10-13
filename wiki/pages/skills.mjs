@@ -39,12 +39,12 @@ const capeHero = skill => heroSprite({ equipped: {}, prestige: { count: 0 }, her
 function actionsTable(id) {
     const nodes = [...SKILLS[id].nodes].sort((a, b) => a.levelReq - b.levelReq);
     const food = id === 'cooking';
-    const head = ['Action', 'Level #', 'Time #', 'XP #', 'XP/hour #', 'Needs', 'Makes', ...(food ? ['Heals #'] : [])];
+    const head = ['Action', 'Level #', 'Time #', 'XP #', 'XP/hour #', 'Needs', 'Makes', ...(food ? ['Heals'] : [])];
     const rows = nodes.map(n => {
         const makes = n.produces ? res(n.produces) : n.bonfireLog ? `${BASE.bonfireSecondsPerLogTier * RESOURCES[n.bonfireLog].tier} s of bonfire` : '–';
         const needs = Object.keys(n.consumes || {}).length ? resList(n.consumes) : '<span class="muted">nothing</span>';
         return [`<span id="${actionAnchor(n.id)}" class="act">${card(n.id)}<span>${esc(n.name)}</span></span>`, n.levelReq, time(n.interval), fmt(n.xp), xpHour(n.xp, n.interval),
-            `${needs}${n.fuel ? ' <span class="muted">+ a log</span>' : ''}`, makes, ...(food ? [fmt(RESOURCES[n.produces]?.heals || 0)] : [])];
+            `${needs}${n.fuel ? ' <span class="muted">+ a log</span>' : ''}`, makes, ...(food ? [RESOURCES[n.produces]?.heal ? `${Math.round(RESOURCES[n.produces].heal * 100)}%` : '–'] : [])];
     });
     return table(head, rows, { cls: 'actions' });
 }

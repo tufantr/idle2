@@ -4,8 +4,9 @@
 import { createDefaultState, migrateState, clampTimers } from './core/state.js';
 import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, startAgility, stopAction, resolveAction } from './systems/skilling.js';
-import { tickCombat, enterCombat, leaveCombat, clickAttack, setPotion, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
-import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, reforgeItem, toggleLock, setAutoSalvage } from './systems/inventory.js';
+import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
+import { setPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
+import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, reforgeItem, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
@@ -146,6 +147,7 @@ export class Game {
                 const action = resolveAction(this.state);
                 if (action) {
                     tickAction(this, step);
+                    if (this.state.action && !this.state.action.stalled) spendWorkPotion(this, step);   // its dose runs while he works
                     tickMinigame(this, action.skill);
                     decayHeat(this, action.skill, step);
                 }
@@ -235,6 +237,7 @@ export class Game {
     }
     clickAttack() { return this._act(() => clickAttack(this)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
+    setWorkPotion(id) { return this._act(() => setWorkPotion(this, id)); }
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
     setStage(stage) { return Number.isFinite(stage) ? this._act(() => setStage(this, stage)) : false; }
     travel(stage) { return Number.isFinite(stage) ? this._act(() => travelTo(this, stage)) : false; }
@@ -249,6 +252,8 @@ export class Game {
     buyGoldShopItem(id) { return this._act(() => buyGoldShopItem(this, id)); }
     salvageItem(id) { return this._act(() => salvageItem(this, id)); }
     salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
+    salvageWeaker() { return this._act(() => salvageWeaker(this)); }
+    buyBagUpgrade() { return this._act(() => buyBagUpgrade(this)); }
     reforgeItem(id) { return this._act(() => reforgeItem(this, id)); }
     reinforceItem(id) { return this._act(() => reinforceItem(this, id)); }
     rerollItem(id) { return this._act(() => rerollItem(this, id)); }

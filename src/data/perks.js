@@ -18,6 +18,16 @@ export const PERKS = [
     { id: 'paragon',   name: 'Paragon',   icon: '👑', desc: '+1% ATK, DEF and Max HP per level',    max: 200, mods: { atkMult: 0.01, defMult: 0.01, hpMult: 0.01 } }
 ];
 
+// A level costs more as a perk climbs (the owner's ask, October 2026: at one point a level, every perk
+// was soon full): levels 1-5 cost 1 point, 6-10 cost 2, and so on, never more than PERK_COST_MAX.
+// Levels bought before this kept what they cost.
+export const PERK_COST_STEP = 5;
+export const PERK_COST_MAX = 5;
+/** Skill points for a perk's `level`-th level (1-based). */
+export function perkLevelCost(level) {
+    return Math.min(PERK_COST_MAX, Math.max(1, Math.ceil(level / PERK_COST_STEP)));
+}
+
 export function perkById(id) {
     return PERKS.find(p => p.id === id) || null;
 }

@@ -169,6 +169,8 @@ LATE_DUNGEON_MONSTERS = {
     'Hellfire Mortar': 'statues/hellfire_mortar', 'Obsidian Colossus': 'statues/obsidian_statue',
 }
 LATE_DUNGEON_UNIQUES = { 'drowned_greaves': 'armour/artefact/urand_bk_barding', 'hellforged_gauntlets': 'armour/artefact/urand_power_gloves' }
+# The potions that came with the work potions (October 2026), by colour like the first four: last of all.
+LATE_POTIONS = { 'gatherers_draught': 'brown', 'scholars_tonic': 'cyan', 'fortune_draught': 'yellow' }
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------
@@ -263,6 +265,8 @@ def main(rltiles):
         add(key, img)
     for key, img in build_voidstone(rltiles).items():   # Crafting's deepest gem, last of all
         add(key, img)
+    for rid, tile in LATE_POTIONS.items():   # the work potions and the Fortune Draught, last of all
+        add(f'res/{rid}', f'item/potion/{tile}')
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

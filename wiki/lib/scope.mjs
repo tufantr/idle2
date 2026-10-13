@@ -44,13 +44,14 @@ import * as pace from '../../src/data/pace.js';
 import * as daily from '../../src/systems/daily.js';
 import * as skilling from '../../src/systems/skilling.js';
 import * as social from '../../src/data/social.js';
+import * as potions from '../../src/data/potions.js';
 import * as ui from './ui.mjs';
 
 // later modules win a clash of names, so the data files' own names come last
 export const scope = Object.freeze({
     ...ui, ...xp, ...formulas, ...modifiers, ...pace, ...resources, ...skills, ...workshop, ...items, ...zones, ...strata,
     ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...ascension, ...events,
-    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...skilling, ...social,
+    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...skilling, ...social, ...potions,
     // two names clash (bestiary's and ascension's starsFor): both kept, by what they count
     bestiaryStarsFor: bestiary.starsFor, ascensionStarsFor: ascension.starsFor, starsFor: undefined
 });

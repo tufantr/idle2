@@ -15,7 +15,7 @@ import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout, packSize } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
-import { fmt, seconds, escapeHtml as esc, shareInWords } from './format.js';
+import { fmt, seconds, duration, escapeHtml as esc, shareInWords } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART } from './features.js';
 import { activeTrial, nextTrialTarget } from '../systems/trials.js';
@@ -373,7 +373,7 @@ export function createScene(root, actions) {
         }
         if (c.potion !== 'none') {
             const p = RESOURCES[c.potion];
-            const left = c.potionCharges > 0 ? `${c.potionCharges} charges` : `×${fmt(state.resources[c.potion] || 0)}`;
+            const left = c.potionMs > 0 ? duration(c.potionMs) : `×${fmt(state.resources[c.potion] || 0)}`;
             parts.push(`<span title="${esc(p?.name || 'Potion')}">${resIcon(c.potion)} ${left}</span>`);
         }
         return parts.join('');

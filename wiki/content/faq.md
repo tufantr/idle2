@@ -121,7 +121,7 @@ Forging makes a first set of copper weapons and armour. Everything stronger drop
 
 ### Why did a drop disappear?
 
-It was most likely salvaged. To start with, common drops are salvaged as they land unless they would be an upgrade; once a few pieces have dropped, the Inventory shows this auto-salvage setting ({{AUTO_SALVAGE_OPTIONS.join(', ')}}). A full bag ({{BAG_SIZE}} pieces) salvages its weakest unlocked piece, never the best upgrade for a slot; that can be a piece you have just forged or crafted, and the log says so. A dropped piece salvages for essence, a forged or crafted one gives back part of what it was made from, and weapons and armour give bars of their metal too. Locked pieces are never sold or salvaged.
+It was most likely salvaged. To start with, common drops are salvaged as they land unless they would be an upgrade; once a few pieces have dropped, the Inventory shows this auto-salvage setting ({{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : RARITIES.find(r => r.id === o).name)).join(', ')}}). A full bag ({{BAG_SIZE}} pieces) salvages its weakest unlocked piece, never the best upgrade for a slot; that can be a piece you have just forged or crafted, and the log says so. A dropped piece salvages for essence, a forged or crafted one gives back part of what it was made from, and weapons and armour give bars of their metal too. Locked pieces are never sold or salvaged.
 
 ### What is essence for, and where do I get it?
 

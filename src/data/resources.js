@@ -40,7 +40,9 @@ export const RESOURCES = {
     yew_log:    R('yew_log',    'Yew Logs',    'log', 5, '🪵', '#22c55e'),
     magic_log:  R('magic_log',  'Magic Logs',  'log', 6, '🪵', '#a855f7'),
 
-    // Raw meat (hunting) and cooked food (cooking). `heals` is HP restored when eaten.
+    // Raw meat (hunting) and cooked food (cooking). `heal` is the share of the hero's max health a dish
+    // restores (food bonuses on top): a share, not a number, so food never goes stale as the hero grows (the
+    // owner's ask, October 2026: a fixed 40-1,100 healed 2% of a stage-160 hero).
     raw_rabbit: R('raw_rabbit', 'Raw Rabbit', 'raw', 1, '🥩', '#fb923c'),
     raw_fox:    R('raw_fox',    'Raw Fox',    'raw', 2, '🥩', '#fb923c'),
     raw_boar:   R('raw_boar',   'Raw Boar',   'raw', 3, '🥩', '#fb923c'),
@@ -48,13 +50,13 @@ export const RESOURCES = {
     raw_bear:   R('raw_bear',   'Raw Bear',   'raw', 5, '🥩', '#fb923c'),
     raw_drake:  R('raw_drake',  'Raw Drake',  'raw', 6, '🥩', '#fb923c'),
     raw_dragon: R('raw_dragon', 'Raw Dragon', 'raw', 7, '🥩', '#fb923c'),
-    cooked_rabbit: R('cooked_rabbit', 'Roast Rabbit',  'food', 1, '🍖', '#f59e0b', { heals: 40 }),
-    cooked_fox:    R('cooked_fox',    'Roast Fox',     'food', 2, '🍖', '#f59e0b', { heals: 80 }),
-    cooked_boar:   R('cooked_boar',   'Roast Boar',    'food', 3, '🍖', '#f59e0b', { heals: 150 }),
-    cooked_deer:   R('cooked_deer',   'Roast Venison', 'food', 4, '🍖', '#f59e0b', { heals: 260 }),
-    cooked_bear:   R('cooked_bear',   'Roast Bear',    'food', 5, '🍖', '#f59e0b', { heals: 420 }),
-    cooked_drake:  R('cooked_drake',  'Roast Drake',   'food', 6, '🍖', '#f59e0b', { heals: 650 }),
-    cooked_dragon: R('cooked_dragon', 'Roast Dragon',  'food', 7, '🍖', '#f59e0b', { heals: 1000 }),
+    cooked_rabbit: R('cooked_rabbit', 'Roast Rabbit',  'food', 1, '🍖', '#f59e0b', { heal: 0.12 }),
+    cooked_fox:    R('cooked_fox',    'Roast Fox',     'food', 2, '🍖', '#f59e0b', { heal: 0.16 }),
+    cooked_boar:   R('cooked_boar',   'Roast Boar',    'food', 3, '🍖', '#f59e0b', { heal: 0.21 }),
+    cooked_deer:   R('cooked_deer',   'Roast Venison', 'food', 4, '🍖', '#f59e0b', { heal: 0.27 }),
+    cooked_bear:   R('cooked_bear',   'Roast Bear',    'food', 5, '🍖', '#f59e0b', { heal: 0.33 }),
+    cooked_drake:  R('cooked_drake',  'Roast Drake',   'food', 6, '🍖', '#f59e0b', { heal: 0.39 }),
+    cooked_dragon: R('cooked_dragon', 'Roast Dragon',  'food', 7, '🍖', '#f59e0b', { heal: 0.45 }),
 
     // Raw fish (fishing) and cooked fish: a little more healing than meat of the same level.
     raw_shrimp:    R('raw_shrimp',    'Raw Shrimp',    'raw', 1, '🦐', '#fda4af'),
@@ -64,33 +66,36 @@ export const RESOURCES = {
     raw_swordfish: R('raw_swordfish', 'Raw Swordfish', 'raw', 5, '🐡', '#60a5fa'),
     raw_shark:     R('raw_shark',     'Raw Shark',     'raw', 6, '🦈', '#94a3b8'),
     raw_leviathan: R('raw_leviathan', 'Raw Leviathan', 'raw', 7, '🐋', '#6366f1'),
-    cooked_shrimp:    R('cooked_shrimp',    'Grilled Shrimp',  'food', 1, '🍤', '#fb923c', { heals: 45 }),
-    cooked_trout:     R('cooked_trout',     'Grilled Trout',   'food', 2, '🍣', '#fb923c', { heals: 90 }),
-    cooked_salmon:    R('cooked_salmon',    'Grilled Salmon',  'food', 3, '🍣', '#fb923c', { heals: 165 }),
-    cooked_lobster:   R('cooked_lobster',   'Boiled Lobster',  'food', 4, '🦞', '#fb923c', { heals: 285 }),
-    cooked_swordfish: R('cooked_swordfish', 'Swordfish Steak', 'food', 5, '🍱', '#fb923c', { heals: 460 }),
-    cooked_shark:     R('cooked_shark',     'Shark Fillet',    'food', 6, '🍱', '#fb923c', { heals: 715 }),
-    cooked_leviathan: R('cooked_leviathan', 'Leviathan Feast', 'food', 7, '🍲', '#fb923c', { heals: 1100 }),
+    cooked_shrimp:    R('cooked_shrimp',    'Grilled Shrimp',  'food', 1, '🍤', '#fb923c', { heal: 0.13 }),
+    cooked_trout:     R('cooked_trout',     'Grilled Trout',   'food', 2, '🍣', '#fb923c', { heal: 0.18 }),
+    cooked_salmon:    R('cooked_salmon',    'Grilled Salmon',  'food', 3, '🍣', '#fb923c', { heal: 0.22 }),
+    cooked_lobster:   R('cooked_lobster',   'Boiled Lobster',  'food', 4, '🦞', '#fb923c', { heal: 0.28 }),
+    cooked_swordfish: R('cooked_swordfish', 'Swordfish Steak', 'food', 5, '🍱', '#fb923c', { heal: 0.34 }),
+    cooked_shark:     R('cooked_shark',     'Shark Fillet',    'food', 6, '🍱', '#fb923c', { heal: 0.4 }),
+    cooked_leviathan: R('cooked_leviathan', 'Leviathan Feast', 'food', 7, '🍲', '#fb923c', { heal: 0.46 }),
 
     // Crops (farming) and the dishes they make. Dishes take two crops (one potato).
     potato:    R('potato',    'Potato',    'crop', 1, '🥔', '#d6a55f'),
     cabbage:   R('cabbage',   'Cabbage',   'crop', 2, '🥬', '#4ade80'),
     pumpkin:   R('pumpkin',   'Pumpkin',   'crop', 4, '🎃', '#f97316'),
     starfruit: R('starfruit', 'Starfruit', 'crop', 5, '⭐', '#facc15'),
-    baked_potato:   R('baked_potato',   'Baked Potato',   'food', 1, '🥔', '#f59e0b', { heals: 55 }),
-    cabbage_soup:   R('cabbage_soup',   'Cabbage Soup',   'food', 3, '🥣', '#f59e0b', { heals: 170 }),
-    pumpkin_pie:    R('pumpkin_pie',    'Pumpkin Pie',    'food', 4, '🥧', '#f59e0b', { heals: 330 }),
-    starfruit_tart: R('starfruit_tart', 'Starfruit Tart', 'food', 5, '🥮', '#f59e0b', { heals: 600 }),
+    baked_potato:   R('baked_potato',   'Baked Potato',   'food', 1, '🥔', '#f59e0b', { heal: 0.13 }),
+    cabbage_soup:   R('cabbage_soup',   'Cabbage Soup',   'food', 3, '🥣', '#f59e0b', { heal: 0.22 }),
+    pumpkin_pie:    R('pumpkin_pie',    'Pumpkin Pie',    'food', 4, '🥧', '#f59e0b', { heal: 0.28 }),
+    starfruit_tart: R('starfruit_tart', 'Starfruit Tart', 'food', 5, '🥮', '#f59e0b', { heal: 0.36 }),
 
-    // Herbs (alchemy foraging) and potions (alchemy brewing). Potions hold `charges` combat actions.
+    // Herbs (alchemy foraging) and potions (alchemy brewing): what each potion does is in data/potions.js.
     guam_leaf:        R('guam_leaf',        'Guam Leaf',        'herb', 1, '🌿', '#10b981'),
     marrentill_leaf:  R('marrentill_leaf',  'Marrentill Root',  'herb', 2, '🌿', '#10b981'),
     tarromin_leaf:    R('tarromin_leaf',    'Tarromin Spore',   'herb', 3, '🌿', '#10b981'),
     harralander_leaf: R('harralander_leaf', 'Harralander Lotus','herb', 4, '🌿', '#10b981'),
-    accuracy_potion: R('accuracy_potion', 'Accuracy Potion', 'potion', 1, '🧪', '#f87171', { effect: 'atk',   desc: '+20% ATK' }),
-    defense_potion:  R('defense_potion',  'Defense Potion',  'potion', 2, '🧪', '#60a5fa', { effect: 'def',   desc: '+20% DEF' }),
-    evasion_potion:  R('evasion_potion',  'Evasion Potion',  'potion', 3, '🧪', '#34d399', { effect: 'dodge', desc: '+15% Dodge' }),
-    health_potion:   R('health_potion',   'Health Potion',   'potion', 4, '🧪', '#f472b6', { effect: 'hp',    desc: '+25% Max HP' }),
+    accuracy_potion:   R('accuracy_potion',   'Accuracy Potion',   'potion', 1, '🧪', '#f87171', { desc: 'more attack while fighting' }),
+    defense_potion:    R('defense_potion',    'Defense Potion',    'potion', 2, '🧪', '#60a5fa', { desc: 'more defence while fighting' }),
+    evasion_potion:    R('evasion_potion',    'Evasion Potion',    'potion', 3, '🧪', '#34d399', { desc: 'a chance to dodge while fighting' }),
+    health_potion:     R('health_potion',     'Health Potion',     'potion', 4, '🧪', '#f472b6', { desc: 'more max health while fighting' }),
+    gatherers_draught: R('gatherers_draught', "Gatherer's Draught", 'potion', 1, '🧪', '#a16207', { desc: 'faster work in every skill' }),
+    scholars_tonic:    R('scholars_tonic',    "Scholar's Tonic",    'potion', 2, '🧪', '#22d3ee', { desc: 'more skill XP' }),
+    fortune_draught:   R('fortune_draught',   'Fortune Draught',   'potion', 3, '🧪', '#facc15', { desc: 'more gold and drops while fighting' }),
 
     // Combat-only materials. Essence fuels equipment upgrades — the one thing crafting cannot make.
     // Bait drops in the wetter zones: each catch uses one, if you have it, for a likely second fish.
@@ -125,5 +130,10 @@ export function orderedByTier(category) {
 
 /** Every food, smallest heal first (auto-eat picks the smallest that fills the gap). */
 export function foodsByHealing() {
-    return resourcesOfCategory('food').sort((a, b) => a.heals - b.heals);
+    return resourcesOfCategory('food').sort((a, b) => a.heal - b.heal);
+}
+
+/** Health a food restores for a hero (derived: maxHp, foodMult): its share of max health, never less than 1. */
+export function foodHeal(food, derived) {
+    return Math.max(1, Math.round((derived?.maxHp || 0) * (food?.heal || 0) * (derived?.foodMult || 1)));
 }

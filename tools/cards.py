@@ -5,6 +5,7 @@
     python3 tools/cards.py art/cards                    # cut every sheet in the folder into its pictures
     python3 tools/cards.py art/cards --sheet out.png    # ... and write a contact sheet to look over
     python3 tools/cards.py --list                       # only rewrite src/data/cardart.js
+    python3 tools/cards.py --recolour                   # the stand-in cards (RECOLOURS), then the list
 
 A sheet is one wide picture holding a 3 x 3 grid of small paintings. SHEETS below lists, for each
 sheet, its nine cards in reading order: the card's name and what to paint. The same list writes the
@@ -225,6 +226,43 @@ def only_of(path):
     return m.group(1) if m else None
 
 
+# Cards that stand in until Gemini paints their own: another card's painting with its liquid recoloured
+# (October 2026, the potions that came with the work potions). For each: the source card; the liquid's hue
+# band and the band it goes to, in PIL's 0-255 HSV; saturation and value scales; the least saturation
+# recoloured; and `glow`, the brightness under which a pixel is the liquid's glow over the table rather than
+# the liquid, turned `glow_turn` steps further round and its saturation kept to `glow_sat` (a yellow glow
+# over dark wood reads as lime). A painted sheet that names these cards replaces them.
+RECOLOURS = {
+    'scholars_tonic':    dict(source='defense_potion', band=(134, 170), to=(124, 136), sat=1.0, val=1.05),   # the blue flask among scrolls, turned cyan
+    'gatherers_draught': dict(source='evasion_potion', band=(46, 106), to=(14, 24), sat=1.4, val=0.78),     # the green flask among herbs, turned amber
+    'fortune_draught':   dict(source='defense_potion', band=(134, 170), to=(26, 34), sat=1.25, val=1.1),   # the flask among the scrolls again, turned gold
+}
+
+
+def recolour():
+    for name, r in RECOLOURS.items():
+        (lo, hi), (tlo, thi) = r['band'], r['to']
+        img = Image.open(OUT / f"{r['source']}.webp").convert('RGB')
+        hsv = np.array(img.convert('HSV')).astype(np.float64)
+        h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+        # how far inside the band a pixel's hue is, feathered over 8 steps at each edge; grey pixels stay
+        inside = np.clip(np.minimum(h - lo, hi - h) / 8 + 1, 0, 1) * np.clip((s - r.get('least', 40)) / 40, 0, 1)
+        mapped = tlo + np.clip((h - lo) / (hi - lo), 0, 1) * (thi - tlo)
+        sat = np.full_like(s, r['sat'])
+        if 'glow' in r:   # 1 for the bright liquid itself, falling to 0 in its dimmer glow
+            dim, bright = r['glow']
+            liquid = np.clip((v - dim) / (bright - dim), 0, 1)
+            mapped = mapped + r['glow_turn'] * (1 - liquid)
+            sat = r['glow_sat'] + (r['sat'] - r['glow_sat']) * liquid
+        turn = (mapped - h + 128) % 256 - 128   # the short way round the colour wheel
+        hsv[..., 0] = (h + turn * inside) % 256
+        hsv[..., 1] = np.clip(s * (1 + (sat - 1) * inside), 0, 255)
+        hsv[..., 2] = np.clip(v * (1 + (r['val'] - 1) * inside), 0, 255)
+        out = Image.fromarray(hsv.round().astype(np.uint8), 'HSV').convert('RGB')
+        out.save(OUT / f'{name}.webp', quality=88)
+        print(f"{name}: {r['source']} recoloured")
+
+
 def write_list():
     names = sorted(p.stem for p in OUT.glob('*.webp')) if OUT.exists() else []
     body = ''.join(f"    '{n}',\n" for n in names)
@@ -255,7 +293,12 @@ def main():
     ap.add_argument('--prompts', action='store_true', help='print the message for each sheet')
     ap.add_argument('--sheet', help='also write a contact sheet of the cut pictures here')
     ap.add_argument('--list', action='store_true', help='only rewrite src/data/cardart.js')
+    ap.add_argument('--recolour', action='store_true', help='write the stand-in cards (RECOLOURS), then the list')
     args = ap.parse_args()
+    if args.recolour:
+        recolour()
+        write_list()
+        return
     if args.prompts:
         for i, (name, cards) in enumerate(SHEETS):
             print(f'{name}.png\n{prompt(i, cards)}\n')

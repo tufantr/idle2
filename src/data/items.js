@@ -141,7 +141,12 @@ export const DROP_HIGH_RARITY_PER_TIER = 0.15; // epic/legendary weight x(1 + 0.
 // ---------- Bag, salvage, reforge ----------
 
 export const BAG_SIZE = 40;
-export const AUTO_SALVAGE_OPTIONS = ['off', 'common', 'uncommon', 'rare'];
+// More room for gold (the owner's ask, October 2026; gold piles up, and this is a sink for it): each
+// purchase adds `slots`, up to `max` purchases (a bag of 100), priced like the gold shop in kills' worth of
+// gold at the best stage, each `growth` times the last (systems/inventory.js bagUpgradePrice).
+export const BAG_UPGRADE = { slots: 5, max: 12, kills: 150, growth: 1.5 };
+// 'weaker': any drop that wouldn't be an upgrade for what is worn, whatever its rarity (never a unique).
+export const AUTO_SALVAGE_OPTIONS = ['off', 'common', 'uncommon', 'rare', 'weaker'];
 
 /**
  * Half of the essence spent upgrading an item comes back when it is salvaged: what the anvil kept count

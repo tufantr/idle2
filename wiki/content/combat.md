@@ -72,13 +72,13 @@ Tap the monster (or press Space) to strike: a hit for {{pct(BALANCE.combat.manua
 
 Each strike builds the combo, up to {{BALANCE.combat.comboMax}}; each one adds a little less as it grows. Every point of combo makes all your hero's hits, his own and your strikes, deal {{pct(BALANCE.combat.comboDmgPerStack, 0)}} more: +{{pct(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack, 0)}} at full combo. Strikes matter most against a boss on its timer and in the Titan's race.
 
-The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} seconds after your last strike, faster the higher it is, and it is gone when your hero leaves the fight or falls. Strikes do not use up potion charges.
+The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} seconds after your last strike, faster the higher it is, and it is gone when your hero leaves the fight or falls.
 
 ## Food and potions
 
 Below {{pct(BASE.baseAutoEatThreshold, 0)}} of his health your hero eats, checked before every attack, his and the monster's. With **Auto** he picks the smallest food that fills the gap. See [[Food]].
 
-A [[Potions|potion]] picked on the Combat tab is drunk as the fight needs it, and one bottle lasts {{BASE.basePotionCharges}} of your hero's attacks.
+A [[Potions|potion]] picked on the Combat tab is drunk as the fight starts, and one bottle lasts {{POTION_MINUTES}} minutes of fighting; what it raises it multiplies, after every other bonus.
 
 ## What a kill pays
 

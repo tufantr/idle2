@@ -2,8 +2,9 @@
 // Everything persisted lives here; derived values (stats, modifiers) are recomputed, never saved.
 
 import { RESOURCES } from '../data/resources.js';
+import { POTIONS, POTION_MINUTES } from '../data/potions.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
-import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS } from '../data/items.js';
+import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS, BAG_UPGRADE } from '../data/items.js';
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
@@ -32,6 +33,8 @@ export function createDefaultState(now = Date.now()) {
         gold: 0,
         resources: {},
         inventory: [],
+        workPotion: { id: 'none', ms: 0 },   // the work potion and what is left of its dose, in ms of work
+        bagUpgrades: 0,        // +BAG_UPGRADE.slots each, bought with gold
         equipped: {},
         tools: {},
         skills: {},
@@ -48,7 +51,7 @@ export function createDefaultState(now = Date.now()) {
             enemyTimer: 0,
             autoEat: 'auto',
             potion: 'none',
-            potionCharges: 0,
+            potionMs: 0,       // what is left of the fight potion's dose, in ms of fighting (data/potions.js)
             combo: 0,
             lastComboAt: 0,
             farmMode: false,
@@ -118,7 +121,8 @@ export function createDefaultState(now = Date.now()) {
     state.farming.plots = FARMING_PLOTS.map(() => ({ crop: null, plantedAt: 0, readyAt: 0 }));
     state.agility.built = AGILITY_SLOTS.map(() => null);
     state.agility.levels = AGILITY_SLOTS.map(() => 0);
-    for (const id of NON_COMBAT_SKILLS) state.minigame[id] = { boostUntil: 0, bonus: 0, streak: 0, challenge: null, nextOpportunityAt: 0, opportunityUntil: 0 };
+    // gainId/gainQty/gainXp: what the skill made while the boost ran, so its end can say what the boost added
+    for (const id of NON_COMBAT_SKILLS) state.minigame[id] = { boostUntil: 0, mult: 0, streak: 0, challenge: null, nextOpportunityAt: 0, opportunityUntil: 0, gainId: '', gainQty: 0, gainXp: 0 };
     return state;
 }
 
@@ -271,7 +275,7 @@ export function clampTimers(state, now) {
         if (!isPlainObject(mg)) continue;
         mg.nextOpportunityAt = upTo(mg.nextOpportunityAt, now + mgMax.opportunityEveryMs[1]);
         mg.opportunityUntil = upTo(mg.opportunityUntil, now + mgMax.opportunityWindowMs);
-        mg.boostUntil = upTo(mg.boostUntil, now + mgMax.boostMs * 2);
+        mg.boostUntil = upTo(mg.boostUntil, now + (mgMax.boostMs + 4 * mgMax.streakMs) * 2);
         if (mg.challenge && !(mg.challenge.expiresAt <= now + 10000)) mg.challenge = null;
     }
     if (isPlainObject(state.meta)) {
@@ -414,6 +418,7 @@ function normalise(data, now) {
         state.equipped[slot] = item && TYPE_SLOTS[item.type].includes(slot) ? item : null;
     }
     state.inventory = (Array.isArray(state.inventory) ? state.inventory : []).map(i => sanitizeItem(i, ids, nextId)).filter(Boolean);
+    state.bagUpgrades = Math.max(0, Math.min(BAG_UPGRADE.max, Math.floor(finite(state.bagUpgrades))));
     for (const id of ids) if (id >= state.idCounter) state.idCounter = id + 1;
     state.log = (Array.isArray(state.log) ? state.log : [])
         .filter(e => isPlainObject(e) && typeof e.text === 'string')
@@ -447,8 +452,14 @@ function normalise(data, now) {
     for (const [key, value] of Object.entries(pages)) if (value === true && isCodexKey(key)) state.codex[key] = true;
     for (const item of [...state.inventory, ...Object.values(state.equipped)]) if (item?.type && isCodexKey(codexKey(item))) state.codex[codexKey(item)] = true;
     state.stats.codexFound = Object.keys(state.codex).length;
-    if (!['auto', 'none'].includes(state.combat.autoEat) && !(RESOURCES[state.combat.autoEat]?.heals > 0)) state.combat.autoEat = 'auto';
-    if (state.combat.potion !== 'none' && RESOURCES[state.combat.potion]?.category !== 'potion') state.combat.potion = 'none';
+    if (!['auto', 'none'].includes(state.combat.autoEat) && !(RESOURCES[state.combat.autoEat]?.heal > 0)) state.combat.autoEat = 'auto';
+    if (state.combat.potion !== 'none' && POTIONS[state.combat.potion]?.use !== 'fight') state.combat.potion = 'none';
+    if (!isPlainObject(state.workPotion)) state.workPotion = { id: 'none', ms: 0 };
+    if (state.workPotion.id !== 'none' && POTIONS[state.workPotion.id]?.use !== 'work') state.workPotion.id = 'none';
+    // a dose is never longer than the longest there is (the Alchemist medal's included); a save from the
+    // potions that counted attacks starts with none working, and drinks the next as it fights
+    const maxDose = POTION_MINUTES * 60000 * 2;
+    state.workPotion.ms = Math.max(0, Math.min(maxDose, finite(state.workPotion.ms)));
     state.action = cleanAction(state.action);
     if (typeof state.settings.forceEvent !== 'string') state.settings.forceEvent = null;
     const volume = Number(state.settings.volume);
@@ -471,7 +482,8 @@ function normalise(data, now) {
     state.combat.regroupLeft = Math.max(0, Math.min(BALANCE.combat.regroupMs, finite(state.combat.regroupLeft)));
     state.combat.playerTimer = Math.max(0, finite(state.combat.playerTimer));
     state.combat.enemyTimer = Math.max(0, finite(state.combat.enemyTimer));
-    state.combat.potionCharges = Math.max(0, Math.floor(finite(state.combat.potionCharges)));
+    state.combat.potionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.potionMs)));
+    delete state.combat.potionCharges;
     // work and a fight are never both under way (a save with both ran them at once): the fight goes on
     if (state.action && state.combat.active) state.action = null;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
@@ -620,8 +632,13 @@ function normalise(data, now) {
         }
         mg.challenge = null;
         mg.streak = intIn(mg.streak, 0, 5, 0);
-        mg.bonus = Math.max(0, Math.min(mgRules.maxBonus, finite(mg.bonus)));
-        if (mg.boostUntil < now) { mg.boostUntil = 0; mg.bonus = 0; }
+        // a boost from before the ×2 (it stored +35% in `bonus`) runs out as a ×2
+        mg.mult = Math.max(1, Math.min(mgRules.speedMult, finite(mg.mult) || mgRules.speedMult));
+        delete mg.bonus;
+        mg.gainId = RESOURCES[mg.gainId] ? mg.gainId : '';
+        mg.gainQty = Math.max(0, Math.floor(finite(mg.gainQty)));
+        mg.gainXp = Math.max(0, finite(mg.gainXp));
+        if (mg.boostUntil < now) { mg.boostUntil = 0; mg.mult = 0; mg.gainId = ''; mg.gainQty = 0; mg.gainXp = 0; }
     }
     return clampTimers(state, now);
 }

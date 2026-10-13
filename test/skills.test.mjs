@@ -113,7 +113,7 @@ test('every resource has at least one consumer', () => {
 
 test('auto-eat considers every food by healing, whichever line it comes from', () => {
     const foods = foodsByHealing();
-    for (let i = 1; i < foods.length; i++) assert.ok(foods[i].heals >= foods[i - 1].heals);
+    for (let i = 1; i < foods.length; i++) assert.ok(foods[i].heal >= foods[i - 1].heal);
     assert.ok(foods.some(f => f.id === 'cooked_shark') && foods.some(f => f.id === 'pumpkin_pie'));
 });
 

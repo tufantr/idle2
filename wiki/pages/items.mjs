@@ -2,6 +2,7 @@
 // (lib/xref.mjs), and the Food and Potions pages.
 
 import { RESOURCES, sellValue, foodsByHealing } from '../../src/data/resources.js';
+import { POTIONS, POTION_MINUTES, potionStrength, potionEffectText, potionLevel } from '../../src/data/potions.js';
 import { SKILLS } from '../../src/data/skills.js';
 import { GEM_TIERS, METALS, JEWEL_BARS, TOOLS, ANVIL_LEVEL_PER_UPGRADE } from '../../src/data/workshop.js';
 import { GEAR_TIERS } from '../../src/data/items.js';
@@ -46,7 +47,7 @@ function lead(r) {
     if (s.shop) parts.push('sold in the Shop');
     if (parts.length > 1) parts.push(`and ${parts.pop()}`);
     const what = r.desc && r.category !== 'potion' ? `${esc(r.desc)}. ` : '';   // a potion's says what it gives, below
-    return `${what}${esc(r.name)} ${r.category === 'food' ? `heals ${fmt(r.heals)} health. It is ` : r.category === 'potion' ? `gives ${esc(r.desc || '')} in a fight. It is ` : 'is '}${parts.length ? parts.join(parts.length > 2 ? ', ' : ' ') : 'found in the fight'}.`;
+    return `${what}${esc(r.name)} ${r.category === 'food' ? `heals ${pct(r.heal, 0)} of your hero's health. It is ` : r.category === 'potion' ? `gives ${esc(r.desc || '')}. It is ` : 'is '}${parts.length ? parts.join(parts.length > 2 ? ', ' : ' ') : 'found in the fight'}.`;
 }
 
 function sourcesHtml(r) {
@@ -120,8 +121,8 @@ function usesHtml(r) {
     }
     if (u.tools) out.push(section('Tools', table(['Tool', 'Made in', 'Level #', 'Needs'], u.tools.map(t => [link(`/tools#${t.toolId}`, esc(t.tier.name), `tool/${t.toolId}`), skillLink(t.tool.madeBy), t.tier.levelReq, resList(t.tier.consumes)]))));
     if (u.agility) out.push(section('Agility', table(['Obstacle slot', 'Agility level #', 'Needs'], u.agility.map(a => [link(`${path.skill('agility')}#slot-${a.slot + 1}`, `Slot ${a.slot + 1}`), a.s.levelReq, `${fmt(a.s.costGold)} gold, ${resList(a.s.materials)}`]))));
-    if (r.category === 'food') out.push(section('Eaten', `<p>Your hero eats food in a fight when health falls below the auto-eat line: ${esc(r.name)} heals ${fmt(r.heals)}. See ${link('/food', 'Food')}.</p>`));
-    if (r.category === 'potion') out.push(section('Drunk', `<p>Chosen on the Combat tab, it gives ${esc(r.desc)} for ${BASE.basePotionCharges} of your hero's attacks a bottle. See ${link('/potions', 'Potions')}.</p>`));
+    if (r.category === 'food') out.push(section('Eaten', `<p>Your hero eats food in a fight when health falls below the auto-eat line: ${esc(r.name)} heals ${pct(r.heal, 0)} of his max health. See ${link('/food', 'Food')}.</p>`));
+    if (POTIONS[r.id]) out.push(section('Drunk', `<p>${POTIONS[r.id].use === 'fight' ? 'Picked under the fight' : 'Picked on a skill\'s tab'}, it gives ${potionEffectText(r.id, potionStrength(r.id, potionLevel(r.id)))} at Alchemy ${potionLevel(r.id)}, rising to ${potionEffectText(r.id, potionStrength(r.id, 99))} at 99, for ${POTION_MINUTES} minutes of ${POTIONS[r.id].use === 'fight' ? 'fighting' : 'work'} a bottle. See ${link('/potions', 'Potions')}.</p>`));
     if (r.id === 'essence') out.push(section('Used for', `<ul><li>Reinforcing and rerolling weapons and armour at the anvil (${link('/skills/smithing#the-anvil', 'Smithing')}).</li><li>Upgrading jewellery and reforging its bonuses (${link('/equipment', 'Equipment')}).</li></ul>`));
     if (r.id === 'fishing_bait') out.push(section('Used for', `<p>Each catch in ${skillLink('fishing')} uses one bait, if you have any, for a ${pct(BAIT_EXTRA_CHANCE, 0)} chance of a second fish.</p>`));
     return out.join('\n');
@@ -141,8 +142,8 @@ function itemPage(r) {
             rows: [
                 ['Kind', link(`/items#${catAnchor(r.category)}`, catName(r.category))],
                 ['Tier', r.tier],
-                r.heals ? ['Heals', fmt(r.heals)] : null,
-                r.category === 'potion' ? ['Effect', `${esc(r.desc)}, ${BASE.basePotionCharges} attacks`] : null,
+                r.heal ? ['Heals', `${pct(r.heal, 0)} of max health`] : null,
+                POTIONS[r.id] ? ['Effect', `${potionEffectText(r.id, potionStrength(r.id, potionLevel(r.id)))} to ${potionEffectText(r.id, potionStrength(r.id, 99))}, ${POTION_MINUTES} min`] : null,
                 gem ? ['Jewellery', `Crafting ${gem.levelReq}`] : null,
                 metal ? ['Gear', `${metal.name}, Smithing ${metal.levelReq}`] : null,
                 jewelBar ? ['Jewellery', `${jewelBar.name} settings, Crafting ${jewelBar.levelReq}`] : null,
@@ -160,7 +161,7 @@ function itemPage(r) {
 function indexPage(help) {
     const body = CATEGORIES.map(([id, name, text]) => {
         const list = Object.values(RESOURCES).filter(r => r.category === id).sort((a, b) => a.tier - b.tier);
-        return section(name, `<p>${text}</p>${tiles(list.map(r => ({ href: path.item(r.id), title: esc(r.name), pic: resIcon(r.id, { scale: 1.5 }), note: r.heals ? `heals ${fmt(r.heals)}` : `tier ${r.tier}` })), 'small')}`, { id: catAnchor(id) });
+        return section(name, `<p>${text}</p>${tiles(list.map(r => ({ href: path.item(r.id), title: esc(r.name), pic: resIcon(r.id, { scale: 1.5 }), note: r.heal ? `heals ${pct(r.heal, 0)}` : `tier ${r.tier}` })), 'small')}`, { id: catAnchor(id) });
     }).join('\n');
     return { body: `${help.prose('/items')}\n${body}\n${section('Gear', `<p>Weapons, armour and jewellery are not stacked like these: see ${link('/equipment', 'Equipment')}, ${link('/equipment/jewellery', 'Jewellery')}, ${link('/uniques', 'Unique items')} and ${link('/tools', 'Tools')}.</p>`)}` };
 }
@@ -168,22 +169,22 @@ function indexPage(help) {
 function foodPage(help) {
     const cooked = foodsByHealing().map(r => {
         const made = (xref().sources[r.id]?.actions || [])[0];
-        return [res(r.id), fmt(r.heals), made ? `${skillLink(made.skill)} ${made.action.levelReq}` : '–', made ? resList(made.needs) : '–'];
+        return [res(r.id), pct(r.heal, 0), made ? `${skillLink(made.skill)} ${made.action.levelReq}` : '–', made ? resList(made.needs) : '–'];
     });
     return {
-        body: `${help.prose('/food')}\n${section('Every food', table(['Food', 'Heals #', 'Cooked at', 'From'], cooked))}`,
+        body: `${help.prose('/food')}\n${section('Every food', table(['Food', 'Heals (of max health)', 'Cooked at', 'From'], cooked))}`,
         infobox: infobox({ title: 'Food', image: resIcon('cooked_boar', { scale: 3 }), rows: [['Eats below', `${pct(BASE.baseAutoEatThreshold, 0)} health`], ['Made in', skillLink('cooking')]] })
     };
 }
 
 function potionsPage(help) {
-    const rows = Object.values(RESOURCES).filter(r => r.category === 'potion').map(r => {
+    const rows = Object.values(RESOURCES).filter(r => r.category === 'potion').sort((a, b) => potionLevel(a.id) - potionLevel(b.id)).map(r => {
         const made = xref().sources[r.id]?.actions?.[0];
-        return [res(r.id), esc(r.desc), made ? made.action.levelReq : '–', made ? resList(made.needs) : '–', fmt(made?.action.xp || 0)];
+        return [res(r.id), POTIONS[r.id].use === 'fight' ? 'Fight' : 'Work', `${potionEffectText(r.id, potionStrength(r.id, potionLevel(r.id)))} → ${potionEffectText(r.id, potionStrength(r.id, 99))}`, made ? made.action.levelReq : '–', made ? resList(made.needs) : '–', fmt(made?.action.xp || 0)];
     });
     return {
-        body: `${help.prose('/potions')}\n${section('Every potion', table(['Potion', 'Effect', 'Alchemy level #', 'Brewed from', 'XP #'], rows))}`,
-        infobox: infobox({ title: 'Potions', image: resIcon('health_potion', { scale: 3 }), rows: [['A bottle lasts', `${BASE.basePotionCharges} attacks`], ['Brewed in', skillLink('alchemy')]] })
+        body: `${help.prose('/potions')}\n${section('Every potion', table(['Potion', 'For', 'Effect (brewed → Alchemy 99)', 'Alchemy level #', 'Brewed from', 'XP #'], rows))}`,
+        infobox: infobox({ title: 'Potions', image: resIcon('health_potion', { scale: 3 }), rows: [['A bottle lasts', `${POTION_MINUTES} minutes of its work`], ['Brewed in', skillLink('alchemy')]] })
     };
 }
 

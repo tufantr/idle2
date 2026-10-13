@@ -78,13 +78,14 @@ test('a Health Potion follows the last one at once: no health is lost between tw
     game.setPotion('health_potion');
     game.enterCombat();
     game.setFarmMode(true);
-    tickUntil(game, () => game.state.combat.potionCharges > 0, 60000);
+    tickUntil(game, () => game.state.combat.potionMs > 0, 60000);
     game.tick(game.now + 100);
     const boosted = game.derived.maxHp;
-    assert.ok(boosted > 0 && game.state.combat.potionCharges > 0);
+    assert.ok(boosted > 0 && game.state.combat.potionMs > 0);
     let lowest = boosted;
     let now = game.now;
-    for (let i = 0; i < 1200 && game.state.resources.health_potion > 1; i++) { now += 100; game.tick(now); lowest = Math.min(lowest, game.derived.maxHp); }
+    // a dose is minutes of fighting now: a second at a time through five of them
+    for (let i = 0; i < 3000 && game.state.resources.health_potion > 1; i++) { now += 1000; game.tick(now); lowest = Math.min(lowest, game.derived.maxHp); }
     assert.ok(game.state.resources.health_potion <= 1, 'several potions were drunk');
     assert.equal(lowest, boosted, 'max health never fell back between potions');
 });

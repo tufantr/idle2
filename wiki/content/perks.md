@@ -14,10 +14,10 @@ Your first prestige brings your first point, or {{BALANCE.prestige.spPerPrestige
 
 ## How perks work
 
-- Each level of a perk costs one skill point. You buy one level at a time, up to the perk's limit (the table below).
+- A level costs more as a perk climbs: levels 1 to {{PERK_COST_STEP}} cost 1 skill point each, the next {{PERK_COST_STEP}} cost 2, and so on, never more than {{PERK_COST_MAX}} (a 25-level perk costs {{Array.from({ length: 25 }, (_, i) => perkLevelCost(i + 1)).reduce((a, b) => a + b, 0)}} in all). You buy one level at a time, up to the perk's limit (the table below), and the button says what the next one costs.
 - A level can't be taken back, but it is never wasted either: what you buy is yours for good.
 - A perk's bonus adds to the same kind of bonus from everywhere else. Knight's attack, for example, joins the attack bonuses from your [[Combat|Combat level]], [[Medals|medals]], [[Pets|pets]] and potions, and the total multiplies the attack of your fists and [[Equipment|gear]].
-- Filling every perk except Paragon takes {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + p.max, 0)}} skill points.
+- Filling every perk except Paragon takes {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + Array.from({ length: p.max }, (_, i) => perkLevelCost(i + 1)).reduce((a, b) => a + b, 0), 0)}} skill points, for {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + p.max, 0)}} levels.
 
 ## Good first picks
 
@@ -29,4 +29,4 @@ No choice is wrong, since every level lasts, but some pay off sooner than others
 
 ## Paragon, for the long run
 
-Paragon gives +{{pct(PERKS.find(p => p.id === 'paragon').mods.atkMult, 0)}} attack, +{{pct(PERKS.find(p => p.id === 'paragon').mods.defMult, 0)}} defence and +{{pct(PERKS.find(p => p.id === 'paragon').mods.hpMult, 0)}} health a level, for up to {{PERKS.find(p => p.id === 'paragon').max}} levels. A level of it is smaller than a level of Knight or Warlord, so Paragon is where your points go once the other perks are full. It is also deep enough never to run out: late in the game, every skill point you earn still makes your hero stronger.
+Paragon gives +{{pct(PERKS.find(p => p.id === 'paragon').mods.atkMult, 0)}} attack, +{{pct(PERKS.find(p => p.id === 'paragon').mods.defMult, 0)}} defence and +{{pct(PERKS.find(p => p.id === 'paragon').mods.hpMult, 0)}} health a level, for up to {{PERKS.find(p => p.id === 'paragon').max}} levels. A level of it is smaller than a level of Knight or Warlord, so Paragon is where your points go once the other perks are full. Its price rises like every perk's: from level {{PERK_COST_STEP * (PERK_COST_MAX - 1) + 1}} on, each costs {{PERK_COST_MAX}} points. It is also deep enough never to run out: late in the game, every skill point you earn still makes your hero stronger.
