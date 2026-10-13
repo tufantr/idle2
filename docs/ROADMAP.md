@@ -1131,8 +1131,9 @@ Keeping it running:
 - [x] **A mini-game's win is felt** (the owner: "I don't feel anything"): ×2 speed for 45 seconds (5 s more
       a streak win), multiplying every other bonus; the working card glows with a ×2 and its bar shines, and
       the boost's end says what it added ("+14 copper ore, +340 XP"). Playing one keeps Focus
-- [x] **When the next clan attacks come**: until the bank is full the Clan tab shows "+3 in 5h 12m" by the
-      attack pips, and with none left the button says when they come
+- [x] **When the next clan attacks come**: the Clan tab always says it by the attack pips, "+3 in 5h 12m",
+      or with all six waiting "Full · refill in 5h 12m" (a full bank's next ones would be lost), counting
+      down between the tab's refreshes; with none left the button says when they come
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

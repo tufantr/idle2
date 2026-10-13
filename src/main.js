@@ -1009,7 +1009,7 @@ async function refreshSocial() {
         const [mine, rewards, board] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period)]);
         if (!current()) return;
         social.clan = mine.clan;
-        Object.assign(social, { members: mine.members || [], boss: mine.boss || null, board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, maxMembers: mine.maxMembers || 20 });
+        Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20 });
         social.rewards = rewards.rewards || [];
         social.leaderboard = board;
         social.optIn = !!board.optIn;
@@ -1142,7 +1142,7 @@ window.FI = {
             if (game.state.clanResult) return;                        // still not sent: it is retried, and this waits
             await cloudSave(false);
             const mine = await cloud.myClan();
-            Object.assign(ui.social, { clan: mine.clan, members: mine.members || [], boss: mine.boss || null, board: mine.board || [], attacksLeft: mine.attacksLeft || 0,
+            Object.assign(ui.social, { clan: mine.clan, members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0,
                 attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6 });
             const boss = mine.boss;
             if (!mine.clan || !boss) { toast('Join a clan first.', 'info'); return; }

@@ -2113,22 +2113,25 @@ function clanBossPanel(game, social, boss, pct) {
     const pending = !!game.state.clanResult;
     const pips = Array.from({ length: bank }, (_, i) => `<i class="clan-pip${i < waiting ? ' on' : ''}"></i>`).join('');
     const ready = waiting > 0 && !boss.killed && !social.attacking && !fighting && !titanFight && !pending;
+    // the server's times, as of when they came (social.bossAt), counted down to now between refreshes
+    const since = Math.max(0, Date.now() - (Number(social.bossAt) || Date.now()));
+    const endsMs = Math.max(0, (Number(boss.endsInMs) || 0) - since);
+    const dayEndMs = boss.nextInMs > 0 ? Math.max(0, boss.nextInMs - since) : 86400000 - (Date.now() % 86400000);
     // felled: back at midnight UTC as the next level, or (on the week's last day) a new boss on Monday
     const lastDay = !(boss.nextInMs > 0) || boss.nextInMs >= boss.endsInMs;
-    const comes = lastDay ? `A new boss in ${duration(boss.endsInMs)}` : `Level ${(boss.level || 1) + 1} in ${duration(boss.nextInMs)}`;
-    // attacks come at midnight UTC: until the bank is full, when the next ones come
+    const comes = lastDay ? `A new boss in ${duration(endsMs)}` : `Level ${(boss.level || 1) + 1} in ${duration(dayEndMs)}`;
+    // attacks come at midnight UTC, `perDay` of them up to the bank: when, always (a full bank's would be lost)
     const perDay = Number(social.attacksPerDay) || 3;
-    const refillMs = boss.nextInMs > 0 ? boss.nextInMs : 86400000 - (Date.now() % 86400000);
-    const refill = waiting < bank ? `<span class="clan-refill" title="${perDay} attacks come each day at midnight UTC, up to ${bank}">${glyph('time')} +${Math.min(perDay, bank - waiting)} in ${duration(refillMs)}</span>` : '';
+    const refill = `<span class="clan-refill" title="${perDay} attacks come each day at midnight UTC, up to ${bank} waiting">${glyph('time')} ${waiting < bank ? `+${Math.min(perDay, bank - waiting)} in` : 'Full · refill in'} ${duration(dayEndMs)}</span>`;
     return `<div class="clan-boss${ready ? ' ready' : ''}">
         <span class="clan-boss-face">${sprite(`mon/${look.name}`, { scale: 2, cls: boss.killed ? 'soft silhouette' : 'soft', fallback: '🐉' })}</span>
         <div class="clan-boss-text">
-            <div><b>${esc(look.name)}</b>${boss.level ? ` <span class="clan-level">Level ${boss.level}</span>` : ''} <span class="muted small">${boss.killed ? `defeated${boss.lastHit ? ` · last hit by ${esc(boss.lastHit)}` : ''}` : `this week's boss · ends in ${duration(boss.endsInMs)}`}</span></div>
+            <div><b>${esc(look.name)}</b>${boss.level ? ` <span class="clan-level">Level ${boss.level}</span>` : ''} <span class="muted small">${boss.killed ? `defeated${boss.lastHit ? ` · last hit by ${esc(boss.lastHit)}` : ''}` : `this week's boss · ends in ${duration(endsMs)}`}</span></div>
             <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
             <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
             <div class="btn-row">${fighting ? '<span class="status-pill fighting">Fighting now</span>'
                 : boss.killed && !pending ? `<span class="status-pill clan-next">${glyph('time')} ${comes}</span>`
-                : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : waiting > 0 ? 'Fight the boss' : `Attacks in ${duration(refillMs)}`}</button>`}
+                : `<button class="prestige-btn" onclick="FI.clanFight()" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : waiting > 0 ? 'Fight the boss' : `Attacks in ${duration(dayEndMs)}`}</button>`}
                 <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${perDay} more come each day, up to ${bank}">${pips}</span>${refill}</div>
         </div>
     </div>`;
