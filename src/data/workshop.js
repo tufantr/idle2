@@ -164,7 +164,7 @@ export const TOOLS = {
         ]
     },
     bow: {
-        name: 'Bow', icon: '🏹', skill: 'hunting', madeBy: 'crafting',
+        name: 'Bow', icon: '🏹', skill: 'hunting', madeBy: 'crafting',   // the whole of Hunting, river spots too (the rod went with Fishing)
         tiers: [
             { tier: 1, name: 'Shortbow',    levelReq: 5,  consumes: { normal_log: 3, copper_bar: 1 }, xp: 40 },
             { tier: 2, name: 'Oak Bow',     levelReq: 15, consumes: { oak_log: 3, iron_bar: 1 },      xp: 80 },
@@ -172,17 +172,6 @@ export const TOOLS = {
             { tier: 4, name: 'Maple Bow',   levelReq: 45, consumes: { maple_log: 3, mithril_bar: 1 }, xp: 200 },
             { tier: 5, name: 'Yew Bow',     levelReq: 60, consumes: { yew_log: 3, adamant_bar: 1 },   xp: 300 },
             { tier: 6, name: 'Magic Bow',   levelReq: 75, consumes: { magic_log: 3, runite_bar: 1 },  xp: 450 }
-        ]
-    },
-    rod: {
-        name: 'Fishing Rod', icon: '🎣', skill: 'fishing', madeBy: 'crafting',
-        tiers: [
-            { tier: 1, name: 'Wooden Rod', levelReq: 5,  consumes: { normal_log: 2, copper_bar: 1 }, xp: 40 },
-            { tier: 2, name: 'Oak Rod',    levelReq: 15, consumes: { oak_log: 2, iron_bar: 1 },      xp: 80 },
-            { tier: 3, name: 'Willow Rod', levelReq: 30, consumes: { willow_log: 2, iron_bar: 1 },   xp: 130 },
-            { tier: 4, name: 'Maple Rod',  levelReq: 45, consumes: { maple_log: 2, mithril_bar: 1 }, xp: 200 },
-            { tier: 5, name: 'Yew Rod',    levelReq: 60, consumes: { yew_log: 2, adamant_bar: 1 },   xp: 300 },
-            { tier: 6, name: 'Magic Rod',  levelReq: 75, consumes: { magic_log: 2, runite_bar: 1 },  xp: 450 }
         ]
     },
     tinderbox: {

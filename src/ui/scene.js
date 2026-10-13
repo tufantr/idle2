@@ -371,10 +371,12 @@ export function createScene(root, actions) {
                 ? `<span title="Food for auto-eat">${resIcon(foods[foods.length - 1].id)} ${fmt(count)}</span>`
                 : `<span class="warn" title="Nothing to eat: cook some food">${resIcon('cooked_rabbit')} no food</span>`);
         }
-        if (c.potion !== 'none') {
-            const p = RESOURCES[c.potion];
-            const left = c.potionMs > 0 ? duration(c.potionMs) : `×${fmt(state.resources[c.potion] || 0)}`;
-            parts.push(`<span title="${esc(p?.name || 'Potion')}">${resIcon(c.potion)} ${left}</span>`);
+        // the potion of the place he fights in: the dungeon's in a run, the combat potion elsewhere
+        const [potion, potionMs] = c.mode === 'dungeon' ? [c.dungeonPotion, c.dungeonPotionMs] : [c.potion, c.potionMs];
+        if (potion && potion !== 'none') {
+            const p = RESOURCES[potion];
+            const left = potionMs > 0 ? duration(potionMs) : `×${fmt(state.resources[potion] || 0)}`;
+            parts.push(`<span title="${esc(p?.name || 'Potion')}">${resIcon(potion)} ${left}</span>`);
         }
         return parts.join('');
     }

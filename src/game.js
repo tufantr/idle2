@@ -5,7 +5,7 @@ import { createDefaultState, migrateState, clampTimers } from './core/state.js';
 import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startToolCraft, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
-import { setPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
+import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
 import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, reforgeItem, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
@@ -237,6 +237,7 @@ export class Game {
     }
     clickAttack() { return this._act(() => clickAttack(this)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
+    setDungeonPotion(id) { return this._act(() => setDungeonPotion(this, id)); }
     setWorkPotion(id) { return this._act(() => setWorkPotion(this, id)); }
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
     setStage(stage) { return Number.isFinite(stage) ? this._act(() => setStage(this, stage)) : false; }

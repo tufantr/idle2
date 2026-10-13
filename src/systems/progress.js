@@ -5,7 +5,7 @@ import { ACHIEVEMENTS } from '../data/achievements.js';
 import { evaluateUnlocks, openWaitingPlace } from '../data/unlocks.js';
 import { evaluateDisclosures } from './disclosure.js';
 import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
-import { petForSkill, petChance } from '../data/pets.js';
+import { petToFind, petChance } from '../data/pets.js';
 import { capeFor } from '../data/capes.js';
 import { trialBite } from '../data/trials.js';
 import { rng } from '../core/rng.js';
@@ -114,8 +114,8 @@ export function bumpStat(game, key, amount = 1) {
 
 /** Roll for the skill's pet after an action (Melvor's formula; see data/pets.js). */
 export function rollPet(game, skill, actionMs) {
-    const pet = petForSkill(skill);
-    if (!pet || game.state.pets[pet.id]) return null;
+    const pet = petToFind(game.state, skill);
+    if (!pet) return null;
     const level = levelForXp(game.state.skills[skill]?.xp || 0);
     if (!rng.chance(petChance(actionMs, level) * (game.derived?.petMult || 1))) return null;
     game.state.pets[pet.id] = true;

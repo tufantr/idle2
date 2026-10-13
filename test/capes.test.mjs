@@ -43,17 +43,17 @@ test('a cape is earned at 99, and its bonus counts for good, whichever cape is w
 test('reaching 99 puts the new cape on; the worn cape shows on the hero', () => {
     const game = new Game(null, T0);
     const s = game.state;
-    s.skills.fishing.xp = xpForLevel(99) - 5;
+    s.skills.hunting.xp = xpForLevel(99) - 5;
     assert.equal(capeWorn(s), null);
     assert.ok(heroLayers(s).some(k => k.startsWith('hero/cloaks/')), "the rank's cloak at first");
-    grantXp(game, 'fishing', 10);
-    assert.equal(s.hero.cape, 'fishing');
-    assert.equal(capeWorn(s), capeFor('fishing'));
-    assert.ok(heroLayers(s).includes('hero/capes/fishing'));
+    grantXp(game, 'hunting', 10);
+    assert.equal(s.hero.cape, 'hunting');
+    assert.equal(capeWorn(s), capeFor('hunting'));
+    assert.ok(heroLayers(s).includes('hero/capes/hunting'));
     assert.ok(!heroLayers(s).some(k => k.startsWith('hero/cloaks/')));
-    grantXp(game, 'fishing', 1000);   // past 99 already: nothing changes
+    grantXp(game, 'hunting', 1000);   // past 99 already: nothing changes
     s.hero.cape = '';
-    grantXp(game, 'fishing', 1000);
+    grantXp(game, 'hunting', 1000);
     assert.equal(s.hero.cape, '', 'only the first time a skill reaches 99');
 });
 

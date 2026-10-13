@@ -11,7 +11,7 @@ import { loadLocal, localLoadProblem, LOCAL_KEY, LEGACY_KEY } from '../src/core/
 import { xpForLevel } from '../src/core/xp.js';
 import { BALANCE } from '../src/core/formulas.js';
 import { BASE } from '../src/core/modifiers.js';
-import { powerSummary, expectedDps as expectedDpsOf } from '../src/core/power.js';
+import { powerSummary, expectedDps as expectedDpsOf, clanFightDamage, clanAttackFromSave } from '../src/core/power.js';
 import * as ACH from '../src/data/achievements.js';
 import { TRIALS, TRIAL_TIERS, WEEK_MS, weeklyTrialAt } from '../src/data/trials.js';
 import { prestigeWaitMs } from '../src/systems/prestige.js';
@@ -330,19 +330,29 @@ test('the first boss\'s armour comes with its first real fall, even after a fall
     rng.setSource(seededRandom(2026));
 });
 
-test('the clan boss fight on screen is the hero the server reckons: no potion, Focus or Trial rule in it', () => {
+test('the clan boss fight on screen is the hero the server reckons: its combat potion, but no Focus or Trial rule', () => {
     const game = new Game(null, T0);
     const s = game.state;
     s.combat.bestStage = 210;
     s.equipped.Weapon = { id: 7, type: 'Weapon', tier: 6, atk: 2000, def: 0, affixes: [] };
     s.trials.active = 'rusted';
-    s.resources.accuracy_potion = 5;
+    s.resources.combat_potion_3 = 5;
     s.meta.lastInputAt = T0 - HOUR;   // idle: Focus
     game.recompute();
-    game.setPotion('accuracy_potion');
+    game.setPotion('combat_potion_3');
+    const before = save(game);   // what the server holds as the fight begins (the page saves first)
     game.startClanFight({ week: '2026-W42', hp: 1e12, maxHp: 1e12 });
-    const server = powerSummary(save(game), game.now);
-    assert.equal(Math.round(expectedDpsOf(game.derived)), Math.round(server.dps), 'the same damage a second');
+    game.tick(game.now + 100);   // the fight drinks the potion at its start
+    assert.ok(s.combat.potionMs > 0, 'the combat potion works against the clan boss (the owner, October 2026)');
+    assert.equal(clanFightDamage(game.derived, []).damage, clanAttackFromSave(before, [], undefined, game.now).damage, 'the same damage');
+    // and without a potion, the same as the boards' stable hero
+    const plain = new Game(null, T0);
+    Object.assign(plain.state.combat, { bestStage: 210 });
+    plain.state.equipped.Weapon = { id: 8, type: 'Weapon', tier: 6, atk: 2000, def: 0, affixes: [] };
+    plain.state.meta.lastInputAt = T0 - HOUR;
+    plain.recompute();
+    plain.startClanFight({ week: '2026-W42', hp: 1e12, maxHp: 1e12 });
+    assert.equal(Math.round(expectedDpsOf(plain.derived)), Math.round(powerSummary(save(plain), plain.now).dps), 'the same damage a second');
 });
 
 test('a refit carries the anvil\'s work as it was: salvage gives back the copper that went in, not runite and new essence', () => {

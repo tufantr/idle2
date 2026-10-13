@@ -15,7 +15,7 @@ export const PETS = [
     { id: 'ember',   skill: 'smithing',    name: 'Ember',   icon: '🦎', desc: '+3% Smithing speed',    mods: { skillSpeed: { smithing: 0.03 } } },
     { id: 'glimmer', skill: 'crafting',    name: 'Glimmer', icon: '🦋', desc: '+3% Crafting speed',    mods: { skillSpeed: { crafting: 0.03 } } },
     { id: 'fang',    skill: 'combat',      name: 'Fang',    icon: '🐺', desc: '+3% ATK and DEF',       mods: { atkMult: 0.03, defMult: 0.03 } },
-    { id: 'finn',    skill: 'fishing',     name: 'Finn',    icon: '🐟', desc: '+3% Fishing speed',     mods: { skillSpeed: { fishing: 0.03 } } },
+    { id: 'finn',    skill: 'hunting',     name: 'Finn',    icon: '🐟', desc: '+3% Hunting speed',     mods: { skillSpeed: { hunting: 0.03 } } },   // (Fishing's, before it joined Hunting: Hunting has two to find)
     { id: 'cinder',  skill: 'firemaking',  name: 'Cinder',  icon: '🦔', desc: '+3% Firemaking speed',  mods: { skillSpeed: { firemaking: 0.03 } } },
     { id: 'sprout',  skill: 'farming',     name: 'Sprout',  icon: '🐛', desc: '+3% crop growth speed', mods: { skillSpeed: { farming: 0.03 } } },
     { id: 'hopper',  skill: 'agility',     name: 'Hopper',  icon: '🐇', desc: '+3% Agility speed',     mods: { skillSpeed: { agility: 0.03 } } }
@@ -30,6 +30,11 @@ export function companionPet(state) {
 
 export function petForSkill(skill) {
     return PETS.find(p => p.skill === skill) || null;
+}
+
+/** The pet a skill's work can still turn up: its first not yet found (Hunting has two: Scout, then Finn). */
+export function petToFind(state, skill) {
+    return PETS.find(p => p.skill === skill && !state.pets?.[p.id]) || null;
 }
 
 export function petChance(actionMs, level) {

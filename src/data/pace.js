@@ -15,7 +15,7 @@ import { RESOURCES } from './resources.js';
 export const PACE_FROM = 20;
 export const PACE_TO = 75;
 export const PACE = {
-    mining: 2.1, woodcutting: 2.0, fishing: 2.15, hunting: 2.05,
+    mining: 2.1, woodcutting: 2.0, hunting: 2.05,
     cooking: 3.2, firemaking: 3.4, alchemy: 1.1,
     smithing: 2.3, crafting: 4,
     farming: 1, agility: 1.2

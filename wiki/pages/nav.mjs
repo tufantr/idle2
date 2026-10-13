@@ -3,7 +3,7 @@
 import { SKILLS } from '../../src/data/skills.js';
 import { FEATURES } from '../../src/ui/features.js';
 
-export const SKILL_ORDER = ['mining', 'smithing', 'woodcutting', 'firemaking', 'fishing', 'cooking', 'hunting', 'alchemy', 'farming', 'crafting', 'agility'];
+export const SKILL_ORDER = ['mining', 'smithing', 'woodcutting', 'firemaking', 'hunting', 'cooking', 'alchemy', 'farming', 'crafting', 'agility'];
 
 export function NAV(site) {
     const page = path => {

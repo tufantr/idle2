@@ -71,11 +71,11 @@ test('a medal earned while away counts from then on, and its card shows when the
     assert.equal(soon.medal, true, 'the medal earned while away is announced');
 });
 
-test('a Health Potion follows the last one at once: no health is lost between two', () => {
+test('a combat potion follows the last one at once: no health is lost between two', () => {
     rng.setSource(seededRandom(3));
     const game = strong({ bestStage: 10, tokens: 0 });
-    game.state.resources.health_potion = 6;
-    game.setPotion('health_potion');
+    game.state.resources.combat_potion_4 = 6;
+    game.setPotion('combat_potion_4');
     game.enterCombat();
     game.setFarmMode(true);
     tickUntil(game, () => game.state.combat.potionMs > 0, 60000);
@@ -85,8 +85,8 @@ test('a Health Potion follows the last one at once: no health is lost between tw
     let lowest = boosted;
     let now = game.now;
     // a dose is minutes of fighting now: a second at a time through five of them
-    for (let i = 0; i < 3000 && game.state.resources.health_potion > 1; i++) { now += 1000; game.tick(now); lowest = Math.min(lowest, game.derived.maxHp); }
-    assert.ok(game.state.resources.health_potion <= 1, 'several potions were drunk');
+    for (let i = 0; i < 3000 && game.state.resources.combat_potion_4 > 1; i++) { now += 1000; game.tick(now); lowest = Math.min(lowest, game.derived.maxHp); }
+    assert.ok(game.state.resources.combat_potion_4 <= 1, 'several potions were drunk');
     assert.equal(lowest, boosted, 'max health never fell back between potions');
 });
 

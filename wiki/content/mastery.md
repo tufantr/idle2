@@ -6,7 +6,7 @@ Every action you repeat has a **mastery** of its own, from level 1 to {{MASTERY_
 
 ## Which actions have a mastery
 
-- Every spot in [[/skills/mining|Mining]], [[/skills/woodcutting|Woodcutting]], [[/skills/fishing|Fishing]] and [[/skills/hunting|Hunting]].
+- Every spot in [[/skills/mining|Mining]], [[/skills/woodcutting|Woodcutting]] and [[/skills/hunting|Hunting]], the river's too.
 - Every dish in [[/skills/cooking|Cooking]], every kind of log in [[/skills/firemaking|Firemaking]], and every herb and potion in [[/skills/alchemy|Alchemy]].
 - In [[/skills/smithing|Smithing]], every bar you smelt, and one mastery per metal for working its gear: forging copper, and reinforcing or rerolling each metal's gear at the anvil. All the pieces of one metal share it.
 - In [[/skills/crafting|Crafting]], one mastery per gem, shared by every ring, earring and amulet set with it.

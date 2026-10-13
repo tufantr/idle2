@@ -9,7 +9,7 @@ import { SKILLS, NON_COMBAT_SKILLS, WORKSHOP_SKILLS } from '../data/skills.js';
 import { RESOURCES } from '../data/resources.js';
 import { TYPE_ICONS } from '../data/items.js';
 import { cropById } from '../data/farming.js';
-import { petForSkill, companionPet } from '../data/pets.js';
+import { PETS, companionPet } from '../data/pets.js';
 import { resolveAction, intervalFor } from '../systems/skilling.js';
 import { plotReady } from '../systems/farming.js';
 import { courseDef } from '../systems/agility.js';
@@ -22,7 +22,7 @@ export const STAGE_SKILLS = [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS, 'farming'
 // The hint under the resting hero (he faces the place's own picture, dimmed).
 const IDLE = {
     mining: 'Pick a vein below to start mining', woodcutting: 'Pick a tree below to start cutting',
-    fishing: 'Pick a spot below to start fishing', hunting: 'Pick a quarry below to start hunting',
+    hunting: 'Pick a quarry or a fishing spot below to start hunting',
     cooking: 'Pick a dish below to start cooking', firemaking: 'Pick logs below to light the fire',
     alchemy: 'Pick a potion below to start brewing', smithing: 'Pick a bar or a piece below to start smithing',
     crafting: 'Pick a piece below to start crafting', farming: 'Plant seeds below: they grow while you do something else',
@@ -128,14 +128,19 @@ export function createStage(root, { sound = () => {}, pat = () => {} } = {}) {
             root.hidden = !skill;
             if (!skill) return;
             const state = game.state;
-            if (shownSkill !== skill) { shownSkill = skill; el.stage.dataset.skill = skill; }
-            const look = skill === 'agility' ? { bare: true } : { tool: skill };
+            if (shownSkill !== skill) shownSkill = skill;
+            // Hunting at a river spot: the river's scenery, the rod in hand and the fish-loving pet (Fishing's, before it joined Hunting)
+            const current = resolveAction(state);
+            const place = skill === 'hunting' && current?.skill === 'hunting' && current.fish ? 'fishing' : skill;
+            if (el.stage.dataset.skill !== place) el.stage.dataset.skill = place;
+            const look = skill === 'agility' ? { bare: true } : { tool: place };
             const hk = `${skill}|${phone()}|${heroLayers(state, look).join(',')}`;   // (the size too: a phone turned, a window resized)
             if (hk !== heroKey) { heroKey = hk; el.figure.innerHTML = heroSprite(state, { scale: phone() ? 3 : 4, ...look }); }
             // the skill's own pet, once found, keeps him company at work
             // the skill's own pet keeps the hero company at work, or else the pet picked for the fight
-            const own = petForSkill(skill);
-            const petId = own && state.pets?.[own.id] ? own.id : companionPet(state);
+            const owned = PETS.filter(p => p.skill === skill && state.pets?.[p.id]);
+            const own = (place === 'fishing' && owned.find(p => p.id === 'finn')) || owned.find(p => p.id !== 'finn') || owned[0];
+            const petId = own ? own.id : companionPet(state);
             const petKey = petId ? `${petId}|${phone()}` : '';
             if (petKey !== el.pet.dataset.key) { el.pet.dataset.key = petKey; el.pet.innerHTML = petKey ? sprite(`pet/${petId}`, { scale: phone() ? 1 : 2 }) : ''; }
             let view;

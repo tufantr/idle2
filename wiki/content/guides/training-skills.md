@@ -15,11 +15,11 @@ Your hero has {{SKILL_IDS.length}} [[/skills|skills]]. Combat levels come from f
 Almost everything one skill makes, another skill uses.
 
 - **[[/skills/mining|Mining]]** digs ore and {{res('coal')}}. **[[/skills/smithing|Smithing]]** smelts them into bars: copper bars forge a first set of weapons and armour, and bars of each metal make tools and reinforce your hero's gear at the anvil. Silver and gold bars go to Crafting.
-- **[[/skills/woodcutting|Woodcutting]]** cuts logs. They are the fuel for Cooking (a log for each dish), the bonfire in **[[/skills/firemaking|Firemaking]]**, the handles of tools, bows and fishing rods, and part of every agility obstacle.
-- **[[/skills/hunting|Hunting]]** and **[[/skills/fishing|Fishing]]** bring raw meat and fish. **[[/skills/cooking|Cooking]]** turns them into [[/food|food]] for the fight.
+- **[[/skills/woodcutting|Woodcutting]]** cuts logs. They are the fuel for Cooking (a log for each dish), the bonfire in **[[/skills/firemaking|Firemaking]]**, the handles of tools and bows, and part of every agility obstacle.
+- **[[/skills/hunting|Hunting]]** brings raw meat from the forest and fish from the river. **[[/skills/cooking|Cooking]]** turns them into [[/food|food]] for the fight.
 - **[[/skills/alchemy|Alchemy]]** forages herbs and brews them with a second ingredient into [[/potions|potions]]: {{SKILLS.alchemy.nodes.filter(n => n.consumes).map(n => `${n.name} (${Object.keys(n.consumes).map(id => RESOURCES[id].name).join(' + ')})`).join(', ')}}.
 - **[[/skills/farming|Farming]]** grows crops for Cooking (potatoes, cabbages, pumpkins and starfruit) and herbs for Alchemy ({{CROPS.filter(c => RESOURCES[c.produces].category === 'herb').map(c => c.name).join(', ')}}).
-- **[[/skills/crafting|Crafting]]** sets a gem in a silver or gold bar to make [[/equipment/jewellery|jewellery]], and makes bows for Hunting and rods for Fishing.
+- **[[/skills/crafting|Crafting]]** sets a gem in a silver or gold bar to make [[/equipment/jewellery|jewellery]], and makes bows for Hunting.
 - **[[/skills/agility|Agility]]** builds a course of lasting bonuses from gold, logs and bars (and diamonds for the last slot), and you train it by running the course.
 - **The fight** feeds the skills back. Each place drops materials of its own (ore, logs, meat, fish, herbs, fishing bait), and monsters leave gems and essence.
 
@@ -48,7 +48,6 @@ Each [[/tools|tool]] tier gives its skill +{{pct(TOOL_SPEED_PER_TIER, 0)}} speed
 | Tinderbox | Firemaking: a log sometimes burns twice | Smithing |
 | Hoe | Farming: crops grow faster, and a harvest sometimes doubles | Smithing |
 | Bow | Hunting | Crafting |
-| Fishing Rod | Fishing | Crafting |
 
 Each tier is made from bars and logs, in order, starting at level {{TOOLS.pickaxe.tiers[0].levelReq}} of the skill that makes it. Tools are kept for good: a prestige never takes them.
 

@@ -33,7 +33,7 @@ import { anvilCost } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
 import { zoneForStage } from '../src/data/zones.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
-import { POTIONS, potionLevel } from '../src/data/potions.js';
+import { potionsFor, potionLevel } from '../src/data/potions.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
@@ -81,7 +81,7 @@ const SPEED_PRESTIGE = !!args['speed-prestige'];
 // The bot's own thresholds. --vary=N draws a different sensible player for each N (D §2.2 P10): how
 // much a run must add before it prestiges, how long a stall lasts, how long it farms a dungeon, its
 // share of time for agility, how long it trains, and the order it buys perks in.
-// potionStock: fight potions kept in stock (a dose is POTION_MINUTES of fighting); workStock: work potions.
+// potionStock: combat and dungeon potions kept in stock (a dose is POTION_MINUTES of fighting); workStock: skill potions.
 const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60, potionStock: 12, workStock: 6, foodStock: 60,
     perkOrder: ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'] };
 if (args.vary) {
@@ -317,15 +317,19 @@ function foodTask() {
     return obtain(best.id, (S.resources[best.id] || 0) + Math.ceil(POLICY.foodStock - stock));
 }
 
-// Potions (data/potions.js): the strongest attack potion the bot can brew for the fight, kept in stock, and
-// the Gatherer's Draught for work. Attack is what moves the wall; the others are left to real players.
-// (asked for before Alchemy reaches them: obtain() trains Alchemy up to the level first)
-const fightPotion = () => 'accuracy_potion';
-const workPotion = () => (lvl('alchemy') >= potionLevel('gatherers_draught') ? 'gatherers_draught' : null);
+// Potions (data/potions.js): the strongest of each kind the bot can brew, kept in stock: a combat potion for the
+// stages, a dungeon potion for runs (once it runs them) and a skill potion for work. The first tier is asked for
+// before Alchemy reaches it: obtain() trains Alchemy up to the level first.
+const bestPotion = kind => [...potionsFor(kind)].reverse().find(id => lvl('alchemy') >= potionLevel(id)) || potionsFor(kind)[0];
+const fightPotion = () => bestPotion('combat');
+const runPotion = () => (S.unlocks.dungeons && !NO_DUNGEONS ? bestPotion('dungeon') : null);
+const workPotion = () => (lvl('alchemy') >= potionLevel(potionsFor('skill')[0]) ? bestPotion('skill') : null);
 function drinkPotions() {
     if (WITHOUT.has('potions')) return;
     const fight = fightPotion();
     if (fight && S.combat.potion !== fight && S.resources[fight] > 0) game.setPotion(fight);
+    const run = runPotion();
+    if (run && S.combat.dungeonPotion !== run && S.resources[run] > 0) game.setDungeonPotion(run);
     const work = workPotion();
     if (work && S.workPotion.id !== work && S.resources[work] > 0) game.setWorkPotion(work);
 }
@@ -333,6 +337,8 @@ function potionTask() {
     if (WITHOUT.has('potions') || !S.unlocks.alchemy) return null;
     const fight = fightPotion();
     if (fight && (S.resources[fight] || 0) < POLICY.potionStock / 2) { const t = obtain(fight, POLICY.potionStock); if (t) return t; }
+    const run = runPotion();
+    if (run && lvl('alchemy') >= potionLevel(run) && (S.resources[run] || 0) < POLICY.potionStock / 2) { const t = obtain(run, POLICY.potionStock); if (t) return t; }
     const work = workPotion();
     if (work && (S.resources[work] || 0) < POLICY.workStock / 2) { const t = obtain(work, POLICY.workStock); if (t) return t; }
     return null;

@@ -3,7 +3,7 @@
 // what that added. Cadence-limited so that a fully active player earns roughly 1.5x an idle one, not
 // 2x forever (see research notes).
 
-import { NON_COMBAT_SKILLS } from '../data/skills.js';
+import { NON_COMBAT_SKILLS, SKILLS } from '../data/skills.js';
 import { BALANCE } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { bumpStat, log } from './progress.js';
@@ -11,14 +11,22 @@ import { bumpStat, log } from './progress.js';
 export const CHALLENGE_MS = 10000;   // how long a challenge lasts once started
 
 export const MINIGAME_CONFIG = {
-    mining:      { icon: '⛏️', label: 'Ore Vein Pulse', desc: 'Tap while the pulse sweeps through the ore seam.', type: 'timing', accent: '#34d399', actionText: 'Pulse the Vein' },
-    woodcutting: { icon: '🌳', label: 'Perfect Chop',   desc: 'Catch the axe rhythm at the heartwood ring.',     type: 'timing', accent: '#22c55e', actionText: 'Catch the Rhythm' },
-    hunting:     { icon: '🏹', label: 'Snap Shot',      desc: 'Fire when the prey crosses the kill zone.',       type: 'moving-target', accent: '#f59e0b', actionText: 'Loose an Arrow' },
+    mining:      { icon: '⛏️', label: 'Ore Vein Pulse', desc: 'Tap while the pulse sweeps through the ore seam.', type: 'timing', accent: '#34d399', actionText: 'Pulse the Vein', marker: 'tool/pickaxe' },
+    woodcutting: { icon: '🌳', label: 'Perfect Chop',   desc: 'Catch the axe rhythm at the heartwood ring.',     type: 'timing', accent: '#22c55e', actionText: 'Catch the Rhythm', marker: 'tool/axe' },
+    hunting:     { icon: '🏹', label: 'Snap Shot',      desc: 'Fire when the prey crosses the kill zone.',       type: 'moving-target', accent: '#f59e0b', actionText: 'Loose an Arrow', marker: 'pet/scout', button: 'Loose arrow' },
     cooking:     { icon: '🍳', label: 'Heat Ride',      desc: 'Tap the flame to keep the pan in the perfect band.', type: 'heat', accent: '#fb923c', actionText: 'Ride the Heat' },
     alchemy:     { icon: '🧪', label: 'Catalyst Drag',  desc: 'Drag the stabiliser into the glowing channel.',   type: 'drag', accent: '#10b981', actionText: 'Stabilise the Mix' },
-    fishing:     { icon: '🎣', label: 'Strike!',        desc: 'Strike when the float dips into the ring.',       type: 'moving-target', accent: '#38bdf8', actionText: 'Strike' },
+    // Hunting at a river spot plays the angler's game (Fishing's, before it joined Hunting): not a skill of its own
+    river:       { icon: '🎣', label: 'Strike!',        desc: 'Strike when the float dips into the ring.',       type: 'moving-target', accent: '#38bdf8', actionText: 'Strike', marker: 'res/raw_trout', button: 'Strike' },
     firemaking:  { icon: '🔥', label: 'Stoke the Fire', desc: 'Tap to keep the flame in the perfect band.',      type: 'heat', accent: '#f97316', actionText: 'Stoke' }
 };
+
+/** A skill's mini-game: Hunting at a river spot plays the angler's (MINIGAME_CONFIG.river). */
+export function minigameConfig(state, skillId) {
+    const a = state?.action;
+    if (skillId === 'hunting' && a?.kind === 'node' && a.skill === 'hunting' && SKILLS.hunting.nodes.find(n => n.id === a.id)?.fish) return MINIGAME_CONFIG.river;
+    return MINIGAME_CONFIG[skillId];
+}
 
 function scheduleNext(game, skillId, now) {
     const [min, max] = BALANCE.minigame.opportunityEveryMs;
@@ -174,7 +182,7 @@ function rewardMinigame(game, skillId) {
     mg.challenge = null;
     bumpStat(game, 'minigameWins');
     scheduleNext(game, skillId, game.now);
-    log(game, `${MINIGAME_CONFIG[skillId].icon} Perfect! ${skillId} works ×${mg.mult} as fast for ${Math.round(boostMs / 1000)}s.`, 'minigame');
+    log(game, `${minigameConfig(game.state, skillId).icon} Perfect! ${skillId} works ×${mg.mult} as fast for ${Math.round(boostMs / 1000)}s.`, 'minigame');
     game.emit({ type: 'minigameWin', skill: skillId, mult: mg.mult, ms: boostMs });
     game.markDirty();
 }

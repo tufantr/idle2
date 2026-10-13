@@ -6,7 +6,7 @@
 
 import { CAMP_UPGRADES } from '../data/camp.js';
 import { RESOURCES } from '../data/resources.js';
-import { NON_COMBAT_SKILLS } from '../data/skills.js';
+import { NON_COMBAT_SKILLS, SKILLS } from '../data/skills.js';
 import { STAGES_PER_ZONE } from '../data/zones.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { SMITHING_TYPES } from '../data/items.js';
@@ -16,7 +16,8 @@ import { TRIALS_FROM } from '../data/trials.js';
 import { ASCEND_FROM } from '../data/ascension.js';
 import { potionsFor } from '../data/potions.js';
 
-const WORK_POTIONS = potionsFor('work');
+const SKILL_POTIONS = potionsFor('skill');
+const RIVER_CATCH = SKILLS.hunting.nodes.filter(n => n.fish).map(n => n.produces);
 
 // The Auto switch, earned (systems/prestige.js autoPrestigeEarned, which this mirrors to stay free of it).
 const autoEarned = s => s.prestige.count >= BALANCE.prestige.autoAfter
@@ -43,8 +44,8 @@ export const DISCLOSURES = [
     { id: 'world_map',    when: s => s.combat.bestStage > STAGES_PER_ZONE },                                                     // a second zone to travel to
     { id: 'food',         when: s => !!s.unlocks.cooking || owns(s, 'food') },
     { id: 'potions',      when: s => !!s.unlocks.alchemy || owns(s, 'potion') },
-    // the work potion's row on the skill tabs, once there is one to pick (data/potions.js)
-    { id: 'work_potions', when: s => WORK_POTIONS.some(id => s.resources[id] > 0) || (s.workPotion?.id || 'none') !== 'none' },
+    // the skill potion's row on the skill tabs, once Alchemy is open or there is one to pick (data/potions.js)
+    { id: 'work_potions', when: s => !!s.unlocks.alchemy || SKILL_POTIONS.some(id => s.resources[id] > 0) || (s.workPotion?.id || 'none') !== 'none' },
     { id: 'gear',         when: s => s.stats.itemsDropped > 0 || s.stats.itemsCrafted > 0 || gear(s).length > 0 },
     { id: 'pity',         when: s => (s.combat.pity || 0) >= 2 || (s.stats.pityDrops || 0) > 0 },   // the bosses' due: a ring round the boss's node, once it has marks worth seeing
     // the armory
@@ -53,6 +54,8 @@ export const DISCLOSURES = [
     { id: 'auto_salvage', when: s => s.stats.itemsDropped >= 10 },
     // the skill tabs
     { id: 'anvil',        when: s => levelForXp(s.skills.smithing.xp) >= ANVIL_LEVEL_PER_UPGRADE || gear(s).some(i => SMITHING_TYPES.includes(i.type) && i.upgrade > 0) },   // Smithing's anvil: the first reinforcing a smith can do
+    // Hunting's river spots: once the kitchen has been used (as Fishing opened, before it joined Hunting)
+    { id: 'river',        when: s => (s.stats.actionsBySkill.cooking || 0) >= 5 || (s.stats.fishCaught || 0) > 0 || RIVER_CATCH.some(id => s.resources[id] > 0) },
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },
     { id: 'minigames',    when: s => s.stats.minigameWins > 0 || NON_COMBAT_SKILLS.some(id => s.minigame[id]?.opportunityUntil > 0 || !!s.minigame[id]?.challenge) }
 ];

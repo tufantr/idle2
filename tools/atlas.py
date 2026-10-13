@@ -171,6 +171,13 @@ LATE_DUNGEON_MONSTERS = {
 LATE_DUNGEON_UNIQUES = { 'drowned_greaves': 'armour/artefact/urand_bk_barding', 'hellforged_gauntlets': 'armour/artefact/urand_power_gloves' }
 # The potions that came with the work potions (October 2026), by colour like the first four: last of all.
 LATE_POTIONS = { 'gatherers_draught': 'brown', 'scholars_tonic': 'cyan', 'fortune_draught': 'yellow' }
+# The three potions that grow (October 2026), four tiers each, a colour family a kind, deeper as the tier
+# climbs: combat reds, dungeon blues and violets, skill yellows and greens. Last of all.
+TIERED_POTIONS = {
+    'combat_potion_1': 'pink', 'combat_potion_2': 'orange', 'combat_potion_3': 'ruby', 'combat_potion_4': 'purple_red',
+    'dungeon_potion_1': 'sky_blue', 'dungeon_potion_2': 'brilliant_blue', 'dungeon_potion_3': 'dark', 'dungeon_potion_4': 'magenta',
+    'skill_potion_1': 'yellow', 'skill_potion_2': 'bubbly', 'skill_potion_3': 'emerald', 'skill_potion_4': 'golden',
+}
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------
@@ -266,6 +273,8 @@ def main(rltiles):
     for key, img in build_voidstone(rltiles).items():   # Crafting's deepest gem, last of all
         add(key, img)
     for rid, tile in LATE_POTIONS.items():   # the work potions and the Fortune Draught, last of all
+        add(f'res/{rid}', f'item/potion/{tile}')
+    for rid, tile in TIERED_POTIONS.items():   # the combat, dungeon and skill potions, last of all
         add(f'res/{rid}', f'item/potion/{tile}')
 
     rows = (len(cells) + COLS - 1) // COLS

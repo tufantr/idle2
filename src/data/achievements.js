@@ -32,7 +32,7 @@ export const ACHIEVEMENTS = [
     { id: 'excavator',    name: 'The Excavator',     desc: 'Reach Mining level 25',           req: skillLevel('mining', 25),    reward: '+10% Mining speed',       mods: { skillSpeed: { mining: 0.10 } } },
     { id: 'lumberjack',   name: 'Lumberjack',        desc: 'Reach Woodcutting level 25',      req: skillLevel('woodcutting', 25), reward: '+10% Woodcutting speed', mods: { skillSpeed: { woodcutting: 0.10 } } },
     { id: 'tracker',      name: 'Tracker',           desc: 'Reach Hunting level 25',          req: skillLevel('hunting', 25),   reward: '+10% Hunting speed',      mods: { skillSpeed: { hunting: 0.10 } } },
-    { id: 'angler',       name: 'Angler',            desc: 'Reach Fishing level 25',          req: skillLevel('fishing', 25),   reward: '+10% Fishing speed',      mods: { skillSpeed: { fishing: 0.10 } } },
+    { id: 'angler',       name: 'Angler',            desc: 'Reach Hunting level 50',          req: skillLevel('hunting', 50),   reward: '+10% Hunting speed',      mods: { skillSpeed: { hunting: 0.10 } } },
     { id: 'pyromaniac',   name: 'Pyromaniac',        desc: 'Reach Firemaking level 25',       req: skillLevel('firemaking', 25), reward: '+10% Firemaking speed', mods: { skillSpeed: { firemaking: 0.10 } } },
     { id: 'green_thumb',  name: 'Green Thumb',       desc: 'Reach Farming level 25',          req: skillLevel('farming', 25),   reward: '+10% farming yield',      mods: { farmYield: 0.10 } },
     { id: 'acrobat',      name: 'Acrobat',           desc: 'Reach Agility level 25',          req: skillLevel('agility', 25),   reward: '+10% Agility speed',      mods: { skillSpeed: { agility: 0.10 } } },

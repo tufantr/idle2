@@ -27,10 +27,9 @@ export const UNLOCKS = [
     { id: 'woodcutting',  hint: 'Smelt your first bar to unlock Woodcutting', task: 'Smelt a bar', tab: 'smithing', requires: s => s.stats.barsSmelted >= 1, progress: s => s.stats.barsSmelted / 1 },
     { id: 'hunting',      pace: true, hint: 'Reach Stage 5 to unlock Hunting', task: 'Reach stage 5', tab: 'combat', requires: s => s.combat.maxStage >= 5, progress: s => s.combat.maxStage / 5 },
     { id: 'cooking',      hint: 'Hunt your first animal to unlock Cooking', task: 'Hunt an animal', tab: 'hunting', requires: s => s.stats.actionsBySkill.hunting >= 1, progress: s => (s.stats.actionsBySkill.hunting || 0) / 1 },
-    { id: 'fishing',      hint: 'Cook 5 dishes to unlock Fishing', task: 'Cook 5 dishes', tab: 'cooking', requires: s => (s.stats.actionsBySkill.cooking || 0) >= 5, progress: s => (s.stats.actionsBySkill.cooking || 0) / 5 },
     { id: 'firemaking',   hint: 'Cut 20 logs to unlock Firemaking', task: 'Cut 20 logs', tab: 'woodcutting', requires: s => (s.stats.actionsBySkill.woodcutting || 0) >= 20, progress: s => (s.stats.actionsBySkill.woodcutting || 0) / 20 },
     // Jewellery is a silver (or gold) bar and a gem, and nothing else in Crafting can be made before the
-    // first piece (its bows and rods want Crafting 5): it opens once both are in hand, not hours before.
+    // first piece (its bows want Crafting 5): it opens once both are in hand, not hours before.
     { id: 'crafting',     hint: 'Smelt a silver bar, with a gem found, to unlock Crafting', task: 'Smelt a silver bar', tab: 'smithing',
       requires: s => heldPreciousBars(s) >= 1 && ((s.stats.gemsFound || 0) >= 1 || heldGems(s) >= 1),
       progress: s => (heldPreciousBars(s) >= 1 ? 0.95 : Math.min(0.9, s.skills.smithing.xp / 4470)) },   // Smithing 20 smelts silver

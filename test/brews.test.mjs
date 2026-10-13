@@ -9,7 +9,8 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { RESOURCES, foodHeal } from '../src/data/resources.js';
-import { POTIONS, POTION_MINUTES, potionStrength, potionLevel, potionsFor } from '../src/data/potions.js';
+import { POTION_KINDS, POTION_MINUTES, OUT_OF_PLACE, potionsFor, potionPower, potionName } from '../src/data/potions.js';
+import { clanAttackFromSave } from '../src/core/power.js';
 import { perkLevelCost, PERKS } from '../src/data/perks.js';
 import { BAG_SIZE, BAG_UPGRADE, RARITIES, GEAR_TIERS } from '../src/data/items.js';
 import { bagSize, bagUpgradePrice } from '../src/systems/inventory.js';
@@ -17,7 +18,7 @@ import { actionInterval } from '../src/core/modifiers.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { migrateState } from '../src/core/state.js';
 import { tryEat, playerAttack } from '../src/systems/combat.js';
-import { BASE } from '../src/core/modifiers.js';
+import { BASE, bonfireDouble } from '../src/core/modifiers.js';
 import { BALANCE } from '../src/core/formulas.js';
 import { addItem } from '../src/systems/inventory.js';
 import { potionEffects } from '../src/core/modifiers.js';
@@ -103,36 +104,43 @@ test("lifesteal heals from what the monster really lost: a killing blow's excess
 
 // ---------- potions ----------
 
-test('a fight potion lasts minutes of fighting, multiplies what it raises, and grows with Alchemy', () => {
+test('a combat potion lasts minutes of fighting and multiplies attack, defence and health by its tier', () => {
     rng.setSource(seededRandom(9));
-    const g = hero({ bestStage: 20, tokens: 300, alchemy: 5 });
+    const g = hero({ bestStage: 20, tokens: 300 });
     g.state.combat.farmMode = true;
-    g.state.resources.accuracy_potion = 2;
-    const plain = g.derived.atk;
-    g.setPotion('accuracy_potion');
+    g.state.resources.combat_potion_2 = 2;
+    const plain = { atk: g.derived.atk, def: g.derived.def, hp: g.derived.maxHp };
+    g.setPotion('combat_potion_2');
     g.enterCombat();
     g.tick(g.now + 100);
     g.recompute();
-    assert.equal(g.state.resources.accuracy_potion, 1, 'one drunk as the fight started');
-    assert.ok(Math.abs(g.derived.atk - plain * (1 + POTIONS.accuracy_potion.base)) <= 1, `${plain} -> ${g.derived.atk}`);
+    assert.equal(g.state.resources.combat_potion_2, 1, 'one drunk as the fight started');
+    const x = 1 + POTION_KINDS.combat.power[1];
+    assert.ok(Math.abs(g.derived.atk - plain.atk * x) <= 1, `${plain.atk} -> ${g.derived.atk}`);
+    assert.ok(Math.abs(g.derived.def - plain.def * x) <= 1);
+    assert.ok(Math.abs(g.derived.maxHp - plain.hp * x) <= 1);
     // a dose is POTION_MINUTES of fighting: after it, the second; after that, none
     run(g, POTION_MINUTES * MIN - 5000);
-    assert.equal(g.state.resources.accuracy_potion, 1, 'still the first bottle');
+    assert.equal(g.state.resources.combat_potion_2, 1, 'still the first bottle');
     run(g, 10_000);
-    assert.equal(g.state.resources.accuracy_potion, 0, 'the second follows at once');
+    assert.equal(g.state.resources.combat_potion_2, 0, 'the second follows at once');
     run(g, POTION_MINUTES * MIN);
     assert.equal(g.state.combat.potionMs, 0);
     assert.equal(potionEffects(g.state).atk, 1, 'and the bonus ends with the last');
-    // stronger with Alchemy: the brewing level's strength, up to `top` at 99
-    assert.equal(potionStrength('accuracy_potion', potionLevel('accuracy_potion')), POTIONS.accuracy_potion.base);
-    assert.equal(potionStrength('accuracy_potion', 99), POTIONS.accuracy_potion.top);
-    assert.ok(potionStrength('accuracy_potion', 50) > POTIONS.accuracy_potion.base);
+    // each tier stronger than the last, the fourth the strongest
+    const tiers = potionsFor('combat').map(id => potionPower(id, 'combat'));
+    assert.deepEqual([...tiers].sort((a, b) => a - b), tiers);
+    assert.equal(potionName('combat_potion_4'), 'Combat Potion IV');
+    // the combat pick takes combat potions only
+    g.state.resources.dungeon_potion_1 = 1;
+    g.setPotion('dungeon_potion_1');
+    assert.equal(g.state.combat.potion, 'combat_potion_2');
 });
 
-test("a fight potion's clock stops out of the fight, and no potion works against the clan boss", () => {
+test("a combat potion's clock stops out of the fight, and it works against the clan boss, the server counting it", () => {
     const g = hero({ bestStage: 20, tokens: 300 });
-    g.state.resources.health_potion = 3;
-    g.setPotion('health_potion');
+    g.state.resources.combat_potion_4 = 3;
+    g.setPotion('combat_potion_4');
     g.enterCombat();
     g.tick(g.now + 1000);
     const left = g.state.combat.potionMs;
@@ -140,58 +148,111 @@ test("a fight potion's clock stops out of the fight, and no potion works against
     g.leaveCombat();
     run(g, 3 * MIN);
     assert.equal(g.state.combat.potionMs, left, 'resting keeps the dose');
+    // the clan fight: the same potion, and the server's reckoning of a clan attack counts it too
     g.state.combat.mode = 'clan';
     g.recompute();
-    assert.equal(g.derived.maxHp, hero({ bestStage: 20, tokens: 300 }).derived.maxHp, 'the clan fight is fought without it');
+    const plainHp = hero({ bestStage: 20, tokens: 300 }).derived.maxHp;
+    assert.ok(Math.abs(g.derived.maxHp - plainHp * (1 + POTION_KINDS.combat.power[3])) <= 1, 'against the clan boss too');
+    g.state.combat.mode = 'stages';
+    const raw = JSON.parse(g.serialize(g.now));
+    const bare = JSON.parse(g.serialize(g.now));
+    bare.combat.potion = 'none';
+    const brewed = clanAttackFromSave(raw, [], undefined, g.now).damage;
+    const plain = clanAttackFromSave(bare, [], undefined, g.now).damage;
+    assert.ok(brewed > plain * 1.6, `${plain} -> ${brewed}`);
 });
 
-test('a work potion runs while the hero works, online and while away: speed or skill XP', () => {
-    const g = hero({ alchemy: 99 });
-    g.state.resources.gatherers_draught = 2;
-    g.state.resources.scholars_tonic = 0;
-    g.startNodeAction('mining', 'copper_ore');
-    const base = actionInterval(3000, g.derived, 'mining');
-    g.setWorkPotion('gatherers_draught');
+test('a dungeon potion works in runs only, stronger there, with a second fragment now and then; a combat potion there at half', () => {
+    rng.setSource(seededRandom(31));
+    const g = hero({ bestStage: 60, tokens: 300 });
+    const plainAtk = g.derived.atk;
+    g.state.resources.dungeon_potion_4 = 50;
+    g.setDungeonPotion('dungeon_potion_4');
+    // on the stages it does nothing (and the combat pick can't hold it)
+    g.enterCombat();
+    g.tick(g.now + 1000);
+    g.recompute();
+    assert.equal(g.derived.atk, plainAtk, 'not on the stages');
+    assert.equal(g.state.resources.dungeon_potion_4, 50, 'nor drunk there');
+    g.leaveCombat();
+    g.enterDungeon('goblin_warren');
+    g.setDungeonRepeat?.(true);
     g.tick(g.now + 100);
     g.recompute();
-    assert.equal(g.state.resources.gatherers_draught, 1);
-    assert.ok(Math.abs(g.derived.skillMult.mining - (1 + POTIONS.gatherers_draught.top)) < 1e-9, 'faster, by the potion at Alchemy 99');
-    assert.ok(actionInterval(3000, g.derived, 'mining') < base / 1.35);
-    assert.ok(Math.abs(g.derived.skillMult.smithing - (1 + POTIONS.gatherers_draught.top)) < 1e-9, 'every skill with work, the workshop too');
+    assert.ok(Math.abs(g.derived.atk - plainAtk * (1 + POTION_KINDS.dungeon.power[3])) <= 1, 'in the run');
+    assert.equal(g.state.resources.dungeon_potion_4, 49);
+    // a combat potion picked for the run works at half its strength
+    g.state.resources.combat_potion_4 = 2;
+    g.setDungeonPotion('combat_potion_4');
+    g.tick(g.now + 100);
+    g.recompute();
+    assert.ok(Math.abs(g.derived.atk - plainAtk * (1 + POTION_KINDS.combat.power[3] * OUT_OF_PLACE)) <= 1, 'half, in a run');
+    // the dungeon potion's second fragment: over many clears, about its chance more than without
+    const clears = (pick, n) => {
+        const h = hero({ bestStage: 400, tokens: 5000 });
+        h.state.resources.dungeon_potion_4 = 1000;
+        h.setDungeonPotion(pick);
+        h.enterDungeon('goblin_warren');
+        h.state.combat.dungeon.repeat = true;
+        const c0 = h.state.dungeons.goblin_warren.clears;
+        while (h.state.dungeons.goblin_warren.clears - c0 < n) run(h, 10_000, 250);
+        const d = h.state.dungeons.goblin_warren;
+        return (d.fragments) / (d.clears - c0);
+    };
+    rng.setSource(seededRandom(32));
+    const without = clears('none', 150);
+    rng.setSource(seededRandom(32));
+    const withIt = clears('dungeon_potion_4', 150);
+    assert.ok(withIt - without > POTION_KINDS.dungeon.fragment[3] * 0.6, `${without.toFixed(2)} -> ${withIt.toFixed(2)} fragments a clear`);
+});
+
+test('a skill potion runs while the hero works, online and while away: faster, and more skill XP', () => {
+    const g = hero({ alchemy: 99 });
+    g.state.resources.skill_potion_4 = 2;
+    g.startNodeAction('mining', 'copper_ore');
+    const base = actionInterval(3000, g.derived, 'mining');
+    g.setWorkPotion('skill_potion_4');
+    g.tick(g.now + 100);
+    g.recompute();
+    assert.equal(g.state.resources.skill_potion_4, 1);
+    const speed = 1 + POTION_KINDS.skill.speed[3];
+    assert.ok(Math.abs(g.derived.skillMult.mining - speed) < 1e-9, 'faster');
+    assert.ok(actionInterval(3000, g.derived, 'mining') < base / (speed - 0.1));
+    assert.ok(Math.abs(g.derived.skillMult.smithing - speed) < 1e-9, 'every skill with work, the workshop too');
     assert.equal(g.derived.skillMult.farming, undefined, 'not Farming: its plots grow on the clock');
+    assert.ok(Math.abs(g.derived.skillXpMult - (1 + POTION_KINDS.skill.xp[3])) < 1e-9, 'and more XP');
     // the offline replay spends it too: two doses' worth of work away, and both are gone
     const saved = JSON.parse(g.serialize(g.now));
     const back = new Game(saved, saved.meta.savedAt);
     back.resumeFromSave(saved.meta.savedAt + 2 * POTION_MINUTES * MIN + 3 * MIN);
-    assert.equal(back.state.resources.gatherers_draught, 0);
+    assert.equal(back.state.resources.skill_potion_4, 0);
     assert.equal(back.state.workPotion.ms, 0, 'run out while away');
-    // Scholar's Tonic: more skill XP an action
-    const s = hero({ alchemy: 28 });
-    s.state.resources.scholars_tonic = 1;
-    s.startNodeAction('mining', 'copper_ore');
-    const xp0 = s.state.skills.mining.xp;
-    run(s, 20_000, 100);
-    const plainXp = s.state.skills.mining.xp - xp0;
-    s.setWorkPotion('scholars_tonic');
-    const xp1 = s.state.skills.mining.xp;
-    run(s, 20_000, 100);
-    const brewedXp = s.state.skills.mining.xp - xp1;
-    assert.ok(brewedXp > plainXp * 1.1, `${plainXp} -> ${brewedXp}`);
-    assert.deepEqual(potionsFor('work'), ['gatherers_draught', 'scholars_tonic']);
+    assert.deepEqual(potionsFor('skill'), ['skill_potion_1', 'skill_potion_2', 'skill_potion_3', 'skill_potion_4']);
 });
 
-test('a save from the potions that counted attacks loads with none at work', () => {
+test('a save from before the three kinds turns its bottles and picks into them, by their herb', () => {
     const g = hero();
     const raw = JSON.parse(g.serialize(T0));
-    raw.combat.potion = 'accuracy_potion';
-    raw.combat.potionCharges = 12;
-    delete raw.combat.potionMs;
-    delete raw.workPotion;
+    Object.assign(raw.resources, { accuracy_potion: 4, defense_potion: 3, evasion_potion: 2, health_potion: 1, fortune_draught: 5, gatherers_draught: 6, scholars_tonic: 7 });
+    raw.combat.potion = 'fortune_draught';
+    raw.combat.potionMs = 60_000;
+    raw.workPotion = { id: 'scholars_tonic', ms: 30_000 };
     const state = migrateState(raw, T0);
-    assert.equal(state.combat.potionMs, 0);
-    assert.equal(state.combat.potionCharges, undefined);
-    assert.deepEqual(state.workPotion, { id: 'none', ms: 0 });
-    assert.equal(state.combat.potion, 'accuracy_potion');
+    assert.deepEqual(['combat_potion_1', 'combat_potion_2', 'combat_potion_3', 'combat_potion_4', 'dungeon_potion_3', 'skill_potion_1', 'skill_potion_2'].map(id => state.resources[id]), [4, 3, 2, 1, 5, 6, 7]);
+    assert.equal(state.resources.accuracy_potion, undefined);
+    assert.equal(state.combat.potion, 'none', 'the Fortune Draught was a fight pick: now the dungeon one');
+    assert.equal(state.combat.dungeonPotion, 'dungeon_potion_3');
+    assert.equal(state.combat.dungeonPotionMs, 60_000);
+    assert.deepEqual(state.workPotion, { id: 'skill_potion_2', ms: 30_000 });
+    // and one that counted attacks loads with none at work
+    const older = JSON.parse(g.serialize(T0));
+    older.combat.potion = 'accuracy_potion';
+    older.combat.potionCharges = 12;
+    delete older.combat.potionMs;
+    const s2 = migrateState(older, T0);
+    assert.equal(s2.combat.potion, 'combat_potion_1');
+    assert.equal(s2.combat.potionMs, 0);
+    assert.equal(s2.combat.potionCharges, undefined);
 });
 
 // ---------- perks ----------
@@ -253,4 +314,21 @@ test('"weaker" salvages any drop that would not improve what is worn, never an u
     const r = g.salvageWeaker();
     assert.equal(r.count, 1);
     assert.deepEqual(g.state.inventory.map(i => i.id).sort(), [9003, 9004]);
+});
+
+// ---------- the bonfire ----------
+
+test('a burning bonfire doubles now and then in every skill that makes something, more with Firemaking', () => {
+    const g = hero();
+    const plain = g.derived.doubleChance.mining;
+    g.state.bonfire.until = g.now + 10 * MIN;
+    g.recompute();
+    assert.ok(Math.abs(g.derived.doubleChance.mining - plain - bonfireDouble(1)) < 1e-9, 'mining');
+    assert.ok(g.derived.doubleChance.cooking >= bonfireDouble(1) - 1e-9, 'cooking');
+    assert.ok(g.derived.doubleChance.smithing >= bonfireDouble(1) - 1e-9, 'smelting');
+    assert.equal(g.derived.doubleChance.firemaking, 0, 'not its own logs');
+    assert.equal(bonfireDouble(99), BASE.bonfireDoubleAt99);
+    g.state.bonfire.until = g.now - 1;
+    g.tick(g.now + 100);
+    assert.equal(g.derived.doubleChance.mining, plain, 'out: as it was');
 });

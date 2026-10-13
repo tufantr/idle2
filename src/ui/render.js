@@ -4,7 +4,7 @@
 
 import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
-import { potionsFor, potionStrength, potionEffectText } from '../data/potions.js';
+import { POTIONS, TIERS, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { anvilCost, onAnvil } from '../systems/anvil.js';
@@ -15,12 +15,12 @@ import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { STRATA } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
-import { actionInterval, skillLevel, bonfireBonus, bonfireLit, skillLevelsTotal } from '../core/modifiers.js';
+import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
-import { MINIGAME_CONFIG, CHALLENGE_MS, hasOpportunity, animatedPosition } from '../systems/minigame.js';
+import { CHALLENGE_MS, hasOpportunity, animatedPosition, minigameConfig } from '../systems/minigame.js';
 import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
@@ -66,7 +66,6 @@ export const TABS = [
     { id: 'dungeons', name: 'Dungeons', icon: '🏰', group: 'COMBAT' },
     { id: 'mining', name: 'Mining', icon: '⛏️', group: 'SKILLS', skill: 'mining' },
     { id: 'woodcutting', name: 'Woodcutting', icon: '🌳', group: 'SKILLS', skill: 'woodcutting' },
-    { id: 'fishing', name: 'Fishing', icon: '🎣', group: 'SKILLS', skill: 'fishing' },
     { id: 'hunting', name: 'Hunting', icon: '🏹', group: 'SKILLS', skill: 'hunting' },
     { id: 'cooking', name: 'Cooking', icon: '🍳', group: 'SKILLS', skill: 'cooking' },
     { id: 'firemaking', name: 'Firemaking', icon: '🔥', group: 'SKILLS', skill: 'firemaking' },
@@ -249,8 +248,9 @@ export function renderHeader(game, ui, cloud) {
     const daily = banked > 0
         ? `<button class="daily-btn ready${greatNext ? ' great' : ''}" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">${greatNext ? 'Great crate' : 'Daily crate'}</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
         : '';
+    const fireLevel = skillLevel(state, 'firemaking');
     const bonfirePill = bonfireLit(state, game.now)
-        ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}% XP for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100)}%<span class="pill-long"> XP · ${duration(state.bonfire.until - game.now)}</span></span>`
+        ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(fireLevel) * 100)}% XP in every skill, and a ${Math.round(bonfireDouble(fireLevel) * 100)}% chance of a double in every one that makes something, for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(fireLevel) * 100)}%<span class="pill-long"> XP · ${Math.round(bonfireDouble(fireLevel) * 100)}% doubles · ${duration(state.bonfire.until - game.now)}</span></span>`
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')
@@ -323,20 +323,14 @@ function renderLoadout(game) {
     const pick = (on, onclick, inner, title, state = '') => `<button class="pick${on ? ' on' : ''}${state ? ` ${state}` : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
     const word = w => `<span class="pick-word">${w}</span>`;
     const foods = foodsByHealing().filter(f => state.resources[f.id] > 0 || c.autoEat === f.id);
-    const potions = potionsFor('fight').map(id => RESOURCES[id]).filter(p => state.resources[p.id] > 0 || c.potion === p.id);
-    const alchemy = skillLevel(state, 'alchemy');
-    const does = id => potionEffectText(id, potionStrength(id, alchemy));   // what a potion does at this hero's Alchemy
     // With none in the bag, the row ends in one more tile that goes to where they are made.
     const goTile = (tab, word, label) => (isUnlocked(state, tab)
         ? `<button class="pick pick-go" onclick="FI.switchTab('${tab}')" title="${label}" aria-label="${label}">${tabIcon(tab, 1)}<span class="pick-sub">${word}</span></button>`
         : '');
     const noFood = !foods.some(f => state.resources[f.id] > 0);
-    const noPotions = !potions.some(p => state.resources[p.id] > 0);
     // Auto eats from every food carried, so those tiles light up with it; food that won't be eaten
-    // (None picked, or another food) is dimmed, and so is a potion that isn't the one picked.
-    // (in the Fasting Trial nothing is eaten, and the clan boss fight takes no potion: their rows say so)
+    // (None picked, or another food) is dimmed. (In the Fasting Trial nothing is eaten: the row says so.)
     const fasting = !!trialBite(state).noFood;
-    const clanFight = c.mode === 'clan';
     const foodState = f => (fasting ? 'idle' : c.autoEat === 'auto' ? (state.resources[f.id] > 0 ? 'in-play' : '') : c.autoEat === f.id ? '' : 'idle');
     const foodRow = [
         pick(c.autoEat === 'auto', "FI.setAutoEat('auto')", word('Auto'), 'Auto: eat from all your food, whichever best fits the missing health'),
@@ -347,41 +341,47 @@ function renderLoadout(game) {
             foodState(f))),
         noFood ? goTile('cooking', 'Cook', 'No food left: cook some') : ''
     ].join('');
-    const potionRow = [
-        pick(c.potion === 'none', "FI.setPotion('none')", word('None'), 'No potion'),
-        ...potions.map(p => pick(c.potion === p.id, `FI.setPotion('${p.id}')`,
-            `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
-            `${p.name}: ${does(p.id)} for ${duration(doseMs(d))} of fighting (${fmt(state.resources[p.id] || 0)} left)`, c.potion === p.id ? '' : 'idle')),
-        noPotions ? goTile('alchemy', 'Brew', 'No potions left: brew some') : ''
-    ].join('');
-    const potionNote = clanFight ? 'none against the clan boss' : c.potion !== 'none' ? (c.potionMs > 0 ? `${does(c.potion)} · ${duration(c.potionMs)} left` : (state.resources[c.potion] > 0 ? 'drunk as the fight starts' : 'none left')) : '';
     return `${showFood ? `<div class="loadout">
             <div class="loadout-label">Food <span class="muted small">${fasting ? 'none is eaten in this Trial' : `eaten below ${pct(d.autoEatThreshold)} health`}</span></div>
             <div class="pick-row">${foodRow}</div>
         </div>` : ''}
-        ${showPotions ? `<div class="loadout">
-            <div class="loadout-label">Potion${potionNote ? ` <span class="muted small">${potionNote}</span>` : ''}</div>
-            <div class="pick-row">${potionRow}</div>
-        </div>` : ''}`;
+        ${showPotions ? potionPicker(game, c.mode === 'dungeon' ? 'dungeon' : 'combat') : ''}`;
 }
 
-/** The work potion, picked on a skill's tab once there are any (a fight potion is picked under the fight). */
-function workPotionRow(game) {
+// The three picks (data/potions.js): the place each works in, its setter, what its tip calls the time it runs.
+const POTION_SLOTS = {
+    combat:  { label: 'Combat potion',  set: 'FI.setPotion',        of: 'fighting',        get: s => ({ id: s.combat.potion, ms: s.combat.potionMs }) },
+    dungeon: { label: 'Dungeon potion', set: 'FI.setDungeonPotion', of: "a run's fighting", get: s => ({ id: s.combat.dungeonPotion, ms: s.combat.dungeonPotionMs }) },
+    skill:   { label: 'Skill potion',   set: 'FI.setWorkPotion',    of: 'work',            get: s => ({ id: s.workPotion?.id || 'none', ms: s.workPotion?.ms || 0 }) }
+};
+
+/**
+ * A place's potion pick (the owner, October 2026: one on the Combat and Clan tabs and in the fight's dock, one on
+ * the Dungeons tab and in a run's dock, one on every skill tab): the bottles it can take that are carried, each
+ * with its tier, and what it does there; with none in the bag, a tile to Alchemy.
+ */
+function potionPicker(game, slot, cls = '') {
     const state = game.state;
-    if (!seen(state, 'work_potions')) return '';
-    const w = state.workPotion || { id: 'none', ms: 0 };
-    const alchemy = skillLevel(state, 'alchemy');
-    const does = id => potionEffectText(id, potionStrength(id, alchemy));
-    const potions = potionsFor('work').map(id => RESOURCES[id]).filter(p => state.resources[p.id] > 0 || w.id === p.id);
-    const pick = (on, onclick, inner, title, cls = '') => `<button class="pick${on ? ' on' : ''}${cls ? ` ${cls}` : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
+    const conf = POTION_SLOTS[slot];
+    const { id: picked, ms } = conf.get(state);
+    const pick = (on, onclick, inner, title, look = '') => `<button class="pick${on ? ' on' : ''}${look ? ` ${look}` : ''}" onclick="${onclick}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${on}">${inner}</button>`;
+    const potions = potionsForSlot(slot).filter(id => state.resources[id] > 0 || picked === id);
+    const none = !potions.some(id => state.resources[id] > 0);
+    const does = id => potionEffectText(id, slot);
     const row = [
-        pick(w.id === 'none', "FI.setWorkPotion('none')", '<span class="pick-word">None</span>', 'No work potion'),
-        ...potions.map(p => pick(w.id === p.id, `FI.setWorkPotion('${p.id}')`,
-            `${resIcon(p.id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[p.id] || 0)}</span>`,
-            `${p.name}: ${does(p.id)} for ${duration(doseMs(game.derived))} of work (${fmt(state.resources[p.id] || 0)} left)`, w.id === p.id ? '' : 'idle'))
+        pick(picked === 'none', `${conf.set}('none')`, '<span class="pick-word">None</span>', 'No potion'),
+        ...potions.map(id => pick(picked === id, `${conf.set}('${id}')`,
+            `${resIcon(id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[id] || 0)}</span><span class="pick-tier">${TIERS[POTIONS[id].tier - 1]}</span>`,
+            `${res(id).name}: ${does(id)}, for ${duration(doseMs(game.derived))} of ${conf.of} (${fmt(state.resources[id] || 0)} left)`, picked === id ? '' : 'idle')),
+        none && isUnlocked(state, 'alchemy') ? `<button class="pick pick-go" onclick="FI.switchTab('alchemy')" title="No potions left: brew some" aria-label="No potions left: brew some">${tabIcon('alchemy', 1)}<span class="pick-sub">Brew</span></button>` : ''
     ].join('');
-    const note = w.id !== 'none' ? (w.ms > 0 ? `${does(w.id)} · ${duration(w.ms)} left` : (state.resources[w.id] > 0 ? 'drunk as the work starts' : 'none left')) : '';
-    return `<div class="loadout work-potion"><div class="loadout-label">Work potion${note ? ` <span class="muted small">${note}</span>` : ''}</div><div class="pick-row">${row}</div></div>`;
+    const note = picked !== 'none' ? (ms > 0 ? `${does(picked)} · ${duration(ms)} left` : (state.resources[picked] > 0 ? `drunk as the ${slot === 'skill' ? 'work' : 'fight'} starts` : 'none left')) : '';
+    return `<div class="loadout ${cls}"><div class="loadout-label">${conf.label}${note ? ` <span class="muted small">${note}</span>` : ''}</div><div class="pick-row">${row}</div></div>`;
+}
+
+/** The skill potion, picked on a skill's tab once Alchemy is open (systems/disclosure.js 'work_potions'). */
+function workPotionRow(game) {
+    return seen(game.state, 'work_potions') ? potionPicker(game, 'skill', 'work-potion') : '';
 }
 
 /**
@@ -747,23 +747,27 @@ function toolBadge(game, skillId) {
     return def ? `<span class="tool-badge" title="${toolEffect(skill.tool, tier)}">${toolIcon(skill.tool)} ${esc(def.name)}</span>` : '';
 }
 
-/** Cooking lists three kinds of dish; group the cards so each line reads as a ladder. */
+/** Cooking lists three kinds of dish, and Hunting the forest's game and the river's fish: each line reads as a ladder. */
+const RIVER_CATCH = new Set(SKILLS.hunting.nodes.filter(n => n.fish).map(n => n.produces));
 function nodeGroup(skillId, node) {
+    if (skillId === 'hunting') return node.fish ? 'River' : 'Forest';
     if (skillId !== 'cooking') return null;
     const input = Object.keys(node.consumes || {})[0];
     if (RESOURCES[input]?.category === 'crop') return 'From the farm';
-    if (SKILLS.fishing.nodes.some(n => n.produces === input)) return 'Fish';
+    if (RIVER_CATCH.has(input)) return 'Fish';
     return 'Meat';
 }
-// A kitchen ladder shows once its ingredients can be had: fish with Fishing, crops with Farming.
-const GROUP_NEEDS = { Fish: 'fishing', 'From the farm': 'farming' };
+// A ladder shows once its place has opened: the river (and its fish in the kitchen) a little after the
+// forest (systems/disclosure.js 'river'), crops with Farming; or once its ingredients are in the bag.
+const GROUP_NEEDS = { River: s => seen(s, 'river'), Fish: s => seen(s, 'river'), 'From the farm': s => isUnlocked(s, 'farming') };
 
 function skillExtras(game, skillId) {
     const state = game.state;
     if (skillId === 'firemaking') {
         const lit = bonfireLit(state, game.now);
         const bonus = Math.round(bonfireBonus(skillLevel(state, 'firemaking')) * 100);
-        return `<div class="info-strip ${lit ? 'lit' : ''}">${glyph('flame')} ${lit ? `The bonfire burns for <b>${duration(state.bonfire.until - game.now)}</b>: <b>+${bonus}% XP</b> in every skill.` : `The bonfire is out. Burn logs to light it: <b>+${bonus}% XP</b> in every skill.`}</div>`;
+        const doubles = Math.round(bonfireDouble(skillLevel(state, 'firemaking')) * 100);
+        return `<div class="info-strip ${lit ? 'lit' : ''}">${glyph('flame')} ${lit ? `The bonfire burns for <b>${duration(state.bonfire.until - game.now)}</b>: <b>+${bonus}% XP</b> in every skill, and <b>${doubles}% doubles</b> in every skill that makes something.` : `The bonfire is out. Burn logs to light it: <b>+${bonus}% XP</b> in every skill and <b>${doubles}% doubles</b> where something is made.`}</div>`;
     }
     return '';
 }
@@ -847,12 +851,12 @@ export function renderSkill(game, ui, skillId) {
     }
     let cards = '';
     for (const [name, nodes] of ladders) {
-        if (GROUP_NEEDS[name] && !isUnlocked(state, GROUP_NEEDS[name]) && !nodes.some(n => Object.keys(n.consumes || {}).some(id => state.resources[id] > 0))) continue;
+        if (GROUP_NEEDS[name] && !GROUP_NEEDS[name](state) && !nodes.some(n => Object.keys(n.consumes || {}).some(id => state.resources[id] > 0))) continue;
         if (name && ladders.size > 1) cards += `<h3 class="section-title grid-span">${esc(name)}</h3>`;
         for (const node of withNext(nodes, n => n.levelReq, level)) {
             const out = res(node.produces || node.bonfireLog);
             const art = resIcon(node.produces || node.bonfireLog, { scale: 1.5 });
-            const pic = cardPic(node.id, skillId === 'cooking' ? 'kitchen' : null);
+            const pic = cardPic(node.id, skillId === 'cooking' ? 'kitchen' : POTIONS[node.produces] ? `${POTIONS[node.produces].kind}_potion` : null);   // a potion's tiers share their kind's
             if (level < node.levelReq) { cards += actionCard({ locked: `Level ${node.levelReq}`, art, pic, title: node.name, color: skill.color }); continue; }
             const active = action?.kind === 'node' && action.skill === skillId && action.id === node.id;
             const def = resolveAction(state, { kind: 'node', skill: skillId, id: node.id });
@@ -879,7 +883,7 @@ export function renderSkill(game, ui, skillId) {
             });
         }
     }
-    const bait = skillId === 'fishing' && state.resources.fishing_bait > 0 ? `<span class="tool-badge" title="Each catch uses one bait for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish">${resIcon('fishing_bait')} ${fmt(state.resources.fishing_bait)} bait</span>` : '';
+    const bait = skillId === 'hunting' && seen(state, 'river') && state.resources.fishing_bait > 0 ? `<span class="tool-badge" title="Each catch at a river spot uses one bait for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish">${resIcon('fishing_bait')} ${fmt(state.resources.fishing_bait)} bait</span>` : '';
     return `<section class="glass-panel skill-panel ${skillPainted(skillId)}">
         ${xpHeader(game, skillId, bait + toolBadge(game, skillId))}
         ${skillExtras(game, skillId)}
@@ -889,14 +893,12 @@ export function renderSkill(game, ui, skillId) {
     </section>`;
 }
 
-// What rides the mini-game's track: the skill's tool, or what it chases (the fox, a fish).
-const MINIGAME_MARKER = { mining: 'tool/pickaxe', woodcutting: 'tool/axe', hunting: 'pet/scout', fishing: 'res/raw_trout' };
 
 /** The mini-game. It arrives with the first chance to play; between chances it is one quiet line. */
 export function renderMinigame(game, skillId) {
     const state = game.state;
     if (!seen(state, 'minigames')) return '';
-    const conf = MINIGAME_CONFIG[skillId];
+    const conf = minigameConfig(state, skillId);   // (Hunting at a river spot plays the angler's)
     const mg = state.minigame[skillId];
     const now = game.now;
     const boostLeft = Math.max(0, mg.boostUntil - now);
@@ -917,8 +919,8 @@ export function renderMinigame(game, skillId) {
         if (ch.type === 'timing' || ch.type === 'moving-target') {
             body = `<div class="minigame-prompt">${ch.type === 'timing' ? 'Tap when the marker is inside the glowing zone.' : conf.desc}</div>${timer}
                 <div class="minigame-timing-track"><div class="minigame-timing-zone" style="left:${ch.zoneStart * 100}%; width:${ch.zoneWidth * 100}%; background:${conf.accent}"></div>
-                <div class="minigame-timing-marker" id="mg-marker-${skillId}" style="left:${animatedPosition(ch, now) * 100}%; background:${conf.accent}">${MINIGAME_MARKER[skillId] ? sprite(MINIGAME_MARKER[skillId], { scale: 0.75, cls: 'soft' }) : ''}</div></div>
-                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">${ch.type === 'timing' ? 'Tap now' : skillId === 'fishing' ? 'Strike' : 'Loose arrow'}</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Skip</button></div>`;
+                <div class="minigame-timing-marker" id="mg-marker-${skillId}" style="left:${animatedPosition(ch, now) * 100}%; background:${conf.accent}">${conf.marker ? sprite(conf.marker, { scale: 0.75, cls: 'soft' }) : ''}</div></div>
+                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">${ch.type === 'timing' ? 'Tap now' : conf.button || 'Strike'}</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Skip</button></div>`;
         } else if (ch.type === 'heat') {
             body = `<div class="minigame-prompt">Tap the flame to keep the heat inside the band, then plate it.</div>${timer}
                 <div class="minigame-heat-track"><div class="minigame-timing-zone" style="left:${ch.targetStart * 100}%; width:${ch.targetWidth * 100}%; background:${conf.accent}"></div><div class="minigame-heat-fill" id="mg-heat-${skillId}" style="width:${ch.heat * 100}%; background:${conf.accent}"></div></div>
@@ -1091,7 +1093,7 @@ export function renderCrafting(game, ui) {
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
-    const tools = ['bow', 'rod'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
+    const tools = ['bow'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
     return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
         ${xpHeader(game, 'crafting')}
         ${workPotionRow(game)}
@@ -1422,8 +1424,8 @@ const MEDAL_ART = {
     masteries99: 'uniq/crystal_heart', skills99: 'crown', petPats: 'pet/fang', greatCrates: 'crate', recoveries: 'campfire', codexFound: 'item/Head/5'
 };
 const SKILL_MEDAL = {
-    mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', fishing: 'res/raw_shark', firemaking: 'campfire',
-    farming: 'res/starfruit', agility: 'item/Boots/5', cooking: 'res/cooked_shark', alchemy: 'res/health_potion',
+    mining: 'res/runite_ore', woodcutting: 'res/magic_log', hunting: 'res/raw_dragon', firemaking: 'campfire',
+    farming: 'res/starfruit', agility: 'item/Boots/5', cooking: 'res/cooked_shark', alchemy: 'res/combat_potion_4',
     smithing: 'res/runite_bar', crafting: 'item/Ring/6', combat: 'item/Weapon/7'
 };
 
@@ -1915,6 +1917,7 @@ export function renderDungeons(game) {
     }).join('');
     return `${banner('dungeons')}
     <section class="glass-panel ${painted('dungeon', 'center 50%')}">
+        ${seen(state, 'potions') ? potionPicker(game, 'dungeon', 'dungeon-potion') : ''}
         <div class="dungeon-grid">${cards}</div>
     </section>
     <section class="glass-panel titan-panel" style="${artStyle('titan')}">
@@ -2110,6 +2113,7 @@ export function renderClan(game, ui, cloud) {
             <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? clanBossPanel(game, social, boss, pct) : ''}
+            ${boss && seen(game.state, 'potions') ? potionPicker(game, 'combat', 'clan-potion') : ''}
             <div class="two-col">
                 <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table clan-board"><thead><tr><th>#</th><th>Member</th><th>Damage</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
                 <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table clan-members"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th>Per attack</th></tr></thead><tbody>${members}</tbody></table></div></div>

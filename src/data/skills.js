@@ -4,8 +4,8 @@
 
 import { paceList } from './pace.js';
 
-export const SKILL_IDS = ['mining', 'woodcutting', 'fishing', 'hunting', 'cooking', 'firemaking', 'alchemy', 'farming', 'agility', 'smithing', 'crafting', 'combat'];
-export const GATHERING_SKILLS = ['mining', 'woodcutting', 'fishing', 'hunting'];
+export const SKILL_IDS = ['mining', 'woodcutting', 'hunting', 'cooking', 'firemaking', 'alchemy', 'farming', 'agility', 'smithing', 'crafting', 'combat'];
+export const GATHERING_SKILLS = ['mining', 'woodcutting', 'hunting'];
 export const PRODUCTION_SKILLS = ['cooking', 'firemaking', 'alchemy'];
 export const WORKSHOP_SKILLS = ['smithing', 'crafting'];
 // Skills with a mini-game and the Forager perk: gathering and production.
@@ -41,22 +41,12 @@ export const SKILLS = {
             { id: 'magic_log',  name: 'Magic Tree',  levelReq: 75, interval: 4200, xp: 125, produces: 'magic_log' }
         ]
     },
-    fishing: {
-        id: 'fishing', name: 'Fishing', icon: '🎣', color: '#38bdf8', tool: 'rod',
-        desc: 'Fish for the kitchen — they cook into food a little better than meat of their level. Bait from combat makes a second catch likely.',
-        nodes: [
-            { id: 'raw_shrimp',     name: 'Shrimp Shallows', levelReq: 1,  interval: 3600, xp: 11,  produces: 'raw_shrimp' },
-            { id: 'raw_trout',      name: 'Trout Stream',    levelReq: 15, interval: 3600, xp: 21,  produces: 'raw_trout' },
-            { id: 'raw_salmon',     name: 'Salmon Run',      levelReq: 30, interval: 3800, xp: 34,  produces: 'raw_salmon' },
-            { id: 'raw_lobster',    name: 'Lobster Pots',    levelReq: 45, interval: 4000, xp: 55,  produces: 'raw_lobster' },
-            { id: 'raw_swordfish',  name: 'Swordfish Banks', levelReq: 60, interval: 4400, xp: 86,  produces: 'raw_swordfish' },
-            { id: 'raw_shark',      name: 'Shark Waters',    levelReq: 75, interval: 4800, xp: 130, produces: 'raw_shark' },
-            { id: 'raw_leviathan',  name: 'Leviathan Deep',  levelReq: 90, interval: 5500, xp: 200, produces: 'raw_leviathan' }
-        ]
-    },
+    // Hunting: game in the forest and, since October 2026, fish in the river (Fishing was its mirror, seven
+    // spots at the same levels and dishes a point apart: the owner made them one skill). A river spot
+    // (`fish`) uses bait for a likely second catch, and shows the river and the rod on the skill's stage.
     hunting: {
         id: 'hunting', name: 'Hunting', icon: '🏹', color: '#f59e0b', tool: 'bow',
-        desc: 'Raw meat for the kitchen. Better bows mean faster kills.',
+        desc: 'Game in the forest and fish in the river, for the kitchen: fish cook into food a little better than meat of their level. Better bows mean faster catches, and bait makes a second fish likely.',
         nodes: [
             { id: 'raw_rabbit', name: 'Rabbit', levelReq: 1,  interval: 4000, xp: 12,  produces: 'raw_rabbit' },
             { id: 'raw_fox',    name: 'Fox',    levelReq: 15, interval: 4000, xp: 22,  produces: 'raw_fox' },
@@ -64,7 +54,14 @@ export const SKILLS = {
             { id: 'raw_deer',   name: 'Deer',   levelReq: 45, interval: 4400, xp: 58,  produces: 'raw_deer' },
             { id: 'raw_bear',   name: 'Bear',   levelReq: 60, interval: 4800, xp: 90,  produces: 'raw_bear' },
             { id: 'raw_drake',  name: 'Drake',  levelReq: 75, interval: 5200, xp: 135, produces: 'raw_drake' },
-            { id: 'raw_dragon', name: 'Dragon', levelReq: 90, interval: 6000, xp: 210, produces: 'raw_dragon' }
+            { id: 'raw_dragon', name: 'Dragon', levelReq: 90, interval: 6000, xp: 210, produces: 'raw_dragon' },
+            { id: 'raw_shrimp',     name: 'Shrimp Shallows', levelReq: 1,  interval: 3600, xp: 11,  fish: true, produces: 'raw_shrimp' },
+            { id: 'raw_trout',      name: 'Trout Stream',    levelReq: 15, interval: 3600, xp: 21,  fish: true, produces: 'raw_trout' },
+            { id: 'raw_salmon',     name: 'Salmon Run',      levelReq: 30, interval: 3800, xp: 34,  fish: true, produces: 'raw_salmon' },
+            { id: 'raw_lobster',    name: 'Lobster Pots',    levelReq: 45, interval: 4000, xp: 55,  fish: true, produces: 'raw_lobster' },
+            { id: 'raw_swordfish',  name: 'Swordfish Banks', levelReq: 60, interval: 4400, xp: 86,  fish: true, produces: 'raw_swordfish' },
+            { id: 'raw_shark',      name: 'Shark Waters',    levelReq: 75, interval: 4800, xp: 130, fish: true, produces: 'raw_shark' },
+            { id: 'raw_leviathan',  name: 'Leviathan Deep',  levelReq: 90, interval: 5500, xp: 200, fish: true, produces: 'raw_leviathan' }
         ]
     },
     cooking: {
@@ -93,7 +90,7 @@ export const SKILLS = {
     },
     firemaking: {
         id: 'firemaking', name: 'Firemaking', icon: '🔥', color: '#f97316', tool: 'tinderbox',
-        desc: 'Burn logs for XP. Every log feeds the bonfire, which gives XP to every skill while it burns.',
+        desc: 'Burn logs for XP. Every log feeds the bonfire: while it burns, every skill earns more XP, and every skill that makes something may make two.',
         nodes: [
             { id: 'burn_normal_log', name: 'Burn Logs',        levelReq: 1,  interval: 2000, xp: 16,  consumes: { normal_log: 1 }, bonfireLog: 'normal_log' },
             { id: 'burn_oak_log',    name: 'Burn Oak Logs',    levelReq: 15, interval: 2000, xp: 28,  consumes: { oak_log: 1 },    bonfireLog: 'oak_log' },
@@ -105,19 +102,25 @@ export const SKILLS = {
     },
     alchemy: {
         id: 'alchemy', name: 'Alchemy', icon: '🧪', color: '#10b981',
-        desc: 'Forage herbs, then brew them with a secondary ingredient into potions for the fight and for work.',
+        desc: 'Forage herbs, then brew them into potions: combat potions for the fight, dungeon potions for dungeon runs and skill potions for work, each stronger with a better herb.',
+        // (each tier's herb with one thing from another skill: ore for the fight, a cooked dish for the dungeons, logs for work)
         nodes: [
             { id: 'guam_leaf',        name: 'Forage Guam',        levelReq: 1,  interval: 3500, xp: 10,  produces: 'guam_leaf' },
-            { id: 'accuracy_potion',  name: 'Accuracy Potion',    levelReq: 5,  interval: 2500, xp: 30,  produces: 'accuracy_potion', consumes: { guam_leaf: 1, copper_ore: 1 } },
-            { id: 'gatherers_draught', name: "Gatherer's Draught", levelReq: 10, interval: 2500, xp: 34, produces: 'gatherers_draught', consumes: { guam_leaf: 1, normal_log: 1 } },
+            { id: 'combat_potion_1',  name: 'Combat Potion I',    levelReq: 5,  interval: 2500, xp: 30,  produces: 'combat_potion_1',  consumes: { guam_leaf: 1, copper_ore: 1 } },
+            { id: 'skill_potion_1',   name: 'Skill Potion I',     levelReq: 8,  interval: 2500, xp: 33,  produces: 'skill_potion_1',   consumes: { guam_leaf: 1, normal_log: 1 } },
+            { id: 'dungeon_potion_1', name: 'Dungeon Potion I',   levelReq: 11, interval: 2600, xp: 38,  produces: 'dungeon_potion_1', consumes: { guam_leaf: 1, cooked_rabbit: 1 } },
             { id: 'marrentill_leaf',  name: 'Forage Marrentill',  levelReq: 15, interval: 3800, xp: 24,  produces: 'marrentill_leaf' },
-            { id: 'defense_potion',   name: 'Defense Potion',     levelReq: 20, interval: 2600, xp: 55,  produces: 'defense_potion',  consumes: { marrentill_leaf: 1, oak_log: 1 } },
-            { id: 'scholars_tonic',   name: "Scholar's Tonic",    levelReq: 28, interval: 2700, xp: 62,  produces: 'scholars_tonic',  consumes: { marrentill_leaf: 2, willow_log: 1 } },
+            { id: 'combat_potion_2',  name: 'Combat Potion II',   levelReq: 20, interval: 2600, xp: 55,  produces: 'combat_potion_2',  consumes: { marrentill_leaf: 1, iron_ore: 1 } },
+            { id: 'skill_potion_2',   name: 'Skill Potion II',    levelReq: 24, interval: 2700, xp: 60,  produces: 'skill_potion_2',   consumes: { marrentill_leaf: 1, oak_log: 1 } },
+            { id: 'dungeon_potion_2', name: 'Dungeon Potion II',  levelReq: 28, interval: 2700, xp: 66,  produces: 'dungeon_potion_2', consumes: { marrentill_leaf: 1, cooked_fox: 1 } },
             { id: 'tarromin_leaf',    name: 'Forage Tarromin',    levelReq: 35, interval: 4200, xp: 45,  produces: 'tarromin_leaf' },
-            { id: 'evasion_potion',   name: 'Evasion Potion',     levelReq: 40, interval: 2800, xp: 95,  produces: 'evasion_potion',  consumes: { tarromin_leaf: 1, raw_fox: 1 } },
-            { id: 'fortune_draught',  name: 'Fortune Draught',    levelReq: 48, interval: 2900, xp: 110, produces: 'fortune_draught', consumes: { tarromin_leaf: 1, silver_bar: 1 } },
+            { id: 'combat_potion_3',  name: 'Combat Potion III',  levelReq: 40, interval: 2800, xp: 95,  produces: 'combat_potion_3',  consumes: { tarromin_leaf: 1, mithril_ore: 1 } },
+            { id: 'skill_potion_3',   name: 'Skill Potion III',   levelReq: 44, interval: 2900, xp: 102, produces: 'skill_potion_3',   consumes: { tarromin_leaf: 1, willow_log: 1 } },
+            { id: 'dungeon_potion_3', name: 'Dungeon Potion III', levelReq: 48, interval: 2900, xp: 110, produces: 'dungeon_potion_3', consumes: { tarromin_leaf: 1, cooked_boar: 1 } },
             { id: 'harralander_leaf', name: 'Forage Harralander', levelReq: 55, interval: 4600, xp: 75,  produces: 'harralander_leaf' },
-            { id: 'health_potion',    name: 'Health Potion',      levelReq: 60, interval: 3000, xp: 150, produces: 'health_potion',   consumes: { harralander_leaf: 1, cooked_boar: 1 } }
+            { id: 'combat_potion_4',  name: 'Combat Potion IV',   levelReq: 60, interval: 3000, xp: 150, produces: 'combat_potion_4',  consumes: { harralander_leaf: 1, adamant_ore: 1 } },
+            { id: 'skill_potion_4',   name: 'Skill Potion IV',    levelReq: 64, interval: 3100, xp: 160, produces: 'skill_potion_4',   consumes: { harralander_leaf: 1, maple_log: 1 } },
+            { id: 'dungeon_potion_4', name: 'Dungeon Potion IV',  levelReq: 68, interval: 3100, xp: 172, produces: 'dungeon_potion_4', consumes: { harralander_leaf: 1, cooked_deer: 1 } }
         ]
     },
     farming: {
@@ -137,7 +140,7 @@ export const SKILLS = {
     },
     crafting: {
         id: 'crafting', name: 'Crafting', icon: '💍', color: '#e879f9',
-        desc: 'Jewellery from precious bars and gems; bows and fishing rods from logs.',
+        desc: 'Jewellery from precious bars and gems; bows from logs.',
         nodes: []
     },
     combat: {

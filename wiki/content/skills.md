@@ -14,7 +14,7 @@ Besides fighting, your hero has {{SKILL_IDS.length - 1}} skills to train, each f
 
 ## Kinds of skills
 
-- **Gathering:** [[/skills/mining|Mining]], [[/skills/woodcutting|Woodcutting]], [[/skills/fishing|Fishing]] and [[/skills/hunting|Hunting]] use nothing up and bring in raw materials.
+- **Gathering:** [[/skills/mining|Mining]], [[/skills/woodcutting|Woodcutting]] and [[/skills/hunting|Hunting]] (the forest and the river) use nothing up and bring in raw materials.
 - **Production:** [[/skills/cooking|Cooking]], [[/skills/firemaking|Firemaking]] and [[/skills/alchemy|Alchemy]] turn materials into food, bonfire time and potions.
 - **Workshop:** [[/skills/smithing|Smithing]] and [[/skills/crafting|Crafting]] make bars, gear, jewellery and tools.
 - **Growing and training:** [[/skills/farming|Farming]] grows crops on the clock, and [[/skills/agility|Agility]] is a course you build, where every obstacle is a bonus for good.

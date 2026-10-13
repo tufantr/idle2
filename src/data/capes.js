@@ -14,8 +14,7 @@ export const CAPES = [
     { skill: 'combat',      perk: '+5% attack and defence',            mods: { atkMult: 0.05, defMult: 0.05 } },
     { skill: 'mining',      perk: 'A second ore 10% more often',       mods: { doubleChance: { mining: 0.10 } } },
     { skill: 'woodcutting', perk: 'A second log 10% more often',       mods: { doubleChance: { woodcutting: 0.10 } } },
-    { skill: 'fishing',     perk: 'A second fish 10% more often',      mods: { doubleChance: { fishing: 0.10 } } },
-    { skill: 'hunting',     perk: 'A second catch 10% more often',     mods: { doubleChance: { hunting: 0.10 } } },
+    { skill: 'hunting',     perk: 'A second catch 10% more often',     mods: { doubleChance: { hunting: 0.10 } } },   // (Fishing's cape went with it into Hunting)
     { skill: 'cooking',     perk: 'A second dish 10% more often',      mods: { doubleChance: { cooking: 0.10 } } },
     { skill: 'firemaking',  perk: 'A log burns twice 10% more often',  mods: { doubleChance: { firemaking: 0.10 } } },
     { skill: 'alchemy',     perk: 'A second herb or potion 10% more often', mods: { doubleChance: { alchemy: 0.10 } } },

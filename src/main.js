@@ -61,7 +61,7 @@ const prefs = {
 };
 
 const ui = {
-    tab: prefs.get('fantasyIdle.tab') || 'combat',
+    tab: (t => (t === 'fishing' ? 'hunting' : t))(prefs.get('fantasyIdle.tab') || 'combat'),   // (Fishing joined Hunting)
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
     smithView: 'smelt',  // the step of Smithing on screen: smelt, forge, anvil or tools
     hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
@@ -1219,6 +1219,7 @@ window.FI = {
     },
     setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },
+    setDungeonPotion(id) { game.setDungeonPotion(id); render(); },
     setWorkPotion(id) { game.setWorkPotion(id); render(); },
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },

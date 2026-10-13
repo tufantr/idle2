@@ -20,14 +20,21 @@ export function expectedDps(derived) {
     return derived.atk * critMult / (derived.attackInterval / 1000);
 }
 
-/** The hero of a stored save as the server judges it: no Focus, timed boosts, potion or Trial, so numbers are stable. */
-function stableState(rawState, now) {
+/**
+ * The hero of a stored save as the server judges it: no Focus, timed boosts, potion or Trial, so numbers are
+ * stable. A clan attack (`clan`) is fought with the combat potion picked (the owner, October 2026), as the
+ * game's own clan fight drinks it at its start: it counts with a dose running or a bottle left
+ * (core/modifiers.js potionEffects).
+ */
+function stableState(rawState, now, { clan = false } = {}) {
     const state = migrateState(rawState, now);
     state.meta.lastInputAt = now;
     state.meta.lastActiveAt = now;
     for (const mg of Object.values(state.minigame)) mg.boostUntil = 0;
     state.bonfire.until = 0;
-    state.combat.potion = 'none';
+    if (clan) state.combat.mode = 'clan';
+    else state.combat.potion = 'none';
+    state.combat.dungeonPotion = 'none';
     state.workPotion = { id: 'none', ms: 0 };
     state.trials.active = null;   // a Trial's rule handicaps a run, not the hero the boards compare
     return state;
@@ -84,7 +91,7 @@ export function clanFightDamage(derived, strikes, ms = CLAN_FIGHT_MS) {
 /** A clan attack from a stored save (the server's reckoning): `strikes` and `ms` as the page sent them. */
 export function clanAttackFromSave(rawState, strikes, ms = CLAN_FIGHT_MS, now = Date.now()) {
     const fightMs = Math.max(0, Math.min(CLAN_FIGHT_MS, Number.isFinite(Number(ms)) ? Number(ms) : CLAN_FIGHT_MS));
-    return clanFightDamage(deriveStats(stableState(rawState, now)), cleanStrikes(strikes, fightMs), fightMs);
+    return clanFightDamage(deriveStats(stableState(rawState, now, { clan: true })), cleanStrikes(strikes, fightMs), fightMs);
 }
 
 /** Summary of a stored save for social features. Accepts any raw save object. */

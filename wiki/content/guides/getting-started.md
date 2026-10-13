@@ -94,7 +94,7 @@ Places you earn by working open within {{WORK_GAP_MS / 60000}} minutes of the wo
 - [[/skills/smithing|Smithing]]: {{UNLOCKS.find(u => u.id === 'smithing').task.replace(/^./, c => c.toLowerCase())}}.
 - [[/skills/woodcutting|Woodcutting]]: {{UNLOCKS.find(u => u.id === 'woodcutting').task.replace(/^./, c => c.toLowerCase())}}.
 - [[/skills/cooking|Cooking]]: {{UNLOCKS.find(u => u.id === 'cooking').task.replace(/^./, c => c.toLowerCase())}}.
-- [[/skills/fishing|Fishing]]: {{UNLOCKS.find(u => u.id === 'fishing').task.replace(/^./, c => c.toLowerCase())}}.
+- Hunting's river: cook five dishes.
 - [[/skills/firemaking|Firemaking]]: {{UNLOCKS.find(u => u.id === 'firemaking').task.replace(/^./, c => c.toLowerCase())}}.
 - [[/skills/farming|Farming]]: {{UNLOCKS.find(u => u.id === 'farming').task.replace(/^./, c => c.toLowerCase())}}.
 - [[/skills/crafting|Crafting]]: {{UNLOCKS.find(u => u.id === 'crafting').task.replace(/^./, c => c.toLowerCase())}}, once you have found a gem.
@@ -132,7 +132,7 @@ Iron comes next: the Iron Vein at Mining {{SKILLS.mining.nodes.find(n => n.id ==
 
 Hunting is the first place to open by fighting. Hunt a rabbit and [[/skills/cooking|Cooking]] opens: roast {{res('raw_rabbit')}} into {{res('cooked_rabbit')}}. Every dish burns a log as fuel, so keep some logs.
 
-Once you can cook, a **Food** row appears under the fight. Your hero eats when health falls below {{pct(BASE.baseAutoEatThreshold, 0)}}. On **Auto** your hero picks the smallest dish that fills the gap; you can also choose one dish, or **None**. Food keeps your hero standing through long climbs. A few dishes in, [[/skills/fishing|Fishing]] opens: fish cook into food that heals a little more than meat of the same level. More in [[/food|Food]].
+Once you can cook, a **Food** row appears under the fight. Your hero eats when health falls below {{pct(BASE.baseAutoEatThreshold, 0)}}. On **Auto** your hero picks the smallest dish that fills the gap; you can also choose one dish, or **None**. Food keeps your hero standing through long climbs. A few dishes in, [[/skills/hunting|Hunting]]'s river opens: fish cook into food that heals a little more than meat of the same level. More in [[/food|Food]].
 
 ## The daily crate
 

@@ -9,9 +9,11 @@ import { SKILLS } from '../src/data/skills.js';
 import { SMELTING_RECIPES, TOOLS } from '../src/data/workshop.js';
 import { SMITHING_TYPES, CRAFTING_TYPES } from '../src/data/items.js';
 import { CROPS } from '../src/data/farming.js';
+import { POTIONS } from '../src/data/potions.js';
 
 const cards = [
-    ...Object.values(SKILLS).flatMap(s => (s.nodes || []).map(n => n.id)),
+    // (a potion's four tiers share their kind's picture: src/ui/render.js renderSkill)
+    ...Object.values(SKILLS).flatMap(s => (s.nodes || []).map(n => (POTIONS[n.produces] ? `${POTIONS[n.produces].kind}_potion` : n.id))),
     ...SMELTING_RECIPES.map(r => r.id),
     ...SMITHING_TYPES.map(t => `forge_${t}`),
     ...CRAFTING_TYPES.map(t => `craft_${t}`),

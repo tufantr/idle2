@@ -26,7 +26,7 @@ import { path, res, resList, resIcon, icon, link, table, infobox, section, tiles
 const sec = { section: 'Skills', sectionPath: '/skills' };
 const KIND = id => (GATHERING_SKILLS.includes(id) ? 'Gathering' : PRODUCTION_SKILLS.includes(id) ? 'Production' : ['smithing', 'crafting'].includes(id) ? 'Workshop' : id === 'farming' ? 'Growing' : 'Training');
 const FEEDS = {
-    mining: ['smithing', 'crafting', 'alchemy'], woodcutting: ['cooking', 'firemaking', 'smithing', 'crafting', 'alchemy', 'agility'], fishing: ['cooking'], hunting: ['cooking', 'alchemy'],
+    mining: ['smithing', 'crafting', 'alchemy'], woodcutting: ['cooking', 'firemaking', 'smithing', 'crafting', 'alchemy', 'agility'], hunting: ['cooking', 'alchemy'],
     cooking: ['alchemy'], firemaking: [], alchemy: [], farming: ['cooking', 'alchemy'], smithing: ['crafting', 'agility'], crafting: [], agility: []
 };
 
@@ -64,7 +64,7 @@ function toolsFor(skillId) {
 function masterySection(id) {
     const actions = masteryActions(id);
     if (!actions.length) return '';
-    const produces = ['mining', 'woodcutting', 'fishing', 'hunting', 'cooking', 'alchemy', 'firemaking', 'smithing'].includes(id);
+    const produces = ['mining', 'woodcutting', 'hunting', 'cooking', 'alchemy', 'firemaking', 'smithing'].includes(id);
     const recipes = ['cooking', 'alchemy', 'firemaking', 'smithing', 'crafting'].includes(id);   // a jewel takes a bar and a gem
     return section('Mastery', `<p>Each of the ${actions.length} actions below has its own ${link('/mastery', 'mastery')}, from 1 to 99, earned by doing it. Every level adds ${pct(MASTERY_PER_LEVEL.speed, 1)} speed${produces ? `, ${pct(MASTERY_PER_LEVEL.double, 2)} chance of a double` : ''}${recipes ? ` and ${pct(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients` : ''}.</p>`
         + `<p class="chips">${actions.map(a => `<span class="chip">${esc(a.name)} <small>${a.levelReq}</small></span>`).join('')}</p>`);

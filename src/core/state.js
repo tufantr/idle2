@@ -2,7 +2,7 @@
 // Everything persisted lives here; derived values (stats, modifiers) are recomputed, never saved.
 
 import { RESOURCES } from '../data/resources.js';
-import { POTIONS, POTION_MINUTES } from '../data/potions.js';
+import { POTION_MINUTES, potionsForSlot } from '../data/potions.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
 import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS, BAG_UPGRADE } from '../data/items.js';
 import { generateEquipment, BALANCE } from './formulas.js';
@@ -33,7 +33,7 @@ export function createDefaultState(now = Date.now()) {
         gold: 0,
         resources: {},
         inventory: [],
-        workPotion: { id: 'none', ms: 0 },   // the work potion and what is left of its dose, in ms of work
+        workPotion: { id: 'none', ms: 0 },   // the skill potion and what is left of its dose, in ms of work
         bagUpgrades: 0,        // +BAG_UPGRADE.slots each, bought with gold
         equipped: {},
         tools: {},
@@ -51,7 +51,9 @@ export function createDefaultState(now = Date.now()) {
             enemyTimer: 0,
             autoEat: 'auto',
             potion: 'none',
-            potionMs: 0,       // what is left of the fight potion's dose, in ms of fighting (data/potions.js)
+            potionMs: 0,       // what is left of the combat potion's dose, in ms of fighting (data/potions.js)
+            dungeonPotion: 'none',   // the dungeon run's pick: a dungeon potion, or a combat potion at half its strength
+            dungeonPotionMs: 0,      // what is left of its dose, in ms of a run's fighting
             lifestealRoom: 0,  // how much lifesteal may still heal now, under its ceiling (BASE.lifestealPerSecond)
             combo: 0,
             lastComboAt: 0,
@@ -87,7 +89,7 @@ export function createDefaultState(now = Date.now()) {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
             itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0,
-            dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0,
+            dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0, potionFragments: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
             masteryLevels: 0, masteryBest: 1, masteries99: 0, ingredientsSaved: 0, campLevels: 0,
@@ -189,7 +191,7 @@ const V1_RESOURCE_MAP = {
     raw_rabbit: 'raw_rabbit', raw_fox: 'raw_fox', raw_boar: 'raw_boar', raw_deer: 'raw_deer', raw_bear: 'raw_bear', raw_drake: 'raw_drake', raw_dragon: 'raw_dragon',
     cooked_rabbit: 'cooked_rabbit', cooked_fox: 'cooked_fox', cooked_boar: 'cooked_boar', cooked_deer: 'cooked_deer', cooked_bear: 'cooked_bear', cooked_drake: 'cooked_drake', cooked_dragon: 'cooked_dragon',
     guam_leaf: 'guam_leaf', marrentill_leaf: 'marrentill_leaf', tarromin_leaf: 'tarromin_leaf', harralander_leaf: 'harralander_leaf',
-    accuracy_potion: 'accuracy_potion', defense_potion: 'defense_potion', evasion_potion: 'evasion_potion', health_potion: 'health_potion'
+    accuracy_potion: 'combat_potion_1', defense_potion: 'combat_potion_2', evasion_potion: 'combat_potion_3', health_potion: 'combat_potion_4'
 };
 
 function migrateV1(old, now) {
@@ -362,9 +364,60 @@ function cleanAction(raw) {
 const LOG_TYPES = new Set(['info', 'system', 'level', 'achievement', 'unlock', 'loot', 'craft', 'death', 'prestige', 'boss', 'combat', 'daily', 'minigame']);
 
 /** Fill any missing keys from the default state and clamp obviously broken numbers. */
+/**
+ * Fishing joined Hunting (October 2026, the owner: the two were mirror images, seven spots each at the same
+ * levels). A save from before keeps the higher of the two levels, both skills' mastery and counts, the
+ * better of its bow and rod (the bow serves the river now), its cape, and an action at a fishing spot goes
+ * on at Hunting's river; Fishing's tab, unlock and mini-game clock go with it.
+ */
+function foldFishingIntoHunting(state) {
+    const fish = state.skills?.fishing;
+    if (isPlainObject(fish)) {
+        const xp = Math.max(finite(Number(fish.xp)), finite(Number(state.skills.hunting?.xp)));
+        state.skills.hunting = { ...(isPlainObject(state.skills.hunting) ? state.skills.hunting : {}), xp };
+    }
+    if (isPlainObject(state.mastery?.fishing)) state.mastery.hunting = { ...(isPlainObject(state.mastery.hunting) ? state.mastery.hunting : {}), ...state.mastery.fishing };
+    const by = state.stats?.actionsBySkill;
+    if (isPlainObject(by) && 'fishing' in by) { by.hunting = finite(Number(by.hunting)) + finite(Number(by.fishing)); delete by.fishing; }
+    if (isPlainObject(state.tools) && 'rod' in state.tools) state.tools.bow = Math.max(finite(Number(state.tools.bow)), finite(Number(state.tools.rod)));
+    if (isPlainObject(state.action) && state.action.skill === 'fishing') state.action.skill = 'hunting';
+    if (isPlainObject(state.hero) && state.hero.cape === 'fishing') state.hero.cape = 'hunting';
+    if (isPlainObject(state.unlocks) && state.unlocks.fishing === true) {   // Fishing was open: so is the river
+        if (isPlainObject(state.seen)) state.seen.river = true;
+        delete state.unlocks.fishing;
+    }
+}
+
+// The seven potions before the three kinds that grow (October 2026), each as the tier of its herb (data/potions.js).
+const OLD_POTIONS = {
+    accuracy_potion: 'combat_potion_1', defense_potion: 'combat_potion_2', evasion_potion: 'combat_potion_3', health_potion: 'combat_potion_4',
+    fortune_draught: 'dungeon_potion_3', gatherers_draught: 'skill_potion_1', scholars_tonic: 'skill_potion_2'
+};
+
+/** A save's bottles of the old potions become the new ones, and so do its picks (the Fortune Draught: the dungeon's). */
+function convertOldPotions(state) {
+    const r = state.resources;
+    if (isPlainObject(r)) {
+        for (const [old, now] of Object.entries(OLD_POTIONS)) {
+            const n = Math.floor(finite(Number(r[old])));
+            if (n > 0) r[now] = Math.floor(finite(Number(r[now]))) + n;
+            delete r[old];
+        }
+    }
+    const c = state.combat;
+    if (isPlainObject(c) && Object.hasOwn(OLD_POTIONS, c.potion)) {
+        const now = OLD_POTIONS[c.potion];
+        if (now.startsWith('dungeon')) { c.dungeonPotion = now; c.dungeonPotionMs = finite(Number(c.potionMs)); c.potion = 'none'; c.potionMs = 0; }
+        else c.potion = now;
+    }
+    if (isPlainObject(state.workPotion) && Object.hasOwn(OLD_POTIONS, state.workPotion.id)) state.workPotion.id = OLD_POTIONS[state.workPotion.id];
+}
+
 function normalise(data, now) {
     const base = createDefaultState(now);
     const state = mergeInto(base, data);
+    foldFishingIntoHunting(state);   // before Fishing's own keys are dropped with the unknown ones
+    convertOldPotions(state);        // and the old potions' ids with the unknown resources
     state.version = SAVE_VERSION;
     // Attended time began with the paced places: a save from before it counts all its play as attended
     // (the default 0 is merged in first, so this reads the save itself).
@@ -454,9 +507,12 @@ function normalise(data, now) {
     for (const item of [...state.inventory, ...Object.values(state.equipped)]) if (item?.type && isCodexKey(codexKey(item))) state.codex[codexKey(item)] = true;
     state.stats.codexFound = Object.keys(state.codex).length;
     if (!['auto', 'none'].includes(state.combat.autoEat) && !(RESOURCES[state.combat.autoEat]?.heal > 0)) state.combat.autoEat = 'auto';
-    if (state.combat.potion !== 'none' && POTIONS[state.combat.potion]?.use !== 'fight') state.combat.potion = 'none';
+    // each pick holds what its place takes (data/potions.js potionsForSlot), or none
+    const fits = (slot, id) => id === 'none' || potionsForSlot(slot).includes(id);
+    if (!fits('combat', state.combat.potion)) state.combat.potion = 'none';
+    if (!fits('dungeon', state.combat.dungeonPotion)) state.combat.dungeonPotion = 'none';
     if (!isPlainObject(state.workPotion)) state.workPotion = { id: 'none', ms: 0 };
-    if (state.workPotion.id !== 'none' && POTIONS[state.workPotion.id]?.use !== 'work') state.workPotion.id = 'none';
+    if (!fits('skill', state.workPotion.id)) state.workPotion.id = 'none';
     // a dose is never longer than the longest there is (the Alchemist medal's included); a save from the
     // potions that counted attacks starts with none working, and drinks the next as it fights
     const maxDose = POTION_MINUTES * 60000 * 2;
@@ -484,6 +540,7 @@ function normalise(data, now) {
     state.combat.playerTimer = Math.max(0, finite(state.combat.playerTimer));
     state.combat.enemyTimer = Math.max(0, finite(state.combat.enemyTimer));
     state.combat.potionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.potionMs)));
+    state.combat.dungeonPotionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.dungeonPotionMs)));
     state.combat.lifestealRoom = Math.max(0, finite(state.combat.lifestealRoom));   // (a second's worth at most; refilled as he fights)
     delete state.combat.potionCharges;
     // work and a fight are never both under way (a save with both ran them at once): the fight goes on

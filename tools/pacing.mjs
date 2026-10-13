@@ -107,7 +107,7 @@ function agilityPace() {
 
 const toolTierAt = toolId => level => TOOLS[toolId].tiers.filter(t => t.levelReq <= level).length;
 const rows = [];
-for (const id of ['mining', 'woodcutting', 'fishing', 'hunting', 'cooking', 'firemaking', 'alchemy']) {
+for (const id of ['mining', 'woodcutting', 'hunting', 'cooking', 'firemaking', 'alchemy']) {
     const nodes = SKILLS[id].nodes.filter(n => !n.consumes || id === 'cooking' || id === 'firemaking');
     const tool = SKILLS[id].tool;
     rows.push([id, pace(nodes), tool ? pace(nodes, { toolFor: toolTierAt(tool) }) : null]);

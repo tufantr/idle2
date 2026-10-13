@@ -246,14 +246,14 @@ export function completeAction(game, def, { offline = false } = {}) {
     } else if (def.kind === 'node' || def.kind === 'smelt') {
         let amount = 1;
         if (rng.chance(doubleChance)) amount = 2;
-        if (skill === 'fishing' && state.resources.fishing_bait > 0) {
+        if (def.fish && state.resources.fishing_bait > 0) {   // a river spot (Hunting): bait
             state.resources.fishing_bait -= 1;
             bumpStat(game, 'baitUsed');
             if (rng.chance(BAIT_EXTRA_CHANCE)) amount += 1;
         }
         state.resources[def.output] += amount;
         made = { id: def.output, qty: amount };
-        if (skill === 'fishing') bumpStat(game, 'fishCaught', amount);
+        if (def.fish) bumpStat(game, 'fishCaught', amount);
         if (def.kind === 'smelt') bumpStat(game, 'barsSmelted', amount);
         if (skill === 'mining' && rng.chance(GEM_FIND_CHANCE)) {
             const rockTier = RESOURCES[def.output].tier;

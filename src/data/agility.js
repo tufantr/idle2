@@ -22,7 +22,7 @@ export function obstacleUpgradeLevelReq(slot, toLevel) {
     return Math.min(99, AGILITY_SLOTS[slot].levelReq + OBSTACLE_LEVEL_STEP * (toLevel - 1));
 }
 
-const GATHER = s => ({ mining: s, woodcutting: s, fishing: s, hunting: s });
+const GATHER = s => ({ mining: s, woodcutting: s, hunting: s });
 const PRODUCE = s => ({ cooking: s, firemaking: s, alchemy: s });
 const ALL_SKILLS = s => ({ ...GATHER(s), ...PRODUCE(s), smithing: s, crafting: s, farming: s, agility: s });
 

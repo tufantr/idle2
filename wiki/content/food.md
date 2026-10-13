@@ -3,7 +3,7 @@ path: /food
 keywords: food, eat, eating, auto-eat, auto eat, healing, heal, cooking, fish, meat, dishes, gourmet, chef, fasting
 aliases: Auto-eat, Healing, Eating
 ---
-Food keeps your hero alive in a long fight. It is cooked in [[Cooking]], every dish burning one log, from raw meat ([[Hunting]]), fish ([[Fishing]]) and crops ([[Farming]]), and raw meat and some fish also drop in the fight ([[Zones]]). Food is kept when you prestige. Every food heals a share of your hero's max health, so a dish stays as good however strong he grows; each dish's card in Cooking shows its share and what it heals him now. The table below lists every food, what it heals and what it is cooked from.
+Food keeps your hero alive in a long fight. It is cooked in [[Cooking]], every dish burning one log, from raw meat and fish ([[Hunting]]) and crops ([[Farming]]), and raw meat and some fish also drop in the fight ([[Zones]]). Food is kept when you prestige. Every food heals a share of your hero's max health, so a dish stays as good however strong he grows; each dish's card in Cooking shows its share and what it heals him now. The table below lists every food, what it heals and what it is cooked from.
 
 Lifesteal heals at most {{pct(BASE.lifestealPerSecond, 0)}} of his health a second (see [[Combat]]), so where monsters hit hard, food is what keeps him standing.
 
@@ -45,7 +45,7 @@ Fish heal a little more than the meat of the same level: {{res('cooked_shrimp')}
     const heals = n => RESOURCES[n.produces].heal;
     const best = SKILLS.cooking.nodes.filter(n => heals(n)).sort((a, b) => a.levelReq - b.levelReq || heals(b) - heals(a)).reduce((list, n) => (list.length && heals(n) <= heals(list.at(-1)) ? list : [...list, n]), []);
     const source = id => {
-        for (const s of ['fishing', 'hunting']) {
+        for (const s of ['hunting']) {
             const node = SKILLS[s].nodes.find(x => x.produces === id);
             if (node) return `${link(path.skill(s), SKILLS[s].name)} ${node.levelReq}`;
         }

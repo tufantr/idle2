@@ -39,7 +39,7 @@ export const GOLD_SHOP = [
     { id: 'buy_logs',    name: 'Firewood Bundle',  desc: '25 logs for the kitchen.',       gives: { normal_log: 25 },  costKills: 25 },
     { id: 'buy_guam',    name: 'Herb Pouch',       desc: '10 guam leaves.',                gives: { guam_leaf: 10 },   costKills: 30 },
     { id: 'buy_rabbit',  name: 'Hunter\'s Cache',  desc: '10 raw rabbits.',                gives: { raw_rabbit: 10 },  costKills: 25 },
-    { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 fishing bait.',               gives: { fishing_bait: 25 }, costKills: 30 },
+    { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 bait for the river.',               gives: { fishing_bait: 25 }, costKills: 30 },
     // The open-ended sink: essence at about the rate combat drops it, for upgrades and reforges.
     { id: 'buy_essence', name: 'Essence Cache',    desc: '10 monster essence for upgrades and reforges.', gives: { essence: 10 }, costKills: 80 },
     // Gems for Crafting (docs/research_notes/crafting-gems.md): the three low ones, for gold, so Crafting

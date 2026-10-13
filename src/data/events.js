@@ -20,8 +20,8 @@ export const EVENT_LENGTH_HOURS = 72;
 export const EVENTS = [
     {
         id: 'harvest_festival', name: 'Harvest Festival', cloak: '#c97a2a', icon: '🌾', color: '#84cc16',
-        desc: 'The fields are generous: +25% farming yield, +15% cooking and fishing speed.',
-        mods: { farmYield: 0.25, skillSpeed: { cooking: 0.15, fishing: 0.15 } }
+        desc: 'The fields are generous: +25% farming yield, +15% cooking and hunting speed.',
+        mods: { farmYield: 0.25, skillSpeed: { cooking: 0.15, hunting: 0.15 } }
     },
     {
         id: 'titans_fury', name: "Titan's Fury", cloak: '#8f1d1d', icon: '🗿', color: '#ef4444',
@@ -31,7 +31,7 @@ export const EVENTS = [
     {
         id: 'miners_rush', name: "Miner's Rush", cloak: '#2f6f57', icon: '⛏️', color: '#34d399',
         desc: 'Rich seams everywhere: +20% gathering speed and +10% XP from every skill.',
-        mods: { skillSpeed: { mining: 0.20, woodcutting: 0.20, fishing: 0.20, hunting: 0.20 }, xpMult: 0.10 }
+        mods: { skillSpeed: { mining: 0.20, woodcutting: 0.20, hunting: 0.20 }, xpMult: 0.10 }
     },
     {
         id: 'guild_fair', name: 'Guild Fair', cloak: '#a03aa8', icon: '⚒️', color: '#e879f9',
@@ -63,7 +63,7 @@ export const EVENT_MILESTONES = [
 export const EVENT_SHOP = [
     { id: 'ev_essence',  name: 'Essence Pouch',   desc: '60 essence',               cost: 20, gives: { essence: 60 } },
     { id: 'ev_diamond',  name: 'Cut Diamond',     desc: 'A diamond for jewellery',  cost: 40, gives: { diamond: 1 } },
-    { id: 'ev_bait',     name: 'Angler\'s Tin',   desc: '100 fishing bait',         cost: 10, gives: { fishing_bait: 100 } },
+    { id: 'ev_bait',     name: 'Angler\'s Tin',   desc: '100 bait for the river',   cost: 10, gives: { fishing_bait: 100 } },
     { id: 'ev_herbs',    name: 'Herbalist Kit',   desc: '10 of each herb',          cost: 15, gives: { guam_leaf: 10, marrentill_leaf: 10, tarromin_leaf: 10, harralander_leaf: 10 } },
     { id: 'ev_bars',     name: 'Smith\'s Crate',  desc: '10 runite bars',           cost: 60, gives: { runite_bar: 10 } }
 ];

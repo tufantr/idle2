@@ -12,7 +12,7 @@ import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js'
 import { NON_COMBAT_SKILLS, SPEED_SKILLS, SKILL_IDS } from '../data/skills.js';
 import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { RESOURCES } from '../data/resources.js';
-import { POTIONS, potionStrength } from '../data/potions.js';
+import { POTIONS, POTION_KINDS, potionPower } from '../data/potions.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
@@ -61,9 +61,12 @@ export const BASE = {
     focusAfterMs: 60000,
     focusSkillSpeed: 0.15,
     focusAttackSpeed: 0.15,
-    // Bonfire: every log burnt adds time; while it burns, all skills (combat too) earn more XP.
+    // Bonfire: every log burnt adds time; while it burns, all skills (combat too) earn more XP, and every
+    // gathering and production action may make two (the owner, October 2026: XP alone went unnoticed).
     bonfireXp: 0.05,            // at firemaking level 1 ...
     bonfireXpAt99: 0.10,        // ... rising to this at 99
+    bonfireDouble: 0.05,        // the chance of a second of what an action makes, at firemaking level 1 ...
+    bonfireDoubleAt99: 0.20,    // ... rising to this at 99
     bonfireSecondsPerLogTier: 15,
     bonfireMaxMs: 60 * 60 * 1000,
     // Lifesteal heals at most this share of max health a second, all of it together (and only from damage a
@@ -79,6 +82,12 @@ export const BASE = {
 export function bonfireBonus(level) {
     return BASE.bonfireXp + (BASE.bonfireXpAt99 - BASE.bonfireXp) * Math.min(99, Math.max(1, level)) / 99;
 }
+
+/** A burning bonfire's chance of a double, at this firemaking level, in every skill whose actions make something. */
+export function bonfireDouble(level) {
+    return BASE.bonfireDouble + (BASE.bonfireDoubleAt99 - BASE.bonfireDouble) * Math.min(99, Math.max(1, level)) / 99;
+}
+const BONFIRE_DOUBLES = SPEED_SKILLS.filter(id => !['firemaking', 'farming', 'agility'].includes(id));   // (its own logs, the plots and the course aside)
 
 export function bonfireLit(state, now = state.meta.lastActiveAt || Date.now()) {
     return (state.bonfire?.until || 0) > now;
@@ -123,22 +132,26 @@ export function skillLevel(state, skillId) {
 }
 
 /**
- * What the potions working now do (data/potions.js): multipliers (atk, def, hp, fortune, speed, xp) and a
- * dodge chance. The fight potion only while its dose lasts, and never in the clan boss's fight; the work
- * potion likewise. Their strength grows with Alchemy.
+ * What the potions working now do (data/potions.js): multipliers (atk, def, hp, speed, xp). The fight's is the
+ * pick of the place he fights in, while its dose lasts: the dungeon potion in a run, the combat potion on the
+ * stages, against the Titan and against the clan boss (the server, reckoning a clan attack from the stored hero,
+ * counts one picked with a bottle left, as the fight drinks it at its start: core/power.js). The skill potion
+ * likewise while he works.
  */
-export function potionEffects(state, clanFight = state.combat?.mode === 'clan') {
-    const e = { atk: 1, def: 1, hp: 1, fortune: 1, speed: 1, xp: 1, dodge: 0 };
-    const alchemy = skillLevel(state, 'alchemy');
-    const apply = id => {
-        const p = POTIONS[id];
-        const s = potionStrength(id, alchemy);
-        if (p.effect === 'dodge') e.dodge += s; else e[p.effect] *= 1 + s;
-    };
-    const fight = state.combat?.potion;
-    if (!clanFight && POTIONS[fight]?.use === 'fight' && state.combat.potionMs > 0) apply(fight);
+export function potionEffects(state) {
+    const e = { atk: 1, def: 1, hp: 1, speed: 1, xp: 1 };
+    const c = state.combat || {};
+    const inRun = c.mode === 'dungeon';
+    const id = inRun ? c.dungeonPotion : c.potion;
+    const running = (inRun ? c.dungeonPotionMs : c.potionMs) > 0 || (c.mode === 'clan' && state.resources?.[id] > 0);
+    const power = running ? potionPower(id, inRun ? 'dungeon' : 'combat') : 0;
+    if (power > 0) e.atk = e.def = e.hp = 1 + power;
     const work = state.workPotion?.id;
-    if (POTIONS[work]?.use === 'work' && state.workPotion.ms > 0) apply(work);
+    if (POTIONS[work]?.kind === 'skill' && state.workPotion.ms > 0) {
+        const t = POTIONS[work].tier - 1;
+        e.speed = 1 + POTION_KINDS.skill.speed[t];
+        e.xp = 1 + POTION_KINDS.skill.xp[t];
+    }
     return e;
 }
 
@@ -202,10 +215,8 @@ export function collectModifiers(state) {
 
     // The clan boss fight is fought by the hero the server reckons it with (core/power.js stableState): no
     // potion, no Focus, no Trial's rule. With them the boss could fall on screen and stand on the server.
-    const clanFight = state.combat.mode === 'clan';
-
-    // Potions (data/potions.js): they multiply, after every other bonus (deriveStats); the work potion's speed here.
-    mods.potions = potionEffects(state, clanFight);
+    // Potions (data/potions.js): they multiply, after every other bonus (deriveStats); the skill potion's speed here.
+    mods.potions = potionEffects(state);
 
     // Tools.
     for (const [toolId, tool] of Object.entries(TOOLS)) {
@@ -226,8 +237,12 @@ export function collectModifiers(state) {
         if (m !== 1) mods.skillMult[id] = m;
     }
 
-    // The bonfire.
-    if (bonfireLit(state, now)) mods.xpMult += bonfireBonus(skillLevel(state, 'firemaking'));
+    // The bonfire: more XP everywhere, and doubles where actions make something.
+    if (bonfireLit(state, now)) {
+        const fm = skillLevel(state, 'firemaking');
+        mods.xpMult += bonfireBonus(fm);
+        for (const id of BONFIRE_DOUBLES) mods.doubleChance[id] += bonfireDouble(fm);
+    }
 
     // A running weekend event.
     const ev = eventStatus(state, now);
@@ -238,7 +253,7 @@ export function collectModifiers(state) {
     mods.focused = isFocused(state, now);
     if (mods.focused) {
         for (const id of Object.keys(mods.skillSpeed)) if (id !== 'farming') mods.skillSpeed[id] += BASE.focusSkillSpeed;
-        if (!clanFight) mods.attackSpeed += BASE.focusAttackSpeed;
+        if (state.combat.mode !== 'clan') mods.attackSpeed += BASE.focusAttackSpeed;   // (the clan fight is watched, and the server counts no Focus)
     }
 
     return mods;
@@ -297,11 +312,11 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         critChance: Math.min(BASE.caps.critChance, BASE.baseCritChance + mods.critChance),
         critDmg: BASE.baseCritDmg + mods.critDmg,
         attackInterval: Math.max(BASE.minAttackInterval, Math.round(BASE.baseAttackInterval / (1 + attackSpeed))),
-        dodge: Math.min(BASE.caps.dodge, mods.dodge + brew.dodge),
+        dodge: Math.min(BASE.caps.dodge, mods.dodge),
         lifesteal: Math.min(BASE.caps.lifesteal, mods.lifesteal),
-        goldMult: (1 + mods.goldMult) * brew.fortune,
-        dropMult: (1 + mods.dropMult) * brew.fortune,
-        skillXpMult: brew.xp,   // a work potion's: skill XP only (systems/skilling.js)
+        goldMult: 1 + mods.goldMult,
+        dropMult: 1 + mods.dropMult,
+        skillXpMult: brew.xp,   // a skill potion's: skill XP only (systems/skilling.js)
         combatXpMult: 1 + mods.combatXpMult + mods.xpMult,
         xpMult: 1 + mods.xpMult,
         foodMult: 1 + mods.foodMult,

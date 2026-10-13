@@ -11,6 +11,7 @@ import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RARITIES } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
 import { rng } from '../core/rng.js';
+import { potionFragmentChance } from '../data/potions.js';
 import { addItem, dropTypesFor } from './inventory.js';
 import { spawnEnemy, enterCombat } from './combat.js';
 import { doingNow, resumeDoing } from './resume.js';
@@ -234,8 +235,12 @@ function completeDungeon(game, d) {
         if (result.kept) kept = item;
         parts.push(result.kept ? item.name : `${item.name} (salvaged)`);
     }
-    const fragments = rng.chance(0.03) ? 3 : 1;
+    // a dungeon potion at work: a chance of one more (data/potions.js)
+    const c = state.combat;
+    const brewed = c.dungeonPotionMs > 0 && rng.chance(potionFragmentChance(c.dungeonPotion)) ? 1 : 0;
+    const fragments = (rng.chance(0.03) ? 3 : 1) + brewed;
     record.fragments += fragments;
+    if (brewed) bumpStat(game, 'potionFragments');
     parts.push(`${fragments} fragment${fragments > 1 ? 's' : ''}`);
     const essence = Math.round(CHEST_ESSENCE_PER_TIER * zone.tier);
     state.resources.essence += essence;

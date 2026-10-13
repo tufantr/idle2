@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { xpForLevel } from '../src/core/xp.js';
+import { xpForLevel, levelForXp } from '../src/core/xp.js';
+import { seen } from '../src/systems/disclosure.js';
 import { collectModifiers, deriveStats, BASE, bonfireBonus } from '../src/core/modifiers.js';
 import { SKILLS, NON_COMBAT_SKILLS } from '../src/data/skills.js';
 import { RESOURCES, foodsByHealing } from '../src/data/resources.js';
@@ -117,21 +118,52 @@ test('auto-eat considers every food by healing, whichever line it comes from', (
     assert.ok(foods.some(f => f.id === 'cooked_shark') && foods.some(f => f.id === 'pumpkin_pie'));
 });
 
-// ---------- fishing ----------
+// ---------- the river (Hunting's fish, Fishing before it joined Hunting) ----------
 
-test('fishing: bait is used one per catch and often doubles it', () => {
-    const plain = newGame({ fishing: 1 });
-    plain.startNodeAction('fishing', 'raw_shrimp');
+test("the river: bait is used one per catch and often doubles it; the forest's game takes none", () => {
+    const plain = newGame({ hunting: 1 });
+    plain.startNodeAction('hunting', 'raw_shrimp');
     run(plain, 10 * 60000);
-    const withBait = newGame({ fishing: 1 });
+    const withBait = newGame({ hunting: 1 });
     withBait.state.resources.fishing_bait = 1000;
-    withBait.startNodeAction('fishing', 'raw_shrimp');
+    withBait.startNodeAction('hunting', 'raw_shrimp');
     run(withBait, 10 * 60000);
-    const catches = withBait.state.stats.actionsBySkill.fishing;
+    const catches = withBait.state.stats.actionsBySkill.hunting;
     assert.equal(withBait.state.stats.baitUsed, catches);
     assert.equal(withBait.state.resources.fishing_bait, 1000 - catches);
     assert.ok(withBait.state.resources.raw_shrimp > plain.state.resources.raw_shrimp * 1.3, 'bait adds ~50% more fish');
     assert.equal(withBait.state.stats.fishCaught, withBait.state.resources.raw_shrimp);
+    const forest = newGame({ hunting: 1 });
+    forest.state.resources.fishing_bait = 100;
+    forest.startNodeAction('hunting', 'raw_rabbit');
+    run(forest, 60000);
+    assert.equal(forest.state.resources.fishing_bait, 100, 'no bait for a rabbit');
+    assert.equal(forest.state.stats.fishCaught, 0);
+});
+
+test('a save from before Fishing joined Hunting keeps the higher level, both masteries, its rod as a bow and its catch', () => {
+    const game = newGame({ hunting: 20 });
+    const raw = JSON.parse(game.serialize(T0));
+    raw.skills.fishing = { xp: xpForLevel(45) };
+    raw.mastery.fishing = { raw_trout: 500 };
+    raw.mastery.hunting = { raw_rabbit: 200 };
+    raw.stats.actionsBySkill.fishing = 300;
+    raw.tools.rod = 4;
+    raw.tools.bow = 2;
+    raw.action = { kind: 'node', skill: 'fishing', id: 'raw_trout', progress: 0 };
+    raw.unlocks.fishing = true;
+    const back = new Game(raw, T0);
+    const s = back.state;
+    assert.equal(levelForXp(s.skills.hunting.xp), 45, 'the higher of the two');
+    assert.equal(s.skills.fishing, undefined);
+    assert.equal(s.mastery.hunting.raw_trout, 500);
+    assert.equal(s.mastery.hunting.raw_rabbit, 200);
+    assert.equal(s.stats.actionsBySkill.hunting, raw.stats.actionsBySkill.hunting + 300);
+    assert.equal(s.tools.bow, 4, 'the better of the bow and the rod');
+    assert.equal(s.tools.rod, undefined);
+    assert.equal(s.action.skill, 'hunting', 'a fishing trip goes on at the river');
+    assert.equal(s.unlocks.fishing, undefined);
+    assert.ok(seen(s, 'river'), 'and the river is open');
 });
 
 test('fish and crops cook into food', () => {
@@ -323,17 +355,18 @@ test('new skills unlock from play', () => {
     let now = T0;
     const play = minutes => { for (let i = 0; i < minutes; i++) { now += 60_000; game.tick(now); } };   // places open one at a time (data/unlocks.js)
     play(40);
-    for (const id of ['fishing', 'firemaking', 'agility']) assert.ok(s.unlocks[id], id);
+    for (const id of ['firemaking', 'agility']) assert.ok(s.unlocks[id], id);
+    assert.ok(s.seen.river, "five dishes cooked open Hunting's river");
     assert.ok(!s.unlocks.farming);
     s.stats.actionsBySkill.alchemy = 10;
     play(1);
     assert.ok(s.unlocks.farming);
 });
 
-test('offline: fishing uses bait and firemaking lights the bonfire', () => {
-    const game = newGame({ fishing: 1, firemaking: 1 });
+test('offline: the river uses bait and firemaking lights the bonfire', () => {
+    const game = newGame({ hunting: 1, firemaking: 1 });
     game.state.resources.fishing_bait = 50;
-    game.startNodeAction('fishing', 'raw_shrimp');
+    game.startNodeAction('hunting', 'raw_shrimp');
     const later = T0 + 3600 * 1000;
     const back = new Game(JSON.parse(game.serialize(T0)), later);
     back.resumeFromSave(later);

@@ -10,7 +10,7 @@ Three things reward the way you play: mini-games for when you are watching, Focu
 While your hero works at a gathering or production skill ({{NON_COMBAT_SKILLS.map(id => link(path.skill(id), SKILLS[id].name)).join(', ')}}), a chance to play turns up on that skill's tab now and then: the first one soon after you start, then one every {{BALANCE.minigame.opportunityEveryMs[0] / 60000}} to {{BALANCE.minigame.opportunityEveryMs[1] / 60000}} minutes or so. These skills share one clock: a chance in one holds the others back, so switching skills does not bring the next one sooner. A chance waits {{BALANCE.minigame.opportunityWindowMs / 1000}} seconds for you to start it, and then you have a few seconds to play. Each skill has its own game, of four kinds:
 
 - **Mining and Woodcutting:** tap when the marker sweeps through the glowing zone.
-- **Hunting and Fishing:** loose the arrow or strike when the target crosses the zone.
+- **Hunting:** loose the arrow when the prey crosses the zone; at a river spot, strike when the float dips into the ring.
 - **Cooking and Firemaking:** tap the flame to keep the heat inside the band, then finish.
 - **Alchemy:** drag the stabiliser into the glowing channel, then lock the brew.
 

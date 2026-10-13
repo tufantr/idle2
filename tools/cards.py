@@ -236,6 +236,10 @@ RECOLOURS = {
     'scholars_tonic':    dict(source='defense_potion', band=(134, 170), to=(124, 136), sat=1.0, val=1.05),   # the blue flask among scrolls, turned cyan
     'gatherers_draught': dict(source='evasion_potion', band=(46, 106), to=(14, 24), sat=1.4, val=0.78),     # the green flask among herbs, turned amber
     'fortune_draught':   dict(source='defense_potion', band=(134, 170), to=(26, 34), sat=1.25, val=1.1),   # the flask among the scrolls again, turned gold
+    # the three potions that grow (October 2026), one picture a kind for all four tiers (src/ui/render.js)
+    'combat_potion':     dict(source='accuracy_potion', band=(0, 1), to=(0, 1), sat=1.0, val=1.0),         # the red flask as it is
+    'dungeon_potion':    dict(source='defense_potion', band=(134, 170), to=(186, 200), sat=1.1, val=1.0),  # the blue flask among scrolls, turned violet
+    'skill_potion':      dict(source='evasion_potion', band=(0, 1), to=(0, 1), sat=1.0, val=1.0),          # the green flask among herbs as it is
 }
 
 

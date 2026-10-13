@@ -58,7 +58,7 @@ export const RESOURCES = {
     cooked_drake:  R('cooked_drake',  'Roast Drake',   'food', 6, '🍖', '#f59e0b', { heal: 0.39 }),
     cooked_dragon: R('cooked_dragon', 'Roast Dragon',  'food', 7, '🍖', '#f59e0b', { heal: 0.45 }),
 
-    // Raw fish (fishing) and cooked fish: a little more healing than meat of the same level.
+    // Raw fish (Hunting's river spots) and cooked fish: a little more healing than meat of the same level.
     raw_shrimp:    R('raw_shrimp',    'Raw Shrimp',    'raw', 1, '🦐', '#fda4af'),
     raw_trout:     R('raw_trout',     'Raw Trout',     'raw', 2, '🐟', '#93c5fd'),
     raw_salmon:    R('raw_salmon',    'Raw Salmon',    'raw', 3, '🐟', '#fb7185'),
@@ -89,16 +89,22 @@ export const RESOURCES = {
     marrentill_leaf:  R('marrentill_leaf',  'Marrentill Root',  'herb', 2, '🌿', '#10b981'),
     tarromin_leaf:    R('tarromin_leaf',    'Tarromin Spore',   'herb', 3, '🌿', '#10b981'),
     harralander_leaf: R('harralander_leaf', 'Harralander Lotus','herb', 4, '🌿', '#10b981'),
-    accuracy_potion:   R('accuracy_potion',   'Accuracy Potion',   'potion', 1, '🧪', '#f87171', { desc: 'more attack while fighting' }),
-    defense_potion:    R('defense_potion',    'Defense Potion',    'potion', 2, '🧪', '#60a5fa', { desc: 'more defence while fighting' }),
-    evasion_potion:    R('evasion_potion',    'Evasion Potion',    'potion', 3, '🧪', '#34d399', { desc: 'a chance to dodge while fighting' }),
-    health_potion:     R('health_potion',     'Health Potion',     'potion', 4, '🧪', '#f472b6', { desc: 'more max health while fighting' }),
-    gatherers_draught: R('gatherers_draught', "Gatherer's Draught", 'potion', 1, '🧪', '#a16207', { desc: 'faster work in every skill' }),
-    scholars_tonic:    R('scholars_tonic',    "Scholar's Tonic",    'potion', 2, '🧪', '#22d3ee', { desc: 'more skill XP' }),
-    fortune_draught:   R('fortune_draught',   'Fortune Draught',   'potion', 3, '🧪', '#facc15', { desc: 'more gold and drops while fighting' }),
+    // Potions (data/potions.js): three kinds, four tiers each, the tier the herb's
+    combat_potion_1:  R('combat_potion_1',  'Combat Potion I',    'potion', 1, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
+    combat_potion_2:  R('combat_potion_2',  'Combat Potion II',   'potion', 2, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
+    combat_potion_3:  R('combat_potion_3',  'Combat Potion III',  'potion', 3, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
+    combat_potion_4:  R('combat_potion_4',  'Combat Potion IV',   'potion', 4, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
+    dungeon_potion_1: R('dungeon_potion_1', 'Dungeon Potion I',   'potion', 1, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
+    dungeon_potion_2: R('dungeon_potion_2', 'Dungeon Potion II',  'potion', 2, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
+    dungeon_potion_3: R('dungeon_potion_3', 'Dungeon Potion III', 'potion', 3, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
+    dungeon_potion_4: R('dungeon_potion_4', 'Dungeon Potion IV',  'potion', 4, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
+    skill_potion_1:   R('skill_potion_1',   'Skill Potion I',     'potion', 1, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
+    skill_potion_2:   R('skill_potion_2',   'Skill Potion II',    'potion', 2, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
+    skill_potion_3:   R('skill_potion_3',   'Skill Potion III',   'potion', 3, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
+    skill_potion_4:   R('skill_potion_4',   'Skill Potion IV',    'potion', 4, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
 
     // Combat-only materials. Essence fuels equipment upgrades — the one thing crafting cannot make.
-    // Bait drops in the wetter zones: each catch uses one, if you have it, for a likely second fish.
+    // Bait drops in the wetter zones: each catch at a river spot uses one, if you have it, for a likely second fish.
     essence: R('essence', 'Monster Essence', 'material', 1, '✨', '#c084fc'),
     fishing_bait: R('fishing_bait', 'Fishing Bait', 'material', 1, '🪱', '#fca5a5')
 };
