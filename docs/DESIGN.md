@@ -1083,10 +1083,17 @@ needs another screen: fight, spend, prestige and fight on.
   of the full-screen fight, and on a Mac the system menu bar slides over the top bar there.
 - **The perks window is everywhere skill points are.** The SP chip in the header opens it on any
   screen, and so do Perks buttons beside Prestige (the fight's dock, the combat tab's prestige strip);
-  the Shop shows the same list. Every level costs one point, so the price is said once above the
-  list and each row's button says what it does: Learn, then Upgrade, lit only while there are points.
+  the Shop shows the same list. A level costs more as the perk climbs, so each row's button says what
+  it does and what the next level costs (Learn 1 SP, then Upgrade 2 SP), lit only while there are
+  points enough.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
   fight; toasts move under the top bar so they never cover the dock.
+- **A dungeon run is fought on the Dungeons tab** (`fightTab` in `src/ui/features.js`; the owner,
+  October 2026: mid-run the Dungeons tab showed the list as if no run were on, and the fight had to be
+  found under Combat). While a run lasts, the Dungeons tab is its fight, full screen or folded with the
+  run's panel and Leave dungeon, and Combat, the phone hotbar's fight button and the header's pill lead
+  there too. The list of dungeons and the stage fight come back once the run is left, ended after a
+  clear, or lost; a lost run that was being watched keeps its screen 2.4 seconds, for the fall to show.
 
 ### 3.24 The first session
 

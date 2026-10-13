@@ -7,7 +7,7 @@ A dungeon is a gauntlet: a row of elite monsters and a boss, fought in one go. E
 
 ## How a run works
 
-Enter a dungeon from the Dungeons tab or the world map. Your hero starts at full health and fights the elites one by one, then the boss; the rooms show on the path under the fight.
+Enter a dungeon from the Dungeons tab or the world map. Your hero starts at full health and fights the elites one by one, then the boss; the rooms show on the path under the fight. The run is fought on the Dungeons tab: while it lasts, that tab (and Combat) shows the fight, and the list of dungeons and the stages come back once you leave it.
 
 - **The elites** are as strong as the stage monsters where the dungeon stands, with {{pct(ELITE_HP_MULT - 1, 0)}} more health and {{pct(ELITE_ATK_MULT - 1, 0)}} more attack.
 - **The boss** has {{fmt(BALANCE.enemy.bossHpMult * DUNGEON_BOSS_HP_MULT)}} times a stage monster's health and a boss's attack, and must fall within {{DUNGEON_BOSS_TIME_MS / 1000}} seconds of fighting.

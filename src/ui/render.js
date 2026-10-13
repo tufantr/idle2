@@ -47,7 +47,7 @@ import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
 import { CAPES, capeFor, capeEarned, capesEarned, capeWorn, festivalCloaksOwned } from '../data/capes.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
-import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle } from './features.js';
+import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle, fightTab } from './features.js';
 import { seen } from '../systems/disclosure.js';
 import { campOnOffer } from '../systems/guide.js';
 import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
@@ -107,13 +107,13 @@ const DEF_ICON = sprite('item/Shield/3', { scale: 0.5, cls: 'soft res-spr' });
 const eventIcon = (e, scale = 0.5) => sprite(EVENT_ART[e.id], { scale, cls: scale < 1 ? 'soft res-spr' : '', fallback: e.icon });
 
 /**
- * Is the fight filling the screen? On the combat tab, while fighting (or resting after a fall, before
- * going on), unless the player folded it away.
+ * Is the fight filling the screen? On the fight's tab (Combat, or Dungeons during a run: fightTab), while
+ * fighting (or resting after a fall, before going on), unless the player folded it away.
  */
 export function battleMode(game, ui) {
     const c = game.state.combat;
     // a fight that just ended keeps the screen a moment (battleHoldUntil: the Titan's, for its banner)
-    return ui.tab === 'combat' && (c.active || c.recovering || (ui.battleHoldUntil || 0) > game.now) && ui.battleFull !== false;
+    return ui.tab === fightTab(game, ui) && (c.active || c.recovering || (ui.battleHoldUntil || 0) > game.now) && ui.battleFull !== false;
 }
 
 // ---------- sidebar ----------
@@ -169,7 +169,7 @@ export function renderNav(game, ui) {
         if (headings && group !== 'TOP') html += `<h3>${group}</h3>`;   // the top three need no heading
         for (const tab of tabs) {
             const active = ui.tab === tab.id ? 'active' : '';
-            const working = (action && (action.skill === tab.skill)) || (tab.id === 'combat' && state.combat.active) ? 'action-active' : '';
+            const working = (action && (action.skill === tab.skill)) || (tab.id === fightTab(game, ui) && state.combat.active) ? 'action-active' : '';
             let badge = '';
             let xpBar = '';
             const levelled = tab.skill || (tab.id === 'combat' ? 'combat' : null);
@@ -221,7 +221,7 @@ export function renderHotbar(game, ui) {
         ? button(tabIcon(action.skill, 1), esc(SKILLS[action.skill].name), `FI.switchTab('${action.skill}')`, { active: ui.tab === action.skill, live: true })
         : button(tabIcon('mining', 1), 'Work', "FI.switchTab('mining')", { active: ui.tab === 'mining' });
     return [
-        button(tabIcon('combat', 1), fighting ? 'Fighting' : 'Battle', "FI.switchTab('combat')", { active: ui.tab === 'combat', live: fighting }),
+        button(tabIcon('combat', 1), fighting ? 'Fighting' : 'Battle', `FI.switchTab('${fightTab(game, ui)}')`, { active: ui.tab === fightTab(game, ui), live: fighting }),
         work,
         button(tabIcon('inventory', 1), 'Inventory', "FI.switchTab('inventory')", { active: ui.tab === 'inventory', badge: upgrade ? '▲' : '' }),
         button(sprite('crate', { scale: 1, fallback: '📦' }), banked > 0 ? (cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1 ? 'Great!' : 'Crate') : duration(state.daily.nextAt - game.now), 'FI.claimDaily()', { badge: banked > 0 ? String(banked) : '', disabled: banked < 1 })
@@ -260,12 +260,12 @@ export function renderHeader(game, ui, cloud) {
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
     // What the hero is doing, when that is not what the tab in view already shows.
-    const here = ui.tab === 'combat' || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
+    const here = ui.tab === fightTab(game, ui) || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
     let status = '';
     if (action) {
         if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</button>`;
     } else if (state.combat.active) {
-        if (ui.tab !== 'combat') status = `<button class="status-pill fighting" onclick="FI.switchTab('combat')">${tabIcon('combat', 0.625)} ${esc(fightingWhere(state))}</button>`;
+        if (ui.tab !== fightTab(game, ui)) status = `<button class="status-pill fighting" onclick="FI.switchTab('${fightTab(game, ui)}')">${tabIcon(fightTab(game, ui), 0.625)} ${esc(fightingWhere(state))}</button>`;
     } else if (!here) {
         status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }
@@ -2410,7 +2410,7 @@ export function renderTab(game, ui, cloud) {
         case 'inventory': return renderInventory(game, ui);
         case 'shop': return renderShop(game, ui);
         case 'achievements': return renderHall(game, ui);
-        case 'dungeons': return renderDungeons(game);
+        case 'dungeons': return fightTab(game, ui) === 'dungeons' ? renderCombat(game, ui) : renderDungeons(game);   // a run is fought here
         case 'farming': return renderFarming(game, ui);
         case 'events': return renderEvents(game);
         case 'agility': return renderAgility(game, ui);

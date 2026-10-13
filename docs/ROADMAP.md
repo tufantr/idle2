@@ -1134,6 +1134,10 @@ Keeping it running:
 - [x] **When the next clan attacks come**: the Clan tab always says it by the attack pips, "+3 in 5h 12m",
       or with all six waiting "Full · refill in 5h 12m" (a full bank's next ones would be lost), counting
       down between the tab's refreshes; with none left the button says when they come
+- [x] **A dungeon run is fought on the Dungeons tab** (the owner: mid-run the tab showed the list as if no
+      run were on, and the fight was under Combat; DESIGN §3.23): while a run lasts the Dungeons tab is its
+      fight, and Combat, the hotbar and the header's pill lead there; the list and the stages come back
+      once the run is over. Checked in a browser at both widths, folded and full, a reload mid-run included
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

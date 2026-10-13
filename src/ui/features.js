@@ -127,6 +127,15 @@ export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/pain
 // where the guide's hand points at it the first time); the Shop shows it too.
 export const FEATURE_TAB = { prestige: 'combat', titan: 'dungeons', camp: 'combat', mastery: null, minigames: null };
 
+/**
+ * The tab the fight is on: a dungeon run's is the Dungeons tab, every other fight's the Combat tab (the
+ * owner, October 2026: mid-run the Dungeons tab showed the list as if no run were on, and the fight had to
+ * be found under Combat). A run just lost keeps its tab a moment, for the fall to show (ui.dungeonHoldUntil).
+ */
+export function fightTab(game, ui) {
+    return game.state.combat.mode === 'dungeon' || (ui?.dungeonHoldUntil || 0) > game.now ? 'dungeons' : 'combat';
+}
+
 export const feature = id => FEATURES[id] || { name: id.charAt(0).toUpperCase() + id.slice(1), icon: '🔓', blurb: '', points: [] };
 export const artUrl = id => (FEATURES[id]?.art ? `assets/paint/${FEATURES[id].art}.webp` : '');
 

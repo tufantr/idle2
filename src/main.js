@@ -8,7 +8,7 @@ import {
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
-import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle } from './ui/features.js';
+import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle, fightTab } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
@@ -41,6 +41,7 @@ const BASE_RECORD_MULT = BASE.recordMult;
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
 const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
+const DEFEAT_HOLD_MS = 2400;     // a lost dungeon run stays on screen this long before the list of dungeons comes back
 const AUTOSAVE_MS = 15000;
 // Cloud saves, sized for a free database that sleeps after five minutes without a request (README "The
 // API"): every ten minutes while the player is around (the page in view, touched in the last ten minutes),
@@ -172,7 +173,7 @@ const scene = createScene(document.getElementById('scene'), {
 // skill cards (src/ui/actionfx.js), and the phone hotbar.
 const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
 // A boss fight in view: its clock and its health are what the player watches, so cards wait until it ends.
-const bossOnScreen = () => { const c = game.state.combat; return ui.tab === 'combat' && c.active && !!c.enemy?.boss && !c.farmMode; };
+const bossOnScreen = () => { const c = game.state.combat; return ui.tab === fightTab(game, ui) && c.active && !!c.enemy?.boss && !c.farmMode; };
 const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs and boss fights
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
@@ -439,7 +440,7 @@ document.addEventListener('keydown', event => {
     if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
     const c = game.state.combat;
     if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
-    else if (event.key === ' ' && ui.tab === 'combat' && c.active && !target?.closest?.('button, a, [role="button"]')) {
+    else if (event.key === ' ' && ui.tab === fightTab(game, ui) && c.active && !target?.closest?.('button, a, [role="button"]')) {
         event.preventDefault();
         if (!event.repeat) document.querySelector('#scene .foe')?.click();
     }
@@ -503,6 +504,7 @@ function render() {
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
+    if (ui.tab === 'combat' && game.state.combat.mode === 'dungeon') ui.tab = 'dungeons';   // a dungeon run is fought on the Dungeons tab
     const focus = document.activeElement;
     const findAgain = focusFinder(focus);
     const tab = document.getElementById('tab');
@@ -520,7 +522,7 @@ function render() {
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
     scene.sync(game, ui);
     stage.sync(game, ui);
-    guide.sync(game, { battle: ui.tab === 'combat', tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
+    guide.sync(game, { battle: ui.tab === fightTab(game, ui), tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
     rewards.resume();   // cards held back by a boss fight show once it is over
     paintGold();
     paintBrand();
@@ -562,10 +564,10 @@ const ARRIVALS = {
 };
 const arrivals = new Set();
 
-/** A dungeon visit is over: a player watching it goes back to the Dungeons tab (one elsewhere stays there). */
+/** A dungeon visit is over: the Dungeons tab, where it was watched, shows the list of them again (fightTab). */
 function backToDungeons() {
-    if (ui.tab === 'combat' && isUnlocked(game.state, 'dungeons')) window.FI.switchTab('dungeons');
-    else render();
+    ui.dungeonHoldUntil = 0;
+    render();
 }
 
 /** After a Titan or clan boss fight that sent the hero back to his work or his rest: back to the tab it was begun from. */
@@ -643,7 +645,9 @@ const REVEAL_TOASTS = {
 const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
 
 function handleEvents(events) {
-    const onCombat = ui.tab === 'combat'; // the battle scene shows these itself
+    // a run lost (a fall, the boss's timer) while watched keeps the fight on the Dungeons tab a moment, for the defeat to show
+    if (ui.tab === 'dungeons' && events.some(ev => ev.type === 'dungeonFail' && ev.lost)) ui.dungeonHoldUntil = game.now + DEFEAT_HOLD_MS + 1000;
+    const onCombat = ui.tab === fightTab(game, ui); // the battle scene shows these itself
     // Places that open in the same moment share one card (and one sound), so nothing queues up.
     const unlocked = events.filter(ev => ev.type === 'unlock').map(ev => ev.id);
     if (unlocked.length) {
@@ -731,7 +735,7 @@ function handleEvents(events) {
             case 'dungeonFail':
                 toast(ev.lost ? 'The dungeon run failed' : 'You left the dungeon: the run ends here', ev.lost ? 'death' : 'info');
                 // lost (a fall, or the boss's timer): once the defeat has shown, back to the dungeons
-                if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, 2400);
+                if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, DEFEAT_HOLD_MS);
                 break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
                 if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its painting, its line
@@ -1107,6 +1111,8 @@ function setBattleFull(on) {
 
 window.FI = {
     switchTab(id) {
+        if (id === 'combat' && game.state.combat.mode === 'dungeon') id = 'dungeons';   // the run is fought there: Combat waits until it is left
+        ui.dungeonHoldUntil = 0;   // a lost run's moment on screen ends with the player's next step
         ui.tab = id;
         prefs.set('fantasyIdle.tab', id);
         markFresh(id, false);
@@ -1211,7 +1217,7 @@ window.FI = {
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
-    enterDungeon(id) { if (game.enterDungeon(id)) { setBattleFull(true); window.FI.switchTab('combat'); } else render(); },
+    enterDungeon(id) { if (game.enterDungeon(id)) { setBattleFull(true); window.FI.switchTab('dungeons'); } else render(); },
     /** After the first clear of a visit: the choice, in a dialog over whatever is on screen. */
     openRunChoice() { if (choosingAfterClear(game.state) && !ui.modalOpen) openModal(renderRunChoiceModal(game), 'runChoice'); },
     dungeonKeepGoing() { if (game.dungeonKeepGoing()) sound.play('unlock'); if (ui.modalOpen === 'runChoice') closeModal(); render(); },

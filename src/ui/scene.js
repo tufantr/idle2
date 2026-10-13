@@ -17,7 +17,7 @@ import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, duration, escapeHtml as esc, shareInWords } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
-import { DUNGEON_ART } from './features.js';
+import { DUNGEON_ART, fightTab } from './features.js';
 import { activeTrial, nextTrialTarget } from '../systems/trials.js';
 
 const STRIKE_SHARE = shareInWords(BALANCE.combat.manualHitMult);   // a strike's share of an attack, in words
@@ -465,7 +465,7 @@ export function createScene(root, actions) {
 
         /** After each render: visibility, place, path, names and kit. Cheap when nothing changed. */
         sync(game, ui) {
-            const onCombat = ui.tab === 'combat';
+            const onCombat = ui.tab === fightTab(game, ui);   // Combat, or Dungeons during a run
             if (root.hidden && onCombat) quiet = true;
             root.hidden = !onCombat;
             if (!onCombat) return;
