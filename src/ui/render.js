@@ -15,7 +15,7 @@ import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { STRATA } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
-import { actionInterval, skillLevel, bonfireBonus, bonfireLit } from '../core/modifiers.js';
+import { actionInterval, skillLevel, bonfireBonus, bonfireLit, skillLevelsTotal } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
@@ -240,7 +240,7 @@ export function renderHeader(game, ui, cloud) {
     const chips = [
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
-        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
+        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, every ${BASE.recordSkillLevels} skill levels, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
         seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${d.tokenMult.toFixed(2)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${starGain(d.stars).toFixed(1)}</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
@@ -817,6 +817,7 @@ function actionCard(c) {
         ${pic}<div class="skill-action-art" style="color:${c.color}">${c.art}</div>
         <div class="node-name">${esc(c.title)}</div>
         ${c.note ? `<div class="node-io muted small">${c.note}</div>` : ''}
+        ${c.heal ? `<div class="node-io small">${c.heal}</div>` : ''}
         ${c.inputs ? `<div class="node-io small">${c.inputs}</div>` : ''}
         ${c.active
             ? `${c.have !== undefined ? `<div class="node-have" ${tipAttrs(c.haveName || c.title, `You have ${fmt(c.have)}`)}>${c.haveIcon || ''}<b>${fmt(c.have)}</b></div>` : ''}<div class="node-stats">${c.stats}</div>${c.mastery || ''}${bar}`
@@ -864,9 +865,11 @@ export function renderSkill(game, ui, skillId) {
                 inputs += ` <span class="need ${log ? 'ok' : 'missing'}" ${tip}>${resIcon(log || 'normal_log', { scale: 0.75 })}<b>${log ? shortQty(state.resources[log]) : 0}</b><i>/1</i></span>`;
             }
             const xp = Math.round(node.xp * d.xpMult);
-            const gives = node.produces ? `${out.name}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;
+            const heals = node.produces && out.heal > 0 ? { share: out.heal * d.foodMult, hp: foodHeal(out, d) } : null;   // a dish: what it heals in the fight
+            const gives = node.produces ? `${out.name}${heals ? `, heals ${pct(heals.share)} of your health (${fmt(heals.hp)} now)` : ''}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;
             cards += actionCard({
                 id: `node-${skillId}-${node.id}`, art, pic, title: node.name, color: skill.color, inputs, time: interval,
+                heal: heals ? `<span class="node-heal" title="Heals ${pct(heals.share)} of your health in the fight: ${fmt(heals.hp)} now">${glyph('heart')} +${pct(heals.share)} <i>${fmt(heals.hp)}</i></span>` : '',
                 tip: `${gives} · +${xp} XP · ${seconds(interval)}`,
                 active, stalled: active && (action.stalled || !check.ok), onclick: `FI.startNode('${skillId}','${node.id}')`,
                 have: node.produces ? state.resources[node.produces] : undefined, haveIcon: node.produces ? resIcon(node.produces) : '', haveName: node.produces ? res(node.produces).name : '',
@@ -1158,8 +1161,8 @@ function bankTile(id, state, picked) {
 /** The picked material: what it is, how many, and selling it. */
 function bankDetail(id, state, derived) {
     const r = res(id);
-    // food heals as the fight heals it (Chef and Gourmet included)
-    const about = [r.category, r.heals ? `heals ${Math.round(r.heals * (derived?.foodMult || 1))}` : '', r.desc ? esc(r.desc) : ''].filter(Boolean).join(' · ');
+    // food heals as the fight heals it: a share of max health (Chef and Gourmet included)
+    const about = [r.category, r.heal > 0 && derived ? `heals ${pct(r.heal * (derived.foodMult || 1))} of your health (${fmt(foodHeal(r, derived))} now)` : '', r.desc ? esc(r.desc) : ''].filter(Boolean).join(' · ');
     const sell = id === 'essence'
         ? '<span class="muted small">Upgrades and reforges gear</span>'
         : !(sellValue(id) > 0) ? '<span class="muted small">No one buys it: it is kept for its use</span>'
@@ -1278,6 +1281,7 @@ export function renderInventory(game, ui) {
                 <span title="Critical hits: how often, and how much harder they hit">${glyph('crit')} ${pct(d.critChance, 1)} crit × ${d.critDmg.toFixed(2)}</span>
                 <span title="Time between your attacks">${glyph('time')} ${seconds(d.attackInterval)}</span>
                 ${d.dodge > 0 ? `<span title="Chance to dodge a hit">${glyph('dodge')} ${pct(d.dodge, 1)}</span>` : ''}
+                ${d.lifesteal > 0 ? `<span title="Lifesteal: each hit heals ${pct(d.lifesteal, 1)} of the damage it deals, ${pct(BASE.lifestealPerSecond, 0)} of your health a second at most">${glyph('heart')} ${pct(d.lifesteal, 1)} lifesteal</span>` : ''}
                 <span title="How long your hero keeps going while you are away">${glyph('away')} ${Math.round(d.offlineMs / 3600000)}h away</span>
             </div>
         </section>
@@ -1544,6 +1548,10 @@ function renderRecords(game) {
     const records = [
         [`mon/${zone.boss}`, fmt(best), 'best stage'],
         ['perk/scholar', `${fmt(totalLevel)}/${fmt(SKILL_IDS.length * MAX_LEVEL)}`, 'total level'],
+        ...(seen(state, 'tokens') ? [
+            ['token', fmt(game.derived.records.count), `records: tokens ×${game.derived.records.mult.toFixed(2)}`],
+            ['perk/forager', `${fmt(skillLevelsTotal(state))}/${fmt((game.derived.records.skills + 1) * BASE.recordSkillLevels)}`, 'skill levels to the next record']
+        ] : []),
         [`hero/capes/${capeWorn(state)?.skill || capes[0]?.skill || 'combat'}`, `${capes.length}/${CAPES.length}`, 'skill capes'],
         ['item/Weapon/3', fmt(s.kills || 0), 'monsters defeated'],
         ['mon/Goblin Chieftain', fmt(s.bossKills || 0), 'bosses defeated'],

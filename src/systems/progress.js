@@ -9,6 +9,7 @@ import { petForSkill, petChance } from '../data/pets.js';
 import { capeFor } from '../data/capes.js';
 import { trialBite } from '../data/trials.js';
 import { rng } from '../core/rng.js';
+import { BASE, skillLevelsTotal } from '../core/modifiers.js';
 
 const LOG_LIMIT = 60;
 
@@ -34,6 +35,15 @@ export function grantXp(game, skillId, amount) {
         const fasting = trialBite(game.state).noRegen && game.state.combat.active;
         if (skillId === 'combat' && game.state.combat.hp > 0 && game.recompute && !fasting) { game.recompute(); game.state.combat.hp = game.derived.maxHp; }
         log(game, `${SKILLS[skillId].icon} ${SKILLS[skillId].name} level ${after}!`, 'level');
+        // every BASE.recordSkillLevels levels of the skills together is a record (core/modifiers.js recordsOf)
+        if (skillId !== 'combat') {
+            const total = skillLevelsTotal(game.state);
+            const step = BASE.recordSkillLevels;
+            if (Math.floor(total / step) > Math.floor((total - (after - before)) / step) && game.recompute) {
+                game.recompute();
+                game.emit({ type: 'skillRecord', levels: Math.floor(total / step) * step, records: game.derived.records });
+            }
+        }
         if (after >= MAX_LEVEL) {
             game.state.stats.skills99 = Object.values(game.state.skills).filter(s => levelForXp(s.xp) >= MAX_LEVEL).length;
             if (before < MAX_LEVEL && capeFor(skillId) && game.state.hero) game.state.hero.cape = skillId;   // the hero puts on the new cape

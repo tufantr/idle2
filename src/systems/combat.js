@@ -172,10 +172,17 @@ export function playerAttack(game, { manual = false } = {}) {
     const isCrit = rng.chance(critChance);
     let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult * (clan ? CLAN_GUARD.mult : 1) : 1);
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
+    const dealt = Math.min(dmg, Math.max(0, enemy.hp));   // what the monster really lost (a killing blow's excess heals nothing)
     enemy.hp -= dmg;
 
-    const lifesteal = trialBite(game.state).noRegen ? 0 : Math.min(BASE.caps.lifesteal, d.lifesteal);   // none in Fasting
-    if (lifesteal > 0) c.hp = Math.min(d.maxHp, c.hp + Math.round(dmg * lifesteal));
+    // lifesteal: a share of the damage dealt, out of the ceiling's room (BASE.lifestealPerSecond, refilled by
+    // the second in tickCombat); none in Fasting
+    const lifesteal = trialBite(game.state).noRegen ? 0 : Math.min(BASE.caps.lifesteal, d.lifesteal);
+    if (lifesteal > 0 && c.hp > 0) {
+        const heal = Math.min(Math.round(dealt * lifesteal), Math.max(0, d.maxHp - c.hp), Math.max(0, Math.floor(c.lifestealRoom || 0)));
+        c.hp += heal;
+        c.lifestealRoom = (c.lifestealRoom || 0) - heal;
+    }
 
     game.emit({ type: 'hit', dmg, crit: isCrit, manual });
     if (enemy.hp <= 0) onEnemyDeath(game);
@@ -473,6 +480,12 @@ export function tickCombat(game, dt) {
     if ((c.active || c.recovering) && c.mode === 'stages' && !c.farmMode) c.stallMs = (c.stallMs || 0) + dt;
     const regen = c.active ? (trialBite(state).noRegen ? 0 : BALANCE.combat.regenInCombat) : BALANCE.combat.regenResting;   // none while fighting in Fasting
     if (c.hp > 0 && c.hp < d.maxHp) c.hp = Math.min(d.maxHp, c.hp + d.maxHp * regen * dt / 1000);
+    // lifesteal's room fills at its ceiling's pace while he fights, and never holds more than a swing's worth
+    // (a second at least, or this step's in a long one), so a pause can't bank a big heal
+    if (c.active) {
+        const pace = d.maxHp * BASE.lifestealPerSecond / 1000;
+        c.lifestealRoom = Math.min(pace * Math.max(1000, d.attackInterval, dt), (c.lifestealRoom || 0) + pace * dt);
+    }
     if (!c.active) {
         if (c.combo > 0) c.combo = 0;
         // Fallen and rested: back on his feet and into the fight, unless he was given work meanwhile.

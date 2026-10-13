@@ -2328,6 +2328,8 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .frag-row { display: flex; align-items: center; gap: 0.5rem; }
 .frag-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
 .frag-count { white-space: nowrap; }
+.node-heal { display: inline-flex; align-items: center; gap: 0.25rem; color: #fca5a5; font-weight: 600; }   /* a dish's card: what it heals */
+.node-heal i { font-style: normal; font-weight: 400; color: var(--text-muted); }
 .dungeon-clears { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; }   /* a dungeon card's clears, with the chest they open */
 .dungeon-clears b { font-family: var(--font-display); font-size: 1.1rem; color: var(--heading); }
 .frag-bar i { display: block; width: var(--p, 0%); height: 100%; background: linear-gradient(90deg, #c2410c, #f97316); }

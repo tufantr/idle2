@@ -35,7 +35,9 @@ As in Melvor Idle, the road to {{MAX_LEVEL}} is long, and the late actions are w
 
 ## Rewards along the way
 
-Skill levels earn [[Medals|medals]], each with a bonus of its own on top of the small one every medal gives:
+Every level makes your hero stronger in the fight too: every {{BASE.recordSkillLevels}} levels of your skills together (every skill but Combat) is a record, and each record makes your prestige tokens ×{{BASE.recordMult}} as strong (see [[Prestige]]). Skill levels are kept through every prestige, so these records are yours for good.
+
+Skill levels also earn [[Medals|medals]], each with a bonus of its own on top of the small one every medal gives:
 
 {{'<ul>' + [...new Set(ACHIEVEMENTS.filter(a => a.req.type === 'skillLevel' && a.req.skill !== 'combat').map(a => a.req.level))].sort((x, y) => x - y).map(l => `<li>Level ${l}: ${ACHIEVEMENTS.filter(a => a.req.type === 'skillLevel' && a.req.skill !== 'combat' && a.req.level === l).map(a => `${a.name} (${SKILLS[a.req.skill].name}: ${a.reward.replace(/^./, c => c.toLowerCase())})`).join(', ')}</li>`).join('') + '</ul>'}}
 

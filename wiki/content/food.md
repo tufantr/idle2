@@ -3,7 +3,9 @@ path: /food
 keywords: food, eat, eating, auto-eat, auto eat, healing, heal, cooking, fish, meat, dishes, gourmet, chef, fasting
 aliases: Auto-eat, Healing, Eating
 ---
-Food keeps your hero alive in a long fight. It is cooked in [[Cooking]], every dish burning one log, from raw meat ([[Hunting]]), fish ([[Fishing]]) and crops ([[Farming]]), and raw meat and some fish also drop in the fight ([[Zones]]). Food is kept when you prestige. Every food heals a share of your hero's max health, so a dish stays as good however strong he grows. The table below lists every food, what it heals and what it is cooked from.
+Food keeps your hero alive in a long fight. It is cooked in [[Cooking]], every dish burning one log, from raw meat ([[Hunting]]), fish ([[Fishing]]) and crops ([[Farming]]), and raw meat and some fish also drop in the fight ([[Zones]]). Food is kept when you prestige. Every food heals a share of your hero's max health, so a dish stays as good however strong he grows; each dish's card in Cooking shows its share and what it heals him now. The table below lists every food, what it heals and what it is cooked from.
+
+Lifesteal heals at most {{pct(BASE.lifestealPerSecond, 0)}} of his health a second (see [[Combat]]), so where monsters hit hard, food is what keeps him standing.
 
 ## Auto-eat
 

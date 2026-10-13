@@ -52,6 +52,7 @@ export function createDefaultState(now = Date.now()) {
             autoEat: 'auto',
             potion: 'none',
             potionMs: 0,       // what is left of the fight potion's dose, in ms of fighting (data/potions.js)
+            lifestealRoom: 0,  // how much lifesteal may still heal now, under its ceiling (BASE.lifestealPerSecond)
             combo: 0,
             lastComboAt: 0,
             farmMode: false,
@@ -483,6 +484,7 @@ function normalise(data, now) {
     state.combat.playerTimer = Math.max(0, finite(state.combat.playerTimer));
     state.combat.enemyTimer = Math.max(0, finite(state.combat.enemyTimer));
     state.combat.potionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.potionMs)));
+    state.combat.lifestealRoom = Math.max(0, finite(state.combat.lifestealRoom));   // (a second's worth at most; refilled as he fights)
     delete state.combat.potionCharges;
     // work and a fight are never both under way (a save with both ran them at once): the fight goes on
     if (state.action && state.combat.active) state.action = null;

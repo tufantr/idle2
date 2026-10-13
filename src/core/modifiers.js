@@ -9,7 +9,7 @@
 import { EQUIP_SLOTS, UPGRADE_STEP } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
-import { NON_COMBAT_SKILLS, SPEED_SKILLS } from '../data/skills.js';
+import { NON_COMBAT_SKILLS, SPEED_SKILLS, SKILL_IDS } from '../data/skills.js';
 import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { RESOURCES } from '../data/resources.js';
 import { POTIONS, potionStrength } from '../data/potions.js';
@@ -47,6 +47,11 @@ export const BASE = {
     // lifts the whole stock where one more run adds a few percent.
     recordStages: 25,
     recordMult: 1.05,
+    // ... and so does every 50 levels in the skills together (all but Combat): every level a skill gains makes
+    // the hero stronger, through every prestige (the owner, October 2026: players fought and never trained, as
+    // nothing a skill's level did reached the fight; with lifesteal's ceiling below, the simulator's skilling
+    // player keeps his pace and one who never trains falls behind)
+    recordSkillLevels: 50,
     baseOfflineHours: 24,       // a day: a player who comes back once a day loses nothing (12 until the check-in research)
     // eat below a quarter of max health: a dish heals a share of it, and a line at half ate through a stock in
     // minutes for little (the simulator: a quarter makes food worth its cooking, half doesn't)
@@ -61,6 +66,12 @@ export const BASE = {
     bonfireXpAt99: 0.10,        // ... rising to this at 99
     bonfireSecondsPerLogTier: 15,
     bonfireMaxMs: 60 * 60 * 1000,
+    // Lifesteal heals at most this share of max health a second, all of it together (and only from damage a
+    // monster really took). Monsters have about twenty times the hero's health, so with no ceiling 5% of
+    // lifesteal healed 1.4 times what a stage-140 hero took and food was never eaten (the owner, October
+    // 2026: lifesteal left no need for food or potions). Easy fights still heal themselves; at the frontier,
+    // where monsters take 10-17% of his health a second, food and potions carry him.
+    lifestealPerSecond: 0.03,
     caps: { critChance: 0.75, dodge: 0.6, lifesteal: 0.3, attackSpeed: 1.0 }
 };
 
@@ -235,16 +246,24 @@ export function collectModifiers(state) {
 
 const RECORDS_CAP = 2000;
 
-/** The hero's records: { stages, uniques, count, mult } — 25-stage steps of the best stage, dungeon uniques held. */
+const TRAINED_SKILLS = SKILL_IDS.filter(id => id !== 'combat');
+
+/** The levels of every skill but Combat, added up (each BASE.recordSkillLevels of them is a record). */
+export function skillLevelsTotal(state) {
+    return TRAINED_SKILLS.reduce((n, id) => n + skillLevel(state, id), 0);
+}
+
+/** The hero's records: { stages, uniques, skills, count, mult } — 25-stage steps of the best stage, dungeon uniques held, 50-level steps of the skills. */
 export function recordsOf(state) {
     const stages = Math.floor((state.combat?.bestStage || 1) / BASE.recordStages);
+    const skills = Math.floor(skillLevelsTotal(state) / BASE.recordSkillLevels);
     const held = new Set();
     for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) held.add(item.uniqueId);
     const trials = trialTiersCleared(state);   // each Trial tier cleared (data/trials.js)
     const laurels = laurelsOf(state);          // and each week's Trial beaten
-    const count = stages + held.size + trials + laurels;
+    const count = stages + held.size + trials + laurels + skills;
     // (counted up to RECORDS_CAP for the power: far past any hero's, and short of where 1.05^count stops being a number)
-    return { stages, uniques: held.size, trials, laurels, count, mult: Math.pow(BASE.recordMult, Math.min(count, RECORDS_CAP)) };
+    return { stages, uniques: held.size, trials, laurels, skills, count, mult: Math.pow(BASE.recordMult, Math.min(count, RECORDS_CAP)) };
 }
 
 /** Turn the modifier object into the numbers the combat system uses. */

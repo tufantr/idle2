@@ -636,6 +636,7 @@ function trainWeakest() {
     const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)) && !WITHOUT.has(id));
     candidates.sort((a, b) => lvl(a) - lvl(b));
     const pick = candidates.find(c => c !== lastTrainedSkill) || candidates[0];
+    if (!pick) return null;   // every skill left out (--without): nothing to train
     lastTrainedSkill = pick;
     if (pick === 'crafting') return craftTraining();
     if (pick === 'agility') { const end = now + 45 * 60000; return { kind: 'agility', why: 'run the agility course', until: () => now >= end }; }

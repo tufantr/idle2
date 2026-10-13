@@ -242,6 +242,14 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   halves damage, and no amount of DEF blocks more than 90%. The prototype subtracted DEF flat, which
   made the player immune until a boss's ×2 ATK suddenly killed them — every wall was a boss.
 - **Crits:** 5% × 1.5 base; affixes add. **Dodge**, **lifesteal** from affixes/potions.
+- **Lifesteal's ceiling** (`BASE.lifestealPerSecond`, 3%; the owner, October 2026: "HP regen is too
+  strong, preventing the need for potions"): lifesteal heals a share of the damage a monster really took
+  (a killing blow's excess heals nothing), and all of it together at most 3% of max HP a second, out of a
+  room (`combat.lifestealRoom`) that fills at that pace while the hero fights and holds a swing's worth at
+  most. Monsters have about twenty times the hero's health, so uncapped, 5% of lifesteal healed 1.4 times
+  what a stage-140 hero took and he ate one dish in twenty minutes (700 without it); in the simulator food
+  changed nothing past stage 100. Under the ceiling, easy fights still heal themselves, and at the
+  frontier, where monsters take 10-17% of max HP a second, food and potions carry the hero.
 - **HP:** no refill between enemies. Regen 0.1% of max HP per second in combat, 2% per second out of
   combat. **Food heals a share of max HP** (12% for a roast rabbit to 46% for a leviathan feast, Gourmet
   and Chef on top), so it never goes stale: a fixed 40-1,100 HP healed 2% of a stage-160 hero (the
@@ -400,7 +408,11 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   300 with five uniques: ×2.29). Held
   tokens alone make each late run add less (+0.8% a run after the hundredth); a record lifts the whole
   stock. A new 25-stage record is a card ("Your tokens are ×1.05 stronger"), and a unique's card says
-  so too, once the player has tokens; the token chip's tip counts them.
+  so too, once the player has tokens; the token chip's tip counts them. **Every 50 levels of the skills
+  together** (every skill but Combat, `skillLevelsTotal`, `BASE.recordSkillLevels`) is a record as well,
+  with its own card (`skillRecord`), and the Hall's Records shows how far the next is (the owner, October
+  2026: players fought and never trained, as no skill level reached the fight; it came with lifesteal's
+  ceiling, so the simulator's skilling player keeps his pace and one who never trains falls behind).
 - **Auto** (`autoPrestigeIn`, `tickAutoPrestige`): after 5 prestiges, or 48 hours after the first one
   (`prestige.firstAt`), whichever comes first, the dock's Prestige button gets an Auto switch beside it
   (`settings.autoPrestige`, off until turned on). It took 20 prestiges until the check-in research

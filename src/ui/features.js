@@ -60,7 +60,7 @@ export const FEATURES = {
         points: ['Supplies are priced by your best stage, so gathering always stays worth it.', 'Perks cost one skill point each and last forever.'] },
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',
         points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence and +${pc(BASE.tokenHp, 1)} health, forever.`,
-            `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
+            `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each ${BASE.recordSkillLevels} levels of your skills together, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
             'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. After the first prestige, a run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
             `After ${BALANCE.prestige.autoAfter} prestiges, or two days after your first, the fight's dock gets an Auto switch: it prestiges a run that has spent ${BALANCE.prestige.autoStallMs / 60000} minutes climbing without a new best stage, even while you are away.`] },
     ascension: { name: 'Ascension', art: 'skyreach', icon: 'token', blurb: 'Give up every token for Stars, and climb again faster.',

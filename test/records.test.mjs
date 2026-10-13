@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { migrateState } from '../src/core/state.js';
-import { BASE, recordsOf, deriveStats } from '../src/core/modifiers.js';
+import { BASE, recordsOf, deriveStats, skillLevelsTotal, skillLevel } from '../src/core/modifiers.js';
+import { xpForLevel } from '../src/core/xp.js';
+import { grantXp } from '../src/systems/progress.js';
 import { BALANCE } from '../src/core/formulas.js';
 import { UNIQUES } from '../src/data/dungeons.js';
 import { autoPrestigeIn } from '../src/systems/prestige.js';
@@ -22,7 +24,7 @@ test('each 25 stages of the best ever, and each unique held, multiply what token
     s.prestige.tokens = 1000;
     s.equipped.Weapon = { id: 800, type: 'Weapon', tier: 7, atk: 5000, def: 0, affixes: [], upgrade: 0 };
     s.combat.bestStage = 24;
-    assert.deepEqual(recordsOf(s), { stages: 0, uniques: 0, trials: 0, laurels: 0, count: 0, mult: 1 });
+    assert.deepEqual(recordsOf(s), { stages: 0, uniques: 0, trials: 0, laurels: 0, skills: 0, count: 0, mult: 1 });
     const plain = deriveStats(s);
     s.combat.bestStage = 100;
     const four = deriveStats(s);
@@ -37,6 +39,30 @@ test('each 25 stages of the best ever, and each unique held, multiply what token
     s.inventory.push({ id: 900, type: UNIQUES[id].type, tier: UNIQUES[id].tier, uniqueId: id, atk: 0, def: 0, affixes: [] });
     s.inventory.push({ id: 901, type: UNIQUES[id].type, tier: UNIQUES[id].tier, uniqueId: id, atk: 0, def: 0, affixes: [] });
     assert.equal(recordsOf(s).count, 5);
+});
+
+test('every 50 levels of the skills together (Combat aside) is a record too, announced as it is reached', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const trained = Object.keys(s.skills).filter(id => id !== 'combat');
+    for (const id of trained) s.skills[id].xp = xpForLevel(10);
+    s.skills.combat.xp = xpForLevel(99);   // Combat's levels are the stages' records, not these
+    assert.equal(skillLevelsTotal(s), 10 * trained.length);
+    assert.equal(recordsOf(s).skills, Math.floor(10 * trained.length / BASE.recordSkillLevels));
+    // one level short of the next step, then the level that reaches it
+    const next = (recordsOf(s).skills + 1) * BASE.recordSkillLevels;
+    s.skills.mining.xp = xpForLevel(10 + next - skillLevelsTotal(s) - 1);
+    game.recompute();
+    const before = game.derived.records.count;
+    game.drainEvents();
+    grantXp(game, 'mining', xpForLevel(skillLevel(s, 'mining') + 1) - s.skills.mining.xp);
+    const ev = game.drainEvents().find(e => e.type === 'skillRecord');
+    assert.equal(ev?.levels, next);
+    assert.equal(ev.records.count, before + 1);
+    assert.ok(Math.abs(game.derived.records.mult - BASE.recordMult ** (before + 1)) < 1e-12, 'the tokens are stronger at once');
+    // a Combat level never makes one
+    grantXp(game, 'combat', 1e9);
+    assert.equal(game.drainEvents().filter(e => e.type === 'skillRecord').length, 0);
 });
 
 test('a new record is announced as the stage is reached', () => {

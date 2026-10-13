@@ -1,6 +1,7 @@
 // The owner's October 2026 asks (docs/ROADMAP.md, Phase 9): food that heals a share of the hero's health,
 // potions that last minutes and multiply, work potions; perks that cost more as they climb; a bigger bag for
-// gold and a "weaker than worn" salvage. Kept here so they stay as asked.
+// gold and a "weaker than worn" salvage; lifesteal under a ceiling, so food and potions keep their job.
+// Kept here so they stay as asked.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -15,7 +16,9 @@ import { bagSize, bagUpgradePrice } from '../src/systems/inventory.js';
 import { actionInterval } from '../src/core/modifiers.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { migrateState } from '../src/core/state.js';
-import { tryEat } from '../src/systems/combat.js';
+import { tryEat, playerAttack } from '../src/systems/combat.js';
+import { BASE } from '../src/core/modifiers.js';
+import { BALANCE } from '../src/core/formulas.js';
 import { addItem } from '../src/systems/inventory.js';
 import { potionEffects } from '../src/core/modifiers.js';
 
@@ -52,6 +55,50 @@ test('food heals a share of max health, so it keeps up with the hero', () => {
     assert.equal(tryEat(g), 1);
     assert.equal(g.state.resources.cooked_rabbit, 0, 'eaten below the auto-eat line');
     assert.equal(g.state.combat.hp, before + foodHeal(RESOURCES.cooked_rabbit, g.derived));
+});
+
+// ---------- lifesteal ----------
+
+const vampire = () => {
+    const g = hero({ bestStage: 30, tokens: 400 });
+    g.state.equipped.Weapon = { id: 7001, type: 'Weapon', tier: 7, atk: 50000, def: 0, upgrade: 0, rarity: 'legendary', affixes: [{ stat: 'lifesteal', name: 'Lifesteal', value: BASE.caps.lifesteal }] };
+    g.recompute();
+    return g;
+};
+
+test('lifesteal heals at most its ceiling a second, however hard the hero hits', () => {
+    rng.setSource(seededRandom(21));
+    const g = vampire();
+    const c = g.state.combat;
+    assert.equal(g.derived.lifesteal, BASE.caps.lifesteal);
+    g.enterCombat();
+    c.enemy.hp = c.enemy.maxHp = 1e15;   // a wall of a monster that never falls...
+    c.enemy.atk = 0;                       // ...and never hurts
+    c.hp = 1;
+    const max = g.derived.maxHp;
+    run(g, 10_000, 100);
+    const healed = c.hp - 1;
+    const regen = max * BALANCE.combat.regenInCombat * 10;
+    assert.ok(healed <= max * BASE.lifestealPerSecond * 11 + regen + 1, `${healed} of ${max} in 10 s`);
+    assert.ok(healed >= max * BASE.lifestealPerSecond * 8, 'and it does heal, up to the ceiling');
+});
+
+test("lifesteal heals from what the monster really lost: a killing blow's excess heals nothing", () => {
+    rng.setSource(seededRandom(22));
+    const g = vampire();
+    const c = g.state.combat;
+    g.enterCombat();
+    c.enemy.hp = 10;
+    c.hp = 1;
+    c.lifestealRoom = g.derived.maxHp;   // room enough: only the damage dealt limits it
+    const dmg = playerAttack(g);
+    assert.ok(dmg > 1000);
+    assert.equal(c.hp, 1 + Math.round(10 * BASE.caps.lifesteal), 'a share of the 10 it had left');
+    // out of the fight the room doesn't fill: a pause banks no heal
+    g.leaveCombat();
+    c.lifestealRoom = 0;
+    run(g, 30_000);
+    assert.equal(c.lifestealRoom, 0);
 });
 
 // ---------- potions ----------

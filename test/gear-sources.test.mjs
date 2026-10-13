@@ -83,6 +83,11 @@ function beatBoss(game, stage, roll) {
     spawnEnemy(game);
     assert.ok(c.enemy.boss);
     c.enemy.hp = 1;
+    // rested and swinging first: the boss falls to the first blow (with lifesteal's ceiling a fall here would
+    // not be won back, BASE.lifestealPerSecond)
+    game.recompute();
+    c.hp = game.derived.maxHp;
+    c.playerTimer = game.derived.attackInterval;
     let now = game.now;
     const kills = game.state.stats.bossKills;
     while (game.state.stats.bossKills === kills) { now += 100; game.tick(now); }

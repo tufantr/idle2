@@ -1144,6 +1144,25 @@ Keeping it running:
       "221/50" beside "251 clears" as wrong clears): "251 clears" beside the chest, "33/50 fragments" or
       "221 fragments" beside the unique, the same in the run's panel and on the map; the clear counter
       itself was checked against the boss kills (130 of 130)
+- [x] **Skilling that the fight needs** (the owner: lifesteal left no need for food or potions, and players
+      fought without ever training; DESIGN §3.6, §3.9). Measured first: 5% of lifesteal healed 1.4 times
+      what a stage-140 hero took (monsters have about twenty times his health), and in the simulator food
+      changed nothing past stage 100, while a player who never trained ended level with one who did.
+      **Lifesteal's ceiling**: it heals only from damage a monster really took, at most 3% of max health a
+      second. **Skill records**: every 50 levels of the skills together is a record (×1.05 tokens), with
+      a card, and the Hall's Records shows the next. **Dishes say what they heal** on Cooking's cards and
+      in the bag ("+23% · 556"), and the Inventory shows lifesteal. Over 20 simulated players: one who
+      skills reaches stage 100 in 3.1 h (3.3 before), 120 in 6.2 h (6.1) and 150 in 15.5 h (13.7), the same
+      best stage by hour 40 (180); one who never skills takes 24.4 h to stage 150 (16.8 before) and ends
+      at 160
+- [ ] **Fishing and Hunting as one skill** (M; the owner's idea, agreed 13 October 2026, to start on the
+      owner's word): the two are mirror images (seven spots each at 1, 15 … 90, their dishes a point apart),
+      so a food chain is one skill to gather and Cooking. Old saves keep the higher of the two levels
+- [ ] **Alchemy's three potions that grow** (M; the owner's idea): a battle potion (stages and the Titan:
+      attack, defence and health), a dungeon potion (runs only, stronger, a chance of an extra fragment) and
+      a skill potion (speed and XP), each in four tiers from the four herbs; old bottles convert
+- [ ] **The bonfire raises output** (S; the owner's idea): while it burns, a chance of a double in every
+      gathering and production action beside its XP (5% at level 1, 20% at 99)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by
