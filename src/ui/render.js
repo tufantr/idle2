@@ -544,9 +544,25 @@ function uniqueProgress(state, d) {
     const record = state.dungeons[d.id];
     const unique = UNIQUES[d.unique];
     const owned = ownsUnique(state, d.unique);
-    return `<div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of the ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: owned ? '' : 'silhouette', fallback: '🌟' })}
-            <span class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></span><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
+    return `${fragmentRow(state, d)}
         ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="prestige-btn run-assemble" onclick="FI.assembleUnique('${d.id}')">${owned ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}`;
+}
+
+/**
+ * A dungeon's unique and its fragments: a clear's chest holds one (now and then three), FRAGMENTS_PER_UNIQUE
+ * make the unique and Assemble spends them, so they run apart from the clears. The bar fills toward the
+ * next, and the words say fragments (the owner read "221/50" beside "251 clears" as a wrong count of clears).
+ * Also the world map's (ui/worldmap.js).
+ */
+export function fragmentRow(state, d, { scale = 1, tag = 'div' } = {}) {
+    const unique = UNIQUES[d.unique];
+    const have = state.dungeons[d.id]?.fragments || 0;
+    const enough = Math.floor(have / FRAGMENTS_PER_UNIQUE);
+    const cls = [scale < 1 ? 'soft' : '', ownsUnique(state, d.unique) ? '' : 'silhouette'].filter(Boolean).join(' ');
+    const title = enough
+        ? `${fmt(have)} fragments of the ${unique.name}: enough for ${enough === 1 ? 'one' : fmt(enough)} (${FRAGMENTS_PER_UNIQUE} make one)`
+        : `${fmt(have)} of the ${FRAGMENTS_PER_UNIQUE} fragments that make the ${unique.name}: a clear's chest holds one`;
+    return `<${tag} class="frag-row" title="${esc(title)}">${sprite(`uniq/${unique.id}`, { scale, cls, fallback: '🌟' })}<span class="frag-bar"><i style="--p:${Math.min(100, have / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></span><span class="small frag-count">${enough ? fmt(have) : `${fmt(have)}/${FRAGMENTS_PER_UNIQUE}`} fragments</span></${tag}>`;
 }
 
 /** The choice after a clear: run it again and again, or end the dungeon (back to the stage the hero left). */
@@ -1879,9 +1895,8 @@ export function renderDungeons(game) {
             </div>
             <div class="dungeon-body">
             ${open ? `${dungeonLineup(state, d)}<div class="small ${ready}" title="An estimate without food, regeneration, lifesteal or combo">${verdict}</div>
-                <div class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 1, cls: ownsUnique(state, d.unique) ? '' : 'silhouette', fallback: '🌟' })}
-                    <div class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></div><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></div>
-                <div class="muted small">${record.clears} clear${record.clears === 1 ? '' : 's'}${next ? ` · at ${next.clears}: ${next.desc}` : ' · every bonus earned'}${done.length ? ` · earned: ${done.join('; ')}` : ''}</div>
+                <div class="dungeon-clears" title="Each clear opens a chest">${sprite('crate', { scale: 0.75, cls: 'soft' })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span><span class="muted small">${next ? `at ${next.clears}: ${next.desc}` : 'every bonus earned'}${done.length ? ` · earned: ${done.join('; ')}` : ''}</span></div>
+                ${fragmentRow(state, d)}
                 <div class="btn-row">
                     ${here ? (choosingAfterClear(state) ? '<button class="prestige-btn" onclick="FI.openRunChoice()">Cleared: keep going?</button>' : '<button class="mini-btn danger" onclick="FI.toggleCombat()">Leave dungeon</button>') : ['titan', 'clan'].includes(c.mode) ? '<span class="muted small">After the fight</span>' : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
                     ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${ownsUnique(state, d.unique) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique) ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}

@@ -1088,12 +1088,18 @@ needs another screen: fight, spend, prestige and fight on.
   points enough.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
   fight; toasts move under the top bar so they never cover the dock.
-- **A dungeon run is fought on the Dungeons tab** (`fightTab` in `src/ui/features.js`; the owner,
-  October 2026: mid-run the Dungeons tab showed the list as if no run were on, and the fight had to be
-  found under Combat). While a run lasts, the Dungeons tab is its fight, full screen or folded with the
-  run's panel and Leave dungeon, and Combat, the phone hotbar's fight button and the header's pill lead
-  there too. The list of dungeons and the stage fight come back once the run is left, ended after a
-  clear, or lost; a lost run that was being watched keeps its screen 2.4 seconds, for the fall to show.
+- **A dungeon run and the Titan are fought on the Dungeons tab** (`fightTab` in `src/ui/features.js`;
+  the owner, October 2026: mid-run the Dungeons tab showed the list as if no run were on, the fight had
+  to be found under Combat, and a Titan felled took the screen to the stages' fight). While one lasts,
+  the Dungeons tab is its fight, full screen or folded with its panel (Leave dungeon, Give up), and
+  Combat, the phone hotbar's fight button and the header's pill lead there too. The list comes back once
+  it is over (a run left, ended after a clear or lost; the Titan felled, outlasted or given up) and the
+  hero goes back to what he was doing, a stage fight under Combat included; a run lost or a Titan's end
+  that was being watched keeps its screen 2.4 seconds, for the fall or the banner to show.
+- **Clears and fragments are told apart** on the dungeon cards, the run's panel and the map: the clears
+  beside the chest they open, the unique's fragments as "33/50 fragments" (or "221 fragments" once there
+  are enough for one: Assemble spends 50, so they fall behind the clears; the owner read "221/50" beside
+  "251 clears" as a wrong count).
 
 ### 3.24 The first session
 

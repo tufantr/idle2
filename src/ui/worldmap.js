@@ -7,14 +7,14 @@
 
 import { ZONES, STAGES_PER_ZONE } from '../data/zones.js';
 import { RESOURCES } from '../data/resources.js';
-import { DUNGEONS, dungeonById, FRAGMENTS_PER_UNIQUE, UNIQUES } from '../data/dungeons.js';
+import { DUNGEONS, dungeonById } from '../data/dungeons.js';
 import { isUnlocked } from '../data/unlocks.js';
-import { dungeonUnlocked, ownsUnique } from '../systems/dungeon.js';
+import { dungeonUnlocked } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { BESTIARY, KILL_STARS, starsFor } from '../data/bestiary.js';
 import { STRATA_FROM, stratumForStage } from '../data/strata.js';
 import { sprite, resIcon, heroSprite } from './sprites.js';
-import { dungeonVerdict } from './render.js';
+import { dungeonVerdict, fragmentRow } from './render.js';
 import { escapeHtml as esc } from './format.js';
 
 // Where each zone sits on the painting, in % of its width and height (set by eye from the picture;
@@ -119,8 +119,6 @@ export function renderDungeonInfo(game, id) {
     const d = dungeonById(id);
     if (!d) return '';
     const open = dungeonUnlocked(state, d);
-    const record = state.dungeons[d.id] || { fragments: 0 };
-    const unique = UNIQUES[d.unique];
     const verdict = open ? dungeonVerdict(game, d) : null;
     const action = inDungeon(state, d.id) ? '<span class="status-pill fighting">You are here</span>'
         : open ? `<button class="prestige-btn war" onclick="FI.mapDungeon('${d.id}')">Enter</button>`
@@ -131,8 +129,7 @@ export function renderDungeonInfo(game, id) {
             <b class="zone-card-name">${esc(d.name)}${open ? starsPill(state, d.id) : ''}</b>
             <span class="muted small">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span>
             ${open ? `<span class="small ${verdict.cls}">${verdict.text}</span>
-            <span class="frag-row" title="${record.fragments} of ${FRAGMENTS_PER_UNIQUE} fragments of ${esc(unique.name)}">${sprite(`uniq/${unique.id}`, { scale: 0.75, cls: `soft${ownsUnique(state, d.unique) ? '' : ' silhouette'}`, fallback: '🌟' })}
-                <span class="frag-bar"><i style="--p:${Math.min(100, record.fragments / FRAGMENTS_PER_UNIQUE * 100).toFixed(1)}%"></i></span><span class="small">${record.fragments}/${FRAGMENTS_PER_UNIQUE}</span></span>` : ''}
+            ${fragmentRow(state, d, { scale: 0.75, tag: 'span' })}` : ''}
         </div>
         ${action}
     </div>`;

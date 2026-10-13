@@ -1138,6 +1138,12 @@ Keeping it running:
       run were on, and the fight was under Combat; DESIGN §3.23): while a run lasts the Dungeons tab is its
       fight, and Combat, the hotbar and the header's pill lead there; the list and the stages come back
       once the run is over. Checked in a browser at both widths, folded and full, a reload mid-run included
+- [x] **The Titan too** (the owner: a Titan felled took the screen to Combat): challenged from the Dungeons
+      tab, it is fought there, and after it the tab shows the list again while the hero goes back to his
+      stage fight under Combat. **Clears and fragments told apart** on the dungeon cards (the owner read
+      "221/50" beside "251 clears" as wrong clears): "251 clears" beside the chest, "33/50 fragments" or
+      "221 fragments" beside the unique, the same in the run's panel and on the map; the clear counter
+      itself was checked against the boss kills (130 of 130)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

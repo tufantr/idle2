@@ -71,7 +71,8 @@ const ui = {
     open: {},            // drawers the player has opened (the battle log, the crop table)
     battleFull: prefs.get('fantasyIdle.battleFull') !== '0', // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
     battleHoldUntil: 0,  // a fight that ended keeps the screen until then (its last banner shows), when the hero goes back to work
-    fightFrom: null,     // the tab a Titan or clan boss fight was begun from: the screen goes back there after it
+    dungeonHoldUntil: 0, // a fight on the Dungeons tab that ended keeps that tab on it until then (fightTab in ui/features.js)
+    fightFrom: null,     // the tab a clan boss fight was begun from: the screen goes back there after it
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -504,7 +505,7 @@ function render() {
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
-    if (ui.tab === 'combat' && game.state.combat.mode === 'dungeon') ui.tab = 'dungeons';   // a dungeon run is fought on the Dungeons tab
+    if (ui.tab === 'combat') ui.tab = fightTab(game);   // a dungeon run or the Titan is fought on the Dungeons tab
     const focus = document.activeElement;
     const findAgain = focusFinder(focus);
     const tab = document.getElementById('tab');
@@ -564,13 +565,14 @@ const ARRIVALS = {
 };
 const arrivals = new Set();
 
-/** A dungeon visit is over: the Dungeons tab, where it was watched, shows the list of them again (fightTab). */
+/** A fight on the Dungeons tab is over (a run, the Titan's): the tab, where it was watched, shows the list again (fightTab). */
 function backToDungeons() {
     ui.dungeonHoldUntil = 0;
+    ui.battleHoldUntil = 0;
     render();
 }
 
-/** After a Titan or clan boss fight that sent the hero back to his work or his rest: back to the tab it was begun from. */
+/** After a clan boss fight (or a Titan given up) that sent the hero back to his work or his rest: back to the tab it was begun from. */
 function backFromFight() {
     const c = game.state.combat;
     ui.battleHoldUntil = 0;
@@ -645,8 +647,9 @@ const REVEAL_TOASTS = {
 const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
 
 function handleEvents(events) {
-    // a run lost (a fall, the boss's timer) while watched keeps the fight on the Dungeons tab a moment, for the defeat to show
-    if (ui.tab === 'dungeons' && events.some(ev => ev.type === 'dungeonFail' && ev.lost)) ui.dungeonHoldUntil = game.now + DEFEAT_HOLD_MS + 1000;
+    // a fight on the Dungeons tab that just ended while watched (a run lost, the Titan's) keeps its screen a moment, for its end to show
+    const ended = ui.tab === 'dungeons' && events.find(ev => (ev.type === 'dungeonFail' && ev.lost) || (ev.type === 'titan' && ev.reason !== 'left'));
+    if (ended) ui.dungeonHoldUntil = game.now + (ended.type === 'titan' ? TITAN_HOLD_MS : DEFEAT_HOLD_MS) + 1000;
     const onCombat = ui.tab === fightTab(game, ui); // the battle scene shows these itself
     // Places that open in the same moment share one card (and one sound), so nothing queues up.
     const unlocked = events.filter(ev => ev.type === 'unlock').map(ev => ev.id);
@@ -762,13 +765,12 @@ function handleEvents(events) {
             }
             case 'titan': {
                 toast(ev.won ? `Titan defeated! Permanent +${+((ev.bonus || 0) * 100).toFixed(1)}% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0'));
-                // he went back to what he was doing before it (not a fight): the battle keeps the screen while
-                // its banner shows, then the screen goes back to where the challenge was made (Give up: at once)
-                const c = game.state.combat;
-                if (ev.reason !== 'left' && ui.fightFrom && !c.active && !c.recovering) {
+                // fought on the Dungeons tab: while watched, its banner keeps the screen a moment (the hold above), and
+                // then the tab shows the list again; the hero is back at what he did before (a stage fight is under Combat)
+                if ((ui.dungeonHoldUntil || 0) > game.now) {
                     ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
-                    setTimeout(backFromFight, TITAN_HOLD_MS);
-                } else ui.fightFrom = null;
+                    setTimeout(() => { if (game.state.combat.mode !== 'titan' && game.state.combat.mode !== 'dungeon') backToDungeons(); }, TITAN_HOLD_MS);
+                }
                 break;
             }
             case 'clanFight': {   // the clan fight is over: what was done is sent (sendClanResult), and the screen goes back as after the Titan
@@ -1111,7 +1113,7 @@ function setBattleFull(on) {
 
 window.FI = {
     switchTab(id) {
-        if (id === 'combat' && game.state.combat.mode === 'dungeon') id = 'dungeons';   // the run is fought there: Combat waits until it is left
+        if (id === 'combat') id = fightTab(game);   // a run or the Titan is fought on the Dungeons tab: Combat waits until it is over
         ui.dungeonHoldUntil = 0;   // a lost run's moment on screen ends with the player's next step
         ui.tab = id;
         prefs.set('fantasyIdle.tab', id);
@@ -1228,12 +1230,11 @@ window.FI = {
     },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
     challengeTitan() {
-        const from = ui.tab;
         if (!game.challengeTitan()) { render(); return; }
-        ui.fightFrom = from;   // when the fight is over and he goes back to his work, the screen goes back too
+        ui.fightFrom = null;
         ui.battleHoldUntil = 0;
         setBattleFull(true);
-        window.FI.switchTab('combat');
+        window.FI.switchTab('dungeons');   // fought where it is challenged, and the tab shows the list again after it (fightTab)
     },
 
     plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },

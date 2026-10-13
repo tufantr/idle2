@@ -7,7 +7,7 @@ Once an hour your hero may challenge a Titan: a race of {{TITAN_TIME_MS / 1000}}
 
 ## When you can fight
 
-The first Titan wakes once your best stage reaches {{TITAN_UNLOCK_STAGE}}, and you challenge it from the Dungeons tab. You get one attempt an hour, and the attempts you don't use wait for you, up to {{TITAN_BANK}}: come back after a few hours and they are there. A gold **!** on the Dungeons tab says the Titan is awake and your hero can beat it.
+The first Titan wakes once your best stage reaches {{TITAN_UNLOCK_STAGE}}, and you challenge it from the Dungeons tab. The fight is fought on that tab too, and once it is over the tab shows the dungeons again while your hero goes back to what he was doing. You get one attempt an hour, and the attempts you don't use wait for you, up to {{TITAN_BANK}}: come back after a few hours and they are there. A gold **!** on the Dungeons tab says the Titan is awake and your hero can beat it.
 
 ## The damage race
 

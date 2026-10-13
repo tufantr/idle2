@@ -2327,6 +2327,9 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 0.6rem; }
 .frag-row { display: flex; align-items: center; gap: 0.5rem; }
 .frag-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
+.frag-count { white-space: nowrap; }
+.dungeon-clears { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; }   /* a dungeon card's clears, with the chest they open */
+.dungeon-clears b { font-family: var(--font-display); font-size: 1.1rem; color: var(--heading); }
 .frag-bar i { display: block; width: var(--p, 0%); height: 100%; background: linear-gradient(90deg, #c2410c, #f97316); }
 
 /* ===== The guide's hand (src/ui/guide.js): a glove on the one thing to do in a new hero's first minutes ===== */
