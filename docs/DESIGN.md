@@ -278,8 +278,11 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   and the boss's sizing stay potion-free. Old saves turn their bottles into these by the tier of their herb
   (`OLD_POTIONS` in `src/core/state.js`). The seven before them (October 2026: a bottle lasting minutes,
   multiplying, growing with Alchemy; before that +20% for 15 attacks, about 17 seconds, that nobody could
-  see) raised one thing each. The three cards are stand-ins, other potions' paintings recoloured
-  (`tools/cards.py --recolour`), until Gemini paints their own.
+  see) raised one thing each. The three cards are Gemini's (sheet `cards11` in `tools/cards.py`: a red
+  flask by a sword and shield, a purple one by a chest and its key, a green one by a pickaxe and an axe).
+  **The skill potion is a chip** in a skill's header (the owner: the row took too much room, and its Brew
+  tile went): the bottle at work with its tier and time left, a tap opening a small tray of the bottles
+  carried (`skillPotionChip` in render.js); with none carried and none at work, no chip.
 - **Clicks and combo** (cut in October 2026, the owner: fast clicking took his hero to stage 100 with no
   prestige, food or potion, and cleared dungeons in seconds that the Dungeons tab called out of reach):
   a strike lands a tenth of an attack (`BALANCE.combat.manualHitMult`), at most one every 250 ms

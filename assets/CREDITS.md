@@ -50,10 +50,10 @@ study, supply table, war table).
 
 `paint/cards/*.webp`, the ninety pictures on the action cards, are AI-generated with Google Gemini
 too, nine to a sheet from the prompts in `tools/cards.py`, and cut out and scaled by that script.
-The three kinds of potion (combat, dungeon and skill, each card shared by its four tiers) have, for now,
-those paintings of the Accuracy, Defense and Evasion Potions, the Defense Potion's flask recoloured violet,
-by `tools/cards.py --recolour` (the Gatherer's Draught, the Scholar's Tonic and the Fortune Draught before
-them were made the same way); the potions' twelve icons are DCSS potion tiles (CC0, as above), packed by
-`tools/atlas.py`.
+The three kinds of potion (combat, dungeon and skill, each card shared by its four tiers) were painted the
+same way in October 2026, on an eleventh sheet of three tries at each (`cards11` in `tools/cards.py`, the
+best of each row kept); the potions' twelve icons are DCSS potion tiles (CC0, as above), packed by
+`tools/atlas.py`. (The Gatherer's Draught, the Scholar's Tonic and the Fortune Draught before them had
+other potions' paintings recoloured by `tools/cards.py --recolour`.)
 
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

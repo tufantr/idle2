@@ -451,6 +451,14 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 }
 .res-tag { white-space: nowrap; }
 .tool-badge { padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.75rem; color: #fde68a; background: rgba(252, 211, 77, 0.08); border: 1px solid rgba(252, 211, 77, 0.35); }
+/* the skill potion: a chip in the header beside the tool, its tray of bottles opening under it */
+.potion-chip-wrap { position: relative; display: inline-flex; }
+.potion-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem 0.18rem 0.35rem; border-radius: 999px; font: inherit; font-size: 0.75rem; font-weight: 700; color: #bbf7d0; background: rgba(74, 222, 128, 0.07); border: 1px solid rgba(74, 222, 128, 0.3); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.potion-chip:hover, .potion-chip.open { border-color: rgba(74, 222, 128, 0.7); background: rgba(74, 222, 128, 0.14); }
+.potion-chip:not(.on) { color: var(--text-muted); }
+.potion-chip .spr.dim { opacity: 0.55; filter: grayscale(0.4); }
+.potion-tray { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; gap: 6px; padding: 7px; border-radius: 12px; background: linear-gradient(180deg, #1e1810, #120d07); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); }
+.potion-tray .pick { width: 40px; height: 40px; }
 .skill-info { display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; }
 .skill-level { padding: 0.2rem 0.65rem; border-radius: 999px; font-weight: 800; color: #1f1406; background: linear-gradient(180deg, #f0cb72, #b08233); box-shadow: 0 0 10px rgba(214, 170, 92, 0.3); }
 .xp-bar-container { width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(214, 170, 92, 0.25); }

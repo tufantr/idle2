@@ -19,9 +19,9 @@ Each place has its own pick, and each pick holds one potion:
 
 - **The Combat tab and the fight's dock:** a combat potion. The **Clan** tab shows the same pick, as the clan boss is fought with it, and the clan counts it in your attack.
 - **The Dungeons tab and a run's dock:** a dungeon potion, or a combat potion, which works in a run at {{pct(OUT_OF_PLACE, 0)}} of its strength.
-- **Every skill's tab:** a skill potion.
+- **Every skill's tab:** a skill potion, as a small chip in the skill's header beside its tool: it shows the bottle at work, its tier and the time left, and a tap opens a tray of the skill potions you carry. It appears once you carry one.
 
-**None** empties a pick, and choosing another potion throws away what is left of the bottle at work. With no bottle of a kind left, its row ends in a tile that takes you to Alchemy. The tiles show each bottle's tier.
+**None** empties a pick, and choosing another potion throws away what is left of the bottle at work. With no combat or dungeon potion left, its row ends in a tile that takes you to Alchemy. The tiles show each bottle's tier.
 
 ## A bottle lasts {{POTION_MINUTES}} minutes
 

@@ -148,6 +148,18 @@ SHEETS = [
         ('pumpkin_pie', 'an orange pumpkin pie cooling on a windowsill'),
         ('starfruit_tart', 'a golden tart topped with glowing star-shaped fruit slices'),
     ]),
+    ('cards11', [  # the three potions that grow (October 2026): three tries at each, a row a kind. The first,
+                   # fifth and seventh were kept (art/cards/'cards11 only-<card>' copies of the sheet); the rest stay alternates
+        ('combat_potion', "a sturdy glass flask of glowing crimson potion on a warrior's wooden table beside a sword hilt and a small round shield"),
+        ('alt_combat_axe', 'a stout bottle of glowing red potion beside a battle axe and a steel gauntlet on a table'),
+        ('alt_combat_helm', "a corked flask of bright red potion beside a knight's helmet in warm candlelight"),
+        ('alt_dungeon_torch', 'a flask of glowing violet potion on a stone ledge in a dark dungeon corridor lit by a wall torch'),
+        ('dungeon_potion', 'a round bottle of deep purple potion beside an old iron key and a small treasure chest on a dungeon floor'),
+        ('alt_dungeon_gate', "a flask of glowing indigo potion on a crypt's stone step beside a lit candle and an iron gate"),
+        ('skill_potion', "a flask of glowing green potion on a workbench beside a pickaxe and a woodcutter's axe"),
+        ('alt_skill_herbs', "a bottle of bright green potion among bundled herbs, a fishing rod and a hammer on a craftsman's table"),
+        ('alt_skill_workshop', 'a flask of glowing emerald potion beside wood shavings, a saw and chisels in a sunny workshop'),
+    ]),
 ]
 
 FIRST = ("New set, same hand-painted storybook style as the places in this chat: small pictures for the "
@@ -236,10 +248,6 @@ RECOLOURS = {
     'scholars_tonic':    dict(source='defense_potion', band=(134, 170), to=(124, 136), sat=1.0, val=1.05),   # the blue flask among scrolls, turned cyan
     'gatherers_draught': dict(source='evasion_potion', band=(46, 106), to=(14, 24), sat=1.4, val=0.78),     # the green flask among herbs, turned amber
     'fortune_draught':   dict(source='defense_potion', band=(134, 170), to=(26, 34), sat=1.25, val=1.1),   # the flask among the scrolls again, turned gold
-    # the three potions that grow (October 2026), one picture a kind for all four tiers (src/ui/render.js)
-    'combat_potion':     dict(source='accuracy_potion', band=(0, 1), to=(0, 1), sat=1.0, val=1.0),         # the red flask as it is
-    'dungeon_potion':    dict(source='defense_potion', band=(134, 170), to=(186, 200), sat=1.1, val=1.0),  # the blue flask among scrolls, turned violet
-    'skill_potion':      dict(source='evasion_potion', band=(0, 1), to=(0, 1), sat=1.0, val=1.0),          # the green flask among herbs as it is
 }
 
 

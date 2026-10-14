@@ -64,6 +64,7 @@ const ui = {
     tab: (t => (t === 'fishing' ? 'hunting' : t))(prefs.get('fantasyIdle.tab') || 'combat'),   // (Fishing joined Hunting)
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
     smithView: 'smelt',  // the step of Smithing on screen: smelt, forge, anvil or tools
+    potionMenu: false,   // the skill potion's tray, open under its chip in a skill's header
     hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
     smithMetal: null,    // null: the best metal there are bars for
     craftBar: null,
@@ -1119,6 +1120,7 @@ window.FI = {
     switchTab(id) {
         if (id === 'combat') id = fightTab(game);   // a run or the Titan is fought on the Dungeons tab: Combat waits until it is over
         ui.dungeonHoldUntil = 0;   // a lost run's moment on screen ends with the player's next step
+        ui.potionMenu = false;
         ui.tab = id;
         prefs.set('fantasyIdle.tab', id);
         markFresh(id, false);
@@ -1220,7 +1222,8 @@ window.FI = {
     setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },
     setDungeonPotion(id) { game.setDungeonPotion(id); render(); },
-    setWorkPotion(id) { game.setWorkPotion(id); render(); },
+    setWorkPotion(id) { game.setWorkPotion(id); ui.potionMenu = false; render(); },
+    togglePotionMenu() { ui.potionMenu = !ui.potionMenu; render(); },
     goZone(stage) { game.setStage(stage); render(); },
     toggleFarm(on) { game.setFarmMode(on); },
     buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },

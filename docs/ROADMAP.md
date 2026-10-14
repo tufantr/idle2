@@ -1169,7 +1169,12 @@ Keeping it running:
       skill tab a skill potion, with a tile to Alchemy when there is none. A dungeon potion can bring a
       second fragment. The seven old potions became these by their herb's tier. Over 20 simulated players:
       stage 100 in 3.25 h, 120 in 5.2 h, 150 in 12.7 h, against 3.7, 6.8 and 16.7 h without potions (the
-      live game before: 3.1, 6.2, 15.5 h). The three card pictures are stand-ins, until Gemini paints them
+      live game before: 3.1, 6.2, 15.5 h)
+- [x] **The potion cards painted, and the skill potion a chip** (the owner's asks): Gemini painted the three
+      kinds' cards (a sheet of three tries at each, the best kept: the red flask by a sword and shield, the
+      purple by a chest and its key, the green by a pickaxe and an axe). The skill potion's row on the skill
+      tabs became a small chip in the header beside the tool ("II · 5m 32s"), opening a tray of the bottles
+      carried, and its Brew tile went; with none carried it doesn't show. Checked at 1280 and 375 px
 - [x] **The bonfire raises output** (the owner's idea): while it burns, every gathering and production action
       may make two, 5% at Firemaking 1 to 20% at 99, beside its XP; the pill says "12% doubles"
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,

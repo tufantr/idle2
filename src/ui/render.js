@@ -4,7 +4,7 @@
 
 import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
-import { POTIONS, TIERS, potionsForSlot, potionEffectText } from '../data/potions.js';
+import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
 import { anvilCost, onAnvil } from '../systems/anvil.js';
@@ -379,9 +379,35 @@ function potionPicker(game, slot, cls = '') {
     return `<div class="loadout ${cls}"><div class="loadout-label">${conf.label}${note ? ` <span class="muted small">${note}</span>` : ''}</div><div class="pick-row">${row}</div></div>`;
 }
 
-/** The skill potion, picked on a skill's tab once Alchemy is open (systems/disclosure.js 'work_potions'). */
-function workPotionRow(game) {
-    return seen(game.state, 'work_potions') ? potionPicker(game, 'skill', 'work-potion') : '';
+/**
+ * The skill potion as a chip in a skill's header (the owner, October 2026: a whole row took too much room):
+ * the bottle at work with its tier and time left, or a plain flask. A tap opens a small tray of the bottles
+ * carried; picking one closes it. It shows only with a skill potion to pick or at work, and never sends to
+ * Alchemy (systems/disclosure.js 'work_potions').
+ */
+function skillPotionChip(game, ui) {
+    const state = game.state;
+    if (!seen(state, 'work_potions')) return '';
+    const w = state.workPotion || { id: 'none', ms: 0 };
+    const picked = POTIONS[w.id] ? w.id : null;
+    const owned = potionsFor('skill').filter(id => state.resources[id] > 0);
+    if (!owned.length && !picked) return '';
+    const open = ui.potionMenu === true;
+    const label = picked
+        ? `${TIERS[POTIONS[picked].tier - 1]}${w.ms > 0 ? ` · ${duration(w.ms)}` : state.resources[picked] > 0 ? '' : ' · none left'}`
+        : 'Potion';
+    const tip = picked
+        ? `${res(picked).name}: ${potionEffectText(picked)}${w.ms > 0 ? `, ${duration(w.ms)} left` : ', drunk as the work starts'}. Tap to change`
+        : 'A skill potion: tap to pick one';
+    const chip = `<button class="potion-chip${picked ? ' on' : ''}${open ? ' open' : ''}" onclick="FI.togglePotionMenu()" title="${esc(tip)}" aria-label="${esc(tip)}" aria-expanded="${open}">${resIcon(picked || owned[owned.length - 1], { scale: 0.75, cls: picked ? '' : 'dim' })}<span>${label}</span></button>`;
+    if (!open) return chip;
+    const tile = (id, inner, title) => `<button class="pick${w.id === id ? ' on' : ''}" onclick="FI.setWorkPotion('${id}')" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${w.id === id}">${inner}</button>`;
+    const tiles = [
+        tile('none', '<span class="pick-word">None</span>', 'No potion'),
+        ...owned.map(id => tile(id, `${resIcon(id, { scale: 1 })}<span class="pick-qty">${shortQty(state.resources[id])}</span><span class="pick-tier">${TIERS[POTIONS[id].tier - 1]}</span>`,
+            `${res(id).name}: ${potionEffectText(id)}, for ${duration(doseMs(game.derived))} of work (${fmt(state.resources[id])} left)`))
+    ].join('');
+    return `<span class="potion-chip-wrap">${chip}<span class="potion-tray" role="group" aria-label="Skill potion">${tiles}</span></span>`;
 }
 
 /**
@@ -885,10 +911,9 @@ export function renderSkill(game, ui, skillId) {
     }
     const bait = skillId === 'hunting' && seen(state, 'river') && state.resources.fishing_bait > 0 ? `<span class="tool-badge" title="Each catch at a river spot uses one bait for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish">${resIcon('fishing_bait')} ${fmt(state.resources.fishing_bait)} bait</span>` : '';
     return `<section class="glass-panel skill-panel ${skillPainted(skillId)}">
-        ${xpHeader(game, skillId, bait + toolBadge(game, skillId))}
+        ${xpHeader(game, skillId, bait + toolBadge(game, skillId) + (skillId !== 'farming' ? skillPotionChip(game, ui) : ''))}
         ${skillExtras(game, skillId)}
         ${NON_COMBAT_SKILLS.includes(skillId) ? renderMinigame(game, skillId) : ''}
-        ${skillId !== 'farming' ? workPotionRow(game) : ''}
         <div class="node-grid${state.minigame[skillId]?.boostUntil > game.now ? ' boosted' : ''}">${cards}</div>
     </section>`;
 }
@@ -1004,8 +1029,7 @@ export function renderSmithing(game, ui) {
         body = `<div class="node-grid">${tools.map(toolId => renderToolCard(game, toolId)).join('')}</div>`;
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
-        ${xpHeader(game, 'smithing')}
-        ${workPotionRow(game)}
+        ${xpHeader(game, 'smithing', skillPotionChip(game, ui))}
         ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ...(anvil ? [['anvil', 'Anvil']] : []), ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
         ${body}
     </section>`;
@@ -1095,8 +1119,7 @@ export function renderCrafting(game, ui) {
     }, state)).join('');
     const tools = ['bow'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
     return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
-        ${xpHeader(game, 'crafting')}
-        ${workPotionRow(game)}
+        ${xpHeader(game, 'crafting', skillPotionChip(game, ui))}
         <div class="forge-bar">
             ${materialPicks('Setting', bars.map(b => ({ id: b.bar, name: `${b.name} setting`, have: state.resources[b.bar] })), bar.bar, 'FI.selectCraftBar')}
             ${materialPicks('Gem', gems.map(g => ({ id: g.gem, name: res(g.gem).name, have: state.resources[g.gem] })), gem.gem, 'FI.selectCraftGem')}

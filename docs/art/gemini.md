@@ -424,7 +424,9 @@ python3 tools/cards.py art/cards --sheet art/cards.png    # cut the sheets, writ
 ```
 
 Send the messages in the same chat as the places, in order, and save each sheet as
-`art/cards/cards01.png` ... `cards10.png`. Look at every cell before going on: Gemini sometimes
+`art/cards/cards01.png` ... `cards10.png` (and `cards11`, the three kinds of potion: three tries at each, a
+row a kind, kept as `cards11 only-<card>` copies so only the best cell of each row is cut). Look at every
+cell before going on: Gemini sometimes
 paints the wrong metal (the first silver came out gold) or carves letters into a rune stone (the
 first wording, "rune-carved", asked for it). "Keep this sheet exactly as it is, but repaint the
 second one..." fixes a cell or two without touching the rest. When an earlier version of a sheet had
