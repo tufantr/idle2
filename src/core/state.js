@@ -24,6 +24,12 @@ import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 import { CLAN_FIGHT_MS } from '../data/social.js';
 
+// The perk reset (the owner, 15 October 2026, after the perks deepened and their prices rose): every save from
+// before it gets each perk level back as skill points, once, to spend at today's prices. What a level cost was
+// never kept, so the points are the more of the two counts: the levels owned and the points left (a level cost
+// one point until 13 October), or all the prestiges and the best stage have paid.
+export const PERK_RESET = '2026-10-15';
+
 export const SAVE_VERSION = 3;
 
 export function createDefaultState(now = Date.now()) {
@@ -76,7 +82,7 @@ export function createDefaultState(now = Date.now()) {
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
         agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
         events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [], cloaks: {} },   // cloaks: the festival cloaks bought (data/capes.js)
-        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0 },   // firstAt: when the first prestige was
+        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0, perkReset: PERK_RESET },   // firstAt: when the first prestige was
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         perks: {},
         achievements: {},
@@ -413,6 +419,19 @@ function convertOldPotions(state) {
     if (isPlainObject(state.workPotion) && Object.hasOwn(OLD_POTIONS, state.workPotion.id)) state.workPotion.id = OLD_POTIONS[state.workPotion.id];
 }
 
+function resetPerks(state, now) {
+    const pr = state.prestige;
+    const levels = PERKS.reduce((n, p) => n + (state.perks[p.id] || 0), 0);
+    if (levels > 0) {
+        const paid = pr.count * BALANCE.prestige.spPerPrestige + Math.floor(pr.spClaimedStage / BALANCE.prestige.spStageStep);
+        const back = Math.max(pr.skillPoints + levels, paid) - pr.skillPoints;
+        pr.skillPoints += back;
+        for (const p of PERKS) state.perks[p.id] = 0;
+        state.log.push({ t: now, type: 'system', text: `Perks reset: every level is back as skill points (+${back}), to spend at today's prices.` });
+    }
+    pr.perkReset = PERK_RESET;
+}
+
 function normalise(data, now) {
     const base = createDefaultState(now);
     const state = mergeInto(base, data);
@@ -677,6 +696,7 @@ function normalise(data, now) {
     state.daily.claimed = Math.max(0, Math.floor(finite(state.daily.claimed)));   // every so many crates is a great one
     if (!Number.isFinite(Number(state.daily.nextAt))) state.daily.nextAt = now + DAILY_INTERVAL_MS;
     for (const perk of PERKS) state.perks[perk.id] = Math.min(perk.max, Math.max(0, Math.floor(Number(state.perks[perk.id]) || 0)));
+    if (data?.prestige?.perkReset !== PERK_RESET) resetPerks(state, now);   // (read from the save itself: the default is the new mark)
     // camp levels as whole numbers in range: a negative one multiplied the hero's health to nothing
     for (const u of CAMP_UPGRADES) state.camp[u.id] = Math.min(u.max, Math.max(0, Math.floor(Number(state.camp[u.id]) || 0)));
     // Mini-game challenges never survive a reload: one left open counts as missed (it ends the streak, and

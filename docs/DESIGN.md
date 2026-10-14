@@ -456,7 +456,11 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   Warlord (+4% HP, 50), Rogue (+3% attack speed, 20), Forager (+3% skill speed, 30), Scholar (+3% XP, 30),
   Endurance (+2 h offline cap, 6), Gourmet (+5% auto-eat threshold and food healing, 6), Fortune (+5% gold
   and drop chance, 20), and Paragon (+1% ATK, DEF and HP, 200 levels) so skill points always have a use
-  once the others are full.
+  once the others are full. **The perk reset** (the owner, the same day; `PERK_RESET`, `resetPerks` in
+  `core/state.js`): every save from before it lost its perk levels once and got them back as skill points to
+  spend at today's prices, the more of two counts (the levels owned plus the points left, a level having cost
+  one point until 13 October; or all the prestiges and the best stage have paid, as a level's price was never
+  kept). The owner's save: 87 levels and 4 points became 91 points; the tester's 194 levels, 199.
 - **Why polynomial tokens:** see §6.1 — an exponential token formula ran away in the simulator.
 - **A name** (`state.hero.name`, set in Settings, sanitised by `heroName` in `src/core/text.js`:
   one line of plain text, up to 20 characters; empty is "You") shows over the hero in the fight and

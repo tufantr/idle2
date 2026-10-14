@@ -16,7 +16,7 @@ import { BAG_SIZE, BAG_UPGRADE, RARITIES, GEAR_TIERS } from '../src/data/items.j
 import { bagSize, bagUpgradePrice } from '../src/systems/inventory.js';
 import { actionInterval } from '../src/core/modifiers.js';
 import { generateEquipment } from '../src/core/formulas.js';
-import { migrateState } from '../src/core/state.js';
+import { migrateState, PERK_RESET } from '../src/core/state.js';
 import { tryEat, playerAttack } from '../src/systems/combat.js';
 import { BASE, bonfireDouble } from '../src/core/modifiers.js';
 import { BALANCE } from '../src/core/formulas.js';
@@ -281,6 +281,33 @@ test('a perk level costs more as the perk climbs: 1 for levels 1-5, 2 for 6-10, 
 });
 
 // ---------- the bag ----------
+
+test('the perk reset gives every level back as skill points, once, and a new game has nothing to reset', () => {
+    const g = hero();
+    const save = JSON.parse(g.serialize(g.now));
+    delete save.prestige.perkReset;   // a save from before the reset
+    Object.assign(save.prestige, { skillPoints: 4, count: 10, spClaimedStage: 0 });
+    Object.assign(save.perks, { knight: 25, warlord: 3, rogue: 15, paragon: 15 });
+    const s = migrateState(save, g.now);
+    assert.equal(Object.values(s.perks).reduce((a, b) => a + b, 0), 0, 'every level gone');
+    assert.equal(s.prestige.skillPoints, 4 + 58, 'and back as points: one a level (their price before 13 October), the more of the two counts');
+    assert.equal(s.prestige.perkReset, PERK_RESET);
+    assert.match(s.log.at(-1).text, /Perks reset/);
+    // what the prestiges paid wins when the levels cost more than one point each
+    const dear = JSON.parse(g.serialize(g.now));
+    delete dear.prestige.perkReset;
+    Object.assign(dear.prestige, { skillPoints: 0, count: 190, spClaimedStage: 239 });
+    dear.combat.bestStage = 239;
+    Object.assign(dear.perks, { knight: 25, warlord: 25, rogue: 15, paragon: 129 });
+    assert.equal(migrateState(dear, g.now).prestige.skillPoints, 199);
+    // once: a reset save, levels bought again, loads as it is
+    s.perks.knight = 5;
+    s.prestige.skillPoints -= 5;
+    const again = migrateState(JSON.parse(JSON.stringify(s)), g.now);
+    assert.equal(again.perks.knight, 5);
+    assert.equal(again.prestige.skillPoints, s.prestige.skillPoints);
+    assert.equal(hero().state.prestige.perkReset, PERK_RESET, 'a new game is past it');
+});
 
 test('the bag grows five slots a purchase, for gold that rises each time', () => {
     const g = hero({ bestStage: 60 });

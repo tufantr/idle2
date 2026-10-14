@@ -1202,6 +1202,9 @@ Keeping it running:
       Auto on (five days before), and Paragon 4,100 more, months. Over 12 simulated players the pace held, with
       Auto (200 hours) and without (150): the deeper levels only come after the old ones are full, and add
       about what Paragon's levels did
+- [x] **A perk reset for everyone** (the owner's ask, with the deeper perks): every save gets its perk levels back
+      as skill points, once, on its next load, to spend at today's prices (the more of the levels owned and
+      what its prestiges and best stage have paid); the game log says so
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

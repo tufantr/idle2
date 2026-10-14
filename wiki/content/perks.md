@@ -15,7 +15,7 @@ Your first prestige brings your first point, or {{BALANCE.prestige.spPerPrestige
 ## How perks work
 
 - A level costs more as a perk climbs: levels 1 to {{PERK_COST_STEP}} cost 1 skill point each, the next {{PERK_COST_STEP}} cost 2, and so on, never more than {{PERK_COST_MAX}} (a 50-level perk such as Knight costs {{perkCost(PERKS.find(p => p.id === 'knight'))}} in all). Paragon's price never stops rising. You buy one level at a time, up to the perk's limit (the table below), and the button says what the next one costs.
-- A level can't be taken back, but it is never wasted either: what you buy is yours for good.
+- A level can't be taken back, but it is never wasted either: what you buy is yours for good. (Once, on 15 October 2026, when the perks went deeper and their prices rose, every perk was reset: each player got their points back to spend at the new prices.)
 - A perk's bonus adds to the same kind of bonus from everywhere else. Knight's attack, for example, joins the attack bonuses from your [[Combat|Combat level]], [[Medals|medals]], [[Pets|pets]] and potions, and the total multiplies the attack of your fists and [[Equipment|gear]].
 - Filling every perk except Paragon takes {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + perkCost(p), 0)}} skill points, for {{PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + p.max, 0)}} levels: about two weeks for a player who leaves Auto on.
 
