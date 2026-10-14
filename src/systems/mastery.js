@@ -37,7 +37,7 @@ export function masteryBonus(level, { produces = true, hasInputs = false } = {})
 /** The mastery block resolveAction attaches to an action definition. */
 export function masteryFor(state, skillId, key, def) {
     const level = masteryLevel(state, skillId, key);
-    const hasInputs = Object.keys(def.consumes || {}).length > 0 || !!def.fuel;
+    const hasInputs = Object.keys(def.consumes || {}).length > 0;
     const produces = def.kind !== 'smith' && def.kind !== 'craft';
     return { key, level, ...masteryBonus(level, { produces, hasInputs }) };
 }

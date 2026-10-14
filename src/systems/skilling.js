@@ -4,7 +4,7 @@
 import { SKILLS, skillNode } from '../data/skills.js';
 import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
-import { RESOURCES, orderedByTier } from '../data/resources.js';
+import { RESOURCES } from '../data/resources.js';
 import { GEM_DROP_TABLE, zoneForStage } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
 import { courseDef } from './agility.js';
@@ -90,19 +90,12 @@ function resolveBase(state, action) {
     }
 }
 
-/** Which log will be burnt as fuel (lowest tier available), or null. */
-export function fuelLog(state) {
-    for (const res of orderedByTier('log')) if (state.resources[res.id] > 0) return res.id;
-    return null;
-}
-
 /** Returns { ok, missing } for the consumption list of an action definition. */
 export function canComplete(state, def) {
     const missing = [];
     for (const [id, qty] of Object.entries(def.consumes || {})) {
         if ((state.resources[id] || 0) < qty) missing.push({ id, need: qty, have: state.resources[id] || 0 });
     }
-    if (def.fuel && !fuelLog(state)) missing.push({ id: 'normal_log', need: def.fuel, have: 0, anyLog: true });
     return { ok: missing.length === 0, missing };
 }
 
@@ -122,7 +115,7 @@ function setAction(game, action, def) {
         // to stand waiting for materials that won't come: say what is missing instead.
         const check = canComplete(state, def);
         if (!check.ok) {
-            const need = check.missing.map(m => (m.anyLog ? 'logs to burn' : RESOURCES[m.id]?.name || m.id)).join(' and ');
+            const need = check.missing.map(m => RESOURCES[m.id]?.name || m.id).join(' and ');
             game.emit({ type: 'error', text: `Not enough ${need} for ${def.label}.` });
             return false;
         }
@@ -212,13 +205,12 @@ export function completeAction(game, def, { offline = false } = {}) {
     const check = canComplete(state, def);
     if (!check.ok) { if (state.action) state.action.stalled = true; return false; }
 
-    // Mastery can keep the ingredients (and the fuel) for this action.
+    // Mastery can keep the ingredients (a dish's log among them) for this action.
     const mastery = def.mastery;
     if (mastery?.preserve > 0 && rng.chance(mastery.preserve)) {
         bumpStat(game, 'ingredientsSaved');
     } else {
         for (const [id, qty] of Object.entries(def.consumes || {})) state.resources[id] -= qty;
-        if (def.fuel) state.resources[fuelLog(state)] -= def.fuel;
     }
 
     const derived = game.derived;

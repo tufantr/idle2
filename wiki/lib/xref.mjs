@@ -116,7 +116,7 @@ export function buildXref() {
     for (const [skillId, skill] of Object.entries(SKILLS)) {
         for (const node of skill.nodes) {
             const needs = { ...(node.consumes || {}) };
-            const row = { skill: skillId, action: node, needs, fuel: !!node.fuel };
+            const row = { skill: skillId, action: node, needs };
             if (node.produces) add(sources, node.produces, 'actions', row);
             for (const id of Object.keys(needs)) add(uses, id, 'actions', { ...row, takes: needs[id] });
             if (node.bonfireLog) add(uses, node.bonfireLog, 'burn', row);
@@ -128,8 +128,6 @@ export function buildXref() {
         for (const id of Object.keys(r.consumes)) add(uses, id, 'actions', { ...row, takes: r.consumes[id] });
     }
     for (const c of CROPS) add(sources, c.produces, 'farming', { crop: c });
-    // logs are the kitchen's fuel: every dish burns one, the lowest kind first
-    for (const r of Object.values(RESOURCES).filter(r => r.category === 'log')) add(uses, r.id, 'fuel', {});
     // tools
     for (const [toolId, tool] of Object.entries(TOOLS)) {
         for (const t of tool.tiers) for (const [id, qty] of Object.entries(t.consumes)) add(uses, id, 'tools', { toolId, tool, tier: t, takes: qty });
@@ -206,7 +204,7 @@ export function actionRow(r, { show = 'needs' } = {}) {
         a.interval ? time(a.interval) : '–',
         fmt(xp),
         perHour !== null ? fmt(perHour) : '–',
-        show === 'needs' ? (Object.keys(r.needs || {}).length ? resList(r.needs) : '<span class="muted">nothing</span>') + (r.fuel ? ' <span class="muted">+ a log</span>' : '')
+        show === 'needs' ? (Object.keys(r.needs || {}).length ? resList(r.needs) : '<span class="muted">nothing</span>')
             : res(a.produces || a.bonfireLog, { qty: 1 })
     ];
 }

@@ -131,7 +131,7 @@ consumes what:
 | Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite); combat potions (copper, iron, mithril, adamant ore) |
 | Bars | Smelting, salvaging weapons and armour | Forging copper (1–5 per piece), the anvil (reinforcing and rerolling worn gear), tools, bows, jewellery (silver/gold only) |
 | Gems | Mining (2%), zone drops, chests | Jewellery |
-| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows, agility obstacles, skill potions (normal, oak, willow, maple) |
+| Logs | Woodcutting, zone drops | **Cooking: one a dish, of the dish's tier** (normal up to magic), Firemaking, tool handles, bows, agility obstacles, skill potions (normal, oak, willow, maple) |
 | Raw meat | Hunting (the forest), zone drops | Cooking |
 | Raw fish | Hunting (the river), zone drops | Cooking |
 | Crops | Farming | Cooking (one potato, or two of the others, per dish) |

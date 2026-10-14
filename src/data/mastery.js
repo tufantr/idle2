@@ -5,7 +5,7 @@
 //   speed     +0.1%  (+9.8% at 99)   every action
 //   double    +0.25% (+24.5% at 99)  actions that produce resources: gathering, cooking, alchemy,
 //                                    smelting, and a log burning twice in firemaking
-//   preserve  +0.2%  (+19.6% at 99)  actions with ingredients: the ingredients (and fuel) are kept
+//   preserve  +0.2%  (+19.6% at 99)  actions with ingredients: the ingredients (a dish's log too) are kept
 // Forging and jewellery have one mastery per metal and per gem, shared by every piece made from it.
 // A metal's mastery grows with the work on its gear at the anvil too (a second of practice a bar),
 // and takes bars off that work instead of saving ingredients (systems/anvil.js).

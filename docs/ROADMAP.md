@@ -1190,6 +1190,11 @@ Keeping it running:
       198 (before: 180, 180, 188, 190). Over 12 simulated players and 100 hours: with both, best stage 300
       (290 before); without food 268 (267), without potions 250 (259), with neither 220 (237). The simulator's
       bot no longer loops training Cooking on a dish it can't make
+- [x] **Each dish burns its own log** (the owner: every dish was cooked on the plainest logs, and better food should
+      take better logs): a dish's log is one of its ingredients, the best log at or below its Cooking level (plain
+      logs for Roast Rabbit and Shrimp up to magic logs for Drake, Shark, Dragon and Leviathan), shown on its
+      card; the cook no longer takes the lowest log carried. Over 12 simulated players and 100 hours the pace
+      held (best stage 300; stage 150 in 13.5 h, 12.7 before) with a little more time gathering (18%, 16%)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

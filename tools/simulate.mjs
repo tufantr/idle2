@@ -208,11 +208,7 @@ function obtain(id, qty) {
         const node = nodeFor('cooking', id);
         if (!node || lvl('cooking') < node.levelReq) return train('cooking');
         const need = qty - (S.resources[id] || 0);
-        const raw = Object.keys(node.consumes)[0];
-        const t = obtain(raw, need);
-        if (t) return t;
-        const logs = orderedByTier('log').reduce((sum, l) => sum + (S.resources[l.id] || 0), 0);
-        if (logs < need) return obtain('normal_log', need - logs + (S.resources.normal_log || 0));
+        for (const [inId, inQty] of Object.entries(node.consumes)) { const t = obtain(inId, inQty * need); if (t) return t; }   // the raw food and the dish's log
         return { kind: 'node', skill: 'cooking', node: node.id, until: () => S.resources[id] >= qty, why: `cook ${qty} ${res.name}` };
     }
     if (res.category === 'gem') return { kind: 'node', skill: 'mining', node: bestNode('mining').id, until: () => S.resources[id] >= qty, why: `mine for ${res.name}` };
@@ -256,10 +252,9 @@ function train(skillId, minutes = 20) {
     if (skillId === 'cooking') {
         // the best dish of hunted meat or fish: a farm dish wants crops fetched elsewhere, and its cook task ended
         // at once and was chosen again every tick (with --without=food the bot did nothing else for days)
-        const node = [...SKILLS.cooking.nodes].reverse().find(n => lvl('cooking') >= n.levelReq && nodeFor('hunting', Object.keys(n.consumes)[0])) || bestNode('cooking');
+        const node = [...SKILLS.cooking.nodes].reverse().find(n => lvl('cooking') >= n.levelReq && dishWithin(n)) || bestNode('cooking');
         const raw = Object.keys(node.consumes)[0];
-        const t = obtain(raw, 20) || obtain('normal_log', 20);
-        if (t) return t;
+        for (const inId of Object.keys(node.consumes)) { const t = obtain(inId, 20); if (t) return t; }   // its raw food and its log
         return { kind: 'node', skill: 'cooking', node: node.id, until: () => now >= end || S.resources[raw] < 1, why: 'train cooking' };
     }
     const node = bestNode(skillId);
@@ -304,13 +299,21 @@ function toolTask() {
     return null;
 }
 
+/** A dish of hunted meat or fish whose game and log the bot's Hunting and Woodcutting reach (each dish burns a log of its tier). */
+function dishWithin(n) {
+    const ins = Object.keys(n.consumes || {});
+    const hunt = nodeFor('hunting', ins[0]);
+    const log = ins.find(id => RESOURCES[id]?.category === 'log');
+    const cut = log && nodeFor('woodcutting', log);
+    return !!hunt && lvl('hunting') >= hunt.levelReq && (!cut || lvl('woodcutting') >= cut.levelReq);
+}
+
 function foodTask() {
     if (WITHOUT.has('food') || !S.unlocks.hunting) return null;
     // The bot cooks hunted meat (fish and farm dishes are left to real players).
     const best = [...orderedByTier('food')].reverse().find(f => {
         const n = nodeFor('cooking', f.id);
-        const hunt = n && nodeFor('hunting', Object.keys(n.consumes)[0]);
-        return hunt && lvl('cooking') >= n.levelReq && lvl('hunting') >= hunt.levelReq;
+        return n && lvl('cooking') >= n.levelReq && dishWithin(n);
     });
     if (!best) return null;
     // (a dish heals a share of max health: the stock is counted in dishes, the better ones counting more)

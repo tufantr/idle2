@@ -57,7 +57,7 @@ test('the bonuses: speed for all, doubling for resources, preservation for ingre
     assert.ok(intervalFor(ore, game.derived) < intervalFor({ ...ore, mastery: null }, game.derived), 'faster with mastery');
 });
 
-test('preservation keeps ingredients and fuel; doubling adds output', () => {
+test('preservation keeps the ingredients and the log; doubling adds output', () => {
     const game = new Game(null, T0);
     const s = game.state;
     s.skills.cooking.xp = xpForLevel(99);

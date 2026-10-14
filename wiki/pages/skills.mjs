@@ -44,7 +44,7 @@ function actionsTable(id) {
         const makes = n.produces ? res(n.produces) : n.bonfireLog ? `${BASE.bonfireSecondsPerLogTier * RESOURCES[n.bonfireLog].tier} s of bonfire` : '–';
         const needs = Object.keys(n.consumes || {}).length ? resList(n.consumes) : '<span class="muted">nothing</span>';
         return [`<span id="${actionAnchor(n.id)}" class="act">${card(n.id)}<span>${esc(n.name)}</span></span>`, n.levelReq, time(n.interval), fmt(n.xp), xpHour(n.xp, n.interval),
-            `${needs}${n.fuel ? ' <span class="muted">+ a log</span>' : ''}`, makes, ...(food ? [RESOURCES[n.produces]?.heal ? `${Math.round(RESOURCES[n.produces].heal * 100)}%` : '–'] : [])];
+            needs, makes, ...(food ? [RESOURCES[n.produces]?.heal ? `${Math.round(RESOURCES[n.produces].heal * 100)}%` : '–'] : [])];
     });
     return table(head, rows, { cls: 'actions' });
 }

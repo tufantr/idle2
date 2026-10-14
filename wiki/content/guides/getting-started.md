@@ -130,7 +130,7 @@ Iron comes next: the Iron Vein at Mining {{SKILLS.mining.nodes.find(n => n.id ==
 
 ## Food and cooking
 
-Hunting is the first place to open by fighting. Hunt a rabbit and [[/skills/cooking|Cooking]] opens: roast {{res('raw_rabbit')}} into {{res('cooked_rabbit')}}. Every dish burns a log as fuel, so keep some logs.
+Hunting is the first place to open by fighting. Hunt a rabbit and [[/skills/cooking|Cooking]] opens: roast {{res('raw_rabbit')}} into {{res('cooked_rabbit')}}. Every dish burns a log, the better the dish the better the log, so keep some logs.
 
 Once you can cook, a **Food** row appears under the fight. Your hero eats when health falls below {{pct(BASE.baseAutoEatThreshold, 0)}}. On **Auto** your hero picks the smallest dish that fills the gap; you can also choose one dish, or **None**. Food keeps your hero standing through long climbs. A few dishes in, [[/skills/hunting|Hunting]]'s river opens: fish cook into food that heals a little more than meat of the same level. More in [[/food|Food]].
 

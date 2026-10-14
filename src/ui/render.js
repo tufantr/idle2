@@ -17,7 +17,7 @@ import { STRATA } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
-import { canComplete, resolveAction, fuelLog, intervalFor } from '../systems/skilling.js';
+import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { CHALLENGE_MS, hasOpportunity, animatedPosition, minigameConfig } from '../systems/minigame.js';
@@ -748,7 +748,7 @@ function luckStats(d, def) {
     const keep = def.mastery?.preserve || 0;
     const what = def.output ? `a second ${res(def.output).name}` : def.bonfireLog ? 'the log burning twice' : 'a double';
     const parts = [fromSkill > 0 && `${pct(fromSkill)} from your tools and bonuses`, fromMastery > 0 && `${pct(fromMastery, 1)} from mastery`].filter(Boolean).join(', ');
-    const kept = def.bonfireLog ? 'the log' : def.fuel ? 'the ingredients and the log' : 'the ingredients';
+    const kept = def.bonfireLog ? 'the log' : def.skill === 'cooking' ? 'the ingredients and the log' : 'the ingredients';
     return `${dbl ? `<span ${tipAttrs('Double chance', `${pct(dbl)} chance of ${what}${parts ? ` (${parts})` : ''}`)}>${glyph('dice')} ${pct(dbl)}</span>` : ''}`
         + `${keep ? `<span ${tipAttrs('Keep chance', `${pct(keep, 1)} chance to keep ${kept} (from mastery)`)}>${glyph('keep')} ${pct(keep)}</span>` : ''}`;
 }
@@ -888,12 +888,7 @@ export function renderSkill(game, ui, skillId) {
             const def = resolveAction(state, { kind: 'node', skill: skillId, id: node.id });
             const interval = intervalFor(def, d);
             const check = canComplete(state, def);
-            let inputs = needChips(state, node.consumes);
-            if (node.fuel) {   // a log to cook on: the cheapest one carried
-                const log = fuelLog(state);
-                const tip = log ? tipAttrs(res(log).name, `Each dish burns one (the cheapest log you carry) · you have ${fmt(state.resources[log])}`) : tipAttrs('A log', `Each dish burns one · from ${SKILLS.woodcutting.name}`);
-                inputs += ` <span class="need ${log ? 'ok' : 'missing'}" ${tip}>${resIcon(log || 'normal_log', { scale: 0.75 })}<b>${log ? shortQty(state.resources[log]) : 0}</b><i>/1</i></span>`;
-            }
+            const inputs = needChips(state, node.consumes);   // (a dish's log among them)
             const xp = Math.round(node.xp * d.xpMult);
             const heals = node.produces && out.heal > 0 ? { share: out.heal * d.foodMult, hp: foodHeal(out, d) } : null;   // a dish: what it heals in the fight
             const gives = node.produces ? `${out.name}${heals ? `, heals ${pct(heals.share)} of your health (${fmt(heals.hp)} now)` : ''}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;

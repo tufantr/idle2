@@ -166,16 +166,33 @@ test('a save from before Fishing joined Hunting keeps the higher level, both mas
     assert.ok(seen(s, 'river'), 'and the river is open');
 });
 
-test('fish and crops cook into food', () => {
+test('fish and crops cook into food, each dish on a log of its tier', () => {
     const game = newGame({ cooking: 70 });
-    Object.assign(game.state.resources, { raw_trout: 5, starfruit: 4, normal_log: 20 });
+    const r = game.state.resources;
+    Object.assign(r, { raw_trout: 5, starfruit: 4, normal_log: 20, oak_log: 5, yew_log: 2 });
+    game.startNodeAction('cooking', 'cooked_trout');   // Cooking 15: oak
+    run(game, 20000);
+    assert.equal(r.cooked_trout, 5);
+    assert.equal(r.oak_log, 0);
+    assert.equal(r.normal_log, 20, 'the plain logs are left for the plain dishes');
+    game.startNodeAction('cooking', 'starfruit_tart');   // Cooking 70: yew
+    run(game, 20000);
+    assert.equal(r.starfruit_tart, 2);
+    assert.equal(r.starfruit, 0);
+    assert.equal(r.yew_log, 0);
+    // a better dish won't cook on a plain log
+    r.raw_trout = 3;
     game.startNodeAction('cooking', 'cooked_trout');
     run(game, 20000);
-    assert.equal(game.state.resources.cooked_trout, 5);
-    game.startNodeAction('cooking', 'starfruit_tart');
-    run(game, 20000);
-    assert.equal(game.state.resources.starfruit_tart, 2);
-    assert.equal(game.state.resources.starfruit, 0);
+    assert.equal(r.cooked_trout, 5, 'no oak, no trout');
+    assert.equal(r.normal_log, 20);
+    // every dish's log: the best whose Woodcutting level is at or below the dish's Cooking level
+    for (const n of SKILLS.cooking.nodes) {
+        const logs = Object.keys(n.consumes).filter(id => RESOURCES[id]?.category === 'log');
+        assert.equal(logs.length, 1, `${n.id} burns one log`);
+        const cut = SKILLS.woodcutting.nodes.filter(w => w.levelReq <= n.levelReq).at(-1);
+        assert.equal(logs[0], cut.produces, `${n.id} (Cooking ${n.levelReq}) burns ${cut.produces}`);
+    }
 });
 
 // ---------- firemaking ----------

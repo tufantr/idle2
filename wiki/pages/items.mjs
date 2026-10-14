@@ -18,7 +18,7 @@ export const CATEGORIES = [
     ['ore', 'Ores', 'Mined in Mining, and dropped in the fight. Smelted into bars.'],
     ['bar', 'Bars', 'Smelted in Smithing. Copper bars forge the first gear; every metal works gear at the anvil; silver and gold set jewellery.'],
     ['gem', 'Gems', 'Found while mining, dropped by monsters and in chests. Set into jewellery in Crafting.'],
-    ['log', 'Logs', 'Cut in Woodcutting. Cooking fuel, Firemaking, tool handles and bows.'],
+    ['log', 'Logs', 'Cut in Woodcutting. Burnt in Cooking (each dish its own kind) and Firemaking; tool handles and bows.'],
     ['raw', 'Raw food', 'Hunted, fished and dropped. Cooked into food.'],
     ['food', 'Food', 'Cooked in Cooking. Your hero eats it in a fight.'],
     ['crop', 'Crops', 'Grown on the farm. Cooked into dishes.'],
@@ -106,7 +106,6 @@ function usesHtml(r) {
         out.push(section('Used to make', table(['Action', 'Skill', 'Level #', 'Time #', 'XP #', 'XP/hour #', 'Takes #', 'Makes'], rows, { wide: true })));
     }
     if (u.burn) out.push(section('Burned', `<p>${skillLink('firemaking')}: burning one gives ${fmt(u.burn[0].action.xp)} XP (level ${u.burn[0].action.levelReq}) and keeps the bonfire lit ${BASE.bonfireSecondsPerLogTier * r.tier} seconds longer (${BASE.bonfireSecondsPerLogTier} seconds a tier).</p>`));
-    if (u.fuel) out.push(section('Cooking fuel', `<p>Every dish in ${skillLink('cooking')} burns one log: the cook takes the lowest kind of log you have, so better logs are kept for better jobs.</p>`));
     if (u.forge) out.push(section('Forging', `<p>${skillLink('smithing', 'forging')}: copper bars forge the first set of weapons and armour. Every stronger piece drops in the fight.</p>`));
     if (u.anvil) {
         const m = u.anvil[0].metal;
