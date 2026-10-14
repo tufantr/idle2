@@ -1155,14 +1155,23 @@ Keeping it running:
       skills reaches stage 100 in 3.1 h (3.3 before), 120 in 6.2 h (6.1) and 150 in 15.5 h (13.7), the same
       best stage by hour 40 (180); one who never skills takes 24.4 h to stage 150 (16.8 before) and ends
       at 160
-- [ ] **Fishing and Hunting as one skill** (M; the owner's idea, agreed 13 October 2026, to start on the
-      owner's word): the two are mirror images (seven spots each at 1, 15 … 90, their dishes a point apart),
-      so a food chain is one skill to gather and Cooking. Old saves keep the higher of the two levels
-- [ ] **Alchemy's three potions that grow** (M; the owner's idea): a battle potion (stages and the Titan:
-      attack, defence and health), a dungeon potion (runs only, stronger, a chance of an extra fragment) and
-      a skill potion (speed and XP), each in four tiers from the four herbs; old bottles convert
-- [ ] **The bonfire raises output** (S; the owner's idea): while it burns, a chance of a double in every
-      gathering and production action beside its XP (5% at level 1, 20% at 99)
+- [x] **Fishing joined Hunting** (the owner's idea, 13-14 October 2026; the skill keeps the name Hunting;
+      DESIGN §3.10): the two were mirror images, so Fishing's seven spots are now Hunting's River row
+      beside the Forest, opening after five dishes. At a river spot the stage shows the river, the rod
+      and Finn, bait gives a second fish, and the mini-game is the angler's "Strike!". The bow serves the
+      whole skill. Old saves keep the higher of the two levels, both masteries and counts, and the better
+      of bow and rod. The wiki's Fishing page became part of Hunting's
+- [x] **Three potions that grow** (the owner's idea; DESIGN §3.6): the Combat, Dungeon and Skill Potion,
+      four tiers each, one a herb, brewed with ore, a cooked dish or logs. **A potion pick in every place**
+      (the owner: there was none on the skill, dungeon or clan tabs): the Combat and Clan tabs and the
+      fight's dock take a combat potion, which now works against the clan boss too (the server counts it);
+      the Dungeons tab and a run's dock a dungeon potion, or a combat potion at half its strength; every
+      skill tab a skill potion, with a tile to Alchemy when there is none. A dungeon potion can bring a
+      second fragment. The seven old potions became these by their herb's tier. Over 20 simulated players:
+      stage 100 in 3.25 h, 120 in 5.2 h, 150 in 12.7 h, against 3.7, 6.8 and 16.7 h without potions (the
+      live game before: 3.1, 6.2, 15.5 h). The three card pictures are stand-ins, until Gemini paints them
+- [x] **The bonfire raises output** (the owner's idea): while it burns, every gathering and production action
+      may make two, 5% at Firemaking 1 to 20% at 99, beside its XP; the pill says "12% doubles"
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

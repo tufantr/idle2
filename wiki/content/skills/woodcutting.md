@@ -9,7 +9,7 @@ Woodcutting brings in logs, and few things in the game don't need some. It opens
 - **Fuel for [[/skills/cooking|Cooking]].** Every dish burns a log, always the lowest kind you have.
 - **[[/skills/firemaking|Firemaking]]**, which burns logs for XP and keeps the bonfire going. It opens soon after you {{UNLOCKS.find(u => u.id === 'firemaking').task.toLowerCase()}}.
 - **Handles and bows.** Pickaxes, axes, tinderboxes and hoes each take a log; bows in [[/skills/crafting|Crafting]] are mostly logs (see [[Tools]]).
-- **The [[/skills/agility|agility]] course**, whose obstacles take logs by the dozen, and [[Oak Logs]], which brew into the [[Defense Potion]] in [[/skills/alchemy|Alchemy]].
+- **The [[/skills/agility|agility]] course**, whose obstacles take logs by the dozen, and logs for [[/skills/alchemy|Alchemy]], which brews them with a herb into [[/potions|skill potions]].
 
 ## How it works
 

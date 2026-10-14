@@ -41,18 +41,20 @@ flowchart LR
     Mining -->|gems 2%| Crafting
     Woodcutting -->|logs| Cooking
     Woodcutting -->|logs| Firemaking
-    Firemaking -->|bonfire: +XP to all| Skills["Every skill"]
-    Fishing -->|raw fish| Cooking
+    Firemaking -->|bonfire: +XP, doubles| Skills["Every skill"]
     Farming -->|herbs| Alchemy
     Farming -->|crops| Cooking
     Woodcutting -->|log handles| Tools
     Woodcutting -->|logs| Bows
-    Hunting -->|raw meat| Cooking
+    Hunting -->|raw meat and fish| Cooking
     Smelting -->|copper bars| Forging
     Smelting -->|bars| Anvil["Anvil: reinforce, reroll"]
     Smelting -->|bars| Tools
     Smelting -->|silver/gold bars| Crafting
-    Alchemy -->|potions| Combat
+    Alchemy -->|combat and dungeon potions| Combat
+    Alchemy -->|skill potions| Skills
+    Mining -->|ore| Alchemy
+    Cooking -->|dishes| Alchemy
     Cooking -->|food| Combat
     Forging -->|a copper set| Combat
     Anvil -->|stronger worn gear| Combat
@@ -63,7 +65,7 @@ flowchart LR
     Combat -->|weapons, armour, epic jewellery| Salvage["Salvage: essence, bars"]
     Salvage -->|bars of their metal| Anvil
     Combat -->|gold| Camp["Camp, supplies, upgrades"]
-    Combat -->|bait| Fishing
+    Combat -->|bait| Hunting
     Combat -->|gold, materials| Agility["Agility course: permanent bonuses"]
     Combat -->|essence| Anvil
     Combat -->|essence| Upgrades["Jewellery upgrades, reforges"]
@@ -88,7 +90,7 @@ let offline progress run overnight.
 - **Curve:** the Old School RuneScape / Melvor table, `XP(L) = floor(¼ · Σ_{l=1}^{L-1} floor(l + 300·2^(l/7)))`,
   cap 99 (`src/core/xp.js`). Level 92 is the halfway point to 99 (13,034,431 XP). The prototype's
   `nextXp × 1.5` put mining 50 at 322 years of play; this puts it at ~2.5 hours.
-- **Skills (12):** Mining, Woodcutting, Fishing, Hunting (gathering); Cooking, Firemaking, Alchemy
+- **Skills (11):** Mining, Woodcutting, Hunting (gathering; its river took Fishing in October 2026); Cooking, Firemaking, Alchemy
   (production); Farming (parallel, on the clock); Agility (a course you build); Smithing, Crafting
   (workshop); Combat (earned by fighting). Every skill's level matters — workshop levels gate recipes,
   farming levels open plots, agility levels open course slots, combat level gates wearing gear.
@@ -111,7 +113,7 @@ let offline progress run overnight.
 - **Gems:** every mining action has a 2% chance to also yield a gem of roughly the rock's tier.
 - **Skill capes** (`src/data/capes.js`, Melvor's skillcapes): level 99 in a skill earns its cape
   for good. Each gives a small bonus to its own skill, counted whichever cape is worn: a second ore,
-  log, fish, catch, dish, bar, herb or potion 10% more often (a log burning twice, for firemaking),
+  log, catch, dish, bar, herb or potion 10% more often (a log burning twice, for firemaking),
   +10% crops a harvest, +10% quality on everything made (crafting), +3% speed in every skill
   (agility), +5% attack and defence (combat). The hero puts the new cape on as it is earned (a DCSS
   cloak in the cape's own cloth with a gold hem, `hero/capes/<skill>`); in Settings, once one is
@@ -126,17 +128,17 @@ consumes what:
 
 | Resource | Made by | Consumed by |
 |---|---|---|
-| Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite) |
+| Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite); combat potions (copper, iron, mithril, adamant ore) |
 | Bars | Smelting, salvaging weapons and armour | Forging copper (1–5 per piece), the anvil (reinforcing and rerolling worn gear), tools, bows, jewellery (silver/gold only) |
 | Gems | Mining (2%), zone drops, chests | Jewellery |
-| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows and rods, agility obstacles, potions (normal: Gatherer's, oak: Defense, willow: Scholar's) |
-| Raw meat | Hunting, zone drops | Cooking; Evasion potion (raw fox) |
-| Raw fish | Fishing, zone drops | Cooking |
+| Logs | Woodcutting, zone drops | **Cooking fuel (1 per dish)**, Firemaking, tool handles, bows, agility obstacles, skill potions (normal, oak, willow, maple) |
+| Raw meat | Hunting (the forest), zone drops | Cooking |
+| Raw fish | Hunting (the river), zone drops | Cooking |
 | Crops | Farming | Cooking (one potato, or two of the others, per dish) |
-| Food | Cooking (meat, fish, farm dishes) | Combat auto-eat (smallest dish that fills the gap); Health potion (roast boar) |
+| Food | Cooking (meat, fish, farm dishes) | Combat auto-eat (smallest dish that fills the gap); dungeon potions (roast rabbit, fox, boar, deer) |
 | Herbs | Alchemy foraging, Farming, zone drops | Potions |
-| Fishing bait | Zone drops (Marsh, Ruins, Frozen Wastes), the Shop | Fishing: one per catch, 50% chance of a second fish |
-| Potions | Alchemy | Fight potions (attack, defence, health, dodge, gold and drops) and work potions (speed, skill XP), 5 minutes of their work a bottle |
+| Fishing bait | Zone drops (Marsh, Ruins, Frozen Wastes), the Shop | Hunting's river spots: one per catch, 50% chance of a second fish |
+| Potions | Alchemy | Combat, dungeon and skill potions, four tiers each, 5 minutes of their work a bottle (§3.6) |
 | Essence | Combat, salvaging drops, dungeon chests, the Titan, daily crates | The anvil, jewellery upgrades and reforges |
 
 Sell prices: `base[category] × 1.6^(tier−1)` with bases ore 3, bar 8, gem 25, log 2, raw 3, food 6,
@@ -145,7 +147,7 @@ herb 4, crop 3, potion 30. Selling is a bootstrap; combat gold is the real econo
 ### 3.3 Tools
 
 Crafted, not bought (`src/data/workshop.js`): pickaxes, axes, tinderboxes and hoes are forged in
-Smithing; bows and fishing rods are made in Crafting. Each tier gives **+5% speed and +5% "double"
+Smithing; bows are made in Crafting (the bow serves Hunting's river too: the fishing rod went with Fishing). Each tier gives **+5% speed and +5% "double"
 chance** to its skill (tier 5 pickaxe: +25% speed, 25% doubles). For the tinderbox the double is a log
 that burns twice (XP and bonfire time); for the hoe, speed is crop growth and the double is a double
 harvest. Tools are the main reason a gathering player visits the workshop and a smith visits the woods.
@@ -257,19 +259,27 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   food that fills the gap. The line was half: with a dish healing a share, a hero at the line ate through
   a stock in minutes for little, and in the simulator food at half cost more cooking than it saved; at a
   quarter it pays for itself (a safety net more than a speed-up: a death costs a stage and a minute).
-- **Potions** (`src/data/potions.js`, `src/systems/potions.js`; the owner's ask, October 2026, after +20%
-  for 15 attacks, about 17 seconds, did nothing anyone could see): a bottle lasts **5 minutes of its
-  work** (the Alchemist medal: 25% longer), its clock running only while that work does, and the next is
-  drunk at once. **Fight potions** (picked under the fight; none in the clan boss's fight) multiply
-  attack, defence or max HP after every other bonus (×1.25 at the Alchemy level they are brewed at, ×2.5
-  at 99), add dodge (+15% to +30%, under the cap), or gold and drop chance (×1.25 to ×1.5, the Fortune
-  Draught). **Work potions** (picked on a skill's tab) multiply the speed of every skill but Farming (the
-  Gatherer's Draught) or its XP (the Scholar's Tonic), ×1.25 to ×1.5. Sized with the simulator over 30
-  seeds (`--without=food,potions,consumables`): a bot that brews an attack potion and cooks reaches stage
-  100 in 3.3 h, 120 in 6.1 h and 150 in 13.5 h, against 4.7, 7.8 and 15.3 h for one that makes neither
-  (the game before: 4.7, 7.6 and 16.4 h), the time spent brewing and cooking counted. The three potions
-  added then (Gatherer's, Scholar's, Fortune) have stand-in card pictures, other potions' paintings
-  recoloured (`tools/cards.py --recolour`), until Gemini paints their own.
+- **Potions** (`src/data/potions.js`, `src/systems/potions.js`): **three kinds, four tiers each** (the
+  owner, October 2026: fewer potions, each growing, simply named), the tier the herb's (Guam I,
+  Marrentill II, Tarromin III, Harralander IV) with a second ingredient from another skill: ore for a
+  **Combat Potion** (×1.4 / 1.6 / 1.8 / 2 attack, defence and max HP on the stages, against the Titan
+  and the clan boss), a cooked dish for a **Dungeon Potion** (×1.5 / 1.75 / 2.1 / 2.5 in a run only, and a
+  10-40% chance of a second fragment from each chest), logs for a **Skill Potion** (×1.15-1.5 the speed of
+  every skill but Farming, +10-40% its XP). Sized with the simulator over 20 seeds: a bot that brews reaches
+  stage 100 in 3.25 h, 120 in 5.2 h and 150 in 12.7 h, against 3.7, 6.8 and 16.7 h for one that brews none
+  (the game before them: 3.1, 6.2 and 15.5 h); a weaker first tier (×1.15) left the first hours 10% slower. They multiply after every other bonus. **Each place has its
+  pick** (`combat.potion`, `combat.dungeonPotion`, `workPotion`; `potionPicker` in render.js): the Combat
+  and Clan tabs and the fight's dock take a combat potion, the Dungeons tab and a run's dock a dungeon
+  potion or a combat potion at half its strength (`OUT_OF_PLACE`, the owner: "it should, just worse"),
+  every skill tab a skill potion. A bottle lasts **5 minutes of its work** (the Alchemist medal: 25%
+  longer), its clock running only while that work does, and the next is drunk at once. The clan fight
+  takes the combat potion, and the server's reckoning counts it (`stableState(…, { clan: true })` in
+  `src/core/power.js`: a dose running or a bottle left, which the fight drinks at its start); the boards
+  and the boss's sizing stay potion-free. Old saves turn their bottles into these by the tier of their herb
+  (`OLD_POTIONS` in `src/core/state.js`). The seven before them (October 2026: a bottle lasting minutes,
+  multiplying, growing with Alchemy; before that +20% for 15 attacks, about 17 seconds, that nobody could
+  see) raised one thing each. The three cards are stand-ins, other potions' paintings recoloured
+  (`tools/cards.py --recolour`), until Gemini paints their own.
 - **Clicks and combo** (cut in October 2026, the owner: fast clicking took his hero to stage 100 with no
   prestige, food or potion, and cleared dungeons in seconds that the Dungeons tab called out of reach):
   a strike lands a tenth of an attack (`BALANCE.combat.manualHitMult`), at most one every 250 ms
@@ -458,15 +468,23 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   (never a secret one's). Cosmetic only; the gear and the rank's cloak go on top. Text addresses
   "your hero", never a pronoun.
 
-### 3.10 Fishing, Firemaking, Farming and Agility
+### 3.10 Hunting's river, Firemaking, Farming and Agility
 
-- **Fishing** (`src/data/skills.js`): seven spots from Shrimp Shallows (1) to Leviathan Deep (90),
-  paced like Hunting. Fish cook into the best food per level (~10% more healing than meat). Each catch
-  uses one **bait** if you have any, for a 50% chance of a second fish; bait drops in the wetter zones
-  and the Shop sells tins. Rods (Crafting) are its tool.
+- **Hunting's river** (`src/data/skills.js`, nodes with `fish: true`; Fishing until October 2026, when
+  the owner made the two one skill: they were mirror images, seven spots each at 1, 15 … 90 and dishes a
+  point apart): seven spots from Shrimp Shallows (1) to Leviathan Deep (90), a row of the Hunting tab
+  beside the forest's game, opening after five dishes (disclosure `river`). Fish cook into food a little
+  better than meat of their level. Each catch there uses one **bait** if you have any, for a 50% chance of
+  a second fish; bait drops in the wetter zones and the Shop sells tins. The bow is the whole skill's tool;
+  at a river spot the stage shows the river, the rod and Finn, and the mini-game is the angler's
+  (`MINIGAME_CONFIG.river`). Old saves keep the higher of the two levels, both masteries and counts, and
+  the better of bow and rod (`foldFishingIntoHunting` in `src/core/state.js`); Finn is Hunting's second
+  pet, and the Angler medal Hunting 50.
 - **Firemaking:** burns logs for XP (the log sink) and feeds the **bonfire**: each log adds 15 s × its
   tier, up to an hour, on the wall clock. While it burns every skill — combat included — earns +5% XP,
-  rising to +10% at Firemaking 99. Tinderboxes (Smithing) are its tool.
+  rising to +10% at Firemaking 99, and every gathering and production action may make two: 5% at
+  Firemaking 1, 20% at 99 (`bonfireDouble`; the owner, October 2026: XP alone went unnoticed).
+  Tinderboxes (Smithing) are its tool.
 - **Farming** (`src/data/farming.js`, `src/systems/farming.js`) — the first **parallel** skill: up to
   six plots (opening at levels 1, 1, 15, 30, 50, 70) grow on the wall clock while any other action runs
   and while the game is closed. Planting is a click and buys the seed at a flat price (25 gold for
@@ -622,7 +640,7 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
   when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
   Smithing after mining 5 times (ore that monsters drop no longer opens it for a hero who only
-  fights), Woodcutting after the first bar, Cooking after the first hunt, Fishing after 5 dishes,
+  fights), Woodcutting after the first bar, Cooking after the first hunt (Hunting's river after 5 dishes),
   Firemaking after 20 logs, Farming after 10 Alchemy actions or Cooking 15, Crafting with the first
   silver (or gold) bar once a gem has been found (its first piece can be made at once; it used to
   open hours before anything in it could be made); by climbing (`pace`), in this order when several
@@ -840,7 +858,8 @@ with the game's own stat code; the client never submits damage or scores.
   the fight ends (time, Give up, or the boss's health running out on screen) they wait in
   `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
   and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
-  rule inside the fight, expected values, no dice, Focus, potions or timed boosts), never more than twice
+  rule inside the fight, expected values, no dice, Focus or timed boosts; the combat potion picked counts,
+  §3.6), never more than twice
   what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
@@ -886,7 +905,7 @@ needs no server: the schedule is the UTC calendar, so events run offline too.
   big moment.
 
 - **When:** every weekend, Friday 00:00 to Monday 00:00 UTC. Six events rotate week by week:
-  **Harvest Festival** (+25% farming yield, +15% cooking and fishing speed), **Titan's Fury** (+20%
+  **Harvest Festival** (+25% farming yield, +15% cooking and hunting speed), **Titan's Fury** (+20%
   combat XP and gold, +10% drop chance), **Miner's Rush** (+20% gathering speed, +10% XP in every
   skill), **Guild Fair** (+20% smithing, crafting and firemaking speed, +5% crafted quality) and
   **Gold Fever** (gilded monsters three times as often, +10% gold from combat), and from 16 October
@@ -1392,7 +1411,7 @@ Rules:
 | Mining + tools | 7m | 16m | 39m | 2.9h | 23h | 86h | 202h |
 | Woodcutting | 6m | 18m | 43m | 3.5h | 29h | 106h | 248h |
 | Woodcutting + tools | 6m | 17m | 39m | 3.1h | 25h | 87h | 200h |
-| Fishing | 6m | 19m | 45m | 3.8h | 33h | 125h | 252h |
+| Fishing (now Hunting's river) | 6m | 19m | 45m | 3.8h | 33h | 125h | 252h |
 | Fishing + tools | 6m | 18m | 41m | 3.3h | 27h | 98h | 195h |
 | Hunting | 6m | 20m | 47m | 3.9h | 34h | 124h | 250h |
 | Hunting + tools | 6m | 19m | 43m | 3.4h | 27h | 97h | 194h |
@@ -1411,7 +1430,7 @@ Targets from the research: Lv 20 ≤ 15 min (close: 10–20 min), Lv 50 in 2–4
 150–400 h (met: 190–290 h, the owner's choice of **Melvor pace**). Before it, 99 took 58–129 h for
 most skills. Each skill's late actions give less than their base XP: an action opening at level 20
 or below keeps it all, one opening at 75 or above gives it divided by the skill's factor in
-`PACE` (`src/data/pace.js`: mining 2.1, woodcutting 2.0, fishing 2.15, hunting 2.05, cooking 3.2,
+`PACE` (`src/data/pace.js`: mining 2.1, woodcutting 2.0, hunting 2.05 (its river too), cooking 3.2,
 firemaking 3.4, alchemy 1.1, smithing 2.3, crafting 4, agility 1.2, farming 1), and the division grows
 evenly in between. The factors are applied once as the data loads, so every card, pop, the simulator
 and this tool see the same XP; old saves keep their levels. Farming and Agility were already on

@@ -47,14 +47,12 @@ Against ordinary stages, health is the limit, and food is more health.
 
 ## 4. Drink a potion
 
-[[/skills/alchemy|Alchemy]] brews {{Object.values(RESOURCES).filter(r => r.category === 'potion').length}} [[/potions|potions]]. Pick one in the fight's Potion row. A bottle lasts {{POTION_MINUTES}} minutes of fighting, and the next opens by itself; a potion multiplies what it raises, more as your Alchemy grows.
+[[/skills/alchemy|Alchemy]] brews [[/potions|potions]] of three kinds, each in {{TIERS.length}} tiers. For a wall on the stages, pick a combat potion in the fight's Combat potion row; for a dungeon, a dungeon potion on the Dungeons tab. A bottle lasts {{POTION_MINUTES}} minutes of fighting, the next opens by itself, and a potion multiplies what it raises: the higher the tier, the more.
 
 | Potion | Effect | Good against |
 | --- | --- | --- |
-| Accuracy Potion | {{RESOURCES.accuracy_potion.desc}} | a boss that holds out |
-| Defense Potion | {{RESOURCES.defense_potion.desc}} | falling |
-| Evasion Potion | {{RESOURCES.evasion_potion.desc}} | falling |
-| Health Potion | {{RESOURCES.health_potion.desc}} | falling, and long climbs |
+| {{POTION_KINDS.combat.name}} | {{RESOURCES.combat_potion_1.desc}} | a boss that holds out, falling, the Titan, the clan boss |
+| {{POTION_KINDS.dungeon.name}} | {{RESOURCES.dungeon_potion_1.desc}} | a dungeon boss that holds out, falling in a run |
 
 ## 5. Prestige
 

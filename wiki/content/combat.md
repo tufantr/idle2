@@ -54,7 +54,7 @@ A monster attacks every {{fmt(BALANCE.enemy.baseInterval / 1000)}} seconds at st
 ## Critical hits, dodge and lifesteal
 
 - **Critical hits:** at first {{pct(BASE.baseCritChance, 0)}} of your hero's hits are critical and deal {{BASE.baseCritDmg}} times the damage. Gear bonuses, unique items, the Living Legend medal and the Gap Leap obstacle raise the chance; gear bonuses and uniques raise the damage.
-- **Dodge:** a chance to avoid a monster's hit completely. It comes from the Evasion Potion, gear bonuses, unique items and the Rock Wall obstacle.
+- **Dodge:** a chance to avoid a monster's hit completely. It comes from gear bonuses, unique items and the Rock Wall obstacle.
 - **Lifesteal:** each of your hero's hits heals him a share of the damage it deals. It comes from gear bonuses and unique items. It heals at most {{pct(BASE.lifestealPerSecond, 0)}} of his health a second, all of it together, and only from damage a monster really takes (the rest of a killing blow heals nothing): enough to keep him going in easy fights, not to carry him where monsters hit hardest, where [[Food|food]] and [[Potions|potions]] do. The Inventory shows his lifesteal beside his other numbers. There is none in the Fasting Trial.
 
 The totals are capped (critical damage is not):

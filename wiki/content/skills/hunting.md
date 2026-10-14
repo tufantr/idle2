@@ -9,6 +9,7 @@ Hunting brings in game from the forest and fish from the river, for the kitchen.
 
 - **Meat and fish for [[/skills/cooking|Cooking]]**, which turns them into [[Food|food]] for the fight. Your first animal hunted opens Cooking.
 - **Fish heal a little more** than the meat of the same level, so both rows are worth cooking at every level.
+- **Cooked game for [[/skills/alchemy|Alchemy]]**: {{['cooked_rabbit', 'cooked_fox', 'cooked_boar', 'cooked_deer'].map(id => res(id)).join(', ')}} brew with a herb into the [[/potions|dungeon potions]].
 
 ## How it works
 

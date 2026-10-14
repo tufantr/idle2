@@ -7,7 +7,7 @@ Cooking turns raw meat, fish and crops into food, and food keeps your hero alive
 ## What it is for
 
 - **[[Food]] for the fight.** In combat your hero eats by itself whenever health falls low, picking the dish that best fills the gap. Better dishes heal more.
-- **[[Roast Boar]]** also brews, with a herb, into the Health Potion in [[/skills/alchemy|Alchemy]].
+- **Dishes for [[/skills/alchemy|Alchemy]]**: {{['cooked_rabbit', 'cooked_fox', 'cooked_boar', 'cooked_deer'].map(id => res(id)).join(', ')}} brew with a herb into the four [[/potions|dungeon potions]].
 
 Cooking takes from [[/skills/hunting|Hunting]] (meat and fish), [[/skills/farming|Farming]] (crops) and [[/skills/woodcutting|Woodcutting]] (the fuel). Your first five dishes open Hunting's river, and reaching Cooking {{[...Array(MAX_LEVEL).keys()].map(i => i + 1).find(l => UNLOCKS.find(u => u.id === 'farming').requires({ stats: { actionsBySkill: { alchemy: 0 } }, skills: { cooking: { xp: xpForLevel(l) } } }))}} is one of the two ways to open Farming.
 

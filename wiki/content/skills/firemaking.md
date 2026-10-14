@@ -2,11 +2,11 @@
 path: /skills/firemaking
 keywords: firemaking, bonfire, burn logs, tinderbox, fire, XP bonus
 ---
-Firemaking burns logs. That trains the skill, and every log burnt also feeds the **bonfire**, which gives more XP to every skill while it burns, combat included. Firemaking opens soon after you {{UNLOCKS.find(u => u.id === 'firemaking').task.toLowerCase()}} in [[/skills/woodcutting|Woodcutting]].
+Firemaking burns logs. That trains the skill, and every log burnt also feeds the **bonfire**, which gives more XP to every skill while it burns, combat included, and a chance of a double in every skill that makes something. Firemaking opens soon after you {{UNLOCKS.find(u => u.id === 'firemaking').task.toLowerCase()}} in [[/skills/woodcutting|Woodcutting]].
 
 ## What it is for
 
-- **The bonfire.** While it burns, every skill earns more XP: +{{pct(bonfireBonus(1), 0)}} at Firemaking 1, growing with your level to +{{pct(bonfireBonus(MAX_LEVEL), 0)}} at {{MAX_LEVEL}} (the table below).
+- **The bonfire.** While it burns, every skill earns more XP: +{{pct(bonfireBonus(1), 0)}} at Firemaking 1, growing with your level to +{{pct(bonfireBonus(MAX_LEVEL), 0)}} at {{MAX_LEVEL}} (the table below). And every gathering and production action (ore, logs, game and fish, dishes, potions, bars) may make two: a {{pct(bonfireDouble(1), 0)}} chance at Firemaking 1, up to {{pct(bonfireDouble(MAX_LEVEL), 0)}} at {{MAX_LEVEL}}.
 - **A use for spare logs**, and XP for them.
 
 Firemaking uses up logs and makes nothing else, so it feeds no other skill: its gift is the bonfire.

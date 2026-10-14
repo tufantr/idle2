@@ -15,10 +15,14 @@ import { SKILLS } from './skills.js';
 export const POTION_MINUTES = 5;
 export const TIERS = ['I', 'II', 'III', 'IV'];
 
+// Sized with the simulator over 20 seeds (tools/batch.mjs, --without=potions for a player who brews none): the
+// bot that brews them reaches stage 100 in 3.25 h, 120 in 5.2 h and 150 in 12.7 h, against 3.7, 6.8 and 16.7 h
+// without, the time spent brewing counted. The first tier is as strong as the Accuracy Potion it replaced was
+// early on: weaker, it left the first hours 10% slower than before.
 export const POTION_KINDS = {
-    combat:  { name: 'Combat Potion',  slot: 'combat',  power: [0.15, 0.3, 0.5, 0.75] },                             // × attack, defence and health
-    dungeon: { name: 'Dungeon Potion', slot: 'dungeon', power: [0.25, 0.5, 0.8, 1.2], fragment: [0.1, 0.2, 0.3, 0.4] },   // in a run: × attack, defence and health, a second fragment
-    skill:   { name: 'Skill Potion',   slot: 'skill',   speed: [0.1, 0.2, 0.35, 0.5], xp: [0.1, 0.2, 0.3, 0.4] }      // × work speed and skill XP
+    combat:  { name: 'Combat Potion',  slot: 'combat',  power: [0.4, 0.6, 0.8, 1.0] },                               // × attack, defence and health
+    dungeon: { name: 'Dungeon Potion', slot: 'dungeon', power: [0.5, 0.75, 1.1, 1.5], fragment: [0.1, 0.2, 0.3, 0.4] },   // in a run: × attack, defence and health, a second fragment
+    skill:   { name: 'Skill Potion',   slot: 'skill',   speed: [0.15, 0.25, 0.35, 0.5], xp: [0.1, 0.2, 0.3, 0.4] }    // × work speed and skill XP
 };
 
 /** A combat potion picked for a dungeon run works there at this share of its strength (the owner: "it should, just worse"). */

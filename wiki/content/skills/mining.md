@@ -8,7 +8,7 @@ Mining is where most of the game's materials begin, and it is open from your ver
 
 - **Ore for [[/skills/smithing|Smithing]].** Every bar starts as ore: bars for tools, for reinforcing your gear at the anvil, for bows, rods and jewellery, and for the [[/skills/agility|agility]] course. [[Coal]] goes into the {{SMELTING_RECIPES.filter(r => r.consumes.coal).map(r => r.name.replace(/ Bar$/, '').toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}} bars; {{SMELTING_RECIPES.filter(r => !r.consumes.coal).map(r => r.name.replace(/ Bar$/, '').toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}} take none.
 - **Gems for [[/skills/crafting|Crafting]].** Each swing has a {{pct(GEM_FIND_CHANCE, 0)}} chance of bringing a gem with it, of about the rock's own tier, a lower one more often than a higher one: copper gives [[Amethyst|amethysts]] and the odd [[Topaz|topaz]], and only the best rock can give a [[Diamond|diamond]].
-- **[[Copper Ore]] for [[/skills/alchemy|Alchemy]]**, which brews it into the [[Accuracy Potion]].
+- **Ore for [[/skills/alchemy|Alchemy]]**: copper, iron, mithril and adamant ore brew with a herb into the four [[/potions|combat potions]].
 
 Monsters drop ore too, but only Mining opens [[/skills/smithing|Smithing]]: it opens soon after you {{UNLOCKS.find(u => u.id === 'smithing').task.toLowerCase()}}.
 
