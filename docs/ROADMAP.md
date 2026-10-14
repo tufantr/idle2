@@ -1178,6 +1178,18 @@ Keeping it running:
       picked (at first it hid with none carried, and the owner looked for it). Checked at 1280 and 375 px
 - [x] **The bonfire raises output** (the owner's idea): while it burns, every gathering and production action
       may make two, 5% at Firemaking 1 to 20% at 99, beside its XP; the pill says "12% doubles"
+- [x] **Food and potions that carry the fight** (the owner at stage 177: a run with food and a potion reached the
+      same best stage as one without, and food seemed eaten late; DESIGN §3.28). Measured on the owner's own
+      save and the simulator's heroes at stages 60-300: eating was never late, but the hero fell from above the
+      eat line with food in the bag, a blow at the wall taking a third of his health or more. **Auto-eat before
+      a felling blow** while the run climbs (not for a blow past his whole health, a boss that can't fall in
+      time, or once held at a wall), and at once after a blow below the line, with a green "+heal" and a bite's
+      sound. **The supplies**: from stage 60 the monsters grow to ×1.6 by stage 150 (dungeons and the Titan too;
+      gold and loot unchanged), and the potions grew with them (combat ×1.8-3.6, dungeon ×2-4.5); the clan boss
+      is sized for it. The owner's hero in a fresh run: bare 170, with food 180, with a potion 188, with both
+      198 (before: 180, 180, 188, 190). Over 12 simulated players and 100 hours: with both, best stage 300
+      (290 before); without food 268 (267), without potions 250 (259), with neither 220 (237). The simulator's
+      bot no longer loops training Cooking on a dish it can't make
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

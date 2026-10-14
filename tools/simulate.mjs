@@ -8,7 +8,7 @@
 //
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
-// --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES; numbers
+// --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, POTION_KINDS, POLICY; numbers
 // only), for sweeps. --json writes the run as JSON (milestones, a log of big moments by band, time by
 // task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
@@ -33,7 +33,7 @@ import { anvilCost } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
 import { zoneForStage } from '../src/data/zones.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
-import { potionsFor, potionLevel } from '../src/data/potions.js';
+import { potionsFor, potionLevel, POTION_KINDS } from '../src/data/potions.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
@@ -109,7 +109,7 @@ const SAVE_PREFIX = String(args.save || 'hero');
 const JSON_OUT = args.json ? String(args.json) : null;
 
 // --set=ROOT.path:value[;ROOT.path:value]: a constant changed before the game starts.
-const SET_ROOTS = { BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES };
+const SET_ROOTS = { BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, POTION_KINDS, POLICY };
 const overrides = {};
 if (args.set) for (const kv of String(args.set).split(';').filter(Boolean)) {
     const [path, raw] = kv.split(':');
@@ -254,7 +254,9 @@ function train(skillId, minutes = 20) {
         return obtain('copper_ore', 20);
     }
     if (skillId === 'cooking') {
-        const node = bestNode('cooking');
+        // the best dish of hunted meat or fish: a farm dish wants crops fetched elsewhere, and its cook task ended
+        // at once and was chosen again every tick (with --without=food the bot did nothing else for days)
+        const node = [...SKILLS.cooking.nodes].reverse().find(n => lvl('cooking') >= n.levelReq && nodeFor('hunting', Object.keys(n.consumes)[0])) || bestNode('cooking');
         const raw = Object.keys(node.consumes)[0];
         const t = obtain(raw, 20) || obtain('normal_log', 20);
         if (t) return t;
@@ -639,7 +641,8 @@ function trainWeakest() {
         if (lvl('mining') < oreNode.levelReq && lastTrainedSkill !== 'mining') { lastTrainedSkill = 'mining'; return train('mining', POLICY.gateTrainMin); }
         if (lvl('smithing') < target.levelReq && lastTrainedSkill !== 'smithing') { lastTrainedSkill = 'smithing'; return train('smithing', POLICY.gateTrainMin); }
     }
-    const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)) && !WITHOUT.has(id));
+    const candidates = ['mining', 'smithing', 'woodcutting', 'hunting', 'cooking', 'crafting', 'agility'].filter(id => (S.unlocks[id] || ['mining', 'smithing'].includes(id)) && (id !== 'agility' || S.agility.built.some(Boolean)) && !WITHOUT.has(id)
+        && !(WITHOUT.has('food') && (id === 'cooking' || id === 'hunting')));   // (a player who never cooks doesn't train it)
     candidates.sort((a, b) => lvl(a) - lvl(b));
     const pick = candidates.find(c => c !== lastTrainedSkill) || candidates[0];
     if (!pick) return null;   // every skill left out (--without): nothing to train

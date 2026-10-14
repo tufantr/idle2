@@ -219,6 +219,19 @@ test('clans: create, list, join, the member cap, leaving hands the clan on', asy
     assert.equal((await post('/clans/join', { clanId: bigId }, await register('one_too_many'))).status, 400, 'full at 20');
 });
 
+test('a deep member\'s share of the clan boss counts the supplies of their stage', async () => {
+    // the attack is measured without a potion, and the potion a stage-200 hero drinks deals supplyMult(200) more
+    const { supplyMult } = await import('../src/core/power.js');
+    const deep = await register('deep_diver');
+    const { clanId } = await (await post('/clans', { name: 'Deep Divers', tag: 'DEEP' }, deep)).json();
+    assert.ok(clanId);
+    await post('/save', { state: heroSave({ tokens: 3000, bestStage: 200, playtimeMs: 200 * 3600 * 1000 }) }, deep);
+    const view = await (await get('/clan', deep)).json();
+    const attack = view.members[0].attackDamage;
+    assert.ok(supplyMult(200) > 1.5);
+    assert.ok(Math.abs(view.boss.maxHp - Math.max(1000, attack * 12 * supplyMult(200))) <= 1, `${view.boss.maxHp} vs ${attack} × 12 × ${supplyMult(200)}`);
+});
+
 test('the clan boss: damage comes from the stored save, three attacks a day, the kill pays once', async () => {
     const a = await register('striker_a');
     const b = await register('striker_b');

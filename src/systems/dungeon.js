@@ -6,7 +6,7 @@ import {
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE,
     ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS,
     TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES, titanStage, TITAN_BANK, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
-import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, BALANCE } from '../core/formulas.js';
+import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, supplyMult, BALANCE } from '../core/formulas.js';
 import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
 import { RARITIES } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
@@ -26,18 +26,20 @@ export function dungeonEnemy(run) {
         const m = d.monsters[run.index];
         const stage = d.stage + run.index;
         const base = enemyBaseStats(stage);
-        const hp = Math.floor(base.hp * ELITE_HP_MULT);
+        const supply = supplyMult(stage);   // (tougher with the supplies, as on the stages)
+        const hp = Math.floor(base.hp * ELITE_HP_MULT * supply);
         return {
             name: m.name, baseName: m.name, icon: m.icon, zoneName: d.name, zoneTier: d.chestTier, stage, boss: false, elite: true,
-            hp, maxHp: hp, atk: Math.floor(base.atk * ELITE_ATK_MULT), interval: base.interval
+            hp, maxHp: hp, worth: Math.floor(base.hp * ELITE_HP_MULT), atk: Math.floor(base.atk * ELITE_ATK_MULT * supply), interval: base.interval
         };
     }
     const stage = d.stage + d.monsters.length;
     const base = enemyBaseStats(stage);
-    const hp = Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT);
+    const supply = supplyMult(stage);
+    const hp = Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT * supply);
     return {
         name: `${d.boss.name} (Boss)`, baseName: d.boss.name, icon: d.boss.icon, zoneName: d.name, zoneTier: d.chestTier, stage, boss: true,
-        hp, maxHp: hp, atk: Math.floor(base.atk * e.bossAtkMult), interval: base.interval, timeLimit: DUNGEON_BOSS_TIME_MS
+        hp, maxHp: hp, worth: Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT), atk: Math.floor(base.atk * e.bossAtkMult * supply), interval: base.interval, timeLimit: DUNGEON_BOSS_TIME_MS
     };
 }
 
@@ -50,11 +52,12 @@ export function titanEnemy(state) {
     const stage = titanStage(level);
     const base = enemyBaseStats(stage);
     const e = BALANCE.enemy;
-    const hp = Math.floor(base.hp * e.bossHpMult * TITAN_HP_MULT);
+    const supply = supplyMult(stage);
+    const hp = Math.floor(base.hp * e.bossHpMult * TITAN_HP_MULT * supply);
     const name = `Titan of ${TITAN_NAMES[(level - 1) % TITAN_NAMES.length]}${level > TITAN_NAMES.length ? ` ${Math.ceil(level / TITAN_NAMES.length)}` : ''}`;
     return {
         name, baseName: name, icon: '🗿', zoneName: 'Titan challenge', zoneTier: Math.min(7, 1 + Math.floor(level / 2)), stage, boss: true, titan: true,
-        hp, maxHp: hp, atk: Math.floor(base.atk * e.bossAtkMult * TITAN_ATK_MULT), interval: base.interval, timeLimit: TITAN_TIME_MS
+        hp, maxHp: hp, worth: Math.floor(base.hp * e.bossHpMult * TITAN_HP_MULT), atk: Math.floor(base.atk * e.bossAtkMult * TITAN_ATK_MULT * supply), interval: base.interval, timeLimit: TITAN_TIME_MS
     };
 }
 

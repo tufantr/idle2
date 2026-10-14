@@ -30,7 +30,12 @@ export const BALANCE = {
         // `atk` and have `hp` of their figures at stage 1, rising evenly to the full figures after stage
         // `to`. A new hero, unarmed at level 1, wins his first fights while the player only watches,
         // meets the first boss within the first minute and beats it. Gold is paid on the full figures.
-        ease: { to: 30, atk: 0.3, hp: 0.6 }
+        ease: { to: 30, atk: 0.3, hp: 0.6 },
+        // Supplies (the owner, October 2026: food and potions should be crucial throughout the game): from stage
+        // `from` the monsters' health and attack grow to `mult` times their figures by stage `to`, and the potions
+        // grew by as much (data/potions.js), so a hero who drinks one is as strong against them as before, and
+        // one who doesn't is that much weaker. Gold and prices keep the old figures (`worth`, enemyBaseStats).
+        supply: { from: 60, to: 150, mult: 1.6 }
     },
     rewards: {
         goldPerHp: 0.25,        // gold per kill = enemy max HP * this (Clicker Heroes uses HP/15 on a steeper curve)
@@ -110,6 +115,10 @@ export const BALANCE = {
         comboMax: 10,
         comboDecayAfterMs: 1500,
         deathHpFraction: 0.5,
+        // Auto-eat eats for a blow that would fell the hero only while the run climbs: on the ladder, within this
+        // long of its last new best stage (combat.stallMs; dungeons and the Titan always). Held at a wall, he
+        // keeps the food for the next push (the simulator's bot that ate there spent a quarter of its time cooking).
+        foodPushMs: 3 * 60000,
         retreatStages: 1,
         bossTimeMs: 30000,      // a boss must fall within 30 s of fighting (Clicker Heroes / Tap Titans rule)
         // The first trip through the first places (the owner, October 2026; docs/DESIGN.md §3.24): a stage
@@ -151,6 +160,12 @@ export function enemyBaseStats(stage) {
     return { hp, atk, interval: Math.max(e.minInterval, e.baseInterval - e.intervalPerStage * Math.min(stage, 120)) };
 }
 
+/** How much tougher the monsters of `stage` are for the supplies (BALANCE.enemy.supply): 1 before `from`, `mult` from `to`. */
+export function supplyMult(stage) {
+    const s = BALANCE.enemy.supply;
+    return 1 + (s.mult - 1) * Math.min(1, Math.max(0, (stage - s.from) / (s.to - s.from)));
+}
+
 export function enemyForStage(stage) {
     const zone = zoneForStage(stage);
     const boss = isBossStage(stage);
@@ -158,6 +173,9 @@ export function enemyForStage(stage) {
     let { hp, atk, interval } = enemyBaseStats(stage);
     if (boss) { hp *= e.bossHpMult; atk *= e.bossAtkMult; }
     const worth = Math.floor(hp);   // what it pays for (gold, a farmed boss's loot): its full health
+    const supply = supplyMult(stage);
+    hp *= supply;
+    atk *= supply;
     const t = Math.min(1, (stage - 1) / e.ease.to);
     hp *= e.ease.hp + (1 - e.ease.hp) * t;
     atk *= e.ease.atk + (1 - e.ease.atk) * t;
@@ -172,7 +190,7 @@ export function enemyForStage(stage) {
         boss,
         hp: Math.floor(hp),
         maxHp: Math.floor(hp),
-        ...(worth > Math.floor(hp) ? { worth } : {}),
+        ...(worth !== Math.floor(hp) ? { worth } : {}),   // (eased or tougher for the supplies, it pays its old figure)
         atk: Math.max(1, Math.floor(atk)),
         interval
     };

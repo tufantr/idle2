@@ -23,7 +23,7 @@ Every depth keeps the Abyss's loot table and richness. What changes is how hard 
 
 ## How the monsters grow
 
-Up to stage {{AUTHORED_STAGES}} a monster's health grows {{pct(BALANCE.enemy.hpGrowth - 1)}} a stage, ×{{fmt(BALANCE.enemy.hpGrowth ** STAGES_PER_ZONE)}} a land. Past stage {{AUTHORED_STAGES}} it grows faster, {{pct(BALANCE.enemy.abyssHpGrowth - 1)}} a stage or ×{{fmt(BALANCE.enemy.abyssHpGrowth ** STAGES_PER_ZONE)}} a depth, so the climb slows in the Abyss. Past stage {{BALANCE.enemy.deepFrom}} it eases again to {{pct(BALANCE.enemy.deepHpGrowth - 1)}} a stage (×{{fmt(BALANCE.enemy.deepHpGrowth ** STAGES_PER_ZONE)}} a depth), so the long climb keeps moving. Attack grows the same way, a little more slowly; the numbers are on [[Combat]].
+Up to stage {{AUTHORED_STAGES}} a monster's health grows {{pct(BALANCE.enemy.hpGrowth - 1)}} a stage, ×{{fmt(BALANCE.enemy.hpGrowth ** STAGES_PER_ZONE)}} a land. Past stage {{AUTHORED_STAGES}} it grows faster, {{pct(BALANCE.enemy.abyssHpGrowth - 1)}} a stage or ×{{fmt(BALANCE.enemy.abyssHpGrowth ** STAGES_PER_ZONE)}} a depth, so the climb slows in the Abyss. Past stage {{BALANCE.enemy.deepFrom}} it eases again to {{pct(BALANCE.enemy.deepHpGrowth - 1)}} a stage (×{{fmt(BALANCE.enemy.deepHpGrowth ** STAGES_PER_ZONE)}} a depth), so the long climb keeps moving. Attack grows the same way, a little more slowly. From stage {{BALANCE.enemy.supply.from}} both grow further, to ×{{fmt(BALANCE.enemy.supply.mult)}} by stage {{BALANCE.enemy.supply.to}}, which [[Food]] and [[Potions]] make up for; the numbers are on [[Combat]].
 
 ## Gear by depth
 

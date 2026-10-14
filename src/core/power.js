@@ -5,7 +5,7 @@
 import { migrateState } from './state.js';
 import { deriveStats, BASE } from './modifiers.js';
 import { levelForXp } from './xp.js';
-import { enemyBaseStats, BALANCE } from './formulas.js';
+import { enemyBaseStats, BALANCE, supplyMult } from './formulas.js';
 import { TRIALS, WEEK_MS, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
 import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK } from '../data/social.js';
 
@@ -13,6 +13,7 @@ export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, C
 
 /** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
 export const trialWeekStart = now => weeklyTrialAt(now).start;
+export { supplyMult };   // the server sizes the clan boss by it (api/index.js shareOf)
 
 /** Expected damage per second: attack × crit expectation ÷ interval. No dice. */
 export function expectedDps(derived) {
@@ -156,6 +157,6 @@ export function honestClimb(fromStage, hours) {
  */
 export function plausibleAttackDamage(bestStage) {
     const stage = Math.max(1, Math.min(3000, Math.floor(Number(bestStage) || 1))) + 40;
-    const bossHp = enemyBaseStats(stage).hp * BALANCE.enemy.bossHpMult;
+    const bossHp = enemyBaseStats(stage).hp * BALANCE.enemy.bossHpMult * supplyMult(stage);   // (as tough as the supplies made it)
     return Math.floor(bossHp / 5 * CLAN_ATTACK_SECONDS);
 }

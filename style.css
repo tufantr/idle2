@@ -1398,6 +1398,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .dmg.manual { font-size: 1.15rem; color: #e0f2fe; text-shadow: 0 2px 0 #0c4a6e, 0 0 10px rgba(125, 211, 252, 0.9); }
 .dmg.taken { color: #fca5a5; }
 .dmg.dodge { font-size: 1rem; font-style: italic; color: #e2e8f0; }
+.dmg.heal { display: inline-flex; align-items: center; gap: 2px; font-size: 1.05rem; color: #86efac; text-shadow: 0 2px 0 #052e16, 0 0 10px rgba(74, 222, 128, 0.85); animation: dmgRise 1.1s ease-out forwards; }
+.dmg.heal small { font-size: 0.7rem; color: #bbf7d0; }
 .dmg.heart { font-size: 1.5rem; color: #fb7185; text-shadow: 0 2px 0 #4c0519, 0 0 12px rgba(251, 113, 133, 0.85); animation: dmgRise 1.1s ease-out forwards; }
 .dmg.levelup { font-family: var(--font-display); font-size: 1.25rem; color: #86efac; text-shadow: 0 2px 0 #052e16, 0 0 14px rgba(74, 222, 128, 0.9); animation: dmgRise 1.5s ease-out forwards; }
 .slash { width: 124px; height: 5px; border-radius: 50%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95) 45%, #fde68a 60%, transparent); box-shadow: 0 0 12px rgba(255, 255, 255, 0.8); animation: slash 0.32s ease-out forwards; }

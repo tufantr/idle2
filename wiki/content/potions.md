@@ -13,6 +13,8 @@ A potion makes your hero stronger for a while. There are three kinds, each brewe
 
 A potion multiplies what it raises, after every other bonus: a {{potionName('combat_potion_2')}}'s ×{{(1 + POTION_KINDS.combat.power[1]).toFixed(1)}} turns 1,000 attack into {{fmt(Math.round(1000 * (1 + POTION_KINDS.combat.power[1])))}}. A skill potion's speed multiplies on top of a [[Mini-games and Focus|mini-game's]] boost, and its XP is the skill's only.
 
+From stage {{BALANCE.enemy.supply.from}} the monsters grow tougher, to ×{{fmt(BALANCE.enemy.supply.mult)}} by stage {{BALANCE.enemy.supply.to}} (see [[Combat]]), and the fight potions are as strong as that: with one your hero fares as he did before, without one he falls well behind.
+
 ## Picking a potion
 
 Each place has its own pick, and each pick holds one potion:

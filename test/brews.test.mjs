@@ -116,9 +116,10 @@ test('a combat potion lasts minutes of fighting and multiplies attack, defence a
     g.recompute();
     assert.equal(g.state.resources.combat_potion_2, 1, 'one drunk as the fight started');
     const x = 1 + POTION_KINDS.combat.power[1];
-    assert.ok(Math.abs(g.derived.atk - plain.atk * x) <= 1, `${plain.atk} -> ${g.derived.atk}`);
-    assert.ok(Math.abs(g.derived.def - plain.def * x) <= 1);
-    assert.ok(Math.abs(g.derived.maxHp - plain.hp * x) <= 1);
+    // (the plain figures are rounded, so the potion's figures may be off by up to its multiple)
+    assert.ok(Math.abs(g.derived.atk - plain.atk * x) <= x, `${plain.atk} -> ${g.derived.atk}`);
+    assert.ok(Math.abs(g.derived.def - plain.def * x) <= x);
+    assert.ok(Math.abs(g.derived.maxHp - plain.hp * x) <= x);
     // a dose is POTION_MINUTES of fighting: after it, the second; after that, none
     run(g, POTION_MINUTES * MIN - 5000);
     assert.equal(g.state.resources.combat_potion_2, 1, 'still the first bottle');
@@ -152,7 +153,7 @@ test("a combat potion's clock stops out of the fight, and it works against the c
     g.state.combat.mode = 'clan';
     g.recompute();
     const plainHp = hero({ bestStage: 20, tokens: 300 }).derived.maxHp;
-    assert.ok(Math.abs(g.derived.maxHp - plainHp * (1 + POTION_KINDS.combat.power[3])) <= 1, 'against the clan boss too');
+    assert.ok(Math.abs(g.derived.maxHp - plainHp * (1 + POTION_KINDS.combat.power[3])) <= 1 + POTION_KINDS.combat.power[3], 'against the clan boss too');
     g.state.combat.mode = 'stages';
     const raw = JSON.parse(g.serialize(g.now));
     const bare = JSON.parse(g.serialize(g.now));
@@ -179,14 +180,14 @@ test('a dungeon potion works in runs only, stronger there, with a second fragmen
     g.setDungeonRepeat?.(true);
     g.tick(g.now + 100);
     g.recompute();
-    assert.ok(Math.abs(g.derived.atk - plainAtk * (1 + POTION_KINDS.dungeon.power[3])) <= 1, 'in the run');
+    assert.ok(Math.abs(g.derived.atk - plainAtk * (1 + POTION_KINDS.dungeon.power[3])) <= 1 + POTION_KINDS.dungeon.power[3], 'in the run');
     assert.equal(g.state.resources.dungeon_potion_4, 49);
     // a combat potion picked for the run works at half its strength
     g.state.resources.combat_potion_4 = 2;
     g.setDungeonPotion('combat_potion_4');
     g.tick(g.now + 100);
     g.recompute();
-    assert.ok(Math.abs(g.derived.atk - plainAtk * (1 + POTION_KINDS.combat.power[3] * OUT_OF_PLACE)) <= 1, 'half, in a run');
+    assert.ok(Math.abs(g.derived.atk - plainAtk * (1 + POTION_KINDS.combat.power[3] * OUT_OF_PLACE)) <= 1 + POTION_KINDS.combat.power[3] * OUT_OF_PLACE, 'half, in a run');
     // the dungeon potion's second fragment: over many clears, about its chance more than without
     const clears = (pick, n) => {
         const h = hero({ bestStage: 400, tokens: 5000 });

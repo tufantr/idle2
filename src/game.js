@@ -39,7 +39,7 @@ const ATTEND_INPUT_MS = 3 * 60000;
 // A return after at least this long away opens one place that was waiting (openPlaceOnReturn).
 const RETURN_MS = 10 * 60000;
 // Events that happen many times a second in combat; they don't warrant re-rendering a tab.
-const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge']);
+const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge', 'eat']);
 
 export class Game {
     constructor(state = null, now = Date.now()) {

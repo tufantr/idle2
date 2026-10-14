@@ -133,19 +133,51 @@ function chooseFood(state, missing, derived) {
     return best;
 }
 
-/** Eat until above the auto-eat threshold. Returns number of items eaten. */
-export function tryEat(game) {
+/**
+ * Can the boss on the clock still fall before its time runs out, at the hero's usual damage (crits counted,
+ * strikes and the combo not)? Food that keeps him standing against one that can't is wasted: it holds out
+ * anyway. (Never asked of the Titan, whose fight is scored by the damage dealt.)
+ */
+export function bossCanFall(state, d) {
+    const c = state.combat;
+    const e = c.enemy;
+    if (!e?.boss || c.mode === 'titan' || !(c.bossTimeLeft > 0)) return true;
+    const perSwing = d.atk * (1 + Math.min(BASE.caps.critChance, d.critChance) * (d.critDmg - 1));
+    return e.hp <= perSwing * Math.floor((c.bossTimeLeft + Math.max(0, c.playerTimer)) / d.attackInterval);
+}
+
+/**
+ * Auto-eat. Below the line (autoEatThreshold) the hero eats back over it; with `blow`, just before the
+ * monster swings, he also eats when its blow would fell him (a monster hits as hard every time, so this is
+ * known), unless the blow is bigger than his whole health, the boss can't fall in time anyway, or the run has
+ * stopped climbing (BALANCE.combat.foodPushMs). Until 2026-10 he ate only below the line: at the wall a blow
+ * took a third of his health or more, so he fell from above the line with food in the bag (the owner: food and
+ * a potion left the best stage where it was). Five dishes at most a time. Returns the number eaten; an 'eat'
+ * event tells the scene.
+ */
+export function tryEat(game, { blow = false } = {}) {
     const state = game.state;
+    const c = state.combat;
     const d = game.derived;
-    let eaten = 0;
     if (trialBite(state).noFood) return 0;   // the Fasting Trial: nothing is eaten
-    while (state.combat.hp > 0 && state.combat.hp < d.maxHp * d.autoEatThreshold && eaten < 5) {
-        const food = chooseFood(state, d.maxHp - state.combat.hp, d);
+    const e = c.enemy;
+    const coming = blow && e && e.hp > 0 ? enemyDamage(e.atk, d.def) : 0;
+    const climbing = c.mode !== 'stages' || (!c.farmMode && (c.stallMs || 0) < BALANCE.combat.foodPushMs);
+    const guard = coming > 0 && coming < d.maxHp && climbing && bossCanFall(state, d) ? coming : 0;   // he must stand above this
+    let eaten = 0;
+    let healed = 0;
+    let last = null;
+    while (c.hp > 0 && (c.hp < d.maxHp * d.autoEatThreshold || c.hp <= guard) && eaten < 5) {
+        const food = chooseFood(state, d.maxHp - c.hp, d);
         if (!food) break;
         state.resources[food] -= 1;
-        state.combat.hp = Math.min(d.maxHp, state.combat.hp + foodHeal(RESOURCES[food], d));
+        const before = c.hp;
+        c.hp = Math.min(d.maxHp, c.hp + foodHeal(RESOURCES[food], d));
+        healed += c.hp - before;
+        last = food;
         eaten++;
     }
+    if (eaten) game.emit({ type: 'eat', food: last, count: eaten, heal: Math.round(healed) });
     return eaten;
 }
 
@@ -548,8 +580,9 @@ export function tickCombat(game, dt) {
             }
         } else {
             c.enemyTimer -= c.enemy.interval;
-            tryEat(game);
+            tryEat(game, { blow: true });
             enemyAttack(game);
+            if (c.active && c.hp > 0) tryEat(game);   // below the line: at once, not at the next swing
         }
         // the fight's own rules changed the regroup at this moment: a boss beaten ends it, a new one starts it
         if (regroupBefore > 0 && !(c.regroupLeft > 0)) regroupEnd = 0;

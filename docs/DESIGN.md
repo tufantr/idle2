@@ -255,15 +255,16 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 - **HP:** no refill between enemies. Regen 0.1% of max HP per second in combat, 2% per second out of
   combat. **Food heals a share of max HP** (12% for a roast rabbit to 46% for a leviathan feast, Gourmet
   and Chef on top), so it never goes stale: a fixed 40-1,100 HP healed 2% of a stage-160 hero (the
-  owner's report, October 2026). **Auto-eat** below 25% HP (Gourmet raises it); "Auto" picks the smallest
-  food that fills the gap. The line was half: with a dish healing a share, a hero at the line ate through
-  a stock in minutes for little, and in the simulator food at half cost more cooking than it saved; at a
-  quarter it pays for itself (a safety net more than a speed-up: a death costs a stage and a minute).
+  owner's report, October 2026). **Auto-eat** below 25% HP (Gourmet raises it), and just before a blow
+  that would fell the hero while the run climbs (§3.28); "Auto" picks the smallest food that fills the gap.
+  The line was half: with a dish healing a share, a hero at the line ate through a stock in minutes for
+  little; at a quarter only, he fell at the wall from above the line with food in the bag (§3.28).
 - **Potions** (`src/data/potions.js`, `src/systems/potions.js`): **three kinds, four tiers each** (the
   owner, October 2026: fewer potions, each growing, simply named), the tier the herb's (Guam I,
   Marrentill II, Tarromin III, Harralander IV) with a second ingredient from another skill: ore for a
-  **Combat Potion** (×1.4 / 1.6 / 1.8 / 2 attack, defence and max HP on the stages, against the Titan
-  and the clan boss), a cooked dish for a **Dungeon Potion** (×1.5 / 1.75 / 2.1 / 2.5 in a run only, and a
+  **Combat Potion** (×1.8 / 2.4 / 3 / 3.6 attack, defence and max HP on the stages, against the Titan
+  and the clan boss; ×1.4-2 until the supplies, §3.28), a cooked dish for a **Dungeon Potion** (×2 / 2.75 /
+  3.5 / 4.5 in a run only, ×1.5-2.5 before, and a
   10-40% chance of a second fragment from each chest), logs for a **Skill Potion** (×1.15-1.5 the speed of
   every skill but Farming, +10-40% its XP). Sized with the simulator over 20 seeds: a bot that brews reaches
   stage 100 in 3.25 h, 120 in 5.2 h and 150 in 12.7 h, against 3.7, 6.8 and 16.7 h for one that brews none
@@ -1380,6 +1381,57 @@ the first time when it may, later when the Stars would raise the tokens by half 
   every 100 hours (the research asks for one every 48), with waits of 155–237 hours: they need new
   things to reach (named Abyss strata, two more dungeons, an end boss), which need paintings. The
   research's other idea, each early Ascension opening something new, is still to do.
+
+### 3.28 Supplies: food and potions that carry the fight
+
+The owner, 14 October 2026, at best stage 177: a run with food and a potion reached the same best stage as one
+without, and food seemed to be eaten late; "food and potion should be crucial", throughout the game. Measured
+first (`tools/supplies.mjs`: fresh runs of the owner's own save and of the simulator's heroes at stages 60-300,
+bare, with food, with a potion and with both):
+- **Eating was never late.** The hero checked the line just before every swing, his and the monster's, so he
+  always ate before the next blow; he stood under the line 0.3-0.5 s on average (up to 2) with no sign of it,
+  the red glow starting at 30% and the line at 25 or 35%. Not one fall in the bench came below the line with food.
+- **He fell from above the line.** He ate only below the line and only back over it, and at the wall a blow
+  took 30-36% of his health (a boss's 40-90%): every fall with food in the bag came from above the line. The
+  owner's hero: bare 180, with food 180, with Combat Potion III 188, with both 190.
+- **Why the wall is so steep:** there a monster's attack is below the hero's defence, where damage grows with
+  its square (`ATK²/(ATK+DEF)`): a blow grows ×1.15 a stage (doubling every five), a kill takes 8.5% longer a
+  stage, so each stage costs about 25% more health. Healing of any kind buys stages by the logarithm of its
+  amount (twice the food, about three more stages), and ten stages past the wall a blow takes his whole
+  health, which no food stops. A multiplier (a potion) moves the wall by a fixed number of stages.
+
+What changed:
+- **Auto-eat before a felling blow** (`tryEat`, `bossCanFall` in `systems/combat.js`): just before the
+  monster swings he also eats when its blow would fell him, but not for a blow bigger than his whole health,
+  not against a boss that can't fall before its time runs out (crits counted; the Titan, scored by the
+  damage dealt, is always fought), and on the ladder only while the run climbs, within
+  `BALANCE.combat.foodPushMs` (3 minutes) of its last new best stage: held at a wall he keeps the food for
+  the next push (a simulated player that ate there spent a quarter of its time cooking and fell behind).
+  Below the line he eats at once after a blow, not at his next swing. An `eat` event shows the dish and its
+  heal in green over him, with a bite's sound; the red glow starts at the line when it is above 30%.
+- **The supplies** (`BALANCE.enemy.supply`, `supplyMult`): from stage 60 every monster's health and attack
+  grow evenly to ×1.6 by stage 150 and stay so (the ladder, dungeons and the Titan; gold and loot keep the old
+  figures through `worth`, prices through `enemyBaseStats`), and the fight potions grew by about as much
+  (combat ×1.8 / 2.4 / 3 / 3.6, dungeon ×2 / 2.75 / 3.5 / 4.5). A hero with the potion of his stage fares as
+  before; one without is 1.6 times weaker. The clan's damage ceiling (`plausibleAttackDamage`) grows with it.
+- **The simulator's bot** no longer loops training Cooking on a farm dish it can't fetch (with
+  `--without=food` it did nothing else for days), and a bot without food trains neither Cooking nor Hunting.
+
+What it does. The owner's hero in a fresh run (the bench, three seeds): bare 170, with 500 dishes 180, with
+Combat Potion III 188, with both 198 (with the 96 Roast Venison carried: 196). Over 12 simulated players and
+100 hours (best stage at 10 / 30 / 50 / 99 hours; hours to stage 150 / 200):
+
+| Player | 10 h | 30 h | 50 h | 99 h | → 150 | → 200 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Food and potions | 140 | 180 | 220 | 300 | 12.7 | 47.5 |
+| No food | 136 | 170 | 208 | 268 | 14.3 | 45.4 |
+| No potions | 128 | 160 | 180 | 250 | 19.3 | 62.5 |
+| Neither | 118 | 155 | 178 | 220 | 26.7 | 75.0 |
+| Before, food and potions | 139 | 180 | 216 | 290 | 12.7 | 41.8 |
+| Before, neither | 120 | 160 | 189 | 237 | 20.0 | 59.7 |
+
+A bigger stock (the bot keeping 200 dishes rather than 60) gained nothing and spent 24% of its time
+gathering instead of 16%: with the food kept for pushes, a push takes about 60-150 dishes.
 
 ## 4. The modifier pipeline
 

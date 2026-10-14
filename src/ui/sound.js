@@ -104,6 +104,7 @@ export function createSound(isOn, volume = () => 1) {
         crit() { tone({ type: 'sine', f0: vary(240), f1: 50, ms: 160, gain: 0.6 }); tone({ type: 'sawtooth', f0: 900, f1: 180, ms: 90, gain: 0.12 }); noise({ ms: 110, gain: 0.3, filter: 'bandpass', f0: 2600, f1: 500, q: 1.2 }); },
         hurt() { tone({ type: 'sine', f0: vary(140), f1: 45, ms: 150, gain: 0.45 }); noise({ ms: 90, gain: 0.18, filter: 'lowpass', f0: 900, f1: 200 }); },
         dodge() { noise({ ms: 160, gain: 0.2, filter: 'bandpass', f0: 600, f1: 2600, q: 1.5 }); },
+        eat() { noise({ ms: 55, gain: 0.18, filter: 'bandpass', f0: vary(900, 80), q: 1.4 }); noise({ ms: 50, gain: 0.14, filter: 'bandpass', f0: vary(700, 80), q: 1.4, at: 0.08 }); tone({ type: 'sine', f0: vary(330, 40), f1: 520, ms: 120, gain: 0.1, at: 0.15 }); },
         kill() { tone({ type: 'square', f0: 420, f1: 140, ms: 120, gain: 0.1 }); noise({ ms: 180, gain: 0.22, filter: 'lowpass', f0: 2400, f1: 200 }); },
         coin() { const f = vary(NOTE(83), 15); tone({ type: 'sine', f0: f, ms: 70, gain: 0.16 }); tone({ type: 'sine', f0: f * 1.335, ms: 260, gain: 0.16, at: 0.07 }); },
         gold() { for (let i = 0; i < 3; i++) tone({ type: 'sine', f0: NOTE(84 + i * 4), ms: 160, gain: 0.12, at: i * 0.045 }); },

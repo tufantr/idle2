@@ -557,8 +557,9 @@ export function createScene(root, actions) {
             el.heroBar.style.width = `${heroPct}%`;
             el.heroTrail.style.width = `${trailFor(trails.hero, heroPct, now, dt)}%`;
             setText(el.heroText, `${fmt(Math.max(0, c.hp))} / ${fmt(d.maxHp)}`);
-            el.hero.classList.toggle('low', heroPct < 30);
-            el.battle.classList.toggle('danger', c.active && heroPct < 30);
+            const lowLine = Math.max(30, d.autoEatThreshold * 100);   // (red from the eat line, if it is higher)
+            el.hero.classList.toggle('low', heroPct < lowLine);
+            el.battle.classList.toggle('danger', c.active && heroPct < lowLine);
             el.battle.classList.toggle('boss-fight', c.active && !!c.enemy?.boss);   // the place darkens while a boss stands
             // the clan boss's guard (systems/clanfight.js): its openings glow, and the first moment of each says so
             const guard = c.active && clanGuardOpen(state);
@@ -638,6 +639,11 @@ export function createScene(root, actions) {
                     const { hero } = anchor();
                     move(el.heroSprite, 'dodge');
                     spawnFx('dmg dodge', 'Dodge!', hero.x, hero.top + 4);
+                    break;
+                }
+                case 'eat': {   // auto-eat: the dish and the health it gave back, green over the hero
+                    const { hero } = anchor();
+                    spawnFx('dmg heal', `${RESOURCES[ev.food] ? resIcon(ev.food, { scale: 0.75 }) : ''}+${fmt(ev.heal)}${ev.count > 1 ? `<small>×${ev.count}</small>` : ''}`, hero.x + 7 + jitter(6), hero.top + 12, 1100);
                     break;
                 }
                 case 'glance': {   // a strike while the clan boss's guard is up

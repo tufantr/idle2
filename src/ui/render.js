@@ -342,7 +342,7 @@ function renderLoadout(game) {
         noFood ? goTile('cooking', 'Cook', 'No food left: cook some') : ''
     ].join('');
     return `${showFood ? `<div class="loadout">
-            <div class="loadout-label">Food <span class="muted small">${fasting ? 'none is eaten in this Trial' : `eaten below ${pct(d.autoEatThreshold)} health`}</span></div>
+            <div class="loadout-label">Food <span class="muted small">${fasting ? 'none is eaten in this Trial' : `eaten below ${pct(d.autoEatThreshold)} or before a killing blow`}</span></div>
             <div class="pick-row">${foodRow}</div>
         </div>` : ''}
         ${showPotions ? potionPicker(game, c.mode === 'dungeon' ? 'dungeon' : 'combat') : ''}`;

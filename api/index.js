@@ -384,12 +384,17 @@ async function settleOldWeeks(clanId, now) {
     }
 }
 
-/** A member's part of a boss: their attack at its best this week, never more than their best stage allows. */
-function shareOf(m, plausibleAttackDamage) {
+/**
+ * A member's part of a boss: their attack at its best this week, never more than their best stage allows,
+ * times the supplies of that stage (src/core/formulas.js supplyMult): the attack is measured without a potion,
+ * and the combat potion a member's stage asks for deals about that much more, so a clan that brews takes as
+ * many attacks as before the supplies and one that doesn't takes more.
+ */
+function shareOf(m, plausibleAttackDamage, supplyMult = () => 1) {
     const metrics = parseMetrics(m.metrics);
     const attack = Math.max(safeDamage(metrics?.attackDamage), safeDamage(metrics?.attackPeak?.v));
     const damage = Math.min(attack, safeDamage(plausibleAttackDamage(metrics?.bestStage)));
-    return Math.min(MAX_BOSS_HP, damage * BOSS_ATTACKS_TO_KILL);
+    return Math.min(MAX_BOSS_HP, damage * BOSS_ATTACKS_TO_KILL * supplyMult(Number(metrics?.bestStage) || 1));
 }
 
 /**
@@ -433,9 +438,9 @@ async function currentBoss(clanId, now) {
         // it bigger for the rest), and no member counts for more than their best stage allows, so one
         // implausible save can't make the boss unbeatable. Each share is kept: a member who leaves (or is
         // removed) before fighting takes theirs away again.
-        const { plausibleAttackDamage } = await engine();
+        const { plausibleAttackDamage, supplyMult } = await engine();
         const members = (await store.clanMembers(clanId)).filter(m => !recentlyFlagged(m.flags, now) && now - (m.lastSaved || 0) < ACTIVE_WITHIN);
-        const shares = members.map(m => ({ userId: m.userId, share: shareOf(m, plausibleAttackDamage) })).filter(sh => sh.share > 0);
+        const shares = members.map(m => ({ userId: m.userId, share: shareOf(m, plausibleAttackDamage, supplyMult) })).filter(sh => sh.share > 0);
         const total = shares.reduce((sum, s) => sum + s.share, 0);
         boss = await store.createBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total)), shares);
     }

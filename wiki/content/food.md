@@ -9,7 +9,14 @@ Lifesteal heals at most {{pct(BASE.lifestealPerSecond, 0)}} of his health a seco
 
 ## Auto-eat
 
-Your hero eats by himself when his health falls below the auto-eat line, {{pct(BASE.baseAutoEatThreshold, 0)}} of his health to begin with. He checks before every attack, his own and the monster's, and eats until he is above the line again.
+Your hero eats by himself when his health falls below the auto-eat line, {{pct(BASE.baseAutoEatThreshold, 0)}} of his health to begin with, and eats until he is above the line again. A monster hits as hard every time, so he also eats just before a blow that would fell him, however far above the line he stands. That is what carries him past monsters that hit too hard to stand: about a land further than he gets without food.
+
+He keeps his food where it would be wasted:
+- **No dish can stop a blow bigger than his whole health,** so he eats nothing for one.
+- **A boss that can't fall in time:** against a boss he can't bring down before its time runs out, he eats only below the line.
+- **Held at a wall:** on the stage ladder he eats for a coming blow only while the run climbs, within {{time(BALANCE.combat.foodPushMs)}} of its last new best stage. Once held at a wall, he keeps the food for the next push (below the line he still eats). In [[Dungeons|dungeon runs]] and against [[The Titan]] he always does.
+
+A green number over your hero shows each time he eats.
 
 What he eats is set by the Food row on the Combat tab and in the fight's dock:
 
@@ -21,7 +28,7 @@ Each food you carry shows in the row with the share it heals, your bonuses count
 
 ## Healing and regeneration
 
-A food heals its share of your hero's max health, as in the table below, raised by your food bonuses, and never past full health: a {{res('cooked_shark')}} that heals {{pct(RESOURCES.cooked_shark.heal, 0)}} gives a hero of 10,000 health {{fmt(Math.round(10000 * RESOURCES.cooked_shark.heal))}}. The bonuses add up: the Gourmet perk and the Chef medal. Food is what lets a hero hold out a little longer at his wall, or through a boss's fight.
+A food heals its share of your hero's max health, as in the table below, raised by your food bonuses, and never past full health: a {{res('cooked_shark')}} that heals {{pct(RESOURCES.cooked_shark.heal, 0)}} gives a hero of 10,000 health {{fmt(Math.round(10000 * RESOURCES.cooked_shark.heal))}}. The bonuses add up: the Gourmet perk and the Chef medal. At the wall a push eats hundreds of dishes, so keep a good stock cooked.
 
 Food is for the fight itself. While fighting your hero regains only {{pct(BALANCE.combat.regenInCombat)}} of his health a second; out of the fight he regains {{pct(BALANCE.combat.regenResting, 0)}} a second, so resting refills him in under a minute. Lifesteal and a combat level-up heal him too (see [[Combat]]).
 

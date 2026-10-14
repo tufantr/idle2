@@ -76,7 +76,7 @@ The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} second
 
 ## Food and potions
 
-Below {{pct(BASE.baseAutoEatThreshold, 0)}} of his health your hero eats, checked before every attack, his and the monster's. With **Auto** he picks the smallest food that fills the gap. See [[Food]].
+Below {{pct(BASE.baseAutoEatThreshold, 0)}} of his health your hero eats, and just before a blow that would fell him while the run climbs. With **Auto** he picks the smallest food that fills the gap. See [[Food]].
 
 A [[Potions|potion]] picked on the Combat tab is drunk as the fight starts, and one bottle lasts {{POTION_MINUTES}} minutes of fighting; what it raises it multiplies, after every other bonus.
 
@@ -134,4 +134,6 @@ A monster at stage 1 has {{BALANCE.enemy.baseHp}} health and {{BALANCE.enemy.bas
 | {{AUTHORED_STAGES + 1}} to {{BALANCE.enemy.deepFrom}}, the Abyss | +{{pct(BALANCE.enemy.abyssHpGrowth - 1)}} a stage, ×{{fmt(BALANCE.enemy.abyssHpGrowth ** STAGES_PER_ZONE)}} a depth | +{{pct(BALANCE.enemy.abyssAtkGrowth - 1)}} a stage |
 | past {{BALANCE.enemy.deepFrom}}, the deep Abyss | +{{pct(BALANCE.enemy.deepHpGrowth - 1)}} a stage, ×{{fmt(BALANCE.enemy.deepHpGrowth ** STAGES_PER_ZONE)}} a depth | +{{pct(BALANCE.enemy.deepAtkGrowth - 1)}} a stage |
 
-The Abyss grows faster than the lands above it, so the climb slows there; past stage {{BALANCE.enemy.deepFrom}} the growth eases off so the long climb keeps moving. A boss has the multiples above on top. The table below gives a monster's health, attack and pay at stages along the way.
+The Abyss grows faster than the lands above it, so the climb slows there; past stage {{BALANCE.enemy.deepFrom}} the growth eases off so the long climb keeps moving. A boss has the multiples above on top.
+
+**Supplies:** from stage {{BALANCE.enemy.supply.from}} every monster's health and attack grow further, evenly, to ×{{fmt(BALANCE.enemy.supply.mult)}} by stage {{BALANCE.enemy.supply.to}} and from then on, in the [[Dungeons]] and against [[The Titan]] too. The [[Potions|fight potions]] grew by as much, so a hero who drinks one fares as before, and one without food and potions falls well behind. Gold and loot keep the old figures. The table below gives a monster's health, attack and pay at stages along the way.

@@ -610,6 +610,7 @@ function soundFor(ev, onCombat) {
         case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
         case 'enemyHit': return onCombat ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
+        case 'eat': return onCombat ? ['eat'] : null;
         case 'kill': return [ev.enemy.boss ? 'victory' : ev.enemy.gilded ? 'gold' : 'kill'];
         case 'itemDropped': return [ev.item.rarity === 'legendary' ? 'legendary' : ['rare', 'epic'].includes(ev.item.rarity) ? 'rare' : 'drop'];
         case 'itemCrafted': return [ev.item.rarity === 'legendary' ? 'legendary' : ['rare', 'epic'].includes(ev.item.rarity) ? 'rare' : 'craft'];
