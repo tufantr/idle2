@@ -1,4 +1,7 @@
 {
     "cleanUrls": true,
-    "trailingSlash": false
+    "trailingSlash": false,
+    "redirects": [
+        { "source": "/skills/fishing", "destination": "/skills/hunting", "permanent": true }
+    ]
 }
