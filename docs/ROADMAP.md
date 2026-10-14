@@ -1174,7 +1174,8 @@ Keeping it running:
       kinds' cards (a sheet of three tries at each, the best kept: the red flask by a sword and shield, the
       purple by a chest and its key, the green by a pickaxe and an axe). The skill potion's row on the skill
       tabs became a small chip in the header beside the tool ("II · 5m 32s"), opening a tray of the bottles
-      carried, and its Brew tile went; with none carried it doesn't show. Checked at 1280 and 375 px
+      carried, and its Brew tile went. Like a slot it is there once Alchemy is open, an empty flask with none
+      picked (at first it hid with none carried, and the owner looked for it). Checked at 1280 and 375 px
 - [x] **The bonfire raises output** (the owner's idea): while it burns, every gathering and production action
       may make two, 5% at Firemaking 1 to 20% at 99, beside its XP; the pill says "12% doubles"
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,

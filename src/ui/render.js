@@ -380,10 +380,10 @@ function potionPicker(game, slot, cls = '') {
 }
 
 /**
- * The skill potion as a chip in a skill's header (the owner, October 2026: a whole row took too much room):
- * the bottle at work with its tier and time left, or a plain flask. A tap opens a small tray of the bottles
- * carried; picking one closes it. It shows only with a skill potion to pick or at work, and never sends to
- * Alchemy (systems/disclosure.js 'work_potions').
+ * The skill potion as a chip in a skill's header, beside the mastery (the owner, October 2026: a whole row
+ * took too much room). Like a slot it is there once Alchemy is open (systems/disclosure.js 'work_potions'):
+ * the bottle at work with its tier and time left, or an empty flask. A tap opens a small tray of the bottles
+ * carried ("None carried" when there are none); picking one closes it. It never sends to Alchemy.
  */
 function skillPotionChip(game, ui) {
     const state = game.state;
@@ -391,15 +391,14 @@ function skillPotionChip(game, ui) {
     const w = state.workPotion || { id: 'none', ms: 0 };
     const picked = POTIONS[w.id] ? w.id : null;
     const owned = potionsFor('skill').filter(id => state.resources[id] > 0);
-    if (!owned.length && !picked) return '';
     const open = ui.potionMenu === true;
     const label = picked
         ? `${TIERS[POTIONS[picked].tier - 1]}${w.ms > 0 ? ` · ${duration(w.ms)}` : state.resources[picked] > 0 ? '' : ' · none left'}`
         : 'Potion';
     const tip = picked
         ? `${res(picked).name}: ${potionEffectText(picked)}${w.ms > 0 ? `, ${duration(w.ms)} left` : ', drunk as the work starts'}. Tap to change`
-        : 'A skill potion: tap to pick one';
-    const chip = `<button class="potion-chip${picked ? ' on' : ''}${open ? ' open' : ''}" onclick="FI.togglePotionMenu()" title="${esc(tip)}" aria-label="${esc(tip)}" aria-expanded="${open}">${resIcon(picked || owned[owned.length - 1], { scale: 0.75, cls: picked ? '' : 'dim' })}<span>${label}</span></button>`;
+        : owned.length ? 'A skill potion: tap to pick one' : 'A skill potion: none carried';
+    const chip = `<button class="potion-chip${picked ? ' on' : ''}${open ? ' open' : ''}" onclick="FI.togglePotionMenu()" title="${esc(tip)}" aria-label="${esc(tip)}" aria-expanded="${open}">${resIcon(picked || owned[owned.length - 1] || 'skill_potion_1', { scale: 0.75, cls: picked ? '' : 'dim' })}<span>${label}</span></button>`;
     if (!open) return chip;
     const tile = (id, inner, title) => `<button class="pick${w.id === id ? ' on' : ''}" onclick="FI.setWorkPotion('${id}')" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${w.id === id}">${inner}</button>`;
     const tiles = [
@@ -407,7 +406,8 @@ function skillPotionChip(game, ui) {
         ...owned.map(id => tile(id, `${resIcon(id, { scale: 1 })}<span class="pick-qty">${shortQty(state.resources[id])}</span><span class="pick-tier">${TIERS[POTIONS[id].tier - 1]}</span>`,
             `${res(id).name}: ${potionEffectText(id)}, for ${duration(doseMs(game.derived))} of work (${fmt(state.resources[id])} left)`))
     ].join('');
-    return `<span class="potion-chip-wrap">${chip}<span class="potion-tray" role="group" aria-label="Skill potion">${tiles}</span></span>`;
+    const empty = owned.length ? '' : '<span class="potion-tray-empty">None carried</span>';
+    return `<span class="potion-chip-wrap">${chip}<span class="potion-tray" role="group" aria-label="Skill potion">${tiles}${empty}</span></span>`;
 }
 
 /**

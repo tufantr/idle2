@@ -459,6 +459,7 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .potion-chip .spr.dim { opacity: 0.55; filter: grayscale(0.4); }
 .potion-tray { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; gap: 6px; padding: 7px; border-radius: 12px; background: linear-gradient(180deg, #1e1810, #120d07); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); }
 .potion-tray .pick { width: 40px; height: 40px; }
+.potion-tray-empty { align-self: center; padding: 0 0.4rem; font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
 .skill-info { display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; }
 .skill-level { padding: 0.2rem 0.65rem; border-radius: 999px; font-weight: 800; color: #1f1406; background: linear-gradient(180deg, #f0cb72, #b08233); box-shadow: 0 0 10px rgba(214, 170, 92, 0.3); }
 .xp-bar-container { width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(214, 170, 92, 0.25); }
