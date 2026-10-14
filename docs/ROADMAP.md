@@ -1195,6 +1195,13 @@ Keeping it running:
       logs for Roast Rabbit and Shrimp up to magic logs for Drake, Shark, Dragon and Leviathan), shown on its
       card; the cook no longer takes the lowest log carried. Over 12 simulated players and 100 hours the pace
       held (best stage 300; stage 150 in 13.5 h, 12.7 before) with a little more time gathering (18%, 16%)
+- [x] **Deeper perks** (feedback to the owner: perks max out too early; with Auto on, a player earns 60-80 skill
+      points a day in the simulator): Knight and Warlord to 50 levels, Forager and Scholar to 30, Rogue and
+      Fortune to 20, a level's price rising every five levels up to 10 points (5 before), and Paragon's without
+      end (40 points at level 200). Every perk but Paragon takes 874 points (269 before): about two weeks with
+      Auto on (five days before), and Paragon 4,100 more, months. Over 12 simulated players the pace held, with
+      Auto (200 hours) and without (150): the deeper levels only come after the old ones are full, and add
+      about what Paragon's levels did
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

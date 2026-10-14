@@ -447,11 +447,16 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
 - **Skill points:** 1 per prestige for a run that reached at least half your all-time best, plus 1
   for every 25 stages of all-time best (each threshold pays once). **A perk level costs more as the
   perk climbs** (`perkLevelCost`; October 2026, the owner: at one point a level, every perk was soon
-  full): levels 1-5 cost 1 point, 6-10 cost 2, and so on, never more than 5, so a 25-level perk costs 75
-  and the 117 levels outside Paragon 269 (levels bought before kept what they cost). Spent on eight perks: Knight (+4% ATK), Warlord (+4% HP), Rogue (+3% attack speed), Forager
-  (+3% skill speed), Scholar (+3% XP), Endurance (+2 h offline cap), Gourmet (+5% auto-eat threshold
-  and food healing), Fortune (+5% gold and drop chance), and Paragon (+1% ATK, DEF and HP, 200 levels)
-  so skill points always have a use once the others are full.
+  full): levels 1-5 cost 1 point, 6-10 cost 2, and so on, never more than 10, and Paragon's price never
+  stops rising (`costCap`), so a 50-level perk costs 275, the 212 levels outside Paragon 874, and Paragon's
+  200 levels 4,100 (levels bought before kept what they cost). Deeper since 15 October 2026 (the owner:
+  with Auto on a player fills the perks too early; the simulator's player with Auto earns 60-80 points a
+  day, and filled every perk but Paragon in about five days with the old 25-level perks at most 5 points a
+  level; now about two weeks, and Paragon months). Spent on eight perks: Knight (+4% ATK, 50 levels),
+  Warlord (+4% HP, 50), Rogue (+3% attack speed, 20), Forager (+3% skill speed, 30), Scholar (+3% XP, 30),
+  Endurance (+2 h offline cap, 6), Gourmet (+5% auto-eat threshold and food healing, 6), Fortune (+5% gold
+  and drop chance, 20), and Paragon (+1% ATK, DEF and HP, 200 levels) so skill points always have a use
+  once the others are full.
 - **Why polynomial tokens:** see §6.1 — an exponential token formula ran away in the simulator.
 - **A name** (`state.hero.name`, set in Settings, sanitised by `heroName` in `src/core/text.js`:
   one line of plain text, up to 20 characters; empty is "You") shows over the hero in the fight and

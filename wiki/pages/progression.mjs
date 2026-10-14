@@ -4,7 +4,7 @@
 import { tokensForStage, prestigeStartStage, BALANCE } from '../../src/core/formulas.js';
 import { BASE } from '../../src/core/modifiers.js';
 import { xpForLevel, XP_FOR_MAX_LEVEL } from '../../src/core/xp.js';
-import { PERKS } from '../../src/data/perks.js';
+import { PERKS, PERK_COST_MAX, perkCost } from '../../src/data/perks.js';
 import { RANKS } from '../../src/data/ranks.js';
 import { TRIALS, TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, trialTarget } from '../../src/data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS, starsFor, starGain } from '../../src/data/ascension.js';
@@ -47,10 +47,10 @@ function perkMax(p) {
 }
 
 function perksPage(help) {
-    const rows = PERKS.map(p => [`<span id="${p.id}" class="act">${icon(`perk/${p.id}`, 1)} ${esc(p.name)}</span>`, esc(p.desc), p.max, perkMax(p)]);
+    const rows = PERKS.map(p => [`<span id="${p.id}" class="act">${icon(`perk/${p.id}`, 1)} ${esc(p.name)}</span>`, esc(p.desc), p.max, perkMax(p), fmt(perkCost(p))]);
     return {
-        infobox: infobox({ title: 'Perks', image: icon('perk/knight', 3), rows: [['Cost', 'one skill point a level'], ['Kept', 'for good'], ['Perks', PERKS.length]] }),
-        body: `${help.prose('/perks')}\n${section('Every perk', table(['Perk', 'Each level', 'Levels #', 'At most'], rows, { sort: false }))}`,
+        infobox: infobox({ title: 'Perks', image: icon('perk/knight', 3), rows: [['Cost', `1 skill point a level at first, rising to ${PERK_COST_MAX} (Paragon: no end)`], ['Kept', 'for good'], ['Perks', PERKS.length]] }),
+        body: `${help.prose('/perks')}\n${section('Every perk', table(['Perk', 'Each level', 'Levels #', 'At most', 'Points to fill #'], rows, { sort: false }))}`,
         navbox: navAll()
     };
 }

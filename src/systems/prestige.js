@@ -93,7 +93,7 @@ export function buyPerk(game, perkId) {
     const perk = PERKS.find(p => p.id === perkId);
     if (!perk) return false;
     if ((state.perks[perkId] || 0) >= perk.max) { game.emit({ type: 'error', text: `${perk.name} is maxed out.` }); return false; }
-    const cost = perkLevelCost((state.perks[perkId] || 0) + 1);
+    const cost = perkLevelCost((state.perks[perkId] || 0) + 1, perk);
     if (state.prestige.skillPoints < cost) { game.emit({ type: 'error', text: `${perk.name}'s next level costs ${cost} skill point${cost === 1 ? '' : 's'}. Prestige to earn more.` }); return false; }
     state.prestige.skillPoints -= cost;
     state.perks[perkId] = (state.perks[perkId] || 0) + 1;

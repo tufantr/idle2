@@ -11,7 +11,7 @@ import { xpForLevel } from '../src/core/xp.js';
 import { RESOURCES, foodHeal } from '../src/data/resources.js';
 import { POTION_KINDS, POTION_MINUTES, OUT_OF_PLACE, potionsFor, potionPower, potionName } from '../src/data/potions.js';
 import { clanAttackFromSave } from '../src/core/power.js';
-import { perkLevelCost, PERKS } from '../src/data/perks.js';
+import { perkLevelCost, perkCost, PERKS } from '../src/data/perks.js';
 import { BAG_SIZE, BAG_UPGRADE, RARITIES, GEAR_TIERS } from '../src/data/items.js';
 import { bagSize, bagUpgradePrice } from '../src/systems/inventory.js';
 import { actionInterval } from '../src/core/modifiers.js';
@@ -258,11 +258,17 @@ test('a save from before the three kinds turns its bottles and picks into them, 
 
 // ---------- perks ----------
 
-test('a perk level costs more as the perk climbs: 1 for levels 1-5, 2 for 6-10, up to 5', () => {
-    assert.deepEqual([1, 5, 6, 10, 11, 16, 21, 25, 200].map(perkLevelCost), [1, 1, 2, 2, 3, 4, 5, 5, 5]);
+test('a perk level costs more as the perk climbs: 1 for levels 1-5, 2 for 6-10, up to 10; Paragon without end', () => {
+    assert.deepEqual([1, 5, 6, 10, 11, 16, 21, 25, 46, 50, 200].map(level => perkLevelCost(level)), [1, 1, 2, 2, 3, 4, 5, 5, 10, 10, 10]);
     const knight = PERKS.find(p => p.id === 'knight');
-    const all = Array.from({ length: knight.max }, (_, i) => perkLevelCost(i + 1)).reduce((a, b) => a + b, 0);
-    assert.equal(all, 75, 'a 25-level perk: 75 points');
+    const paragon = PERKS.find(p => p.id === 'paragon');
+    assert.equal(knight.max, 50);
+    assert.equal(perkCost(knight), 275, 'a 50-level perk: 275 points');
+    assert.equal(perkCost(knight, 25), 75, 'its first 25 cost what a whole one did before');
+    assert.equal(perkLevelCost(200, paragon), 40, "Paragon's price keeps rising");
+    assert.equal(perkCost(paragon), 4100);
+    // with Auto on, the simulator's player earns 60-80 points a day: the perks but Paragon take about two weeks
+    assert.equal(PERKS.filter(p => p.id !== 'paragon').reduce((n, p) => n + perkCost(p), 0), 874);
     const g = hero();
     g.state.prestige.skillPoints = 6;
     for (let i = 0; i < 5; i++) assert.ok(g.buyPerk('knight'));

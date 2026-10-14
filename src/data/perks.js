@@ -6,26 +6,36 @@ import { NON_COMBAT_SKILLS } from './skills.js';
 const GATHERING_AND_PRODUCTION = value => Object.fromEntries(NON_COMBAT_SKILLS.map(id => [id, value]));
 
 export const PERKS = [
-    { id: 'knight',    name: 'Knight',    icon: '⚔️', desc: '+4% ATK per level',                    max: 25, mods: { atkMult: 0.04 } },
-    { id: 'warlord',   name: 'Warlord',   icon: '🛡️', desc: '+4% Max HP per level',                 max: 25, mods: { hpMult: 0.04 } },
-    { id: 'rogue',     name: 'Rogue',     icon: '💨', desc: '+3% attack speed per level',           max: 15, mods: { attackSpeed: 0.03 } },
-    { id: 'forager',   name: 'Forager',   icon: '🌾', desc: '+3% gathering & production speed',     max: 15, mods: { skillSpeed: GATHERING_AND_PRODUCTION(0.03) } },
-    { id: 'scholar',   name: 'Scholar',   icon: '📖', desc: '+3% XP from all skills',               max: 15, mods: { xpMult: 0.03 } },
+    { id: 'knight',    name: 'Knight',    icon: '⚔️', desc: '+4% ATK per level',                    max: 50, mods: { atkMult: 0.04 } },
+    { id: 'warlord',   name: 'Warlord',   icon: '🛡️', desc: '+4% Max HP per level',                 max: 50, mods: { hpMult: 0.04 } },
+    { id: 'rogue',     name: 'Rogue',     icon: '💨', desc: '+3% attack speed per level',           max: 20, mods: { attackSpeed: 0.03 } },
+    { id: 'forager',   name: 'Forager',   icon: '🌾', desc: '+3% gathering & production speed',     max: 30, mods: { skillSpeed: GATHERING_AND_PRODUCTION(0.03) } },
+    { id: 'scholar',   name: 'Scholar',   icon: '📖', desc: '+3% XP from all skills',               max: 30, mods: { xpMult: 0.03 } },
     { id: 'endurance', name: 'Endurance', icon: '🌙', desc: '+2 hours of offline progress',         max: 6,  mods: { offlineHours: 2 } },
     { id: 'gourmet',   name: 'Gourmet',   icon: '🍖', desc: '+5% auto-eat threshold, +5% food healing', max: 6, mods: { autoEatThreshold: 0.05, foodMult: 0.05 } },
-    { id: 'fortune',   name: 'Fortune',   icon: '🍀', desc: '+5% gold and drop chance from combat', max: 10, mods: { goldMult: 0.05, dropMult: 0.05 } },
-    // For the long tail: every skill point has somewhere to go once the other perks are full.
-    { id: 'paragon',   name: 'Paragon',   icon: '👑', desc: '+1% ATK, DEF and Max HP per level',    max: 200, mods: { atkMult: 0.01, defMult: 0.01, hpMult: 0.01 } }
+    { id: 'fortune',   name: 'Fortune',   icon: '🍀', desc: '+5% gold and drop chance from combat', max: 20, mods: { goldMult: 0.05, dropMult: 0.05 } },
+    // For the long tail: every skill point has somewhere to go once the other perks are full, its price
+    // rising without end (costCap), so it stays a goal for months.
+    { id: 'paragon',   name: 'Paragon',   icon: '👑', desc: '+1% ATK, DEF and Max HP per level',    max: 200, costCap: Infinity, mods: { atkMult: 0.01, defMult: 0.01, hpMult: 0.01 } }
 ];
 
 // A level costs more as a perk climbs (the owner's ask, October 2026: at one point a level, every perk
-// was soon full): levels 1-5 cost 1 point, 6-10 cost 2, and so on, never more than PERK_COST_MAX.
-// Levels bought before this kept what they cost.
+// was soon full): levels 1-5 cost 1 point, 6-10 cost 2, and so on, never more than PERK_COST_MAX, and
+// Paragon's never stops rising. Levels bought before this kept what they cost. On 15 October the main perks
+// went deeper and the cap rose from 5 to 10 (the owner: with Auto on, a player earns 60-80 points a day in
+// the simulator, and filled every perk but Paragon within five days; now about two weeks, Paragon months).
 export const PERK_COST_STEP = 5;
-export const PERK_COST_MAX = 5;
-/** Skill points for a perk's `level`-th level (1-based). */
-export function perkLevelCost(level) {
-    return Math.min(PERK_COST_MAX, Math.max(1, Math.ceil(level / PERK_COST_STEP)));
+export const PERK_COST_MAX = 10;
+/** Skill points for the `level`-th level (1-based) of `perk` (its own costCap, else PERK_COST_MAX). */
+export function perkLevelCost(level, perk = null) {
+    return Math.min(perk?.costCap ?? PERK_COST_MAX, Math.max(1, Math.ceil(level / PERK_COST_STEP)));
+}
+
+/** Skill points for all of a perk's levels from `from` + 1 to `to`. */
+export function perkCost(perk, to = perk.max, from = 0) {
+    let sum = 0;
+    for (let level = from + 1; level <= to; level++) sum += perkLevelCost(level, perk);
+    return sum;
 }
 
 export function perkById(id) {

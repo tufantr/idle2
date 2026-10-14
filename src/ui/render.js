@@ -1359,7 +1359,7 @@ function perkList(state) {
     const sp = state.prestige.skillPoints;
     return PERKS.map(p => {
         const level = state.perks[p.id] || 0;
-        const cost = perkLevelCost(level + 1);
+        const cost = perkLevelCost(level + 1, p);
         const action = level >= p.max ? '<span class="perk-max">Max</span>'
             : `<button class="shop-btn" onclick="FI.buyPerk('${p.id}')" ${sp >= cost ? '' : 'disabled'} title="${sp >= cost ? `Costs ${cost} skill point${cost === 1 ? '' : 's'}` : `Needs ${cost} skill point${cost === 1 ? '' : 's'}: a prestige whose run reached half your best brings one`}">${level ? 'Upgrade' : 'Learn'} <span class="perk-cost">${cost} SP</span></button>`;
         return `<div class="shop-item">

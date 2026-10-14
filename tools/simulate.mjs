@@ -35,7 +35,7 @@ import { zoneForStage } from '../src/data/zones.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { potionsFor, potionLevel, POTION_KINDS } from '../src/data/potions.js';
 import { skillLevel } from '../src/core/modifiers.js';
-import { PERKS, GOLD_SHOP } from '../src/data/perks.js';
+import { PERKS, GOLD_SHOP, perkLevelCost } from '../src/data/perks.js';
 import { MAX_UPGRADE } from '../src/data/items.js';
 import { CAMP_UPGRADES } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
@@ -373,11 +373,21 @@ function jewelTask() {
     return null;
 }
 
+// The perks' depths before they deepened (15 October 2026): the bot fills these in its order first, as it
+// always did, then buys the cheapest next level of the deeper ones, and Paragon last.
+const FIRST_DEPTH = { knight: 25, warlord: 25, rogue: 15, forager: 15, scholar: 15, endurance: 6, gourmet: 6, fortune: 10 };
+function nextPerk() {
+    const order = POLICY.perkOrder.map(id => PERKS.find(p => p.id === id));
+    const first = order.find(p => p.id in FIRST_DEPTH && S.perks[p.id] < Math.min(p.max, FIRST_DEPTH[p.id]));
+    if (first) return first;
+    const deeper = order.filter(p => p.id !== 'paragon' && S.perks[p.id] < p.max);
+    if (deeper.length) return deeper.reduce((a, b) => (perkLevelCost(S.perks[b.id] + 1, b) < perkLevelCost(S.perks[a.id] + 1, a) ? b : a));
+    return order.find(p => S.perks[p.id] < p.max) || null;
+}
 function spendPoints() {
-    const order = POLICY.perkOrder;
     let guard = 0;
     while (!WITHOUT.has('perks') && S.prestige.skillPoints > 0 && guard++ < 100) {
-        const perk = order.map(id => PERKS.find(p => p.id === id)).find(p => S.perks[p.id] < p.max);
+        const perk = nextPerk();
         if (!perk || !game.buyPerk(perk.id)) break;
     }
     // Spare gold buys essence (after the camp, and never the gold saved for the next obstacle).
