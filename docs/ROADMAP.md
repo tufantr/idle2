@@ -1205,6 +1205,17 @@ Keeping it running:
 - [x] **A perk reset for everyone** (the owner's ask, with the deeper perks): every save gets its perk levels back
       as skill points, once, on its next load, to spend at today's prices (the more of the levels owned and
       what its prestiges and best stage have paid); the game log says so
+- [x] **Gear that matters** (a player: wearing gear or not hardly changed the best stage; the owner: all gear must
+      be significant, and a legendary weapon should make the hero stronger at once and push him further; DESIGN
+      §3.29). Measured on the owner's save, the tester's and 42 simulated heroes: a legendary weapon for a rare one
+      gained 0.3 stages on average, as the walls were blows only armour answered and a legendary was ×1.4. **Rarity
+      is a real step**, ×1 / 1.2 / 1.5 / 2 / 2.8 (old gear raised once to match, the log says so); **the ladder's
+      bosses test attack**, from stage 60 growing to ×7 health by stage 150 and hitting as their monsters do (gold
+      as before); and **each piece says what it does**: "+80% attack, +2.5% health" on the fight's ▲ Equip and an
+      item's card, and in gold over the hero as it goes on. Now a legendary weapon for a rare one gains 3.1 stages
+      (one dropped at the best stage, 4.7, moving 86% of heroes), a legendary set 9.8 (4.9); the owner's hero
+      190 with a rare weapon, 200 with a legendary one (198 either way before). The late pace held over 12
+      simulated players (stage 300 at 88.6 h, 92.6 before); stage 150 comes at 11.4 h (13.5). `tools/gearbench.mjs`
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

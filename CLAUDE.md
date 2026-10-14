@@ -25,7 +25,8 @@ medians and percentiles: `node tools/batch.mjs --seeds=30 --hours=150` (add `--a
 `--set=BALANCE.abyss.dropGrowth:1.5`; results in `runs/`, git-ignored); a new player's first minutes:
 `node tools/opening.mjs 60 3` (docs/research_notes/first-session.md, docs/research_notes/robust-and-fun/);
 food and potions in one fresh run of a saved hero (bare, food, potion, both, and why he falls):
-`node tools/supplies.mjs <save.json>` (DESIGN §3.28).
+`node tools/supplies.mjs <save.json>` (DESIGN §3.28); what each piece of gear is worth to a saved hero (a rarity
+for another, a slot emptied): `node tools/gearbench.mjs <save.json>` (DESIGN §3.29).
 
 ## Where things are
 

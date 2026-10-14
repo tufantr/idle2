@@ -1,7 +1,7 @@
 // Equipment: slots, base-stat multipliers, rarity (quality), affixes and upgrade costs.
-// Rule from the itemisation research: the material tier decides an item's power band;
-// rarity is a bounded quality bonus plus extra affixes, never a raw multiplier that lets
-// a lucky copper sword beat honest runite.
+// Rule from the itemisation research: the material tier (and in the Abyss the depth) decides an
+// item's power band; rarity is a bounded quality multiplier plus extra affixes, never enough that
+// a lucky copper sword beats honest runite.
 
 export const EQUIP_SLOTS = ['Weapon', 'Shield', 'Head', 'Body', 'Legs', 'Boots', 'Gloves', 'Ring1', 'Ring2', 'Neck', 'Ear1', 'Ear2'];
 
@@ -42,16 +42,20 @@ export const TYPE_ICONS = {
 // which stops at Rare for forging; jewellery's rises with Crafting (CRAFT_RARITY_LEVELS): epic from
 // level 75, legendary at 99, at the roll's own odds (about 3% and under 1%, more with the quality bonuses).
 // The fight's jewellery is epic or legendary (JEWEL_DROP_MIN_RANK, DROP_RARITY_WEIGHTS).
+// A legendary is 2.8 times a common (the owner, October 2026: a legendary drop must make the hero
+// stronger at once; it was 1.4, less than one Abyss depth's 1.45, so a common from one depth deeper
+// beat it): worth a tier up (x2.2), or nearly three depths. Saves from before have their gear
+// rescaled once (core/state.js RARITY_RESCALE).
 export const CRAFT_MAX_RARITY = 'rare';
 export const CRAFT_RARITY_LEVELS = [[99, 'legendary'], [75, 'epic']];
 /** The best rarity a piece of jewellery can roll at this Crafting level. */
 export const craftMaxRarity = level => CRAFT_RARITY_LEVELS.find(([at]) => level >= at)?.[1] || CRAFT_MAX_RARITY;
 export const RARITIES = [
     { id: 'common',    name: 'Common',    quality: 1.00, affixes: 0, weight: 100, color: '#e2e8f0' },
-    { id: 'uncommon',  name: 'Uncommon',  quality: 1.08, affixes: 1, weight: 40,  color: '#22c55e' },
-    { id: 'rare',      name: 'Rare',      quality: 1.16, affixes: 2, weight: 14,  color: '#3b82f6' },
-    { id: 'epic',      name: 'Epic',      quality: 1.25, affixes: 3, weight: 4,   color: '#a855f7' },
-    { id: 'legendary', name: 'Legendary', quality: 1.40, affixes: 4, weight: 1,   color: '#f59e0b' }
+    { id: 'uncommon',  name: 'Uncommon',  quality: 1.20, affixes: 1, weight: 40,  color: '#22c55e' },
+    { id: 'rare',      name: 'Rare',      quality: 1.50, affixes: 2, weight: 14,  color: '#3b82f6' },
+    { id: 'epic',      name: 'Epic',      quality: 2.00, affixes: 3, weight: 4,   color: '#a855f7' },
+    { id: 'legendary', name: 'Legendary', quality: 2.80, affixes: 4, weight: 1,   color: '#f59e0b' }
 ];
 
 // Affix pool. Values are per-item; the modifier pipeline caps the totals (see core/modifiers.js).

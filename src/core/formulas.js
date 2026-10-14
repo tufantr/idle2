@@ -23,6 +23,13 @@ export const BALANCE = {
         deepAtkGrowth: 1.057,
         bossHpMult: 3,
         bossAtkMult: 1.6,
+        // Stage bosses test the weapon (the owner, October 2026: every piece of gear must matter, and a legendary
+        // weapon must push the hero on): from stage `from` a boss of the ladder grows evenly to `hp` times its
+        // monsters' health by stage `to` and comes down to hitting as hard as they do (`atk`), so the wall at a
+        // boss is felling it within the 30 s (BALANCE.combat.bossTimeMs), which takes attack, and no longer
+        // surviving its first blow, which took only armour. Its gold and loot keep bossHpMult (`worth`); the
+        // dungeons' bosses and the Titan keep bossHpMult and bossAtkMult.
+        stageBoss: { from: 60, to: 150, hp: 7, atk: 1 },
         baseInterval: 2200,     // ms between enemy attacks at stage 1
         intervalPerStage: 8,    // ms faster per stage
         minInterval: 1300,
@@ -166,13 +173,25 @@ export function supplyMult(stage) {
     return 1 + (s.mult - 1) * Math.min(1, Math.max(0, (stage - s.from) / (s.to - s.from)));
 }
 
+/** A boss of the ladder's health and attack, as multiples of its stage's monsters' (BALANCE.enemy.stageBoss). */
+export function stageBossMults(stage) {
+    const e = BALANCE.enemy;
+    const b = e.stageBoss;
+    const t = Math.min(1, Math.max(0, (stage - b.from) / (b.to - b.from)));
+    return { hp: e.bossHpMult + (b.hp - e.bossHpMult) * t, atk: e.bossAtkMult + (b.atk - e.bossAtkMult) * t };
+}
+
 export function enemyForStage(stage) {
     const zone = zoneForStage(stage);
     const boss = isBossStage(stage);
     const e = BALANCE.enemy;
     let { hp, atk, interval } = enemyBaseStats(stage);
-    if (boss) { hp *= e.bossHpMult; atk *= e.bossAtkMult; }
-    const worth = Math.floor(hp);   // what it pays for (gold, a farmed boss's loot): its full health
+    const worth = Math.floor(boss ? hp * e.bossHpMult : hp);   // what it pays for (gold, a farmed boss's loot): its full health, a boss's as of old
+    if (boss) {
+        const m = stageBossMults(stage);
+        hp *= m.hp;
+        atk *= m.atk;
+    }
     const supply = supplyMult(stage);
     hp *= supply;
     atk *= supply;
@@ -190,7 +209,7 @@ export function enemyForStage(stage) {
         boss,
         hp: Math.floor(hp),
         maxHp: Math.floor(hp),
-        ...(worth !== Math.floor(hp) ? { worth } : {}),   // (eased or tougher for the supplies, it pays its old figure)
+        ...(worth !== Math.floor(hp) ? { worth } : {}),   // (eased, tougher for the supplies or a boss past stage 60, it pays its old figure)
         atk: Math.max(1, Math.floor(atk)),
         interval
     };

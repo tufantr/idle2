@@ -30,12 +30,19 @@ import { CLAN_FIGHT_MS } from '../data/social.js';
 // one point until 13 October), or all the prestiges and the best stage have paid.
 export const PERK_RESET = '2026-10-15';
 
+// The rarity rescale (the owner, 15 October 2026: every piece of gear must matter, a legendary most of all): the
+// rarities' qualities grew from 1.00-1.40 to 1.00-2.80 (data/items.js RARITIES). Gear from before it has its attack,
+// defence and price raised once by as much as its rarity's quality grew. The mark is kept in `meta`, which a page
+// still running the older game keeps as it is, so no piece is ever raised twice.
+export const RARITY_RESCALE = '2026-10-15';
+const OLD_QUALITY = { common: 1, uncommon: 1.08, rare: 1.16, epic: 1.25, legendary: 1.4 };
+
 export const SAVE_VERSION = 3;
 
 export function createDefaultState(now = Date.now()) {
     const state = {
         version: SAVE_VERSION,
-        meta: { createdAt: now, savedAt: now, playtimeMs: 0, attendedMs: 0, lastActiveAt: now, lastInputAt: now, lastPlaceAt: 0 },   // attendedMs: time played with the page in view; lastPlaceAt: attended time when the last place opened (data/unlocks.js)
+        meta: { createdAt: now, savedAt: now, playtimeMs: 0, attendedMs: 0, lastActiveAt: now, lastInputAt: now, lastPlaceAt: 0, rarityRescale: RARITY_RESCALE },   // attendedMs: time played with the page in view; lastPlaceAt: attended time when the last place opened (data/unlocks.js)
         gold: 0,
         resources: {},
         inventory: [],
@@ -432,6 +439,20 @@ function resetPerks(state, now) {
     pr.perkReset = PERK_RESET;
 }
 
+function rescaleRarity(state, now) {
+    let raised = 0;
+    for (const item of [...Object.values(state.equipped), ...state.inventory]) {
+        const k = item ? RARITY_BY_ID[item.rarity].quality / OLD_QUALITY[item.rarity] : 1;
+        if (k === 1) continue;
+        item.atk = Math.round(item.atk * k);
+        item.def = Math.round(item.def * k);
+        item.value = Math.round(item.value * k);
+        raised++;
+    }
+    if (raised) state.log.push({ t: now, type: 'system', text: `Rarity counts for more now: a legendary piece has ${RARITY_BY_ID.legendary.quality} times a common one's stats (it was ${OLD_QUALITY.legendary}). ${raised} of your pieces grew.` });
+    state.meta.rarityRescale = RARITY_RESCALE;
+}
+
 function normalise(data, now) {
     const base = createDefaultState(now);
     const state = mergeInto(base, data);
@@ -491,6 +512,7 @@ function normalise(data, now) {
         state.equipped[slot] = item && TYPE_SLOTS[item.type].includes(slot) ? item : null;
     }
     state.inventory = (Array.isArray(state.inventory) ? state.inventory : []).map(i => sanitizeItem(i, ids, nextId)).filter(Boolean);
+    if (data?.meta?.rarityRescale !== RARITY_RESCALE) rescaleRarity(state, now);   // (read from the save itself: the default is the new mark)
     state.bagUpgrades = Math.max(0, Math.min(BAG_UPGRADE.max, Math.floor(finite(state.bagUpgrades))));
     for (const id of ids) if (id >= state.idCounter) state.idCounter = id + 1;
     state.log = (Array.isArray(state.log) ? state.log : [])

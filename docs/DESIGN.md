@@ -197,18 +197,20 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
 
 | Tier | Weapon ATK | Weapon + armour ATK / DEF (common) | Same, legendary | Wear at combat |
 |---|---|---|---|---|
-| Copper | 20 | 25 / 56 | 35 / 78 | 1 |
-| Iron | 44 | 55 / 123 | 77 / 172 | 10 |
-| Mithril | 96 | 120 / 269 | 168 / 376 | 25 |
-| Adamant | 212 | 265 / 594 | 371 / 831 | 40 |
-| Runite | 468 | 585 / 1,310 | 819 / 1,835 | 60 |
-| Dragonbone (drop only) | 1,020 | 1,275 / 2,856 | 1,785 / 3,998 | 70 |
-| Abyssal (drop only) | 2,240 | 2,800 / 6,272 | 3,920 / 8,781 | 80 |
+| Copper | 20 | 25 / 56 | 70 / 157 | 1 |
+| Iron | 44 | 55 / 123 | 154 / 345 | 10 |
+| Mithril | 96 | 120 / 269 | 336 / 753 | 25 |
+| Adamant | 212 | 265 / 594 | 742 / 1,662 | 40 |
+| Runite | 468 | 585 / 1,310 | 1,638 / 3,669 | 60 |
+| Dragonbone (drop only) | 1,020 | 1,275 / 2,856 | 3,570 / 7,997 | 70 |
+| Abyssal (drop only) | 2,240 | 2,800 / 6,272 | 7,840 / 17,562 | 80 |
 
-- **Rarity = quality + affixes**, never a raw multiplier: Common ×1.00 / 0 affixes, Uncommon ×1.08 / 1,
-  Rare ×1.16 / 2, Epic ×1.25 / 3, Legendary ×1.40 / 4. Because tiers are ×2.2 apart, **a common of
-  tier N always beats a legendary of tier N−1** (a test enforces this). The prototype multiplied stats
-  by up to 64× and let legendary copper beat runite.
+- **Rarity = quality + affixes**: Common ×1.00 / 0 affixes, Uncommon ×1.20 / 1, Rare ×1.50 / 2,
+  Epic ×2.00 / 3, Legendary ×2.80 / 4 (×1.08 / 1.16 / 1.25 / 1.40 until October 2026, §3.29). A
+  legendary is worth about a tier (×2.2): it beats a common piece of the tier above and about matches an
+  uncommon one, a rare one beats it, and **nothing reaches two tiers up** (a test enforces this); in the Abyss it
+  is worth nearly three depths of the drops' ×1.45. The prototype multiplied stats by up to 64× and let
+  legendary copper beat runite.
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
 - **Upgrades:** +5% base stats per level, max +10. Weapons and armour are reinforced at the anvil
@@ -335,7 +337,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
 
 - **Enemy HP** = `25 × 1.075^(s−1)` to stage 100 (×2.06 per zone), then ×1.085 per stage, and past
   stage 400 ×1.065 (`deepFrom`, `deepHpGrowth`: the deep Abyss eased, §5.6).
-  **Enemy ATK** = `5 × 1.065^(s−1)`, then ×1.075, past 400 ×1.057. **Bosses** ×3 HP, ×1.6 ATK.
+  **Enemy ATK** = `5 × 1.065^(s−1)`, then ×1.075, past 400 ×1.057. **Bosses** ×3 HP, ×1.6 ATK; from
+  stage 60 the ladder's bosses move evenly to ×7 HP and ×1 ATK by stage 150 (`stageBoss`, §3.29), and
+  pay for ×3 HP as before. The dungeons' bosses and the Titan keep ×3 and ×1.6 under their own multiples.
 - **Two tiers per zone.** `tier` is the zone's richness (material quantities, gems, boss essence);
   `gearTier` is the tier of gear that drops there. Prestige carries players through the early zones
   far faster than they can smith (stage 60 in ~1.5 h, mithril in ~2–4 h), so the gear tier follows
@@ -1441,6 +1445,59 @@ Combat Potion III 188, with both 198 (with the 96 Roast Venison carried: 196). O
 
 A bigger stock (the bot keeping 200 dishes rather than 60) gained nothing and spent 24% of its time
 gathering instead of 16%: with the food kept for pushes, a push takes about 60-150 dishes.
+
+### 3.29 Gear that matters
+
+The owner, 15 October 2026, passing on a player's word that wearing gear or not hardly changed the best stage:
+"all gear must be significant"; a legendary weapon dropping should be a moment, make the hero stronger at once
+and push him further. Measured first (`tools/gearbench.mjs`: fresh runs of a saved hero with one thing about his
+gear changed; the owner's save, the tester's, and 42 of the simulator's heroes saved at stages 120-270):
+- **Rarity changed nothing.** A legendary weapon for a rare one: +0.3 stages on average, one hero in fourteen
+  moved; all twelve pieces legendary for rare: +4.9. The owner's hero reached 198 with any weapon of any rarity,
+  the tester's 250 with every variant tried. Taking the weapon off cost 8-10 stages and all the gear 70-130,
+  so gear as a whole counted; one piece's rarity did not.
+- **Why.** A legendary was ×1.40, ×1.21 a rare: less than one Abyss depth (×1.45), so a common piece from one
+  depth deeper beat it. And the walls were survival walls: at the wall a monster's blow took about all of the
+  hero's health, and a boss's (×1.6 attack, squared under defence) two or three times it, so only defence and
+  health moved the wall and attack (the weapon) never did. Bosses every ten stages round any gain down to the
+  next one fallen: an upgrade worth four stages shows only when it fells a boss.
+
+What changed:
+- **Rarity is a real step**: ×1 / 1.2 / 1.5 / 2 / 2.8 (§3.5), a legendary worth about a tier, or nearly three
+  depths. Gear in saves from before is raised once by as much as its rarity grew (`RARITY_RESCALE` in
+  `core/state.js`, its mark kept in `meta`, where a page still running the older game leaves it alone), and the
+  game log says so.
+- **The ladder's bosses test attack** (`BALANCE.enemy.stageBoss`, `stageBossMults`): from stage 60 a boss's
+  health grows evenly from ×3 to ×7 its monsters' by stage 150 and its attack comes down from ×1.6 to theirs.
+  The wall at a boss is now felling it in its 30 seconds, which the weapon does, rather than living through its
+  first blow; the monsters between bosses still test defence and health. A boss pays for ×3 as before (`worth`),
+  and the dungeons' bosses and the Titan keep their figures. The bosses before stage 60, the first hour, are
+  unchanged.
+- **What a piece does is shown**, every bonus counted (`equipGain` in `systems/inventory.js`: the hero's attack,
+  defence and health with it on, as a share of now): on the fight's ▲ Equip ("+80% attack, +2.5% health"), on
+  an item's card ("Worn: …", green or red by part), and as a gold rise over the hero when it goes on (red for a
+  weaker piece).
+
+What it does. Over the 42 simulated heroes (mean stages gained, and the share of heroes whose best stage moved):
+
+| | Today | Now |
+| --- | --- | --- |
+| A legendary weapon for a rare one | +0.3 (7%) | +3.1 (45%) |
+| A legendary body armour for a rare one | +0.2 (7%) | +1.2 (40%) |
+| All six armour pieces legendary for rare | +2.9 (48%) | +3.9 (55%) |
+| All twelve pieces legendary for rare | +4.9 (67%) | +9.8 (98%) |
+| A legendary weapon as it drops at the best stage, put on | +0.3 (10%) | +4.7 (86%) |
+| Best stage as worn (the rescale on loading) | 199.8 | 202.4 |
+
+The owner's hero (the save of 14 October, Dragonbone gear): a rare weapon 190, a legendary one 200, one as it
+drops at his best stage 203 (all 198 before). The tester's: rare 250, legendary 255 (both 250 before). Over 12
+simulated players and 150 hours the pace held where it was paced, the late climb: stage 250 at 61.0 h (65.4),
+300 at 88.6 (92.6), 350 at 125.7 (131.1), best at 150 h 370 (370); the middle came sooner, stage 150 at 11.4 h
+(13.5), as crafted rare gear grew ×1.29. With bosses of ×5 health instead of ×7 a weapon moved fewer heroes
+(+1.5, 38%) and the climb ran 10-19% faster; trimming the tokens by a quarter held the pace but took the
+owner's hero from 198 to 190 on loading, so it was left. The Trials cost about what they did at their door
+(`tools/trials.mjs`, heroes at 210: Swift Bosses −12 stages, −2 before; Brutes −8, −5; the rest within a few),
+and every first tier still falls there.
 
 ## 4. The modifier pipeline
 

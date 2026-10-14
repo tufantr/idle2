@@ -81,7 +81,8 @@ function formulasPage(help) {
                 `health(stage) = ${e.baseHp} × ${e.hpGrowth}^(stage − 1)                 up to stage 100`,
                 `              then × ${e.abyssHpGrowth} a stage to ${e.deepFrom}, then × ${e.deepHpGrowth} a stage`,
                 `attack(stage) = ${e.baseAtk} × ${e.atkGrowth}^(stage − 1)                  (× ${e.abyssAtkGrowth}, then × ${e.deepAtkGrowth}, likewise)`,
-                `a boss: × ${e.bossHpMult} health, × ${e.bossAtkMult} attack`,
+                `a boss: × ${e.bossHpMult} health, × ${e.bossAtkMult} attack; from stage ${e.stageBoss.from} evenly to × ${e.stageBoss.hp} and × ${e.stageBoss.atk} by stage ${e.stageBoss.to}`,
+                `        (it pays for × ${e.bossHpMult} health; the dungeons' bosses and the Titan keep × ${e.bossHpMult} and × ${e.bossAtkMult})`,
                 `attacks every max(${e.minInterval}, ${e.baseInterval} − ${e.intervalPerStage} × stage) ms`,
                 `stages 1–${e.ease.to}: a gentler start (attack from ${pct(e.ease.atk, 0)}, health from ${pct(e.ease.hp, 0)} of the figures, rising evenly)`
             ]) + enemy),

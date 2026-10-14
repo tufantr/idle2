@@ -21,7 +21,7 @@ import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js'
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { CHALLENGE_MS, hasOpportunity, animatedPosition, minigameConfig } from '../systems/minigame.js';
-import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, refitLevel } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, refitLevel, equipGain } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
@@ -38,7 +38,7 @@ import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
-import { fmt, pct, seconds, duration, escapeHtml as esc } from './format.js';
+import { fmt, pct, seconds, duration, escapeHtml as esc, gainWords, gainMarkup } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey, glyph, coinIcon } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
@@ -654,7 +654,9 @@ function renderLoopActions(game) {
     }
     const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
     if (upgrade) {
-        parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span></span></button>`);
+        const gain = equipGain(state, upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
+        const words = gainWords(gain);
+        parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}</i>` : ''}</span></button>`);
     }
     return parts.length ? `<div class="dock-group dock-loop ${painted('shrine', 'center 45%')}">${parts.join('')}</div>` : '';
 }
@@ -1235,6 +1237,9 @@ export function renderItemDetail(game, id) {
         const delta = (value, icon) => value ? `<span class="${value > 0 ? 'up' : 'down'}">${icon} ${value > 0 ? '+' : '−'}${fmt(Math.abs(value))}</span>` : '';
         const deltas = delta(Math.round((item.atk || 0) * newMult) - Math.round((worn?.atk || 0) * wornMult), ATK_ICON) + delta(Math.round((item.def || 0) * newMult) - Math.round((worn?.def || 0) * wornMult), DEF_ICON);
         compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${worn.upgrade ? ` +${worn.upgrade}` : ''}${refit > up ? `, refitted to +${refit}` : ''}` : 'That slot is empty'}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
+        // and what it does to the hero, every bonus counted (a +900 sword is +40% attack, or +4%)
+        const gain = canWear(state, item) ? gainMarkup(equipGain(state, item)) : '';
+        if (gain) compare += `<div class="detail-gain">Worn: ${gain}</div>`;
     }
     return `<div class="detail" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}">
         <button class="detail-close" onclick="FI.selectItem(null)" aria-label="Close">✕</button>

@@ -16,7 +16,7 @@ Gold is the money of a run. You earn it mostly by fighting, and you spend it on 
 
 {{table(['Stage #', 'Gold per kill #'], [11, 25, 51, 101, 151, 201, 301].map(s => [s, fmt(goldPerKillAtStage(s))]), { sort: false })}}
 
-- **Bosses** pay {{BALANCE.rewards.bossGoldMult}} times as much on their first fall in a run, the kill that moves you on, on top of their {{BALANCE.enemy.bossHpMult}} times the health: {{BALANCE.enemy.bossHpMult * BALANCE.rewards.bossGoldMult}} times an ordinary monster of the stage. Farmed after that, a boss pays like the ordinary monsters its health is worth, so there is no point parking on one.
+- **Bosses** pay {{BALANCE.rewards.bossGoldMult}} times as much on their first fall in a run, the kill that moves you on, on top of paying for {{BALANCE.enemy.bossHpMult}} times the health (the deeper bosses have more, and pay the same): {{BALANCE.enemy.bossHpMult * BALANCE.rewards.bossGoldMult}} times an ordinary monster of the stage. Farmed after that, a boss pays like the ordinary monsters its health is worth, so there is no point parking on one.
 - **Gilded monsters**: about one ordinary monster in {{Math.round(1 / BALANCE.rewards.gildedChance)}} on the stage ladder arrives gilded, with a banner and a chime. It is the same fight for {{BALANCE.rewards.gildedGoldMult}}× the gold and {{BALANCE.rewards.gildedXpMult}}× the XP, plus a gem and some [[/items/essence|essence]] for certain.
 - **Dungeon** monsters pay like ordinary monsters of the same health. The chest at the end holds materials, essence and fragments rather than gold.
 - **The Titan**: each Titan you bring down pays a pile of gold, along with essence and gems.

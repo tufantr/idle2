@@ -15,7 +15,7 @@ import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { killPayout, packSize } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
-import { fmt, seconds, duration, escapeHtml as esc, shareInWords } from './format.js';
+import { fmt, seconds, duration, escapeHtml as esc, shareInWords, gainParts } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART, fightTab } from './features.js';
 import { activeTrial, nextTrialTarget } from '../systems/trials.js';
@@ -639,6 +639,16 @@ export function createScene(root, actions) {
                     const { hero } = anchor();
                     move(el.heroSprite, 'dodge');
                     spawnFx('dmg dodge', 'Dodge!', hero.x, hero.top + 4);
+                    break;
+                }
+                case 'equip': {   // a piece put on: what it did to him, all bonuses counted (systems/inventory.js equipGain)
+                    const parts = gainParts(ev.gain);
+                    if (!parts.length) break;
+                    const { hero } = anchor();
+                    fxBudget = Math.max(fxBudget, 1);
+                    const down = Object.values(ev.gain).reduce((a, b) => a + b, 0) < 0;   // a weaker piece put on: said, not celebrated
+                    // a line a part, so it stays narrow on a phone; rising over his head, under his health bar
+                    spawnFx(`dmg gear${down ? ' down' : ''}`, parts.map(p => esc(p.text)).join('<br>'), hero.x, hero.top + 8, 1800);
                     break;
                 }
                 case 'eat': {   // auto-eat: the dish and the health it gave back, green over the hero

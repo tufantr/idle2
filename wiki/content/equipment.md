@@ -20,7 +20,7 @@ Three things set a piece's attack and defence:
 - its **slot**, which splits that strength between attack and defence;
 - its **rarity**, a quality bonus that stops at ×{{RARITIES.at(-1).quality}} for a {{RARITIES.at(-1).name.toLowerCase()}} piece.
 
-A piece's attack is {{STAT_UNIT}} × its tier's power × its slot's attack weight × its rarity's quality, give or take a little, and its defence likewise: a common {{GEAR_TIERS[0].name}} {{TYPE_NAMES.Weapon}} has about {{STAT_UNIT * GEAR_TIERS[0].power * SLOT_STATS.Weapon.atk}} attack. The tiers are so far apart that, on base stats, a common piece always beats a legendary one of the tier below. Jewellery carries {{pct(JEWEL_POWER, 0)}} of its tier's power: its worth is in its bonuses.
+A piece's attack is {{STAT_UNIT}} × its tier's power × its slot's attack weight × its rarity's quality, give or take a little, and its defence likewise: a common {{GEAR_TIERS[0].name}} {{TYPE_NAMES.Weapon}} has about {{STAT_UNIT * GEAR_TIERS[0].power * SLOT_STATS.Weapon.atk}} attack. A {{RARITIES.at(-1).name.toLowerCase()}} piece has {{RARITIES.at(-1).quality}} times a common one's stats, about a tier's worth: it beats a common piece of the tier above, a {{RARITIES[2].name.toLowerCase()}} one of that tier beats it, and nothing reaches two tiers up. Jewellery carries {{pct(JEWEL_POWER, 0)}} of its tier's power: its worth is in its bonuses.
 
 Defence also gives health, one for every {{1 / BASE.hpPerDef}} defence, and each upgrade level adds {{pct(UPGRADE_STEP, 0)}} to a piece's base attack and defence.
 

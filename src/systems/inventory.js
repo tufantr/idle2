@@ -9,7 +9,7 @@ import { salvageBars, carryAnvilWork, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
 import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
-import { skillLevel } from '../core/modifiers.js';
+import { skillLevel, deriveStats } from '../core/modifiers.js';
 import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
 import { log, bumpStat } from './progress.js';
@@ -94,6 +94,19 @@ export function isUpgrade(state, item) {
 function weakestSlotFor(state, type) {
     const slots = TYPE_SLOTS[type] || [];
     return slots.reduce((worst, slot) => (itemScore(state.equipped[slot]) < itemScore(state.equipped[worst]) ? slot : worst), slots[0]);
+}
+
+/**
+ * What wearing `item` does to the hero, all bonuses counted: his attack, defence and max health after, as
+ * ratios to before (0.38 is +38%; Infinity where he had none). In the slot equipItem would choose, with the
+ * anvil levels a refit would bring. The fight's Equip, the bag and the equip itself say it, so a better piece is
+ * seen to make him stronger (the owner, October 2026: a legendary should be felt).
+ */
+export function equipGain(state, item, slot = weakestSlotFor(state, item.type)) {
+    const before = deriveStats(state);
+    const after = deriveStats({ ...state, equipped: { ...state.equipped, [slot]: { ...item, upgrade: refitLevel(item, state.equipped[slot]) } } });
+    const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
+    return { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
 }
 
 /** The best wearable upgrade in the bag, if any: { item, slot, gain } (the fight's one-tap Equip). */
@@ -301,6 +314,7 @@ export function equipItem(game, id, requestedSlot = null) {
     if (!slot) slot = slots.find(s => !state.equipped[s]) || slots.reduce((w, s) => (itemScore(state.equipped[s]) < itemScore(state.equipped[w]) ? s : w), slots[0]);
 
     const previous = state.equipped[slot];
+    const gain = equipGain(state, item, slot);   // (before the swap: what it does to him, for the screen)
     const refit = refitLevel(item, previous);   // the smith refits the reinforcing (above)
     if (previous && refit > (item.upgrade || 0)) {
         carryAnvilWork(item, previous);   // the bars and essence that went in, as they were (data/workshop.js)
@@ -312,7 +326,7 @@ export function equipItem(game, id, requestedSlot = null) {
     state.inventory.splice(index, 1);
     if (previous) state.inventory.push(previous);
     if (item.rarity === 'legendary') bumpStat(game, 'legendariesEquipped');
-    game.emit({ type: 'equip', item, slot });
+    game.emit({ type: 'equip', item, slot, gain });
     game.markDirty();
     return true;
 }

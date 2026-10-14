@@ -17,6 +17,8 @@ The first stages are gentle: at stage 1 a monster hits with {{pct(BALANCE.enemy.
 
 A boss has {{BALANCE.enemy.bossHpMult}} times the health and {{BALANCE.enemy.bossAtkMult}} times the attack of the monsters of its stage, and it must fall within {{BALANCE.combat.bossTimeMs / 1000}} seconds of fighting. The clock only runs while your hero fights, so it works the same while you are away.
 
+From stage {{BALANCE.enemy.stageBoss.from}} the bosses grow tougher and hit softer, evenly, until from stage {{BALANCE.enemy.stageBoss.to}} a boss has {{BALANCE.enemy.stageBoss.hp}} times its monsters' health and hits as hard as they do. Living through its blows is no longer the hard part: felling it in time is, and that takes attack. A better weapon is what gets your hero past a boss that keeps holding out. A boss still pays for {{BALANCE.enemy.bossHpMult}} times its monsters' health.
+
 If the boss holds out, your hero steps back one stage to regroup. He fights on there without moving on for {{time(BALANCE.combat.regroupMs)}} of fighting, then tries the boss again by himself. Tap the boss on the stage path to try again at once: beating it ends the wait.
 
 A boss pays its bonus only the first time it falls in a run, the kill that moves you on: {{BALANCE.rewards.bossGoldMult}} times the gold, {{BALANCE.rewards.bossXpMult}} times the XP and far better loot (see Drops below). A boss beaten again later in the run, or one you stay on, pays like the ordinary monsters its health is worth, so parking on a boss is never the best way to farm.

@@ -19,6 +19,21 @@ export function pct(x, digits = 0) {
     return `${(x * 100).toFixed(digits)}%`;
 }
 
+/** What a piece of gear does to the hero (systems/inventory.js equipGain), part by part: [{ text: '+38% attack', up: true }]. */
+export function gainParts(gain) {
+    const part = (v, word) => {
+        if (!Number.isFinite(v)) return v > 0 ? { text: `+${word}`, up: true } : null;   // (none before: a first piece of armour)
+        if (Math.abs(v) < 0.005) return null;
+        const abs = Math.abs(v);
+        return { text: `${v > 0 ? '+' : '−'}${abs >= 10 ? `×${(1 + v).toFixed(0)}` : pct(abs, abs < 0.1 ? 1 : 0)} ${word}`, up: v > 0 };
+    };
+    return gain ? [part(gain.atk, 'attack'), part(gain.def, 'defence'), part(gain.hp, 'health')].filter(Boolean) : [];
+}
+/** The same in words: "+38% attack, −2.5% health". */
+export const gainWords = gain => gainParts(gain).map(p => p.text).join(', ');
+/** The same as markup, each part green or red. */
+export const gainMarkup = gain => gainParts(gain).map(p => `<span class="${p.up ? 'up' : 'down'}">${escapeHtml(p.text)}</span>`).join(', ');
+
 export function seconds(ms) {
     return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`;
 }
