@@ -1,7 +1,7 @@
 // Every balance formula in one place. tools/simulate.mjs exercises these headlessly;
 // change a constant here and re-run the simulator to see the pacing move.
 
-import { AUTHORED_STAGES, zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
+import { AUTHORED_STAGES, zoneForStage, isBossStage, isLordStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER, JEWEL_DROP_MIN_RANK, MYTHIC, PRIMAL } from '../data/items.js';
 import { rng } from './rng.js';
 
@@ -223,8 +223,10 @@ export function enemyForStage(stage) {
     hp *= e.ease.hp + (1 - e.ease.hp) * t;
     atk *= e.ease.atk + (1 - e.ease.atk) * t;
     const name = boss ? zone.boss : zone.monsters[(stage - 1) % zone.monsters.length];
+    const lord = boss && isLordStage(stage);   // every 100th from 200 (data/zones.js LORDS): its first defeat leaves a sure piece
     return {
-        name: boss ? `${name} (Boss)` : name,
+        name: lord ? `${name} (Lord)` : boss ? `${name} (Boss)` : name,
+        ...(lord ? { lord } : {}),
         baseName: name,
         icon: zone.icons[name] || '👾',
         zoneName: zone.name,
@@ -378,14 +380,14 @@ export function abyssDropMult(depth = 0) {
  * (systems/inventory.js dropTypesFor tilts them toward what the hero lacks); a ring, amulet or
  * earring only comes epic or legendary. `depth` (the Abyss depth) scales its power past depth 5.
  */
-export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS, { tier: fixedTier = null, frontier = null } = {}) {
+export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS, { tier: fixedTier = null, frontier = null, rarity: fixedRarity = null } = {}) {
     const tier = fixedTier ?? Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
     const gearTier = GEAR_TIERS[tier - 1];
     const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (zoneTier - 1);
     const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));
-    let rarity = rollRarity({ weights });
+    let rarity = fixedRarity ? RARITIES.find(r => r.id === fixedRarity) : rollRarity({ weights });   // (a Lord's sure piece names its own)
     // a ladder boss's piece near the best stage (`frontier`: { stage, best }) may be above legendary (data/items.js MYTHIC)
-    if (boss && frontier && frontier.stage >= MYTHIC.from && frontier.stage >= frontier.best - MYTHIC.near && rng.chance(MYTHIC.chance)) {
+    if (!fixedRarity && boss && frontier && frontier.stage >= MYTHIC.from && frontier.stage >= frontier.best - MYTHIC.near && rng.chance(MYTHIC.chance)) {
         const above = frontier.stage >= PRIMAL.from && rng.chance(1 / PRIMAL.odds) ? 'primal' : 'mythic';
         rarity = RARITIES.find(r => r.id === above);
     }

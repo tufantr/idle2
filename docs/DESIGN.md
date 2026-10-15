@@ -1591,6 +1591,38 @@ Numbers (median of 7 seeds, with Auto; part one alone → with this): the best s
 +40 to +51 in every slot by hour 1,200 (the Smithing it asked at five levels a step held every hero at +15), and a Mythic
 comes about once every 21 hours of play past stage 500. The climb's allowance took one more row (§3.17).
 
+### 3.32 The deep: Lords, the strata come round, steps every 500, bonuses that multiply
+
+The third part of the endless climb (§3.30, the research's §5.2 items 6–8): somewhere to arrive past stage 500, and
+bonuses whose worth doesn't fade as the hero grows.
+- **Lords** (`LORDS` in `src/data/zones.js`, `lordsDue` in `src/systems/combat.js`): from stage 200 the boss of every
+  100th stage is its stratum's Lord, crowned on the stage path and named on its banner. Its first defeat ever leaves a
+  sure piece from its depth for the weapon or armour slot that lags furthest behind (`laggingSlot`; an earring was a
+  poor due in the first try): legendary, from stage 500 Mythic (Primal one time in 20
+  from 1,000), with its card. After that it is a boss like the others (`combat.lordsBeaten`; a save from before counts
+  those above its best as beaten, their due being for new ground).
+- **The strata come round** (`stratumAt`, `stratumById` in `src/data/strata.js`): past Pandemonium (stage 500) the
+  fifteen strata below the Abyss's own come round again without end, each round numbered (The Weeping Dark II from
+  stage 501) with its painting cast in new hues (`--land-hue`, 47° a round), each a place of its own: a card when
+  first reached and a line in the chronicle. Their monsters and bosses are the first round's (the bestiary keeps one
+  page each).
+- **A step every 500 stages** (`deep_1000` … `deep_10000` in `src/data/achievements.js`): medals at 1,000, 1,500,
+  2,000, 2,500, 3,000, 4,000, 5,000, 7,500 and 10,000, each ×1.1 attack, defence and health; stage 500's record card
+  says Mythic gear opens there, and 1,000's that Primal does.
+- **Bonuses that multiply** (`atkLog`, `defLog`, `hpLog` in `src/core/modifiers.js`): Knight (×1.025 attack a level),
+  Warlord (×1.025 health) and Paragon (×1.01 attack, defence and health) multiply instead of adding into the pool of
+  percents, where by stage 600 a Knight level was worth under 1%; the deep medals likewise. At ×1.04, the percent they
+  added, the heroes were at stage 560 by hour 100 (470 before) and 990 by hour 200 (800): the early game sped up as
+  much as the late, so Knight and Warlord take ×1.025 (490 and 890).
+- **Numbers past 10^308**: denser stages keep monsters' health a number to about stage 19,900, past `MAX_STAGE`
+  (10,000); a log-scale number (break_infinity.js does this for Antimatter Dimensions) waits until a hero nears it.
+
+Numbers (median of 7 seeds, with Auto; the forge's part → with this): the best stage at 50 h 300 → 310, 100 h 470 → 510,
+200 h 800 → 910, 300 h 1,130 → 1,280, 600 h 1,590 → 1,800, 1,000 h 1,850 → 2,140, 1,200 h 2,010 → 2,290 (stage 1,000 at hour
+221, 2,000 at 821, and still climbing); a Mythic about every 18 hours of play past stage 500, Lords' included. Against
+the game before the endless climb: 690 at hour 1,200, where it had stopped. The worst honest climb came to 53% of the
+leaderboard's allowance (§3.17).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat

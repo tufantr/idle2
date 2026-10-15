@@ -285,7 +285,7 @@ test('a Swift boss that comes on mid-step escapes on its own 3-s clock, whatever
         const g = new Game(null, T0);
         const s = g.state;
         s.meta.lastInputAt = T0 + 1e12;   // no Focus
-        for (const a of ACHIEVEMENTS) s.achievements[a.id] = true;
+        for (const a of ACHIEVEMENTS) if (a.req.key !== 'maxStage' || a.req.value <= 250) s.achievements[a.id] = true;   // (every medal a hero at 250 can hold)
         s.skills.combat.xp = 2e8;
         Object.assign(s.combat, { bestStage: 250, maxStage: 19, stage: 19, autoEat: 'none' });
         s.trials.active = 'swift_bosses';

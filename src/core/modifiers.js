@@ -112,6 +112,10 @@ function emptyMods() {
         skillMult: {},   // per skill, multiplying its speed after every bonus (a mini-game's ×2)
         gearAtk: 0, gearDef: 0,
         atkMult: 0, defMult: 0, hpMult: 0,
+        // bonuses that multiply instead of adding into the pool above, kept as logarithms so they add up here
+        // (the endless climb, docs/research_notes/endless-late-game.md §5.2 item 7: a perk level or a deep medal is
+        // worth as much at stage 2,000 as at 200, where a percent in a pool of +500% was worth a sixth of itself)
+        atkLog: 0, defLog: 0, hpLog: 0,
         critChance: 0, critDmg: 0, attackSpeed: 0, dodge: 0, lifesteal: 0,
         goldMult: 0, dropMult: 0, combatXpMult: 0, xpMult: 0,
         skillSpeed, doubleChance,
@@ -184,8 +188,12 @@ export function collectModifiers(state) {
     mods.atkMult += BASE.atkPerCombatLevel * (combatLevel - 1);
     mods.defMult += BASE.defPerCombatLevel * (combatLevel - 1);
 
-    // Perks bought with skill points.
-    for (const perk of PERKS) addMods(mods, perk.mods, state.perks[perk.id] || 0);
+    // Perks bought with skill points (Knight, Warlord and Paragon multiply: data/perks.js `mult`).
+    for (const perk of PERKS) {
+        const level = state.perks[perk.id] || 0;
+        addMods(mods, perk.mods, level);
+        for (const [stat, m] of Object.entries(perk.mult || {})) mods[`${stat}Log`] += level * Math.log(m);
+    }
 
     // Achievements: their own reward plus the small global bonus each.
     let unlockedCount = 0;
@@ -309,9 +317,9 @@ export function deriveStats(state, mods = collectModifiers(state)) {
 
     const brew = mods.potions || potionEffects(state);
     const legacy = legacyMult(state);
-    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk * brew.atk * legacy;
-    const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def * brew.def * legacy;
-    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * brew.hp * (bite.heroHp ?? 1) * legacy;
+    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * Math.exp(mods.atkLog) * tokenLayerAtk * camp.atk * brew.atk * legacy;
+    const def = mods.gearDef * (1 + mods.defMult) * Math.exp(mods.defLog) * tokenLayerDef * camp.def * brew.def * legacy;
+    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * Math.exp(mods.hpLog) * tokenLayerHp * camp.hp * brew.hp * (bite.heroHp ?? 1) * legacy;
     // nothing makes the hero slower than his base (a hand-made affix below nothing made him never swing, or swing at the cap)
     const attackSpeed = Math.max(0, Math.min(BASE.caps.attackSpeed, mods.attackSpeed));
 

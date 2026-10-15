@@ -2710,10 +2710,14 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .done-bar i { display: block; height: 100%; background: linear-gradient(90deg, #b7791f, #fde68a); }
 .done-count { font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
-/* The Abyss's strata (src/data/strata.js): each its own light over the Abyss's painting, until each has one */
-.battle[data-scene] .battle-sky { filter: brightness(1); transition: filter 1.2s ease; }
-.battle.boss-fight[data-scene] .battle-sky { filter: brightness(0.78) saturate(1.15) contrast(1.06); }
-.battle.idle[data-scene] .battle-sky { filter: saturate(0.55) brightness(0.78); }
+/* The Abyss's strata (src/data/strata.js): each its own light over the Abyss's painting, until each has one. Past
+   Pandemonium the strata come round again, each round's painting cast in new hues (--land-hue, scene.js landHue). */
+.battle[data-scene] .battle-sky, .battle[data-scene] .battle-far, .battle[data-scene] .battle-near { filter: hue-rotate(var(--land-hue, 0deg)) brightness(1); transition: filter 1.2s ease; }
+.battle.boss-fight[data-scene] .battle-sky, .battle.boss-fight[data-scene] .battle-far, .battle.boss-fight[data-scene] .battle-near { filter: hue-rotate(var(--land-hue, 0deg)) brightness(0.78) saturate(1.15) contrast(1.06); }
+.battle.idle[data-scene] .battle-sky, .battle.idle[data-scene] .battle-far, .battle.idle[data-scene] .battle-near { filter: hue-rotate(var(--land-hue, 0deg)) saturate(0.55) brightness(0.78); }
+.battle.slowmo[data-scene] .battle-sky, .battle.slowmo[data-scene] .battle-far, .battle.slowmo[data-scene] .battle-near { filter: hue-rotate(var(--land-hue, 0deg)) brightness(0.6) saturate(0.7); }
+/* a Lord's stage on the path (data/zones.js LORDS): its crown, gold until its due is paid */
+.stage-path li.lord b, .stage-path li.lord button { box-shadow: 0 0 0 2px rgba(252, 211, 77, 0.75), 0 0 12px rgba(252, 211, 77, 0.45); }
 
 /* The week's Trial (src/data/trials.js weeklyTrialAt): a ribbon on its card, its laurel goal in the foot */
 .trial-card.weekly { border-color: rgba(134, 239, 172, 0.55); box-shadow: 0 0 0 1px rgba(134, 239, 172, 0.25), 0 0 14px rgba(74, 222, 128, 0.18); }

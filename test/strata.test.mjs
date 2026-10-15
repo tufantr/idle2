@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { STRATA, STRATA_FROM, STRATUM_STAGES, stratumForStage, stratumStartingAt } from '../src/data/strata.js';
+import { STRATA, STRATA_FROM, STRATUM_STAGES, stratumForStage, stratumStartingAt, stratumById } from '../src/data/strata.js';
 import { ZONES, zoneForStage, abyssGearTier } from '../src/data/zones.js';
 import { enemyForStage } from '../src/core/formulas.js';
 import { SPRITES } from '../src/data/sprites.js';
@@ -15,17 +15,24 @@ import { spawnEnemy, onEnemyDeath } from '../src/systems/combat.js';
 rng.setSource(seededRandom(5));
 const T0 = 1_700_000_000_000;
 
-test('the strata stack from stage 101, 25 stages each, the last going on below', () => {
+test('the strata stack from stage 101, 25 stages each, and past the last they come round again, numbered', () => {
     assert.equal(stratumForStage(100), null);
     assert.equal(stratumForStage(STRATA_FROM).id, 'abyss');
     assert.equal(stratumForStage(125).id, 'abyss');
     assert.equal(stratumForStage(126).id, STRATA[1].id);
     const lastFrom = STRATA_FROM + (STRATA.length - 1) * STRATUM_STAGES;
     assert.equal(stratumForStage(lastFrom).id, STRATA.at(-1).id);
-    assert.equal(stratumForStage(lastFrom + 5000).id, STRATA.at(-1).id);
+    // past Pandemonium the strata below the Abyss's own come round again, each a place of its own, its painting cast anew
+    const below = stratumForStage(lastFrom + STRATUM_STAGES);
+    assert.deepEqual([below.id, below.name, below.cycle, below.paint], [`${STRATA[1].id}-2`, `${STRATA[1].name} II`, 2, STRATA[1].id]);
+    const round = (STRATA.length - 1) * STRATUM_STAGES;
+    assert.equal(stratumForStage(lastFrom + STRATUM_STAGES + round).name, `${STRATA[1].name} III`);
+    assert.equal(stratumForStage(lastFrom + 5000).cycle > 2, true);
+    assert.equal(stratumById(below.id).from ?? stratumById(below.id).index, below.index);
+    assert.equal(stratumById('abyss-2'), null, 'the Abyss itself comes round no more');
     assert.equal(stratumStartingAt(126).id, STRATA[1].id);
     assert.equal(stratumStartingAt(127), null);
-    assert.equal(stratumStartingAt(lastFrom + STRATUM_STAGES), null, 'no card below the last');
+    assert.equal(stratumStartingAt(lastFrom + STRATUM_STAGES).id, below.id, 'a card for each new round');
 });
 
 test('a stratum is the Abyss with its own name and monsters: the same scaling, loot and gear depth', () => {
@@ -33,7 +40,8 @@ test('a stratum is the Abyss with its own name and monsters: the same scaling, l
     const z = zoneForStage(stage);
     const s = stratumForStage(stage);
     assert.equal(z.id, 'abyss');
-    assert.equal(z.stratum, s.id);
+    assert.equal(z.stratum, s.paint);
+    assert.equal(z.place, s.id);
     assert.equal(z.name, s.name);
     assert.deepEqual(z.monsters, s.monsters);
     assert.equal(z.depth, Math.floor((stage - 1) / 10) - ZONES.length + 1);

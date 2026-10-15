@@ -198,3 +198,48 @@ test('a piece says about how many stages it is worth where the hero climbs', asy
     assert.equal(stagesWords(-1.2), '−1 stage');
     assert.equal(stagesWords(0.4), '');
 });
+
+test('a Lord every 100 stages from 200: its first defeat ever leaves a sure piece, legendary, Mythic from 500', async () => {
+    const { enemyForStage } = await import('../src/core/formulas.js');
+    const { isLordStage, LORDS } = await import('../src/data/zones.js');
+    const { spawnEnemy } = await import('../src/systems/combat.js');
+    const { rng, seededRandom } = await import('../src/core/rng.js');
+    assert.equal(isLordStage(100), false, 'the first lands keep their bosses');
+    assert.ok(isLordStage(LORDS.from) && isLordStage(600) && !isLordStage(610));
+    assert.equal(enemyForStage(600).name.endsWith('(Lord)'), true);
+    assert.equal(enemyForStage(600).lord, true);
+    assert.equal(enemyForStage(610).lord, undefined);
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.combat.xp = 1e10;
+    game.enterCombat();
+    s.stats.bossKills = s.stats.bossFalls = 5;
+    s.settings.autoSalvage = 'off';
+    const beat = stage => {
+        const c = s.combat;
+        Object.assign(c, { stage, maxStage: stage, bestStage: Math.max(c.bestStage, stage), mode: 'stages', farmMode: false, regroupLeft: 0, frontierDrop: true });
+        rng.setSource(() => 0.9999);
+        spawnEnemy(game);
+        c.enemy.hp = 1;
+        c.enemy.atk = 0;
+        game.recompute();
+        c.hp = game.derived.maxHp;
+        c.playerTimer = game.derived.attackInterval;
+        let now = game.now;
+        const kills = s.stats.bossKills;
+        for (let guard = 0; s.stats.bossKills === kills && guard < 600; guard++) { now += 100; game.tick(now); }
+        rng.setSource(seededRandom(1));
+        return game.drainEvents().filter(e => e.type === 'itemDropped' && e.lord).map(e => e.item);
+    };
+    const [legendary] = beat(300);
+    assert.equal(legendary?.rarity, 'legendary', 'a Lord below 500: legendary');
+    assert.equal(s.combat.lordsBeaten, 300);
+    assert.equal(beat(300).length, 0, 'once ever');
+    const [mythic] = beat(600);
+    assert.equal(mythic?.rarity, 'mythic', 'from 500: Mythic');
+    // a save from before the Lords counts those above its best as felled: their due is for new ground
+    const raw = JSON.parse(game.serialize(T0));
+    delete raw.combat.lordsBeaten;
+    raw.combat.bestStage = 870;
+    assert.equal(loadState(raw, T0).combat.lordsBeaten, 800);
+});

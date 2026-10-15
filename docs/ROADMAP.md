@@ -1243,6 +1243,12 @@ Keeping it running:
       and ▲ Equip say about **how many stages** a piece is worth. Seven simulated players with Auto reach stage 2,000 at
       hour 1,161 (1,830 by hour 1,200 before), the forge +40 to +51 by then, and a Mythic about once every 21 hours of
       play past stage 500
+- [x] **The endless climb, third part: the deep** (DESIGN §3.32). A **Lord** every 100 stages from 200, crowned on the
+      path, whose first defeat ever leaves a sure legendary (Mythic from 500); past Pandemonium **the strata come round**
+      again without end, numbered and cast in new hues, each with its card; **a medal every 500 stages** from 1,000 (×1.1
+      attack, defence and health); Knight, Warlord and Paragon **multiply** instead of adding into the pool of percents
+      (×1.025, ×1.025 and ×1.01 a level). Seven simulated players with Auto: stage 1,000 at hour 221, 2,000 at hour 821,
+      2,290 by hour 1,200 and still climbing (690, stopped, before the endless climb)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by
@@ -1262,8 +1268,9 @@ A rule to settle (the owner's call):
 
 The long game (the research's last items):
 
-- [ ] **Something to reach past stage 500** (M): past it only the records and the calendar are left;
-      Pandemonium could bring a layer or a medal every 50 stages
+- [x] **Something to reach past stage 500** (M): past it only the records and the calendar were left. Now a
+      Lord every 100 stages, the strata coming round past Pandemonium, and a medal every 500 (the endless climb,
+      third part, below)
 - [ ] **An end boss** (M)
 - [ ] **Early Ascensions that each open something new** (M)
 - [ ] **A cape for 100% completion** (S)

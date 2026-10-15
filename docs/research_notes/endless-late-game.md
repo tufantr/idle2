@@ -6,9 +6,10 @@ version. Tell me how much each factor contributes to pushing max stage forward, 
 of the late game is. It should be pretty much endless: players should be able to push thousands of levels
 while still finding upgrades, and new upgrades push them even further."*
 
-**Built since** (DESIGN §3.30): the first part of §5's package, with the deep stages eased over 400–700 instead
-of at once (the burst in hours 100–150 smoothed); 7 players with Auto reach stage 1,000 at hour 281 and 1,830 at
-hour 1,200, still climbing. Gear (a forge without a cap, Mythic) and the deep's Lords and strata are next.
+**Built since** (DESIGN §3.30–3.32): all of §5.2 but the log-scale numbers. The deep stages eased over 400–700 instead
+of at once (the burst in hours 100–150 smoothed), Legacy, the camp past 25; the forge on the slot without a top, Mythic
+and Primal, the frontier's piece, "+N stages"; Lords, the strata coming round, a medal every 500, perks that multiply.
+7 players with Auto reach stage 1,000 at hour 221 and 2,000 at hour 821, and are still climbing at hour 1,200 (2,290).
 
 **How to read it.** A sentence with a link is from that source. **[Inference]** is my own reasoning or
 arithmetic. Fantasy Idle numbers come from the code at commit 627f21e and from simulator runs made for this

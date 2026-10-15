@@ -2,7 +2,7 @@
 
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
-import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS, FRONTIER_DROP } from '../data/items.js';
+import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS, FRONTIER_DROP, MYTHIC, PRIMAL } from '../data/items.js';
 import { addItem, dropTypesFor, isUpgrade, laggingSlot, PITY_LAG } from './inventory.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing, foodHeal } from '../data/resources.js';
@@ -297,6 +297,7 @@ function rollLoot(game, enemy, payout) {
         }
     }
     if (ladder) frontierPiece(game, enemy, drops);
+    if (ladder && enemy.lord) lordsDue(game, enemy, drops);
     if (ladder) pityMark(game, zone, drops, enemy.stage);
     // A new hero fights with his fists: the first monster he ever beats leaves him a sword.
     if (state.stats.kills === 1 && !state.prestige.count && !state.equipped.Weapon && !state.inventory.some(i => i.type === 'Weapon')) {
@@ -337,6 +338,28 @@ function frontierPiece(game, enemy, drops) {
         log(game, `${item.icon} ${item.name}: this run's piece from the frontier.`, 'loot');
         game.emit({ type: 'itemDropped', item, frontier: true });
     }
+}
+
+/**
+ * A Lord's due (data/zones.js LORDS): its first defeat ever leaves a sure piece from its depth, legendary, and from
+ * stage 500 Mythic (Primal one time in twenty from 1,000), for the weapon or armour slot that lags furthest behind
+ * (a ring or an earring was a poor due). After that it is a boss like the others.
+ */
+function lordsDue(game, enemy, drops) {
+    const state = game.state;
+    const c = state.combat;
+    if (enemy.stage <= (c.lordsBeaten || 0)) return;
+    c.lordsBeaten = enemy.stage;
+    const zone = zoneForStage(enemy.stage);
+    const top = enemy.stage < MYTHIC.from ? 'legendary' : enemy.stage >= PRIMAL.from && rng.chance(1 / PRIMAL.odds) ? 'primal' : 'mythic';
+    const lag = laggingSlot(state, zone);
+    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { rarity: top, tier: zone.gearTier });
+    const result = addItem(game, item);
+    bumpStat(game, 'itemsDropped');
+    if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');
+    drops.push({ item, kept: result.kept });
+    log(game, `${item.icon} ${enemy.name.replace(' (Lord)', '')}, Lord of ${zone.name.replace(/^The /, 'the ')}, leaves its due: ${RARITIES.find(r => r.id === item.rarity).name} ${item.name}.`, 'loot');
+    if (result.kept) game.emit({ type: 'itemDropped', item, lord: true });
 }
 
 /**

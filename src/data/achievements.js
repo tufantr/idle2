@@ -27,6 +27,12 @@ export const ACHIEVEMENTS = [
     { id: 'deep_300',     name: 'Stormrider',        desc: 'Reach Stage 300',                 req: stat('maxStage', 300),       reward: '+5% DEF, +5% Max HP',     mods: { defMult: 0.05, hpMult: 0.05 } },
     { id: 'deep_400',     name: 'Choirbreaker',      desc: 'Reach Stage 400',                 req: stat('maxStage', 400),       reward: '+5% ATK, +5% DEF',        mods: { atkMult: 0.05, defMult: 0.05 } },
     { id: 'deep_500',     name: 'Bottom of the World', desc: 'Reach Stage 500',               req: stat('maxStage', 500),       reward: '+10% ATK, DEF and Max HP', mods: { atkMult: 0.10, defMult: 0.10, hpMult: 0.10 } },
+    // A step every 500 stages past 500 (the endless climb, October 2026; DESIGN §3.32): each multiplies attack, defence
+    // and health (core/modifiers.js atkLog), so it is felt however deep the hero is. Mythic gear comes at 500 and Primal
+    // at 1,000 (data/items.js), a Lord's sure piece every 100 (data/zones.js LORDS).
+    ...[[1000, 'The Thousandth Stair'], [1500, 'Below the Below'], [2000, 'Two Thousand Fathoms'], [2500, 'The Long Dark'], [3000, 'Unending'],
+        [4000, 'Lightless'], [5000, 'Heart of the Abyss'], [7500, 'Where the Stairs Forget'], [10000, 'The Last Stair']].map(([stage, name]) => (
+        { id: `deep_${stage}`, name, desc: `Reach Stage ${stage.toLocaleString('en-US')}`, req: stat('maxStage', stage), reward: '×1.1 ATK, DEF and Max HP', mods: { atkLog: Math.log(1.1), defLog: Math.log(1.1), hpLog: Math.log(1.1) } })),
     { id: 'ascendant',    name: 'Ascendant',         desc: 'Ascend once',                     req: stat('ascensions', 1),       reward: '+10% Prestige Tokens',    mods: { tokenMult: 0.10 }, after: 'ascension' },
     { id: 'trial_master', name: 'Trial Master',      desc: 'Clear 20 tiers of the Trials',    req: stat('trialTiers', 20),      reward: '+5% ATK, +5% DEF',        mods: { atkMult: 0.05, defMult: 0.05 }, after: 'trials' },
     { id: 'excavator',    name: 'The Excavator',     desc: 'Reach Mining level 25',           req: skillLevel('mining', 25),    reward: '+10% Mining speed',       mods: { skillSpeed: { mining: 0.10 } } },

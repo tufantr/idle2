@@ -8,7 +8,7 @@
 //
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
-// --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, POTION_KINDS, POLICY; numbers
+// --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, PERKS, POTION_KINDS, POLICY; numbers
 // only), for sweeps. --json writes the run as JSON (milestones, a log of big moments by band, time by
 // task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
@@ -108,7 +108,7 @@ const SAVE_PREFIX = String(args.save || 'hero');
 const JSON_OUT = args.json ? String(args.json) : null;
 
 // --set=ROOT.path:value[;ROOT.path:value]: a constant changed before the game starts.
-const SET_ROOTS = { BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, POTION_KINDS, POLICY };
+const SET_ROOTS = { BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, PERKS, POTION_KINDS, POLICY };
 const overrides = {};
 if (args.set) for (const kv of String(args.set).split(';').filter(Boolean)) {
     const [path, raw] = kv.split(':');

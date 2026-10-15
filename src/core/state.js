@@ -23,6 +23,7 @@ import { capeEarned, festivalCloak, FESTIVAL_CLOAKS } from '../data/capes.js';
 import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 import { CLAN_FIGHT_MS } from '../data/social.js';
+import { LORDS } from '../data/zones.js';
 
 // The perk reset (the owner, 15 October 2026, after the perks deepened and their prices rose): every save from
 // before it gets each perk level back as skill points, once, to spend at today's prices. What a level cost was
@@ -86,6 +87,7 @@ export function createDefaultState(now = Date.now()) {
             recovering: false, // fallen: resting to full health, then back into the fight by himself
             pity: 0,           // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
             frontierDrop: false,   // this run's piece from the best stage's depth is found (data/items.js FRONTIER_DROP)
+            lordsBeaten: 0,        // the deepest Lord ever felled (data/zones.js LORDS): each pays its due once
             stallMs: 0,        // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
             pack: null         // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
         },
@@ -625,6 +627,8 @@ function normalise(data, now) {
     if (state.action && state.combat.active) state.action = null;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
     state.combat.frontierDrop = state.combat.frontierDrop === true;
+    // a save from before the Lords counts those above its best as felled (their due is for new ground)
+    state.combat.lordsBeaten = Number.isFinite(Number(data?.combat?.lordsBeaten)) ? intIn(state.combat.lordsBeaten, 0, MAX_STAGE, 0) : Math.floor(state.combat.bestStage / LORDS.every) * LORDS.every;
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
     const pack = state.combat.pack;
     state.combat.pack = isPlainObject(pack) && Math.floor(Number(pack.stage)) === state.combat.stage && Number(pack.killed) >= 1

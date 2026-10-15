@@ -46,16 +46,45 @@ export const STRATA = [
       monsters: ['Rust Devil', 'Sin Beast', 'Spark Demon', 'Night Hag'], boss: 'Pandemonium Lord' }
 ];
 
-/** The stratum a stage of the Abyss lies in (the last one goes on below it), or null above the Abyss. */
+// Past Pandemonium (stage 500) the strata go on without end (the endless climb, October 2026; DESIGN §3.32): the
+// others below the Abyss's own again in turn, each round with a numeral (The Weeping Dark II) and its own cast of
+// light (`cycle`: the scene turns its painting's hues, `paint` is the painting). Its id is the first's with the
+// round (`weeping-2`), so each is a place of its own: a card when first reached, a line in the chronicle.
+const ROUND = STRATA.length - 1;
+const ROMAN = [['M', 1000], ['CM', 900], ['D', 500], ['CD', 400], ['C', 100], ['XC', 90], ['L', 50], ['XL', 40], ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]];
+const roman = n => ROMAN.reduce((out, [r, v]) => { while (n >= v) { out += r; n -= v; } return out; }, '');
+
+/** The `i`-th stratum below the Abyss's first (0: the Abyss itself), its rounds past Pandemonium included. */
+export function stratumAt(i) {
+    if (i < STRATA.length) return { ...STRATA[i], index: i, cycle: 0, paint: STRATA[i].id };
+    const k = i - STRATA.length;
+    const base = STRATA[1 + (k % ROUND)];
+    const cycle = 2 + Math.floor(k / ROUND);
+    return { ...base, id: `${base.id}-${cycle}`, name: `${base.name} ${roman(cycle)}`, index: i, cycle, paint: base.id };
+}
+
+/** A stratum by its id, a round's (`weeping-2`) included, or null. */
+export function stratumById(id) {
+    const m = /^([a-z]+)(?:-(\d+))?$/.exec(String(id || ''));
+    if (!m) return null;
+    const at = STRATA.findIndex(s => s.id === m[1]);
+    if (at < 0) return null;
+    if (!m[2]) return stratumAt(at);
+    const cycle = Number(m[2]);
+    if (at === 0 || at >= STRATA.length || cycle < 2 || cycle > 1000) return null;
+    return stratumAt(STRATA.length + (cycle - 2) * ROUND + at - 1);
+}
+
+/** The stratum a stage of the Abyss lies in, or null above the Abyss. */
 export function stratumForStage(stage) {
     if (stage < STRATA_FROM) return null;
-    const i = Math.min(STRATA.length - 1, Math.floor((stage - STRATA_FROM) / STRATUM_STAGES));
-    return { ...STRATA[i], index: i, from: STRATA_FROM + i * STRATUM_STAGES };
+    const i = Math.floor((stage - STRATA_FROM) / STRATUM_STAGES);
+    return { ...stratumAt(i), from: STRATA_FROM + i * STRATUM_STAGES };
 }
 
 /** The stratum whose first stage is `stage`, or null (the first step into it is a card). */
 export function stratumStartingAt(stage) {
     if (stage < STRATA_FROM || (stage - STRATA_FROM) % STRATUM_STAGES !== 0) return null;
     const i = (stage - STRATA_FROM) / STRATUM_STAGES;
-    return i < STRATA.length ? { ...STRATA[i], index: i, from: stage } : null;
+    return { ...stratumAt(i), from: stage };
 }

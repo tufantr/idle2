@@ -13,7 +13,7 @@ import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { STRATA } from '../data/strata.js';
+import { stratumById } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal, legacyMult } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
@@ -1627,7 +1627,7 @@ function chronicleLine(e) {
     switch (e.kind) {
         case 'start': return ['campfire', 'The adventure began'];
         case 'zone': {   // a zone, or a stratum of the Abyss below its first (data/strata.js)
-            const z = ZONES.find(x => x.id === e.id) || STRATA.find(x => x.id === e.id);
+            const z = ZONES.find(x => x.id === e.id) || stratumById(e.id);
             return z ? [`mon/${z.boss}`, `Reached ${z.name}`] : null;
         }
         case 'pet': { const p = PETS.find(x => x.id === e.id); return p ? [`pet/${p.id}`, `${p.name} joined the hero`] : null; }

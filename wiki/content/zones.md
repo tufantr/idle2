@@ -17,7 +17,11 @@ Your hero's first step into a new land is greeted with a card: its painting, its
 
 ## Depths and strata
 
-The last land, the Abyss, begins at stage {{AUTHORED_STAGES - STAGES_PER_ZONE + 1}} like any other, but it does not end at stage {{AUTHORED_STAGES}}. Past it the Abyss goes on in depths of {{STAGES_PER_ZONE}} stages, depth 1 being stages {{AUTHORED_STAGES + 1}} to {{AUTHORED_STAGES + STAGES_PER_ZONE}}, each ending with a boss, and in strata of {{STRATUM_STAGES}} stages from stage {{STRATA_FROM}}: {{STRATA.length}} named layers, each with {{STRATA[1].monsters.length}} monsters, a boss and a painting of its own. Past the last, [[Pandemonium]] (from stage {{STRATA_FROM + (STRATA.length - 1) * STRATUM_STAGES}}), it goes on as that stratum for ever.
+The last land, the Abyss, begins at stage {{AUTHORED_STAGES - STAGES_PER_ZONE + 1}} like any other, but it does not end at stage {{AUTHORED_STAGES}}. Past it the Abyss goes on in depths of {{STAGES_PER_ZONE}} stages, depth 1 being stages {{AUTHORED_STAGES + 1}} to {{AUTHORED_STAGES + STAGES_PER_ZONE}}, each ending with a boss, and in strata of {{STRATUM_STAGES}} stages from stage {{STRATA_FROM}}: {{STRATA.length}} named layers, each with {{STRATA[1].monsters.length}} monsters, a boss and a painting of its own. Past the last, [[Pandemonium]] (stages {{STRATA_FROM + (STRATA.length - 1) * STRATUM_STAGES}} to {{STRATA_FROM + STRATA.length * STRATUM_STAGES - 1}}), the strata below the Abyss's own come round again without end, each round with a numeral and its painting cast in new hues: {{stratumAt(STRATA.length).name}} from stage {{STRATA_FROM + STRATA.length * STRATUM_STAGES}}, {{stratumAt(STRATA.length + STRATA.length - 1).name}} after the next round, and so on.
+
+## The Lords
+
+From stage {{LORDS.from}}, the boss of every {{LORDS.every}}th stage is a **Lord**, marked with a crown on the stage path. The first time you ever beat one it leaves a sure piece of gear from its depth, for the weapon or armour slot that lags furthest behind: legendary, and from stage {{MYTHIC.from}} Mythic (a Primal one time in {{PRIMAL.odds}} from stage {{PRIMAL.from}}). After that it is a boss like any other. A save from before the Lords counts those above its best stage as beaten: their due is for new ground.
 
 Every depth keeps the Abyss's loot table and richness. What changes is how hard the monsters are and the gear they drop.
 

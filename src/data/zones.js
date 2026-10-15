@@ -59,7 +59,7 @@ export function zoneForStage(stage) {
     const depth = index - ZONES.length + 1;
     const abyss = ZONES[ZONES.length - 1];
     const s = stratumForStage(stage);
-    return { ...abyss, name: s.name, stratum: s.id, monsters: s.monsters, boss: s.boss, depth, index, gearTier: abyssGearTier(depth) };
+    return { ...abyss, name: s.name, stratum: s.paint, place: s.id, cycle: s.cycle, monsters: s.monsters, boss: s.boss, depth, index, gearTier: abyssGearTier(depth) };
 }
 
 /** Runite at depths 1–2, Dragonbone at 3–4, Abyssal from 5. */
@@ -70,6 +70,12 @@ export function abyssGearTier(depth) {
 export function isBossStage(stage) {
     return stage % STAGES_PER_ZONE === 0;
 }
+
+// The Lords (the endless climb, October 2026; DESIGN §3.32): from stage LORDS.from the boss of every LORDS.every-th
+// stage is its stratum's Lord, and its first defeat ever leaves a sure piece of gear from its depth: legendary, and
+// from stage 500 Mythic (data/items.js MYTHIC; Primal one time in twenty from 1,000). A record on a grid, every 100.
+export const LORDS = { from: 200, every: 100 };
+export const isLordStage = stage => stage >= LORDS.from && stage % LORDS.every === 0;
 
 // Gems that can drop from any zone (weighted toward the zone tier).
 export const GEM_DROP_TABLE = [

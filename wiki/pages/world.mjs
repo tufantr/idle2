@@ -2,7 +2,7 @@
 // the camp. Monsters' numbers are the game's own (enemyForStage, dungeonEnemy, titanEnemy), stage by stage.
 
 import { ZONES, STAGES_PER_ZONE, zoneForStage, abyssGearTier, isBossStage, GEM_DROP_TABLE } from '../../src/data/zones.js';
-import { STRATA, STRATA_FROM, STRATUM_STAGES } from '../../src/data/strata.js';
+import { STRATA, STRATA_FROM, STRATUM_STAGES, stratumAt } from '../../src/data/strata.js';
 import { DUNGEONS, UNIQUES, DUNGEON_MILESTONES, ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, FRAGMENTS_PER_UNIQUE, DIRECT_UNIQUE_CHANCE,
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE, TITAN_TIME_MS, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_BONUS, TITAN_LATE_FROM, TITAN_BANK, TITAN_UNLOCK_STAGE, titanStage } from '../../src/data/dungeons.js';
 import { BESTIARY, KILL_STARS } from '../../src/data/bestiary.js';
@@ -105,7 +105,7 @@ function dungeonsSection(from, to) {
 /** The strata below the Abyss as painted tiles, each with its stages. */
 const strataTiles = () => tiles(STRATA.slice(1).map((s, i) => {
     const from = STRATA_FROM + (i + 1) * STRATUM_STAGES;
-    return { href: path.zone(s.id), title: esc(s.name), pic: icon(`mon/${s.boss}`, 1.5), note: `stages ${from}${i + 2 === STRATA.length ? '+' : `–${from + STRATUM_STAGES - 1}`}`, art: paintStyle(s.id) };
+    return { href: path.zone(s.id), title: esc(s.name), pic: icon(`mon/${s.boss}`, 1.5), note: `stages ${from}–${from + STRATUM_STAGES - 1}${i + 2 === STRATA.length ? ', then round again' : ''}`, art: paintStyle(s.id) };
 }), 'painted small');
 
 function zonePage(z, index, help) {
@@ -150,14 +150,14 @@ function stratumPage(s, i, help) {
         lead: esc(s.line),
         infobox: infobox({
             title: esc(s.name), image: icon(`mon/${s.boss}`, 3), caption: `Its boss: ${monLink(s.boss)}`,
-            rows: [['Stages', `${from}${last ? '+' : `–${to}`}`], ['Abyss depth', `${depths[0]}${depths.length > 1 ? `–${depths[depths.length - 1]}` : ''}${last ? '+' : ''}`], ['Gear that drops', gear],
+            rows: [['Stages', `${from}–${to}`], ['Abyss depth', `${depths[0]}${depths.length > 1 ? `–${depths[depths.length - 1]}` : ''}`], ['Gear that drops', gear],
                 i > 1 ? ['Above it', link(path.zone(STRATA[i - 1].id), esc(STRATA[i - 1].name))] : ['Above it', link(path.zone('abyss'), 'The Abyss')],
                 !last ? ['Below it', link(path.zone(STRATA[i + 1].id), esc(STRATA[i + 1].name))] : null]
         }),
         body: [
             help.prose(path.zone(s.id)),
             section('Monsters', `<p class="chips">${s.monsters.map(m => `<span class="chip">${monLink(m)}</span>`).join('')}<span class="chip boss">${monLink(s.boss)}</span></p>`),
-            section('Stages', `<p>Every tenth stage is a boss on a ${BALANCE.combat.bossTimeMs / 1000}-second timer.${last ? ' Past the stages below, Pandemonium goes on for ever, its monsters ever stronger.' : ''}</p>${table(STAGE_HEAD, stages, { cls: 'stages', wide: true })}`),
+            section('Stages', `<p>Every tenth stage is a boss on a ${BALANCE.combat.bossTimeMs / 1000}-second timer.${last ? ' Past the stages below, the strata come round again, each round numbered and cast in new hues, its monsters ever stronger.' : ` Its stratum comes round again past Pandemonium, as ${esc(stratumAt(STRATA.length + i - 1).name)} from stage ${STRATA_FROM + (STRATA.length + i - 1) * STRATUM_STAGES}.`}</p>${table(STAGE_HEAD, stages, { cls: 'stages', wide: true })}`),
             lootSection(zone, from, to),
             dungeonsSection(from, to)
         ].filter(Boolean).join('\n'),

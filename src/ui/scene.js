@@ -3,7 +3,7 @@
 // here is presentation: the game state is only read, and the player's clicks go out through
 // the `actions` callbacks.
 
-import { ZONES, zoneForStage, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
+import { ZONES, zoneForStage, STAGES_PER_ZONE, isBossStage, isLordStage } from '../data/zones.js';
 import { clanBossFor } from '../data/social.js';
 import { clanGuardOpen } from '../systems/clanfight.js';
 import { dungeonById } from '../data/dungeons.js';
@@ -42,6 +42,10 @@ const LOOT_GAP = 900;          // the next piece while this one still glows
 const LOOT_MAX_QUEUED = 3;     // a tab catching up shows its best few
 // the boss's pip on the path, the boss clock and the regroup line
 const SKULL = glyph('skull');
+const CROWN = sprite('crown', { scale: 0.5, cls: 'res-spr glyph soft' });   // a Lord's stage (data/zones.js LORDS)
+const bossName = name => name.replace(/ \((Boss|Lord)\)$/, '');
+/** A round of the strata past Pandemonium (data/strata.js) casts its painting in new hues. */
+const landHue = zone => (zone?.cycle ? ((zone.cycle - 1) * 47) % 360 : 0);
 const CLOCK = glyph('time');
 const CAMPFIRE = sprite('campfire', { scale: 0.5, cls: 'soft res-spr' });
 const CTA_ICON = sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' });
@@ -515,10 +519,11 @@ export function createScene(root, actions) {
             nodes = Array.from({ length: STAGES_PER_ZONE }, (_, i) => {
                 const s = start + i;
                 const boss = isBossStage(s);
+                const lord = boss && isLordStage(s) && s > (c.lordsBeaten || 0);   // a Lord whose due is still to come
                 const due = boss && pity !== null ? ` · ${pity} of ${PITY_MARKS} marks toward a sure piece of gear` : '';
                 const here = s === c.stage && pack > 1;
-                return { label: s, state: s === c.stage ? 'now' : s <= c.maxStage ? 'done' : 'next', boss, go: s !== c.stage && s <= c.maxStage,
-                    title: `${boss ? 'Boss · ' : ''}Stage ${s}${due}${here ? ` · a pack of ${pack}, ${beaten} beaten` : ''}`, pity: boss && pity !== null ? pity : undefined,
+                return { label: s, state: s === c.stage ? 'now' : s <= c.maxStage ? 'done' : 'next', boss, lord, go: s !== c.stage && s <= c.maxStage,
+                    title: `${lord ? 'A Lord · its first fall leaves a sure piece of top gear · ' : boss ? 'Boss · ' : ''}Stage ${s}${due}${here ? ` · a pack of ${pack}, ${beaten} beaten` : ''}`, pity: boss && pity !== null ? pity : undefined,
                     pack: here ? [pack, beaten] : undefined };
             });
         }
@@ -526,10 +531,10 @@ export function createScene(root, actions) {
         if (key === lastPathKey) return;
         lastPathKey = key;
         el.path.innerHTML = nodes.map(n => {
-            const face = n.portrait || (n.boss ? SKULL : `<span>${n.label}</span>`);
+            const face = n.portrait || (n.lord ? CROWN : n.boss ? SKULL : `<span>${n.label}</span>`);
             const ring = n.pity !== undefined ? ` pity" style="--pity:${(n.pity / PITY_MARKS).toFixed(3)}` : '';
             const pips = n.pack ? `<i class="pack" aria-hidden="true">${Array.from({ length: n.pack[0] }, (_, k) => `<i class="${k < n.pack[1] ? 'on' : k === n.pack[1] ? 'up' : ''}"></i>`).join('')}</i>` : '';
-            return `<li class="${n.state}${n.boss ? ' boss' : ''}${n.portrait ? ' portrait' : ''}${ring}">${n.go
+            return `<li class="${n.state}${n.boss ? ' boss' : ''}${n.lord ? ' lord' : ''}${n.portrait ? ' portrait' : ''}${ring}">${n.go
                 ? `<button type="button" data-stage="${n.label}" title="Go to ${n.title}" aria-label="Go to ${n.title}">${face}</button>`
                 : `<b title="${n.title}${n.state === 'now' ? ' (here)' : n.state === 'next' ? ' (not reached yet)' : ''}">${face}</b>`}${pips}</li>`;
         }).join('');
@@ -581,7 +586,7 @@ export function createScene(root, actions) {
         }
         if (enemy.boss) lastBossScale = bossScale(lastFoeScale);
         el.foeIcon.innerHTML = sprite(monsterSpriteKey(enemy), { scale: lastBossScale || lastFoeScale, fallback: esc(enemy.icon || '👾') });
-        setText(el.foeName, enemy.name.replace(' (Boss)', ''));
+        setText(el.foeName, bossName(enemy.name));
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
         el.foe.classList.toggle('gilded', !!enemy.gilded);
@@ -596,8 +601,9 @@ export function createScene(root, actions) {
             actions.sound?.('rare');
         }
         if (enemy.boss && c.active) {
-            const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : `Boss · stage ${c.stage}`;
-            banner(`<small>${label}</small><strong>${esc(enemy.name.replace(' (Boss)', ''))}</strong>`, 'boss', 2200);
+            const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : enemy.lord ? `A Lord · stage ${c.stage}` : `Boss · stage ${c.stage}`;
+            const due = enemy.lord && c.mode === 'stages' && enemy.stage > (c.lordsBeaten || 0) ? '<span>Its first fall leaves a sure piece of top gear</span>' : '';
+            banner(`<small>${label}</small><strong>${esc(bossName(enemy.name))}</strong>${due}`, 'boss', due ? 2800 : 2200);
             move(el.battle, 'shake');
             actions.sound?.('boss');
         }
@@ -649,6 +655,8 @@ export function createScene(root, actions) {
             const c = state.combat;
             const d = game.derived;
             const scene = sceneFor(state);
+            const hue = c.mode === 'stages' ? landHue(zoneForStage(c.stage)) : 0;
+            if (el.battle.style.getPropertyValue('--land-hue') !== `${hue}deg`) el.battle.style.setProperty('--land-hue', `${hue}deg`);
             preloadNextLand(state);
             if (el.battle.dataset.scene !== scene) {
                 const arriving = sceneDrawn && !quietNow();   // not on the first draw
@@ -851,7 +859,7 @@ export function createScene(root, actions) {
                     if (ev.enemy.gilded) spawnFx('dmg gilded-gold', `+${fmt(ev.gold)}`, foe.x, foe.top - 6, 1400);
                     ev.drops.filter(dr => !dr.item).slice(0, 3).forEach((dr, i) => spawnFx('drop-pop', `+${fmt(dr.qty)} ${resIcon(dr.id)}`, foe.x - 14 + i * 14, foe.bottom - 4, 1200));
                     if (ev.enemy.boss && !ev.enemy.titan && game.state.combat.mode === 'stages') {
-                        banner(`<small>Victory</small><strong>${esc(ev.enemy.name.replace(' (Boss)', ''))} falls</strong><span>+${fmt(ev.gold)} gold</span>`, 'victory', 1800);
+                        banner(`<small>Victory</small><strong>${esc(bossName(ev.enemy.name))} falls</strong><span>+${fmt(ev.gold)} gold</span>`, 'victory', 1800);
                     }
                     break;
                 }

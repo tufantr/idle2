@@ -57,7 +57,8 @@ test('every bonus in the data is well-formed, so it reaches the modifier pipelin
             }
         }
     };
-    for (const perk of PERKS) check(`perk ${perk.id}`, perk.mods);
+    // (Knight, Warlord and Paragon multiply: their `mult` reaches the pipeline as atkLog, defLog and hpLog)
+    for (const perk of PERKS) check(`perk ${perk.id}`, perk.mods || Object.fromEntries(Object.entries(perk.mult || {}).map(([stat, m]) => [`${stat}Log`, Math.log(m)])));
     for (const ach of ACHIEVEMENTS) check(`achievement ${ach.id}`, ach.mods);
     for (const pet of PETS) check(`pet ${pet.id}`, pet.mods);
     for (const slot of AGILITY_SLOTS) for (const o of slot.obstacles) check(`obstacle ${o.id}`, o.mods);

@@ -31,10 +31,10 @@ import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
-import { RARITIES } from './data/items.js';
+import { RARITIES, MYTHIC, PRIMAL } from './data/items.js';
 import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
-import { STRATA, STRATUM_STAGES } from './data/strata.js';
+import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
 
@@ -654,7 +654,7 @@ function lootSound(item) {
  * A legendary (or better) that beats what he wears: its card once it has landed in the fight (scene.js playLoot), with
  * what it would do and an Equip on it, staying until it is tapped (the owner, October 2026: a legendary drop should be a moment).
  */
-function legendaryCard(item) {
+function legendaryCard(item, lord = false) {
     const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[4];
     const worth = equipGain(game.state, item);
     const stages = stagesWords(gainStages(game.state, worth));
@@ -664,7 +664,7 @@ function legendaryCard(item) {
         if (!game.state.inventory.some(i => i.id === item.id)) return;   // put on, or gone, meanwhile
         if (document.hidden) { toast(`${rarity.name} drop: ${item.name}!`, 'achievement', pic(itemSpriteKey(item), escapeHtml(item.icon || ''))); return; }   // (no card for a page out of sight)
         rewards.celebrate({
-            key: `loot:${item.id}`, kind: `legend-drop r-${rarity.id}`, kicker: `${rarity.name} drop`, title: item.name, sticky: true,   // until tapped (the owner's ask)
+            key: `loot:${item.id}`, kind: `legend-drop r-${rarity.id}`, kicker: lord ? `A Lord's due: ${rarity.name}` : `${rarity.name} drop`, title: item.name, sticky: true,   // until tapped (the owner's ask)
             icon: `<span class="cel-loot">${sprite(itemSpriteKey(item), { scale: 3, fallback: escapeHtml(item.icon || '') })}</span>`,
             lines: [gain ? `Worn: ${gain}` : '', `Tier ${item.tier}${item.depth ? ` · depth ${item.depth}` : ''}`].filter(Boolean),
             act: { label: 'Equip', run: () => window.FI.equip(item.id) }
@@ -728,8 +728,8 @@ function handleEvents(events) {
             case 'itemDropped': {
                 const rank = RARITIES.findIndex(r => r.id === ev.item.rarity);
                 const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);   // legendary and above
-                if (better) legendaryCard(ev.item);   // its card says it
-                else if (rank >= 2) toast(`${ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
+                if (better) legendaryCard(ev.item, !!ev.lord);   // its card says it
+                else if (rank >= 2) toast(`${ev.lord ? 'A Lord\'s due: ' : ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
                 break;
             }
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
@@ -786,12 +786,12 @@ function handleEvents(events) {
                 if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, DEFEAT_HOLD_MS);
                 break;
             case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
-                if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its painting, its line
-                    const s = STRATA.find(x => x.id === ev.zone);
+                if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its painting (a round's cast in new hues), its line
+                    const s = stratumById(ev.zone);
                     if (!s) break;
-                    const endless = s === STRATA[STRATA.length - 1];
-                    rewards.celebrate({ key: `zone:${s.id}`, kind: 'unlock', art: paintStyle(s.id), icon: sprite(`mon/${s.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
-                        kicker: 'Deeper into the Abyss', title: s.name, note: s.line, lines: [endless ? `Stages ${ev.stage}+, without end` : `Stages ${ev.stage}–${ev.stage + STRATUM_STAGES - 1}`], ms: 5000 });
+                    const hue = s.cycle ? `;filter:hue-rotate(${((s.cycle - 1) * 47) % 360}deg)` : '';
+                    rewards.celebrate({ key: `zone:${s.id}`, kind: 'unlock', art: paintStyle(s.paint) + hue, icon: sprite(`mon/${s.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
+                        kicker: s.cycle ? 'The strata come round again' : 'Deeper into the Abyss', title: s.name, note: s.line, lines: [`Stages ${ev.stage}–${ev.stage + STRATUM_STAGES - 1}`], ms: 5000 });
                     break;
                 }
                 const zone = ZONES.find(z => z.id === ev.zone);
@@ -859,10 +859,14 @@ function handleEvents(events) {
                     lines: [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`, ...(target ? [`Next: stage ${target}`] : [])] });
                 break;
             }
-            case 'record':   // every 25 stages of all-time best: the tokens grow stronger (once there are tokens to strengthen)
+            case 'record': {   // every 25 stages of all-time best: the tokens grow stronger (once there are tokens to strengthen)
+                // the steps of the deep say what opens there (data/items.js MYTHIC, PRIMAL)
+                const opens = ev.stage === MYTHIC.from ? 'From here a boss near your best can leave Mythic gear'
+                    : ev.stage === PRIMAL.from ? 'From here a Mythic piece can come Primal' : '';
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `record:${ev.stage}`, kind: 'legend', icon: sprite('token', { scale: 2, fallback: '✨' }), kicker: 'A new record', title: `Stage ${fmt(ev.stage)}`,
-                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`, opens].filter(Boolean), ms: opens ? 5200 : undefined });
                 break;
+            }
             case 'skillRecord':   // every 50 levels of the skills together: the tokens grow stronger too (core/modifiers.js recordsOf)
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `skillRecord:${ev.levels}`, kind: 'legend', icon: sprite('perk/scholar', { scale: 2, fallback: '📜' }), kicker: 'A new record', title: `${fmt(ev.levels)} skill levels`,
                     lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
