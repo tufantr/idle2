@@ -187,7 +187,7 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
             const box = node.getBoundingClientRect();
             confetti(box.left + box.width / 2, box.top + box.height * 0.35);
         });
-        timer = setTimeout(next, card.ms || SHOW_MS);
+        if (!card.sticky) timer = setTimeout(next, card.ms || SHOW_MS);   // a sticky card stays until it is tapped
     }
 
     function next() {
@@ -209,7 +209,7 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
     }
 
     return {
-        /** Queue a card: { key?, kind, icon, kicker, title, lines?: [html pills], note?: text, act?: { label, run }, ms? }. A card with the same key replaces the queued one. */
+        /** Queue a card: { key?, kind, icon, kicker, title, lines?: [html pills], note?: text, act?: { label, run }, ms?, sticky? }. A card with the same key replaces the queued one; a sticky one (with something to tap) stays until it is tapped. */
         celebrate(card) {
             // nobody is watching: the toast and the log keep the record, but a new place's card waits for the return
             if (document.hidden && card.kind !== 'unlock') return;

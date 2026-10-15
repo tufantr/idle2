@@ -1223,7 +1223,8 @@ Keeping it running:
       pillar, a tall gold pillar with a halo, rays and "Legendary"; an upgrade shows "▲ +38% attack". It then
       flies into the fight's ▲ Equip (which keeps a glow) or the hero's hands. A legendary upgrade adds gold
       at the screen's edges, a held breath, and a card with what it does and an Equip button. Epic has its own
-      chime, a plainer upgrade a bright one, and the welcome-back report shows the best piece found while away
+      chime, a plainer upgrade a bright one, and the welcome-back report shows the best piece found while away.
+      The legendary card stays until it is tapped (the owner's ask)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

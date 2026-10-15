@@ -650,7 +650,7 @@ function lootSound(item) {
 
 /**
  * A legendary that beats what he wears: its card once it has landed in the fight (scene.js playLoot), with what it
- * would do and an Equip on it (the owner, October 2026: a legendary drop should be a moment).
+ * would do and an Equip on it, staying until it is tapped (the owner, October 2026: a legendary drop should be a moment).
  */
 function legendaryCard(item) {
     const gain = gainMarkup(equipGain(game.state, item));
@@ -659,7 +659,7 @@ function legendaryCard(item) {
         if (!game.state.inventory.some(i => i.id === item.id)) return;   // put on, or gone, meanwhile
         if (document.hidden) { toast(`legendary drop: ${item.name}!`, 'achievement', pic(itemSpriteKey(item), escapeHtml(item.icon || ''))); return; }   // (no card for a page out of sight)
         rewards.celebrate({
-            key: `loot:${item.id}`, kind: 'legend-drop', kicker: 'Legendary drop', title: item.name, ms: 4500,
+            key: `loot:${item.id}`, kind: 'legend-drop', kicker: 'Legendary drop', title: item.name, sticky: true,   // until tapped (the owner's ask)
             icon: `<span class="cel-loot">${sprite(itemSpriteKey(item), { scale: 3, fallback: escapeHtml(item.icon || '') })}</span>`,
             lines: [gain ? `Worn: ${gain}` : '', `Tier ${item.tier}${item.depth ? ` · depth ${item.depth}` : ''}`].filter(Boolean),
             act: { label: 'Equip', run: () => window.FI.equip(item.id) }
