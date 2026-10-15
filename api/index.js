@@ -300,47 +300,41 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     // "This week" leaderboards count from where the player stood when the week began: the numbers stored
     // before this upload (the first upload of the week, an empty one say, made the whole week's gain).
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(previous || metrics));
-    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id) });
+    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id), banner: await bannerOf(req.user.id, savedAt) });
 }));
 
 app.get('/api/load', authenticateToken, route('load', async (req, res) => {
     const current = await store.getSave(req.user.id);
     const gifts = await store.unclaimedGiftCount(req.user.id);   // waiting gifts: the game claims them next
     // serverNow lets the client measure time away on the server's clock, not its own.
-    if (!current || !current.state) return res.json({ state: null, serverNow: Date.now(), gifts });
-    res.json({ state: JSON.parse(current.state), lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts });
+    const banner = await bannerOf(req.user.id, Date.now());   // the clan's banner this week (src/data/social.js CLAN_BANNER)
+    if (!current || !current.state) return res.json({ state: null, serverNow: Date.now(), gifts, banner });
+    res.json({ state: JSON.parse(current.state), lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, banner });
 }));
 
 // ---------- clans ----------
 // A clan fights one shared boss a week. An attack is a short fight against it in the game
 // (CLAN_ATTACK_SECONDS, src/systems/clanfight.js): the page sends only when the player struck, and the
-// damage is reckoned here from the member's stored save and those strikes (src/core/power.js
-// clanAttackFromSave), never sent by the client. Three attacks come each day and wait, up to six. The
-// boss's health is sized from the members' power when the week's boss appears. When it falls, it comes back
-// at the next UTC midnight as the next level, twice as strong (BOSS_LEVEL_GROWTH), until Monday brings a
-// new boss at level 1: at most one kill a day, so at most seven a week.
+// damage is reckoned here (src/core/power.js clanAttackFromSave), never sent by the client. Three attacks
+// come each day and wait, up to six. The boss is the clan's, counted in its attacks (the owner, October 2026):
+// level 1 takes CLAN_BOSS.first plain attacks of the members' average strength (the unit: their 30-s fight
+// without a strike or a potion), each level CLAN_BOSS.growth times the last, its health kept in thousandths of
+// that unit, so no hero is too strong for its numbers. A member's attack counts by their strength against the
+// average, so a full clan that fights fells all seven and a player alone one at most. When it falls it comes
+// back at the next UTC midnight as the next level, until Monday brings a new boss: one kill a day. Each kill
+// raises the clan's banner (src/data/social.js CLAN_BANNER) for every member until the week ends: that is the
+// whole reward (no crate, essence or diamonds since).
 
 const CLAN_NAME_RE = /^[A-Za-z0-9 '_-]{3,32}$/;
 const CLAN_TAG_RE = /^[A-Za-z0-9]{2,5}$/;
 const MAX_MEMBERS = 20;
-const BOSS_ATTACKS_TO_KILL = 12;   // the boss holds about four days of everyone attacking every time
-const BOSS_LEVEL_GROWTH = 2;       // each level back after a kill: twice the last
-const ACTIVE_WITHIN = 7 * DAY;    // a member counts toward Monday's boss only if they played (uploaded) this past week
+const ACTIVE_WITHIN = 7 * DAY;    // a member counts toward the boss's unit only if they played (uploaded) this past week
 // An account whose saves showed impossible numbers (recentlyFlagged) deals at most this share of the boss's
 // health an attack: a forged save once felled a boss with one attack of the 100T ceiling. Everyone else
 // deals what their hero does (a cap of a seventh for all came first, and hid honest players' real damage).
 const FLAGGED_ATTACK_SHARE = 0.01;
-const MIN_BOSS_HP = 1000;
-// Damage and boss health stay exact integers in JavaScript and fit Postgres BIGINT, whatever a save says.
-const MAX_ATTACK_DAMAGE = 1e14;
-const MAX_BOSS_HP = 4e15;
-const safeDamage = v => (Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), MAX_ATTACK_DAMAGE) : 0);
-const REWARDS = {
-    participation: { essence: 50, text: 'Clan boss: you fought this week' },
-    top: [{ essence: 100, diamond: 1 }, { essence: 60, diamond: 1 }, { essence: 30, diamond: 1 }],
-    kill: { essence: 100, diamond: 2, text: 'Clan boss defeated' },
-    lastHit: { essence: 50, diamond: 1, text: 'Clan boss: the last hit' }
-};
+// A damage figure from a save, as a plain number (deep heroes deal past 10^20: the boss is counted in units, not damage).
+const safeDamage = v => (Number.isFinite(v) && v > 0 ? v : 0);
 
 const cleanText = (value, max) => String(value || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
 
@@ -349,72 +343,36 @@ function parseMetrics(json) {
     try { const m = json ? JSON.parse(json) : null; return m && typeof m === 'object' ? m : null; } catch { return null; }
 }
 
-/**
- * The kill's rewards (everyone who fought that level, and the last hit), paid once the kill is marked.
- * Each reward has its own dedupe key, so paying again pays nothing twice: a payout that failed half way
- * is finished by the next look at the clan (kill_paid says it is done). Level 1 keeps the keys from before
- * levels, so a week felled then is never paid twice.
- */
-async function payKill(clanId, boss, now) {
-    const level = boss.level || 1;
-    const tag = level > 1 ? `:L${level}` : '';
-    const named = text => (level > 1 ? `${text} (level ${level})` : text);
-    for (const userId of await store.levelFighters(clanId, boss.week, level)) {
-        await store.addReward(userId, 'kill', JSON.stringify({ ...REWARDS.kill, text: named(REWARDS.kill.text), week: boss.week, level }), now, `kill:${userId}:${boss.week}${tag}`);
-    }
-    if (boss.lastHitUser) await store.addReward(boss.lastHitUser, 'lastHit', JSON.stringify({ ...REWARDS.lastHit, text: named(REWARDS.lastHit.text), week: boss.week, level }), now, `lastHit:${boss.lastHitUser}:${boss.week}${tag}`);
-    await store.markKillPaid(clanId, boss.week);
-}
-
-/**
- * Pay the weekly rewards (participation, top three) of any finished week of this clan, then mark it
- * settled: paid first (the dedupe keys pay each once), so a failure half way leaves it to be finished.
- */
-async function settleOldWeeks(clanId, now) {
-    for (const boss of await store.unsettledBosses(clanId, isoWeek(now))) {
-        if (boss.killedAt > 0 && !boss.killPaid) await payKill(clanId, boss, now);
-        const board = await store.weeklyDamage(clanId, boss.week);
-        for (const [i, row] of board.entries()) {
-            // Once per player per week, even if they fought for several clans that week.
-            await store.addReward(row.userId, 'participation', JSON.stringify({ ...REWARDS.participation, week: boss.week }), now, `participation:${row.userId}:${boss.week}`);
-            if (i < REWARDS.top.length) {
-                await store.addReward(row.userId, 'top', JSON.stringify({ ...REWARDS.top[i], text: `Clan boss: #${i + 1} damage in ${boss.week}`, week: boss.week }), now, `top:${row.userId}:${boss.week}`);
-            }
-        }
-        await store.claimSettlement(clanId, boss.week);
-    }
-}
-
-/**
- * A member's part of a boss: their attack at its best this week, never more than their best stage allows,
- * times the supplies of that stage (src/core/formulas.js supplyMult): the attack is measured without a potion,
- * and the combat potion a member's stage asks for deals about that much more, so a clan that brews takes as
- * many attacks as before the supplies and one that doesn't takes more.
- */
-function shareOf(m, plausibleAttackDamage, supplyMult = () => 1) {
+/** A member's plain attack: at its best this week, never more than their best stage allows (one forged save can't size the boss). */
+function attackOf(m, plausibleAttackDamage) {
     const metrics = parseMetrics(m.metrics);
     const attack = Math.max(safeDamage(metrics?.attackDamage), safeDamage(metrics?.attackPeak?.v));
-    const damage = Math.min(attack, safeDamage(plausibleAttackDamage(metrics?.bestStage)));
-    return Math.min(MAX_BOSS_HP, damage * BOSS_ATTACKS_TO_KILL * supplyMult(Number(metrics?.bestStage) || 1));
+    return Math.min(attack, safeDamage(plausibleAttackDamage(metrics?.bestStage)));
 }
 
 /**
- * The week's boss made the size of the clan as it is now: the parts of those in it, and of those who left
- * no more than the damage they dealt. Leaving no longer takes a part that coming back doesn't return
- * (leave and come back, each member in turn, and the boss had 1 health), and a stranger who joins, hits it
- * once and leaves takes their whole part with them.
+ * The unit the clan's boss is counted in: the average plain attack of the members who count now (flagged
+ * members don't, nor those who haven't played this past week), 0 when none does.
  */
+async function clanUnit(clanId, now) {
+    const { plausibleAttackDamage } = await engine();
+    const counted = (await store.clanMembers(clanId)).filter(m => !recentlyFlagged(m.flags, now) && now - (m.lastSaved || 0) < ACTIVE_WITHIN);
+    const attacks = counted.map(m => attackOf(m, plausibleAttackDamage)).filter(a => a > 0);
+    return attacks.length ? attacks.reduce((a, b) => a + b, 0) / attacks.length : 0;
+}
+
+/** The boss's health (thousandths of the unit) as damage, for the screen: the figures the hero's own hits are in. */
+const asDamage = (milli, unit) => (unit > 0 ? (milli / 1000) * unit : milli);
+
+/** Levels of the week's boss the clan has felled (its banner: src/data/social.js CLAN_BANNER). */
+const killsOf = (boss, levels) => (boss ? Math.min(levels, (boss.level || 1) - 1 + (boss.killedAt > 0 ? 1 : 0)) : 0);
+
+/** A member joined, left or was removed: the boss is counted in the clan's average as it is now. */
 async function resizeBoss(clanId, now) {
     const week = isoWeek(now);
-    const boss = await store.getBoss(clanId, week);
-    if (!boss || boss.hp <= 0) return;
-    const [shares, members, board] = await Promise.all([store.bossShares(clanId, week), store.clanMembers(clanId), store.weeklyDamage(clanId, week)]);
-    if (!shares.length) return;
-    const here = new Set(members.map(m => m.userId));
-    const dealt = new Map(board.map(r => [r.userId, r.damage]));
-    const total = shares.reduce((sum, sh) => sum + (here.has(sh.userId) ? sh.share : Math.min(sh.share, dealt.get(sh.userId) || 0)), 0);
-    const doublings = BOSS_LEVEL_GROWTH ** ((boss.level || 1) - 1);   // the shares size level 1
-    await store.resizeBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total) * doublings));
+    if (!(await store.getBoss(clanId, week))) return;
+    const unit = await clanUnit(clanId, now);
+    if (unit > 0) await store.setBossUnit(clanId, week, unit);
 }
 
 /**
@@ -431,28 +389,39 @@ async function clanOf(userId) {
 }
 const validId = id => Number.isInteger(id) && id > 0 && id < 2 ** 31;   // a Postgres integer (a bigger one was a 500)
 
+/** This week's boss of a clan: made the first time it is looked at, moved to its next level the day after a kill. */
 async function currentBoss(clanId, now) {
     const week = isoWeek(now);
+    const { clanBossHealth } = await engine();
     let boss = await store.getBoss(clanId, week);
     if (!boss) {
-        // Flagged members don't count, nor members who haven't played this past week (one away shouldn't make
-        // it bigger for the rest), and no member counts for more than their best stage allows, so one
-        // implausible save can't make the boss unbeatable. Each share is kept: a member who leaves (or is
-        // removed) before fighting takes theirs away again.
-        const { plausibleAttackDamage, supplyMult } = await engine();
-        const members = (await store.clanMembers(clanId)).filter(m => !recentlyFlagged(m.flags, now) && now - (m.lastSaved || 0) < ACTIVE_WITHIN);
-        const shares = members.map(m => ({ userId: m.userId, share: shareOf(m, plausibleAttackDamage, supplyMult) })).filter(sh => sh.share > 0);
-        const total = shares.reduce((sum, s) => sum + s.share, 0);
-        boss = await store.createBoss(clanId, week, Math.min(MAX_BOSS_HP, Math.max(MIN_BOSS_HP, total)), shares);
+        boss = await store.createBoss(clanId, week, clanBossHealth(1), [], await clanUnit(clanId, now));
+    } else if (!(boss.unit > 0)) {
+        // a boss from before the clan's attacks counted it: the same share of its health left, in the new figures,
+        // and its attacks this week moved with it (once, whoever asks first)
+        const unit = await clanUnit(clanId, now);
+        const maxHp = clanBossHealth(boss.level);
+        const hp = boss.hp <= 0 ? 0 : Math.max(1, Math.round(maxHp * boss.hp / Math.max(1, boss.maxHp)));
+        if (unit > 0) await store.convertBoss(clanId, week, unit, maxHp, hp, maxHp / Math.max(1, boss.maxHp));
+        boss = await store.getBoss(clanId, week);
     }
-    // Felled on an earlier day of this week: it is back as the next level, twice as strong (its kill paid
-    // first, so a payout half done is never lost; the store moves it once, whoever asks at the same time).
+    // Felled on an earlier day of this week: it is back as the next level (the store moves it once, whoever asks
+    // at the same time; the kill's mark, which once waited for its rewards, is set first).
     if (boss.killedAt > 0 && dayNumber(now) > dayNumber(boss.killedAt)) {
-        if (!boss.killPaid) await payKill(clanId, boss, now);
-        await store.nextLevel(clanId, week, boss.level, boss.killedAt, Math.min(MAX_BOSS_HP, boss.maxHp * BOSS_LEVEL_GROWTH));
+        if (!boss.killPaid) await store.markKillPaid(clanId, week);
+        await store.nextLevel(clanId, week, boss.level, boss.killedAt, clanBossHealth(boss.level + 1));
         boss = await store.getBoss(clanId, week);
     }
     return boss;
+}
+
+/** The player's clan banner this week ({ week, kills }), or null outside a clan: every save and load says it. */
+async function bannerOf(userId, now) {
+    const mine = await clanOf(userId);
+    if (!mine) return null;
+    const week = isoWeek(now);
+    const { CLAN_BOSS } = await engine();
+    return { week, kills: killsOf(await store.getBoss(mine.clan.id, week), CLAN_BOSS.levels) };
 }
 
 app.get('/api/clans', authenticateToken, route('clans', async (req, res) => {
@@ -538,19 +507,20 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     if (!mine) return res.json({ clan: null });
     const { clan } = mine;
     const clanId = clan.id;
-    await settleOldWeeks(clanId, now);
     const [rawMembers, boss] = await Promise.all([store.clanMembers(clanId), currentBoss(clanId, now)]);
-    if (boss.killedAt > 0 && !boss.killPaid) await payKill(clanId, boss, now);   // a payout that failed half way
     const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = await store.weeklyDamage(clanId, boss.week);
-    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds } = await engine();
+    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds, CLAN_BOSS } = await engine();
+    const kills = killsOf(boss, CLAN_BOSS.levels);
     const attacksLeft = await store.chargesNow(req.user.id, dayNumber(now), perDay, bank);
     const lastHit = boss.lastHitUser ? members.find(m => m.userId === boss.lastHitUser) : null;
     res.json({
         clan: { ...clan, isOwner: clan.ownerId === req.user.id },
         members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: safeDamage(m.power?.attackDamage) })),
-        boss: { week: boss.week, level: boss.level, maxHp: boss.maxHp, hp: boss.hp, killed: boss.killedAt > 0, lastHit: lastHit ? lastHit.username : null, endsInMs: msToWeekEnd(now), nextInMs: msToDayEnd(now) },
-        board: board.map(r => ({ username: r.username, damage: r.damage, attacks: r.attacks, you: r.userId === req.user.id })),
+        // health and damage as damage (the screen's figures); the server keeps them in the clan's attacks
+        boss: { week: boss.week, level: boss.level, maxHp: asDamage(boss.maxHp, boss.unit), hp: asDamage(boss.hp, boss.unit), killed: boss.killedAt > 0, lastHit: lastHit ? lastHit.username : null, endsInMs: msToWeekEnd(now), nextInMs: msToDayEnd(now), kills, levels: CLAN_BOSS.levels },
+        banner: { week: boss.week, kills },
+        board: board.map(r => ({ username: r.username, damage: asDamage(r.damage, boss.unit), attacks: r.attacks, you: r.userId === req.user.id })),
         attacksLeft,
         attacksPerDay: perDay,
         attackBank: bank,
@@ -573,9 +543,10 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const answerAgain = async earlier => {
         const boss = await store.getBoss(earlier.clanId, earlier.week);
         const board = await store.weeklyDamage(earlier.clanId, earlier.week);
+        const unit = boss?.unit || 0;
         return res.json({
-            damage: earlier.damage, strikes: 0, hp: boss ? boss.hp : 0, maxHp: boss ? boss.maxHp : 0,
-            killed: !!boss && boss.killedAt === earlier.at && boss.lastHitUser === req.user.id,
+            damage: asDamage(earlier.damage, unit), strikes: 0, hp: boss ? asDamage(boss.hp, unit) : 0, maxHp: boss ? asDamage(boss.maxHp, unit) : 0,
+            killed: !!boss && boss.killedAt === earlier.at && boss.lastHitUser === req.user.id, kills: killsOf(boss, eng.CLAN_BOSS.levels),
             attacksLeft: await store.chargesNow(req.user.id, dayNumber(now), perDay, bank),
             rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: earlier.week, again: true
         });
@@ -584,7 +555,7 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const save = await store.getSave(req.user.id);
     if (!save || !save.state) return res.status(400).json({ error: 'Save to the cloud first: the attack uses your stored hero.' });
     const boss = await currentBoss(clanId, now);
-    const defeated = () => res.status(400).json({ error: 'The boss is down: it comes back at midnight UTC, twice as strong.' });
+    const defeated = () => res.status(400).json({ error: 'The boss is down: it comes back at midnight UTC, a level stronger.' });
     if (boss.hp <= 0) return defeated();
     // The fight as the player fought it: when they struck, and how long it lasted (a page from before
     // the fight sends neither: a whole fight without a strike). The damage is reckoned here, from the
@@ -592,8 +563,11 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     // impossible numbers no more than a sliver of the boss (FLAGGED_ATTACK_SHARE).
     let fight = null;
     try { fight = eng.clanAttackFromSave(JSON.parse(save.state), body.strikes, body.ms, now); } catch (err) { console.error('clan fight failed', err); }
-    const cap = safeDamage(eng.plausibleAttackDamage(parseMetrics(save.metrics)?.bestStage) * 2) || MAX_ATTACK_DAMAGE;
-    const reckoned = Math.max(1, Math.min(safeDamage(fight?.damage), cap));
+    const cap = safeDamage(eng.plausibleAttackDamage(parseMetrics(save.metrics)?.bestStage) * 2) || Infinity;
+    const dealt = Math.min(safeDamage(fight?.damage), cap);
+    // in the clan's attacks: thousandths of its average plain attack (the player's own, if none counted yet)
+    const unit = boss.unit > 0 ? boss.unit : safeDamage(parseMetrics(save.metrics)?.attackDamage) || 1;
+    const reckoned = Math.max(1, Math.round((dealt / unit) * 1000));
     const damage = recentlyFlagged(save.flags, now) ? Math.min(reckoned, Math.max(1, Math.ceil(boss.maxHp * FLAGGED_ATTACK_SHARE))) : reckoned;
     const left = await store.spendCharge(req.user.id, dayNumber(now), perDay, bank);
     if (left === null) return res.status(400).json({ error: `No attacks waiting: ${perDay} more come each day (midnight UTC), up to ${bank}.` });
@@ -612,10 +586,11 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const after = await store.damageBoss(clanId, boss.week, damage);
     if (!after) { await store.deleteAttack(req.user.id, day, slot); await store.refundCharge(req.user.id, bank); return defeated(); } // it fell to a parallel hit
     const killed = after.hp <= 0 && await store.markBossKilled(clanId, boss.week, req.user.id, now);
-    if (killed) await payKill(clanId, { ...after, killedAt: now, lastHitUser: req.user.id }, now);
     const board = await store.weeklyDamage(clanId, boss.week);
+    const levels = eng.CLAN_BOSS.levels;
     res.json({
-        damage, capped: damage < reckoned, strikes: fight?.guarded || 0, hp: after.hp, maxHp: boss.maxHp, level: boss.level, killed, attacksLeft: left,
+        damage: asDamage(damage, unit), capped: damage < reckoned, strikes: fight?.guarded || 0, hp: asDamage(after.hp, unit), maxHp: asDamage(boss.maxHp, unit), level: boss.level, killed, attacksLeft: left,
+        kills: killsOf(killed ? { ...after, killedAt: now } : after, levels), banner: { week: boss.week, kills: killsOf(killed ? { ...after, killedAt: now } : after, levels) },
         rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: boss.week
     });
 }));

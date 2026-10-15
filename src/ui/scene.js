@@ -12,6 +12,7 @@ import { laggingSlot, PITY_LAG, isUpgrade, canWear, equipGain } from '../systems
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
+import { clanBannerMult } from '../core/modifiers.js';
 import { killPayout, packSize } from '../systems/combat.js';
 import { titanLevel, ownsUnique } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
@@ -557,6 +558,9 @@ export function createScene(root, actions) {
             const left = potionMs > 0 ? duration(potionMs) : `×${fmt(state.resources[potion] || 0)}`;
             parts.push(`<span title="${esc(p?.name || 'Potion')}">${resIcon(potion)} ${left}</span>`);
         }
+        // the clan's banner this week (data/social.js CLAN_BANNER): not in the clan boss's own fight
+        const banner = c.mode === 'clan' ? 1 : clanBannerMult(state);
+        if (banner > 1) parts.push(`<span class="hero-banner" title="Clan banner: ×${banner} attack, defence and health, until the week ends">${sprite('item/Shield/4', { scale: 0.5, cls: 'soft res-spr' })} ×${banner}</span>`);
         return parts.join('');
     }
 

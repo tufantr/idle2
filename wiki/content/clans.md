@@ -1,8 +1,8 @@
 ---
 path: /clans
-keywords: clans, clan, clan boss, weekly boss, leaderboards, leaderboard, account, cloud save, sign in, log in, register, attack, rewards, opt in, ranking
+keywords: clans, clan, clan boss, weekly boss, clan banner, banner, leaderboards, leaderboard, account, cloud save, sign in, log in, register, attack, rewards, opt in, ranking
 ---
-Clans are the game's online side. Join one, and every week the whole clan fights one shared boss together, for [[Monster Essence|essence]] and [[Diamond|diamonds]]. Beside the clans are the leaderboards, where you can see how far other heroes have come.
+Clans are the game's online side. Join one, and every week the whole clan fights one shared boss together: each level of it the clan fells raises the **clan banner**, which makes every member stronger until the week ends. Beside the clans are the leaderboards, where you can see how far other heroes have come.
 
 ## What you need
 
@@ -21,22 +21,30 @@ Without a clan, the Clan tab lets you search the clans by name or tag and join o
 
 Each week, from Monday 00:00 UTC to the next Monday, the clan has one boss to bring down together: the ten lands' rulers take turns, one a week ({{clanBossFor('2026-W41').name}}, then {{clanBossFor('2026-W42').name}}, and so on), each fought on its own land's painting. The Clan tab shows its health and level, the week's damage member by member, and each member's best stage, total level and damage per attack.
 
-- **Its health** is set when the week's boss first appears, from the best attack of the past week of each member who has played in that week: about twelve attacks from each of them, so it holds out for about four days of everyone attacking. A member who leaves (or is removed) takes their share of its health away, all but the damage they dealt, and brings it back if they rejoin that week; someone who joins after it appeared adds nothing to it.
+- **Its health is the clan's, counted in its attacks.** Its first level takes about {{CLAN_BOSS.first}} attacks at your members' average strength: each member's plain attack (what their hero deals by himself in the fight, without strikes or a potion), at its best of the past week, for the members who played that week. A stronger member's attack counts for more and a weaker one's for less. Members joining or leaving change the average, not how many attacks it takes. So the more members fight, the sooner it falls, and a player alone gets little further than the first level.
 - **An attack is a fight.** "Fight the boss" saves your hero to the cloud and takes you into a {{CLAN_ATTACK_SECONDS}}-second fight against it, on the whole screen like the [[The Titan|Titan's]]. Your hero attacks by himself, and the boss never hits back. Give up ends it early, with what you did so far; when it is over your hero goes back to what he was doing, and the screen to the Clan tab.
 - **Its guard:** the boss drops its guard for {{CLAN_GUARD.open / 1000}} seconds every {{CLAN_GUARD.every / 1000}} seconds, from the {{CLAN_GUARD.first / 1000}}th second on. It glows and the game says "Strike now!". Only then do your [[Combat|strikes]] land, each {{CLAN_GUARD.mult}} times as hard as a strike in a fight, and build your combo; at other times they glance off. Clicking fast in the openings is the most anyone can do, an auto-clicker too: about 1.3 to 1.6 times what your hero deals by himself, more for a slow-hitting hero.
 - **The damage is the server's:** the game sends only when you struck, and the server works the damage out from your saved hero and those moments: your attack, crits and attack speed, with no dice rolled. A card then shows what you dealt and where it puts you in the clan this week.
-- **Levels:** when the boss falls, it is down until midnight UTC, then comes back as the next level with twice the health: 1× on Monday, 2× the next day, then 4×, 8×… up to 64× on Sunday if it falls every day. A boss that isn't brought down stays as it is, with the damage dealt, and Monday brings a new boss at level 1. The Clan tab shows the level, and after a kill which level comes back and when.
+- **Levels:** when the boss falls, it is down until midnight UTC, then comes back as the next level with a fifth more health (×{{CLAN_BOSS.growth}}), up to {{CLAN_BOSS.levels}} levels a week if it falls every day (the table below). A boss that isn't brought down stays as it is, with the damage dealt, and Monday brings a new boss at level 1. The Clan tab shows the level, and after a kill which level comes back and when.
 - **Saves with impossible numbers:** an account whose save showed numbers no play could reach deals at most 1% of the boss's health an attack, and its card says "Capped".
 - **Your attacks:** {{CLAN_ATTACKS_PER_DAY}} a day, at midnight UTC, and those you don't use wait for you, up to {{CLAN_ATTACK_BANK}}.
-- **What doesn't count:** anything timed or temporary. [[Mini-games and Focus|Focus]], [[Potions|potions]], the [[/skills/firemaking|bonfire]] and mini-game boosts are left out, and a [[Trials|Trial's]] rule doesn't hold your attacks back either.
+- **Your combat potion counts:** the one you have picked is drunk as the fight starts, so a good potion makes every attack worth several plain ones (with strikes, Combat Potion I about 2.4 and IV about 4.8).
+- **What doesn't count:** [[Mini-games and Focus|Focus]], the [[/skills/firemaking|bonfire]], mini-game boosts and the clan banner itself are left out, and a [[Trials|Trial's]] rule doesn't hold your attacks back either.
 
-## Rewards
+{{table(['Level #', 'Plain attacks of the clan to fell it #'], Array.from({ length: CLAN_BOSS.levels }, (_, i) => [i + 1, Math.round(clanBossHealth(i + 1) / 1000)]), { sort: false })}}
 
-Rewards wait on the Clan tab until you claim them:
-- **Each time the boss falls:** 100 essence and 2 diamonds for everyone who fought that level, and 50 essence and a diamond more for the member who landed the last hit. With one kill a day at most, that is up to seven times a week.
-- **When the week ends:** 50 essence for everyone who fought, and 100, 60 and 30 essence, each with a diamond, for the top three by damage.
+With everyone using all {{CLAN_ATTACKS_PER_DAY}} attacks a day and striking in the openings, a clan of 2 fells about one level a week, 5 about three, 10 about five, and 15 or 20 all seven; good potions take smaller clans further.
 
-Each kind of reward is paid once per player per week (a kill's, once per level), even to someone who fought for more than one clan that week.
+## The clan banner
+
+The clan's reward for its boss is its banner. Each level the clan fells raises it, and it multiplies the attack, defence and health of **every member, whether they fought or not**, until the week ends (Monday 00:00 UTC). A new week starts it again from nothing.
+
+{{table(['Levels felled this week #', 'Clan banner'], CLAN_BANNER.slice(1).map((m, i) => [i + 1, `×${m}`]), { sort: false })}}
+
+- The first kill is the big step, so every clan wants at least one a week.
+- It counts everywhere you fight (the stages, dungeons, the Titan), and while you are away, but not in the clan boss's own fight, and the leaderboards leave it out.
+- It shows beside your food and potion under your hero, and on the boss's panel on the Clan tab, with what the next level would bring. A card says when it rises.
+- There are no other clan rewards: no essence or diamonds (rewards from before, still waiting, can be claimed on the Clan tab).
 
 ## Leaderboards
 

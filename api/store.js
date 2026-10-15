@@ -128,6 +128,9 @@ async function ensureSchema() {
     // A felled boss comes back the next day (UTC) twice as strong, until the week ends (api/index.js): its
     // level, and each attack's, so a kill pays those who fought that level. Older rows are level 1.
     await sql`ALTER TABLE clan_bosses ADD COLUMN IF NOT EXISTS level SMALLINT DEFAULT 1`;
+    // The boss counted in the clan's attacks (the clan banner, October 2026; api/index.js): its health in thousandths
+    // of the members' average plain attack, `unit` that attack. 0: a row from before, counted in damage.
+    await sql`ALTER TABLE clan_bosses ADD COLUMN IF NOT EXISTS unit DOUBLE PRECISION DEFAULT 0`;
     await sql`ALTER TABLE clan_attacks ADD COLUMN IF NOT EXISTS level SMALLINT DEFAULT 1`;
     // Names are one account whatever their case ("Tufan" and "tufan"). Made only if the names already
     // there allow it: a failure here must not stop the API (createUser checks as well).
@@ -300,17 +303,17 @@ async function clanMembers(clanId) {
 // ---------- the weekly clan boss ----------
 
 function bossRow(r) {
-    return r ? { clanId: r.clan_id, week: r.week, level: int(r.level) || 1, maxHp: int(r.max_hp), hp: int(r.hp), killedAt: int(r.killed_at), lastHitUser: r.last_hit_user || null, settled: !!r.settled, killPaid: !!r.kill_paid } : null;
+    return r ? { clanId: r.clan_id, week: r.week, level: int(r.level) || 1, maxHp: int(r.max_hp), hp: int(r.hp), killedAt: int(r.killed_at), lastHitUser: r.last_hit_user || null, settled: !!r.settled, killPaid: !!r.kill_paid, unit: Number(r.unit) || 0 } : null;
 }
 
 async function getBoss(clanId, week) {
-    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week = ${week}`;
+    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid, unit FROM clan_bosses WHERE clan_id = ${clanId} AND week = ${week}`;
     return bossRow(rows[0]);
 }
 
-/** Create the week's boss (once) with each member's share of its health: [{ userId, share }]. */
-async function createBoss(clanId, week, maxHp, shares = []) {
-    const { rows } = await sql`INSERT INTO clan_bosses (clan_id, week, max_hp, hp) VALUES (${clanId}, ${week}, ${maxHp}, ${maxHp}) ON CONFLICT (clan_id, week) DO NOTHING RETURNING clan_id`;
+/** Create the week's boss (once): its health, each member's share of it ([{ userId, share }]) and the unit it is counted in. */
+async function createBoss(clanId, week, maxHp, shares = [], unit = 0) {
+    const { rows } = await sql`INSERT INTO clan_bosses (clan_id, week, max_hp, hp, unit) VALUES (${clanId}, ${week}, ${maxHp}, ${maxHp}, ${unit}) ON CONFLICT (clan_id, week) DO NOTHING RETURNING clan_id`;
     if (rows.length) {
         for (const s of shares) await sql`INSERT INTO clan_boss_shares (clan_id, week, user_id, share) VALUES (${clanId}, ${week}, ${s.userId}, ${s.share}) ON CONFLICT DO NOTHING`;
     }
@@ -334,12 +337,32 @@ async function resizeBoss(clanId, week, maxHp) {
     `;
 }
 
+/** The unit the week's boss is counted in: the members' average plain attack, as the clan is now. */
+async function setBossUnit(clanId, week, unit) {
+    await sql`UPDATE clan_bosses SET unit = ${unit} WHERE clan_id = ${clanId} AND week = ${week}`;
+}
+
+/**
+ * A boss from before the clan's attacks counted it (unit 0) moved to them: its health as the same share of the
+ * new figures, its attacks this week scaled with it (`factor`). Once: true for the caller who moves it.
+ */
+async function convertBoss(clanId, week, unit, maxHp, hp, factor) {
+    const { rows } = await sql`
+        UPDATE clan_bosses SET unit = ${unit}, max_hp = ${maxHp}::bigint, hp = ${hp}::bigint
+        WHERE clan_id = ${clanId} AND week = ${week} AND (unit IS NULL OR unit = 0)
+        RETURNING clan_id
+    `;
+    if (!rows.length) return false;
+    await sql`UPDATE clan_attacks SET damage = GREATEST(1, ROUND(damage * ${factor}))::bigint WHERE clan_id = ${clanId} AND week = ${week}`;
+    return true;
+}
+
 /** Apply damage atomically; returns the boss after the hit. */
 async function damageBoss(clanId, week, damage) {
     const { rows } = await sql`
         UPDATE clan_bosses SET hp = GREATEST(0, hp - ${damage})
         WHERE clan_id = ${clanId} AND week = ${week} AND hp > 0
-        RETURNING clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid
+        RETURNING clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid, unit
     `;
     return bossRow(rows[0]);
 }
@@ -374,7 +397,7 @@ async function markKillPaid(clanId, week) {
 
 /** Earlier weeks of this clan that have not paid out their weekly rewards yet. */
 async function unsettledBosses(clanId, beforeWeek) {
-    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid FROM clan_bosses WHERE clan_id = ${clanId} AND week < ${beforeWeek} AND settled = FALSE`;
+    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid, unit FROM clan_bosses WHERE clan_id = ${clanId} AND week < ${beforeWeek} AND settled = FALSE`;
     return rows.map(bossRow);
 }
 
@@ -563,7 +586,7 @@ module.exports = {
     createUser, findUserByName, userNameOf, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
-    getBoss, createBoss, bossShares, resizeBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
+    getBoss, createBoss, bossShares, resizeBoss, setBossUnit, convertBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,

@@ -22,7 +22,7 @@ import { DEFAULT_LOOK, lookById, lookOpen } from '../data/looks.js';
 import { capeEarned, festivalCloak, FESTIVAL_CLOAKS } from '../data/capes.js';
 import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
-import { CLAN_FIGHT_MS } from '../data/social.js';
+import { CLAN_FIGHT_MS, CLAN_BANNER } from '../data/social.js';
 import { LORDS } from '../data/zones.js';
 
 // The perk reset (the owner, 15 October 2026, after the perks deepened and their prices rose): every save from
@@ -95,6 +95,7 @@ export function createDefaultState(now = Date.now()) {
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
         clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }
         clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at }
+        clanBanner: { week: '', kills: 0 },   // the clan's banner, as the server last said it: levels felled in that ISO week (data/social.js CLAN_BANNER)
         pets: {},
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
@@ -703,6 +704,9 @@ function normalise(data, now) {
     state.clanResult = isPlainObject(sent) && typeof sent.week === 'string' && Array.isArray(sent.strikes)
         ? { week: sent.week.slice(0, 10), strikes: sent.strikes.slice(0, 200).map(Number).filter(Number.isFinite), ms: Math.max(0, Math.min(CLAN_FIGHT_MS, finite(sent.ms))), at: finite(sent.at) }
         : null;
+    // the clan's banner: a week the server named, and the levels felled in it
+    const banner = isPlainObject(state.clanBanner) ? state.clanBanner : {};
+    state.clanBanner = /^\d{4}-W\d{2}$/.test(String(banner.week)) ? { week: banner.week, kills: intIn(banner.kills, 0, CLAN_BANNER.length - 1, 0) } : { week: '', kills: 0 };
     const run = state.combat.dungeon;
     const runDungeon = run ? DUNGEONS.find(d => d.id === run.id) : null;
     if (state.combat.mode !== 'dungeon' || !runDungeon) {

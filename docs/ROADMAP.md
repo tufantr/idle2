@@ -1249,8 +1249,17 @@ Keeping it running:
       attack, defence and health); Knight, Warlord and Paragon **multiply** instead of adding into the pool of percents
       (×1.025, ×1.025 and ×1.01 a level). Seven simulated players with Auto: stage 1,000 at hour 221, 2,000 at hour 821,
       2,290 by hour 1,200 and still climbing (690, stopped, before the endless climb)
+- [x] **The clan banner** (the owner's design, 15 October 2026; DESIGN §3.18): felling the week's clan boss makes
+      every member stronger, fought or not, instead of a crate. Each level felled raises the banner, ×1.5 at the first
+      and a quarter more a level to ×3 at seven, on attack, defence and health until Monday; it shows under the hero,
+      on the boss's panel and on a card as it rises, and the boards leave it out. The boss is counted in the clan's
+      attacks: level 1 takes 30 plain attacks at the clan's average strength, each level a fifth more (it was twice),
+      so twenty members who use their attacks fell all seven even watching, ten five (seven with a potion), five
+      three, and one alone none without a potion; a member joining or leaving moves the average, not the boss. No
+      essence or diamonds any more (rewards from before still claim). Seven simulated players with Auto, 600 hours:
+      stage 1,870 with one level a week, 1,900 with five, 1,800 alone
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
-      the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
+      the conditional save, a fight's own mark (`fight_at`), `kill_paid`, the boss's `unit` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by
       reading and against the in-memory store only; the live tables gain the new columns on the first
       request after the deploy

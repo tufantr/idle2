@@ -17,6 +17,34 @@ export const CLAN_ATTACK_SECONDS = 30;
 export const CLAN_FIGHT_MS = CLAN_ATTACK_SECONDS * 1000;
 export const CLAN_GUARD = { first: 4000, every: 6000, open: 2000, mult: 2.5 };
 
+// The clan banner (the owner, October 2026: clearing the clan's bosses should make its members stronger, and
+// every member, fought or not, so a clan sees to it that its members fight; DESIGN §3.18): each level of the
+// week's boss the clan fells raises it, for everyone in the clan, until the week ends (Monday 00:00 UTC), and a
+// new week starts it again from nothing. The first kill is the big step, so every clan wants one a week. It
+// multiplies attack, defence and health (core/modifiers.js); the boards and the clan boss leave it out.
+export const CLAN_BANNER = [1, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3];
+
+// The boss counted in the clan's attacks (api/index.js): level 1 takes `first` plain attacks of the clan's
+// average strength (the 30-s fight without a strike or a potion that sizes it), each level `growth` times the
+// last, `levels` a week at most (one a day). Striking and a combat potion make an attack worth up to five
+// plain ones, so twenty members who use every attack fell all seven even if they only watch, and a player
+// alone one at most, with a strong potion (DESIGN §3.18). It was each member's own twelve attacks, twice as
+// many each level: a clan of one kept pace with a full one, and level 7 was out of everyone's reach.
+export const CLAN_BOSS = { first: 30, growth: 1.2, levels: 7 };
+/** A level's health in thousandths of the clan's average plain attack (the server keeps it so, a whole number). */
+export const clanBossHealth = level => Math.round(1000 * CLAN_BOSS.first * Math.pow(CLAN_BOSS.growth, Math.max(1, level) - 1));
+
+/** The ISO-8601 week of a moment in UTC ('2026-W42'), as the server counts the clan's weeks. */
+export function isoWeek(ms) {
+    const d = new Date(ms);
+    const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const dayNum = (date.getUTCDay() + 6) % 7;   // Monday 0
+    date.setUTCDate(date.getUTCDate() - dayNum + 3);   // the week's Thursday
+    const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+    const week = 1 + Math.round(((date - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+    return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
 /**
  * The week's clan boss: the ten lands' rulers in turn, one a week (ISO weeks, as the server counts
  * them, '2026-W41'), each fought on its own land's painting. The name is its look; the server keeps

@@ -5,7 +5,7 @@
 // and those times (core/power.js clanAttackFromSave), so the page never says how much was dealt.
 
 import { clanGuardDown } from '../core/power.js';
-import { clanBossFor, CLAN_FIGHT_MS } from '../data/social.js';
+import { clanBossFor, CLAN_FIGHT_MS, CLAN_BANNER } from '../data/social.js';
 import { spawnEnemy, enterCombat } from './combat.js';
 import { failDungeon, returnToStages } from './dungeon.js';
 import { doingNow, resumeDoing } from './resume.js';
@@ -104,6 +104,22 @@ export function giveUpClanFight(game) {
 }
 
 /** The server has the attack (or refused it for good): nothing more to send. */
+/**
+ * The clan's banner as the server says it ({ week, kills }, or null outside a clan): kept in the save, so it counts
+ * while away until its week ends. A rise is said once, as a card (main.js).
+ */
+export function setClanBanner(game, banner) {
+    const state = game.state;
+    const was = state.clanBanner || { week: '', kills: 0 };
+    const next = banner && /^\d{4}-W\d{2}$/.test(String(banner.week)) ? { week: banner.week, kills: Math.max(0, Math.min(CLAN_BANNER.length - 1, Math.floor(Number(banner.kills) || 0))) } : { week: '', kills: 0 };
+    if (next.week === was.week && next.kills === was.kills) return false;
+    state.clanBanner = next;
+    const rose = next.kills > 0 && (next.week !== was.week || next.kills > was.kills);
+    if (rose) game.emit({ type: 'clanBanner', kills: next.kills, mult: CLAN_BANNER[next.kills], next: CLAN_BANNER[next.kills + 1] || null, week: next.week });
+    game.markDirty();
+    return true;
+}
+
 export function clearClanResult(game) {
     if (!game.state.clanResult) return false;
     game.state.clanResult = null;

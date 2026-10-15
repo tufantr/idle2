@@ -918,6 +918,10 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .status-pill.clan-next { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--heading); }   /* a felled boss: when the next comes */
 .clan-refill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-muted); }   /* when the next attacks come */
 .clan-level { display: inline-block; margin-left: 0.3rem; padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid rgba(251, 191, 36, 0.5); color: var(--heading); font-size: 0.72rem; vertical-align: middle; }
+/* the clan's banner (data/social.js CLAN_BANNER): on the boss's panel, and beside the food under the hero */
+.clan-banner-line { margin: 0.15rem 0 0.25rem; color: var(--text-muted); }
+.clan-banner-line b { color: var(--gold-color); }
+.hero-banner { color: #fde68a; font-weight: 800; }
 /* the clan boss fight (systems/clanfight.js): the boss glows while its guard is down, strikes then land */
 .clan-guard-hint { color: #fde68a; font-size: 0.78rem; }
 .battle.guard-down .foe .fighter-sprite { filter: drop-shadow(0 0 8px rgba(253, 224, 71, 0.95)) drop-shadow(0 0 22px rgba(250, 204, 21, 0.6)) brightness(1.2); }

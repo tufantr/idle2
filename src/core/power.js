@@ -7,9 +7,9 @@ import { deriveStats, BASE } from './modifiers.js';
 import { levelForXp } from './xp.js';
 import { enemyBaseStats, BALANCE, supplyMult } from './formulas.js';
 import { TRIALS, WEEK_MS, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
-import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK } from '../data/social.js';
+import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth } from '../data/social.js';
 
-export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK };   // the server reads them here
+export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth };   // the server reads them here
 
 /** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
 export const trialWeekStart = now => weeklyTrialAt(now).start;
@@ -38,6 +38,7 @@ function stableState(rawState, now, { clan = false } = {}) {
     state.combat.dungeonPotion = 'none';
     state.workPotion = { id: 'none', ms: 0 };
     state.trials.active = null;   // a Trial's rule handicaps a run, not the hero the boards compare
+    state.clanBanner = { week: '', kills: 0 };   // the clan's banner is the week's: not on the boards, nor in the clan fight
     return state;
 }
 

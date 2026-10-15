@@ -11,7 +11,8 @@
 //                                                 # dialog with Trials cleared and one picked, and
 //                                                 # 'trialfight' a fight in a Trial; 'ascend' the
 //                                                 # dialog's Ascend row; 'refit' a new piece in the
-//                                                 # bag compared with the reinforced one it would replace)
+//                                                 # bag compared with the reinforced one it would replace;
+//                                                 # 'banner' the fight under a clan banner of ×2)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -38,6 +39,12 @@ const STEPS = {
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
     trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); },
+    banner: async () => {   // three levels of this week's clan boss felled: the chip under the hero says ×2
+        const { isoWeek } = await import('/src/data/social.js');
+        const g = FI.game();
+        g.setClanBanner({ week: isoWeek(Date.now()), kills: 3 });
+        FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat();
+    },
     refit: async () => {   // a better body armour in the bag than the worn one at +7: its detail compares it refitted
         const { generateEquipment } = await import('/src/core/formulas.js');
         const { GEAR_TIERS, RARITIES } = await import('/src/data/items.js');

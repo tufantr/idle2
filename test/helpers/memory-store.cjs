@@ -111,9 +111,9 @@ function createMemoryStore() {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
             return b ? { ...b } : null;
         },
-        async createBoss(clanId, week, maxHp, shares = []) {
+        async createBoss(clanId, week, maxHp, shares = [], unit = 0) {
             if (!db.bosses.some(x => x.clanId === clanId && x.week === week)) {
-                db.bosses.push({ clanId, week, level: 1, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false, killPaid: false });
+                db.bosses.push({ clanId, week, level: 1, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false, killPaid: false, unit });
                 for (const s of shares) db.shares.push({ clanId, week, userId: s.userId, share: s.share });
             }
             return store.getBoss(clanId, week);
@@ -154,6 +154,17 @@ function createMemoryStore() {
             db.auth.set(key, r && now - r.since < windowMs ? { count: r.count + 1, since: r.since } : { count: 1, since: now });
         },
         async clearAuthFailures(key) { db.auth.delete(key); },
+        async setBossUnit(clanId, week, unit) {
+            const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
+            if (b) b.unit = unit;
+        },
+        async convertBoss(clanId, week, unit, maxHp, hp, factor) {
+            const b = db.bosses.find(x => x.clanId === clanId && x.week === week && !(x.unit > 0));
+            if (!b) return false;
+            Object.assign(b, { unit, maxHp, hp });
+            for (const a of db.attacks.filter(x => x.clanId === clanId && x.week === week)) a.damage = Math.max(1, Math.round(a.damage * factor));
+            return true;
+        },
         async damageBoss(clanId, week, damage) {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week && x.hp > 0);
             if (!b) return null;

@@ -733,6 +733,14 @@ function handleEvents(events) {
                 break;
             }
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
+            case 'clanBanner': {   // the clan felled a level of its boss: the banner rises for everyone in it until the week ends
+                const look = clanBossFor(ev.week);
+                rewards.celebrate({ key: `banner:${ev.week}:${ev.kills}`, kind: 'legend', art: paintStyle(look.zone), icon: tabIcon('clan', 2),
+                    kicker: `Your clan felled level ${ev.kills}`, title: `Clan banner ×${ev.mult}`,
+                    lines: ['Attack, defence and health, for everyone in the clan until the week ends', ev.next ? `The next level: ×${ev.next}` : 'The week\'s last level'], ms: 5200 });
+                sound.play('levelUp');
+                break;
+            }
             case 'equip':   // the first piece to take a slot's forge levels: how the forge works, said once (systems/inventory.js)
                 if (ev.firstForge) {
                     const kind = ev.slot === 'Weapon' ? 'weapon' : 'piece of armour';
@@ -978,6 +986,7 @@ async function cloudSave(announce = true, { keepalive = false, sync = false } = 
         if (announce) toast('Saved to cloud', 'info');
         giftsWaiting = answer?.gifts > 0;
         if (giftsWaiting) claimGifts();
+        if (answer && 'banner' in answer) game.setClanBanner(answer.banner);   // a kill by a clanmate shows up within an upload
     } catch (err) {
         if (err.status === 409) {   // another device saved meanwhile: look at the server again before anything goes up
             cloudReady = false;
@@ -1037,12 +1046,13 @@ async function sendClanResult(now = false) {
         // the fight's own mark goes with it: sent again after a lost answer, the server counts it once
         const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms, at: result.at });
         game.clearClanResult();
+        if (answer.banner) game.setClanBanner(answer.banner);
         save(Date.now());
-        if (ui.social.boss) Object.assign(ui.social.boss, { hp: answer.hp, maxHp: answer.maxHp, killed: !!answer.killed });
+        if (ui.social.boss) Object.assign(ui.social.boss, { hp: answer.hp, maxHp: answer.maxHp, killed: !!answer.killed }, Number.isFinite(answer.kills) ? { kills: answer.kills } : {});
         ui.social.attacksLeft = answer.attacksLeft;
         ui.social.fetchedAt = 0;   // the Clan tab brings its board up to date when it is next shown
         const look = clanBossFor(answer.week || result.week);
-        const lines = [answer.killed ? (answer.level ? 'The boss is down! It comes back at midnight UTC, twice as strong' : 'The boss is down!') : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
+        const lines = [answer.killed ? 'The boss is down! It comes back at midnight UTC, a level stronger' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
             answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
             answer.capped ? 'Capped: this account\'s save showed impossible numbers' : ''].filter(Boolean);
         rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
@@ -1069,6 +1079,7 @@ async function refreshSocial() {
         if (!current()) return;
         social.clan = mine.clan;
         Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20 });
+        game.setClanBanner(mine.clan ? mine.banner : null);
         social.rewards = rewards.rewards || [];
         social.leaderboard = board;
         social.optIn = !!board.optIn;
@@ -1121,13 +1132,15 @@ async function syncFromCloud() {
     const known = cloud.base ?? cloud.knownBase()?.at ?? null;
     cloudReady = false;
     try {
-        const { state: remote, lastSaved, gifts } = await cloud.pull(Date.now());
+        const { state: remote, lastSaved, gifts, banner } = await cloud.pull(Date.now());
         if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
             heldReport = null;
             cloudReady = true;
             adoptState(remote);
             if (before) toast('Your game was played on another device: carrying on from there', 'info');
+            game.setClanBanner(banner);   // the clan's banner this week, as the server says it
         } else {
+            game.setClanBanner(banner);
             showHeldReport();
             cloudReady = true;
             await cloudSave(false, { sync: true });

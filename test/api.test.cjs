@@ -38,8 +38,20 @@ const peek = {
     async bossHpToOne() {
         if (memory) { memory.db.bosses.forEach(boss => { if (boss.hp > 0) boss.hp = 1; }); return; }
         await pool.query('UPDATE clan_bosses SET hp = 1 WHERE hp > 0');
+    },
+    /** A clan's boss this week as one from before the clan's attacks counted it: health in damage, no unit. */
+    async oldBoss(username, maxHp, hp) {
+        if (memory) {
+            const user = memory.db.users.find(u => u.username === username);
+            const clanId = memory.db.members.find(m => m.userId === user.id).clanId;
+            Object.assign(memory.db.bosses.find(b => b.clanId === clanId), { maxHp, hp, unit: 0 });
+            return;
+        }
+        await pool.query("UPDATE clan_bosses SET max_hp = $1, hp = $2, unit = 0 WHERE clan_id = (SELECT clan_id FROM clan_members WHERE user_id = (SELECT id FROM users WHERE username = $3))", [maxHp, hp, username]);
     }
 };
+/** Two figures alike to a part in a thousand (the boss is kept in thousandths of an attack). */
+const near = (a, b, why = '') => assert.ok(Math.abs(a - b) <= 1e-3 * Math.max(Math.abs(a), Math.abs(b), 1), `${a} vs ${b} ${why}`);
 
 // The server reads Date.now(); tests move the clock to cross days and weeks.
 const realNow = Date.now;
@@ -221,20 +233,25 @@ test('clans: create, list, join, the member cap, leaving hands the clan on', asy
     assert.equal((await post('/clans/join', { clanId: bigId }, await register('one_too_many'))).status, 400, 'full at 20');
 });
 
-test('a deep member\'s share of the clan boss counts the supplies of their stage', async () => {
-    // the attack is measured without a potion, and the potion a stage-200 hero drinks deals supplyMult(200) more
-    const { supplyMult } = await import('../src/core/power.js');
-    const deep = await register('deep_diver');
-    const { clanId } = await (await post('/clans', { name: 'Deep Divers', tag: 'DEEP' }, deep)).json();
+test('the boss is the clan\'s, counted in its attacks: level 1 is 30 plain attacks at the members\' average strength', async () => {
+    const { CLAN_BOSS } = await import('../src/core/power.js');
+    const solo = await register('lone_wolf');
+    const { clanId } = await (await post('/clans', { name: 'Lone Wolves', tag: 'LONE' }, solo)).json();
     assert.ok(clanId);
-    await post('/save', { state: heroSave({ tokens: 3000, bestStage: 200, playtimeMs: 200 * 3600 * 1000 }) }, deep);
-    const view = await (await get('/clan', deep)).json();
-    const attack = view.members[0].attackDamage;
-    assert.ok(supplyMult(200) > 1.5);
-    assert.ok(Math.abs(view.boss.maxHp - Math.max(1000, attack * 12 * supplyMult(200))) <= 1, `${view.boss.maxHp} vs ${attack} × 12 × ${supplyMult(200)}`);
+    await post('/save', { state: heroSave({ tokens: 3000, bestStage: 200, playtimeMs: 200 * 3600 * 1000 }) }, solo);
+    const view = await (await get('/clan', solo)).json();
+    near(view.boss.maxHp, CLAN_BOSS.first * view.members[0].attackDamage, 'alone: thirty of their own attacks');
+    // a second member: the same thirty attacks for the clan, at the average of the two (not thirty more)
+    const pal = await register('wolf_pal');
+    await post('/save', { state: heroSave({ tokens: 300, bestStage: 120 }) }, pal);
+    await post('/clans/join', { clanId }, pal);
+    const two = await (await get('/clan', solo)).json();
+    const average = (two.members[0].attackDamage + two.members[1].attackDamage) / 2;
+    near(two.boss.maxHp, CLAN_BOSS.first * average, 'two: thirty attacks of their average');
+    assert.deepEqual([two.boss.kills, two.boss.levels, two.banner.kills], [0, CLAN_BOSS.levels, 0]);
 });
 
-test('the clan boss: damage comes from the stored save, three attacks a day, the kill pays once', async () => {
+test('the clan boss: damage comes from the stored save, three attacks a day, and a kill raises the banner of every member, fought or not', async () => {
     const a = await register('striker_a');
     const b = await register('striker_b');
     const { clanId } = await (await post('/clans', { name: 'Boss Hunters', tag: 'BH' }, a)).json();
@@ -242,67 +259,56 @@ test('the clan boss: damage comes from the stored save, three attacks a day, the
 
     assert.equal((await post('/clan/attack', {}, a)).status, 400, 'no stored save yet');
     await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, a);
-    await post('/save', { state: heroSave({ tokens: 0, bestStage: 1 }) }, b);
+    const quiet = await (await post('/save', { state: heroSave({ tokens: 0, bestStage: 1 }) }, b)).json();
+    assert.deepEqual(quiet.banner, { week: '2026-W40', kills: 0 }, 'every save says the clan\'s banner');
 
     const view = await (await get('/clan', a)).json();
     assert.equal(view.attacksLeft, 3);
     const strong = view.members.find(m => m.username === 'striker_a').attackDamage;
     const weak = view.members.find(m => m.username === 'striker_b').attackDamage;
     assert.ok(strong > weak, 'tokens show up in the server-computed damage');
-    assert.equal(view.boss.maxHp, Math.max(1000, (strong + weak) * 12));
+    near(view.boss.maxHp, 30 * (strong + weak) / 2);
 
     const hit = await (await post('/clan/attack', { damage: 1e15 }, a)).json();
-    assert.equal(hit.damage, strong, 'a damage number sent by the client is ignored');
+    near(hit.damage, strong, 'a damage number sent by the client is ignored');
     await post('/clan/attack', {}, a);
     await post('/clan/attack', {}, a);
     assert.equal((await post('/clan/attack', {}, a)).status, 400, 'three a day');
 
-    // Next day: more attacks; wear the boss down until it falls.
-    let killed = false;
-    for (let day = 1; day <= 30 && !killed; day++) {
-        clock += 24 * 3600 * 1000;
-        if ((await (await get('/clan', a)).json()).boss.week !== view.boss.week) break;
-        for (let i = 0; i < 3 && !killed; i++) {
-            const r = await (await post('/clan/attack', {}, a)).json();
-            killed = !!r.killed;
-        }
-    }
-    if (!killed) {
-        // The boss outlived the week at this strength; make it quick and check the kill instead.
-        await peek.bossHpToOne();
-        clock += 24 * 3600 * 1000;
-        killed = !!(await (await post('/clan/attack', {}, a)).json()).killed;
-    }
-    assert.ok(killed);
-    const rewards = (await (await get('/rewards', a)).json()).rewards;
-    assert.equal(rewards.filter(r => r.kind === 'kill').length, 1);
-    assert.equal(rewards.filter(r => r.kind === 'lastHit').length, 1);
+    // next day: the boss falls to a
+    await peek.bossHpToOne();
+    clock += 24 * 3600 * 1000;
+    const kill = await (await post('/clan/attack', {}, a)).json();
+    assert.equal(kill.killed, true);
+    assert.deepEqual(kill.banner, { week: '2026-W40', kills: 1 });
+    // b never fought: the banner is theirs as well, in every save and load
+    assert.equal((await (await post('/save', { state: heroSave({ tokens: 0, bestStage: 1 }) }, b)).json()).banner.kills, 1);
+    assert.equal((await (await get('/load', b)).json()).banner.kills, 1);
+    // and that is the whole reward: nothing to claim
+    assert.equal((await (await get('/rewards', a)).json()).rewards.length, 0);
+    assert.equal((await (await get('/rewards', b)).json()).rewards.length, 0);
     assert.equal((await post('/clan/attack', {}, a)).status, 400, 'no attacking a dead boss');
-
-    const claimed = (await (await post('/rewards/claim', { ids: rewards.map(r => r.id) }, a)).json()).rewards;
-    assert.equal(claimed.length, rewards.length);
-    assert.equal((await (await post('/rewards/claim', { ids: rewards.map(r => r.id) }, a)).json()).rewards.length, 0, 'claiming twice pays once');
-    assert.equal((await (await post('/rewards/claim', { ids: rewards.map(r => r.id) }, b)).json()).rewards.length, 0, 'not your rewards');
 });
 
-test('a finished week pays participation and top-three rewards when the clan is next opened', async () => {
+test('the banner is the week\'s: a new week starts it from nothing, and pays nothing at its end', async () => {
     const leader = await register('weekly_a');
     const helper = await register('weekly_b');
     const { clanId } = await (await post('/clans', { name: 'Weeklies', tag: 'WK' }, leader)).json();
     await post('/clans/join', { clanId }, helper);
     await post('/save', { state: heroSave({ tokens: 200 }) }, leader);
     await post('/save', { state: heroSave({ tokens: 10 }) }, helper);
+    await get('/clan', leader);   // (the week's boss is made on the clan's first look)
+    await peek.bossHpToOne();
     await post('/clan/attack', {}, leader);
-    await post('/clan/attack', {}, helper);
+    const week = (await (await get('/clan', leader)).json()).banner;
+    assert.equal(week.kills, 1);
     clock += 8 * 24 * 3600 * 1000; // next week
+    const next = (await (await post('/save', { state: heroSave({ tokens: 10 }) }, helper)).json()).banner;
+    assert.notEqual(next.week, week.week);
+    assert.equal(next.kills, 0);
     await get('/clan', leader);
-    const mine = (await (await get('/rewards', leader)).json()).rewards;
-    assert.ok(mine.some(r => r.kind === 'participation'));
-    assert.ok(mine.some(r => r.kind === 'top' && /#1/.test(r.text)));
-    const theirs = (await (await get('/rewards', helper)).json()).rewards;
-    assert.ok(theirs.some(r => r.kind === 'top' && /#2/.test(r.text)));
-    await get('/clan', helper);
-    assert.equal((await (await get('/rewards', helper)).json()).rewards.length, theirs.length, 'a week settles once');
+    assert.equal((await (await get('/rewards', leader)).json()).rewards.length, 0, 'no participation or top-three rewards');
+    assert.equal((await (await get('/rewards', helper)).json()).rewards.length, 0);
 });
 
 test('leaderboards: opt-in only, server-computed, flagged accounts left out, a weekly view', async () => {
@@ -337,28 +343,18 @@ test('leaderboards: opt-in only, server-computed, flagged accounts left out, a w
     assert.equal(after.me, null, 'opting out removes you at once');
 });
 
-test('parallel requests pay a finished week once, and once per player across clans', async () => {
+test('parallel attacks fell a level once: the banner counts it once', async () => {
     const a = await register('race_a');
     const b = await register('race_b');
     await post('/save', { state: heroSave({ tokens: 50 }) }, a);
     await post('/save', { state: heroSave({ tokens: 50 }) }, b);
-    const { clanId: first } = await (await post('/clans', { name: 'Racers One', tag: 'RC1' }, a)).json();
-    await post('/clan/attack', {}, a);
-    // Same week, a second clan: attack there too.
-    await post('/clans/leave', {}, a);
-    const { clanId: second } = await (await post('/clans', { name: 'Racers Two', tag: 'RC2' }, a)).json();
-    await post('/clans/join', { clanId: second }, b);
-    clock += 24 * 3600 * 1000;
-    await post('/clan/attack', {}, a);
-    await post('/clan/attack', {}, b);
-    assert.ok(first !== second);
-    clock += 8 * 24 * 3600 * 1000; // the week is over
-    await Promise.all(Array.from({ length: 8 }, () => get('/clan', b)));
-    const rewards = (await (await get('/rewards', a)).json()).rewards;
-    assert.equal(rewards.filter(r => r.kind === 'participation').length, 1, 'one participation reward for the week');
-    assert.ok(rewards.filter(r => r.kind === 'top').length <= 1, 'at most one top-three reward for the week');
-    const theirs = (await (await get('/rewards', b)).json()).rewards;
-    assert.equal(theirs.filter(r => r.kind === 'participation').length, 1);
+    const { clanId } = await (await post('/clans', { name: 'Racers One', tag: 'RC1' }, a)).json();
+    await post('/clans/join', { clanId }, b);
+    await get('/clan', a);
+    await peek.bossHpToOne();
+    const answers = await Promise.all([a, a, b, b].map(t => post('/clan/attack', {}, t).then(r => r.json())));
+    assert.equal(answers.filter(r => r.killed).length, 1, 'one kill');
+    assert.equal((await (await get('/clan', b)).json()).banner.kills, 1);
 });
 
 test('an absurd save cannot break its clan', async () => {
@@ -371,10 +367,11 @@ test('an absurd save cannot break its clan', async () => {
     const view = await get('/clan', owner);
     assert.equal(view.status, 200);
     const data = await view.json();
-    assert.ok(Number.isSafeInteger(data.boss.maxHp), `boss HP ${data.boss.maxHp}`);
+    assert.ok(Number.isFinite(data.boss.maxHp) && data.boss.maxHp > 0, `boss HP ${data.boss.maxHp}`);
     const hit = await post('/clan/attack', {}, giant);
     assert.equal(hit.status, 200);
-    assert.ok(Number.isSafeInteger((await hit.json()).damage));
+    const dealt = (await hit.json()).damage;
+    assert.ok(Number.isFinite(dealt) && dealt <= data.boss.maxHp * 0.011, 'flagged: a sliver of the boss');
     // The owner can remove them.
     assert.equal((await post('/clan/kick', { username: 'giant_owner' }, giant)).status, 409, 'only the owner removes members (409: a 403 would log the player out)');
     assert.equal((await post('/clan/kick', { username: 'giant' }, owner)).status, 200);
@@ -445,19 +442,19 @@ test('password guessing stops after ten tries per name, and one address makes on
     assert.equal((await post('/register', { username: 'farm_10', password: 'correct horse' }, null, farm)).status, 429);
 });
 
-test("a member who leaves before fighting takes their part of the week's boss with them", async () => {
+test("a member who leaves changes the clan's average, not the boss's health in attacks", async () => {
     const owner = await register('honest_owner');
-    const griefer = await register('drive_by');
+    const strong = await register('drive_by');
     await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, owner);
-    await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, griefer);
+    await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, strong);
     const { clanId } = await (await post('/clans', { name: 'Honest Folk', tag: 'HF' }, owner)).json();
-    await post('/clans/join', { clanId }, griefer);
+    await post('/clans/join', { clanId }, strong);
     const sized = (await (await get('/clan', owner)).json()).boss.maxHp;
-    await post('/clans/leave', {}, griefer);
+    await post('/clans/leave', {}, strong);
     const after = (await (await get('/clan', owner)).json());
-    const ownerShare = after.members.find(m => m.username === 'honest_owner').attackDamage * 12;
+    const own = after.members.find(m => m.username === 'honest_owner').attackDamage;
     assert.ok(after.boss.maxHp < sized, `${after.boss.maxHp} < ${sized}`);
-    assert.equal(after.boss.maxHp, Math.max(1000, ownerShare), 'the boss is sized for the ones who stayed');
+    near(after.boss.maxHp, 30 * own, 'thirty attacks of the one who stayed');
 });
 
 test('a deleted clan does not hand out fresh attacks, and a huge item id cannot freeze the server', async () => {
@@ -608,25 +605,23 @@ test('honest attacks deal their full damage; an account flagged for impossible n
     const host = await register('full_host');
     const { clanId } = await (await post('/clans', { name: 'Full Swings', tag: 'FUL' }, host)).json();
     await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, host);
-    const { maxHp } = (await (await get('/clan', host)).json()).boss;
-
     const forger = await register('flagged_giant');
     await post('/save', { state: heroSave({ tokens: 1e19, bestStage: 400 }) }, forger);   // tokens beyond any possible save
     await post('/clans/join', { clanId }, forger);
-    const sliver = Math.ceil(maxHp * 0.01);
+    const { maxHp } = (await (await get('/clan', host)).json()).boss;
     for (let i = 0; i < 3; i++) {
         const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, forger)).json();
-        assert.equal(hit.damage, sliver, `attack ${i + 1}: 1% of ${maxHp}`);
+        near(hit.damage, maxHp * 0.01, `attack ${i + 1}: 1% of ${maxHp}`);
         assert.equal(hit.capped, true);
     }
     // the host's perfect fight: its full damage, whatever share of the boss that is
     const quarters = Array.from({ length: 121 }, (_, i) => i * 250);
     const best = await (await post('/clan/attack', { strikes: quarters, ms: 30000 }, host)).json();
     assert.equal(best.capped, false, `${best.damage} of ${maxHp}`);
-    assert.ok(best.damage > sliver);
+    assert.ok(best.damage > maxHp * 0.01);
 });
 
-test('a felled boss comes back the next day twice as strong, one kill a day, each paid to its fighters; Monday starts over', async () => {
+test('a felled boss comes back the next day a level stronger (x1.2), one kill a day; each kill raises the banner; Monday starts over', async () => {
     toMonday();
     const host = await register('level_host');
     const sleeper = await register('level_sleeper');
@@ -636,9 +631,9 @@ test('a felled boss comes back the next day twice as strong, one kill a day, eac
     toMonday();   // a week on: the sleeper hasn't played since
     await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, host);
     const first = (await (await get('/clan', host)).json());
-    const hostShare = first.members.find(m => m.username === 'level_host').attackDamage * 12;
+    const hostAttack = first.members.find(m => m.username === 'level_host').attackDamage;
     assert.equal(first.boss.level, 1);
-    assert.equal(first.boss.maxHp, Math.max(1000, hostShare), 'Monday\'s boss: 12 attacks of each member who played this week');
+    near(first.boss.maxHp, 30 * hostAttack, 'Monday\'s boss: thirty attacks of the members who played this week');
 
     // felled on Monday: down until midnight UTC
     await peek.bossHpToOne();
@@ -646,44 +641,44 @@ test('a felled boss comes back the next day twice as strong, one kill a day, eac
     const refused = await post('/clan/attack', {}, host);
     assert.equal(refused.status, 400);
     assert.match((await refused.json()).error, /midnight UTC/);
-    const down = (await (await get('/clan', host)).json()).boss;
-    assert.deepEqual([down.killed, down.level], [true, 1]);
-    assert.ok(down.nextInMs > 0 && down.nextInMs <= DAY_MS && down.nextInMs < down.endsInMs);
+    const down = (await (await get('/clan', host)).json());
+    assert.deepEqual([down.boss.killed, down.boss.level, down.banner.kills], [true, 1, 1]);
+    assert.ok(down.boss.nextInMs > 0 && down.boss.nextInMs <= DAY_MS && down.boss.nextInMs < down.boss.endsInMs);
 
-    // Tuesday: level 2, twice the health, full; level 1's kill paid to its fighter
+    // Tuesday: level 2, a fifth more health, full; the sleeper has the banner too
     clock += DAY_MS;
     const tuesday = (await (await get('/clan', host)).json()).boss;
-    assert.deepEqual([tuesday.level, tuesday.maxHp, tuesday.hp, tuesday.killed], [2, first.boss.maxHp * 2, first.boss.maxHp * 2, false]);
-    let rewards = (await (await get('/rewards', host)).json()).rewards;
-    assert.deepEqual([rewards.filter(r => r.kind === 'kill').length, rewards.filter(r => r.kind === 'lastHit').length], [1, 1]);
+    assert.deepEqual([tuesday.level, tuesday.killed], [2, false]);
+    near(tuesday.maxHp, first.boss.maxHp * 1.2);
+    near(tuesday.hp, tuesday.maxHp);
+    assert.equal((await (await get('/load', sleeper)).json()).banner.kills, 1, 'every member, fought or not');
 
-    // level 2 felled: paid again, under its own key
+    // level 2 felled: two levels on the banner
     await post('/clan/attack', {}, host);
     await peek.bossHpToOne();
-    assert.equal((await (await post('/clan/attack', {}, host)).json()).killed, true);
-    rewards = (await (await get('/rewards', host)).json()).rewards;
-    assert.deepEqual([rewards.filter(r => r.kind === 'kill').length, rewards.filter(r => r.kind === 'lastHit').length], [2, 2]);
-    assert.ok(rewards.some(r => r.kind === 'kill' && /level 2/.test(r.text)));
-    assert.equal((await (await get('/rewards', sleeper)).json()).rewards.filter(r => r.kind === 'kill').length, 0, 'a kill pays only who fought that level');
+    const second = await (await post('/clan/attack', {}, host)).json();
+    assert.deepEqual([second.killed, second.banner.kills], [true, 2]);
 
-    // Wednesday: level 3 (4x). Not felled: Thursday keeps it as it is, damage and all
+    // Wednesday: level 3 (x1.44). Not felled: Thursday keeps it as it is, damage and all
     clock += DAY_MS;
     const wednesday = (await (await get('/clan', host)).json()).boss;
-    assert.deepEqual([wednesday.level, wednesday.maxHp], [3, first.boss.maxHp * 4]);
+    assert.equal(wednesday.level, 3);
+    near(wednesday.maxHp, first.boss.maxHp * 1.44);
     const hit = await (await post('/clan/attack', {}, host)).json();
     assert.equal(hit.killed, false);
     clock += DAY_MS;
-    const thursday = (await (await get('/clan', host)).json()).boss;
-    assert.deepEqual([thursday.level, thursday.maxHp, thursday.hp], [3, first.boss.maxHp * 4, first.boss.maxHp * 4 - hit.damage]);
+    const thursday = (await (await get('/clan', host)).json());
+    assert.equal(thursday.boss.level, 3);
+    near(thursday.boss.hp, wednesday.maxHp - hit.damage);
+    assert.equal(thursday.banner.kills, 2);
 
-    // Monday: a new boss at level 1, sized from the numbers then
+    // Monday: a new boss at level 1, and the banner starts again
     toMonday();
-    const next = (await (await get('/clan', host)).json()).boss;
-    assert.equal(next.level, 1);
-    assert.notEqual(next.week, first.boss.week);
+    const next = (await (await get('/clan', host)).json());
+    assert.equal(next.boss.level, 1);
+    assert.notEqual(next.boss.week, first.boss.week);
+    assert.equal(next.banner.kills, 0);
 });
-
-// ---------- the October 2026 bug sweep (docs/ROADMAP.md, Phase 9) ----------
 
 test('an upload made over a cloud save the game had not seen is refused (409), and one over the right one is stored', async () => {
     const t = await register('two_devices');
@@ -726,17 +721,18 @@ test('password guesses sent all at once are counted before they are checked: ten
     clock += 61 * 60 * 1000;
 });
 
-test("leaving and coming back doesn't shrink the week's boss; a stranger who hits it once and leaves takes their part away", async () => {
+test("leaving and coming back leaves the week's boss as it was; a strong stranger's hits count, and leaving takes nothing back", async () => {
     const owner = await register('steady_owner');
     const friend = await register('steady_friend');
     await post('/save', { state: heroSave({ tokens: 300, bestStage: 60 }) }, owner);
     await post('/save', { state: heroSave({ tokens: 300, bestStage: 60 }) }, friend);
     const { clanId } = await (await post('/clans', { name: 'Steady Hands', tag: 'STDY' }, owner)).json();
     await post('/clans/join', { clanId }, friend);
-    const sized = (await (await get('/clan', owner)).json()).boss.maxHp;
+    const sized = (await (await get('/clan', owner)).json()).boss;
     await post('/clans/leave', {}, friend);
     await post('/clans/join', { clanId }, friend);
-    assert.equal((await (await get('/clan', owner)).json()).boss.maxHp, sized, 'the same boss as before');
+    const again = (await (await get('/clan', owner)).json()).boss;
+    near(again.maxHp, sized.maxHp, 'the same boss as before');
 
     const host = await register('wary_host');
     const stranger = await register('drive_by_two');
@@ -744,13 +740,14 @@ test("leaving and coming back doesn't shrink the week's boss; a stranger who hit
     await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, stranger);
     const wary = (await (await post('/clans', { name: 'Wary Folk', tag: 'WARY' }, host)).json()).clanId;
     await post('/clans/join', { clanId: wary }, stranger);
-    const big = (await (await get('/clan', host)).json()).boss.maxHp;
+    const before = (await (await get('/clan', host)).json()).boss;
     const hit = await (await post('/clan/attack', { strikes: [], ms: 0 }, stranger)).json();   // given up at once: the least damage
     await post('/clans/leave', {}, stranger);
     const after = (await (await get('/clan', host)).json());
-    const hostShare = after.members.find(m => m.username === 'wary_host').attackDamage * 12;
-    assert.ok(after.boss.maxHp < big / 2, `${after.boss.maxHp} vs ${big}`);
-    assert.equal(after.boss.maxHp, Math.max(1000, hostShare + hit.damage), 'their part goes, all but what they dealt');
+    const own = after.members.find(m => m.username === 'wary_host').attackDamage;
+    // in the clan's attacks the boss is as it was, less the stranger's hit: thirty of the host's own now
+    near(after.boss.maxHp, 30 * own);
+    near(after.boss.hp / after.boss.maxHp, (before.maxHp - hit.damage) / before.maxHp, 'the hit stays dealt');
 });
 
 test('a clan fight sent twice (its answer lost) is one attack: answered again, one attack spent', async () => {
@@ -793,23 +790,18 @@ test('a member left in a clan deleted under them is let out of it', async () => 
     assert.equal((await post('/clans', { name: 'Found Again', tag: 'FND' }, t)).status, 200, 'free to start another');
 });
 
-test("a felled boss's rewards are paid even if the payout stopped half way", async () => {
+test("a boss from before the clan's attacks counted it moves to them once, with the share of its health it had left", async () => {
     const t = await register('patient_slayer');
     await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
     await post('/clans', { name: 'Patient Ones', tag: 'PAT' }, t);
-    await post('/clan/attack', {}, t);
-    // the boss fell, and the server stopped before paying (marked, not paid)
-    if (memory) {
-        const boss = memory.db.bosses.find(b => b.clanId === memory.db.members.find(m => m.userId === memory.db.users.find(u => u.username === 'patient_slayer').id).clanId);
-        Object.assign(boss, { hp: 0, killedAt: clock, lastHitUser: memory.db.users.find(u => u.username === 'patient_slayer').id, killPaid: false });
-    } else {
-        await pool.query("UPDATE clan_bosses SET hp = 0, killed_at = $1, last_hit_user = (SELECT id FROM users WHERE username = 'patient_slayer'), kill_paid = FALSE WHERE clan_id = (SELECT clan_id FROM clan_members WHERE user_id = (SELECT id FROM users WHERE username = 'patient_slayer'))", [clock]);
-    }
     await get('/clan', t);
-    await get('/clan', t);
-    const rewards = (await (await get('/rewards', t)).json()).rewards;
-    assert.equal(rewards.filter(r => r.kind === 'kill').length, 1);
-    assert.equal(rewards.filter(r => r.kind === 'lastHit').length, 1);
+    await peek.oldBoss('patient_slayer', 1_000_000, 400_000);   // 40% left, in damage
+    const moved = (await (await get('/clan', t)).json());
+    const attack = moved.members[0].attackDamage;
+    near(moved.boss.maxHp, 30 * attack);
+    near(moved.boss.hp, 0.4 * moved.boss.maxHp);
+    const again = (await (await get('/clan', t)).json()).boss;
+    near(again.hp, moved.boss.hp, 'once');
 });
 
 test('a token whose name is no longer its account\'s is refused', async () => {

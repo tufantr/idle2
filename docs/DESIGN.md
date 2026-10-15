@@ -848,27 +848,34 @@ with the game's own stat code; the client never submits damage or scores.
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
   places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
-- **The weekly clan boss** (ISO weeks, UTC). Its health is set when the week's boss first appears:
-  12 × the combined attack of members who aren't flagged and have played (uploaded) in the past week
-  (one away doesn't make it bigger for the rest), each member's at its best of the past week
-  (a weak save uploaded just before Monday doesn't shrink the boss) and counted no higher than their best
-  stage allows, capped so no save can overflow it. Each member's share is kept all week, and the boss is
-  the size of the clan as it is: one who leaves or is removed takes away all of their share but the
-  damage they dealt (a stranger could join just before Monday with a huge save, size the boss, hit it
-  once and leave), and one who comes back the same week brings it back (leaving and rejoining in turn
-  used to shrink the boss to 1 health). A member left in a clan deleted under them is let out of it. The ten lands' rulers take turns as the boss, one an ISO
-  week (`clanBossFor`, `src/data/social.js`); the server keeps only its health.
+- **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
+  banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
+  past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
+  Its unit is the clan's average plain attack (the 30-s fight without a strike or a potion) of the members who
+  aren't flagged and have played (uploaded) in the past week, each at its best of the week and never more than their
+  best stage allows; level 1 takes `CLAN_BOSS.first` (30) of them, kept in thousandths of the unit
+  (`clanBossHealth`, `src/data/social.js`), and an attack counts its damage over the unit, so a stronger member's
+  counts for more. Members joining, leaving or removed move the unit (`resizeBoss`), never the boss's health in
+  attacks, so the more members fight the sooner it falls, and a player alone gets little past level 1. The answers
+  give health and damage back as damage, in the unit, for the screen. A boss of the week it went live (counted in
+  damage, unit 0) moves once to the same share of its health, its attacks scaled with it. The ten lands' rulers take
+  turns as the boss, one an ISO week (`clanBossFor`, `src/data/social.js`).
 - **Levels: one kill a day** (October 2026, the owner's design, after a boss sized on Monday morning fell
   that evening: heroes grew 5 to 80 times in that day). A felled boss stays down until the next UTC
-  midnight, then comes back as the next level at twice the health (`BOSS_LEVEL_GROWTH`), full: 1× on
-  Monday, then 2×, 4×… up to 64× on Sunday if it falls every day. One not felled stays as it is, damage
-  and all; Monday brings a new boss at level 1, sized again. At most one kill a day, so at most seven a
-  week, which also bounds what a cheat could farm (no top level needed). Each level's kill pays everyone
-  who fought that level (attacks carry their level) and the last hit; level 1 keeps the reward keys from
-  before levels, so an older week is never paid twice. A member leaving resizes the current level from
-  the level-1 shares. Other games looked at: Hero Wars' guild boss beaten again at full health, Clicker
-  Heroes' Immortals stronger after each kill, Tap Titans 2's raid levels, Raid: Shadow Legends' daily
-  Clan Boss with damage chests.
+  midnight, then comes back as the next level with a fifth more health (`CLAN_BOSS.growth`, ×1.2; it was ×2, and
+  level 7 had 64 times level 1's health, beyond any clan: the owner asked that twenty members who use all their
+  attacks fell all seven), full; at most seven a week. One not felled stays as it is, damage and all; Monday brings
+  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack,
+  with Combat Potion I ×2.4, IV ×4.8; with every member's three attacks a day and the unused kept, 20 members fell
+  all seven even watching, 10 five (seven with a potion), 5 three, 2 one, and one alone none without a potion.
+- **The clan banner** (the owner: clearing the clan's bosses should make its members stronger, every member, fought
+  or not, so a clan sees to its fighters; no crate). Each level felled raises it, `CLAN_BANNER` ×1.5, 1.75 … 3 at
+  seven, on attack, defence and health, until the week ends; Monday starts it again. Every save, load, clan look and
+  attack answer says it (`bannerOf`, `api/index.js`), the game keeps it in the save (`clanBanner`, as long as its week
+  lasts: `clanBannerMult`, `src/core/modifiers.js`), a card says each rise, and it shows under the hero and on the
+  boss's panel. The boards and the clan boss's own fight leave it out (`stableState`). Simulated (7 players with Auto,
+  600 h): a clan felling one level a week climbs to 1,870 against 1,800 alone, five a week 1,900. No essence or
+  diamonds for kills, last hits, taking part or the top three any more; rewards from before still claim.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
   (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen like the Titan's (`state.combat.mode` =
@@ -894,13 +901,11 @@ with the game's own stat code; the client never submits damage or scores.
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
   atomically, so parallel requests can't spend one twice); an attack given back if the boss was already
   down. Each fight carries its own mark (the time it ended): sent again after an answer was lost, it is
-  answered again as it was, and no second attack is spent. Rewards, claimed from the Clan tab: 100 essence and 2 diamonds to everyone who fought
-  when the boss falls, 50 essence and a diamond for the last hit, and when the week ends 50 essence for
-  taking part plus 100 / 60 / 30 essence and a diamond for the top three. Claiming twice pays once; a
-  week's rewards and a kill's are paid before they are marked done (each reward has its own key, so
-  paying again pays nothing twice, and a payout that failed half way is finished by the next look), and
-  weekly, kill and last-hit rewards are paid once per player per week even for someone who fought for
-  several clans.
+  answered again as it was, and no second attack is spent. Until October 2026 a felled boss and the
+  week's end paid essence and diamonds (100 essence and 2 diamonds to everyone who fought, 50 and a diamond
+  for the last hit, 50 for taking part, 100 / 60 / 30 and a diamond for the top three); the clan banner took
+  their place (above, the owner: no crate, even for the top three). Rewards paid before still claim from the
+  Clan tab (`/api/rewards`), once each.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
   level, Titans or dungeon clears, all time or this week (from where each player stood when the week
   began: the numbers stored before their first upload of the week, not that upload's).

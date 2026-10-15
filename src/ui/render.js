@@ -32,7 +32,7 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE, clanBossFor } from '../data/social.js';
+import { DISCORD_INVITE, clanBossFor, CLAN_BANNER } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
@@ -2109,7 +2109,7 @@ export function renderClan(game, ui, cloud) {
             <div class="clan-tiles">
                 ${tile(sprite('mon/Elder Dragon', { scale: 3, fallback: '🐉' }), 'A boss each week', 'fought by the whole clan')}
                 ${tile(heroSprite(game.state, { scale: 3 }), 'Three attacks a day', 'by your saved hero')}
-                ${tile(`${resIcon('essence', { scale: 2 })}${resIcon('diamond', { scale: 2 })}`, 'Rewards for all', 'more for the top three')}
+                ${tile(sprite('item/Shield/4', { scale: 3, fallback: '🛡️' }), 'A banner for all', 'stronger until the week ends')}
             </div>
         </section>`;
     }
@@ -2167,6 +2167,21 @@ export function renderClan(game, ui, cloud) {
 }
 
 /**
+ * The clan's banner on the boss's panel (data/social.js CLAN_BANNER): what the levels felled this week give every
+ * member until Monday, and what the next would.
+ */
+function clanBannerLine(boss) {
+    const kills = Math.max(0, Math.min(CLAN_BANNER.length - 1, Number(boss.kills) || 0));
+    const now = CLAN_BANNER[kills];
+    const next = CLAN_BANNER[kills + 1];
+    const shield = sprite('item/Shield/4', { scale: 0.5, cls: 'soft res-spr' });
+    const what = 'attack, defence and health for everyone in the clan until the week ends';
+    return `<div class="clan-banner-line small" title="${esc(`The clan banner: ${what}`)}">${shield} ${kills
+        ? `Clan banner <b>×${now}</b>${next ? ` · level ${kills + 1} brings ×${next}` : ' · the most it goes'}`
+        : `Fell it for a clan banner of <b>×${next}</b>: ${what}`}</div>`;
+}
+
+/**
  * The week's clan boss (data/social.js clanBossFor): its portrait and health, the fight button (a clan
  * attack is a short fight on screen, systems/clanfight.js) and the attacks waiting as pips. The rules
  * are behind the Clan's "?".
@@ -2194,6 +2209,7 @@ function clanBossPanel(game, social, boss, pct) {
         <span class="clan-boss-face">${sprite(`mon/${look.name}`, { scale: 2, cls: boss.killed ? 'soft silhouette' : 'soft', fallback: '🐉' })}</span>
         <div class="clan-boss-text">
             <div><b>${esc(look.name)}</b>${boss.level ? ` <span class="clan-level">Level ${boss.level}</span>` : ''} <span class="muted small">${boss.killed ? `defeated${boss.lastHit ? ` · last hit by ${esc(boss.lastHit)}` : ''}` : `this week's boss · ends in ${duration(endsMs)}`}</span></div>
+            ${clanBannerLine(boss)}
             <div class="combat-bar"><div class="combat-fill enemy-fill" style="width:${pct}%"></div></div>
             <div class="small">${fmt(boss.hp)} / ${fmt(boss.maxHp)} HP</div>
             <div class="btn-row">${fighting ? '<span class="status-pill fighting">Fighting now</span>'

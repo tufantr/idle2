@@ -16,7 +16,7 @@ import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
 import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, giveUpTitan, titanReady, scoreTitanCutShort } from './systems/dungeon.js';
-import { startClanFight, giveUpClanFight, clearClanResult } from './systems/clanfight.js';
+import { startClanFight, giveUpClanFight, clearClanResult, setClanBanner } from './systems/clanfight.js';
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
@@ -290,6 +290,7 @@ export class Game {
     startClanFight(boss) { return this._act(() => startClanFight(this, boss)); }
     /** The server has the last clan attack: forget it. */
     clearClanResult() { return this._act(() => clearClanResult(this)); }
+    setClanBanner(banner) { return this._act(() => setClanBanner(this, banner)); }
 
     canPrestige() { return canPrestige(this.state, this.now); }
     /** The dock's Prestige glows: the first as soon as it may be made, a later one at its wall (systems/prestige.js). */

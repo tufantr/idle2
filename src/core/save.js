@@ -199,7 +199,7 @@ export class CloudClient {
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
         this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null);
-        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0 };
+        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0, banner: data.banner ?? null };
     }
 
     /**
