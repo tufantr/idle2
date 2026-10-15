@@ -639,7 +639,7 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 }
 .tile:hover { transform: translateY(-2px); border-color: var(--r); background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--r) 26%, #1d1610), #0e0a07 75%); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5), 0 0 12px color-mix(in srgb, var(--r) 35%, transparent); }
 .tile.r-rare, .tile.r-epic { box-shadow: inset 0 0 12px color-mix(in srgb, var(--r) 30%, transparent), 0 0 8px color-mix(in srgb, var(--r) 30%, transparent); }
-.tile.r-legendary { box-shadow: inset 0 0 14px color-mix(in srgb, var(--r) 40%, transparent), 0 0 12px color-mix(in srgb, var(--r) 45%, transparent); animation: legendGlow 2.4s ease-in-out infinite; }
+.tile.r-legendary, .tile.r-mythic, .tile.r-primal { box-shadow: inset 0 0 14px color-mix(in srgb, var(--r) 40%, transparent), 0 0 12px color-mix(in srgb, var(--r) 45%, transparent); animation: legendGlow 2.4s ease-in-out infinite; }
 .tile.selected { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
 .tile.unwearable .tile-icon { filter: grayscale(0.7) brightness(0.65); }
 .tile.empty { border: 1px dashed rgba(214, 170, 92, 0.16); background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5); }
@@ -1427,12 +1427,12 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .loot.landed .loot-ground { animation: lootGround 0.45s ease-out forwards, lootBreathe 1.1s ease-in-out 0.45s infinite alternate; }
 .loot-ground::after { content: ''; position: absolute; inset: -6px -14px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--r) 80%, white); opacity: 0; }
 .loot.landed .loot-ground::after { animation: lootRipple 0.7s ease-out forwards; }
-.loot.r-legendary.landed .loot-ground::after { animation: lootRipple 1.1s ease-out forwards; border-width: 3px; }
+.loot.top.landed .loot-ground::after { animation: lootRipple 1.1s ease-out forwards; border-width: 3px; }
 .loot-pillar { z-index: 1; width: 76px; height: calc(var(--fh) * 0.62); opacity: 0; transform: translateX(-50%) scaleY(0); transform-origin: 50% 100%;
     background: linear-gradient(0deg, color-mix(in srgb, var(--r) 70%, white) 0%, color-mix(in srgb, var(--r) 90%, transparent) 22%, color-mix(in srgb, var(--r) 55%, transparent) 60%, transparent 100%);
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent); mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent); }
 .loot-pillar::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 8px; height: 100%; margin-left: -4px; background: linear-gradient(0deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 55%, transparent); }
-.loot.r-legendary .loot-pillar { width: 100px; height: calc(var(--fh) * 0.96);
+.loot.top .loot-pillar { width: 100px; height: calc(var(--fh) * 0.96);
     background: linear-gradient(0deg, color-mix(in srgb, var(--r) 80%, white) 0%, var(--r) 20%, color-mix(in srgb, var(--r) 70%, transparent) 55%, transparent 100%); }
 /* a rare piece: no standing pillar, a short flare of light as it lands */
 .loot.r-rare .loot-pillar { height: calc(var(--fh) * 0.34); }
@@ -1442,6 +1442,13 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--r) 55%, transparent) 0deg 8deg, transparent 8deg 24deg);
     -webkit-mask-image: radial-gradient(circle, #000 16%, transparent 66%); mask-image: radial-gradient(circle, #000 16%, transparent 66%); }
 .loot.landed .loot-rays { animation: lootRays 0.5s ease-out forwards, spin 7s linear infinite; }
+/* above legendary: Mythic's crimson, Primal's light running through every colour (data/items.js) */
+.loot.r-mythic .loot-pillar, .loot.r-primal .loot-pillar { width: 124px; }
+.loot.r-primal.landed .loot-pillar, .loot.r-primal.landed .loot-rays, .loot.r-primal.landed .loot-halo { filter: hue-rotate(0deg); animation-name: lootPillar, lootShimmer, primalHue; animation-duration: 0.4s, 0.9s, 3s; animation-timing-function: ease-out, ease-in-out, linear; animation-iteration-count: 1, infinite, infinite; animation-fill-mode: forwards, none, none; }
+.loot.r-primal.landed .loot-rays { animation-name: lootRays, spin, primalHue; animation-duration: 0.5s, 5s, 3s; animation-timing-function: ease-out, linear, linear; animation-iteration-count: 1, infinite, infinite; }
+.loot.r-primal.landed .loot-halo { animation-name: lootRays, lootShimmer, primalHue; animation-duration: 0.5s, 1.2s, 3s; animation-iteration-count: 1, infinite, infinite; }
+@keyframes primalHue { to { filter: hue-rotate(360deg); } }
+.loot.r-mythic .loot-rarity, .loot.r-primal .loot-rarity { color: color-mix(in srgb, var(--r) 45%, white); text-shadow: 0 2px 0 #1c0a0f, 0 0 14px color-mix(in srgb, var(--r) 90%, transparent); }
 .loot-spark { z-index: 3; width: 5px; height: 5px; margin: 0 0 calc(var(--ih) / 2) -2px; opacity: 0; background: color-mix(in srgb, var(--r) 45%, white); box-shadow: 0 0 6px var(--r); }
 .loot.landed .loot-spark { animation: lootSpark var(--t) ease-out forwards; }
 .loot-words { z-index: 5; margin-bottom: calc(var(--ih) + 6px); display: flex; flex-direction: column; align-items: center; gap: 1px; transform: translateX(-50%); opacity: 0; white-space: nowrap; font-family: var(--font-display); }
@@ -1457,7 +1464,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .loot-arrive { position: fixed; z-index: 452; transform: translate(-50%, -50%); border-radius: 12px; pointer-events: none;
     box-shadow: 0 0 0 2px var(--r), 0 0 26px 6px color-mix(in srgb, var(--r) 65%, transparent); animation: lootArrive 0.7s ease-out forwards; }
 /* a legendary upgrade: gold at the screen's edges, and the fight holds its breath (the scene's sprites pause, its land dims) */
-.loot-flash { position: fixed; inset: 0; z-index: 451; pointer-events: none; box-shadow: inset 0 0 160px 56px rgba(252, 211, 77, 0.85); animation: lootFlash 1.1s ease-out forwards; }
+.loot-flash { position: fixed; inset: 0; z-index: 451; pointer-events: none; box-shadow: inset 0 0 160px 56px color-mix(in srgb, var(--r, #fcd34d) 85%, transparent); animation: lootFlash 1.1s ease-out forwards; }
 .battle.slowmo .battle-sky, .battle.slowmo .battle-far, .battle.slowmo .battle-near { filter: brightness(0.6) saturate(0.7); transition-duration: 0.2s; }
 .battle.slowmo .fighter-sprite *, .battle.slowmo .battle-particles i { animation-play-state: paused; }
 /* the monster that leaves a piece worth seeing flashes in its colour as it falls */
@@ -1630,6 +1637,8 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
 .celebration.prestige { --cel: #e879f9; --cel-glow: rgba(217, 70, 239, 0.55); border-color: rgba(217, 70, 239, 0.75); }
 /* a legendary upgrade dropped (main.js legendaryCard): the piece on a gold disc, what it does, and Equip */
 .celebration.legend-drop { --cel: #f59e0b; --cel-glow: rgba(245, 158, 11, 0.6); border-color: rgba(245, 158, 11, 0.9); }
+.celebration.legend-drop.r-mythic { --cel: #f43f5e; --cel-glow: rgba(244, 63, 94, 0.6); border-color: rgba(244, 63, 94, 0.9); }
+.celebration.legend-drop.r-primal { --cel: #5eead4; --cel-glow: rgba(94, 234, 212, 0.6); border-color: rgba(94, 234, 212, 0.9); }
 .cel-loot { display: inline-grid; place-items: center; width: 108px; height: 108px; border-radius: 50%; line-height: 0;
     background: radial-gradient(circle at 50% 42%, #5a3a0e, #160d04 72%); border: 3px solid #f59e0b;
     box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(0, 0, 0, 0.4), 0 0 30px rgba(245, 158, 11, 0.6); }
@@ -2106,11 +2115,11 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .wb-find.best { border-color: color-mix(in srgb, var(--r) 65%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--r) 25%, transparent); }
 .wb-loot { flex: 0 0 auto; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; line-height: 0;
     border: 1px solid var(--r); background: radial-gradient(circle, color-mix(in srgb, var(--r) 35%, transparent), transparent 72%), var(--well); }
-.wb-find.best.r-legendary .wb-loot { animation: legendGlow 2.4s ease-in-out infinite; }
+.wb-find.best.r-legendary .wb-loot, .wb-find.best.r-mythic .wb-loot, .wb-find.best.r-primal .wb-loot { animation: legendGlow 2.4s ease-in-out infinite; }
 .wb-rarity { color: var(--r); font-size: 0.78rem; font-weight: 700; }
 .wb-up { color: #4ade80; font-size: 0.78rem; font-weight: 700; }
 .wb-find.best small { display: block; color: var(--text-muted); font-size: 0.75rem; }
-body.reduced-motion .wb-find.best.r-legendary .wb-loot { animation: none; }
+body.reduced-motion .wb-find.best .wb-loot { animation: none; }
 .wb-find-icon { width: 32px; text-align: center; font-size: 1.3rem; }
 .wb-find .spr { flex: 0 0 auto; }
 @keyframes wbIn { from { opacity: 0; transform: translateY(10px) scale(0.85); } to { opacity: 1; transform: none; } }
@@ -2234,6 +2243,8 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .anvil-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2rem 0.7rem; color: var(--text); font-variant-numeric: tabular-nums; }
 .anvil-stats .spr { margin: -4px 0; }
 .anvil-stats i { font-style: normal; color: #86efac; }
+/* the forge's next rung for the slot (data/workshop.js): "Weapon slot +14 → +15: +5% attack" */
+.anvil-next { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .anvil-jobs { display: flex; flex-direction: column; align-items: stretch; gap: 0.4rem; width: 100%; margin-top: 0.15rem; }
 .anvil-btn { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0.55rem; border-radius: 10px; font-size: 0.8rem; text-align: left; }
 .anvil-btn[aria-disabled="true"] { opacity: 0.7; filter: saturate(0.7); }
@@ -2246,10 +2257,11 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .anvil-empty { padding: 1rem 0; }
 @media (max-width: 600px) {   /* a phone: the piece beside its name, the jobs beneath */
     .anvil-grid { gap: 0.6rem; }
-    .anvil-card { display: grid; grid-template-columns: 68px 1fr; grid-template-areas: "art name" "art stats" "jobs jobs"; align-items: center; column-gap: 0.8rem; row-gap: 0.3rem; padding: 0.7rem 0.75rem; text-align: left; }
+    .anvil-card { display: grid; grid-template-columns: 68px 1fr; grid-template-areas: "art name" "art stats" "art next" "jobs jobs"; align-items: center; column-gap: 0.8rem; row-gap: 0.3rem; padding: 0.7rem 0.75rem; text-align: left; }
     .anvil-art { grid-area: art; width: 68px; height: 68px; }
     .anvil-name { grid-area: name; align-self: end; }
     .anvil-stats { grid-area: stats; justify-content: flex-start; align-self: start; }
+    .anvil-next { grid-area: next; align-self: start; }
     .anvil-jobs { grid-area: jobs; }
 }
 @media (max-width: 600px) { .seg { display: flex; } .seg-btn { flex: 1; justify-content: center; padding: 0.5rem 0.4rem; } }
@@ -2566,6 +2578,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .dock-equip { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.7rem; text-align: left; color: #bbf7d0; border-color: rgba(74, 222, 128, 0.7);
     box-shadow: 0 0 14px rgba(74, 222, 128, 0.32), inset 0 0 14px rgba(74, 222, 128, 0.12); }   /* it glows while it waits (a steady glow: the dock is redrawn every second) */
 .dock-equip .dock-gain { display: block; font-style: normal; font-size: 0.7rem; font-weight: 800; color: #4ade80; }
+.dock-equip .dock-stages { color: #fde68a; white-space: nowrap; }   /* about how far it takes him (systems/inventory.js gainStages) */
 .dock-equip > span { min-width: 0; display: flex; flex-direction: column; font-size: 0.8rem; line-height: 1.25; }
 .dock-equip > span > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); font-weight: 400; }
 .perks-modal { max-width: 780px; }

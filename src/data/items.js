@@ -55,8 +55,24 @@ export const RARITIES = [
     { id: 'uncommon',  name: 'Uncommon',  quality: 1.20, affixes: 1, weight: 40,  color: '#22c55e' },
     { id: 'rare',      name: 'Rare',      quality: 1.50, affixes: 2, weight: 14,  color: '#3b82f6' },
     { id: 'epic',      name: 'Epic',      quality: 2.00, affixes: 3, weight: 4,   color: '#a855f7' },
-    { id: 'legendary', name: 'Legendary', quality: 2.80, affixes: 4, weight: 1,   color: '#f59e0b' }
+    { id: 'legendary', name: 'Legendary', quality: 2.80, affixes: 4, weight: 1,   color: '#f59e0b' },
+    // above legendary (the endless climb, October 2026; DESIGN §3.31): never crafted, only a frontier boss's (MYTHIC)
+    { id: 'mythic',    name: 'Mythic',    quality: 4.00, affixes: 5, weight: 0,   color: '#f43f5e' },
+    { id: 'primal',    name: 'Primal',    quality: 4.00, affixes: 6, weight: 0,   color: '#5eead4', perfect: true }
 ];
+
+// Above legendary: from stage MYTHIC.from, a piece left by a boss of the stage ladder within MYTHIC.near stages of the
+// best stage, and the frontier's piece (below), is Mythic MYTHIC.chance of the time (×4 a common, five bonuses), and from
+// stage PRIMAL.from a Mythic is Primal one time in PRIMAL.odds: its stats and bonuses rolled as high as they go, and a
+// sixth bonus. With Auto a Mythic comes about once a day of play past stage 500 (tools/simulate.mjs: at 2% one in 70
+// hours, as a run meets few bosses that near its best; one legendary in twenty, the first plan, one in 500 hours);
+// a Primal a few times a year.
+export const MYTHIC = { from: 500, near: 100, chance: 0.05 };
+export const PRIMAL = { from: 1000, odds: 20 };
+// The frontier's piece (Tap Titans 2 seeds frontier drops on every prestige run): once a run, the first boss of the
+// ladder beaten at FRONTIER_DROP.share of the best stage or deeper (from a best of FRONTIER_DROP.from) leaves a sure
+// piece from the best stage's depth, at a boss's odds, so every run has a real chance at an upgrade.
+export const FRONTIER_DROP = { from: 100, share: 0.9 };
 
 // Affix pool. Values are per-item; the modifier pipeline caps the totals (see core/modifiers.js).
 // `min`/`max` are rolled once at creation and scale mildly with material tier.

@@ -131,7 +131,7 @@ const lateGame = page => page.evaluate(async () => {
     for (const r of Object.keys(s.resources)) s.resources[r] = 240;
     s.resources.essence = 3200; s.gold = 4.8e6;
     const { GEAR_TIERS, RARITIES } = await import('/src/data/items.js');
-    ['Weapon', 'Shield', 'Head', 'Body', 'Legs'].forEach((type, i) => { s.equipped[type] = generateEquipment({ type, tier: 3, power: GEAR_TIERS[2].power, materialName: 'Mithril', rarity: RARITIES[i % 4], source: 'drop' }, s.idCounter++); s.equipped[type].upgrade = [4, 0, 2, 7, 10][i]; });
+    ['Weapon', 'Shield', 'Head', 'Body', 'Legs'].forEach((type, i) => { s.equipped[type] = generateEquipment({ type, tier: 3, power: GEAR_TIERS[2].power, materialName: 'Mithril', rarity: RARITIES[i % 4], source: 'drop' }, s.idCounter++); s.forge[type].level = [4, 0, 2, 7, 14][i]; });
     s.combat.pity = 3;
     for (let i = 0; i < 12; i++) s.inventory.push(generateDrop(2 + (i % 3), i % 4 === 0, s.idCounter++));
     s.daily.banked = 1;

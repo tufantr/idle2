@@ -2,7 +2,7 @@
 // change a constant here and re-run the simulator to see the pacing move.
 
 import { AUTHORED_STAGES, zoneForStage, isBossStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER, JEWEL_DROP_MIN_RANK } from '../data/items.js';
+import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER, JEWEL_DROP_MIN_RANK, MYTHIC, PRIMAL } from '../data/items.js';
 import { rng } from './rng.js';
 
 export const BALANCE = {
@@ -309,21 +309,21 @@ export function skillPointsForStages(bestStage, claimedStage) {
 export function rollRarity({ qualityBonus = 0, weights = null, maxRarity = null } = {}) {
     const maxIndex = maxRarity ? RARITIES.findIndex(r => r.id === maxRarity) : RARITIES.length - 1;
     const entries = RARITIES.map((r, i) => {
-        let weight = weights ? weights[i] : r.weight;
+        let weight = (weights ? weights[i] : r.weight) || 0;   // (Mythic and Primal are never rolled: generateDrop raises a legendary)
         weight *= i === 0 ? Math.max(0.2, 1 - qualityBonus * 4) : 1 + qualityBonus * 4;
         return { ...r, weight: i > maxIndex ? 0 : weight };
     });
     return rng.weighted(entries);
 }
 
-function rollAffixes(count, tier) {
+function rollAffixes(count, tier, perfect = false) {
     const pool = [...AFFIXES];
     const affixes = [];
     for (let i = 0; i < count && pool.length; i++) {
         const idx = Math.floor(rng.random() * pool.length);
         const [affix] = pool.splice(idx, 1);
         const tierScale = 1 + 0.08 * (tier - 1);
-        const value = rng.float(affix.min, affix.max) * tierScale;
+        const value = (perfect ? affix.max : rng.float(affix.min, affix.max)) * tierScale;   // (Primal: as high as it goes)
         affixes.push({ id: affix.id, name: affix.name, stat: affix.stat, value: Math.round(value * 1000) / 1000, format: affix.format });
     }
     return affixes;
@@ -337,7 +337,7 @@ function rollAffixes(count, tier) {
 export function generateEquipment(opts, nextId) {
     const rarity = opts.rarity || rollRarity({ qualityBonus: opts.qualityBonus || 0, weights: opts.rarityWeights, maxRarity: opts.maxRarity });
     const slot = SLOT_STATS[opts.type];
-    const variance = rng.float(0.95, 1.05);
+    const variance = rarity.perfect ? 1.05 : rng.float(0.95, 1.05);
     const base = STAT_UNIT * opts.power * rarity.quality * variance;
     const atk = Math.round(base * slot.atk);
     const def = Math.round(base * slot.def);
@@ -352,7 +352,7 @@ export function generateEquipment(opts, nextId) {
         color: rarity.color,
         icon: TYPE_ICONS[opts.type],
         atk, def,
-        affixes: rollAffixes(rarity.affixes, opts.tier),
+        affixes: rollAffixes(rarity.affixes, opts.tier, !!rarity.perfect),
         upgrade: 0,
         reforges: 0,
         locked: false,
@@ -378,12 +378,17 @@ export function abyssDropMult(depth = 0) {
  * (systems/inventory.js dropTypesFor tilts them toward what the hero lacks); a ring, amulet or
  * earring only comes epic or legendary. `depth` (the Abyss depth) scales its power past depth 5.
  */
-export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS, { tier: fixedTier = null } = {}) {
+export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS, { tier: fixedTier = null, frontier = null } = {}) {
     const tier = fixedTier ?? Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
     const gearTier = GEAR_TIERS[tier - 1];
     const scale = 1 + DROP_HIGH_RARITY_PER_TIER * (zoneTier - 1);
     const weights = (boss ? DROP_RARITY_WEIGHTS.boss : DROP_RARITY_WEIGHTS.regular).map((w, i) => (i >= 3 ? w * scale : w));
-    const rarity = rollRarity({ weights });
+    let rarity = rollRarity({ weights });
+    // a ladder boss's piece near the best stage (`frontier`: { stage, best }) may be above legendary (data/items.js MYTHIC)
+    if (boss && frontier && frontier.stage >= MYTHIC.from && frontier.stage >= frontier.best - MYTHIC.near && rng.chance(MYTHIC.chance)) {
+        const above = frontier.stage >= PRIMAL.from && rng.chance(1 / PRIMAL.odds) ? 'primal' : 'mythic';
+        rarity = RARITIES.find(r => r.id === above);
+    }
     const kinds = RARITIES.findIndex(r => r.id === rarity.id) >= JEWEL_DROP_MIN_RANK ? types : types.filter(t => !CRAFTING_TYPES.includes(t.type));
     const type = rng.weighted(kinds.length ? kinds : types).type;
     const jewel = CRAFTING_TYPES.includes(type);
@@ -402,7 +407,7 @@ export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYP
 /** New affixes for an item (same count as its rarity). */
 export function rerollAffixes(item) {
     const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[0];
-    item.affixes = rollAffixes(rarity.affixes, item.tier || 1);
+    item.affixes = rollAffixes(rarity.affixes, item.tier || 1, !!rarity.perfect);
     return item;
 }
 

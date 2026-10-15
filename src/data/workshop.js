@@ -1,7 +1,7 @@
 // Smithing and crafting recipes, and the tool ladder that ties gathering to production.
 
 import { paceList } from './pace.js';
-import { SMITHING_BAR_COST, SMITHING_TYPES, MAX_REFORGE_MULT, RARITIES } from './items.js';
+import { SMITHING_BAR_COST, SMITHING_TYPES, MAX_REFORGE_MULT, RARITIES, MAX_UPGRADE, UPGRADE_STEP } from './items.js';
 
 // Smelting: ore (+ coal) -> bar. Coal demand rises with tier so early rocks stay useful.
 export const SMELTING_RECIPES = [
@@ -28,14 +28,31 @@ export const METALS = [
 export const SMITH_INTERVAL = 3000;
 
 // Forging makes copper gear only: every stronger weapon and piece of armour drops in the fight
-// (DESIGN §3.25). The smith's work on them is the anvil: reinforcing what the hero wears (+1 to +10)
-// and rerolling its bonuses, with bars of its own metal. Dragonbone and Abyssal gear takes runite,
-// two and three times as many. The anvil opens at Smithing 5; each step of reinforcing takes half as
-// many bars again as the last, needs 5 more levels, and pays the bars' forging XP. The bars are the
-// real gate: smelting each metal needs its level, or they come from salvaging gear of that metal.
+// (DESIGN §3.25). The smith's work on them is the anvil: reinforcing what the hero wears and rerolling
+// its bonuses, with bars of its own metal. Dragonbone and Abyssal gear takes runite, two and three times
+// as many. The anvil opens at Smithing 5; each step of reinforcing up to +10 takes half as many bars again
+// as the last, needs 5 more levels, and pays the bars' forging XP. The bars are the real gate: smelting
+// each metal needs its level, or they come from salvaging gear of that metal.
 export const FORGE_METALS = METALS.filter(m => m.tier === 1);
 export const ANVIL_LEVEL_PER_UPGRADE = 5;
 export const ANVIL_BAR_GROWTH = 1.5;
+// The forge without a top (the endless climb, October 2026; DESIGN §3.31): reinforcing belongs to the slot, not
+// the piece, so every weapon or piece of armour worn there has the slot's levels and a better drop never loses
+// them (a refit lost one). Up to +10 a level adds 5% of the piece's base stats (×1.5 at +10, as before); each
+// level past +10 multiplies them by FORGE_STEP (+5% of all they had). Past +10 the bars grow FORGE_BAR_GROWTH a
+// level instead of ×1.5, the essence as before, and each level asks one Smithing level more, up to 99 (five a level
+// held every simulated hero at +15). A level is priced in the
+// metal of the best tier the slot has held (state.forge), so a copper sword can't buy cheap levels for an
+// Abyssal one. Bars and essence don't grow with depth, so the forge climbs with time spent, not with the
+// stage (the camp is the one sink priced in plain gold: two would run away, endless-late-game.md §5.2).
+export const FORGE_STEP = 1.05;
+export const FORGE_BAR_GROWTH = 1.15;
+export const FORGE_MAX = 10000;   // (a bound for a save: far past what any hero's bars buy)
+/** What a slot's forge levels multiply a piece's base attack and defence by. */
+export function forgeMult(level) {
+    const l = Math.max(0, Math.floor(Number(level) || 0));
+    return (1 + UPGRADE_STEP * Math.min(l, MAX_UPGRADE)) * Math.pow(FORGE_STEP, Math.max(0, l - MAX_UPGRADE));
+}
 /** The metal whose bars work gear of a tier at the anvil. */
 export function anvilMetal(tier) {
     return METALS[Math.max(1, Math.min(METALS.length, Math.round(tier) || 1)) - 1];
@@ -44,13 +61,14 @@ export function anvilMetal(tier) {
 export function anvilBarMult(tier) {
     return Math.max(1, (Math.round(tier) || 1) - METALS.length + 1);
 }
-/** Reinforcing to the next level: { bar, bars, essence, level, xp, metal }. */
-export function reinforceCost(item) {
-    const next = (item.upgrade || 0) + 1;
-    const tier = item.tier || 1;
+/** Reinforcing a slot of `type` from `level` to the next, priced at `tier`: { bar, bars, essence, level, xp, metal }. */
+export function reinforceCost(type, level = 0, tier = 1) {
+    const next = Math.max(0, Math.floor(level) || 0) + 1;
     const metal = anvilMetal(tier);
-    const bars = Math.ceil((SMITHING_BAR_COST[item.type] || 1) * Math.pow(ANVIL_BAR_GROWTH, next - 1)) * anvilBarMult(tier);
-    return { bar: metal.bar, bars, essence: Math.ceil(2 * next * tier), level: ANVIL_LEVEL_PER_UPGRADE * next, xp: bars * metal.xpPerBar, metal };
+    const growth = Math.pow(ANVIL_BAR_GROWTH, Math.min(next, MAX_UPGRADE) - 1) * Math.pow(FORGE_BAR_GROWTH, Math.max(0, next - MAX_UPGRADE));
+    const bars = Math.ceil((SMITHING_BAR_COST[type] || 1) * growth) * anvilBarMult(tier);
+    const smithing = next <= MAX_UPGRADE ? ANVIL_LEVEL_PER_UPGRADE * next : Math.min(99, ANVIL_LEVEL_PER_UPGRADE * MAX_UPGRADE + next - MAX_UPGRADE);   // (past +10 a Smithing level a forge level)
+    return { bar: metal.bar, bars, essence: Math.ceil(2 * next * tier), level: smithing, xp: bars * metal.xpPerBar, metal };
 }
 /** Rerolling the bonuses: a piece's worth of bars, and essence that grows with each reroll (capped). */
 export function rerollCost(item) {
@@ -61,40 +79,19 @@ export function rerollCost(item) {
     return { bar: metal.bar, bars, essence: 3 * tier * times, level: ANVIL_LEVEL_PER_UPGRADE, xp: bars * metal.xpPerBar, metal };
 }
 /**
- * The essence the anvil took to reinforce `item` to its level: as kept (item.essenceIn), or for a piece
- * from before that was kept, what its levels cost at its own tier.
+ * The essence the anvil took to reinforce a piece from before the forge (core/state.js forgeSlots): as kept
+ * (item.essenceIn), or what its levels cost at its own tier.
  */
 export function anvilEssenceSpent(item) {
     if (Number.isFinite(item.essenceIn)) return item.essenceIn;
     let essence = 0;
-    for (let level = 1; level <= (item.upgrade || 0); level++) essence += reinforceCost({ ...item, upgrade: level - 1 }).essence;
+    for (let level = 1; level <= (item.upgrade || 0); level++) essence += reinforceCost(item.type, level - 1, item.tier).essence;
     return essence;
 }
 
-/**
- * A refit (systems/inventory.js equipItem) moves the anvil's work from the piece taken off (`from`) to
- * the one put on (`to`): the bars that went in, each metal kept as itself (`barsIn` for the piece's own
- * metal, `barsCarried` for others), and the essence. Salvage gives back a share of what was really spent;
- * before, the bars of a copper piece came back as the new piece's runite, and its essence at the new tier.
- * Call it before the levels move.
- */
-export function carryAnvilWork(to, from) {
-    const ownBar = anvilMetal(to.tier).bar;
-    const carried = { ...(to.barsCarried || {}) };
-    const add = (bar, qty) => { if (qty > 0) carried[bar] = (carried[bar] || 0) + qty; };
-    for (const [bar, qty] of Object.entries(from.barsCarried || {})) add(bar, qty);
-    add(anvilMetal(from.tier).bar, from.barsIn || 0);
-    to.barsIn = (to.barsIn || 0) + (carried[ownBar] || 0);
-    delete carried[ownBar];
-    to.essenceIn = anvilEssenceSpent(to) + anvilEssenceSpent(from);
-    if (Object.keys(carried).length) to.barsCarried = carried; else delete to.barsCarried;
-    from.barsIn = 0;
-    from.essenceIn = 0;
-    delete from.barsCarried;
-}
-
 // Salvaging a weapon or a piece of armour gives bars of its metal back: one for a common piece, five
-// for a legendary (more past runite), and three quarters of the bars reinforcing it took.
+// for a legendary (more past runite). The forge's work stays with the slot; a piece from before it that kept
+// its own reinforcing (core/state.js sanitizeForge) gives three quarters of those bars back.
 export const ANVIL_REFUND = 0.75;
 /** { bar, qty } for a weapon or armour (forged copper gives its own materials back instead), else null. */
 export function salvageBars(item) {

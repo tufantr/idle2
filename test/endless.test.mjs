@@ -113,3 +113,88 @@ test('numbers past a nonillion keep their names, to the end of what a number hol
     assert.ok(!/e\+/.test(fmt(1.7e308)));
     assert.ok(!/e\+|NaN|undefined/.test(fmt(enemyBaseStats(10000).hp)));
 });
+
+test('above legendary: from stage 500 a frontier boss\'s piece is Mythic one time in fifty, and from 1,000 a Mythic Primal one in twenty', async () => {
+    const { generateDrop } = await import('../src/core/formulas.js');
+    const { rng, seededRandom } = await import('../src/core/rng.js');
+    const { MYTHIC, PRIMAL } = await import('../src/data/items.js');
+    rng.setSource(seededRandom(77));
+    const count = (frontier, n = 40000) => {
+        const tally = {};
+        for (let i = 0; i < n; i++) { const r = generateDrop(7, true, i + 1, 60, undefined, { frontier }).rarity; tally[r] = (tally[r] || 0) + 1; }
+        return tally;
+    };
+    const shallow = count({ stage: 450, best: 460 });
+    assert.ok(!shallow.mythic && !shallow.primal, 'nothing above legendary before stage 500');
+    const far = count({ stage: 700, best: 900 });
+    assert.ok(!far.mythic, 'nor from a boss far behind the best stage');
+    const near = count({ stage: 880, best: 900 });
+    assert.ok(Math.abs(near.mythic / 40000 - MYTHIC.chance) < 0.004, `a Mythic is ${(near.mythic / 400).toFixed(2)}% of the pieces`);
+    assert.ok(!near.primal, 'and no Primal before stage 1,000');
+    assert.equal(count({ stage: 880, best: 900 }, 2000) && generateDrop(7, false, 1, 60, undefined, { frontier: { stage: 880, best: 900 } }).rarity === 'mythic', false, 'never from an ordinary monster');
+    const deep = count({ stage: 1200, best: 1210 }, 100000);
+    assert.ok(deep.primal > 0 && deep.primal < deep.mythic / 8, `${deep.primal} Primal to ${deep.mythic} Mythic`);
+    // a Primal is rolled as high as it goes: the top of the ±5%, every bonus at its most
+    let primal = null;
+    for (let i = 0; !primal && i < 2e6; i++) { const it = generateDrop(7, true, i + 1, 60, [{ type: 'Weapon', weight: 1 }], { frontier: { stage: 1500, best: 1500 } }); if (it.rarity === 'primal') primal = it; }
+    assert.equal(primal.affixes.length, 6);
+    rng.setSource(seededRandom(2026));
+    assert.ok(MYTHIC.from === 500 && PRIMAL.from === 1000);
+});
+
+test('once a run, the first ladder boss at nine tenths of the best stage leaves a piece from the best stage\'s depth', async () => {
+    const { spawnEnemy } = await import('../src/systems/combat.js');
+    const { rng, seededRandom } = await import('../src/core/rng.js');
+    const { zoneForStage } = await import('../src/data/zones.js');
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.combat.xp = 1e10;
+    game.enterCombat();
+    s.stats.bossKills = s.stats.bossFalls = 5;
+    s.settings.autoSalvage = 'off';
+    const beat = stage => {   // a boss's first fall in the run, through the game's own fight (rolls high: no ordinary gear)
+        const c = s.combat;
+        Object.assign(c, { stage, maxStage: stage, mode: 'stages', farmMode: false, regroupLeft: 0 });
+        rng.setSource(() => 0.9999);
+        spawnEnemy(game);
+        c.enemy.hp = 1;
+        c.enemy.atk = 0;   // (a bare hero this deep would fall to its first blow)
+        game.recompute();
+        c.hp = game.derived.maxHp;
+        c.playerTimer = game.derived.attackInterval;
+        let now = game.now;
+        const kills = s.stats.bossKills;
+        for (let guard = 0; s.stats.bossKills === kills && guard < 600; guard++) { now += 100; game.tick(now); }
+        assert.equal(s.stats.bossKills, kills + 1, `the boss of stage ${stage} fell`);
+        rng.setSource(seededRandom(1));
+        return game.drainEvents().filter(e => e.type === 'itemDropped' && e.frontier);
+    };
+    s.combat.bestStage = 800;
+    assert.equal(beat(700).length, 0, 'not yet near the best');
+    const [found] = beat(720);
+    assert.ok(found, 'at nine tenths of the best stage');
+    assert.equal(found.item.depth, zoneForStage(800).depth, 'from the best stage\'s depth');
+    assert.equal(s.combat.frontierDrop, true);
+    assert.equal(beat(730).length, 0, 'once a run');
+    s.prestige.runStartedAt = T0 - 3600e3;
+    s.combat.maxStage = 730;
+    assert.ok(game.prestige());
+    assert.equal(s.combat.frontierDrop, false, 'and again the next run');
+    game.enterCombat();
+    assert.equal(beat(750).length, 1);
+});
+
+test('a piece says about how many stages it is worth where the hero climbs', async () => {
+    const { gainStages } = await import('../src/systems/inventory.js');
+    const { stagesWords } = await import('../src/ui/format.js');
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.combat.bestStage = 900;   // the dense deep: health ×1.035 a stage
+    const doubled = gainStages(s, { atk: 1, def: 0, hp: 0 });
+    assert.ok(Math.abs(doubled - Math.log(2) / Math.log(BALANCE.enemy.denseHpGrowth)) < 0.01, `twice the attack: ${doubled.toFixed(1)} stages`);
+    assert.ok(gainStages(s, { atk: 0, def: 0.5, hp: 0.5 }) > 10, 'armour counts at the blow he must live through');
+    assert.equal(gainStages(s, { atk: Infinity, def: 0, hp: 0 }), null, 'nothing to say for a slot that was empty');
+    assert.equal(stagesWords(20.2), '+20 stages');
+    assert.equal(stagesWords(-1.2), '−1 stage');
+    assert.equal(stagesWords(0.4), '');
+});

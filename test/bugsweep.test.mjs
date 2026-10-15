@@ -355,7 +355,7 @@ test('the clan boss fight on screen is the hero the server reckons: its combat p
     assert.equal(Math.round(expectedDpsOf(plain.derived)), Math.round(powerSummary(save(plain), plain.now).dps), 'the same damage a second');
 });
 
-test('a refit carries the anvil\'s work as it was: salvage gives back the copper that went in, not runite and new essence', () => {
+test('the forge keeps its work in the slot: a piece salvaged gives back only what it is made of', () => {
     rng.setSource(seededRandom(9));
     const game = new Game(null, T0);
     const s = game.state;
@@ -368,26 +368,17 @@ test('a refit carries the anvil\'s work as it was: salvage gives back the copper
     s.inventory.push(sword);
     game.equipItem(sword.id, 'Weapon');
     for (let i = 0; i < 10; i++) assert.equal(game.reinforceItem(sword.id), true);
-    const copperIn = 5000 - s.resources.copper_bar;
-    const essenceIn = 5000 - s.resources.essence;
-    assert.deepEqual([sword.barsIn, sword.essenceIn], [copperIn, essenceIn]);
+    assert.equal(s.forge.Weapon.level, 10);
     const plain = generateEquipment({ type: 'Weapon', tier: top, power: GEAR_TIERS[top - 1].power, materialName: GEAR_TIERS[top - 1].name, rarity: RARITIES[0], source: 'drop' }, s.idCounter++);
     s.inventory.push(plain);
     game.equipItem(plain.id, 'Weapon');
     assert.equal(s.equipped.Weapon.id, plain.id);
-    assert.equal(plain.upgrade, 9, 'the levels move, but one');
-    assert.deepEqual(plain.barsCarried, { copper_bar: copperIn }, 'the copper stays copper');
-    // it survives a reload as it is
-    const loaded = reload(game).state.equipped.Weapon;
-    assert.deepEqual([loaded.barsCarried, loaded.essenceIn], [plain.barsCarried, plain.essenceIn]);
-    const found = salvageBars({ ...plain, barsIn: 0 }).qty;   // what a plain piece of its metal gives
+    assert.equal(reload(game).state.forge.Weapon.level, 10, 'the levels stay with the slot, across a reload');
     const before = { ...s.resources };
-    game.unequipItem('Weapon');
-    game.salvageItem(plain.id);
-    const bar = anvilMetal(top).bar;
-    assert.equal(s.resources.copper_bar - before.copper_bar, Math.floor(ANVIL_REFUND * copperIn));
-    assert.equal(s.resources[bar] - before[bar], found, 'no runite for the copper');
-    assert.equal(s.resources.essence - before.essence, salvageEssence({ ...plain, upgrade: 0, essenceIn: undefined }) + Math.floor(essenceIn / 2));
+    game.salvageItem(sword.id);
+    assert.equal(s.resources.copper_bar - before.copper_bar, salvageBars(sword).qty, 'the copper sword gives back what it is made of');
+    assert.equal(s.resources.essence - before.essence, salvageEssence(sword));
+    assert.equal(s.forge.Weapon.level, 10, 'and the slot keeps its levels');
     rng.setSource(seededRandom(2026));
 });
 

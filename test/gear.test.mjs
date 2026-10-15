@@ -22,7 +22,10 @@ const piece = (type, rarity, { tier = 5, id = 1 } = {}) =>
     generateEquipment({ type, tier, power: GEAR_TIERS[tier - 1].power, materialName: GEAR_TIERS[tier - 1].name, rarity: RARITIES.find(r => r.id === rarity), source: 'drop' }, id);
 
 test('each rarity is a clear step, a legendary 2.8 times a common, and never worth two tiers', () => {
-    for (let i = 1; i < RARITIES.length; i++) assert.ok(RARITIES[i].quality >= RARITIES[i - 1].quality * 1.2, `${RARITIES[i].id} a step above ${RARITIES[i - 1].id}`);
+    for (let i = 1; RARITIES[i]?.id !== 'primal'; i++) assert.ok(RARITIES[i].quality >= RARITIES[i - 1].quality * 1.2, `${RARITIES[i].id} a step above ${RARITIES[i - 1].id}`);
+    // Primal is a Mythic rolled as high as it goes, with a bonus more
+    const [mythic, primal] = ['mythic', 'primal'].map(id => RARITIES.find(r => r.id === id));
+    assert.deepEqual([primal.quality, primal.affixes, !!primal.perfect], [mythic.quality, mythic.affixes + 1, true]);
     assert.equal(quality('legendary'), 2.8);
     assert.ok(quality('legendary') / quality('rare') > 1.8, 'a legendary nearly doubles a rare');
     // a lucky piece may beat the next tier's common, never the tier after it (copper never beats runite)

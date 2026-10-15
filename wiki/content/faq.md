@@ -115,9 +115,9 @@ Forging makes a first set of copper weapons and armour. Everything stronger drop
 
 ### How do I upgrade gear?
 
-- **Weapons and armour** are reinforced at the anvil in [[/skills/smithing|Smithing]] (from Smithing {{ANVIL_LEVEL_PER_UPGRADE}}) with bars of the piece's own metal and essence: +{{pct(UPGRADE_STEP, 0)}} base stats a level, up to +{{MAX_UPGRADE}}. The anvil also rerolls a piece's bonuses.
+- **Weapons and armour** are reinforced at the anvil in [[/skills/smithing|Smithing]] (from Smithing {{ANVIL_LEVEL_PER_UPGRADE}}) with bars and essence: +{{pct(UPGRADE_STEP, 0)}} base stats a level up to +{{MAX_UPGRADE}}, then ×{{FORGE_STEP}} a level with no top. The anvil also rerolls a piece's bonuses.
 - **Jewellery** is upgraded in the Inventory with essence and gold, and reforged there to reroll its bonuses. See [[/equipment/jewellery|Jewellery]].
-- A weapon or piece of armour put on in place of a reinforced one of the same kind takes over its anvil levels, less one. Jewellery keeps its upgrades on the piece.
+- The anvil's levels belong to the slot: every weapon or piece of armour you wear there has them. Jewellery keeps its upgrades on the piece.
 
 ### Why did a drop disappear?
 

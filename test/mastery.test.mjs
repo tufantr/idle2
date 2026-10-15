@@ -101,9 +101,9 @@ test('a metal past copper is practised at the anvil, and its mastery takes bars 
     assert.ok(game.reinforceItem(s.equipped.Body.id));
     assert.equal(s.mastery.smithing[forgeKey('iron_bar')], fresh, 'a second of practice a bar');
     s.mastery.smithing[forgeKey('iron_bar')] = practiceFor(99);
-    s.equipped.Body.upgrade = 6;
+    s.forge.Body.level = 6;
     const practised = anvilCost(s, s.equipped.Body).bars;
-    assert.ok(practised < reinforceCost(s.equipped.Body).bars * 0.85, `${practised} bars at mastery 99`);
+    assert.ok(practised < reinforceCost('Body', 6, 2).bars * 0.85, `${practised} bars at mastery 99`);
 });
 
 test('level-ups count toward stats and achievements; milestones are logged', () => {

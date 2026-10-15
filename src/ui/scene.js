@@ -35,8 +35,9 @@ const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
 const MAX_COINS_IN_FLIGHT = 14;
 // Loot worth seeing (playLoot): how long it glows on the ground before it flies off, and its sparks.
-const LOOT_HOLD = { rare: 950, epic: 1300, legendary: 2000 };
-const LOOT_SPARKS = { rare: 5, epic: 8, legendary: 14 };
+const LOOT_HOLD = { rare: 950, epic: 1300, legendary: 2000, mythic: 2600, primal: 3200 };
+const LOOT_SPARKS = { rare: 5, epic: 8, legendary: 14, mythic: 20, primal: 28 };
+const TOP_RANK = 4;            // legendary and above (Mythic, Primal): the halo, the rays, the name, the moment
 const LOOT_GAP = 900;          // the next piece while this one still glows
 const LOOT_MAX_QUEUED = 3;     // a tab catching up shows its best few
 // the boss's pip on the path, the boss clock and the regroup line
@@ -346,20 +347,20 @@ export function createScene(root, actions) {
         const dx = (foe.x - lx) / 100 * box.width;
         const dy = (sy - ly) / 100 * box.height;
         const scale = Math.max(2, Math.round(fighterScale() / 2));
-        const big = tier === 'rare' || tier === 'epic' || tier === 'legendary';
+        const big = rank >= 2 && tier !== 'upgrade';
         const sparks = big ? Array.from({ length: LOOT_SPARKS[tier] }, (_, i) => {
             const a = i * 360 / LOOT_SPARKS[tier] + Math.random() * 24;
             return `<i class="loot-spark" style="--a:${a.toFixed(0)}deg;--far:${Math.round(30 + Math.random() * 34)}px;--t:${(0.55 + Math.random() * 0.5).toFixed(2)}s"></i>`;
         }).join('') : '';
         const words = upgrade ? topGain(gain) : '';
         const node = document.createElement('div');
-        node.className = `loot r-${tier}`;
+        node.className = `loot r-${tier}${rank >= TOP_RANK ? ' top' : ''}`;
         node.style.left = `${lx}%`;
         node.style.top = `${ly}%`;
         node.style.setProperty('--r', color);
         node.style.setProperty('--fh', `${Math.round(box.height)}px`);
         node.style.setProperty('--ih', `${32 * scale}px`);
-        const legendary = tier === 'legendary';
+        const legendary = rank >= TOP_RANK;   // (Mythic and Primal too)
         const said = [legendary ? `<em class="loot-rarity">${esc(RARITIES[rank].name)}</em>` : '', words ? `<b class="loot-gain">▲ ${esc(words)}</b>` : ''].join('');
         node.innerHTML = `${legendary ? '<i class="loot-halo"></i>' : ''}<i class="loot-ground"></i>${big ? '<i class="loot-pillar"></i>' : ''}${legendary ? '<i class="loot-rays"></i>' : ''}${sparks}`
             + `<span class="loot-item">${sprite(itemSpriteKey(item), { scale, fallback: esc(item.icon) })}</span>${said ? `<span class="loot-words">${said}</span>` : ''}`;
@@ -377,16 +378,17 @@ export function createScene(root, actions) {
         setTimeout(() => {
             if (!node.isConnected) return;
             node.classList.add('landed');
-            if (tier === 'legendary' && upgrade) radiance();
+            if (legendary && upgrade) radiance(color);
         }, 560);
         setTimeout(() => flyLoot(node, piece, item, upgrade, color), 640 + (LOOT_HOLD[tier] || 700));
     }
 
-    /** A legendary upgrade: gold at the screen's edges, the fight holding its breath a moment. */
-    function radiance() {
+    /** A legendary (or better) upgrade: its colour at the screen's edges, the fight holding its breath a moment. */
+    function radiance(color = '#fcd34d') {
         actions.sound?.('radiance');
         const flash = document.createElement('div');
         flash.className = 'loot-flash';
+        flash.style.setProperty('--r', color);
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 1100);
         el.battle.classList.add('slowmo');
@@ -815,6 +817,7 @@ export function createScene(root, actions) {
                 }
                 case 'equip': {   // a piece put on: what it did to him, all bonuses counted (systems/inventory.js equipGain)
                     const parts = gainParts(ev.gain);
+                    if (ev.forge > 0) parts.unshift({ text: `+${ev.forge} kept`, up: true });   // the slot's forge levels, on the new piece at once
                     if (!parts.length) break;
                     const { hero } = anchor();
                     fxBudget = Math.max(fxBudget, 1);

@@ -10,9 +10,9 @@ import { generateDrop, generateEquipment } from '../src/core/formulas.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { migrateState } from '../src/core/state.js';
 import { CRAFTING_TYPES, SMITHING_TYPES, PITY_MARKS, DROP_TYPE_WEIGHTS, RARITIES, GEAR_TIERS } from '../src/data/items.js';
-import { reinforceCost, rerollCost, salvageBars, ANVIL_REFUND } from '../src/data/workshop.js';
+import { reinforceCost, rerollCost, salvageBars, ANVIL_REFUND, forgeMult } from '../src/data/workshop.js';
 import { dropTypesFor, salvagePreview } from '../src/systems/inventory.js';
-import { anvilCost } from '../src/systems/anvil.js';
+import { anvilCost, forgeLevel } from '../src/systems/anvil.js';
 import { spawnEnemy } from '../src/systems/combat.js';
 import { zoneForStage } from '../src/data/zones.js';
 
@@ -160,22 +160,25 @@ test('the anvil reinforces with bars of the piece\'s metal and essence, for Smit
     assert.equal(game.reinforceItem(sword.id), false);
     s.skills.smithing.xp = xpForLevel(5);
     const xp = s.skills.smithing.xp;
-    const cost = reinforceCost(sword);
+    const cost = reinforceCost('Weapon', 0, 3);
     assert.equal(cost.bar, 'mithril_bar');
     assert.ok(game.reinforceItem(sword.id));
-    assert.equal(sword.upgrade, 1);
-    assert.equal(sword.barsIn, cost.bars);
+    assert.equal(s.forge.Weapon.level, 1, 'the slot is reinforced, not the piece');
+    assert.equal(sword.upgrade, 0);
     assert.equal(s.resources.mithril_bar, 1000 - cost.bars);
     assert.equal(s.resources.essence, 1000 - cost.essence);
     assert.ok(s.skills.smithing.xp - xp >= cost.xp);
-    // each step takes more bars, and higher steps more Smithing
-    for (let n = 1; n < 10; n++) assert.ok(reinforceCost({ ...sword, upgrade: n }).bars > reinforceCost({ ...sword, upgrade: n - 1 }).bars);
-    assert.equal(reinforceCost({ ...sword, upgrade: 1 }).level, 10);
-    assert.equal(reinforceCost({ ...sword, upgrade: 9 }).level, 50);
+    // each step takes more bars, and higher steps more Smithing, up to 99
+    for (let n = 1; n < 40; n++) assert.ok(reinforceCost('Weapon', n, 3).bars > reinforceCost('Weapon', n - 1, 3).bars);
+    assert.equal(reinforceCost('Weapon', 1, 3).level, 10);
+    assert.equal(reinforceCost('Weapon', 9, 3).level, 50);
+    assert.equal(reinforceCost('Weapon', 10, 3).level, 51, 'past +10 a Smithing level a forge level');
+    assert.equal(reinforceCost('Weapon', 30, 3).level, 71);
+    assert.equal(reinforceCost('Weapon', 80, 3).level, 99);
     s.skills.smithing.xp = xpForLevel(10);
     // Dragonbone and Abyssal gear takes runite, more of it
-    assert.equal(reinforceCost({ type: 'Weapon', tier: 7, upgrade: 0 }).bar, 'runite_bar');
-    assert.equal(reinforceCost({ type: 'Weapon', tier: 7, upgrade: 0 }).bars, 3 * reinforceCost({ type: 'Weapon', tier: 5, upgrade: 0 }).bars);
+    assert.equal(reinforceCost('Weapon', 0, 7).bar, 'runite_bar');
+    assert.equal(reinforceCost('Weapon', 0, 7).bars, 3 * reinforceCost('Weapon', 0, 5).bars);
     // rerolling its bonuses takes bars too, and no gold
     const gold = s.gold;
     const reroll = rerollCost(sword);
@@ -206,47 +209,69 @@ test('salvaging a weapon or armour gives bars back: more for rarer pieces, and m
     assert.equal(s.resources.adamant_bar - before, salvagePreview(legendary).materials.adamant_bar);
 });
 
-test('old saves keep their gear; bars spent at the anvil are cleaned and kept', () => {
+test('old saves keep their gear: the best reinforced piece of a kind gives its levels to the slot', () => {
     const game = new Game(null, T0);
     const s = game.state;
-    s.equipped.Weapon = piece(game, 'Weapon', 2, { upgrade: 4 });
-    s.inventory.push(piece(game, 'Body', 3, { barsIn: 40 }), piece(game, 'Head', 3, { barsIn: -5 }), piece(game, 'Legs', 3, { barsIn: 'lots' }));
+    s.equipped.Weapon = piece(game, 'Weapon', 2, { upgrade: 4, barsIn: 30 });
+    s.inventory.push(piece(game, 'Weapon', 2, { upgrade: 6, barsIn: 50 }), piece(game, 'Body', 3, { barsIn: 40 }), piece(game, 'Head', 3, { barsIn: -5 }), piece(game, 'Legs', 3, { barsIn: 'lots' }));
     const raw = JSON.parse(game.serialize(T0));
     delete raw.combat.pity;
+    delete raw.forge;
+    delete raw.meta.forge;
     const loaded = migrateState(raw, T0);
-    assert.equal(loaded.equipped.Weapon.upgrade, 4);
-    assert.equal(loaded.equipped.Weapon.barsIn, undefined);
-    assert.deepEqual(loaded.inventory.map(i => i.barsIn), [40, undefined, undefined]);
+    assert.deepEqual(loaded.forge.Weapon, { level: 6, tier: 2 }, 'the best of the kind, worn or not');
+    assert.equal(loaded.inventory[0].upgrade, 0);
+    assert.equal(loaded.inventory[0].barsIn, undefined, 'its work is the slot\'s now');
+    assert.deepEqual([loaded.equipped.Weapon.upgrade, loaded.equipped.Weapon.barsIn], [4, 30], 'the other keeps its own, to give its bars back');
+    assert.deepEqual(loaded.inventory.slice(1).map(i => i.barsIn), [40, undefined, undefined]);
     assert.equal(loaded.combat.pity, 0);
+    assert.ok(loaded.log.some(e => /belong to the slots/.test(e.text)));
+    // loading it again moves nothing more, and the levels are kept in meta as well
+    const again = migrateState(JSON.parse(JSON.stringify(loaded)), T0);
+    assert.equal(again.forge.Weapon.level, 6);
+    assert.equal(again.meta.forge.Weapon, 6);
+    // a page still running the older game drops `forge`, which it doesn't know: the levels come back from meta
+    const stale = JSON.parse(JSON.stringify(loaded));
+    delete stale.forge;
+    assert.equal(migrateState(stale, T0).forge.Weapon.level, 6);
 });
 
-test('the smith refits the reinforcing: a new piece takes the old one\'s anvil levels but one', async () => {
-    const { Game } = await import('../src/game.js');
-    const { findUpgrade, refitLevel } = await import('../src/systems/inventory.js');
-    const game = new Game(null, 1_700_000_000_000);
+test('the forge\'s levels belong to the slot: a new piece has them at once, and nothing is lost in a swap', async () => {
+    const { findUpgrade, isUpgrade } = await import('../src/systems/inventory.js');
+    const game = new Game(null, T0);
     const s = game.state;
     s.skills.combat.xp = 1e9;   // can wear anything
-    const piece = (id, tier, atk, upgrade = 0, extra = {}) => ({ id, type: 'Weapon', tier, name: `Sword ${id}`, rarity: 'common', atk, def: 0, affixes: [], upgrade, ...extra });
-    s.equipped.Weapon = piece(1, 5, 100, 6, { barsIn: 40 });
-    s.inventory.push(piece(2, 6, 140));
-    // a +0 piece of more base attack, as it would be worn: +5 refitted, so it is the upgrade
-    assert.equal(refitLevel(s.inventory[0], s.equipped.Weapon), 5);
+    const sword = (id, tier, atk, extra = {}) => ({ id, type: 'Weapon', tier, name: `Sword ${id}`, rarity: 'common', atk, def: 0, affixes: [], upgrade: 0, ...extra });
+    s.equipped.Weapon = sword(1, 5, 100);
+    s.forge.Weapon = { level: 14, tier: 5 };
+    game.recompute();
+    const atk = game.derived.atk;
+    s.inventory.push(sword(2, 6, 140));
+    assert.ok(isUpgrade(s, s.inventory[0]), 'more base attack wins: both would have the slot\'s +14');
     assert.equal(findUpgrade(s)?.item.id, 2);
     game.drainEvents();
     assert.equal(game.equipItem(2), true);
-    assert.equal(s.equipped.Weapon.upgrade, 5);
-    assert.equal(s.equipped.Weapon.barsIn, 40, 'the bars go with the levels (and come back when it is salvaged)');
-    const old = s.inventory.find(i => i.id === 1);
-    assert.deepEqual([old.upgrade, old.barsIn], [0, 0], 'the old piece comes off plain');
-    assert.ok(game.drainEvents().some(e => e.type === 'refit' && e.level === 5));
-    // swapping back loses a level each way: nothing to gain
+    assert.ok(game.derived.atk > atk * 1.3, 'the new sword has the +14 at once');
+    const equip = game.drainEvents().find(e => e.type === 'equip');
+    assert.deepEqual([equip.forge, equip.firstForge], [14, true], 'the first such equip says how the forge works, once');
+    assert.equal(s.forge.Weapon.tier, 6, 'the slot\'s price follows the best tier it has held');
+    // swapping back and forth loses nothing
     assert.equal(game.equipItem(1), true);
-    assert.equal(s.equipped.Weapon.upgrade, 4);
     assert.equal(game.equipItem(2), true);
-    assert.equal(s.equipped.Weapon.upgrade, 3);
-    // a piece already better reinforced keeps its own; jewellery is not the anvil's
-    s.inventory.push(piece(3, 6, 150, 7));
-    assert.equal(refitLevel(s.inventory.at(-1), s.equipped.Weapon), 7);
-    const ring = { id: 9, type: 'Ring', tier: 5, name: 'Ring', rarity: 'common', atk: 10, def: 0, affixes: [], upgrade: 0 };
-    assert.equal(refitLevel(ring, { ...ring, upgrade: 5 }), 0);
+    assert.equal(s.forge.Weapon.level, 14);
+    assert.equal(game.drainEvents().find(e => e.type === 'equip').firstForge, false);
+    // past +10 each level is ×1.05; up to +10 as before (+5% of base a level)
+    assert.ok(Math.abs(forgeMult(10) - 1.5) < 1e-12);
+    assert.ok(Math.abs(forgeMult(14) - 1.5 * 1.05 ** 4) < 1e-12);
+    assert.ok(Math.abs(forgeMult(3) - 1.15) < 1e-12);
+    // a copper sword worn in the slot is priced at the slot's best tier: no cheap levels for an Abyssal one
+    s.equipped.Weapon = sword(3, 1, 20);
+    s.skills.smithing.xp = 1e9;
+    assert.equal(anvilCost(s, s.equipped.Weapon).bar, 'runite_bar');
+    // jewellery is upgraded piece by piece, as before
+    const ring = { id: 9, type: 'Ring', tier: 5, name: 'Ring', rarity: 'common', atk: 10, def: 0, affixes: [], upgrade: 5 };
+    s.equipped.Ring1 = ring;
+    game.recompute();
+    assert.equal(forgeLevel(s, 'Ring1'), 0);
 });
+

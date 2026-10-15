@@ -54,7 +54,7 @@ export const DISCLOSURES = [
     { id: 'bag_tools',    when: s => s.stats.itemsDropped + s.stats.itemsCrafted >= 5 },
     { id: 'auto_salvage', when: s => s.stats.itemsDropped >= 10 },
     // the skill tabs
-    { id: 'anvil',        when: s => levelForXp(s.skills.smithing.xp) >= ANVIL_LEVEL_PER_UPGRADE || gear(s).some(i => SMITHING_TYPES.includes(i.type) && i.upgrade > 0) },   // Smithing's anvil: the first reinforcing a smith can do
+    { id: 'anvil',        when: s => levelForXp(s.skills.smithing.xp) >= ANVIL_LEVEL_PER_UPGRADE || SMITHING_TYPES.some(t => (s.forge?.[t]?.level || 0) > 0) },   // Smithing's anvil: the first reinforcing a smith can do
     // Hunting's river spots: once the kitchen has been used (as Fishing opened, before it joined Hunting)
     { id: 'river',        when: s => (s.stats.actionsBySkill.cooking || 0) >= 5 || (s.stats.fishCaught || 0) > 0 || RIVER_CATCH.some(id => s.resources[id] > 0) },
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },

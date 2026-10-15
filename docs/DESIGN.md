@@ -1554,6 +1554,43 @@ it had stopped. The research's first package (easing at once at 400) reached 1,9
 are named on (`fmt` in `src/ui/format.js`: Dc for 10^33 on to Ce), and they stay numbers to about stage 19,000,
 past `MAX_STAGE`. The leaderboard's allowance was refitted with it (§3.17).
 
+### 3.31 The forge without a top, and gear above legendary
+
+The second part of the endless climb (§3.30), the owner's "start doing in your recommended order", with the way the
+forge is shown agreed first (the owner asked how a player would know it):
+- **The forge belongs to the slot** (`state.forge`, `src/data/workshop.js`, `src/systems/anvil.js`). Reinforcing works
+  the slot of the piece worn, `{ level, tier }`, and every weapon or piece of armour worn there has its levels, so a
+  better drop never loses them (a refit lost one before, and moved the bars and essence along). Levels have no top:
+  up to +10 a level adds 5% of a piece's base stats (×1.5 at +10, as before), past it each multiplies them by 1.05
+  (`FORGE_STEP`). Bars grow ×1.5 a level to +10 and ×1.15 past it (`FORGE_BAR_GROWTH`), essence 2 × level × tier as
+  before, and the Smithing asked grows five levels a step to +10 and one past it, up to 99 (five a step held every
+  simulated hero at +15). A level is priced in the metal of the best tier the slot has held
+  (`tier`), so a copper sword can't buy cheap levels for an Abyssal one. Bars and essence don't grow with depth: the
+  forge climbs with time spent, and the camp stays the one sink priced in plain gold (two would run away).
+  Shown: the plate "+14" on the slot (on the doll even when empty, on the anvil's card), "Weapon slot +14 → +15: +5%
+  attack" on the anvil (the next rung only), "+14 kept" over the hero when a piece goes on, a card the first time
+  ("Forge levels belong to the slot. Every weapon you wear there gets your +14.", `state.seen.forge_slots`), and
+  "Salvage: +34 essence for the forge". Saves from before: on every load the best reinforced piece of each kind gives
+  its levels to the slot and comes off plain (the others keep theirs, and their bars come back on salvage); the
+  levels are copied into `meta.forge`, which a page still running the older game keeps when it drops `forge`.
+- **Mythic and Primal** (`RARITIES`, `MYTHIC`, `PRIMAL` in `src/data/items.js`). From stage 500 a piece left by a boss of
+  the ladder within 100 stages of the best stage, and the frontier's piece, is Mythic 5% of the time: ×4 a common, five
+  bonuses. (One legendary in twenty, as first planned, came every ~500 hours, as a run meets few bosses that near its
+  best; 2% every ~70.)
+  From stage 1,000 a Mythic is Primal one time in 20: the same quality with its stats and bonuses rolled as high as they go
+  and a sixth bonus. Never crafted. Their loot is crimson and prismatic, with its own chord (`mythic` in sound.js).
+- **The frontier's piece** (`FRONTIER_DROP`, `frontierPiece` in `src/systems/combat.js`): once a run, from a best of 100,
+  the first ladder boss beaten at 90% of the best stage or deeper leaves a sure piece from the best stage's depth at a
+  boss's odds (Tap Titans 2 seeds frontier drops on every prestige run), so every run has a real chance at an upgrade.
+- **"+N stages"** (`gainStages` in `src/systems/inventory.js`): every item card and the fight's ▲ Equip say about how
+  far a piece takes the hero: its attack at the boss's wall (ln(1 + gain) over the stage's health growth), its defence
+  and health at the blow he must live through, whichever moves more (the exchange rate of the research, §1.1).
+
+Numbers (median of 7 seeds, with Auto; part one alone → with this): the best stage at 100 h 420 → 470, 300 h 1,010 →
+1,130, 600 h 1,410 → 1,590, 1,000 h 1,660 → 1,850, 1,200 h 1,830 → 2,010 (stage 2,000 at hour 1,161). The forge reaches
++40 to +51 in every slot by hour 1,200 (the Smithing it asked at five levels a step held every hero at +15), and a Mythic
+comes about once every 21 hours of play past stage 500. The climb's allowance took one more row (§3.17).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat

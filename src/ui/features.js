@@ -16,7 +16,7 @@ import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { POTION_MINUTES } from '../data/potions.js';
-import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
+import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
@@ -38,8 +38,9 @@ export const FEATURES = {
         points: ['Pick a vein and your hero keeps digging, even while you are away.', 'Ore becomes bars in Smithing. Now and then a gem turns up.'] },
     smithing: { name: 'Smithing', art: 'forge', icon: 'res/copper_bar', blurb: SKILLS.smithing.desc,
         points: ['Smelt: ore becomes bars.', 'Forge: copper bars become a first set of weapons and armour. Everything stronger drops in the fight.',
-            `Anvil (from Smithing ${ANVIL_LEVEL_PER_UPGRADE}): bars of a piece's own metal, with essence, reinforce what you wear, up to +${MAX_UPGRADE}, and reroll its bonuses. Each step takes more bars, more essence and ${ANVIL_LEVEL_PER_UPGRADE} more levels; mastery of a metal takes bars off.`,
-            'Salvaged weapons and armour give bars of their metal back, and most of what reinforcing them took.', 'Tools make gathering faster.'] },
+            `Anvil (from Smithing ${ANVIL_LEVEL_PER_UPGRADE}): bars and essence reinforce the slots of what you wear, with no top, and reroll a piece's bonuses. Each step takes more bars, more essence and more Smithing: ${ANVIL_LEVEL_PER_UPGRADE} levels a step to +${MAX_UPGRADE}, one past it, up to 99; mastery of a metal takes bars off.`,
+            `The levels belong to the slot: every piece you wear there has them. Up to +${MAX_UPGRADE} a level adds 5% of a piece's base stats; past it, each multiplies them by ${FORGE_STEP}.`,
+            'A level is priced in the metal of the best piece the slot has held. Salvaged weapons and armour give bars of their metal back.', 'Tools make gathering faster.'] },
     woodcutting: { name: 'Woodcutting', art: 'forest', icon: 'res/oak_log', blurb: SKILLS.woodcutting.desc, points: ['Logs feed the kitchen fire, tool handles and bows.'] },
     hunting: { name: 'Hunting', art: 'meadow', focus: 'center 62%', icon: 'res/raw_rabbit', blurb: SKILLS.hunting.desc,
         points: ['Game and fish are cooked into food, and food keeps you alive in long fights.', 'The river opens a little after the forest, once the kitchen is in use.',

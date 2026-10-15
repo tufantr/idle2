@@ -2,7 +2,7 @@
 
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
-import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS } from '../data/items.js';
+import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS, FRONTIER_DROP } from '../data/items.js';
 import { addItem, dropTypesFor, isUpgrade, laggingSlot, PITY_LAG } from './inventory.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing, foodHeal } from '../data/resources.js';
@@ -257,6 +257,7 @@ function rollLoot(game, enemy, payout) {
     const r = BALANCE.rewards;
     const zone = zoneForStage(enemy.stage);
     const boss = payout.full;
+    const ladder = boss && !enemy.titan && state.combat.mode === 'stages';   // a boss of the stage ladder, on its first fall in the run
     const drops = [];
     const add = (id, qty) => {
         state.resources[id] += qty;
@@ -285,21 +286,24 @@ function rollLoot(game, enemy, payout) {
         const firstBoss = boss && !enemy.titan && state.combat.mode === 'stages' && state.stats.bossFalls === 1 && roll === 0;
         const gearChance = firstBoss ? 1 : (boss ? GEAR_DROP_CHANCE.boss : GEAR_DROP_CHANCE.regular) * d.dropMult;
         if (rng.chance(gearChance)) {
-            const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth, firstBoss ? FIRST_ARMOUR : dropTypesFor(state, zone.gearTier));
+            const item = generateDrop(zone.gearTier, boss, state.idCounter++, zone.depth, firstBoss ? FIRST_ARMOUR : dropTypesFor(state, zone.gearTier), { frontier: ladder ? { stage: enemy.stage, best: state.combat.bestStage } : null });
             const result = addItem(game, item);
             bumpStat(game, 'itemsDropped');
+            if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');
             drops.push({ item, kept: result.kept });
             const rank = RARITIES.findIndex(rr => rr.id === item.rarity);
             if (result.kept && rank >= 2) log(game, `${item.icon} ${RARITIES[rank].name} ${item.name} dropped!`, 'loot');
             if (result.kept) game.emit({ type: 'itemDropped', item });
         }
     }
-    if (boss && !enemy.titan && state.combat.mode === 'stages') pityMark(game, zone, drops);
+    if (ladder) frontierPiece(game, enemy, drops);
+    if (ladder) pityMark(game, zone, drops, enemy.stage);
     // A new hero fights with his fists: the first monster he ever beats leaves him a sword.
     if (state.stats.kills === 1 && !state.prestige.count && !state.equipped.Weapon && !state.inventory.some(i => i.type === 'Weapon')) {
         const item = generateEquipment({ type: 'Weapon', tier: 1, power: STARTER_SWORD_POWER, materialName: 'Rusty', rarity: RARITIES[0], source: 'drop' }, state.idCounter++);
         const result = addItem(game, item);
         bumpStat(game, 'itemsDropped');
+        if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');
         drops.push({ item, kept: result.kept });
         if (result.kept) game.emit({ type: 'itemDropped', item, first: true });
     }
@@ -314,13 +318,35 @@ function rollLoot(game, enemy, payout) {
 }
 
 /**
+ * The frontier's piece (data/items.js FRONTIER_DROP): once a run, the first ladder boss beaten at nine tenths of the
+ * best stage or deeper leaves a sure piece from the best stage's depth, at a boss's odds (Mythic included).
+ */
+function frontierPiece(game, enemy, drops) {
+    const state = game.state;
+    const c = state.combat;
+    const best = c.bestStage || 0;
+    if (c.frontierDrop || best < FRONTIER_DROP.from || enemy.stage < Math.floor(FRONTIER_DROP.share * best)) return;
+    c.frontierDrop = true;
+    const deep = zoneForStage(best);
+    const item = generateDrop(deep.gearTier, true, state.idCounter++, deep.depth, dropTypesFor(state, deep.gearTier), { frontier: { stage: best, best } });
+    const result = addItem(game, item);
+    bumpStat(game, 'itemsDropped');
+    if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');
+    drops.push({ item, kept: result.kept });
+    if (result.kept) {
+        log(game, `${item.icon} ${item.name}: this run's piece from the frontier.`, 'loot');
+        game.emit({ type: 'itemDropped', item, frontier: true });
+    }
+}
+
+/**
  * The pity count: a boss's first fall where the place's drops could still beat something the hero wears
  * (a common piece of its tier, at its depth, outscores his most lagging weapon or armour: laggingSlot)
  * marks one when it leaves no upgrade, and the PITY_MARKS-th mark leaves a sure piece of the place's own
  * tier, at its depth, for that slot. An upgrade wipes the marks. A re-climb through places whose gear
  * the hero has outgrown (shallower Abyss depths are all tier 7, but far weaker) marks nothing.
  */
-function pityMark(game, zone, drops) {
+function pityMark(game, zone, drops, stage) {
     const state = game.state;
     const c = state.combat;
     if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && isUpgrade(state, dr.item))) { c.pity = 0; return; }
@@ -329,9 +355,10 @@ function pityMark(game, zone, drops) {
     c.pity = (c.pity || 0) + 1;
     if (c.pity < PITY_MARKS) return;
     c.pity = 0;
-    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { tier: zone.gearTier });
+    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { tier: zone.gearTier, frontier: { stage, best: state.combat.bestStage } });
     const result = addItem(game, item);
     bumpStat(game, 'itemsDropped');
+    if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');
     bumpStat(game, 'pityDrops');
     drops.push({ item, kept: result.kept });
     if (result.kept) {

@@ -3,7 +3,7 @@
 
 import { SKILLS, GATHERING_SKILLS, PRODUCTION_SKILLS } from '../../src/data/skills.js';
 import { RESOURCES } from '../../src/data/resources.js';
-import { SMITH_INTERVAL, CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, SMITH_SLOT_OFFSET, smithLevelReq, reinforceCost, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
+import { SMITH_INTERVAL, CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, SMITH_SLOT_OFFSET, smithLevelReq, reinforceCost, FORGE_STEP, FORGE_BAR_GROWTH, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
 import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES, GEAR_TIERS } from '../../src/data/items.js';
 import { CROPS, FARMING_PLOTS } from '../../src/data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL, obstacleUpgradeGold, obstacleUpgradeLevelReq } from '../../src/data/agility.js';
@@ -123,10 +123,10 @@ function smithingSections() {
         const base = STAT_UNIT * RESOURCES.copper_bar.power;
         return [`<span class="act">${icon(`item/${type}/1`, 1)}<span>Copper ${esc(TYPE_NAMES[type])}</span></span>`, smithLevelReq(copper, type), SMITHING_BAR_COST[type], fmt(copper.xpPerBar * SMITHING_BAR_COST[type]), Math.round(base * SLOT_STATS[type].atk), Math.round(base * SLOT_STATS[type].def)];
     }));
-    const steps = Array.from({ length: MAX_UPGRADE }, (_, i) => i + 1);
+    const steps = [...Array.from({ length: MAX_UPGRADE }, (_, i) => i + 1), 15, 20, 30];
     const anvil = table(['Reinforce to', 'Smithing level #', ...SMITHING_TYPES.map(t => `${esc(TYPE_NAMES[t])} #`), 'Essence #'], steps.map(n => {
-        const costs = SMITHING_TYPES.map(type => reinforceCost({ type, tier: 1, upgrade: n - 1 }));
-        return [`+${n}`, costs[0].level, ...costs.map(c => c.bars), costs[0].essence];
+        const costs = SMITHING_TYPES.map(type => reinforceCost(type, n - 1, 1));
+        return [`+${n}`, costs[0].level, ...costs.map(c => fmt(c.bars)), fmt(costs[0].essence)];
     }), { sort: false });
     // what salvage gives back past runite: more of the last metal's bars
     const past = GEAR_TIERS.filter(t => anvilBarMult(t.tier) > 1);
@@ -134,9 +134,9 @@ function smithingSections() {
     return [
         section('Smelting', `<p>Ore becomes bars, with coal for the ${SMELTING_RECIPES.filter(r => r.consumes.coal).map(r => r.name.replace(/ Bar$/, '').toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')} bars.</p>${smelt}`),
         section('Forging', `<p>Copper bars forge a first set of weapons and armour. Every stronger piece drops in the fight (${link('/equipment', 'Equipment')}). A forged piece rolls its quality: common to rare.</p>${forge}`),
-        section('The anvil', `<p>From Smithing ${ANVIL_LEVEL_PER_UPGRADE}, the anvil works the weapons and armour you wear, with bars of the piece's own metal: <strong>reinforce</strong> it (+1 to +${MAX_UPGRADE}, each level adds to its attack and defence) or <strong>reroll</strong> its bonuses. Each step of reinforcing takes ${ANVIL_BAR_GROWTH} times the bars of the last and ${ANVIL_LEVEL_PER_UPGRADE} more Smithing levels; the essence grows with the piece's tier. Dragonbone and Abyssal pieces take runite bars, two and three times as many. Mastery of a metal takes bars off the work.</p>${anvil}<p class="muted">The bars each kind of piece takes, and the essence for a tier-1 piece: multiply it by the piece's tier.</p>`),
+        section('The anvil', `<p>From Smithing ${ANVIL_LEVEL_PER_UPGRADE}, the anvil works the weapons and armour you wear: <strong>reinforce</strong> the slot (its levels, with no top, belong to the slot, so every piece worn there has them; up to +${MAX_UPGRADE} each adds to a piece's attack and defence, past it each multiplies them by ${FORGE_STEP}) or <strong>reroll</strong> a piece's bonuses. Each step of reinforcing takes ${ANVIL_BAR_GROWTH} times the bars of the last up to +${MAX_UPGRADE}, ${FORGE_BAR_GROWTH} times past it, and more Smithing (${ANVIL_LEVEL_PER_UPGRADE} levels a step to +${MAX_UPGRADE}, one past it, up to 99); the bars are the metal of the best piece the slot has held, and the essence grows with its tier. Dragonbone and Abyssal take runite bars, two and three times as many. Mastery of a metal takes bars off the work.</p>${anvil}<p class="muted">The bars each kind of slot takes, and the essence for tier 1: multiply it by the tier.</p>`),
         section('Metals', `<p>Working a metal at the anvil pays its XP per bar, and grows that metal's mastery.</p>${metals}`),
-        section('Salvage', `<p>A weapon or piece of armour you salvage gives bars of its metal back: one for a common piece up to five for a legendary (${past.map(t => t.name).join(' and ')} give ${esc(anvilMetal(past[0].tier).name.toLowerCase())} bars, ${past.map(t => `×${anvilBarMult(t.tier)}`).join(' and ')}), and ${pct(ANVIL_REFUND, 0)} of the bars reinforcing it took. A forged copper piece gives back part of what it was made from.</p>`)
+        section('Salvage', `<p>A weapon or piece of armour you salvage gives bars of its metal back: one for a common piece up to five for a legendary (${past.map(t => t.name).join(' and ')} give ${esc(anvilMetal(past[0].tier).name.toLowerCase())} bars, ${past.map(t => `×${anvilBarMult(t.tier)}`).join(' and ')}). The anvil's work stays with the slot. A forged copper piece gives back part of what it was made from.</p>`)
     ].join('\n');
 }
 

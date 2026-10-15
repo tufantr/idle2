@@ -38,6 +38,12 @@ export function gainParts(gain) {
 export const gainWords = gain => gainParts(gain).map(p => p.text).join(', ');
 /** The same as markup, each part green or red. */
 export const gainMarkup = gain => gainParts(gain).map(p => `<span class="${p.up ? 'up' : 'down'}">${escapeHtml(p.text)}</span>`).join(', ');
+/** Stages a gain is worth (systems/inventory.js gainStages), in words: "+12 stages"; '' under one. */
+export function stagesWords(n) {
+    if (n == null || !Number.isFinite(n) || Math.abs(n) < 1) return '';
+    const k = Math.round(Math.abs(n));
+    return `${n > 0 ? '+' : '−'}${k} stage${k === 1 ? '' : 's'}`;
+}
 
 export function seconds(ms) {
     return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`;

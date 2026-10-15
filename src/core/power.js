@@ -131,9 +131,11 @@ export function powerSummary(rawState, now = Date.now()) {
 // 20 stages in an hour and 70 in a day around stage 250, 10 and 50 past 400, and 20 a day past 500. Refitted
 // again for the endless climb (October 2026, DESIGN §3.30) to 28 runs of 600 to 1,200 hours with Auto, 21 of them
 // on varied plans: the camp past 25 and the Legacy from the start, and the dense deep Abyss, where a run fresh
-// from a prestige can gain 150 stages in an hour around stage 700 and 240 in a day. No row came down.
+// from a prestige can gain 150 stages in an hour around stage 700 and 240 in a day. No row came down. With the
+// forge without a top and Mythic gear, 90 in an hour past 1,500 (worst honest climb 50% of the allowance, then 1,500's
+// row raised).
 const CLIMB = [[0, 95, 10], [50, 55, 6], [100, 25, 4.5], [150, 25, 4.5], [200, 35, 3.6], [300, 40, 3.5], [350, 60, 3], [400, 60, 6.6],
-    [450, 80, 6], [500, 130, 4], [600, 160, 4], [700, 170, 4], [800, 150, 4], [1000, 125, 2], [1200, 90, 1.5], [1500, 60, 1]];
+    [450, 80, 6], [500, 130, 4], [600, 160, 4], [700, 170, 4], [800, 150, 4], [1000, 125, 2], [1200, 90, 1.5], [1500, 90, 1.5]];
 export const CLIMB_MARGIN = 3;   // what the server allows over it: players who tap, and better plans than the bot's
 
 /** The most a best stage of `fromStage` can honestly grow in `hours`, times CLIMB_MARGIN. */

@@ -19,8 +19,8 @@ import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
-import { fmt, escapeHtml, gainMarkup } from './ui/format.js';
-import { isUpgrade, canWear, equipGain } from './systems/inventory.js';
+import { fmt, escapeHtml, gainMarkup, stagesWords } from './ui/format.js';
+import { isUpgrade, canWear, equipGain, gainStages } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -31,6 +31,7 @@ import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
+import { RARITIES } from './data/items.js';
 import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { STRATA, STRATUM_STAGES } from './data/strata.js';
@@ -645,21 +646,25 @@ function soundFor(ev, onCombat) {
 /** A drop's sound: its rarity's, or for a plainer piece that beats what he wears a bright step up. */
 function lootSound(item) {
     if (['rare', 'epic', 'legendary'].includes(item.rarity)) return item.rarity;
+    if (['mythic', 'primal'].includes(item.rarity)) return 'mythic';
     return canWear(game.state, item) && isUpgrade(game.state, item) ? 'upgrade' : 'drop';
 }
 
 /**
- * A legendary that beats what he wears: its card once it has landed in the fight (scene.js playLoot), with what it
- * would do and an Equip on it, staying until it is tapped (the owner, October 2026: a legendary drop should be a moment).
+ * A legendary (or better) that beats what he wears: its card once it has landed in the fight (scene.js playLoot), with
+ * what it would do and an Equip on it, staying until it is tapped (the owner, October 2026: a legendary drop should be a moment).
  */
 function legendaryCard(item) {
-    const gain = gainMarkup(equipGain(game.state, item));
+    const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[4];
+    const worth = equipGain(game.state, item);
+    const stages = stagesWords(gainStages(game.state, worth));
+    const gain = gainMarkup(worth) + (stages ? ` · <b class="up">${escapeHtml(stages)}</b>` : '');
     const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => {
         if (!game.state.inventory.some(i => i.id === item.id)) return;   // put on, or gone, meanwhile
-        if (document.hidden) { toast(`legendary drop: ${item.name}!`, 'achievement', pic(itemSpriteKey(item), escapeHtml(item.icon || ''))); return; }   // (no card for a page out of sight)
+        if (document.hidden) { toast(`${rarity.name} drop: ${item.name}!`, 'achievement', pic(itemSpriteKey(item), escapeHtml(item.icon || ''))); return; }   // (no card for a page out of sight)
         rewards.celebrate({
-            key: `loot:${item.id}`, kind: 'legend-drop', kicker: 'Legendary drop', title: item.name, sticky: true,   // until tapped (the owner's ask)
+            key: `loot:${item.id}`, kind: `legend-drop r-${rarity.id}`, kicker: `${rarity.name} drop`, title: item.name, sticky: true,   // until tapped (the owner's ask)
             icon: `<span class="cel-loot">${sprite(itemSpriteKey(item), { scale: 3, fallback: escapeHtml(item.icon || '') })}</span>`,
             lines: [gain ? `Worn: ${gain}` : '', `Tier ${item.tier}${item.depth ? ` · depth ${item.depth}` : ''}`].filter(Boolean),
             act: { label: 'Equip', run: () => window.FI.equip(item.id) }
@@ -721,13 +726,20 @@ function handleEvents(events) {
             }
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'itemDropped': {
-                const better = ev.item.rarity === 'legendary' && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);
+                const rank = RARITIES.findIndex(r => r.id === ev.item.rarity);
+                const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);   // legendary and above
                 if (better) legendaryCard(ev.item);   // its card says it
-                else if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
+                else if (rank >= 2) toast(`${ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
                 break;
             }
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
-            case 'refit': toast(`The smith refits it: +${ev.level} carried over from the ${ev.from.name}`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon || ''))); break;   // (systems/inventory.js refitLevel)
+            case 'equip':   // the first piece to take a slot's forge levels: how the forge works, said once (systems/inventory.js)
+                if (ev.firstForge) {
+                    const kind = ev.slot === 'Weapon' ? 'weapon' : 'piece of armour';
+                    rewards.celebrate({ key: 'forge-slots', kind: 'legend', icon: `<span class="cel-loot">${sprite(itemSpriteKey(ev.item), { scale: 2, fallback: escapeHtml(ev.item.icon || '') })}</span>`,
+                        kicker: 'The forge', title: `+${ev.forge} kept`, lines: ['Forge levels belong to the slot.', `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
+                }
+                break;
             case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
             case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
             case 'prestige': {

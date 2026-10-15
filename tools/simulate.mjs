@@ -29,14 +29,13 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
 import { FORGE_METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq, anvilMetal } from '../src/data/workshop.js';
-import { anvilCost } from '../src/systems/anvil.js';
+import { anvilCost, forgeTier } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
 import { zoneForStage } from '../src/data/zones.js';
 import { RESOURCES, orderedByTier } from '../src/data/resources.js';
 import { potionsFor, potionLevel, POTION_KINDS } from '../src/data/potions.js';
 import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../src/data/perks.js';
-import { MAX_UPGRADE } from '../src/data/items.js';
 import { CAMP_UPGRADES, CAMP_GOLD } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
 import { itemUpgradeCost, itemScore, goldShopPrice, goldShopOpen } from '../src/systems/inventory.js';
@@ -396,10 +395,10 @@ function spendPoints() {
         const price = goldShopPrice(game, GOLD_SHOP.find(i => i.id === 'buy_essence'));
         if (S.gold - price < reserve + 20 * price || !game.buyGoldShopItem('buy_essence')) break;
     }
-    // Bars and essence into the worn weapon and armour at the anvil, weapon first.
+    // Bars and essence into the slots of the worn weapon and armour at the anvil, weapon first (the forge has no top).
     for (const slot of WITHOUT.has('anvil') ? [] : ARMOUR_PRIORITY) {
         const item = S.equipped[slot];
-        for (let g = 0; item && g < MAX_UPGRADE && anvilCost(S, item).ok; g++) game.reinforceItem(item.id);
+        for (let g = 0; item && g < 200 && anvilCost(S, item).ok; g++) game.reinforceItem(item.id);
     }
     buyCamp();
 }
@@ -646,7 +645,7 @@ function trainWeakest() {
     if (trainings % 3 === 0 && S.unlocks.crafting && !WITHOUT.has('crafting') && lvl('crafting') < 99) { lastTrainedSkill = 'crafting'; return craftTraining(); }
     // The metal the anvil needs for the weapon worn, while Mining or Smithing doesn't reach it yet.
     const weapon = S.equipped.Weapon;
-    const target = weapon && (weapon.upgrade || 0) < MAX_UPGRADE ? anvilMetal(weapon.tier) : null;
+    const target = weapon ? anvilMetal(forgeTier(S, 'Weapon')) : null;   // (the forge's levels are priced at the slot's best tier)
     if (target) {
         const recipe = SMELTING_RECIPES.find(r => r.produces === target.bar);
         const oreId = Object.keys(recipe.consumes).find(id => RESOURCES[id].category === 'ore' && id !== 'coal');
@@ -969,7 +968,7 @@ if (VERBOSE) for (const d of DUNGEONS) {
     console.log(`  ${d.name}: boss ${p.bossFight.killSeconds.toFixed(1)} s to kill / ${p.bossFight.surviveSeconds.toFixed(1)} s to survive; last elite ${p.eliteFight.killSeconds.toFixed(1)} / ${p.eliteFight.surviveSeconds.toFixed(1)} s`);
 }
 console.log(`\nFinal: best stage ${S.combat.bestStage}, ${S.prestige.count} prestiges, ${S.prestige.tokens} tokens (+${game.derived.tokenPowerPct}% power), kills ${S.stats.kills}, deaths ${S.stats.deaths}, gold earned ${Math.round(S.stats.goldEarned).toLocaleString()}, pity drops ${S.stats.pityDrops || 0}`);
-console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.equipped[s].upgrade ? '+' + S.equipped[s].upgrade : ''}` : null).filter(Boolean).join(', ')}`);
+console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].name}${S.forge?.[s]?.level ? '+' + S.forge[s].level : ''}` : null).filter(Boolean).join(', ')}`);
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);
 const majors = moments.filter(m => m.cls === 'major');
 if (PLAYER === 'online') console.log(`Big moments by band (major: per hour, median / P90 / longest gap in hours): ${bandStats(majors).map(b => `${b.band} h ${b.perHour}/h ${b.p50}/${b.p90}/${b.max}`).join(' · ')}`);
@@ -988,8 +987,8 @@ if (JSON_OUT) {
         levels: Object.fromEntries(milestones.filter(m => m.key.endsWith(' lv')).map(m => [`${m.key.slice(0, -3)} ${m.value}`, +H(m.at).toFixed(2)])),
         final: {
             bestStage: S.combat.bestStage, prestiges: S.prestige.count, tokens: S.prestige.tokens, records: game.derived.records.count, kills: S.stats.kills, deaths: S.stats.deaths,
-            titanKills: S.titan.kills, titanTries, pityDrops: S.stats.pityDrops || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
-            gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.equipped[t].upgrade || 0, depth: S.equipped[t].depth || 0 } : null),
+            titanKills: S.titan.kills, titanTries, pityDrops: S.stats.pityDrops || 0, mythics: S.stats.mythicsFound || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
+            gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.forge?.[t]?.level || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length,
             // Crafting: its level, what it made, and the jewellery worn at the end (crafted or dropped)
             crafting: lvl('crafting'), crafted: S.stats.itemsCrafted || 0,

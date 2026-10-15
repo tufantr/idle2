@@ -5,10 +5,10 @@ import {
     BAG_SIZE, BAG_UPGRADE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
     SMITHING_TYPES, AUTO_SALVAGE_OPTIONS, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
 } from '../data/items.js';
-import { salvageBars, carryAnvilWork, ANVIL_REFUND } from '../data/workshop.js';
+import { salvageBars, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
-import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
+import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, enemyBaseStats } from '../core/formulas.js';
 import { skillLevel, deriveStats } from '../core/modifiers.js';
 import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
@@ -65,29 +65,20 @@ export function canWear(state, item) {
     return skillLevel(state, 'combat') >= (TIER_WEAR_LEVEL[item.tier] || 1);
 }
 
-/** Rough power of an item for comparisons (upgrades and affixes count). */
+/**
+ * Rough power of an item for comparisons (affixes count, and a piece of jewellery's own upgrades; a weapon's or
+ * armour's forge levels belong to its slot, data/workshop.js, so any piece worn there has them).
+ */
 export function itemScore(item) {
     if (!item) return -1;
-    return ((item.atk || 0) + (item.def || 0)) * (1 + UPGRADE_STEP * (item.upgrade || 0)) + 5 * (item.affixes?.length || 0);
+    const own = SMITHING_TYPES.includes(item.type) ? 1 : 1 + UPGRADE_STEP * (item.upgrade || 0);
+    return ((item.atk || 0) + (item.def || 0)) * own + 5 * (item.affixes?.length || 0);
 }
-
-// The smith refits the reinforcing: a weapon or armour piece put on in place of a reinforced one takes its
-// anvil levels but one (and the bars that went into them), and the old piece comes off plain. The anvil's
-// work used to be lost with every better drop, and a hero replaced his gear at almost every new depth, so
-// Smithing's anvil hardly changed his pace (tools/audit.mjs: 0.3% without it). Swapping back and forth
-// loses a level each time, so nothing is gained by it.
-/** The anvil level `item` would have once worn in place of `worn`. */
-export function refitLevel(item, worn) {
-    if (!item || !worn || !SMITHING_TYPES.includes(item.type) || worn.type !== item.type) return item?.upgrade || 0;
-    return Math.max(item.upgrade || 0, Math.min(MAX_UPGRADE, (worn.upgrade || 0) - 1));
-}
-/** `item`'s score as it would be worn in place of `worn` (refitted). */
-const scoreInPlaceOf = (item, worn) => itemScore({ ...item, upgrade: refitLevel(item, worn) });
 
 /** True if the item beats what is worn in the weakest slot it fits (empty slots count as beaten). */
 export function isUpgrade(state, item) {
     const slots = TYPE_SLOTS[item.type] || [];
-    return slots.some(slot => scoreInPlaceOf(item, state.equipped[slot]) > itemScore(state.equipped[slot]));
+    return slots.some(slot => itemScore(item) > itemScore(state.equipped[slot]));
 }
 
 /** The weakest equipped slot an item could go into (empty slots first). */
@@ -98,15 +89,32 @@ function weakestSlotFor(state, type) {
 
 /**
  * What wearing `item` does to the hero, all bonuses counted: his attack, defence and max health after, as
- * ratios to before (0.38 is +38%; Infinity where he had none). In the slot equipItem would choose, with the
- * anvil levels a refit would bring. The fight's Equip, the bag and the equip itself say it, so a better piece is
- * seen to make him stronger (the owner, October 2026: a legendary should be felt).
+ * ratios to before (0.38 is +38%; Infinity where he had none), in the slot equipItem would choose (with its
+ * forge levels). The fight's Equip, the bag and the equip itself say it, so a better piece is seen to make
+ * him stronger (the owner, October 2026: a legendary should be felt).
  */
 export function equipGain(state, item, slot = weakestSlotFor(state, item.type)) {
     const before = deriveStats(state);
-    const after = deriveStats({ ...state, equipped: { ...state.equipped, [slot]: { ...item, upgrade: refitLevel(item, state.equipped[slot]) } } });
+    const after = deriveStats({ ...state, equipped: { ...state.equipped, [slot]: item } });
     const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
     return { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
+}
+
+/**
+ * About how many stages a change in the hero's attack, defence and health (`gain`, as equipGain gives it) is worth
+ * at his best stage: attack where a boss must fall in time (its health grows a stage's growth), defence and health
+ * together where he must live through a blow (its attack grows likewise), whichever moves more (the exchange rate of
+ * docs/research_notes/endless-late-game.md §1.1). Null when it can't be said (a slot that was empty).
+ */
+export function gainStages(state, gain) {
+    if (!gain || ![gain.atk, gain.def, gain.hp].every(Number.isFinite)) return null;
+    const best = Math.max(1, state.combat?.bestStage || 1);
+    const here = enemyBaseStats(best);
+    const next = enemyBaseStats(best + 1);
+    const ln = v => Math.log(1 + Math.max(-0.99, v));
+    const boss = ln(gain.atk) / Math.log(next.hp / here.hp);
+    const blow = (ln(gain.def) + ln(gain.hp)) / (2 * Math.log(next.atk / here.atk));
+    return Math.abs(boss) >= Math.abs(blow) ? boss : blow;
 }
 
 /** The best wearable upgrade in the bag, if any: { item, slot, gain } (the fight's one-tap Equip). */
@@ -115,7 +123,7 @@ export function findUpgrade(state) {
     for (const item of state.inventory) {
         if (!canWear(state, item)) continue;
         const slot = weakestSlotFor(state, item.type);
-        const gain = scoreInPlaceOf(item, state.equipped[slot]) - itemScore(state.equipped[slot]);
+        const gain = itemScore(item) - itemScore(state.equipped[slot]);
         if (gain > 0 && (!best || gain > best.gain)) best = { item, slot, gain };
     }
     return best;
@@ -127,10 +135,7 @@ function neededInBag(state) {
     const byType = {};
     for (const item of state.inventory) (byType[item.type] ||= []).push(item);
     for (const [type, items] of Object.entries(byType)) {
-        // ranked as each would be worn (refitted, as isUpgrade judges them): by raw score a spare
-        // reinforced piece could crowd out the real upgrade, and the bag-full rule salvaged it
-        const worn = state.equipped[weakestSlotFor(state, type)];
-        const best = items.sort((a, b) => scoreInPlaceOf(b, worn) - scoreInPlaceOf(a, worn)).slice(0, (TYPE_SLOTS[type] || []).length);
+        const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
         for (const item of best) if (isUpgrade(state, item)) needed.add(item);
     }
     return needed;
@@ -315,18 +320,20 @@ export function equipItem(game, id, requestedSlot = null) {
 
     const previous = state.equipped[slot];
     const gain = equipGain(state, item, slot);   // (before the swap: what it does to him, for the screen)
-    const refit = refitLevel(item, previous);   // the smith refits the reinforcing (above)
-    if (previous && refit > (item.upgrade || 0)) {
-        carryAnvilWork(item, previous);   // the bars and essence that went in, as they were (data/workshop.js)
-        item.upgrade = refit;
-        previous.upgrade = 0;
-        game.emit({ type: 'refit', item, from: previous, level: refit });
-    }
     state.equipped[slot] = item;
     state.inventory.splice(index, 1);
     if (previous) state.inventory.push(previous);
     if (item.rarity === 'legendary') bumpStat(game, 'legendariesEquipped');
-    game.emit({ type: 'equip', item, slot, gain });
+    // the slot's forge (data/workshop.js): its price follows the best tier it has held, and its levels are the piece's now
+    let forge = 0;
+    if (SMITHING_TYPES.includes(slot) && state.forge?.[slot]) {
+        state.forge[slot].tier = Math.max(state.forge[slot].tier || 1, item.tier || 1);
+        forge = state.forge[slot].level || 0;
+    }
+    // the first time a piece takes a slot's levels, a card says how the forge works (main.js), once
+    const firstForge = forge > 0 && previous && !state.seen.forge_slots;
+    if (firstForge) state.seen.forge_slots = true;
+    game.emit({ type: 'equip', item, slot, gain, forge, firstForge });
     game.markDirty();
     return true;
 }

@@ -6,11 +6,11 @@
 // Stacking rule: percentages from "content" sources add together inside a layer; layers
 // multiply. Prestige tokens are their own layer so prestige stays exponential.
 
-import { EQUIP_SLOTS, UPGRADE_STEP } from '../data/items.js';
+import { EQUIP_SLOTS, UPGRADE_STEP, SMITHING_TYPES } from '../data/items.js';
 import { PERKS } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
 import { NON_COMBAT_SKILLS, SPEED_SKILLS, SKILL_IDS } from '../data/skills.js';
-import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER } from '../data/workshop.js';
+import { TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, forgeMult } from '../data/workshop.js';
 import { RESOURCES } from '../data/resources.js';
 import { POTIONS, POTION_KINDS, potionPower } from '../data/potions.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
@@ -163,13 +163,14 @@ export function potionEffects(state) {
 export function collectModifiers(state) {
     const mods = emptyMods();
 
-    // Equipment: base stats scaled by upgrade level, plus affixes (all of it times a Trial's `gear`,
-    // nothing in Rusted Gear: data/trials.js). Not in the clan boss fight, which leaves the Trial out.
+    // Equipment: base stats scaled by the slot's forge levels (weapons and armour, data/workshop.js forgeMult) or the
+    // piece's own upgrades (jewellery), plus affixes (all of it times a Trial's `gear`, nothing in Rusted Gear:
+    // data/trials.js). Not in the clan boss fight, which leaves the Trial out.
     const gearShare = state.combat.mode === 'clan' ? 1 : trialBite(state).gear ?? 1;
     for (const slot of EQUIP_SLOTS) {
         const item = state.equipped[slot];
         if (!item || !gearShare) continue;
-        const upgradeMult = (1 + UPGRADE_STEP * (item.upgrade || 0)) * gearShare;
+        const upgradeMult = (SMITHING_TYPES.includes(slot) ? forgeMult(state.forge?.[slot]?.level) : 1 + UPGRADE_STEP * (item.upgrade || 0)) * gearShare;
         mods.gearAtk += (item.atk || 0) * upgradeMult;
         mods.gearDef += (item.def || 0) * upgradeMult;
         for (const affix of item.affixes || []) addMods(mods, { [affix.stat]: affix.value * gearShare });

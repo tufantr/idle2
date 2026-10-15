@@ -4,7 +4,7 @@
 import { RESOURCES } from '../data/resources.js';
 import { POTION_MINUTES, potionsForSlot } from '../data/potions.js';
 import { SKILL_IDS, NON_COMBAT_SKILLS } from '../data/skills.js';
-import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS, BAG_UPGRADE } from '../data/items.js';
+import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MAX_GEAR_TIER, codexKey, isCodexKey, GEAR_TIERS, CRAFTING_TYPES, JEWEL_POWER, PITY_MARKS, BAG_UPGRADE, SMITHING_TYPES } from '../data/items.js';
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
@@ -12,7 +12,7 @@ import { TRIALS, TRIAL_TIERS, trialById, trialTarget, trialTiersCleared } from '
 import { xpForLevel, levelForXp, MAX_LEVEL } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
-import { TOOLS } from '../data/workshop.js';
+import { TOOLS, FORGE_MAX } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions } from '../data/mastery.js';
@@ -36,6 +36,14 @@ export const PERK_RESET = '2026-10-15';
 // still running the older game keeps as it is, so no piece is ever raised twice.
 export const RARITY_RESCALE = '2026-10-15';
 const OLD_QUALITY = { common: 1, uncommon: 1.08, rare: 1.16, epic: 1.25, legendary: 1.4 };
+
+// The forge (the endless climb, October 2026; data/workshop.js): the anvil's levels belong to the slots, in
+// `forge` ({ level, tier } a slot, the tier the best it has held). A piece from before carries its own levels
+// (`upgrade`); on every load the best of each kind, worn or in the bag, gives its levels to the slot and comes
+// off plain (the others keep theirs, and their bars come back when salvaged). The levels are copied into
+// `meta.forge` too: a page still running the older game deletes `forge`, which it doesn't know, but keeps
+// `meta` as it is, so they are read back from there.
+const emptyForge = () => Object.fromEntries(SMITHING_TYPES.map(type => [type, { level: 0, tier: 1 }]));
 
 export const SAVE_VERSION = 3;
 
@@ -77,6 +85,7 @@ export function createDefaultState(now = Date.now()) {
             dungeon: null,     // { id, index } while in a dungeon run
             recovering: false, // fallen: resting to full health, then back into the fight by himself
             pity: 0,           // bosses at the frontier without an upgrade since the last (data/items.js PITY_MARKS)
+            frontierDrop: false,   // this run's piece from the best stage's depth is found (data/items.js FRONTIER_DROP)
             stallMs: 0,        // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
             pack: null         // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
         },
@@ -91,6 +100,7 @@ export function createDefaultState(now = Date.now()) {
         events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [], cloaks: {} },   // cloaks: the festival cloaks bought (data/capes.js)
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0, perkReset: PERK_RESET },   // firstAt: when the first prestige was
         camp: { whetstone: 0, armory: 0, hearth: 0 },
+        forge: emptyForge(),
         perks: {},
         achievements: {},
         codex: {},             // "<type>/<tier>" -> true: the gear codex (data/items.js), pages filled
@@ -101,7 +111,7 @@ export function createDefaultState(now = Date.now()) {
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
-            itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0,
+            itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0, mythicsFound: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0, potionFragments: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
@@ -439,10 +449,36 @@ function resetPerks(state, now) {
     pr.perkReset = PERK_RESET;
 }
 
+/** The forge's slots as whole numbers in range, the levels kept in `meta.forge` read back, and old pieces' levels folded in (above). */
+function sanitizeForge(state, data, now) {
+    const saved = isPlainObject(data?.forge) ? data.forge : {};
+    const mirror = isPlainObject(data?.meta?.forge) ? data.meta.forge : {};
+    state.forge = emptyForge();
+    let moved = 0;
+    for (const type of SMITHING_TYPES) {
+        const f = state.forge[type];
+        const s = isPlainObject(saved[type]) ? saved[type] : {};
+        f.level = Math.max(intIn(s.level, 0, FORGE_MAX, 0), intIn(mirror[type], 0, FORGE_MAX, 0));
+        f.tier = intIn(s.tier, 1, MAX_GEAR_TIER, 1);
+        const worn = state.equipped[type];
+        if (worn) f.tier = Math.max(f.tier, worn.tier);
+        const best = [worn, ...state.inventory.filter(i => i.type === type)].filter(i => i && i.upgrade > 0).sort((a, b) => b.upgrade - a.upgrade)[0];
+        if (!best) continue;
+        if (best.upgrade > f.level) { f.level = best.upgrade; f.tier = Math.max(f.tier, best.tier); }
+        best.upgrade = 0;
+        delete best.barsIn;
+        delete best.barsCarried;
+        delete best.essenceIn;
+        moved++;
+    }
+    if (moved) state.log.push({ t: now, type: 'system', text: 'The anvil\'s levels belong to the slots now, with no top: every weapon and piece of armour you wear has its slot\'s levels.' });
+    state.meta.forge = Object.fromEntries(SMITHING_TYPES.map(type => [type, state.forge[type].level]));
+}
+
 function rescaleRarity(state, now) {
     let raised = 0;
     for (const item of [...Object.values(state.equipped), ...state.inventory]) {
-        const k = item ? RARITY_BY_ID[item.rarity].quality / OLD_QUALITY[item.rarity] : 1;
+        const k = item && OLD_QUALITY[item.rarity] ? RARITY_BY_ID[item.rarity].quality / OLD_QUALITY[item.rarity] : 1;   // (nothing above legendary was from before)
         if (k === 1) continue;
         item.atk = Math.round(item.atk * k);
         item.def = Math.round(item.def * k);
@@ -513,6 +549,7 @@ function normalise(data, now) {
     }
     state.inventory = (Array.isArray(state.inventory) ? state.inventory : []).map(i => sanitizeItem(i, ids, nextId)).filter(Boolean);
     if (data?.meta?.rarityRescale !== RARITY_RESCALE) rescaleRarity(state, now);   // (read from the save itself: the default is the new mark)
+    sanitizeForge(state, data, now);
     state.bagUpgrades = Math.max(0, Math.min(BAG_UPGRADE.max, Math.floor(finite(state.bagUpgrades))));
     for (const id of ids) if (id >= state.idCounter) state.idCounter = id + 1;
     state.log = (Array.isArray(state.log) ? state.log : [])
@@ -587,6 +624,7 @@ function normalise(data, now) {
     // work and a fight are never both under way (a save with both ran them at once): the fight goes on
     if (state.action && state.combat.active) state.action = null;
     state.combat.pity = intIn(state.combat.pity, 0, PITY_MARKS - 1, 0);
+    state.combat.frontierDrop = state.combat.frontierDrop === true;
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
     const pack = state.combat.pack;
     state.combat.pack = isPlainObject(pack) && Math.floor(Number(pack.stage)) === state.combat.stage && Number(pack.killed) >= 1

@@ -1234,6 +1234,15 @@ Keeping it running:
       simulated players with Auto: stage 1,000 at hour 281 and 1,830 at hour 1,200, still climbing (690, stopped,
       before); 420 at hour 100 (370). Numbers past 10^33 keep their names (Dc, UDc … Ce), the
       leaderboard's allowance for a fast climb was refitted, and its ceilings raised
+- [x] **The endless climb, second part: gear** (DESIGN §3.31; how the forge is shown agreed with the owner first). The
+      anvil's levels belong to the slot and have no top (+5% of a piece's base a level to +10, ×1.05 past it): every
+      piece worn there has them, shown as a plate on the slot, "+14 kept" when a piece goes on, a card the first time,
+      "Weapon slot +14 → +15: +5% attack" on the anvil, and "Salvage: +34 essence for the forge". **Mythic** (×4 a common,
+      five bonuses) from stage 500 near the best stage, **Primal** (rolled as high as it goes, a sixth bonus) from
+      1,000; once a run the first boss at 90% of the best leaves **a piece from the best stage's depth**; item cards
+      and ▲ Equip say about **how many stages** a piece is worth. Seven simulated players with Auto reach stage 2,000 at
+      hour 1,161 (1,830 by hour 1,200 before), the forge +40 to +51 by then, and a Mythic about once every 21 hours of
+      play past stage 500
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

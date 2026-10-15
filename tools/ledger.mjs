@@ -66,10 +66,10 @@ function ledger(file) {
     // gear against none at all: defence is then nothing, so it is counted from one point
     add('gear (all 12 pieces)', { atk: (BASE.unarmedAtk + mods.gearAtk) / BASE.unarmedAtk, def: Math.max(1, mods.gearDef), hp: (hpBase + BASE.hpPerDef * mods.gearDef) / hpBase }, `attack ${Math.round(mods.gearAtk)}, defence ${Math.round(mods.gearDef)} (defence counted from 1 point)`);
     const w = S.equipped.Weapon;
-    if (w) add('  of which the weapon', share(T => { T.equipped.Weapon = null; }), `${w.name} ${w.rarity} T${w.tier}${w.depth ? ` d${w.depth}` : ''} +${w.upgrade || 0}`);
+    if (w) add('  of which the weapon', share(T => { T.equipped.Weapon = null; }), `${w.name} ${w.rarity} T${w.tier}${w.depth ? ` d${w.depth}` : ''} +${S.forge?.Weapon?.level || 0}`);
     add('  of which the armour (6)', share(T => { for (const s of ['Shield', 'Head', 'Body', 'Legs', 'Boots', 'Gloves']) T.equipped[s] = null; }));
     add('  of which the jewellery (5)', share(T => { for (const s of ['Ring1', 'Ring2', 'Neck', 'Ear1', 'Ear2']) T.equipped[s] = null; }));
-    add('  of which upgrade levels', share(T => { for (const s of EQUIP_SLOTS) if (T.equipped[s]) T.equipped[s].upgrade = 0; }));
+    add('  of which upgrade levels', share(T => { for (const s of EQUIP_SLOTS) if (T.equipped[s]) T.equipped[s].upgrade = 0; for (const f of Object.values(T.forge || {})) f.level = 0; }), `the forge: ${Object.entries(S.forge || {}).map(([s, f]) => `${s} +${f.level}`).join(', ')}`);
     add('tokens (with records)', share(T => { T.prestige.tokens = 0; }), `${Math.round(tokens)} tokens x records ${rec.mult.toFixed(2)}`);
     const layer = (k, m) => (1 + BASE[k] * tokens * m);
     add('  of which records', { atk: layer('tokenAtk', rec.mult) / layer('tokenAtk', 1), def: layer('tokenDef', rec.mult) / layer('tokenDef', 1), hp: layer('tokenHp', rec.mult) / layer('tokenHp', 1) }, `${rec.count} records: ${rec.stages} stage, ${rec.skills} skill, ${rec.uniques} unique, ${rec.trials} trial, ${rec.laurels} laurel`);
