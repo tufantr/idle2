@@ -26,7 +26,9 @@ medians and percentiles: `node tools/batch.mjs --seeds=30 --hours=150` (add `--a
 `node tools/opening.mjs 60 3` (docs/research_notes/first-session.md, docs/research_notes/robust-and-fun/);
 food and potions in one fresh run of a saved hero (bare, food, potion, both, and why he falls):
 `node tools/supplies.mjs <save.json>` (DESIGN §3.28); what each piece of gear is worth to a saved hero (a rarity
-for another, a slot emptied): `node tools/gearbench.mjs <save.json>` (DESIGN §3.29).
+for another, a slot emptied): `node tools/gearbench.mjs <save.json>` (DESIGN §3.29); what every source of power is
+worth in stages, and where a climb's stages came from: `node tools/ledger.mjs <save.json>` and `--flow <dir>`
+(docs/research_notes/endless-late-game.md).
 
 ## Where things are
 
