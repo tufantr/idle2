@@ -14,6 +14,7 @@ import { killPayout } from '../src/systems/combat.js';
 import { dungeonEnemy } from '../src/systems/dungeon.js';
 import { DUNGEONS, DUNGEON_BOSS_HP_MULT } from '../src/data/dungeons.js';
 import { gainWords } from '../src/ui/format.js';
+import { bestFind } from '../src/systems/offline.js';
 
 const T0 = 1_760_000_000_000;
 const quality = id => RARITIES.find(r => r.id === id).quality;
@@ -112,4 +113,49 @@ test('a legendary sword for a rare one: the hero is seen to grow stronger, by th
     assert.equal(gainWords(equipGain(g.state, helm)).split(', ')[0], '+defence');
     assert.equal(gainWords({ atk: 0.002, def: 0, hp: 0 }), '', 'a change too small to see says nothing');
     assert.equal(gainWords({ atk: -0.25, def: 0.031, hp: 0 }), '−25% attack, +3.1% defence');
+});
+
+test("the welcome-back card's best find: the rarest new piece, or a plainer one that beats what he wears", () => {
+    rng.setSource(seededRandom(9));
+    const g = new Game(null, T0);
+    const S = g.state;
+    S.skills.combat.xp = 1e7;
+    S.equipped.Weapon = piece('Weapon', 'epic', { tier: 5, id: 31 });
+    S.equipped.Body = piece('Body', 'epic', { tier: 5, id: 32 });
+    const old = piece('Weapon', 'legendary', { tier: 3, id: 33 });
+    S.inventory = [old];
+    const known = new Set([old.id]);
+    assert.equal(bestFind(S, known), null, 'nothing new');
+    S.inventory.push(piece('Head', 'common', { tier: 1, id: 34 }));
+    // a common helm beats an empty head slot: it is an upgrade, so it is worth showing
+    assert.equal(bestFind(S, known).id, 34);
+    assert.equal(bestFind(S, known).upgrade, true);
+    S.equipped.Head = piece('Head', 'epic', { tier: 5, id: 35 });
+    assert.equal(bestFind(S, known), null, 'a plain piece that is no upgrade is not shown');
+    S.inventory.push(piece('Weapon', 'rare', { tier: 2, id: 36 }), piece('Body', 'epic', { tier: 2, id: 37 }));
+    assert.equal(bestFind(S, known).id, 37, 'the rarest new piece');
+    assert.equal(bestFind(S, known).upgrade, false);
+    S.inventory.push(piece('Legs', 'legendary', { tier: 1, id: 38 }));
+    assert.equal(bestFind(S, known).id, 38, 'a legendary first, whatever its tier');
+});
+
+test('a long time away fighting reports its best find', () => {
+    rng.setSource(seededRandom(4));
+    const game = new Game(null, T0);
+    game.state.prestige.tokens = 800;
+    game.state.combat.bestStage = 60;
+    game.state.combat.maxStage = 60;
+    game.state.settings.autoSalvage = 'off';
+    game.state.combat.farmMode = true;
+    game.recompute();
+    game.setStage(40);
+    game.enterCombat();
+    const saved = JSON.parse(game.serialize(T0));
+    const later = T0 + 6 * 3600 * 1000;
+    const back = new Game(saved, later);
+    const summary = back.resumeFromSave(later);
+    assert.ok(summary.items > 0, `${summary.items} items`);
+    assert.ok(summary.best, 'a piece worth showing');
+    assert.ok(back.state.inventory.some(i => i.id === summary.best.id), 'one he still has');
+    assert.ok(RARITIES.findIndex(r => r.id === summary.best.rarity) >= 2 || summary.best.upgrade);
 });

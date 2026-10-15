@@ -19,7 +19,8 @@ import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
-import { fmt, escapeHtml } from './ui/format.js';
+import { fmt, escapeHtml, gainMarkup } from './ui/format.js';
+import { isUpgrade, canWear, equipGain } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -612,8 +613,8 @@ function soundFor(ev, onCombat) {
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;
         case 'kill': return [ev.enemy.boss ? 'victory' : ev.enemy.gilded ? 'gold' : 'kill'];
-        case 'itemDropped': return [ev.item.rarity === 'legendary' ? 'legendary' : ['rare', 'epic'].includes(ev.item.rarity) ? 'rare' : 'drop'];
-        case 'itemCrafted': return [ev.item.rarity === 'legendary' ? 'legendary' : ['rare', 'epic'].includes(ev.item.rarity) ? 'rare' : 'craft'];
+        case 'itemDropped': return [lootSound(ev.item)];
+        case 'itemCrafted': return [['rare', 'epic', 'legendary'].includes(ev.item.rarity) ? ev.item.rarity : 'craft'];
         case 'actionComplete': return ui.tab === ev.skill ? [ev.made?.gem ? 'gem' : ev.made?.item ? 'craft' : (ev.made?.qty || 1) > 1 ? 'double' : 'action'] : null;
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
@@ -639,6 +640,31 @@ function soundFor(ev, onCombat) {
         case 'error': return ['error'];
         default: return null;
     }
+}
+
+/** A drop's sound: its rarity's, or for a plainer piece that beats what he wears a bright step up. */
+function lootSound(item) {
+    if (['rare', 'epic', 'legendary'].includes(item.rarity)) return item.rarity;
+    return canWear(game.state, item) && isUpgrade(game.state, item) ? 'upgrade' : 'drop';
+}
+
+/**
+ * A legendary that beats what he wears: its card once it has landed in the fight (scene.js playLoot), with what it
+ * would do and an Equip on it (the owner, October 2026: a legendary drop should be a moment).
+ */
+function legendaryCard(item) {
+    const gain = gainMarkup(equipGain(game.state, item));
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(() => {
+        if (!game.state.inventory.some(i => i.id === item.id)) return;   // put on, or gone, meanwhile
+        if (document.hidden) { toast(`legendary drop: ${item.name}!`, 'achievement', pic(itemSpriteKey(item), escapeHtml(item.icon || ''))); return; }   // (no card for a page out of sight)
+        rewards.celebrate({
+            key: `loot:${item.id}`, kind: 'legend-drop', kicker: 'Legendary drop', title: item.name, ms: 4500,
+            icon: `<span class="cel-loot">${sprite(itemSpriteKey(item), { scale: 3, fallback: escapeHtml(item.icon || '') })}</span>`,
+            lines: [gain ? `Worn: ${gain}` : '', `Tier ${item.tier}${item.depth ? ` · depth ${item.depth}` : ''}`].filter(Boolean),
+            act: { label: 'Equip', run: () => window.FI.equip(item.id) }
+        });
+    }, still ? 0 : 1150);
 }
 
 const REVEAL_TOASTS = {
@@ -694,7 +720,12 @@ function handleEvents(events) {
                 break;
             }
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
-            case 'itemDropped': if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
+            case 'itemDropped': {
+                const better = ev.item.rarity === 'legendary' && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);
+                if (better) legendaryCard(ev.item);   // its card says it
+                else if (['rare', 'epic', 'legendary'].includes(ev.item.rarity)) toast(`${ev.item.rarity} drop: ${ev.item.name}!`, ev.item.rarity === 'legendary' ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
+                break;
+            }
             case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
             case 'refit': toast(`The smith refits it: +${ev.level} carried over from the ${ev.from.name}`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon || ''))); break;   // (systems/inventory.js refitLevel)
             case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;

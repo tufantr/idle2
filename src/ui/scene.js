@@ -8,7 +8,7 @@ import { clanBossFor } from '../data/social.js';
 import { clanGuardOpen } from '../systems/clanfight.js';
 import { dungeonById } from '../data/dungeons.js';
 import { RARITIES, PITY_MARKS } from '../data/items.js';
-import { laggingSlot, PITY_LAG } from '../systems/inventory.js';
+import { laggingSlot, PITY_LAG, isUpgrade, canWear, equipGain } from '../systems/inventory.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
 import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
@@ -34,6 +34,11 @@ const PARTICLE_COUNT = 18;
 const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
 const MAX_COINS_IN_FLIGHT = 14;
+// Loot worth seeing (playLoot): how long it glows on the ground before it flies off, and its sparks.
+const LOOT_HOLD = { rare: 950, epic: 1300, legendary: 2000 };
+const LOOT_SPARKS = { rare: 5, epic: 8, legendary: 14 };
+const LOOT_GAP = 900;          // the next piece while this one still glows
+const LOOT_MAX_QUEUED = 3;     // a tab catching up shows its best few
 // the boss's pip on the path, the boss clock and the regroup line
 const SKULL = glyph('skull');
 const CLOCK = glyph('time');
@@ -274,6 +279,173 @@ export function createScene(root, actions) {
             anim.onfinish = done;
             anim.oncancel = done;
         }
+    }
+
+    // ---------- loot ----------
+    // A piece worth seeing (rare or better, an upgrade, the first sword) pops out of the falling monster in an
+    // arc, bounces, and glows on the ground in its rarity's colour: a ring for rare, a pillar for epic, a tall
+    // gold pillar with rays for legendary. An upgrade says what it does ("▲ +38% attack"). Then it flies to the
+    // fight's ▲ Equip (an upgrade), the phone's Inventory button, or into the hero's hands. A legendary upgrade
+    // also gets a moment: gold at the screen's edges and the fight holding its breath (main.js shows its card).
+    // The owner, October 2026: a good drop should be felt. One at a time, the best first.
+    const lootQueue = [];
+    let lootBusy = false;
+
+    /** What the scene makes of a dropped piece: { tier, color, rank, upgrade } or null for a plain one. */
+    function lootLook(item, state, first = false) {
+        const rank = RARITIES.findIndex(r => r.id === item.rarity);
+        const upgrade = !first && canWear(state, item) && isUpgrade(state, item);
+        if (first) return { tier: 'rare', color: '#fcd34d', rank: 2, upgrade: false };   // the first sword rises like a rare find
+        if (rank < 2 && !upgrade) return null;   // a plain piece: the bag counts it
+        return { tier: rank >= 2 ? RARITIES[rank].id : 'upgrade', color: rank >= 2 ? RARITIES[rank].color : '#4ade80', rank, upgrade };
+    }
+
+    /** The colour the falling monster flashes: its best piece worth seeing (the kill comes after the drops). */
+    function lootShine(ev, game) {
+        let best = null;
+        for (const dr of ev.drops || []) {
+            if (!dr.item || !dr.kept) continue;
+            const look = lootLook(dr.item, game.state, game.state.stats.kills === 1);
+            if (look && (!best || look.rank > best.rank)) best = look;
+        }
+        return best && !quietNow() ? best.color : '';
+    }
+
+    function queueLoot(ev, game) {
+        const look = lootLook(ev.item, game.state, !!ev.first);
+        if (!look || quietNow() || root.hidden) return;   // (the toast and the log keep the record)
+        lootQueue.push({ item: ev.item, ...look, gain: look.upgrade ? equipGain(game.state, ev.item) : null });
+        lootQueue.sort((a, b) => b.rank + (b.upgrade ? 0.5 : 0) - (a.rank + (a.upgrade ? 0.5 : 0)));
+        lootQueue.length = Math.min(lootQueue.length, LOOT_MAX_QUEUED);
+        if (!lootBusy) { lootBusy = true; setTimeout(nextLoot, 220); }   // after the monster's flash
+    }
+
+    function nextLoot() {
+        const entry = lootQueue.shift();
+        if (!entry || quietNow() || root.hidden) { lootQueue.length = 0; lootBusy = false; return; }
+        playLoot(entry);
+        setTimeout(nextLoot, LOOT_GAP);
+    }
+
+    /** The biggest gain of an upgrade, in words: "+38% attack". */
+    function topGain(gain) {
+        const up = gainParts(gain).filter(p => p.up);
+        if (!up.length) return '';
+        const order = ['attack', 'defence', 'health'];
+        const value = p => { const k = order.find(w => p.text.endsWith(w)); return k === 'attack' ? gain.atk : k === 'defence' ? gain.def : gain.hp; };
+        return up.reduce((a, b) => (value(b) > value(a) ? b : a)).text;
+    }
+
+    function playLoot({ item, tier, color, rank, upgrade, gain }) {
+        const box = el.fx.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+        const { foe } = anchor();
+        const lx = Math.min(90, Math.max(10, foe.x - 9));   // on the ground in front of where the monster stood
+        const ly = foe.bottom - 2;
+        const sy = foe.bottom - (foe.bottom - foe.top) * 0.45;   // out of its body
+        const dx = (foe.x - lx) / 100 * box.width;
+        const dy = (sy - ly) / 100 * box.height;
+        const scale = Math.max(2, Math.round(fighterScale() / 2));
+        const big = tier === 'rare' || tier === 'epic' || tier === 'legendary';
+        const sparks = big ? Array.from({ length: LOOT_SPARKS[tier] }, (_, i) => {
+            const a = i * 360 / LOOT_SPARKS[tier] + Math.random() * 24;
+            return `<i class="loot-spark" style="--a:${a.toFixed(0)}deg;--far:${Math.round(30 + Math.random() * 34)}px;--t:${(0.55 + Math.random() * 0.5).toFixed(2)}s"></i>`;
+        }).join('') : '';
+        const words = upgrade ? topGain(gain) : '';
+        const node = document.createElement('div');
+        node.className = `loot r-${tier}`;
+        node.style.left = `${lx}%`;
+        node.style.top = `${ly}%`;
+        node.style.setProperty('--r', color);
+        node.style.setProperty('--fh', `${Math.round(box.height)}px`);
+        node.style.setProperty('--ih', `${32 * scale}px`);
+        const legendary = tier === 'legendary';
+        const said = [legendary ? `<em class="loot-rarity">${esc(RARITIES[rank].name)}</em>` : '', words ? `<b class="loot-gain">▲ ${esc(words)}</b>` : ''].join('');
+        node.innerHTML = `${legendary ? '<i class="loot-halo"></i>' : ''}<i class="loot-ground"></i>${big ? '<i class="loot-pillar"></i>' : ''}${legendary ? '<i class="loot-rays"></i>' : ''}${sparks}`
+            + `<span class="loot-item">${sprite(itemSpriteKey(item), { scale, fallback: esc(item.icon) })}</span>${said ? `<span class="loot-words">${said}</span>` : ''}`;
+        el.fx.appendChild(node);
+        const piece = node.querySelector('.loot-item');
+        const turn = rank >= 3 ? 360 : 0;
+        piece.animate([
+            { transform: `translate(calc(-50% + ${dx.toFixed(1)}px), ${dy.toFixed(1)}px) scale(0.35) rotate(0deg)`, opacity: 0 },
+            { opacity: 1, offset: 0.12 },
+            { transform: `translate(calc(-50% + ${(dx * 0.45).toFixed(1)}px), ${(Math.min(dy, 0) - 72).toFixed(1)}px) scale(1.08) rotate(${turn / 2}deg)`, offset: 0.48 },
+            { transform: `translate(-50%, 0) scale(1) rotate(${turn}deg)`, offset: 0.78 },
+            { transform: `translate(-50%, -12px) scale(1) rotate(${turn}deg)`, offset: 0.89 },
+            { transform: `translate(-50%, 0) scale(1) rotate(${turn}deg)`, opacity: 1 }
+        ], { duration: 640, easing: 'ease-out', fill: 'forwards' });
+        setTimeout(() => {
+            if (!node.isConnected) return;
+            node.classList.add('landed');
+            if (tier === 'legendary' && upgrade) radiance();
+        }, 560);
+        setTimeout(() => flyLoot(node, piece, item, upgrade, color), 640 + (LOOT_HOLD[tier] || 700));
+    }
+
+    /** A legendary upgrade: gold at the screen's edges, the fight holding its breath a moment. */
+    function radiance() {
+        actions.sound?.('radiance');
+        const flash = document.createElement('div');
+        flash.className = 'loot-flash';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 1100);
+        el.battle.classList.add('slowmo');
+        setTimeout(() => el.battle.classList.remove('slowmo'), 650);
+    }
+
+    /** Where a piece goes: the fight's ▲ Equip for this very piece, else the phone's Inventory button, else his hands. */
+    function lootTarget(item, upgrade) {
+        const shown = node => {
+            if (!node || !node.isConnected) return null;
+            const r = node.getBoundingClientRect();
+            return r.width && r.height && r.bottom > 0 && r.top < innerHeight ? node : null;
+        };
+        return (upgrade && shown(document.querySelector(`.dock-equip[data-item="${Number(item.id)}"]`)))
+            || shown(document.querySelector('.hot-btn[onclick*="\'inventory\'"]'))
+            || el.heroSprite;
+    }
+
+    function flyLoot(node, piece, item, upgrade, color) {
+        if (!node.isConnected) return;
+        node.classList.add('leaving');   // the glow fades as the piece leaves
+        setTimeout(() => node.remove(), 450);
+        const target = lootTarget(item, upgrade);
+        const from = piece.getBoundingClientRect();
+        const to = target.getBoundingClientRect();
+        if (quietNow() || !from.width || !to.width) return;
+        const flyer = document.createElement('div');
+        flyer.className = 'flying-loot';
+        flyer.innerHTML = piece.innerHTML;
+        flyer.style.setProperty('--r', color);
+        const x0 = from.left + from.width / 2;
+        const y0 = from.top + from.height / 2;
+        flyer.style.left = `${x0}px`;
+        flyer.style.top = `${y0}px`;
+        document.body.appendChild(flyer);
+        piece.style.visibility = 'hidden';
+        const hands = target === el.heroSprite;
+        const dx = to.left + to.width / 2 - x0;
+        const dy = to.top + to.height * (hands ? 0.55 : 0.5) - y0;
+        const anim = flyer.animate([
+            { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${(dx * 0.4).toFixed(1)}px), calc(-50% + ${(Math.min(0, dy) - 64).toFixed(1)}px)) scale(1.12)`, offset: 0.4 },
+            { transform: `translate(calc(-50% + ${dx.toFixed(1)}px), calc(-50% + ${dy.toFixed(1)}px)) scale(${hands ? 0.3 : 0.55})`, opacity: hands ? 0.2 : 0.95 }
+        ], { duration: 640, easing: 'cubic-bezier(.45,0,.35,1)' });
+        anim.onfinish = () => { flyer.remove(); arrive(hands ? el.heroSprite : lootTarget(item, upgrade), color, hands); };
+        anim.oncancel = () => flyer.remove();
+    }
+
+    /** It lands: a ring where it went (its own node: the dock is redrawn every second), and a soft sound. */
+    function arrive(target, color, hands) {
+        actions.sound?.('pickup');
+        if (hands) { move(el.heroSprite, 'cheer'); return; }
+        const r = target.getBoundingClientRect();
+        if (!r.width) return;
+        const ring = document.createElement('div');
+        ring.className = 'loot-arrive';
+        ring.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;width:${Math.max(44, r.width)}px;height:${Math.max(44, r.height)}px;--r:${color}`;
+        document.body.appendChild(ring);
+        setTimeout(() => ring.remove(), 750);
     }
 
     let sceneDrawn = false;   // the first draw sets the place without fading it in
@@ -668,7 +840,9 @@ export function createScene(root, actions) {
                 case 'kill': {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;
-                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: ev.enemy.boss ? bossScale(fighterScale()) : fighterScale(), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
+                    const shine = lootShine(ev, game);   // it leaves a piece worth seeing: it flashes in that colour as it falls
+                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}${shine ? ' loot' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: ev.enemy.boss ? bossScale(fighterScale()) : fighterScale(), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
+                    if (corpse && shine) corpse.style.setProperty('--loot', shine);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
                     coinBurst(ev.enemy.boss ? 7 : ev.enemy.gilded ? 6 : 1);
                     if (ev.enemy.gilded) spawnFx('dmg gilded-gold', `+${fmt(ev.gold)}`, foe.x, foe.top - 6, 1400);
@@ -678,15 +852,9 @@ export function createScene(root, actions) {
                     }
                     break;
                 }
-                case 'itemDropped': {
-                    const rarity = RARITIES.find(r => r.id === ev.item.rarity);
-                    if (!rarity || (RARITIES.indexOf(rarity) < 2 && !ev.first)) break;   // the first sword rises like a rare find
-                    const { foe } = anchor();
-                    fxBudget = Math.max(fxBudget, 1);
-                    const beam = spawnFx(`loot-beam r-${rarity.id}`, `<span>${sprite(itemSpriteKey(ev.item), { scale: ev.first ? 1.5 : 1, fallback: esc(ev.item.icon) })}</span>`, foe.x + jitter(16), Math.max(0, foe.bottom - 64), ev.first ? 3200 : 2400);
-                    if (beam) beam.style.setProperty('--beam', ev.first ? '#fcd34d' : rarity.color);
+                case 'itemDropped':
+                    queueLoot(ev, game);
                     break;
-                }
                 case 'levelUp': {
                     if (ev.skill !== 'combat') break;
                     const { hero } = anchor();

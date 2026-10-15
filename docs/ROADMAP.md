@@ -1216,6 +1216,14 @@ Keeping it running:
       (one dropped at the best stage, 4.7, moving 86% of heroes), a legendary set 9.8 (4.9); the owner's hero
       190 with a rare weapon, 200 with a legendary one (198 either way before). The late pace held over 12
       simulated players (stage 300 at 88.6 h, 92.6 before); stage 150 comes at 11.4 h (13.5). `tools/gearbench.mjs`
+- [x] **Drops you feel** (the owner: a rare drop animation, for the feeling of finding something good while
+      farming; DESIGN §3.21). The old beam was all but invisible on a bright land, alike for rare, epic and
+      legendary, and said nothing of whether the piece was any good. Now a piece worth seeing pops out of the
+      falling monster (which flashes in its colour), bounces, and glows by rarity: a ring and a flare, a purple
+      pillar, a tall gold pillar with a halo, rays and "Legendary"; an upgrade shows "▲ +38% attack". It then
+      flies into the fight's ▲ Equip (which keeps a glow) or the hero's hands. A legendary upgrade adds gold
+      at the screen's edges, a held breath, and a card with what it does and an Equip button. Epic has its own
+      chime, a plainer upgrade a bright one, and the welcome-back report shows the best piece found while away
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

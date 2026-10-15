@@ -147,7 +147,8 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
         clearTimeout(timer);
         root.querySelector('.celebration')?.remove();
         const node = document.createElement('div');
-        node.className = `celebration ${card.kind || ''}${card.art ? ' pictured' : ''}${card.go || card.tiles ? ' clickable' : ''}`;
+        const tappable = !!(card.go || card.tiles || card.act);
+        node.className = `celebration ${card.kind || ''}${card.art ? ' pictured' : ''}${tappable ? ' clickable' : ''}`;
         node.setAttribute('role', 'status');
         // The words in one box: under the picture on a wide screen, beside it on a phone (a banner).
         node.innerHTML = `${card.art ? `<span class="cel-art" style="${card.art}" aria-hidden="true"></span>` : '<span class="cel-rays" aria-hidden="true"></span>'}
@@ -158,15 +159,18 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
                 ${card.lines?.length ? `<span class="cel-lines">${card.lines.map(l => `<span>${l}</span>`).join('')}</span>` : ''}
                 ${card.note ? `<span class="cel-note">${esc(card.note)}</span>` : ''}
                 ${card.go ? '<span class="cel-go">Take a look →</span>' : ''}
+                ${card.act ? `<button type="button" class="cel-act">${esc(card.act.label)}</button>` : ''}
             </span>
             ${card.tiles ? `<span class="cel-tiles">${card.tiles.map((t, i) => `<button type="button" class="cel-tile" data-tile="${i}" style="${t.art}"><span>${esc(t.name)}</span></button>`).join('')}</span>` : ''}
-            ${card.go || card.tiles ? '<button type="button" class="cel-close" aria-label="Dismiss">✕</button>' : ''}`;
-        // A card with somewhere to go is a button: the whole card, or each of its pictures. It ignores
-        // the first moment after it appears, so a tap already on its way to the monster doesn't leave the fight.
-        if (card.go || card.tiles) {
+            ${tappable ? '<button type="button" class="cel-close" aria-label="Dismiss">✕</button>' : ''}`;
+        // A card with somewhere to go is a button: the whole card, or each of its pictures; one with an action
+        // (`act`: { label, run }, a legendary's Equip) has a button for it, and a tap elsewhere dismisses it. It
+        // ignores the first moment after it appears, so a tap already on its way to the monster doesn't count.
+        if (tappable) {
             const shownAt = Date.now();
             node.addEventListener('click', event => {
                 if (Date.now() - shownAt < ARM_MS) return;
+                if (card.act && event.target.closest?.('.cel-act')) { clearTimeout(timer); next(); card.act.run(); return; }
                 const close = event.target.closest?.('.cel-close');
                 const tile = event.target.closest?.('[data-tile]');
                 const where = close ? null : tile ? card.tiles[Number(tile.dataset.tile)]?.go : card.go;
@@ -205,7 +209,7 @@ export function createRewards(root, { blocked = () => false, go = () => {} } = {
     }
 
     return {
-        /** Queue a card: { key?, kind, icon, kicker, title, lines?: [html pills], note?: text, ms? }. A card with the same key replaces the queued one. */
+        /** Queue a card: { key?, kind, icon, kicker, title, lines?: [html pills], note?: text, act?: { label, run }, ms? }. A card with the same key replaces the queued one. */
         celebrate(card) {
             // nobody is watching: the toast and the log keep the record, but a new place's card waits for the return
             if (document.hidden && card.kind !== 'unlock') return;

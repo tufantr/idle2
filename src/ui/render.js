@@ -656,7 +656,7 @@ function renderLoopActions(game) {
     if (upgrade) {
         const gain = equipGain(state, upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
         const words = gainWords(gain);
-        parts.push(`<button class="mini-btn dock-equip" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}</i>` : ''}</span></button>`);
+        parts.push(`<button class="mini-btn dock-equip" data-item="${Number(upgrade.item.id)}" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}</i>` : ''}</span></button>`);
     }
     return parts.length ? `<div class="dock-group dock-loop ${painted('shrine', 'center 45%')}">${parts.join('')}</div>` : '';
 }
@@ -2301,6 +2301,18 @@ export function renderConfirmModal(title, text, confirmLabel) {
     </div>`;
 }
 
+/** The best piece found while away (systems/offline.js bestFind), in its rarity's frame, and how many more came. */
+function welcomeBestFind(summary, i) {
+    const best = summary.best;
+    const rarity = RARITIES.find(r => r.id === best.rarity) || RARITIES[0];
+    const more = summary.items - 1;
+    const rest = [more > 0 ? `and ${more} more ${summary.mode === 'combat' ? 'found' : 'made'}` : '', summary.salvaged > 0 ? `${summary.salvaged} salvaged` : ''].filter(Boolean).join(', ');
+    return `<div class="wb-find best r-${esc(rarity.id)}" style="--i:${i};--r:${esc(best.color || rarity.color)}">
+        <span class="wb-loot">${sprite(itemSpriteKey(best), { scale: 1, fallback: esc(best.icon || '') })}</span>
+        <span><b>${esc(best.name)}</b> <span class="wb-rarity">${esc(rarity.name)}</span>${best.upgrade ? ' <span class="wb-up">▲ better than yours</span>' : ''}${rest ? `<small>${esc(rest.charAt(0).toUpperCase() + rest.slice(1))}</small>` : ''}</span>
+    </div>`;
+}
+
 /**
  * Welcome back: what the hero did while you were away, as a haul to look at rather than a list:
  * each skill's XP with its bar (a level-up stands out), the materials as tiles popping in one by
@@ -2334,7 +2346,8 @@ export function renderWelcomeBack(summary, game) {
         summary.prestiges > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.prestige.icon, { scale: 1 })}<span>Prestiged <b>${summary.prestiges === 1 ? 'once' : `${fmt(summary.prestiges)} times`}</b> on its own: +${fmt(summary.tokens)} tokens</span></div>` : '',
         ...(summary.petIds || []).map(id => { const p = PETS.find(x => x.id === id); return `<div class="wb-find pet" style="--i:${next()}">${sprite(`pet/${id}`, { scale: 1.5, fallback: p?.icon || '🐾' })}<span>A pet found you: <b>${esc(p?.name || id)}</b></span></div>`; }),
         summary.uniques > 0 ? `<div class="wb-find unique" style="--i:${next()}">${sprite(FEATURES.achievements.icon, { scale: 1 })}<span><b>${summary.uniques}</b> unique item${summary.uniques > 1 ? 's' : ''} found</span></div>` : '',
-        summary.items > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.inventory.icon, { scale: 1 })}<span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
+        summary.items > 0 && summary.best ? welcomeBestFind(summary, next())
+            : summary.items > 0 ? `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.inventory.icon, { scale: 1 })}<span><b>${summary.items}</b> ${summary.items > 1 ? 'items' : 'item'} ${summary.mode === 'combat' ? 'found' : 'made'}${summary.salvaged > 0 ? ` (${summary.salvaged} more salvaged)` : ''}</span></div>`
             : summary.salvaged > 0 ? `<div class="wb-find" style="--i:${next()}">${resIcon('essence', { scale: 1 })}<span><b>${summary.salvaged}</b> items salvaged for essence and bars</span></div>` : '',
         ...(summary.dungeonClears || []).map(d => `<div class="wb-find" style="--i:${next()}">${sprite(FEATURES.dungeons.icon, { scale: 1 })}<span><b>${fmt(d.clears)}</b> ${esc(d.name)} clear${d.clears > 1 ? 's' : ''} (+${d.fragments} fragment${d.fragments === 1 ? '' : 's'})</span></div>`),
         summary.gilded > 0 ? `<div class="wb-find gilded" style="--i:${next()}">${sprite('gold', { scale: 1 })}<span><b>${summary.gilded}</b> gilded monster${summary.gilded > 1 ? 's' : ''} defeated</span></div>` : '',

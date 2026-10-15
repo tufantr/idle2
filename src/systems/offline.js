@@ -12,6 +12,8 @@ import { SKILLS } from '../data/skills.js';
 import { levelForXp } from '../core/xp.js';
 import { DUNGEONS } from '../data/dungeons.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
+import { RARITIES } from '../data/items.js';
+import { itemScore, isUpgrade, canWear } from './inventory.js';
 import { checkAchievements } from './progress.js';
 import { expireMinigames } from './minigame.js';
 import { PETS } from '../data/pets.js';
@@ -26,6 +28,7 @@ function snapshot(state) {
         stage: state.combat.stage,
         kills: state.stats.kills,
         items: state.inventory.length,
+        itemIds: new Set(state.inventory.map(i => i.id)),
         salvaged: state.stats.itemsSalvaged || 0,
         deaths: state.stats.deaths,
         dungeons: Object.fromEntries(DUNGEONS.map(d => [d.id, { ...state.dungeons[d.id] }])),
@@ -37,6 +40,22 @@ function snapshot(state) {
         stars: state.stats.bestiaryStars || 0,
         combatMode: state.combat.mode
     };
+}
+
+/**
+ * The best piece found or made while away (in the bag, and not among `knownIds`), worth a picture on the
+ * welcome-back card: rare or better, or one that beats what he wears (the rarest first, then the strongest).
+ * Null when none.
+ */
+export function bestFind(state, knownIds) {
+    const rank = item => RARITIES.findIndex(r => r.id === item.rarity);
+    let best = null;
+    for (const item of state.inventory) {
+        if (knownIds.has(item.id)) continue;
+        if (!best || rank(item) > rank(best) || (rank(item) === rank(best) && itemScore(item) > itemScore(best))) best = item;
+    }
+    if (!best || (rank(best) < 2 && !(canWear(state, best) && isUpgrade(state, best)))) return null;
+    return { ...best, upgrade: canWear(state, best) && isUpgrade(state, best) };
 }
 
 function diff(before, state) {
@@ -56,6 +75,7 @@ function diff(before, state) {
         stages: state.combat.stage - before.stage,
         kills: state.stats.kills - before.kills,
         items: state.inventory.length - before.items,
+        best: bestFind(state, before.itemIds),
         salvaged: (state.stats.itemsSalvaged || 0) - before.salvaged, // auto-salvages count here too
         died: state.stats.deaths > before.deaths,
         deaths: state.stats.deaths - before.deaths,

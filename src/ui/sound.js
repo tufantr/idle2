@@ -111,7 +111,15 @@ export function createSound(isOn, volume = () => 1) {
         combo(count = 1) { tone({ type: 'triangle', f0: 500 * Math.pow(2, Math.min(30, count) / 24), ms: 60, gain: 0.14 }); },
         drop() { tone({ type: 'triangle', f0: vary(660, 80), f1: 520, ms: 90, gain: 0.12 }); },
         rare() { [0, 4, 7, 12].forEach((n, i) => tone({ type: 'sine', f0: NOTE(79 + n), ms: 220, gain: 0.14, at: i * 0.07 })); noise({ ms: 300, gain: 0.05, filter: 'highpass', f0: 6000 }); },
+        // an epic piece: a mystic climb between the rare chime and the legendary fanfare
+        epic() { [0, 3, 7, 10, 15].forEach((n, i) => tone({ type: 'sine', f0: NOTE(76 + n), ms: 300, gain: 0.13, at: i * 0.075 })); tone({ type: 'triangle', f0: NOTE(91), ms: 700, gain: 0.06, at: 0.38 }); noise({ ms: 450, gain: 0.05, filter: 'highpass', f0: 7000, at: 0.1 }); },
         legendary() { [0, 4, 7, 12, 16, 19].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(72 + n), ms: 420, gain: 0.14, at: i * 0.08 })); tone({ type: 'sine', f0: NOTE(96), ms: 900, gain: 0.08, at: 0.5 }); },
+        // a plainer piece that beats what he wears: a bright step up
+        upgrade() { tone({ type: 'sine', f0: NOTE(84), ms: 120, gain: 0.13 }); tone({ type: 'sine', f0: NOTE(91), ms: 300, gain: 0.13, at: 0.09 }); tone({ type: 'triangle', f0: NOTE(72), ms: 200, gain: 0.06, at: 0.09 }); },
+        // a dropped piece landing in the dock or in his hands
+        pickup() { noise({ ms: 50, gain: 0.1, filter: 'bandpass', f0: 1600, q: 2 }); tone({ type: 'sine', f0: vary(1400, 50), f1: 1900, ms: 80, gain: 0.07, at: 0.02 }); },
+        // a legendary upgrade's moment: the light swells (the fanfare plays over it)
+        radiance() { tone({ type: 'sine', f0: 110, f1: 220, ms: 900, gain: 0.22, attack: 0.08 }); noise({ ms: 900, gain: 0.06, filter: 'highpass', f0: 5000, f1: 9000, at: 0.05 }); },
         gem() { [0, 7, 12].forEach((n, i) => tone({ type: 'sine', f0: NOTE(88 + n), ms: 200, gain: 0.12, at: i * 0.06 })); },
         levelUp() { [0, 4, 7, 12].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(72 + n), ms: 380, gain: 0.18, at: i * 0.11 })); tone({ type: 'sine', f0: NOTE(84), ms: 700, gain: 0.1, at: 0.33 }); },
         unlock() { [0, 5, 9, 12, 16].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(67 + n), ms: 420, gain: 0.16, at: i * 0.1 })); noise({ ms: 500, gain: 0.05, filter: 'highpass', f0: 5000, at: 0.3 }); },
@@ -130,7 +138,7 @@ export function createSound(isOn, volume = () => 1) {
     };
 
     /** Vibration patterns (ms) for phones; nothing on devices without a motor. */
-    const HAPTICS = { hit: 8, crit: 22, hurt: 14, kill: [12, 30, 12], levelUp: [20, 40, 20, 40, 30], unlock: [20, 40, 30], boss: [40, 60, 40], legendary: [15, 30, 15, 30, 40], chest: [10, 40, 20], victory: [20, 40, 20], prestige: [30, 50, 30, 50, 60] };
+    const HAPTICS = { hit: 8, crit: 22, hurt: 14, kill: [12, 30, 12], levelUp: [20, 40, 20, 40, 30], unlock: [20, 40, 30], boss: [40, 60, 40], legendary: [15, 30, 15, 30, 40], epic: [12, 24, 12], upgrade: [10, 20, 10], chest: [10, 40, 20], victory: [20, 40, 20], prestige: [30, 50, 30, 50, 60] };
 
     return {
         unlock,

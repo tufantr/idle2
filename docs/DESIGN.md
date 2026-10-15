@@ -1010,6 +1010,23 @@ dungeon's lasting bonus at 25, 100 and 250 clears (`dungeonMilestone`). A dungeo
 banner on the scene with the chest's contents popping out as pictures. Offline replay is silent, so
 none of these queue up behind the welcome-back report.
 
+**Loot you feel** (the owner, October 2026: a good drop while farming should be felt; until then a rare,
+epic or legendary drop was one thin beam, all but invisible on a bright land, alike for all three, saying
+nothing of whether the piece was any good). A piece worth seeing (rare or better, any piece that beats
+what is worn, and the first sword) is a small scene of its own (`playLoot` in `scene.js`): the falling
+monster flashes in its colour, the piece pops out of it in an arc and bounces on the ground at twice its
+size, and glows there by rarity: rare a ring and a short flare, epic a standing purple pillar with
+sparks, legendary a tall gold pillar with a halo, turning rays, a ripple and the word "Legendary". An
+upgrade says what it does over it ("▲ +38% attack", its biggest gain). After a second or two it flies to
+the fight's ▲ Equip if that is its button, else into the hero's hands, with a soft pickup and a ring
+where it lands; ▲ Equip keeps a steady glow while it waits (steady: the dock is redrawn every second). A
+legendary that beats what is worn adds gold at the screen's edges and the fight dimming and holding still
+a moment, then a card (`legendaryCard` in `main.js`) with the piece, what it does worn and an Equip
+button. One piece at a time, the best first, three at most waiting; under reduced motion only the card.
+Rare, epic and legendary each have their own sound, a plainer upgrade a bright step up. The
+welcome-back report shows the best piece found while away in its rarity's frame (`bestFind` in
+`systems/offline.js`).
+
 The skill stage (`src/ui/stage.js`) is the same idea for work: a strip of the place's painting above
 every skill tab, built once, with the hero holding that skill's tool and facing what he works on. His
 swing follows the real action progress and lands on the beat. Farming and Agility have it too: on the
@@ -1165,7 +1182,7 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   farmed boss's loot are paid on the full figures (`enemy.worth`). Dungeons and the Titan are not
   eased.
 - **The first monster leaves a sword.** A hero who has never had a weapon gets a Rusty Sword from
-  his first kill (+5 attack, doubling his), rising out of the monster in a gold beam; the dock offers
+  his first kill (+5 attack, doubling his), popping out of the monster in a gold glow; the dock offers
   it at once. The first boss he beats always leaves a piece of armour he is seen to wear (a helm, a
   body or a shield).
 - **Levels carry him.** The first combat levels come quickly (a kill's XP is tripled at level 1, the
