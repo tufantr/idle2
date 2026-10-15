@@ -13,7 +13,7 @@ import { sellValue } from '../../src/data/resources.js';
 import { STAT_UNIT } from '../../src/data/items.js';
 import { PET_BASE } from '../../src/data/pets.js';
 import { MASTERY_XP_DIVISOR } from '../../src/data/mastery.js';
-import { CAMP_PRICE_KILLS } from '../../src/data/camp.js';
+import { CAMP_PRICE_KILLS, CAMP_GOLD } from '../../src/data/camp.js';
 import { FEATURES, EVENT_ART } from '../../src/ui/features.js';
 import { path, res, resList, icon, link, table, infobox, section, tiles, navbox, fmt, pct, time, esc, paintStyle } from '../lib/ui.mjs';
 
@@ -67,7 +67,7 @@ function formulasPage(help) {
     const e = BALANCE.enemy;
     const r = BALANCE.rewards;
     const p = BALANCE.prestige;
-    const stages = [1, 10, 25, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000];
+    const stages = [1, 10, 25, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 5000];
     const enemy = table(['Stage #', 'Health #', 'Attack #', 'Attacks every #', 'Boss health #', 'Gold a kill #'], stages.map(s => {
         const m = enemyForStage(s % 10 === 0 ? s - 1 : s);
         const b = enemyForStage(Math.ceil(s / 10) * 10);
@@ -79,8 +79,9 @@ function formulasPage(help) {
             help.prose('/formulas'),
             section('Monsters', f('Health and attack', [
                 `health(stage) = ${e.baseHp} × ${e.hpGrowth}^(stage − 1)                 up to stage 100`,
-                `              then × ${e.abyssHpGrowth} a stage to ${e.deepFrom}, then × ${e.deepHpGrowth} a stage`,
-                `attack(stage) = ${e.baseAtk} × ${e.atkGrowth}^(stage − 1)                  (× ${e.abyssAtkGrowth}, then × ${e.deepAtkGrowth}, likewise)`,
+                `              then × ${e.abyssHpGrowth} a stage to ${e.deepFrom}, then from × ${e.deepHpGrowth} a stage easing evenly`,
+                `              (in its logarithm) to × ${e.denseHpGrowth} by ${e.denseFrom}, and × ${e.denseHpGrowth} on`,
+                `attack(stage) = ${e.baseAtk} × ${e.atkGrowth}^(stage − 1)                  (× ${e.abyssAtkGrowth}, then × ${e.deepAtkGrowth} to × ${e.denseAtkGrowth}, likewise)`,
                 `a boss: × ${e.bossHpMult} health, × ${e.bossAtkMult} attack; from stage ${e.stageBoss.from} evenly to × ${e.stageBoss.hp} and × ${e.stageBoss.atk} by stage ${e.stageBoss.to}`,
                 `        (it pays for × ${e.bossHpMult} health; the dungeons' bosses and the Titan keep × ${e.bossHpMult} and × ${e.bossAtkMult})`,
                 `attacks every max(${e.minInterval}, ${e.baseInterval} − ${e.intervalPerStage} × stage) ms`,
@@ -88,8 +89,8 @@ function formulasPage(help) {
             ]) + enemy),
             section('Damage', f('A hit', [
                 `damage taken = attack² ÷ (attack + defence), at least ${pct(1 - MAX_MITIGATION, 0)} of the attack`,
-                `your attack = (${BASE.unarmedAtk} + gear attack) × (1 + attack bonuses) × tokens × camp`,
-                `your health = (${BASE.baseHp} + ${BASE.hpPerCombatLevel} × (combat level − 1) + ${BASE.hpPerDef} × gear defence) × (1 + health bonuses) × tokens × camp`,
+                `your attack = (${BASE.unarmedAtk} + gear attack) × (1 + attack bonuses) × tokens × camp × Legacy`,
+                `your health = (${BASE.baseHp} + ${BASE.hpPerCombatLevel} × (combat level − 1) + ${BASE.hpPerDef} × gear defence) × (1 + health bonuses) × tokens × camp × Legacy`,
                 `attacks every ${BASE.baseAttackInterval} ms ÷ (1 + attack speed), never faster than ${BASE.minAttackInterval} ms`,
                 `crit: ${pct(BASE.baseCritChance, 0)} chance, × ${BASE.baseCritDmg} damage, plus bonuses (caps: crit ${pct(BASE.caps.critChance, 0)}, dodge ${pct(BASE.caps.dodge, 0)}, lifesteal ${pct(BASE.caps.lifesteal, 0)}, attack speed +${pct(BASE.caps.attackSpeed, 0)})`,
                 `a strike: ${pct(BALANCE.combat.manualHitMult, 0)} of an attack; the combo adds ${pct(BALANCE.combat.comboDmgPerStack, 0)} a stack, up to ${BALANCE.combat.comboMax} stacks`
@@ -102,6 +103,7 @@ function formulasPage(help) {
             ]) + f('A prestige', [
                 `tokens = floor(((best stage of the run − ${p.tokenOffset}) ÷ ${p.tokenDivisor})^${p.tokenExp})`,
                 `each token: +${pct(BASE.tokenAtk, 1)} attack and defence, +${pct(BASE.tokenHp, 1)} health, × ${BASE.recordMult} for each record`,
+                `Legacy = ${1 + BASE.legacyPerPrestige}^(prestiges ever made), on attack, defence and health`,
                 `next run starts at floor(best stage × ${p.startStageFraction})`,
                 `skill points: ${p.spPerPrestige} for a run reaching ${pct(p.fullRunFraction, 0)} of your best, plus 1 for every ${p.spStageStep} stages of your best (each once)`
             ])),
@@ -112,7 +114,8 @@ function formulasPage(help) {
                 `a pet's chance per action = action seconds × skill level ÷ ${fmt(PET_BASE)}`
             ]) + f('Gear and prices', [
                 `a piece's attack or defence = ${STAT_UNIT} × tier power × rarity quality × slot weight (± 5%)`,
-                `the camp: a level costs base × growth^level, or ${CAMP_PRICE_KILLS} × a kill's gold at your best stage × growth^level when that is higher`,
+                `the camp: a level costs base × growth^level, or ${CAMP_PRICE_KILLS} × a kill's gold at your best stage × growth^level when that is higher;`,
+                `          from level ${CAMP_GOLD.from} on, ${fmt(CAMP_GOLD.base)} × ${CAMP_GOLD.growth}^(level − ${CAMP_GOLD.from}) at any depth`,
                 `the Shop: kills × a kill's gold at your best stage`,
                 `selling: a category's base price × 1.6^(tier − 1) (an ore ${sellValue('copper_ore')} gold at tier 1)`
             ]))

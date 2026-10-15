@@ -1,6 +1,11 @@
 // Number and time formatting for the UI.
 
-const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
+// Past No (10^30) the short scale's names go on the same way, so the deep Abyss's numbers stay words to the end of
+// what a number holds: Dc (10^33), UDc, DDc, TDc, QaDc … NoDc, Vg (10^63) … NoNog (10^300), Ce, UCe.
+const UNITS = ['', 'U', 'D', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
+const TENS = ['Dc', 'Vg', 'Tg', 'Qag', 'Qig', 'Sxg', 'Spg', 'Ocg', 'Nog'];
+const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No',
+    ...Array.from({ length: 90 }, (_, i) => UNITS[i % 10] + TENS[Math.floor(i / 10)]), 'Ce', 'UCe'];
 
 /** 1234 -> "1,234"; 1234567 -> "1.23M" (full digits with separators below one million). */
 export function fmt(n, { short = true } = {}) {

@@ -19,6 +19,7 @@ import { POTION_MINUTES } from '../data/potions.js';
 import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
+import { CAMP_GOLD } from '../data/camp.js';
 import { escapeHtml as esc, shareInWords } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
@@ -64,6 +65,7 @@ export const FEATURES = {
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',
         points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence and +${pc(BASE.tokenHp, 1)} health, forever.`,
             `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each ${BASE.recordSkillLevels} levels of your skills together, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,
+            `Every prestige you make adds to your Legacy: ×${1 + BASE.legacyPerPrestige} attack, defence and health, multiplied together, forever (an Ascension keeps it).`,
             'Gold, the camp and your stage start over. Skills, gear and materials stay.', `You also earn skill points for perks. After the first prestige, a run lasts at least ${BALANCE.prestige.minRunMs / 60000} minutes.`, 'Prestiges earn your hero a rank, worn as the colour of the cloak.',
             `After ${BALANCE.prestige.autoAfter} prestiges, or two days after your first, the fight's dock gets an Auto switch: it prestiges a run that has spent ${BALANCE.prestige.autoStallMs / 60000} minutes climbing without a new best stage, even while you are away.`] },
     ascension: { name: 'Ascension', art: 'skyreach', icon: 'token', blurb: 'Give up every token for Stars, and climb again faster.',
@@ -91,7 +93,8 @@ export const FEATURES = {
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
     camp: { name: 'Camp', art: 'camp', icon: 'mon/Magma Slime', blurb: 'Upgrades for this run, bought with gold.',
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.',
-            'Once you have gone far, prices follow your best stage: each run buys its camp again as it nears its best.'] },
+            'Once you have gone far, prices follow your best stage: each run buys its camp again as it nears its best.',
+            `Past level ${CAMP_GOLD.from} the levels never end, each at a set price in gold, ×${CAMP_GOLD.growth} the last: the deeper you go, the more of them a run buys.`] },
     mastery: { name: 'Mastery', art: 'caves', icon: 'res/diamond', blurb: 'Every action gets better the more you do it.',
         points: [`Each mastery level adds +${pc(MASTERY_PER_LEVEL.speed, 1)} speed to that action.`, `Gathering and cooking also gain +${pc(MASTERY_PER_LEVEL.double, 2)} chance of a double; recipes gain +${pc(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients.`,
             `At ${MASTERY_CHECKPOINTS.map(c => `${Math.round(c.at * 100)}%`).join(', ')} of a skill's whole mastery, every action of it gets faster: ${MASTERY_CHECKPOINTS.map(c => `+${Math.round(c.speed * 100)}%`).join(', ')}.`, 'Mastery is permanent.'] },

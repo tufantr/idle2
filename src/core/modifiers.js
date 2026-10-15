@@ -52,6 +52,10 @@ export const BASE = {
     // nothing a skill's level did reached the fight; with lifesteal's ceiling below, the simulator's skilling
     // player keeps his pace and one who never trains falls behind)
     recordSkillLevels: 50,
+    // Legacy (the endless climb, docs/research_notes/endless-late-game.md §5): every prestige ever made multiplies
+    // attack, defence and health by 1 + this, for good (an Ascension keeps it). A layer of its own, so a late
+    // prestige adds as much as an early one did, where a token adds less as the stock grows.
+    legacyPerPrestige: 0.002,
     baseOfflineHours: 24,       // a day: a player who comes back once a day loses nothing (12 until the check-in research)
     // eat below a quarter of max health: a dish heals a share of it, and a line at half ate through a stock in
     // minutes for little (the simulator: a quarter makes food worth its cooking, half doesn't)
@@ -281,6 +285,11 @@ export function recordsOf(state) {
     return { stages, uniques: held.size, trials, laurels, skills, count, mult: Math.pow(BASE.recordMult, Math.min(count, RECORDS_CAP)) };
 }
 
+/** What the hero's Legacy multiplies attack, defence and health by: every prestige ever made (BASE.legacyPerPrestige). */
+export function legacyMult(state) {
+    return Math.pow(1 + BASE.legacyPerPrestige, Math.max(0, state.prestige?.count || 0));
+}
+
 /** Turn the modifier object into the numbers the combat system uses. */
 export function deriveStats(state, mods = collectModifiers(state)) {
     const combatLevel = skillLevel(state, 'combat');
@@ -298,9 +307,10 @@ export function deriveStats(state, mods = collectModifiers(state)) {
     if (!bite.noCamp) for (const upgrade of CAMP_UPGRADES) camp[upgrade.stat] *= campMultiplier(upgrade, state.camp?.[upgrade.id] || 0);
 
     const brew = mods.potions || potionEffects(state);
-    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk * brew.atk;
-    const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def * brew.def;
-    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * brew.hp * (bite.heroHp ?? 1);
+    const legacy = legacyMult(state);
+    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * tokenLayerAtk * camp.atk * brew.atk * legacy;
+    const def = mods.gearDef * (1 + mods.defMult) * tokenLayerDef * camp.def * brew.def * legacy;
+    const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * tokenLayerHp * camp.hp * brew.hp * (bite.heroHp ?? 1) * legacy;
     // nothing makes the hero slower than his base (a hand-made affix below nothing made him never swing, or swing at the cap)
     const attackSpeed = Math.max(0, Math.min(BASE.caps.attackSpeed, mods.attackSpeed));
 
@@ -335,6 +345,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         doubleChance: mods.doubleChance,
         tokenPowerPct: Math.round(BASE.tokenAtk * tokens * 100),
         records,
+        legacy,
         campMult: camp,
         focused: !!mods.focused,
         bonfire: bonfireLit(state),

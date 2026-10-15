@@ -390,8 +390,8 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   the big one: about half of all gold earned in 150 simulated hours (45–53%; 70–85% for a player with
   Auto on), against about 1% before, when 95–99% of gold was lost at prestige unspent.
 - **Camp** (`src/data/camp.js`) — the run-scoped power layer, bought with gold and **reset on
-  prestige**: Whetstone +5% ATK, Armour Rack +5% DEF, Hearth +4% HP per level, multiplicative, max
-  25 levels each (×3.39 / ×3.39 / ×2.67 when maxed). A level costs `max(base, 0.008 × a kill's gold at
+  prestige**: Whetstone +5% ATK, Armour Rack +5% DEF, Hearth +4% HP per level, multiplicative, without end
+  (×3.39 / ×3.39 / ×2.67 at level 25; past 25 a level costs plain gold, §3.30). Up to 25 a level costs `max(base, 0.008 × a kill's gold at
   the best stage) × 1.36^level` (base 20 / 20 / 15): the base price until about best stage 85, so a new
   player's camp is as it was (§3.24); past that, a whole upgrade costs about 50 kills at the best stage,
   so each run buys its camp again as it nears its best (the owner's choice 3a). At 0.016 the camp took
@@ -818,7 +818,11 @@ gear to wear; a place that waited opens on the return and is named there too.
   honest hero came within 1.3 times of the allowance at stage 300: now from stage 200 about 70 stages in
   an hour and 240 in a day, from 300 about 210 in a day, past 400 160 and past 500 95, each at least
   three times the fastest honest climb from there. It was 30 plus 60 an hour at any depth, which let a
-  late save gain 1,470 stages in a day against an honest 20 to 70. Trial tiers
+  late save gain 1,470 stages in a day against an honest 20 to 70. Refitted again for the endless climb (§3.30)
+  to 28 runs of 600 to 1,200 hours with Auto, 21 on varied plans: past 400 a run fresh from a prestige gains up
+  to 150 stages in an hour and 240 in a day, so rows now reach 1,500 (`CLIMB`), none lower than before; the
+  worst honest climb in any window of 1 to 48 hours, measured from the hour before, comes to 43% of the
+  allowance. The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). Trial tiers
   a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
@@ -1516,6 +1520,40 @@ owner's hero from 198 to 190 on loading, so it was left. The Trials cost about w
 (`tools/trials.mjs`, heroes at 210: Swift Bosses −12 stages, −2 before; Brutes −8, −5; the rest within a few),
 and every first tier still falls there.
 
+### 3.30 The endless climb
+
+The owner, 15 October 2026: the late game should be "pretty much endless", players pushing thousands of stages
+while still finding upgrades, each new upgrade pushing them further. The research
+(`docs/research_notes/endless-late-game.md`, `tools/ledger.mjs`) found the climb stopping near stage 690 at 1,000
+simulated hours: past stage 200 only deeper gear and tokens moved it, ×2 power bought 9-12 stages, and tokens
+paid ever less per prestige. Three changes, measured together with `tools/batch.mjs --auto` (7 seeds, 1,200 h):
+- **Denser deep stages.** From stage 400 (`deepFrom`) a stage's growth eases evenly, in its logarithm, from
+  ×1.065 health and ×1.057 attack to ×1.035 and ×1.03 by stage 700 (`denseFrom`, `denseHpGrowth`,
+  `denseAtkGrowth`), and stays there; the drops ease with them, from ×1.45 a depth to ×1.225 by the same depth
+  (`BALANCE.abyss.denseDropGrowth`, `abyssDropMult`). The gap to the drops and records narrows from 0.024 a
+  stage to 0.012, so a doubling of power is worth about twice the stages, and gear found deep keeps its worth
+  for longer. Nothing changes up to stage 400. Easing at once at 400 (the research's first package) gave a
+  burst of 340 stages in hours 100-150 and then a slump; over 200 stages it still jumped (+210, +170), over
+  500 it was smooth but stage 1,000 came 40 hours later.
+- **Legacy.** Every prestige ever made multiplies attack, defence and health by 1.002 (`BASE.legacyPerPrestige`,
+  `legacyMult` in `src/core/modifiers.js`), a layer of its own that an Ascension keeps: a late prestige adds as
+  much to it as an early one, where its tokens add less and less to a big stock. 100 prestiges ×1.22, 1,000
+  ×7.4. The prestige dialog shows it from the second prestige (`seen('legacy')`), with the Shop's prestige
+  panel and the Hall's records.
+- **The camp past 25.** Levels go on without end (`max: Infinity`); past level 25 (`CAMP_GOLD.from`) each level
+  costs plain gold, 1,000,000 × 1.6^(levels held − 25), the same at any depth (`campCost`). Gold a kill pays grows
+  with the monsters' health, so a deeper hero's run buys more of them: about one more level of each for every
+  14 stages of the dense Abyss. Deep down a level past 25 can cost less than the 25th did, which follows the
+  best stage; that is the point, and the 25 levels below still ask about 50 kills at the best stage, so gold
+  keeps its job.
+
+Numbers (median of 7 seeds, with Auto; before → after): the best stage at 50 h 260 → 290, 100 h 370 → 420,
+150 h 460 → 610, 200 h 490 → 740, 300 h 570 → 1,010, 400 h 610 → 1,190, 600 h 650 → 1,410, 1,000 h 690 → 1,660,
+1,200 h 690 → 1,830: stage 1,000 at hour 281 and 1,500 at 681, and still about 0.85 stages an hour at the end, where
+it had stopped. The research's first package (easing at once at 400) reached 1,990. Past 1,000 the numbers
+are named on (`fmt` in `src/ui/format.js`: Dc for 10^33 on to Ce), and they stay numbers to about stage 19,000,
+past `MAX_STAGE`. The leaderboard's allowance was refitted with it (§3.17).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -1529,7 +1567,8 @@ Rules:
 1. **Inside a layer, percentages add.** All of the sources above add into `ATK%`, `DEF%`, `HP%`,
    `skillSpeed[skill]` and so on.
 2. **Layers multiply:** content layer × **token layer** (`1 + 0.004 × tokens × records` for attack and
-   defence, `0.002` for health; records ×1.05 each, §3.9) × **camp layer**.
+   defence, `0.002` for health; records ×1.05 each, §3.9) × **camp layer** × **Legacy** (`1.002^prestiges`,
+   §3.30).
    Health's base is `100 + 12 × (combat level − 1) + 0.05 × gear defence` (`BASE.hpPerDef`: armour
    carries one point of health for every 20 defence) before its layers multiply it. Gear is the only
    source that grows with depth, so health from armour is what keeps a deep hero from falling to

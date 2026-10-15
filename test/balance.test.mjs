@@ -54,13 +54,18 @@ test('deep in the Abyss health grows with the depth the armour came from, and dr
 test('the deep Abyss eases, but its monsters stay ahead of the drops and the records', () => {
     const e = BALANCE.enemy;
     assert.ok(e.deepHpGrowth < e.abyssHpGrowth && e.deepAtkGrowth < e.abyssAtkGrowth, 'past deepFrom the monsters grow more slowly');
+    assert.ok(e.denseFrom > e.deepFrom && e.denseHpGrowth < e.deepHpGrowth && e.denseAtkGrowth < e.deepAtkGrowth, 'and more slowly again by denseFrom (the endless climb)');
     assert.ok(e.deepFrom >= 300, 'the first 150 hours hardly reach it');
     // the gap a stage, in log power: the monsters' health against a depth's drops (ten stages) and a record (recordStages)
-    const gap = Math.log(e.deepHpGrowth) - Math.log(BALANCE.abyss.dropGrowth) / 10 - Math.log(BASE.recordMult) / BASE.recordStages;
-    assert.ok(gap > 0.02, `gap ${gap.toFixed(4)} a stage: nearer 0.02 the climb runs away`);
+    const record = Math.log(BASE.recordMult) / BASE.recordStages;
+    const deepGap = Math.log(e.deepHpGrowth) - Math.log(BALANCE.abyss.dropGrowth) / 10 - record;
+    const denseGap = Math.log(e.denseHpGrowth) - Math.log(BALANCE.abyss.denseDropGrowth) / 10 - record;
+    assert.ok(deepGap > 0.02, `gap ${deepGap.toFixed(4)} a stage at deepFrom`);
+    // (the camp's levels past 25 take about 0.004 more: nearer 0.005 the climb runs away, tools/simulate.mjs)
+    assert.ok(denseGap > 0.01, `gap ${denseGap.toFixed(4)} a stage past denseFrom`);
     const below = enemyBaseStats(e.deepFrom);
-    const past = enemyBaseStats(e.deepFrom + 10);
-    assert.ok(Math.abs(past.hp / below.hp - Math.pow(e.deepHpGrowth, 10)) < 1e-6 * past.hp / below.hp, 'ten stages past deepFrom grow by deepHpGrowth^10');
+    const past = enemyBaseStats(e.deepFrom + 1);
+    assert.ok(Math.abs(past.hp / below.hp - e.deepHpGrowth) < 0.001, 'the stage past deepFrom grows about deepHpGrowth');
     assert.ok(enemyBaseStats(e.deepFrom - 1).hp < below.hp, 'no step down at deepFrom');
 });
 

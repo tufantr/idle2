@@ -214,11 +214,12 @@ const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 // src/core/power.js), and a ceiling no save reaches at all, checked on every upload including the first. Growth is measured from each number's highest value so far and when it
 // was reached, so restoring a backup and coming forward again is never flagged.
 const RANKED = [
-    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 3000, byDepth: true },   // (perHour, flat: only without honestClimb)
+    // (perHour, flat: only without honestClimb; the ceiling far past any hero's: 2,000 after 1,200 simulated hours of the endless climb)
+    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 6000, byDepth: true },
     { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 2, ceiling: 20000 },
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
     { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
-    { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e9 },
+    { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e12 },   // (a few hundred million after 1,200 simulated hours)
     // Stars come only with an Ascension (data/ascension.js): ten for each tenfold of tokens, at most a few a day
     { key: 'stars', label: 'Stars', perHour: 3, flat: 40, ceiling: 2000 }
 ];

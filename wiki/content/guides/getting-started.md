@@ -55,7 +55,7 @@ Every kill pays gold, and gold buys [[/camp|camp]] upgrades. They sit in the doc
 - the **Hearth**: {{CAMP_UPGRADES.find(u => u.id === 'hearth').short}} a level, the first for {{campCost(CAMP_UPGRADES.find(u => u.id === 'hearth'), 0)}} gold;
 - the **Armour Rack**: {{CAMP_UPGRADES.find(u => u.id === 'armory').short}} a level. It appears once your hero wears some armour, so it has defence to raise.
 
-Each level costs {{CAMP_UPGRADES[0].growth}} times as much as the one before, up to {{CAMP_UPGRADES[0].max}} levels each. An upgrade you can afford lights up. The camp is for this run only: a prestige packs it up, and you buy it again.
+Each level costs {{CAMP_UPGRADES[0].growth}} times as much as the one before. An upgrade you can afford lights up. The camp is for this run only: a prestige packs it up, and you buy it again.
 
 ## The first boss
 

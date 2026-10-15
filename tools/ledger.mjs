@@ -3,7 +3,8 @@
 // his attack, defence and health and as stages at the two walls: the boss's 30 s, which takes attack, and the
 // one blow he must live through, which takes defence and health together. The hero as a fresh run finds him at
 // his wall: a prestige, the skill points spent (Knight and Warlord to 25, Rogue to 15, then Paragon), the camp
-// full, Combat Potion III running.
+// as a run near its best buys it (25 levels, and past them what a hundred kills' gold there buys), Combat Potion
+// III running.
 //
 //   node tools/ledger.mjs runs/hero-300.json [--json]
 //   node tools/ledger.mjs --flow runs/heroes    # heroes saved by simulate.mjs --save-at as <name>-<mark>.json:
@@ -11,7 +12,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { BALANCE } from '../src/core/formulas.js';
+import { BALANCE, enemyBaseStats, goldPerKillAtStage } from '../src/core/formulas.js';
+import { CAMP_GOLD } from '../src/data/camp.js';
 import { returnToStages } from '../src/systems/dungeon.js';
 import { PERKS } from '../src/data/perks.js';
 import { migrateState } from '../src/core/state.js';
@@ -39,7 +41,8 @@ function ledger(file) {
         const p = PERKS.find(p => p.id in FIRST && S.perks[p.id] < FIRST[p.id]) || PERKS.find(p => p.id === 'paragon');
         if (!g.buyPerk(p.id)) break;
     }
-    S.camp = { whetstone: 25, armory: 25, hearth: 25 };
+    const past = Math.max(0, Math.floor(Math.log(Math.max(1, 100 * goldPerKillAtStage(best) / CAMP_GOLD.base)) / Math.log(CAMP_GOLD.growth)));
+    S.camp = { whetstone: CAMP_GOLD.from + past, armory: CAMP_GOLD.from + past, hearth: CAMP_GOLD.from + past };
     S.combat.potionMs = 60000;   // a dose running
     g.recompute();
 
@@ -52,9 +55,8 @@ function ledger(file) {
         return { atk: d.atk / Math.max(1e-9, e.atk), def: d.def / Math.max(1e-9, e.def), hp: d.maxHp / Math.max(1e-9, e.maxHp) };
     };
     // the monsters' growth a stage where he stands (the deep Abyss eases past BALANCE.enemy.deepFrom)
-    const e = BALANCE.enemy;
-    const gHp = best > 100 ? (best > e.deepFrom ? e.deepHpGrowth : e.abyssHpGrowth) : e.hpGrowth;
-    const gAtk = best > 100 ? (best > e.deepFrom ? e.deepAtkGrowth : e.abyssAtkGrowth) : e.atkGrowth;
+    const gHp = enemyBaseStats(best + 1).hp / enemyBaseStats(best).hp;
+    const gAtk = enemyBaseStats(best + 1).atk / enemyBaseStats(best).atk;
     const mods = collectModifiers(S);
     const rec = recordsOf(S);
     const tokens = S.prestige.tokens || 0;
@@ -71,7 +73,8 @@ function ledger(file) {
     add('tokens (with records)', share(T => { T.prestige.tokens = 0; }), `${Math.round(tokens)} tokens x records ${rec.mult.toFixed(2)}`);
     const layer = (k, m) => (1 + BASE[k] * tokens * m);
     add('  of which records', { atk: layer('tokenAtk', rec.mult) / layer('tokenAtk', 1), def: layer('tokenDef', rec.mult) / layer('tokenDef', 1), hp: layer('tokenHp', rec.mult) / layer('tokenHp', 1) }, `${rec.count} records: ${rec.stages} stage, ${rec.skills} skill, ${rec.uniques} unique, ${rec.trials} trial, ${rec.laurels} laurel`);
-    add('camp (full)', share(T => { T.camp = {}; }));
+    add('camp', share(T => { T.camp = {}; }), `${S.camp.whetstone} levels each`);
+    add('Legacy', share(T => { T.prestige.count = 0; }), `${S.prestige.count} prestiges`);
     add('potion (Combat III)', share(T => { T.combat.potion = 'none'; T.combat.potionMs = 0; }));
     add('combat level', share(T => { T.skills.combat.xp = 0; }), `level ${d.combatLevel}`);
     add('perks', share(T => { T.perks = {}; }), Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', '));

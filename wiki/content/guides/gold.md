@@ -31,9 +31,9 @@ Gold is the money of a run. You earn it mostly by fighting, and you spend it on 
 
 ### The camp
 
-The [[/camp|camp]] is where most of your gold goes, and it is the first thing to buy in every run: the Whetstone, the Armour Rack and the Hearth multiply your hero's attack, defence and health. A first level costs {{campCost(CAMP_UPGRADES.find(u => u.id === 'hearth'), 0)}} or {{campCost(CAMP_UPGRADES.find(u => u.id === 'whetstone'), 0)}} gold, and each level costs {{CAMP_UPGRADES[0].growth}} times the one before, up to {{CAMP_UPGRADES[0].max}} levels.
+The [[/camp|camp]] is where most of your gold goes, and it is the first thing to buy in every run: the Whetstone, the Armour Rack and the Hearth multiply your hero's attack, defence and health. A first level costs {{campCost(CAMP_UPGRADES.find(u => u.id === 'hearth'), 0)}} or {{campCost(CAMP_UPGRADES.find(u => u.id === 'whetstone'), 0)}} gold, and each level costs {{CAMP_UPGRADES[0].growth}} times the one before, up to level {{CAMP_GOLD.from}}. Past it the levels never end, each at a set price in gold, {{CAMP_GOLD.growth}} times the one before, so the deeper your hero goes, the more of them a run buys.
 
-The camp is packed up at each prestige. Once your best stage passes about {{(() => { let s = 1; while (CAMP_PRICE_KILLS * goldPerKillAtStage(s) <= CAMP_UPGRADES[0].baseCost) s++; return s; })()}}, its prices follow your best stage: all {{CAMP_UPGRADES[0].max}} levels of one upgrade cost about {{Math.round(CAMP_PRICE_KILLS * (Math.pow(CAMP_UPGRADES[0].growth, CAMP_UPGRADES[0].max) - 1) / (CAMP_UPGRADES[0].growth - 1))}} kills' worth of gold there. So each run buys its camp again as it nears its best, and the camp keeps pace with your income.
+The camp is packed up at each prestige. Once your best stage passes about {{(() => { let s = 1; while (CAMP_PRICE_KILLS * goldPerKillAtStage(s) <= CAMP_UPGRADES[0].baseCost) s++; return s; })()}}, its prices follow your best stage: the first {{CAMP_GOLD.from}} levels of one upgrade cost about {{Math.round(CAMP_PRICE_KILLS * (Math.pow(CAMP_UPGRADES[0].growth, CAMP_GOLD.from) - 1) / (CAMP_UPGRADES[0].growth - 1))}} kills' worth of gold there. So each run buys its camp again as it nears its best, and the camp keeps pace with your income.
 
 ### The Shop
 

@@ -21,6 +21,14 @@ export const BALANCE = {
         deepFrom: 400,
         deepHpGrowth: 1.065,
         deepAtkGrowth: 1.057,
+        // The endless climb (the owner, October 2026: thousands of stages, each new upgrade a push;
+        // docs/research_notes/endless-late-game.md): from `deepFrom` a stage's growth eases evenly (in its
+        // logarithm) to denseHpGrowth and denseAtkGrowth by stage `denseFrom`, and stays there. The drops ease
+        // with it (BALANCE.abyss.denseDropGrowth), so the gap to them narrows from 0.026 a stage to 0.014: every
+        // doubling of power is worth about twice the stages it was, and the stages come closer together.
+        denseFrom: 700,
+        denseHpGrowth: 1.035,
+        denseAtkGrowth: 1.03,
         bossHpMult: 3,
         bossAtkMult: 1.6,
         // Stage bosses test the weapon (the owner, October 2026: every piece of gear must matter, and a legendary
@@ -103,7 +111,9 @@ export const BALANCE = {
     // made a deep hero stronger (with tokens at 0.4%: tools/simulate.mjs, DESIGN §5.2).
     abyss: {
         dropScalingFrom: 5,
-        dropGrowth: 1.45
+        dropGrowth: 1.45,
+        // from the depth of BALANCE.enemy.deepFrom a depth's growth eases evenly to this by the depth of denseFrom
+        denseDropGrowth: 1.225
     },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
@@ -150,6 +160,19 @@ export const BALANCE = {
 
 // ---------- Enemies ----------
 
+/**
+ * The logarithm of `n` steps of a growth that eases evenly (in its logarithm) from `from` to `to` over
+ * `over` steps and stays at `to` after: the deep Abyss's monsters by stage, its drops by depth.
+ */
+export function easedGrowthLog(n, from, to, over) {
+    if (!(n > 0)) return 0;
+    const a = Math.log(from);
+    const b = Math.log(to);
+    if (!(over > 0)) return n * b;
+    const m = Math.min(n, over);
+    return m * a + (b - a) * m * (m + 1) / (2 * over) + Math.max(0, n - over) * b;
+}
+
 /** HP, ATK and attack interval of a regular (non-boss) enemy at `stage`. Dungeons and the Titan build on it. */
 export function enemyBaseStats(stage) {
     const e = BALANCE.enemy;
@@ -161,8 +184,9 @@ export function enemyBaseStats(stage) {
     } else {
         const extra = Math.min(stage, e.deepFrom) - AUTHORED_STAGES;
         const deep = Math.max(0, stage - e.deepFrom);
-        hp = e.baseHp * Math.pow(e.hpGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssHpGrowth, extra) * Math.pow(e.deepHpGrowth, deep);
-        atk = e.baseAtk * Math.pow(e.atkGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssAtkGrowth, extra) * Math.pow(e.deepAtkGrowth, deep);
+        const over = e.denseFrom - e.deepFrom;
+        hp = e.baseHp * Math.pow(e.hpGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssHpGrowth, extra) * Math.exp(easedGrowthLog(deep, e.deepHpGrowth, e.denseHpGrowth, over));
+        atk = e.baseAtk * Math.pow(e.atkGrowth, AUTHORED_STAGES - 1) * Math.pow(e.abyssAtkGrowth, extra) * Math.exp(easedGrowthLog(deep, e.deepAtkGrowth, e.denseAtkGrowth, over));
     }
     return { hp, atk, interval: Math.max(e.minInterval, e.baseInterval - e.intervalPerStage * Math.min(stage, 120)) };
 }
@@ -341,7 +365,11 @@ export function generateEquipment(opts, nextId) {
 /** How much stronger gear dropped at this Abyss depth is than its tier's base (1 above ground). */
 export function abyssDropMult(depth = 0) {
     const a = BALANCE.abyss;
-    return depth > a.dropScalingFrom ? Math.pow(a.dropGrowth, depth - a.dropScalingFrom) : 1;
+    if (!(depth > a.dropScalingFrom)) return 1;
+    const e = BALANCE.enemy;
+    const deepDepth = (e.deepFrom - AUTHORED_STAGES) / STAGES_PER_ZONE;   // the depth whose last stage is deepFrom (30)
+    const over = (e.denseFrom - e.deepFrom) / STAGES_PER_ZONE;
+    return Math.pow(a.dropGrowth, Math.min(depth, deepDepth) - a.dropScalingFrom) * Math.exp(easedGrowthLog(depth - deepDepth, a.dropGrowth, a.denseDropGrowth, over));
 }
 
 /**

@@ -40,7 +40,7 @@ A salvaged piece gives back half the essence its upgrades took. The price of eac
 
 The {{res('voidstone')}} is the deepest gem: tier {{RESOURCES.voidstone.tier}}, cut from Crafting {{GEM_TIERS.find(g => g.gem === 'voidstone').levelReq}}. No rock holds it. From depth {{VOIDSTONE_DEPTH}} of the Abyss (stage {{AUTHORED_STAGES + (VOIDSTONE_DEPTH - 1) * STAGES_PER_ZONE + 1}}), a boss's first fall in a run (and a Titan that deep) leaves one {{pct(VOIDSTONE_CHANCE, 0)}} of the time.
 
-A Voidstone piece is cut to the deepest depth you have ever reached. Past depth {{BALANCE.abyss.dropScalingFrom}} each depth makes it {{BALANCE.abyss.dropGrowth}} times as strong, just like the gear that drops there, so a crafted piece can stand beside the deep Abyss's drops. The piece shows its depth.
+A Voidstone piece is cut to the deepest depth you have ever reached. Past depth {{BALANCE.abyss.dropScalingFrom}} each depth makes it {{BALANCE.abyss.dropGrowth}} times as strong (easing to {{BALANCE.abyss.denseDropGrowth}} times deep down), just like the gear that drops there, so a crafted piece can stand beside the deep Abyss's drops. The piece shows its depth.
 
 ## Jewellery that drops
 

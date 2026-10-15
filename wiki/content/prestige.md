@@ -1,6 +1,6 @@
 ---
 path: /prestige
-keywords: prestige, reset, rebirth, tokens, prestige tokens, records, skill points, auto prestige, first prestige, wall, glow
+keywords: prestige, reset, rebirth, tokens, prestige tokens, records, legacy, skill points, auto prestige, first prestige, wall, glow
 ---
 A prestige ends your run and trades it for power that lasts. Your hero goes back to an early stage, but the best stage of the run becomes **prestige tokens**, which make your hero stronger for good, and often **skill points** for [[Perks]] as well. The next run climbs back quickly and then goes further. When a run stops moving, a prestige is the way past the wall.
 
@@ -51,6 +51,10 @@ Records make every token stronger. Each record multiplies what all your tokens g
 - each laurel from the week's Trial.
 
 Records multiply together: ten of them make your tokens ×{{(BASE.recordMult ** 10).toFixed(2)}} as strong. Reaching a new {{BASE.recordStages}}-stage record gets a card of its own, and so does each new {{BASE.recordSkillLevels}} skill levels; the token chip's tip in the purse counts your records, and the Hall's Records shows how far the next skill record is. Late in the game, when one more prestige adds little to a big stock of tokens, a new record lifts the whole stock at once.
+
+## Legacy
+
+Every prestige you ever make also adds to your hero's **Legacy**: ×{{1 + BASE.legacyPerPrestige}} attack, defence and health for each one, multiplied together, for good. A hundred prestiges make ×{{fmt((1 + BASE.legacyPerPrestige) ** 100)}}, a thousand ×{{fmt((1 + BASE.legacyPerPrestige) ** 1000)}}. Legacy is a layer of its own, so a late prestige adds as much to it as an early one did, where one more prestige's tokens add less and less to a big stock; an [[Ascension]] keeps it. The prestige dialog shows what your Legacy will be after the prestige you are about to make.
 
 ## Skill points
 

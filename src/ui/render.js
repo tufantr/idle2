@@ -15,7 +15,7 @@ import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
 import { ZONES, zoneForStage, STAGES_PER_ZONE } from '../data/zones.js';
 import { STRATA } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
-import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal } from '../core/modifiers.js';
+import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal, legacyMult } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
@@ -424,9 +424,10 @@ function campTokens(game) {
         const cost = nextCampCost(state, u.id);
         const can = cost !== null && state.gold >= cost;
         const canTwo = can && level + 1 < u.max && state.gold >= cost + campPrice(state, u, level + 1);
-        const total = Math.round((Math.pow(1 + u.bonus, level) - 1) * 100);
+        const mult = Math.pow(1 + u.bonus, level);
+        const total = mult >= 10 ? `×${fmt(mult)}` : `+${Math.round((mult - 1) * 100)}%`;
         return `<div class="camp-token${can ? ' can' : ''}" data-camp="${u.id}">
-            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now +${total}%)` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
+            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now ${total})` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
                 <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
                 <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
             </button>
@@ -1417,6 +1418,7 @@ export function renderShop(game, ui) {
             <div class="panel-header"><h2>Prestige ${aboutButton('prestige')}</h2>${rankBadge(state)}</div>
             <div class="prestige-stats">
                 <div><b>${fmt(state.prestige.tokens)}</b><span>tokens held: +${fmt(d.tokenPowerPct)}% attack and defence</span></div>
+                ${seen(state, 'legacy') ? `<div><b>×${fmt(d.legacy)}</b><span>Legacy from ${fmt(state.prestige.count)} prestiges: attack, defence and health</span></div>` : ''}
                 <div><b>${state.prestige.skillPoints}</b><span>skill points to spend</span></div>
                 <div><b>+${preview.tokens}</b><span>tokens for this run (best stage ${state.combat.maxStage})</span></div>
                 <div><b>${preview.startStage}</b><span>is the stage the next run starts at</span></div>
@@ -1582,7 +1584,7 @@ function renderRecords(game) {
         ['mon/Goblin Chieftain', fmt(s.bossKills || 0), 'bosses defeated'],
         ['gold', fmt(s.gildedKills || 0), 'gilded monsters'],
         ['res/gold_bar', fmt(s.goldEarned || 0), 'gold earned'],
-        ['res/essence', fmt(state.prestige.count || 0), 'prestiges'],
+        ['res/essence', fmt(state.prestige.count || 0), seen(state, 'legacy') ? `prestiges: Legacy ×${fmt(game.derived.legacy)}` : 'prestiges'],
         ['titan/0', fmt(state.titan?.kills || 0), 'Titans felled'],
         ['crate', fmt(clears), 'dungeons cleared'],
         ['item/Body/4', fmt(s.itemsCrafted || 0), 'pieces of gear made'],
@@ -2235,6 +2237,7 @@ export function renderPrestigeModal(game) {
         <div class="modal-body">
             <div class="pg-gain">
                 <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${fmt(Math.round(p.tokensAfter * BASE.tokenAtk * game.derived.records.mult * 100))}% attack and defence${game.derived.records.count ? ` (records ×${game.derived.records.mult.toFixed(2)})` : ''}</small></div>
+                ${seen(state, 'legacy') ? `<div class="pg-get legacy"><i class="coin-dot legacy" aria-hidden="true"></i><b>+${pct(BASE.legacyPerPrestige, 1)} <span>Legacy</span></b><small>×${fmt(legacyMult({ prestige: { count: count + 1 } }))} attack, defence and health from ${fmt(count + 1)} prestiges, for good</small></div>` : ''}
                 ${p.skillPoints > 0 ? `<div class="pg-get sp"><i class="coin-dot sp" aria-hidden="true"></i><b>+${p.skillPoints} <span>skill point${p.skillPoints === 1 ? '' : 's'}</span></b><small>for perks that last forever</small></div>` : ''}
                 ${newRank ? `<div class="pg-rank">${heroSprite({ ...state, prestige: { ...state.prestige, count: count + 1 }, hero: { ...state.hero, cape: '' } }, { scale: 2 })}<span><small>A new rank</small><b>${esc(rank.name)}</b><small>and a ${esc(rank.cloak)} cloak</small></span></div>` : ''}
                 ${p.fullRun ? '' : `<div class="pg-note muted small">A skill point comes with a run that reaches stage ${nextSp}</div>`}

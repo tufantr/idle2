@@ -1225,6 +1225,15 @@ Keeping it running:
       at the screen's edges, a held breath, and a card with what it does and an Equip button. Epic has its own
       chime, a plainer upgrade a bright one, and the welcome-back report shows the best piece found while away.
       The legendary card stays until it is tapped (the owner's ask)
+- [x] **The endless climb, first part: the balance** (the owner: the late game should be pretty much endless,
+      thousands of stages, each new upgrade a push; research in `docs/research_notes/endless-late-game.md`,
+      DESIGN §3.30). From stage 400 a stage grows ever more gently, down to ×1.035 health and ×1.03 attack by
+      stage 700, and the deep drops ease with them; every prestige adds ×1.002 attack, defence and health to a
+      **Legacy** that lasts (an Ascension keeps it; the prestige dialog shows it); the camp's levels go on past
+      25 at a price in plain gold, so a deeper run buys more of them. Nothing changes below stage 400. Seven
+      simulated players with Auto: stage 1,000 at hour 281 and 1,830 at hour 1,200, still climbing (690, stopped,
+      before); 420 at hour 100 (370). Numbers past 10^33 keep their names (Dc, UDc … Ce), the
+      leaderboard's allowance for a fast climb was refitted, and its ceilings raised
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

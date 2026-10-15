@@ -10,7 +10,7 @@ import { enemyForStage, goldForKill, combatXpForKill, BALANCE } from '../../src/
 import { BASE } from '../../src/core/modifiers.js';
 import { GEAR_TIERS, GEAR_DROP_CHANCE, TIER_WEAR_LEVEL } from '../../src/data/items.js';
 import { VOIDSTONE_DEPTH, VOIDSTONE_CHANCE } from '../../src/data/workshop.js';
-import { CAMP_UPGRADES, campCost, campMultiplier } from '../../src/data/camp.js';
+import { CAMP_UPGRADES, CAMP_GOLD, campCost, campMultiplier } from '../../src/data/camp.js';
 import { PETS } from '../../src/data/pets.js';
 import { CAPES } from '../../src/data/capes.js';
 import { dungeonEnemy, titanEnemy } from '../../src/systems/dungeon.js';
@@ -297,12 +297,13 @@ function titanPage(help) {
 }
 
 function campPage(help) {
-    const levels = [1, 2, 3, 5, 10, 15, 20, 25];
+    const top = CAMP_GOLD.from;
+    const levels = [1, 2, 3, 5, 10, 15, 20, top, top + 1, top + 5, top + 10, top + 25, top + 50, top + 75];
     const rows = levels.map(l => [l, ...CAMP_UPGRADES.map(u => fmt(campCost(u, l - 1)))]);
-    const info = table(['Upgrade', 'Each level', 'Most levels #', 'At most #'], CAMP_UPGRADES.map(u => [`<span class="act">${icon(u.art, 1)}<span>${esc(u.name)}</span></span>`, esc(u.desc), u.max, `×${campMultiplier(u, u.max).toFixed(2)}`]), { sort: false });
+    const info = table(['Upgrade', 'Each level', `At level ${top} #`, `At level ${top * 2} #`, `At level ${top * 4} #`], CAMP_UPGRADES.map(u => [`<span class="act">${icon(u.art, 1)}<span>${esc(u.name)}</span></span>`, esc(u.desc), `×${fmt(campMultiplier(u, top))}`, `×${fmt(campMultiplier(u, top * 2))}`, `×${fmt(campMultiplier(u, top * 4))}`]), { sort: false });
     return {
         infobox: infobox({ title: 'Camp', image: icon('campfire', 3), rows: [['Paid with', 'gold'], ['Resets', 'every prestige'], ['Upgrades', CAMP_UPGRADES.map(u => esc(u.name)).join(', ')]] }),
-        body: `${help.prose('/camp')}\n${section('Upgrades', info)}\n${section('Price of each level', `<p>The base price of each level, in gold (later on, prices follow your best stage instead, when that is higher):</p>${table(['Level #', ...CAMP_UPGRADES.map(u => `${esc(u.name)} #`)], rows, { sort: false })}`)}`
+        body: `${help.prose('/camp')}\n${section('Upgrades', info)}\n${section('Price of each level', `<p>The base price of each level, in gold. Up to level ${top}, prices follow your best stage later on, when that is higher; past it, a level costs the same at any depth:</p>${table(['Level #', ...CAMP_UPGRADES.map(u => `${esc(u.name)} #`)], rows, { sort: false })}`)}`
     };
 }
 

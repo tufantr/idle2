@@ -37,6 +37,7 @@ export const DISCLOSURES = [
     { id: 'ascension',    when: s => s.combat.bestStage >= ASCEND_FROM || (s.ascension?.count || 0) > 0 },   // the prestige dialog's Ascend
     { id: 'stars',        when: s => (s.ascension?.stars || 0) > 0 },   // the purse's Stars
     { id: 'trials',       when: s => s.combat.bestStage >= TRIALS_FROM || !!s.trials?.active || Object.keys(s.trials?.cleared || {}).length > 0 },   // the prestige dialog's Trials
+    { id: 'legacy',       when: s => s.prestige.count >= 1 },   // Legacy (core/modifiers.js legacyMult): from the second prestige, in its dialog
     { id: 'skill_points', when: s => s.prestige.skillPoints > 0 || s.prestige.count > 0 || Object.values(s.perks).some(level => level > 0) },
     // the combat tab
     { id: 'camp',         when: s => s.gold >= CHEAPEST_CAMP || Object.values(s.camp).some(level => level > 0) || s.prestige.count > 0 },
