@@ -353,7 +353,7 @@ async function convertBoss(clanId, week, unit, maxHp, hp, factor) {
         RETURNING clan_id
     `;
     if (!rows.length) return false;
-    await sql`UPDATE clan_attacks SET damage = GREATEST(1, ROUND(damage * ${factor}))::bigint WHERE clan_id = ${clanId} AND week = ${week}`;
+    await sql`UPDATE clan_attacks SET damage = GREATEST(1, ROUND(damage * ${factor}::double precision))::bigint WHERE clan_id = ${clanId} AND week = ${week}`;   // (a bare parameter beside a bigint is read as one)
     return true;
 }
 

@@ -567,7 +567,7 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const dealt = Math.min(safeDamage(fight?.damage), cap);
     // in the clan's attacks: thousandths of its average plain attack (the player's own, if none counted yet)
     const unit = boss.unit > 0 ? boss.unit : safeDamage(parseMetrics(save.metrics)?.attackDamage) || 1;
-    const reckoned = Math.max(1, Math.round((dealt / unit) * 1000));
+    const reckoned = Math.max(1, Math.min(boss.maxHp, Math.round((dealt / unit) * 1000)));   // no attack counts for more than the whole boss
     const damage = recentlyFlagged(save.flags, now) ? Math.min(reckoned, Math.max(1, Math.ceil(boss.maxHp * FLAGGED_ATTACK_SHARE))) : reckoned;
     const left = await store.spendCharge(req.user.id, dayNumber(now), perDay, bank);
     if (left === null) return res.status(400).json({ error: `No attacks waiting: ${perDay} more come each day (midnight UTC), up to ${bank}.` });
