@@ -166,7 +166,7 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   mithril, adamant, runite for tiers 1–5; Dragonbone takes twice the runite, Abyssal three times — and
   essence; no gold. Step n takes `ceil(bars per piece × 1.5^(n−1))` bars (a body: 5, 8, 12 … 193;
   about 113 pieces' worth for +10) and `2 × n × tier` essence, needs Smithing `5n`, and pays the bars'
-  XP (as forging did: 18 / 30 / 57 / 90 / 135 a bar, paced). A reroll takes a piece's worth of bars
+  XP (as forging did: 18 / 30 / 57 / 90 / 135 a bar, paced; past +10, the +10 level's: §3.31). A reroll takes a piece's worth of bars
   and the old reforge's essence. The metal's mastery grows a second a bar and takes up to 19.6% of
   the bars off. Smelting a metal needs its level, so the bars are the real gate (runite at 75), or they
   come from salvaging gear of that metal. A piece put on in place of a reinforced one of its kind is
@@ -1580,7 +1580,9 @@ forge is shown agreed first (the owner asked how a player would know it):
   up to +10 a level adds 5% of a piece's base stats (×1.5 at +10, as before), past it each multiplies them by 1.05
   (`FORGE_STEP`). Bars grow ×1.5 a level to +10 and ×1.15 past it (`FORGE_BAR_GROWTH`), essence 2 × level × tier as
   before, and the Smithing asked grows five levels a step to +10 and one past it, up to 99 (five a step held every
-  simulated hero at +15). A level is priced in the metal of the best tier the slot has held
+  simulated hero at +15). The Smithing XP is the bars' to +10 and stays the +10 level's past it (the owner, 16
+  October 2026: it grew with the bars, and a click at +40 on Abyssal body armour paid 2.25M XP, several levels in
+  the 90s; at +50, 9.1M). A level is priced in the metal of the best tier the slot has held
   (`tier`), so a copper sword can't buy cheap levels for an Abyssal one. Bars and essence don't grow with depth: the
   forge climbs with time spent, and the camp stays the one sink priced in plain gold (two would run away).
   Shown: the plate "+14" on the slot (on the doll even when empty, on the anvil's card), "Weapon slot +14 → +15: +5%

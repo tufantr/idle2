@@ -1262,6 +1262,10 @@ Keeping it running:
       fought the stages ended on the stages' fight. The clan boss is now fought on the Clan tab, like the Titan on the
       Dungeons tab: when it is over, its banner shows a moment and the tab shows the clan again, ready for the next
       attack, while the hero goes back to the stages (or his work) behind it. Checked in a browser at both widths
+- [x] **Reinforcing past +10 pays the +10 level's Smithing XP** (the owner's report, 16 October 2026: upgrading gear
+      gave too much Smithing XP). The XP followed the bars, which grow ×1.15 a level past +10 without a top: a click at
+      +40 on Abyssal body armour paid 2.25M XP (several levels in the 90s), at +50 9.1M. The price still climbs; the XP
+      stays the +10 level's (34,161 for that piece)
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid`, the boss's `unit` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

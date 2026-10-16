@@ -61,14 +61,19 @@ export function anvilMetal(tier) {
 export function anvilBarMult(tier) {
     return Math.max(1, (Math.round(tier) || 1) - METALS.length + 1);
 }
-/** Reinforcing a slot of `type` from `level` to the next, priced at `tier`: { bar, bars, essence, level, xp, metal }. */
+/**
+ * Reinforcing a slot of `type` from `level` to the next, priced at `tier`: { bar, bars, essence, level, xp, metal }.
+ * The XP is the bars' up to +10; past it the price keeps climbing but the XP stays the +10 level's (the owner, 16
+ * October 2026: it grew with the price, a click at +40 paid 2.25M XP, several Smithing levels).
+ */
 export function reinforceCost(type, level = 0, tier = 1) {
     const next = Math.max(0, Math.floor(level) || 0) + 1;
     const metal = anvilMetal(tier);
-    const growth = Math.pow(ANVIL_BAR_GROWTH, Math.min(next, MAX_UPGRADE) - 1) * Math.pow(FORGE_BAR_GROWTH, Math.max(0, next - MAX_UPGRADE));
-    const bars = Math.ceil((SMITHING_BAR_COST[type] || 1) * growth) * anvilBarMult(tier);
+    const barsAt = growth => Math.ceil((SMITHING_BAR_COST[type] || 1) * growth) * anvilBarMult(tier);
+    const upTo10 = Math.pow(ANVIL_BAR_GROWTH, Math.min(next, MAX_UPGRADE) - 1);
+    const bars = barsAt(upTo10 * Math.pow(FORGE_BAR_GROWTH, Math.max(0, next - MAX_UPGRADE)));
     const smithing = next <= MAX_UPGRADE ? ANVIL_LEVEL_PER_UPGRADE * next : Math.min(99, ANVIL_LEVEL_PER_UPGRADE * MAX_UPGRADE + next - MAX_UPGRADE);   // (past +10 a Smithing level a forge level)
-    return { bar: metal.bar, bars, essence: Math.ceil(2 * next * tier), level: smithing, xp: bars * metal.xpPerBar, metal };
+    return { bar: metal.bar, bars, essence: Math.ceil(2 * next * tier), level: smithing, xp: barsAt(upTo10) * metal.xpPerBar, metal };
 }
 /** Rerolling the bonuses: a piece's worth of bars, and essence that grows with each reroll (capped). */
 export function rerollCost(item) {

@@ -9,8 +9,8 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { generateDrop, generateEquipment } from '../src/core/formulas.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { migrateState } from '../src/core/state.js';
-import { CRAFTING_TYPES, SMITHING_TYPES, PITY_MARKS, DROP_TYPE_WEIGHTS, RARITIES, GEAR_TIERS } from '../src/data/items.js';
-import { reinforceCost, rerollCost, salvageBars, ANVIL_REFUND, forgeMult } from '../src/data/workshop.js';
+import { CRAFTING_TYPES, SMITHING_TYPES, PITY_MARKS, DROP_TYPE_WEIGHTS, RARITIES, GEAR_TIERS, MAX_UPGRADE } from '../src/data/items.js';
+import { reinforceCost, rerollCost, salvageBars, ANVIL_REFUND, forgeMult, METALS } from '../src/data/workshop.js';
 import { dropTypesFor, salvagePreview } from '../src/systems/inventory.js';
 import { anvilCost, forgeLevel } from '../src/systems/anvil.js';
 import { spawnEnemy } from '../src/systems/combat.js';
@@ -175,6 +175,12 @@ test('the anvil reinforces with bars of the piece\'s metal and essence, for Smit
     assert.equal(reinforceCost('Weapon', 10, 3).level, 51, 'past +10 a Smithing level a forge level');
     assert.equal(reinforceCost('Weapon', 30, 3).level, 71);
     assert.equal(reinforceCost('Weapon', 80, 3).level, 99);
+    // the XP is the bars' up to +10, and stays the +10 level's past it while the price climbs (the owner, October 2026)
+    for (let n = 0; n < MAX_UPGRADE; n++) assert.equal(reinforceCost('Body', n, 5).xp, reinforceCost('Body', n, 5).bars * METALS[4].xpPerBar);
+    for (const n of [10, 20, 40, 80]) {
+        assert.equal(reinforceCost('Body', n, 7).xp, reinforceCost('Body', MAX_UPGRADE - 1, 7).xp, `+${n + 1} pays what +10 did`);
+        assert.ok(reinforceCost('Body', n, 7).bars > reinforceCost('Body', MAX_UPGRADE - 1, 7).bars);
+    }
     s.skills.smithing.xp = xpForLevel(10);
     // Dragonbone and Abyssal gear takes runite, more of it
     assert.equal(reinforceCost('Weapon', 0, 7).bar, 'runite_bar');
