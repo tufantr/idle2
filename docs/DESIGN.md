@@ -308,6 +308,12 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   (about 25 s) and goes back into the fight by himself (`combat.recovering`); "Stay at camp", starting
   work or entering the fight at once call that off. Offline replay does the same, so a fall early in a
   long absence costs a rest, not the absence.
+- **Retreat lets the monster catch its breath** (the owner's call, 16 October 2026: resting at camp healed the
+  hero but not the boss, so retreating, resting and coming back beat bosses he couldn't beat in one go and pushed
+  him past where he belonged). Leaving a fight at the stages (Retreat, work, a prestige) makes the monster whole
+  again, a boss's clock starts over and a pack starts whole, as after a fall (`catchBreath`,
+  `src/systems/combat.js`); entering the fight checks it too, for a save stored mid-retreat. The same monster, so
+  leaving and coming back doesn't roll a gilded one again.
 - **Death:** retreat to the start of the zone (a boss death sends you back 9 stages), HP set to 50%,
   a rest to full health, then the fight goes on from there. **Farm mode** ("Stay on this stage") keeps you on the current stage; the map, and the stones on
   the scene's stage path, take you back to any stage reached this run.

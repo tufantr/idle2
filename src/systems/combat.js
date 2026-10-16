@@ -77,12 +77,14 @@ export function enterCombat(game) {
     c.combo = 0;
     if (c.hp <= 0) c.hp = game.derived.maxHp;
     if ((!c.enemy && !choosingAfterClear(state)) || (c.mode === 'stages' && c.enemy?.stage !== c.stage)) spawnEnemy(game);
+    else if (c.mode === 'stages' && c.enemy && c.enemy.hp < c.enemy.maxHp) catchBreath(game);   // left hurt some other way (a save from before)
     game.markDirty();
 }
 
 /**
  * Stop fighting. Leaving mid-dungeon abandons the run; leaving the Titan ends the attempt (its Give up
- * is dungeon.js giveUpTitan, which goes back to what he was doing; this stops him, for new work).
+ * is dungeon.js giveUpTitan, which goes back to what he was doing; this stops him, for new work). Leaving
+ * the stages (Retreat, work, a prestige), the monster gets its breath back (catchBreath).
  */
 export function leaveCombat(game) {
     const c = game.state.combat;
@@ -91,10 +93,29 @@ export function leaveCombat(game) {
     if (c.mode === 'dungeon') failDungeon(game, 'you left');
     else if (c.mode === 'titan') endTitan(game, false, 'left');
     else if (c.mode === 'clan') endClanFight(game, 'left');
+    else catchBreath(game);
     c.active = false;
     c.recovering = false;   // the Titan's end may have sent him back to a rest that ends in the fight
     c.combo = 0;
     game.markDirty();
+}
+
+/**
+ * The hero left a fight at the stages: the monster he leaves is whole again when he comes back, a boss with its
+ * clock started over, and a pack starts whole, as after a fall (the owner, October 2026: resting at camp healed the
+ * hero but not the boss, so retreating, resting and coming back beat bosses he couldn't beat in one go). The same
+ * monster, not a new one: leaving and coming back doesn't roll a gilded one again.
+ */
+function catchBreath(game) {
+    const c = game.state.combat;
+    const e = c.enemy;
+    c.pack = null;
+    if (!e) return;
+    if (e.boss && e.hp < e.maxHp) log(game, `🏕️ ${e.name} catches its breath: whole again, its clock started over.`, 'combat');
+    e.hp = e.maxHp;
+    c.playerTimer = 0;
+    c.enemyTimer = 0;
+    c.bossTimeLeft = e.boss ? (e.timeLimit || BALANCE.combat.bossTimeMs) : 0;
 }
 
 export function setStage(game, stage) {

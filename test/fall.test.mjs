@@ -8,6 +8,7 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { migrateState } from '../src/core/state.js';
 import { onPlayerDeath } from '../src/systems/combat.js';
+import { BALANCE } from '../src/core/formulas.js';
 
 rng.setSource(seededRandom(5));
 const T0 = 1_700_000_000_000;
@@ -119,3 +120,47 @@ test('a prestige while resting after a fall walks the hero into the new run, as 
     assert.ok(resting.prestige({ resume: true }));
     assert.equal(resting.state.combat.active, false);
 });
+
+test('a retreat gives the monster its breath back: whole again, a boss with its clock started over, the same monster', () => {
+    // the owner, October 2026: resting at camp healed the hero but not the boss, so retreating, resting and
+    // coming back beat bosses he couldn't beat in one go
+    const game = fighter(20);   // a zone's boss
+    const c = game.state.combat;
+    const boss = c.enemy;
+    assert.ok(boss.boss);
+    boss.hp = Math.floor(boss.maxHp / 3);
+    c.bossTimeLeft = 4000;
+    game.toggleCombat();   // Retreat
+    assert.equal(c.active, false);
+    assert.equal(c.enemy, boss, 'the same monster, not a new roll');
+    assert.equal(boss.hp, boss.maxHp);
+    assert.equal(c.bossTimeLeft, boss.timeLimit || BALANCE.combat.bossTimeMs);
+    game.toggleCombat();   // back in
+    assert.equal(c.enemy, boss);
+    assert.equal(boss.hp, boss.maxHp);
+
+    // leaving for work: the same; a gilded monster stays gilded
+    const worker = fighter(15);
+    const w = worker.state.combat;
+    w.enemy = { ...w.enemy, gilded: true, name: `Gilded ${w.enemy.name}`, hp: 1 };
+    const gilded = w.enemy;
+    assert.equal(worker.startNodeAction('mining', 'copper_ore'), true);
+    assert.equal(w.active, false);
+    assert.equal(w.enemy, gilded);
+    assert.equal(gilded.hp, gilded.maxHp);
+
+    // a pack faced again starts whole, as after a fall
+    const packed = fighter(15);
+    packed.state.combat.pack = { stage: 15, killed: 2 };
+    packed.toggleCombat();
+    assert.equal(packed.state.combat.pack, null);
+
+    // a save stored mid-retreat with the monster hurt (from before): whole when he goes back in
+    const old = fighter(20);
+    old.state.combat.enemy.hp = 5;
+    old.state.combat.active = false;
+    const loaded = new Game(JSON.parse(old.serialize()), old.now);
+    loaded.enterCombat();
+    assert.equal(loaded.state.combat.enemy.hp, loaded.state.combat.enemy.maxHp);
+});
+

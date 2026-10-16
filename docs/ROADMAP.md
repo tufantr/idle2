@@ -1274,10 +1274,10 @@ Keeping it running:
 
 A rule to settle (the owner's call):
 
-- [ ] **Retreat during a boss** (S): leaving a boss fight keeps the boss's lost health and its time left
-      while the hero heals at camp, so retreating, resting and coming back beats a boss he could not beat in
-      one go. Either that is the way (a choice for a player who is watching), or a boss heals and its clock
-      starts again when the hero leaves
+- [x] **Retreat during a boss** (S; settled by the owner, 16 October 2026: "my hero's hp regens but the enemy's
+      doesn't"): leaving a fight at the stages (Retreat, work, a prestige) makes the monster whole again, a boss's
+      clock starts over and a pack starts whole, as after a fall; the same monster, so no new roll for a gilded
+      one. A boss says so in the battle log (DESIGN §3.6)
 
 The long game (the research's last items):
 
