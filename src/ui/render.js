@@ -106,12 +106,12 @@ const DEF_ICON = sprite('item/Shield/3', { scale: 0.5, cls: 'soft res-spr' });
 const eventIcon = (e, scale = 0.5) => sprite(EVENT_ART[e.id], { scale, cls: scale < 1 ? 'soft res-spr' : '', fallback: e.icon });
 
 /**
- * Is the fight filling the screen? On the fight's tab (Combat, or Dungeons during a run: fightTab), while
+ * Is the fight filling the screen? On the fight's tab (Combat, Dungeons during a run, Clan against its boss: fightTab), while
  * fighting (or resting after a fall, before going on), unless the player folded it away.
  */
 export function battleMode(game, ui) {
     const c = game.state.combat;
-    // a fight that just ended keeps the screen a moment (battleHoldUntil: the Titan's, for its banner)
+    // a fight that just ended keeps the screen a moment (battleHoldUntil: the Titan's and the clan boss's, for their banners)
     return ui.tab === fightTab(game, ui) && (c.active || c.recovering || (ui.battleHoldUntil || 0) > game.now) && ui.battleFull !== false;
 }
 
@@ -2512,7 +2512,7 @@ export function renderTab(game, ui, cloud) {
         case 'events': return renderEvents(game);
         case 'agility': return renderAgility(game, ui);
         case 'settings': return renderSettings(game, ui, cloud);
-        case 'clan': return renderClan(game, ui, cloud);
+        case 'clan': return fightTab(game, ui) === 'clan' ? renderCombat(game, ui) : renderClan(game, ui, cloud);   // the clan boss is fought here
         default: return NON_COMBAT_SKILLS.includes(ui.tab) ? renderSkill(game, ui, ui.tab) : renderCombat(game, ui);
     }
 }

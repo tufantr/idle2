@@ -103,7 +103,6 @@ export function giveUpClanFight(game) {
     return true;
 }
 
-/** The server has the attack (or refused it for good): nothing more to send. */
 /**
  * The clan's banner as the server says it ({ week, kills }, or null outside a clan): kept in the save, so it counts
  * while away until its week ends. A rise is said once, as a card (main.js).
@@ -120,6 +119,7 @@ export function setClanBanner(game, banner) {
     return true;
 }
 
+/** The server has the attack (or refused it for good): nothing more to send. */
 export function clearClanResult(game) {
     if (!game.state.clanResult) return false;
     game.state.clanResult = null;

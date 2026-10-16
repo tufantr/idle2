@@ -651,7 +651,7 @@ export function createScene(root, actions) {
 
         /** After each render: visibility, place, path, names and kit. Cheap when nothing changed. */
         sync(game, ui) {
-            const onCombat = ui.tab === fightTab(game, ui);   // Combat, or Dungeons during a run
+            const onCombat = ui.tab === fightTab(game, ui);   // Combat, Dungeons during a run, or Clan against its boss
             if (root.hidden && onCombat) quiet = true;
             root.hidden = !onCombat;
             if (!onCombat) return;

@@ -8,6 +8,8 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { clanFightDamage, cleanStrikes, clanGuardDown, clanAttackFromSave, expectedDps } from '../src/core/power.js';
 import { CLAN_FIGHT_MS, CLAN_GUARD, clanBossFor } from '../src/data/social.js';
 import { BALANCE } from '../src/core/formulas.js';
+import { fightTab } from '../src/ui/features.js';
+import { battleMode } from '../src/ui/render.js';
 
 rng.setSource(seededRandom(11));
 const T0 = 1_760_000_000_000;
@@ -115,6 +117,39 @@ test('the clan fight in the game: the week\'s boss, strikes kept and landing in 
     assert.equal(game.startClanFight({ week: '2026-W41', hp: 5, maxHp: 5 }), false, 'not before the last one is sent');
     assert.equal(game.clearClanResult(), true);
     assert.equal(game.state.clanResult, null);
+});
+
+test('the clan boss is fought on the Clan tab, which shows the clan again after it, even when the hero fights on at the stages', () => {
+    // the owner, October 2026: after an attack the screen went on to the stages instead of back to the Clan tab
+    const game = new Game(null, T0);
+    game.state.combat.bestStage = 40;
+    game.recompute();
+    game.toggleCombat();   // at the stages before the attack
+    const c = game.state.combat;
+    assert.equal(c.active, true);
+    const ui = { tab: 'clan', battleFull: true };
+    assert.equal(fightTab(game, ui), 'combat');
+    assert.equal(game.startClanFight({ week: '2026-W41', hp: 1e12, maxHp: 1e12 }), true);
+    assert.equal(fightTab(game, ui), 'clan', 'fought where it is begun');
+    assert.equal(battleMode(game, ui), true, 'filling the screen there');
+    for (let t = T0 + 1000; t <= T0 + CLAN_FIGHT_MS + 2000; t += 1000) game.tick(t);
+    assert.equal(c.mode, 'stages');
+    assert.equal(c.active, true, 'back at the stages, as before the attack');
+    assert.equal(fightTab(game, ui), 'combat', 'the stages are fought under Combat');
+    assert.equal(battleMode(game, ui), false, 'the Clan tab shows the clan');
+    // its end held on screen a moment (main.js), then the clan
+    ui.clanHoldUntil = ui.battleHoldUntil = game.now + 2400;
+    assert.equal(fightTab(game, ui), 'clan');
+    assert.equal(battleMode(game, ui), true);
+    game.tick(game.now + 3000);
+    assert.equal(battleMode(game, ui), false);
+    // Give up: the same, at once
+    game.clearClanResult();
+    assert.equal(game.startClanFight({ week: '2026-W41', hp: 1e12, maxHp: 1e12 }), true);
+    game.toggleCombat();
+    assert.equal(c.mode, 'stages');
+    assert.equal(c.active, true);
+    assert.equal(fightTab(game, {}), 'combat');
 });
 
 test('felling the clan boss here ends the fight, pays nothing here, and counts as the whole fight for the server', () => {

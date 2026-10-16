@@ -1258,6 +1258,10 @@ Keeping it running:
       three, and one alone none without a potion; a member joining or leaving moves the average, not the boss. No
       essence or diamonds any more (rewards from before still claim). Seven simulated players with Auto, 600 hours:
       stage 1,870 with one level a week, 1,900 with five, 1,800 alone
+- [x] **Back to the Clan tab after an attack** (the owner's report, 16 October 2026): an attack begun while the hero
+      fought the stages ended on the stages' fight. The clan boss is now fought on the Clan tab, like the Titan on the
+      Dungeons tab: when it is over, its banner shows a moment and the tab shows the clan again, ready for the next
+      attack, while the hero goes back to the stages (or his work) behind it. Checked in a browser at both widths
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid`, the boss's `unit` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

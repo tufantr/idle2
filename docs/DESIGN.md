@@ -878,8 +878,8 @@ with the game's own stat code; the client never submits damage or scores.
   diamonds for kills, last hits, taking part or the top three any more; rewards from before still claim.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
-  (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen like the Titan's (`state.combat.mode` =
-  `clan`), on the boss's land's painting. The hero attacks by himself; the boss never hits back. It drops
+  (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen on the Clan tab like the Titan's on the Dungeons tab (`state.combat.mode` =
+  `clan`; §3.23), on the boss's land's painting. The hero attacks by himself; the boss never hits back. It drops
   its guard for 2 s every 6 s from the 4th (`CLAN_GUARD`): it glows, "Strike now!" pops, and only then do
   strikes land (2.5 × a fight's strike) and build the combo; at other times they glance off, so an
   auto-clicker gets no more than a player clicking fast in the openings: ×1.3 to ×1.6 of a hero who only
@@ -1172,6 +1172,11 @@ needs another screen: fight, spend, prestige and fight on.
   it is over (a run left, ended after a clear or lost; the Titan felled, outlasted or given up) and the
   hero goes back to what he was doing, a stage fight under Combat included; a run lost or a Titan's end
   that was being watched keeps its screen 2.4 seconds, for the fall or the banner to show.
+- **The clan boss is fought on the Clan tab** the same way (`fightTab`; the owner, 16 October 2026: after an
+  attack begun while the hero fought the stages, the screen went on to the stages' fight instead of back to the
+  Clan tab). The tab is the fight while it lasts; when it ends its banner holds the screen 2.4 seconds
+  (`ui.clanHoldUntil`; Give up goes straight back), and then the tab shows the clan again, ready for the next
+  attack, while the hero goes back to what he was doing, a stage fight under Combat included.
 - **Clears and fragments are told apart** on the dungeon cards, the run's panel and the map: the clears
   beside the chest they open, the unique's fragments as "33/50 fragments" (or "221 fragments" once there
   are enough for one: Assemble spends 50, so they fall behind the clears; the owner read "221/50" beside

@@ -137,13 +137,15 @@ export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/pain
 export const FEATURE_TAB = { prestige: 'combat', titan: 'dungeons', camp: 'combat', mastery: null, minigames: null };
 
 /**
- * The tab a fight is on: the Dungeons tab for the fights begun there, a dungeon run and the Titan, and the
- * Combat tab for every other (the owner, October 2026: mid-run the Dungeons tab showed the list as if no run
- * were on, and a Titan felled took the screen to Combat). A fight there that just ended while watched keeps
- * the tab a moment, for its end to show (ui.dungeonHoldUntil; without `ui`, no moment is counted).
+ * The tab a fight is on: the Dungeons tab for the fights begun there, a dungeon run and the Titan, the Clan tab
+ * for the clan boss, and the Combat tab for every other (the owner, October 2026: mid-run the Dungeons tab showed
+ * the list as if no run were on, a Titan felled took the screen to Combat, and after a clan attack the screen went
+ * on to the stages instead of back to the Clan tab). A fight there that just ended while watched keeps the tab a
+ * moment, for its end to show (ui.dungeonHoldUntil, ui.clanHoldUntil; without `ui`, no moment is counted).
  */
 export function fightTab(game, ui) {
     const mode = game.state.combat.mode;
+    if (mode === 'clan' || (ui?.clanHoldUntil || 0) > game.now) return 'clan';
     return mode === 'dungeon' || mode === 'titan' || (ui?.dungeonHoldUntil || 0) > game.now ? 'dungeons' : 'combat';
 }
 

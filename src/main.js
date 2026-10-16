@@ -75,7 +75,7 @@ const ui = {
     battleFull: prefs.get('fantasyIdle.battleFull') !== '0', // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
     battleHoldUntil: 0,  // a fight that ended keeps the screen until then (its last banner shows), when the hero goes back to work
     dungeonHoldUntil: 0, // a fight on the Dungeons tab that ended keeps that tab on it until then (fightTab in ui/features.js)
-    fightFrom: null,     // the tab a clan boss fight was begun from: the screen goes back there after it
+    clanHoldUntil: 0,    // a clan boss fight that ended while watched keeps the Clan tab on it until then (fightTab in ui/features.js)
     invFilter: 'all',
     resSelected: null,
     invSelected: null,   // the item on the table in the inventory (an item id)
@@ -508,7 +508,7 @@ function render() {
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
-    if (ui.tab === 'combat') ui.tab = fightTab(game);   // a dungeon run or the Titan is fought on the Dungeons tab
+    if (ui.tab === 'combat') ui.tab = fightTab(game);   // a dungeon run or the Titan is fought on the Dungeons tab, the clan boss on the Clan tab
     const focus = document.activeElement;
     const findAgain = focusFinder(focus);
     const tab = document.getElementById('tab');
@@ -575,14 +575,15 @@ function backToDungeons() {
     render();
 }
 
-/** After a clan boss fight (or a Titan given up) that sent the hero back to his work or his rest: back to the tab it was begun from. */
-function backFromFight() {
-    const c = game.state.combat;
+/**
+ * The clan boss's fight is over: the Clan tab, where it was fought, shows the clan again (fightTab), whatever the
+ * hero went back to (a fight at the stages goes on under Combat).
+ */
+function backToClan() {
+    if (game.state.combat.mode === 'clan') return;   // another attack already began
+    ui.clanHoldUntil = 0;
     ui.battleHoldUntil = 0;
-    const from = ui.fightFrom;
-    ui.fightFrom = null;
-    if (ui.tab === 'combat' && !c.active && !c.recovering && from && from !== 'combat') window.FI.switchTab(from);   // he still rests or works, and nothing else was opened
-    else render();
+    render();
 }
 
 /** A quick pop with a glow on something just drawn: the answer to a press on the armory's buttons. */
@@ -683,6 +684,11 @@ function handleEvents(events) {
     // a fight on the Dungeons tab that just ended while watched (a run lost, the Titan's) keeps its screen a moment, for its end to show
     const ended = ui.tab === 'dungeons' && events.find(ev => (ev.type === 'dungeonFail' && ev.lost) || (ev.type === 'titan' && ev.reason !== 'left'));
     if (ended) ui.dungeonHoldUntil = game.now + (ended.type === 'titan' ? TITAN_HOLD_MS : DEFEAT_HOLD_MS) + 1000;
+    // so does the clan boss's on the Clan tab ("Time is up · To the clan…"), and then the tab shows the clan again
+    if (ui.tab === 'clan' && events.some(ev => ev.type === 'clanFight' && ev.reason !== 'left')) {
+        ui.clanHoldUntil = ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
+        setTimeout(backToClan, TITAN_HOLD_MS);
+    }
     const onCombat = ui.tab === fightTab(game, ui); // the battle scene shows these itself
     // Places that open in the same moment share one card (and one sound), so nothing queues up.
     const unlocked = events.filter(ev => ev.type === 'unlock').map(ev => ev.id);
@@ -826,15 +832,9 @@ function handleEvents(events) {
                 }
                 break;
             }
-            case 'clanFight': {   // the clan fight is over: what was done is sent (sendClanResult), and the screen goes back as after the Titan
-                const c = game.state.combat;
-                if (ev.reason !== 'left' && ui.fightFrom && !c.active && !c.recovering) {
-                    ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
-                    setTimeout(backFromFight, TITAN_HOLD_MS);
-                } else ui.fightFrom = null;
+            case 'clanFight':   // the clan fight is over: what was done is sent; the Clan tab shows the clan again (the hold above)
                 sendClanResult(true);
                 break;
-            }
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'ascend':   // tokens given up for Stars: the biggest card there is
                 rewards.celebrate({ key: `ascend:${ev.count}`, kind: 'legend', icon: '<i class="coin-dot stars big" aria-hidden="true"></i>', kicker: `Ascension ${ev.count}`, title: `+${fmt(ev.stars)} Stars`,
@@ -1179,8 +1179,9 @@ function setBattleFull(on) {
 
 window.FI = {
     switchTab(id) {
-        if (id === 'combat') id = fightTab(game);   // a run or the Titan is fought on the Dungeons tab: Combat waits until it is over
+        if (id === 'combat') id = fightTab(game);   // a run or the Titan is fought on the Dungeons tab, the clan boss on the Clan tab: Combat waits until it is over
         ui.dungeonHoldUntil = 0;   // a lost run's moment on screen ends with the player's next step
+        ui.clanHoldUntil = 0;
         ui.potionMenu = false;
         ui.tab = id;
         prefs.set('fantasyIdle.tab', id);
@@ -1223,12 +1224,10 @@ window.FI = {
             if (!mine.clan || !boss) { toast('Join a clan first.', 'info'); return; }
             if (boss.killed) { toast("This week's boss is already defeated.", 'info'); return; }
             if (!(mine.attacksLeft > 0)) { toast(`No attacks waiting: ${ui.social.attacksPerDay} more come each day.`, 'info'); return; }
-            const from = ui.tab;
             if (!game.startClanFight({ week: boss.week, hp: boss.hp, maxHp: boss.maxHp })) return;
-            ui.fightFrom = from;   // when it is over and he goes back to his work, the screen goes back too
             ui.battleHoldUntil = 0;
             setBattleFull(true);
-            window.FI.switchTab('combat');
+            window.FI.switchTab('clan');   // fought on the Clan tab, which shows the clan again when it is over (fightTab)
         } catch (err) {
             toast(err.message, 'error');
         } finally {
@@ -1266,7 +1265,7 @@ window.FI = {
         game.toggleCombat();
         if (!fighting && c.active) setBattleFull(true);
         if (inDungeon && c.mode !== 'dungeon') { backToDungeons(); return; }   // Leave dungeon: back to the list of them
-        if (special && c.mode !== special) { backFromFight(); return; }        // Give up: back to where it was begun, unless he fights on
+        if (special && c.mode !== special) ui.battleHoldUntil = ui.clanHoldUntil = 0;   // Give up: its tab shows its page again (fightTab)
         render();
     },
     /** After a fall: rest without going back into the fight. */
@@ -1300,7 +1299,6 @@ window.FI = {
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
     challengeTitan() {
         if (!game.challengeTitan()) { render(); return; }
-        ui.fightFrom = null;
         ui.battleHoldUntil = 0;
         setBattleFull(true);
         window.FI.switchTab('dungeons');   // fought where it is challenged, and the tab shows the list again after it (fightTab)
