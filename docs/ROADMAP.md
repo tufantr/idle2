@@ -1266,6 +1266,12 @@ Keeping it running:
       gave too much Smithing XP). The XP followed the bars, which grow ×1.15 a level past +10 without a top: a click at
       +40 on Abyssal body armour paid 2.25M XP (several levels in the 90s), at +50 9.1M. The price still climbs; the XP
       stays the +10 level's (34,161 for that piece)
+- [x] **Mini-games worth playing** (the owner's go-ahead, 17 October 2026, after the research; DESIGN §3.15): every
+      game can be lost but is easy (the heat and the brew are held in a moving band until done, where one tap or a
+      drag won every time), each zone has a gold Perfect centre (15 s more and always a find), an ordinary win
+      brings a find one time in three (a gem, a bird's nest of logs, game or bait, dishes, potions, bonfire time),
+      better resources play harder and pay better while levels make them easier, and a chance waits a minute,
+      with a chime Settings can turn off. Checked in a browser at both widths
 - [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
       the conditional save, a fight's own mark (`fight_at`), `kill_paid`, the boss's `unit` and the case-blind name index came
       after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by

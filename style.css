@@ -519,6 +519,14 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 .minigame-drag-slider { position: relative; z-index: 1; width: 100%; appearance: none; background: transparent; }
 .minigame-drag-slider::-webkit-slider-runnable-track { height: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
 .minigame-drag-slider::-webkit-slider-thumb { appearance: none; width: 24px; height: 24px; margin-top: -7px; border-radius: 50%; background: #fff7e6; border: 2px solid rgba(16, 185, 129, 0.55); box-shadow: 0 0 16px rgba(16, 185, 129, 0.45); }
+/* the zone's gold centre is Perfect; a held game's band moves, glows while held, and the bar under it fills */
+.minigame-perfect { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(180deg, #fef3c7, #f59e0b); box-shadow: 0 0 10px rgba(253, 224, 71, 0.85); }
+.minigame-band { position: absolute; top: 0; bottom: 0; z-index: 1; border-radius: 999px; background: transparent !important; border: 2px solid var(--minigame-accent); box-shadow: inset 0 0 10px color-mix(in srgb, var(--minigame-accent) 45%, transparent); }
+.minigame-heat-fill { border-right: 3px solid #fff7e6; }
+.minigame-heat-track.inside, .minigame-drag-shell.inside .minigame-drag-zone { box-shadow: 0 0 16px color-mix(in srgb, var(--minigame-accent) 65%, transparent); }
+.minigame-drag-shell.inside .minigame-drag-zone { opacity: 0.7; }
+.minigame-hold { height: 8px; margin: -0.3rem 0 0.8rem; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(253, 230, 138, 0.25); }
+.minigame-hold i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #f59e0b, #fde68a) !important; box-shadow: 0 0 10px rgba(253, 224, 71, 0.6); }   /* gold: the dish filling, not the time running out */
 
 /* mastery */
 .mastery-row { display: flex; align-items: center; gap: 0.45rem; width: 100%; font-size: 0.72rem; color: var(--text-muted); }
@@ -1737,6 +1745,7 @@ body.reduced-motion .nav-ready { animation: none; }
 .work-pop.gem { font-size: 1.05rem; color: #93c5fd; }
 .work-pop.item { font-family: var(--font-display); color: var(--c, #e2e8f0); }
 .work-pop.xp { font-size: 0.76rem; color: #86efac; }
+.work-pop.perfect { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; color: #fde68a; text-shadow: 0 0 12px rgba(253, 224, 71, 0.9), 0 2px 2px rgba(0, 0, 0, 0.8); }
 @keyframes workPop { 0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7); } 15% { opacity: 1; transform: translate(-50%, -10px) scale(1.08); } 100% { opacity: 0; transform: translate(-50%, -66px) scale(1); } }
 
 /* ===== Phone hotbar ===== */

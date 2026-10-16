@@ -123,6 +123,10 @@ export function createSound(isOn, volume = () => 1) {
         // a legendary upgrade's moment: the light swells (the fanfare plays over it)
         radiance() { tone({ type: 'sine', f0: 110, f1: 220, ms: 900, gain: 0.22, attack: 0.08 }); noise({ ms: 900, gain: 0.06, filter: 'highpass', f0: 5000, f1: 9000, at: 0.05 }); },
         gem() { [0, 7, 12].forEach((n, i) => tone({ type: 'sine', f0: NOTE(88 + n), ms: 200, gain: 0.12, at: i * 0.06 })); },
+        // a mini-game chance appears: a soft two-note bell (Settings can turn it off)
+        chance() { tone({ type: 'sine', f0: NOTE(88), ms: 420, gain: 0.1 }); tone({ type: 'sine', f0: NOTE(95), ms: 560, gain: 0.08, at: 0.13 }); },
+        // a mini-game's Perfect: a quick bright climb with a shimmer
+        perfect() { [0, 7, 12, 19].forEach((n, i) => tone({ type: 'sine', f0: NOTE(84 + n), ms: 190, gain: 0.12, at: i * 0.045 })); noise({ ms: 280, gain: 0.05, filter: 'highpass', f0: 7000, at: 0.1 }); },
         levelUp() { [0, 4, 7, 12].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(72 + n), ms: 380, gain: 0.18, at: i * 0.11 })); tone({ type: 'sine', f0: NOTE(84), ms: 700, gain: 0.1, at: 0.33 }); },
         unlock() { [0, 5, 9, 12, 16].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(67 + n), ms: 420, gain: 0.16, at: i * 0.1 })); noise({ ms: 500, gain: 0.05, filter: 'highpass', f0: 5000, at: 0.3 }); },
         achievement() { [0, 7, 12, 19].forEach((n, i) => tone({ type: 'square', f0: NOTE(72 + n), ms: 200, gain: 0.06, at: i * 0.09 })); SOUNDS.gold(); },
@@ -140,7 +144,7 @@ export function createSound(isOn, volume = () => 1) {
     };
 
     /** Vibration patterns (ms) for phones; nothing on devices without a motor. */
-    const HAPTICS = { hit: 8, crit: 22, hurt: 14, kill: [12, 30, 12], levelUp: [20, 40, 20, 40, 30], unlock: [20, 40, 30], boss: [40, 60, 40], legendary: [15, 30, 15, 30, 40], mythic: [20, 40, 20, 40, 20, 60], epic: [12, 24, 12], upgrade: [10, 20, 10], chest: [10, 40, 20], victory: [20, 40, 20], prestige: [30, 50, 30, 50, 60] };
+    const HAPTICS = { perfect: [10, 20, 10], hit: 8, crit: 22, hurt: 14, kill: [12, 30, 12], levelUp: [20, 40, 20, 40, 30], unlock: [20, 40, 30], boss: [40, 60, 40], legendary: [15, 30, 15, 30, 40], mythic: [20, 40, 20, 40, 20, 60], epic: [12, 24, 12], upgrade: [10, 20, 10], chest: [10, 40, 20], victory: [20, 40, 20], prestige: [30, 50, 30, 50, 60] };
 
     return {
         unlock,

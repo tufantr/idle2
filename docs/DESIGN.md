@@ -707,16 +707,36 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 
 - **Mini-games** (`src/systems/minigame.js`) are **opportunities**, not a job: while you train a
   gathering or production skill, a first chance appears after 45–90 seconds and then one every 3–6
-  minutes, each open for 20 seconds, on one clock for all the skills (with a clock each, a player who
-  switched skills found a chance waiting in each and kept a boost up nearly all the time). A challenge
-  left open by a reload counts as missed.
+  minutes, each open for **a minute** (it was 20 s, and a player on another tab missed it: Cookie Clicker's
+  upgrades take its golden cookie from 13 s to 52 s, RuneScape's Forestry counts anyone who chopped in the last 3
+  minutes), with a chime Settings can turn off, on one clock for all the skills (with a clock each, a player who
+  switched skills found a chance waiting in each and kept a boost up nearly all the time). A challenge left open
+  by a reload counts as missed.
   A win makes the skill **×2 as fast for 45 seconds** (each win of a streak 5 s longer, up to 65 s): the
   ×2 multiplies after every other speed bonus, the working card glows with a ×2 and its bar shines, and
   the boost's end says what it added (half of what the skill made meanwhile: "+14 copper ore, +340 XP").
   Playing a mini-game doesn't end Focus. Until October 2026 a win gave +35% (+5% a streak win, up to +55%)
   for 90 s, added to the other speed bonuses, and the clicks cost Focus's +15% for a minute: at a stage-160
   hero's speeds a win came to about 12% more work over those 90 s, and players didn't feel it (the owner's
-  report). A miss costs nothing but the streak. A fully attentive player gains roughly +15% on average.
+  report). A miss costs nothing but the streak.
+- **Every game can be lost, but is easy; a Perfect centre; finds** (the owner's go-ahead, 17 October 2026, after
+  the research: a game whose outcome is certain soon feels like a chore — Costikyan, Juul, Cook). Mining,
+  Woodcutting and Hunting tap a sweeping marker in a zone whose middle two fifths (`PERFECT_SHARE`) are **Perfect**,
+  as Dead by Daylight's great skill checks sit inside its good ones. Cooking and Firemaking hold the heat (it falls
+  by itself, each tap +0.1) and Alchemy the stabiliser (a slider) inside a **slowly moving band** for 2.5 s
+  (`HOLD_MS`; out of it the dish cools at half the pace), as Stardew Valley's fishing bar holds the fish; a game held
+  without slipping once in is Perfect, and a game nobody plays is lost (a hidden tab's long step counts 0.25 s). A
+  Perfect adds 15 s to the boost and always brings a **find**; an ordinary win one time in three
+  (`BALANCE.minigame`): a gem of the vein's tier, a bird's nest of the tree's logs (one in four with a gem), game, a
+  tin of 10 bait at a river spot, dishes or potions made with nothing spent, or bonfire time as if the logs had
+  burnt; about 20 s of the skill's work, with a pop and a sound. The speed stays the guaranteed part (a modest
+  random extra pleases more than a fixed reward or a swingy one, Kao 2012); no variant items (Melvor had to let
+  players switch off "perfect" food). **Better resources play harder** — a narrower zone and a faster marker, a
+  narrower band that moves more and a heat that falls faster, `minigameDifficulty` by the resource's level — and
+  every level above the resource widens it again (as Stardew's bar grows with the fishing level). Simulated players
+  who watch win all the time and score Perfects 70% of the time at copper, 25–45% at runite; a casual one 90%
+  and seldom Perfect; one who doesn't play loses. A fully attentive player gains roughly +25–30% on skills, plus
+  the finds.
 - **Focus** (Clicker Heroes' idle ancients): after **60 seconds without a click or key press** the hero
   settles in — +15% skill speed and +15% attack speed until the next input. It also applies to offline
   progress, so leaving the game alone is never strictly worse than clicking.

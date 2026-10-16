@@ -20,7 +20,7 @@ import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/f
 import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js';
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
-import { CHALLENGE_MS, hasOpportunity, animatedPosition, minigameConfig } from '../systems/minigame.js';
+import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
@@ -941,19 +941,25 @@ export function renderMinigame(game, skillId) {
         const left = Math.max(0, Math.min(1, (ch.expiresAt - now) / CHALLENGE_MS));
         const timer = `<i class="mg-time" style="--p:${(left * 100).toFixed(1)}%" aria-label="${Math.max(0, Math.ceil((ch.expiresAt - now) / 1000))} seconds left"></i>`;
         if (ch.type === 'timing' || ch.type === 'moving-target') {
-            body = `<div class="minigame-prompt">${ch.type === 'timing' ? 'Tap when the marker is inside the glowing zone.' : conf.desc}</div>${timer}
-                <div class="minigame-timing-track"><div class="minigame-timing-zone" style="left:${ch.zoneStart * 100}%; width:${ch.zoneWidth * 100}%; background:${conf.accent}"></div>
+            // the zone's gold centre is Perfect (systems/minigame.js PERFECT_SHARE)
+            const perfect = `<i class="minigame-perfect" style="left:${((1 - PERFECT_SHARE) / 2) * 100}%; width:${PERFECT_SHARE * 100}%"></i>`;
+            body = `<div class="minigame-prompt">${ch.type === 'timing' ? 'Tap when the marker is in the zone.' : esc(conf.desc)} <span class="muted">Its gold centre is Perfect.</span></div>${timer}
+                <div class="minigame-timing-track"><div class="minigame-timing-zone" style="left:${ch.zoneStart * 100}%; width:${ch.zoneWidth * 100}%; background:${conf.accent}">${perfect}</div>
                 <div class="minigame-timing-marker" id="mg-marker-${skillId}" style="left:${animatedPosition(ch, now) * 100}%; background:${conf.accent}">${conf.marker ? sprite(conf.marker, { scale: 0.75, cls: 'soft' }) : ''}</div></div>
                 <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">${ch.type === 'timing' ? 'Tap now' : conf.button || 'Strike'}</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Skip</button></div>`;
-        } else if (ch.type === 'heat') {
-            body = `<div class="minigame-prompt">Tap the flame to keep the heat inside the band, then plate it.</div>${timer}
-                <div class="minigame-heat-track"><div class="minigame-timing-zone" style="left:${ch.targetStart * 100}%; width:${ch.targetWidth * 100}%; background:${conf.accent}"></div><div class="minigame-heat-fill" id="mg-heat-${skillId}" style="width:${ch.heat * 100}%; background:${conf.accent}"></div></div>
-                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.pumpHeat('${skillId}')">${glyph('flame')} Tap heat</button><button class="minigame-start-btn" onclick="FI.resolveMinigame('${skillId}')">Plate it</button></div>`;
         } else {
-            body = `<div class="minigame-prompt">Drag the stabiliser into the glowing channel, then lock the brew.</div>${timer}
-                <div class="minigame-drag-shell"><div class="minigame-drag-zone" style="left:${ch.targetStart * 100}%; width:${ch.targetWidth * 100}%; background:${conf.accent}"></div>
-                <input type="range" min="0" max="1" step="0.01" value="${ch.dragValue.toFixed(2)}" class="minigame-drag-slider" oninput="FI.setDragValue('${skillId}', this.value)"></div>
-                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.resolveMinigame('${skillId}')">Stabilise</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Vent</button></div>`;
+            // a held game: the band moves; held inside it, the bar under it fills (patchLive moves them each frame)
+            const { lo, hi } = bandAt(ch, now);
+            const band = `<div class="${ch.type === 'drag' ? 'minigame-drag-zone' : 'minigame-band'}" id="mg-band-${skillId}" style="left:${lo * 100}%; width:${(hi - lo) * 100}%; background:${conf.accent}"></div>`;
+            const hold = `<div class="minigame-hold" title="Held in the band, this fills; out of it, it slips back"><i id="mg-hold-${skillId}" style="width:${(ch.progress || 0) * 100}%; background:${conf.accent}"></i></div>`;
+            body = ch.type === 'heat'
+                ? `<div class="minigame-prompt">${esc(conf.desc)}</div>${timer}
+                <div class="minigame-heat-track${ch.inside ? ' inside' : ''}" id="mg-track-${skillId}">${band}<div class="minigame-heat-fill" id="mg-heat-${skillId}" style="width:${ch.heat * 100}%; background:${conf.accent}"></div></div>${hold}
+                <div class="minigame-actions"><button class="minigame-action-btn" onclick="FI.pumpHeat('${skillId}')">${glyph('flame')} Tap heat</button><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Skip</button></div>`
+                : `<div class="minigame-prompt">${esc(conf.desc)}</div>${timer}
+                <div class="minigame-drag-shell${ch.inside ? ' inside' : ''}" id="mg-track-${skillId}">${band}
+                <input type="range" min="0" max="1" step="0.005" value="${ch.dragValue.toFixed(3)}" class="minigame-drag-slider" aria-label="The stabiliser" oninput="FI.setDragValue('${skillId}', this.value)"></div>${hold}
+                <div class="minigame-actions"><button class="minigame-secondary-btn" onclick="FI.failMinigame('${skillId}')">Vent</button></div>`;
         }
     } else {
         body = `<div class="minigame-prompt pulse">A chance appears! <span class="muted">${esc(conf.desc)} (${Math.ceil((mg.opportunityUntil - now) / 1000)}s)</span></div>
@@ -2082,6 +2088,7 @@ export function renderSettings(game, ui, cloud) {
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
+        ${seen(state, 'minigames') ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('minigameChime', this.checked)" ${state.settings.minigameChime !== false ? 'checked' : ''}> Chime when a mini-game chance appears</label>` : ''}
         ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
         <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
         ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
@@ -2495,6 +2502,13 @@ export function patchLive(game, ui) {
         if (marker && (ch.type === 'timing' || ch.type === 'moving-target')) marker.style.left = `${animatedPosition(ch, Date.now()) * 100}%`;   // smooth: the clock of this frame, not the last tick's
         const heat = document.getElementById(`mg-heat-${id}`);
         if (heat && ch.type === 'heat') heat.style.width = `${ch.heat * 100}%`;
+        if (ch.type === 'heat' || ch.type === 'drag') {   // a held game: its band moves, its bar fills
+            const band = document.getElementById(`mg-band-${id}`);
+            if (band) { const { lo, hi } = bandAt(ch, Date.now()); band.style.left = `${lo * 100}%`; band.style.width = `${(hi - lo) * 100}%`; }
+            const hold = document.getElementById(`mg-hold-${id}`);
+            if (hold) hold.style.width = `${(ch.progress || 0) * 100}%`;
+            document.getElementById(`mg-track-${id}`)?.classList.toggle('inside', !!ch.inside);
+        }
     }
 }
 function set2(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }

@@ -43,6 +43,7 @@ import * as unlocks from '../../src/data/unlocks.js';
 import * as pace from '../../src/data/pace.js';
 import * as daily from '../../src/systems/daily.js';
 import * as skilling from '../../src/systems/skilling.js';
+import * as minigame from '../../src/systems/minigame.js';
 import * as social from '../../src/data/social.js';
 import * as potions from '../../src/data/potions.js';
 import * as ui from './ui.mjs';
@@ -51,7 +52,7 @@ import * as ui from './ui.mjs';
 export const scope = Object.freeze({
     ...ui, ...xp, ...formulas, ...modifiers, ...pace, ...resources, ...skills, ...workshop, ...items, ...zones, ...strata,
     ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...ascension, ...events,
-    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...skilling, ...social, ...potions,
+    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...minigame, ...skilling, ...social, ...potions,
     // two names clash (bestiary's and ascension's starsFor): both kept, by what they count
     bestiaryStarsFor: bestiary.starsFor, ascensionStarsFor: ascension.starsFor, starsFor: undefined
 });

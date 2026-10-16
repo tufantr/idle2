@@ -7,14 +7,25 @@ Three things reward the way you play: mini-games for when you are watching, Focu
 
 ## Mini-games
 
-While your hero works at a gathering or production skill ({{NON_COMBAT_SKILLS.map(id => link(path.skill(id), SKILLS[id].name)).join(', ')}}), a chance to play turns up on that skill's tab now and then: the first one soon after you start, then one every {{BALANCE.minigame.opportunityEveryMs[0] / 60000}} to {{BALANCE.minigame.opportunityEveryMs[1] / 60000}} minutes or so. These skills share one clock: a chance in one holds the others back, so switching skills does not bring the next one sooner. A chance waits {{BALANCE.minigame.opportunityWindowMs / 1000}} seconds for you to start it, and then you have a few seconds to play. Each skill has its own game, of four kinds:
+While your hero works at a gathering or production skill ({{NON_COMBAT_SKILLS.map(id => link(path.skill(id), SKILLS[id].name)).join(', ')}}), a chance to play turns up on that skill's tab now and then: the first one soon after you start, then one every {{BALANCE.minigame.opportunityEveryMs[0] / 60000}} to {{BALANCE.minigame.opportunityEveryMs[1] / 60000}} minutes or so. These skills share one clock: a chance in one holds the others back, so switching skills does not bring the next one sooner. A chance waits {{BALANCE.minigame.opportunityWindowMs / 1000}} seconds for you to start it, with a soft chime you can turn off in Settings, and then you have {{CHALLENGE_MS / 1000}} seconds to play. Each skill has its own game, of two kinds:
 
-- **Mining and Woodcutting:** tap when the marker sweeps through the glowing zone.
-- **Hunting:** loose the arrow when the prey crosses the zone; at a river spot, strike when the float dips into the ring.
-- **Cooking and Firemaking:** tap the flame to keep the heat inside the band, then finish.
-- **Alchemy:** drag the stabiliser into the glowing channel, then lock the brew.
+- **Mining, Woodcutting and Hunting:** a marker sweeps back and forth; tap when it is inside the zone (at a river spot, strike when the float dips into the ring). The zone's **gold centre**, its middle {{pct(PERFECT_SHARE, 0)}}, is a **Perfect**.
+- **Cooking, Firemaking and Alchemy:** keep the heat (each tap raises it, and it falls by itself) or the stabiliser (drag it) inside a band that moves slowly, until the gold bar under it fills: {{HOLD_MS / 1000}} seconds inside. Out of the band the bar slips back, at half the pace. Held without slipping out once you were in, it is a **Perfect**. A game you don't play is lost.
 
-A win makes that skill work **{{BALANCE.minigame.speedMult}} times as fast** for {{BALANCE.minigame.boostMs / 1000}} seconds, on top of every other speed bonus: its card glows with a ×{{BALANCE.minigame.speedMult}} and its bar shines. Every win in a row makes the next boost {{BALANCE.minigame.streakMs / 1000}} seconds longer, up to {{(BALANCE.minigame.boostMs + 4 * BALANCE.minigame.streakMs) / 1000}} seconds on a streak of 5. When the boost ends, a line says what it added: the extra ore, logs or fish, and the extra XP. A miss, or giving up a game you started (its Skip button, or closing or reloading the page before it is over), ends the streak; letting a chance pass by costs nothing at all.
+Better resources play harder: a narrower zone and a faster marker, or a narrower band that moves more and heat that falls faster. Every level you have above the resource makes it easier again.
+
+A win makes that skill work **{{BALANCE.minigame.speedMult}} times as fast** for {{BALANCE.minigame.boostMs / 1000}} seconds, on top of every other speed bonus: its card glows with a ×{{BALANCE.minigame.speedMult}} and its bar shines. Every win in a row makes the next boost {{BALANCE.minigame.streakMs / 1000}} seconds longer, up to {{(BALANCE.minigame.boostMs + 4 * BALANCE.minigame.streakMs) / 1000}} seconds on a streak of 5, and a **Perfect** adds {{BALANCE.minigame.perfectMs / 1000}} seconds more. When the boost ends, a line says what it added: the extra ore, logs or fish, and the extra XP. A miss, or giving up a game you started (its Skip button, or closing or reloading the page before it is over), ends the streak; letting a chance pass by costs nothing at all.
+
+### Finds
+
+A Perfect always brings a find, and an ordinary win about one time in {{Math.round(1 / BALANCE.minigame.findChance)}}. Each is about {{BALANCE.minigame.findSeconds}} seconds of the skill's own work, made for nothing:
+
+- **Mining:** a gem of the vein's tier, or one either side.
+- **Woodcutting:** a bird's nest with the tree's logs; one nest in {{Math.round(1 / BALANCE.minigame.nestGemChance)}} holds a gem too.
+- **Hunting:** game, or at a river spot a tin of {{BALANCE.minigame.baitFind}} bait.
+- **Cooking:** dishes of the one you cook, with no ingredients spent.
+- **Firemaking:** the bonfire burns as long as the logs would have added, with no logs spent.
+- **Alchemy:** potions, or the herbs you forage, with nothing spent.
 
 - The boost is for that skill only, and it runs on the clock: switch skills or leave, and it still ends on time.
 - Chances only come while you are there, never during [[/offline|offline progress]].

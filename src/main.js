@@ -16,10 +16,11 @@ import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
-import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey } from './ui/sprites.js';
+import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
-import { fmt, escapeHtml, gainMarkup, stagesWords } from './ui/format.js';
+import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
+import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, equipGain, gainStages } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
@@ -608,6 +609,17 @@ function glowArrivals() {
 }
 
 /** Which sound an event makes (null for none): the fight is heard only while it is watched. */
+/** What a mini-game's find was, in words and a picture, for its toast (null for none). */
+function findWords(find) {
+    if (!find) return null;
+    const name = id => RESOURCES[id]?.name || id;
+    if (find.kind === 'gem') return { text: `Found ${withArticle(name(find.id))}!`, icon: resIcon(find.id) };
+    if (find.kind === 'nest') return { text: `A bird's nest: +${fmt(find.qty)} ${name(find.id)}${find.gem ? `, and ${withArticle(name(find.gem))}` : ''}`, icon: resIcon(find.gem || find.id) };
+    if (find.kind === 'bait') return { text: `A tin of bait: +${fmt(find.qty)} bait`, icon: resIcon('fishing_bait') };
+    if (find.kind === 'bonfire') return { text: `The bonfire roars: +${duration(find.bonfireMs)}`, icon: glyph('flame') };
+    return { text: `+${fmt(find.qty)} ${name(find.id)}, for nothing`, icon: resIcon(find.id) };
+}
+
 function soundFor(ev, onCombat) {
     switch (ev.type) {
         case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
@@ -634,7 +646,8 @@ function soundFor(ev, onCombat) {
         case 'dungeonClear': return ['chest'];
         case 'titan': return [ev.won ? 'victory' : 'defeat'];
         case 'glance': return onCombat ? ['dodge'] : null;   // a strike off the clan boss's guard
-        case 'minigameWin': return ['gold'];
+        case 'minigameReady': return game.state.settings.minigameChime !== false ? ['chance'] : null;   // (Settings can turn it off)
+        case 'minigameWin': return [ev.perfect ? 'perfect' : 'gold'];
         case 'minigameFail': return ['dodge'];
         case 'harvest': return ['drop'];
         case 'obstacleBuilt': return ['unlock'];
@@ -779,7 +792,13 @@ function handleEvents(events) {
                 break;
             }
             case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
-            case 'minigameWin': toast(`Perfect! ×${ev.mult} speed for ${Math.round(ev.ms / 1000)}s`, 'minigame'); break;
+            case 'minigameWin': {   // the boost, a Perfect said so, and the find (systems/minigame.js giveFind) with its own sound
+                toast(`${ev.perfect ? 'Perfect! ' : ''}×${ev.mult} speed for ${Math.round(ev.ms / 1000)}s`, 'minigame');
+                const found = findWords(ev.find);
+                if (found) { toast(found.text, 'minigame', found.icon); sound.play(ev.find.kind === 'gem' || ev.find.gem ? 'gem' : 'pickup'); }
+                actionFx.minigameWin(ev, ui.tab, stage.anchor());
+                break;
+            }
             case 'minigameBoostOver': {   // what the ×2 added, in the skill's own goods
                 const what = [ev.qty > 0 && RESOURCES[ev.id] ? `+${fmt(ev.qty)} ${RESOURCES[ev.id].name}` : '', ev.xp > 0 ? `+${fmt(ev.xp)} XP` : ''].filter(Boolean).join(', ');
                 if (what) toast(`The ×2 brought ${what}`, 'minigame', ev.qty > 0 && RESOURCES[ev.id] ? resIcon(ev.id) : tabIcon(ev.skill, 0.625));

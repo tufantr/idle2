@@ -11,7 +11,7 @@ import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
-import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, decayHeat, setDragValue, expireMinigames } from './systems/minigame.js';
+import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, tickChallenge, setDragValue, expireMinigames } from './systems/minigame.js';
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
@@ -149,7 +149,7 @@ export class Game {
                     tickAction(this, step);
                     if (this.state.action && !this.state.action.stalled) spendWorkPotion(this, step);   // its dose runs while he works
                     tickMinigame(this, action.skill);
-                    decayHeat(this, action.skill, step);
+                    tickChallenge(this, action.skill, step);   // a held game: the heat falls, the band moves, the dish fills
                 }
                 tickCombat(this, step);
                 tickAutoPrestige(this);

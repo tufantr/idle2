@@ -5,7 +5,7 @@ import { SKILLS, skillNode } from '../data/skills.js';
 import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
-import { GEM_DROP_TABLE, zoneForStage } from '../data/zones.js';
+import { zoneForStage } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
 import { courseDef } from './agility.js';
 import { eventProgress } from './events.js';
@@ -17,7 +17,7 @@ import { withArticle } from '../core/text.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
-import { noteBoostGain } from './minigame.js';
+import { noteBoostGain, rollGem } from './minigame.js';
 
 export const GEM_FIND_CHANCE = 0.02;   // a gem now and then while mining (exported for the wiki)
 export const BAIT_EXTRA_CHANCE = 0.5;   // each catch uses one bait, if you have any, for this chance of a second fish
@@ -248,13 +248,11 @@ export function completeAction(game, def, { offline = false } = {}) {
         if (def.fish) bumpStat(game, 'fishCaught', amount);
         if (def.kind === 'smelt') bumpStat(game, 'barsSmelted', amount);
         if (skill === 'mining' && rng.chance(GEM_FIND_CHANCE)) {
-            const rockTier = RESOURCES[def.output].tier;
-            const candidates = GEM_DROP_TABLE.filter(g => Math.abs(g.tier - rockTier) <= 1).map(g => ({ ...g, weight: g.tier <= rockTier ? 3 : 1 }));
-            const gem = rng.weighted(candidates);
-            state.resources[gem.id] += 1;
-            made.gem = gem.id;
+            const gem = rollGem(RESOURCES[def.output].tier);
+            state.resources[gem] += 1;
+            made.gem = gem;
             bumpStat(game, 'gemsFound');
-            if (!offline) log(game, `💎 Found ${withArticle(RESOURCES[gem.id].name)} while mining!`, 'info'); // not 'loot': that is the battle log's
+            if (!offline) log(game, `💎 Found ${withArticle(RESOURCES[gem].name)} while mining!`, 'info'); // not 'loot': that is the battle log's
         }
         if (!offline && amount === 2) game.emit({ type: 'doubleDrop', resource: def.output });
     } else if (def.kind === 'smith' || def.kind === 'craft') {

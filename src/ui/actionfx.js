@@ -48,6 +48,24 @@ export function createActionFx(layer) {
                 if (made.item) pop(`${sprite(itemSpriteKey(made.item), { scale: 0.75, cls: 'soft res-spr', fallback: esc(made.item.icon) })} ${esc(made.item.name)}`, x, y, 'item', 0, made.item.color || '');
                 if (ev.xp) pop(`+${fmt(ev.xp)} XP`, x + 30, y + 16, 'xp', 110);
             });
+        },
+        /** A mini-game won (the minigameWin event): "Perfect!" and what it found, off the skill's stage or card. */
+        minigameWin(ev, tab, anchor = null) {
+            if (tab !== ev.skill || document.hidden || reduced()) return;
+            requestAnimationFrame(() => {
+                const card = document.querySelector('#tab .node-card.active');
+                const art = anchor || card?.querySelector('.skill-action-art') || card;
+                const box = art?.getBoundingClientRect();
+                if (!box?.width) return;
+                const x = box.left + box.width / 2;
+                const y = box.top - 6;
+                if (ev.perfect) pop('Perfect!', x, y - 22, 'perfect');
+                const f = ev.find;
+                if (!f) return;
+                if (f.id) pop(`+${fmt(f.qty)} ${resIcon(f.id, { scale: 0.75 })}`, x, y, f.kind === 'gem' ? 'gem' : 'double', 160);
+                if (f.gem) pop(`${resIcon(f.gem, { scale: 0.75 })} ${esc(RESOURCES[f.gem]?.name || 'Gem')}!`, x, y - 8, 'gem', 320);
+                if (f.bonfireMs) pop(`${glyph('flame', { scale: 0.75 })} +${Math.round(f.bonfireMs / 1000)}s`, x, y, 'double', 160);
+            });
         }
     };
 }

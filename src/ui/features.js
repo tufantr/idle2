@@ -102,7 +102,10 @@ export const FEATURES = {
         points: [`Each mastery level adds +${pc(MASTERY_PER_LEVEL.speed, 1)} speed to that action.`, `Gathering and cooking also gain +${pc(MASTERY_PER_LEVEL.double, 2)} chance of a double; recipes gain +${pc(MASTERY_PER_LEVEL.preserve, 1)} chance to keep the ingredients.`,
             `At ${MASTERY_CHECKPOINTS.map(c => `${Math.round(c.at * 100)}%`).join(', ')} of a skill's whole mastery, every action of it gets faster: ${MASTERY_CHECKPOINTS.map(c => `+${Math.round(c.speed * 100)}%`).join(', ')}.`, 'Mastery is permanent.'] },
     minigames: { name: 'A chance to play', art: 'forest', icon: 'res/topaz', blurb: 'Every few minutes of work, a short game appears.',
-        points: [`Win it and that skill works ×${BALANCE.minigame.speedMult} as fast for ${secs(BALANCE.minigame.boostMs)} seconds; when it ends, a line says what it added.`, `Each win in a row makes the next boost ${secs(BALANCE.minigame.streakMs)} seconds longer. Letting a chance pass costs nothing; a miss or a skip ends the streak. Playing keeps your Focus.`] }
+        points: [`Win it and that skill works ×${BALANCE.minigame.speedMult} as fast for ${secs(BALANCE.minigame.boostMs)} seconds; when it ends, a line says what it added.`,
+            `Hit the zone's gold centre, or hold the heat or the brew in its band without slipping once, for a Perfect: ${secs(BALANCE.minigame.perfectMs)} seconds more, and always a find. An ordinary win brings one about one time in ${Math.round(1 / BALANCE.minigame.findChance)}: a gem, a bird's nest, game or bait, dishes, potions, or a longer bonfire.`,
+            'Better resources play faster and narrower, and their finds are worth more; every level you have above one makes it easier.',
+            `A chance waits ${secs(BALANCE.minigame.opportunityWindowMs)} seconds, with a chime you can turn off in Settings. Each win in a row makes the next boost ${secs(BALANCE.minigame.streakMs)} seconds longer. Letting a chance pass costs nothing; a miss or a skip ends the streak. Playing keeps your Focus.`] }
 };
 
 // Every skill's card ends with what its 99 brings: its cape (data/capes.js), worn by the hero.

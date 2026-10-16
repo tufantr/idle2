@@ -147,14 +147,25 @@ export const BALANCE = {
     },
     minigame: {
         opportunityEveryMs: [180000, 360000], // a chance appears every 3-6 minutes of active skilling
-        opportunityWindowMs: 20000,
+        // ... and waits a minute (it was 20 s: a player on another tab missed it; Cookie Clicker's upgrades take its
+        // golden cookie from 13 s to 52 s, and RuneScape's Forestry counts anyone who chopped in the last 3 minutes)
+        opportunityWindowMs: 60000,
         // A win: the skill works twice as fast for a short while, each win of a streak 5 s longer (the owner's
         // ask, October 2026: +35% for 90 s, added to the other speed bonuses and costing Focus, came to about
         // 12% more work, and was hardly seen). Once in 3-6 minutes, ~15% more work for a player who plays
         // every chance: the active-to-idle target of about 1.5x holds.
         speedMult: 2,
         boostMs: 45000,
-        streakMs: 5000
+        streakMs: 5000,
+        // A Perfect (the zone's centre, or a held game that never slipped once in) adds this to the boost and always
+        // brings a find; an ordinary win brings one this often. A find is about findSeconds of the skill's work (a gem
+        // when mining; a nest holds a gem this often; a river spot gives a tin of bait), on top of the speed, which
+        // stays the guaranteed part: a modest extra now and then pleases more than a fixed reward or a swingy one.
+        perfectMs: 15000,
+        findChance: 1 / 3,
+        findSeconds: 20,
+        nestGemChance: 0.25,
+        baitFind: 10
     }
 };
 

@@ -113,7 +113,7 @@ export function createDefaultState(now = Date.now()) {
         hero: { name: '', look: DEFAULT_LOOK, pet: '', cape: '' },    // the name the player gave the hero ('' is "You"), the look (data/looks.js), the pet at their side ('' for the default), the skill cape worn ('' for the rank's cloak)
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
-            minigameWins: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
+            minigameWins: 0, minigamePerfects: 0, minigameFinds: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
             itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0, mythicsFound: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0, potionFragments: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
@@ -133,7 +133,7 @@ export function createDefaultState(now = Date.now()) {
         minigame: {},
         daily: { banked: 1, nextAt: now + DAILY_INTERVAL_MS, claimed: 0 },
         log: [],
-        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false, playtestLog: false },
+        settings: { devUnlockAll: false, numberFormat: 'short', reducedMotion: false, sound: true, volume: 1, cloudSync: true, autoSalvage: 'common', forceEvent: null, autoPrestige: false, playtestLog: false, minigameChime: true },
         playtest: [],          // the playtest log, when the player turns it on (systems/playtest.js)
         trials: { active: null, cleared: {}, best: {}, laurels: 0, weekly: null },   // the run's Trial, tiers cleared, best stage in each, the week's laurel (data/trials.js)
         ascension: { count: 0, stars: 0, firstAt: 0, lastAt: 0 },   // Ascensions made, the Stars they paid, the first and the last (data/ascension.js)
@@ -636,6 +636,7 @@ function normalise(data, now) {
         ? { stage: state.combat.stage, killed: Math.min(9, Math.floor(Number(pack.killed))) } : null;
     delete state.combat.lastRiseAt;   // a clock on the wall, before the stall clock counted only climbing
     state.settings.autoPrestige = state.settings.autoPrestige === true;
+    state.settings.minigameChime = state.settings.minigameChime !== false;   // a chime when a mini-game chance appears: on unless turned off
     state.settings.playtestLog = state.settings.playtestLog === true;
     // Ascension: whole, non-negative counts
     const asc = isPlainObject(data?.ascension) ? data.ascension : {};
