@@ -56,7 +56,7 @@ ufw --force enable >/dev/null
 
 # --- the app's user, its folders, and its database (reached by its socket: the user is the role, no password)
 id fantasyidle >/dev/null 2>&1 || useradd --system --create-home --home-dir /srv/fantasyidle --shell /usr/sbin/nologin fantasyidle
-install -d -o fantasyidle -g fantasyidle /srv/fantasyidle/releases /srv/fantasyidle/wiki /srv/fantasyidle/wiki/releases
+install -d -m 0755 -o fantasyidle -g fantasyidle /srv/fantasyidle /srv/fantasyidle/releases /srv/fantasyidle/wiki /srv/fantasyidle/wiki/releases   # (nginx reads the files: the home useradd makes is private)
 install -d -m 0750 -o root -g fantasyidle /etc/fantasyidle
 runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'fantasyidle'" | grep -q 1 || runuser -u postgres -- createuser fantasyidle
 runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'fantasyidle'" | grep -q 1 || runuser -u postgres -- createdb -O fantasyidle fantasyidle

@@ -2,7 +2,7 @@
 // Points fantasyidle.com at the server and sets up HTTPS on Cloudflare (README "The server"):
 // - an origin certificate for the server (Cloudflare's, fifteen years), its key made there and never leaving it;
 // - the DNS records: the game, www and the wiki, all through Cloudflare's proxy;
-// - SSL "Full (strict)", Always Use HTTPS, TLS 1.2 at least.
+// - SSL "Full (strict)", Always Use HTTPS, TLS 1.2 at least, and the server's own caching headers respected.
 // Running it again changes only what isn't right yet. The token (fantasyidle.com only: DNS, SSL and Certificates,
 // Zone Settings; made by the owner) is read from ~/.config/fantasyidle/cloudflare-token and never printed.
 //   node deploy/vps/cloudflare.mjs
@@ -56,7 +56,8 @@ for (const w of want) {
 }
 
 // 3. HTTPS: Cloudflare to the server checked against the origin certificate, visitors always on HTTPS
-for (const [setting, value] of [['ssl', 'strict'], ['always_use_https', 'on'], ['min_tls_version', '1.2']]) {
+// and browsers keep the server's own word on caching (its default, 4 hours, held players on old files after a deploy)
+for (const [setting, value] of [['ssl', 'strict'], ['always_use_https', 'on'], ['min_tls_version', '1.2'], ['browser_cache_ttl', 0]]) {
     const now = await cf(`/zones/${zone.id}/settings/${setting}`);
     if (now.value === value) console.log(`${setting}: ${value}`);
     else { await cf(`/zones/${zone.id}/settings/${setting}`, { method: 'PATCH', body: { value } }); console.log(`${setting}: ${now.value} -> ${value}`); }
