@@ -481,16 +481,20 @@ test('the health check says the database, the secret and the game code are all t
     assert.deepEqual({ ok: body.ok, db: body.db, secret: body.secret, game: body.game }, { ok: true, db: true, secret: true, game: true });
 });
 
-test('with no database the connection fails on first use, not when the API loads; DATABASE_URL counts too', { skip: !!realDb && 'the real-database run replaces this module' }, async () => {
+test('with no database the connection fails on first use, not when the API loads; DATABASE_URL counts too, a Neon address or our own', { skip: !!realDb && 'the real-database run replaces this module' }, async () => {
     const saved = { POSTGRES_URL: process.env.POSTGRES_URL, DATABASE_URL: process.env.DATABASE_URL };
     delete process.env.POSTGRES_URL;
     delete process.env.DATABASE_URL;
     try {
         const { sql } = require('../api/database.js');   // loads with nothing set
-        await assert.rejects(async () => sql`SELECT 1`, /POSTGRES_URL/);
-        // the integration's own name for it is read too (this one is unpooled, so it is refused, unused)
-        process.env.DATABASE_URL = 'postgresql://player:not-a-password@db.example.com/game';
+        await assert.rejects(async () => sql`SELECT 1`, /DATABASE_URL/);
+        // the Neon integration's own name for it is read too (this one is unpooled, so it is refused, unused)
+        process.env.DATABASE_URL = 'postgresql://player:not-a-password@ep-quiet-sky-123456.eu-central-1.aws.neon.tech/game';
         await assert.rejects(async () => sql`SELECT 1`, /pooled connection string/);
+        // any other address is a Postgres of our own (the fantasyidle.com server's, by its socket), through `pg`:
+        // it fails when first asked, here for want of a server at all
+        process.env.DATABASE_URL = 'postgresql://fantasyidle@/fantasyidle?host=/nonexistent-socket-dir';
+        await assert.rejects(async () => sql`SELECT 1`, /ENOENT|connect/);
     } finally {
         for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
     }

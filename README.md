@@ -81,9 +81,40 @@ save. It needs Node 20.19+ or 22+.
 | `POST /api/gifts/claim` | the owner's gifts to a player (below), claimed by the game when a save or load says some wait |
 | `POST /api/leaderboard/consent`, `GET /api/leaderboard` | opt in or out; boards by best stage, total level, Titans or dungeon clears |
 
-## Deploy
+## The server (fantasyidle.com)
 
-The live game is the Vercel project `fantasy-idle` (team "skinbaba1-3986's projects"), production at
+Since October 2026 the game runs at **https://fantasyidle.com**, and its wiki at **https://wiki.fantasyidle.com**,
+on the owner's RackNerd VPS (Ubuntu 24.04, 2 cores, 2 GB, `75.127.4.7`) behind Cloudflare (DNS, proxy, HTTPS). It
+started with a fresh database; the Vercel site below is the old one, kept as it was.
+
+- **Access:** SSH as root with a key only (passwords are refused): Claude Code's `~/.ssh/fantasyidle_ed25519` or the
+  owner's `~/.ssh/id_ed25519`, the server's key pinned in `~/.ssh/known_hosts_fantasyidle`
+  (`SHA256:ab8cloJyK4pnTBqAHsnpVPjVpO7JpC5UQmLgQkRUL64`). RackNerd's web console still takes the root password.
+- **Safety:** the firewall lets in SSH from anywhere and the web only from Cloudflare's addresses, so nobody reaches
+  the game around Cloudflare and the visitor's address it reports can be trusted (the API's login limits count it);
+  fail2ban; security updates install themselves.
+- **What runs:** nginx serves the game's files and the wiki, and passes `/api/` to the API (systemd
+  `fantasyidle-api`, Node 22, `deploy/vps/server.cjs`), which uses a local PostgreSQL 16 (`fantasyidle`, by its
+  socket). Its settings are in `/etc/fantasyidle/api.env`; the JWT secret was made there and never leaves it.
+- **Backups:** every night at 03:30 UTC (`fantasyidle-backup.timer`) into `/var/backups/fantasyidle`, 14 days kept.
+  Copies off the server are still to do.
+- **Cloudflare:** a token for fantasyidle.com only (DNS, SSL and Certificates, Zone Settings), made by the owner, in
+  `~/.config/fantasyidle/cloudflare-token` on the owner's Mac; never print it or commit it.
+
+Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
+
+```bash
+deploy/vps/deploy.sh
+```
+
+Set up from nothing: `deploy/vps/provision.sh` on the server (packages, firewall, user, database, backups), then
+`node deploy/vps/cloudflare.mjs` here (DNS records, the origin certificate, SSL "Full (strict)"), then the deploy.
+On the server, `journalctl -u fantasyidle-api` shows the API's log and `runuser -u fantasyidle -- psql` opens the
+database (a gift, below, is the same SQL there).
+
+## Deploy (the old site, on Vercel)
+
+Until October 2026 the live game was the Vercel project `fantasy-idle` (team "skinbaba1-3986's projects"), production at
 https://fantasy-idle.vercel.app. It is not connected to Git: a deploy uploads exactly what is committed on
 the branch, never `art/`, `runs/` or `shots/`:
 

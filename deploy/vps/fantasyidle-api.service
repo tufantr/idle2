@@ -1,0 +1,30 @@
+# The Fantasy Idle API on the fantasyidle.com server (deploy/vps/; installed as
+# /etc/systemd/system/fantasyidle-api.service). Its settings: /etc/fantasyidle/api.env (deploy/vps/provision.sh).
+[Unit]
+Description=Fantasy Idle API (fantasyidle.com)
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+User=fantasyidle
+Group=fantasyidle
+EnvironmentFile=/etc/fantasyidle/api.env
+WorkingDirectory=/srv/fantasyidle/current
+ExecStart=/usr/bin/node deploy/vps/server.cjs
+Restart=always
+RestartSec=2
+# it reads its release and writes nothing to disk: everything else is shut away from it
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=700M
+
+[Install]
+WantedBy=multi-user.target
