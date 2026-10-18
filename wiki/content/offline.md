@@ -40,7 +40,7 @@ Time with the page out of sight does not count toward the breaks between new pla
 
 ## Saving
 
-You play with an account, and your game lives on the game's server, as in any online game: any device you sign in on plays it. The game keeps a copy in the browser as you play, and uploads it every ten minutes while you play and when you leave the page (Settings shows when it last did); **Save now** does it at once. When the game loads or you sign in, it plays the save on the server and never asks you to choose: the copy in the browser is kept only when it is that same game played further (the minutes since the last upload, say). If you played on another device in the meantime, the game carries on from there and tells you so. Time away is measured by the server's clock.
+You play with an account, and your game lives on the game's server, as in any online game: any device you sign in on plays it. The game keeps a copy in the browser as you play, and uploads it every minute while the game is open and when you leave the page (Settings shows when it last did); **Save now** does it at once. When the game loads or you sign in, it plays the save on the server and never asks you to choose: the copy in the browser is kept only when it is that same game played further (the minutes since the last upload, say). If you played on another device in the meantime, the game carries on from there and tells you so. Time away is measured by the server's clock.
 
 The game plays in one tab at a time: open it in a second tab or window and it plays there, while the first one stops (its **Play here** button takes it back), so the two never save over each other.
 

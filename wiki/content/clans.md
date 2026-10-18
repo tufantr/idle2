@@ -6,7 +6,7 @@ Clans are the game's online side. Join one, and every week the whole clan fights
 
 ## What you need
 
-Clans and leaderboards work through your account and [[Offline progress and saves|your game on the server]]: it goes up every ten minutes while you play and when you leave the page. Everything other players see of you, your clan attacks and your place on a board, is worked out on the server from that saved hero, never from numbers your game sends.
+Clans and leaderboards work through your account and [[Offline progress and saves|your game on the server]]: it goes up every minute while the game is open and when you leave the page. Everything other players see of you, your clan attacks and your place on a board, is worked out on the server from that saved hero, never from numbers your game sends.
 
 The Clan tab itself opens once you have [[Prestige|prestiged]] and reached stage {{[...Array(1000).keys()].find(s => UNLOCKS.find(u => u.id === 'clan').requires({ prestige: { count: 1 }, combat: { bestStage: s } }))}} (see [[Places and unlocks]]). Until you sign in, it only shows what a clan is.
 

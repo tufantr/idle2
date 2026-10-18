@@ -803,13 +803,13 @@ gear to wear; a place that waited opens on the return and is named there too.
   still plays as a guest.
 - **Cloud:** signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
-  version-checked saves. The client uploads every ten minutes while the player is around (the page in
-  view and touched in the last ten minutes), and once on leaving the page (hidden or closed: a keepalive
-  request, under the 64 KB browsers allow); a page left open in the background uploads nothing more, as the
-  next load replays that time from the last upload, and the local save stays current every 15 s. That is
-  sized for the free database, which sleeps after five minutes without a request and may be awake 100
-  compute-hours a month: a few testers playing keep it awake for a part of their play, not around the
-  clock (it was every 60 s, from every open page). **Signed in, the server's save
+  version-checked saves. The client uploads **every minute while the page is open**, in the background
+  too, and once on leaving the page (hidden or closed: a keepalive request, under the 64 KB browsers allow),
+  unless it uploaded seconds before; the local save stays current every 15 s. That is since the game moved to
+  its own server (October 2026, the owner: "traffic is not an issue"). On Vercel's free Neon database, which
+  slept after five minutes without a request and could be awake 100 compute-hours a month, it was every ten
+  minutes and only while the player was around (the page in view and touched in the last ten minutes), and a
+  page in the background uploaded nothing. **Signed in, the server's save
   is the game** (October 2026, the owner's ask: "just like any normal online game"; `syncChoice` in
   `src/core/save.js`). At load, at sign-in and after a long time hidden the game looks at the server's save
   and plays it; nobody is asked. This device's game is kept (and uploaded) only when it is the server's

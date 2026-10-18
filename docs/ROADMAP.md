@@ -1279,6 +1279,9 @@ Keeping it running:
       its API doesn't answer. The old Vercel site stays as it was
 - [x] **The API's queries on a real Postgres** (S): the whole API suite (36 tests) passed against the server's
       PostgreSQL 16 on 18 October 2026, every query in `api/store.js` with it
+- [x] **Saves every minute** (the owner, 18 October 2026, once the game had its own server: "traffic is not an
+      issue"): the game uploads every minute while its page is open, in the background too, and on leaving unless it
+      just did (it was every ten minutes and only while the player was around, for the free database on Vercel)
 - [ ] **Backups off the server** (S): the nightly backups stay on the VPS for now (14 days); a copy elsewhere
       (Cloudflare R2, or the owner's Mac) and a restore tried once
 - [ ] **Sign-up by email** (the owner's ask, next after the server): an address checked by a link, from a mail

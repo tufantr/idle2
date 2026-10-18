@@ -19,7 +19,7 @@ Yes. Whatever your hero was doing when you left, the fight or a skill, carries o
 
 ### Where is my save? Is there a cloud save?
 
-On the game's server. You play with an account, as in any online game, and any device you sign in on plays your game. The game keeps a copy in the browser as you play and uploads it every ten minutes and when you leave the page. The time you were away is measured by the server's clock, not your device's. See [[/offline|Offline progress and saves]].
+On the game's server. You play with an account, as in any online game, and any device you sign in on plays your game. The game keeps a copy in the browser as you play and uploads it every minute and when you leave the page. The time you were away is measured by the server's clock, not your device's. See [[/offline|Offline progress and saves]].
 
 ### Can I play on my phone, or install it like an app?
 

@@ -46,13 +46,13 @@ const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something 
 const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
 const DEFEAT_HOLD_MS = 2400;     // a lost dungeon run stays on screen this long before the list of dungeons comes back
 const AUTOSAVE_MS = 15000;
-// Cloud saves, sized for a free database that sleeps after five minutes without a request (README "The
-// API"): every ten minutes while the player is around (the page in view, touched in the last ten minutes),
-// and once on leaving the page. A page left open in the background uploads nothing more: the hero's time
-// there is replayed from the last upload on the next load anyway, and the local save is always current.
-const CLOUD_SAVE_MS = 10 * 60000;
-const CLOUD_AWAY_MS = 10 * 60000;    // no touch for this long: nobody is there, nothing more to upload
-const CLOUD_LEAVE_GAP_MS = 60000;    // leaving within a minute of an upload sends no other
+// Cloud saves: every minute while the page is open, in the background too, and once on leaving it (the
+// owner, October 2026, once the game had its own server: "traffic is not an issue"). On Vercel's free Neon
+// database, which slept after five minutes without a request, it was every ten minutes and only while the
+// player was around; a page in the background uploaded nothing.
+const CLOUD_SAVE_MS = 60000;
+const CLOUD_AWAY_MS = 10 * 60000;    // back after this long away: another device may have played meanwhile
+const CLOUD_LEAVE_GAP_MS = 5000;     // leaving within seconds of an upload sends no other
 const TITAN_HOLD_MS = 2400;      // the Titan's fight keeps the screen this long after it ends (its last banner)
 
 // Browser storage can be blocked (private windows, the game embedded in another page). These are
@@ -261,7 +261,7 @@ setInterval(() => {
     if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem) { lastBackup = now; rotateBackup(game.serialize(now), now); }
     // the sync that failed, tried again (until it has chosen, nothing is uploaded)
     if (cloud.loggedIn && !cloudReady && !syncing && !document.hidden && now >= syncRetryAt) syncFromCloud();
-    if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS && playerAround(now)) cloudSave(false);
+    if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
     // the Clan tab's board, only while someone is there (an untouched page kept the free database awake)
     if (ui.tab === 'clan' && playerAround(now) && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
     const changed = game.revision !== ui.renderedRevision;
