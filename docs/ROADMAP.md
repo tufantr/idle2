@@ -1272,14 +1272,19 @@ Keeping it running:
       brings a find one time in three (a gem, a bird's nest of logs, game or bait, dishes, potions, bonfire time),
       better resources play harder and pay better while levels make them easier, and a chance waits a minute,
       with a chime Settings can turn off. Checked in a browser at both widths
-- [ ] **The API's queries on a real Postgres** (S): the login limits, the clan boss's sizing and resizing,
-      the conditional save, a fight's own mark (`fight_at`), `kill_paid`, the boss's `unit` and the case-blind name index came
-      after the last check against PostgreSQL 16 (README "The API" has the command). They were checked by
-      reading and against the in-memory store only; the live tables gain the new columns on the first
-      request after the deploy
-- [ ] **A watch on the live side** (S): Neon's usage page, Vercel's runtime errors and `/api/health` after
-      each deploy, and a backup beyond Neon's six-hour restore window (a weekly export)
-- [ ] **A custom domain** (the owner's purchase): its records in Cloudflare's DNS, set to "DNS only"
+- [x] **The game on its own server, at fantasyidle.com** (the owner's VPS and domain, 18 October 2026, a fresh
+      start; README "The server"): Ubuntu 24.04 behind Cloudflare, SSH by key only, a firewall letting the web in only
+      from Cloudflare, fail2ban, security updates by themselves; nginx, the API under systemd, a local PostgreSQL 16 and
+      a nightly backup; the wiki at wiki.fantasyidle.com; `deploy/vps/deploy.sh` ships a commit and switches back if
+      its API doesn't answer. The old Vercel site stays as it was
+- [x] **The API's queries on a real Postgres** (S): the whole API suite (36 tests) passed against the server's
+      PostgreSQL 16 on 18 October 2026, every query in `api/store.js` with it
+- [ ] **Backups off the server** (S): the nightly backups stay on the VPS for now (14 days); a copy elsewhere
+      (Cloudflare R2, or the owner's Mac) and a restore tried once
+- [ ] **Sign-up by email** (the owner's ask, next after the server): an address checked by a link, from a mail
+      service the owner picks
+- [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
+      SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

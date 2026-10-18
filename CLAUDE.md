@@ -2,9 +2,10 @@
 
 A browser idle RPG in the spirit of Melvor Idle, made to look and feel like a game: a battle scene
 with pixel sprites on painted backdrops, a skill stage, sound, rewards with motion. Plain ES modules,
-no build step, no framework. Static site, plus an Express API on Vercel for accounts, saves, clans and
-leaderboards (see README.md). The live game needs an account and plays the server's save; a local host
-(tools/serve.py, the tools) plays as a guest.
+no build step, no framework. Static site, plus an Express API for accounts, saves, clans and leaderboards,
+live at https://fantasyidle.com (wiki: wiki.fantasyidle.com) on the owner's VPS behind Cloudflare since October
+2026: `deploy/vps/deploy.sh` ships a commit (README "The server"); the old Vercel site stays as it was. The live
+game needs an account and plays the server's save; a local host (tools/serve.py, the tools) plays as a guest.
 
 Work on the branch `claude/intelligent-einstein-y5i5iq` (main holds the old game) and push there.
 
@@ -88,7 +89,9 @@ worth in stages, and where a climb's stages came from: `node tools/ledger.mjs <s
 - Check desktop (1280) and phone (390) widths: no sideways scroll; phones have a bottom hotbar.
   Honor reduced motion (`body.reduced-motion` and `prefers-reduced-motion`).
 - Never commit `art/` (source paintings), `.env` files or keys. `api/node_modules` is tracked on
-  purpose. `JWT_SECRET` is required in production. Don't change Vercel settings without the owner.
+  purpose. `JWT_SECRET` is required in production. Don't change Vercel settings without the owner. On the server,
+  SSH is keys only; never print the Cloudflare token (`~/.config/fantasyidle/cloudflare-token`) or the server's
+  `/etc/fantasyidle/api.env`.
 
 ## Ideas not done yet
 
