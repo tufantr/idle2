@@ -28,6 +28,14 @@ if (realDb) {
 process.env.JWT_SECRET = 'test-secret';
 const app = require('../api/index.js');
 
+// Mail goes to this box instead of Resend (api/mail.js); `mailDown` makes the service fail.
+const mailbox = [];
+let mailDown = false;
+require('../api/mail.js').setMailer(async message => { if (mailDown) throw new Error('the mail service is down (test)'); mailbox.push(message); });
+/** The 6-digit code in the last mail to `to`, or null. */
+const codeFor = to => { const m = [...mailbox].reverse().find(x => x.to === to); return m ? (m.text.match(/\b(\d{6})\b/) || [])[1] || null : null; };
+const mailsTo = to => mailbox.filter(x => x.to === to).length;
+
 // Two things the tests reach into the data for, in both modes.
 const peek = {
     async flags(username) {
@@ -61,7 +69,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -72,12 +80,16 @@ const post = (p, body, token, headers = {}) => fetch(base + p, { method: 'POST',
 const get = (p, token) => fetch(base + p, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
 
 // Each test player registers from an address of their own, as real players do (one address may only
-// make a few accounts an hour).
+// make a few accounts an hour), with an email of their own, and enters the code mailed there.
 let addresses = 0;
+const emailOf = username => `${username.toLowerCase()}@example.test`;
 async function register(username) {
-    const res = await post('/register', { username, password: 'correct horse' }, null, { 'X-Forwarded-For': `10.0.${Math.floor(++addresses / 250)}.${addresses % 250}` });
+    const from = { 'X-Forwarded-For': `10.0.${Math.floor(++addresses / 250)}.${addresses % 250}` };
+    const res = await post('/register', { username, password: 'correct horse', email: emailOf(username) }, null, from);
     assert.equal(res.status, 200, `register ${username}`);
-    return (await res.json()).token;
+    const confirmed = await post('/verify', { username, code: codeFor(emailOf(username)) }, null, from);
+    assert.equal(confirmed.status, 200, `confirm ${username}'s email`);
+    return (await confirmed.json()).token;
 }
 
 /** A small but valid save: the server migrates whatever it gets, so a partial state is enough. */
@@ -93,7 +105,9 @@ test('register validates username and password', async () => {
 
 test('register, login, save and load round-trip, with the server clock', async () => {
     const token = await register('hero_1');
-    assert.equal((await post('/register', { username: 'hero_1', password: 'correct horse' })).status, 400, 'duplicate username');
+    const again = await post('/register', { username: 'hero_1', password: 'correct horse', email: 'someone.else@example.test' });
+    assert.equal(again.status, 400, 'duplicate username');
+    assert.match((await again.json()).error, /Username already exists/);
     assert.equal((await post('/login', { username: 'hero_1', password: 'wrong password' })).status, 400);
     assert.equal((await post('/login', { username: 'hero_1', password: 'correct horse' })).status, 200);
 
@@ -438,8 +452,8 @@ test('password guessing stops after ten tries per name, and one address makes on
     clock += 16 * 60 * 1000;
     assert.equal((await post('/login', { username: 'guarded_hero', password: 'correct horse' }, null, from)).status, 200, 'after the window it works again');
     const farm = { 'X-Forwarded-For': '198.51.100.9' };
-    for (let i = 0; i < 10; i++) assert.equal((await post('/register', { username: `farm_${i}`, password: 'correct horse' }, null, farm)).status, 200);
-    assert.equal((await post('/register', { username: 'farm_10', password: 'correct horse' }, null, farm)).status, 429);
+    for (let i = 0; i < 10; i++) assert.equal((await post('/register', { username: `farm_${i}`, password: 'correct horse', email: `farm_${i}@example.test` }, null, farm)).status, 200);
+    assert.equal((await post('/register', { username: 'farm_10', password: 'correct horse', email: 'farm_10@example.test' }, null, farm)).status, 429);
 });
 
 test("a member who leaves changes the clan's average, not the boss's health in attacks", async () => {
@@ -720,7 +734,7 @@ test('password guesses sent all at once are counted before they are checked: ten
     assert.equal((await post('/login', { username: 'rushed_hero', password: 'correct horse' }, null, { 'X-Forwarded-For': '198.51.100.200' })).status, 200);
     // and accounts made all at once from one address are counted the same way
     const farm = { 'X-Forwarded-For': '203.0.113.99' };
-    const made = await Promise.all(Array.from({ length: 25 }, (_, i) => post('/register', { username: `rush_farm_${i}`, password: 'correct horse' }, null, farm)));
+    const made = await Promise.all(Array.from({ length: 25 }, (_, i) => post('/register', { username: `rush_farm_${i}`, password: 'correct horse', email: `rush_farm_${i}@example.test` }, null, farm)));
     assert.ok(made.filter(r => r.status === 200).length <= 10, `${made.filter(r => r.status === 200).length} accounts`);
     clock += 61 * 60 * 1000;
 });
@@ -777,7 +791,7 @@ test('a clan fight sent twice (its answer lost) is one attack: answered again, o
 
 test('a name is one account whatever its case', async () => {
     await register('CaseHero');
-    assert.equal((await post('/register', { username: 'casehero', password: 'correct horse' })).status, 400);
+    assert.equal((await post('/register', { username: 'casehero', password: 'correct horse', email: 'case.other@example.test' })).status, 400);
     const res = await post('/login', { username: 'CASEHERO', password: 'correct horse' });
     assert.equal(res.status, 200);
 });
@@ -854,4 +868,116 @@ test("the boss is sized from each member's attack at its best this week (a weak 
     const view = await (await get('/clan', t)).json();
     const weakShare = view.members[0].attackDamage * 12;
     assert.ok(view.boss.maxHp > weakShare, `${view.boss.maxHp} > ${weakShare}`);
+});
+
+// ---------- sign-up by email (the owner, October 2026; README "The API") ----------
+
+test('sign-up needs an email, and the account plays once the code mailed there is entered', async () => {
+    const from = { 'X-Forwarded-For': '192.0.2.10' };
+    assert.equal((await post('/register', { username: 'mail_hero', password: 'correct horse' }, null, from)).status, 400, 'no email');
+    assert.equal((await post('/register', { username: 'mail_hero', password: 'correct horse', email: 'not an address' }, null, from)).status, 400);
+    const made = await post('/register', { username: 'mail_hero', password: 'correct horse', email: '  Mail.Hero@Example.TEST ' }, null, from);
+    assert.equal(made.status, 200);
+    const body = await made.json();
+    assert.equal(body.pending, true);
+    assert.equal(body.token, undefined, 'no token before the code');
+    assert.equal(body.email, 'ma***@example.test', 'the address shown in part, lowercase');
+    const code = codeFor('mail.hero@example.test');
+    assert.match(code, /^\d{6}$/);
+    assert.match(mailbox.at(-1).subject, new RegExp(code));
+    assert.match(mailbox.at(-1).html, new RegExp(code));
+    // the right password, but not confirmed: the code first (409, which the game doesn't take for a lost session)
+    const early = await post('/login', { username: 'mail_hero', password: 'correct horse' }, null, from);
+    assert.equal(early.status, 409);
+    assert.equal((await early.json()).pending, true);
+    assert.equal((await post('/verify', { username: 'mail_hero', code: code === '000000' ? '000001' : '000000' }, null, from)).status, 400, 'a wrong code');
+    const confirmed = await post('/verify', { username: 'mail_hero', code }, null, from);
+    assert.equal(confirmed.status, 200);
+    assert.ok((await confirmed.json()).token);
+    assert.equal((await post('/login', { username: 'mail_hero', password: 'correct horse' }, null, from)).status, 200);
+    assert.equal((await post('/verify', { username: 'mail_hero', code }, null, from)).status, 400, 'confirmed already');
+    // one account an address, whatever its case
+    const twice = await post('/register', { username: 'mail_twin', password: 'correct horse', email: 'MAIL.hero@example.test' }, null, from);
+    assert.equal(twice.status, 400);
+    assert.match((await twice.json()).error, /already has an account/);
+});
+
+test('a code takes five tries and lives fifteen minutes; a new one goes once a minute, five an hour', async () => {
+    const from = { 'X-Forwarded-For': '192.0.2.11' };
+    const email = 'tries@example.test';
+    assert.equal((await post('/register', { username: 'try_hero', password: 'correct horse', email }, null, from)).status, 200);
+    const code = codeFor(email);
+    const wrong = code === '111111' ? '222222' : '111111';
+    for (let i = 0; i < 5; i++) assert.match((await (await post('/verify', { username: 'try_hero', code: wrong }, null, from)).json()).error, /wrong/);
+    assert.match((await (await post('/verify', { username: 'try_hero', code }, null, from)).json()).error, /Too many tries/, 'even the right one, after five');
+    // a new one: not within a minute of the last
+    const soon = await post('/verify/resend', { username: 'try_hero' }, null, from);
+    assert.equal(soon.status, 429);
+    clock += 61 * 1000;
+    assert.equal((await post('/verify/resend', { username: 'try_hero' }, null, from)).status, 200);
+    const second = codeFor(email);
+    // it runs out after fifteen minutes
+    clock += 16 * 60 * 1000;
+    assert.match((await (await post('/verify', { username: 'try_hero', code: second }, null, from)).json()).error, /run out/);
+    // five mails an hour to an account: the sign-up's, then four more
+    const sent = mailsTo(email);
+    for (let i = 0; i < 3; i++) { clock += 61 * 1000; assert.equal((await post('/verify/resend', { username: 'try_hero' }, null, from)).status, 200); }
+    clock += 61 * 1000;
+    assert.equal((await post('/verify/resend', { username: 'try_hero' }, null, from)).status, 429, 'the sixth in the hour');
+    assert.equal(mailsTo(email), sent + 3);
+    clock += 61 * 60 * 1000;
+    assert.equal((await post('/verify/resend', { username: 'try_hero' }, null, from)).status, 200, 'an hour on');
+    assert.equal((await post('/verify', { username: 'try_hero', code: codeFor(email) }, null, from)).status, 200);
+});
+
+test('a forgotten password: a code to the address, then a new password; the same answer for an address nobody has', async () => {
+    const from = { 'X-Forwarded-For': '192.0.2.12' };
+    await register('forgetful');
+    const before = mailbox.length;
+    const nobody = await post('/password/forgot', { email: 'nobody.here@example.test' }, null, from);
+    assert.equal(nobody.status, 200);
+    assert.equal((await nobody.json()).sent, true);
+    assert.equal(mailbox.length, before, 'no mail for an address no account has');
+    assert.equal((await post('/password/forgot', { email: emailOf('forgetful') }, null, from)).status, 200);
+    const code = codeFor(emailOf('forgetful'));
+    assert.match(mailbox.at(-1).subject, /password/);
+    assert.equal((await post('/password/reset', { email: emailOf('forgetful'), code, password: 'short' }, null, from)).status, 400, 'a password too short');
+    assert.equal((await post('/password/reset', { email: emailOf('forgetful'), code: code === '333333' ? '444444' : '333333', password: 'a brand new one' }, null, from)).status, 400);
+    const reset = await post('/password/reset', { email: emailOf('forgetful'), code, password: 'a brand new one' }, null, from);
+    assert.equal(reset.status, 200);
+    assert.ok((await reset.json()).token);
+    assert.equal((await post('/login', { username: 'forgetful', password: 'correct horse' }, null, from)).status, 400, 'the old password is gone');
+    assert.equal((await post('/login', { username: 'forgetful', password: 'a brand new one' }, null, from)).status, 200);
+    // an account whose address was never confirmed: the reset code reached it, so it is confirmed now
+    assert.equal((await post('/register', { username: 'never_confirmed', password: 'correct horse', email: 'never@example.test' }, null, from)).status, 200);
+    clock += 61 * 1000;
+    await post('/password/forgot', { email: 'never@example.test' }, null, from);
+    assert.equal((await post('/password/reset', { email: 'never@example.test', code: codeFor('never@example.test'), password: 'another new one' }, null, from)).status, 200);
+    assert.equal((await post('/login', { username: 'never_confirmed', password: 'another new one' }, null, from)).status, 200);
+});
+
+test('when the mail service fails the account waits, and a new code can be asked for at once', async () => {
+    const from = { 'X-Forwarded-For': '192.0.2.13' };
+    mailDown = true;
+    const made = await post('/register', { username: 'unlucky', password: 'correct horse', email: 'unlucky@example.test' }, null, from);
+    mailDown = false;
+    assert.equal(made.status, 502);
+    assert.equal((await made.json()).pending, true);
+    assert.equal(mailsTo('unlucky@example.test'), 0);
+    assert.equal((await post('/verify/resend', { username: 'unlucky' }, null, from)).status, 200, 'the failed one holds nothing back');
+    assert.equal((await post('/verify', { username: 'unlucky', code: codeFor('unlucky@example.test') }, null, from)).status, 200);
+});
+
+test("no answer another player sees carries anyone's email", async () => {
+    const a = await register('private_one');
+    const b = await register('private_two');
+    await post('/save', { state: heroSave({ bestStage: 20 }) }, a);
+    await post('/save', { state: heroSave({ bestStage: 20 }) }, b);
+    await post('/leaderboard/consent', { optIn: true }, a);
+    const { clanId } = await (await post('/clans', { name: 'Quiet Ones', tag: 'QUI' }, a)).json();
+    await post('/clans/join', { clanId }, b);
+    for (const answer of [await get('/clan', b), await get('/clans', b), await get('/leaderboard?metric=bestStage', b), await get('/load', b)]) {
+        const text = await answer.text();
+        assert.ok(!/@example\.test/.test(text), `an address in ${answer.url}`);
+    }
 });

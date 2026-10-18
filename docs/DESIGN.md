@@ -801,6 +801,14 @@ gear to wear; a place that waited opens on the return and is named there too.
   and leaves a fresh one in the browser, so an account registered there next starts its own game, not a
   copy of the last one. A local development host (`DEV_HOST` in `src/main.js`: the tools, the screenshots)
   still plays as a guest.
+- **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a
+  username, an email and a password, and plays once a 6-digit code mailed there is entered in the same dialog (a code,
+  not a link: on a phone a link opens in another browser than the game's). The same kind of code sets a new password
+  ("Forgot your password?"). A code lives 15 minutes and takes 5 tries, and is kept only as a hash keyed with the
+  server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour from an address; one account
+  an email, whatever its case, and no address is shown to another player. A login with the right password but the
+  address not confirmed answers 409 with `pending` (a 403 is the game's word for a session gone, which would sign the
+  player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
   version-checked saves. The client uploads **every minute while the page is open**, in the background

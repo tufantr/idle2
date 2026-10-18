@@ -64,6 +64,7 @@ const prefs = {
 };
 
 const ui = {
+    auth: null,          // the account dialog's step: { mode, username, email (as shown), resetEmail } (showAuth)
     tab: (t => (t === 'fishing' ? 'hunting' : t))(prefs.get('fantasyIdle.tab') || 'combat'),   // (Fishing joined Hunting)
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
     smithView: 'smelt',  // the step of Smithing on screen: smelt, forge, anvil or tools
@@ -962,7 +963,32 @@ function startAdventure() {
 }
 /** The sign-in the game waits behind (SIGN_IN_REQUIRED): no guest button, and Escape leaves it up. */
 function openSignIn(register = false) {
+    ui.auth = { mode: register ? 'register' : 'login' };
     if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register }), 'signin');
+}
+/** The account dialog at a step (renderAuthModal's `mode`), in place of the one open. */
+function showAuth(message = '', ctx = {}) {
+    ui.auth = { ...ctx };
+    const key = ui.modalOpen === 'auth' ? 'auth' : 'signin';
+    showModal(renderAuthModal(message, { required: key === 'signin', ...ui.auth }), key);
+}
+function authError(text) {
+    const err = document.getElementById('auth-error');
+    if (err) err.textContent = text;
+}
+/** Signed in (a login, a code, a new password): the account's game is looked at before anything goes up. */
+async function signedIn() {
+    ui.social = freshSocial(); // nothing from the previous account carries over
+    cloudReady = false;        // nothing goes up before the sync below has looked at the account's save
+    synced = false;
+    ui.auth = null;
+    closeModal();
+    toast(`Signed in as ${cloud.username}`, 'info');
+    await syncFromCloud();
+    // from the title card: a new account's hero goes into the first fight (an account with a save plays it)
+    if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();
+    ui.beginAfterSignIn = false;
+    render();
 }
 let pendingConfirm = null;
 /** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
@@ -1512,7 +1538,7 @@ window.FI = {
 
     openAuth() {
         if (ui.modalOpen === 'intro') closeModal();
-        if (SIGN_IN_REQUIRED) openSignIn(); else openModal(renderAuthModal(), 'auth');
+        if (SIGN_IN_REQUIRED) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal(), 'auth'); }
     },
     collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
     /** The title card's arrows: the next or the previous look, tried on at once. */
@@ -1533,27 +1559,52 @@ window.FI = {
         if (needsSignIn()) { ui.beginAfterSignIn = true; openSignIn(true); return; }   // an account first; the fight once it is made
         startAdventure();
     },
+    /** Log in, or make an account: a new one waits for the code mailed to its address (FI.verifyCode). */
     async auth(kind) {
         const user = document.getElementById('auth-user')?.value.trim();
         const pass = document.getElementById('auth-pass')?.value;
-        const err = document.getElementById('auth-error');
-        if (!user || !pass) { if (err) err.textContent = 'Username and password are required.'; return; }
+        const email = document.getElementById('auth-email')?.value.trim() || '';
+        ui.auth = { mode: kind, username: user || '' };
+        if (!user || !pass) return authError('Username and password are required.');
+        if (kind === 'register' && !email) return authError('An email address is needed: the game sends a code there.');
         try {
-            if (kind === 'login') await cloud.login(user, pass); else await cloud.register(user, pass);
-            ui.social = freshSocial(); // nothing from the previous account carries over
-            cloudReady = false;        // nothing goes up before the sync below has looked at the account's save
-            synced = false;
-            closeModal();
-            toast(`Signed in as ${cloud.username}`, 'info');
-            await syncFromCloud();
-            // from the title card: a new account's hero goes into the first fight (an account with a save plays it)
-            if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();
-            ui.beginAfterSignIn = false;
-            render();
+            if (kind === 'login') { await cloud.login(user, pass); await signedIn(); return; }
+            const data = await cloud.register(user, pass, email);
+            if (cloud.loggedIn) { await signedIn(); return; }   // (a server from before codes)
+            showAuth('', { mode: 'verify', username: data.username || user, email: data.email || email });
         } catch (e) {
-            // (the client's own words for an unreachable server say the game plays locally: here it can't)
-            if (err) err.textContent = SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message;
+            // made, or with the right password, but the address not confirmed yet: to the code
+            if (e.data?.pending) return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email });
+            authError(SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message);
         }
+    },
+    /** Another step of the account dialog: 'login', 'register', 'forgot'. */
+    authMode(mode) { showAuth('', { mode, username: ui.auth?.username || document.getElementById('auth-user')?.value.trim() || '' }); },
+    async verifyCode() {
+        const code = document.getElementById('auth-code')?.value.trim();
+        if (!code) return authError('Enter the 6-digit code from the email.');
+        try { await cloud.verify(ui.auth?.username, code); await signedIn(); } catch (e) { authError(e.message); }
+    },
+    async resendCode() {
+        try {
+            const data = await cloud.resendCode(ui.auth?.username);
+            showAuth(`A new code is on its way to ${data.email || 'your email'}.`, { ...ui.auth });
+        } catch (e) { authError(e.message); }
+    },
+    /** A code to set a new password; `again` sends another to the same address. */
+    async forgotPassword(again = false) {
+        const email = again ? ui.auth?.resetEmail : document.getElementById('auth-email')?.value.trim();
+        if (!email) return authError('Enter your account\'s email address.');
+        try {
+            const data = await cloud.forgotPassword(email);
+            showAuth(again ? 'If an account has this address, another code is on its way.' : '', { mode: 'reset', resetEmail: email, email: data.email || email });
+        } catch (e) { authError(e.message); }
+    },
+    async resetPassword() {
+        const code = document.getElementById('auth-code')?.value.trim();
+        const pass = document.getElementById('auth-pass')?.value;
+        if (!code || !pass) return authError('The code and a new password are both needed.');
+        try { await cloud.resetPassword(ui.auth?.resetEmail, code, pass); toast('Password changed', 'info'); await signedIn(); } catch (e) { authError(e.message); }
     },
     async logout() {
         if (cloudReady) await cloudSave(false);   // the latest play goes up first: this browser keeps none of it

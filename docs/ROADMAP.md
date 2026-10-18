@@ -1284,8 +1284,10 @@ Keeping it running:
       just did (it was every ten minutes and only while the player was around, for the free database on Vercel)
 - [ ] **Backups off the server** (S): the nightly backups stay on the VPS for now (14 days); a copy elsewhere
       (Cloudflare R2, or the owner's Mac) and a restore tried once
-- [ ] **Sign-up by email** (the owner's ask, next after the server): an address checked by a link, from a mail
-      service the owner picks
+- [x] **Sign-up by email** (the owner's ask, 18 October 2026, with Resend): a sign-up gives an email, and the account
+      plays once the 6-digit code mailed there is entered; "Forgot your password?" sets a new one with a code. One
+      account an email; codes last 15 minutes and take 5 tries; the mail comes from noreply@fantasyidle.com (DESIGN
+      §3.17). Checked in a browser at both widths, and against the server's real PostgreSQL
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

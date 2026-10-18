@@ -137,6 +137,24 @@ async function ensureSchema() {
     try { await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username))`; } catch (err) {
         console.error('users_username_lower not made (names that differ only in case?)', err && err.message);
     }
+    // Sign-up by email (October 2026, on the fantasyidle.com server): an account's address, confirmed by a code
+    // (email_verified_at), one account an address whatever its case; and the codes themselves, kept only as a
+    // keyed hash (api/index.js), each for one purpose ('verify', 'reset'), with its tries counted.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at BIGINT DEFAULT 0`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower ON users (lower(email))`;
+    await sql`
+        CREATE TABLE IF NOT EXISTS email_codes (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            purpose TEXT NOT NULL,
+            code_hash TEXT NOT NULL,
+            expires_at BIGINT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            created_at BIGINT NOT NULL
+        )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS email_codes_user ON email_codes (user_id, purpose)`;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -147,20 +165,68 @@ async function ping() {
 // ---------- users and saves ----------
 
 /** Throws a unique violation (23505) for a name taken in any case. */
-async function createUser(username, hash) {
+/** A new account; `email` (lowercase) is checked for confirmation afterwards. A name or an address taken: a 23505, its `constraint` saying which. */
+async function createUser(username, hash, email = null) {
     const { rows: taken } = await sql`SELECT 1 FROM users WHERE lower(username) = lower(${username}) LIMIT 1`;
-    if (taken.length) throw Object.assign(new Error('Username already exists'), { code: '23505' });
-    const { rows } = await sql`INSERT INTO users (username, password_hash) VALUES (${username}, ${hash}) RETURNING id`;
+    if (taken.length) throw Object.assign(new Error('Username already exists'), { code: '23505', constraint: 'users_username_lower' });
+    if (email) {
+        const { rows: used } = await sql`SELECT 1 FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
+        if (used.length) throw Object.assign(new Error('Email already used'), { code: '23505', constraint: 'users_email_lower' });
+    }
+    const { rows } = await sql`INSERT INTO users (username, password_hash, email) VALUES (${username}, ${hash}, ${email}) RETURNING id`;
     return rows[0].id;
 }
+
+const accountRow = r => (r ? { id: r.id, username: r.username, password_hash: r.password_hash, email: r.email || null, emailVerifiedAt: int(r.email_verified_at) } : null);
 
 /** The account of a name, whatever its case (the one spelled exactly so first, where two older ones differ only in case). */
 async function findUserByName(username) {
     const { rows } = await sql`
-        SELECT id, username, password_hash FROM users WHERE lower(username) = lower(${username})
+        SELECT id, username, password_hash, email, email_verified_at FROM users WHERE lower(username) = lower(${username})
         ORDER BY (username = ${username}) DESC, id ASC LIMIT 1
     `;
-    return rows[0] || null;
+    return accountRow(rows[0]);
+}
+
+/** The account of an email address, whatever its case. */
+async function findUserByEmail(email) {
+    const { rows } = await sql`SELECT id, username, password_hash, email, email_verified_at FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
+    return accountRow(rows[0]);
+}
+
+async function setEmailVerified(userId, now) {
+    await sql`UPDATE users SET email_verified_at = ${now}::bigint WHERE id = ${userId}`;
+}
+
+async function setPassword(userId, hash) {
+    await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${userId}`;
+}
+
+/** A new code for an account and a purpose, in place of any before it. */
+async function putEmailCode(userId, purpose, codeHash, expiresAt, now) {
+    await sql`DELETE FROM email_codes WHERE user_id = ${userId} AND purpose = ${purpose}`;
+    await sql`INSERT INTO email_codes (user_id, purpose, code_hash, expires_at, created_at) VALUES (${userId}, ${purpose}, ${codeHash}, ${expiresAt}::bigint, ${now}::bigint)`;
+}
+
+async function getEmailCode(userId, purpose) {
+    const { rows } = await sql`SELECT id, code_hash, expires_at, attempts, created_at FROM email_codes WHERE user_id = ${userId} AND purpose = ${purpose} ORDER BY id DESC LIMIT 1`;
+    const r = rows[0];
+    return r ? { id: r.id, codeHash: r.code_hash, expiresAt: int(r.expires_at), attempts: int(r.attempts), createdAt: int(r.created_at) } : null;
+}
+
+/** One more try at a code; its tries so far. */
+async function bumpEmailCodeAttempts(id) {
+    const { rows } = await sql`UPDATE email_codes SET attempts = attempts + 1 WHERE id = ${id} RETURNING attempts`;
+    return rows[0] ? int(rows[0].attempts) : Infinity;
+}
+
+/** A code used up by its tries: it can no longer be right, and its time still counts toward the next one's minute. */
+async function expireEmailCode(id) {
+    await sql`UPDATE email_codes SET expires_at = 0 WHERE id = ${id}`;
+}
+
+async function deleteEmailCodes(userId, purpose) {
+    await sql`DELETE FROM email_codes WHERE user_id = ${userId} AND purpose = ${purpose}`;
 }
 
 /** The name an account id has now (a token is checked against it), or null. */
@@ -583,7 +649,8 @@ async function claimGifts(userId, now) {
 
 module.exports = {
     ensureSchema, ping,
-    createUser, findUserByName, userNameOf, getSave, putSave, setOptIn, leaderboardRows,
+    createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
+    userNameOf, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, setBossUnit, convertBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,

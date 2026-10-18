@@ -158,7 +158,7 @@ export class CloudClient {
         }
         let data = {};
         try { data = await res.json(); } catch { /* empty body */ }
-        if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { status: res.status });
+        if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { status: res.status, data });   // (the answer too: a sign-in waiting for its code says so)
         return data;
     }
 
@@ -177,8 +177,25 @@ export class CloudClient {
         return data;
     }
 
-    async register(username, password) {
-        const data = await this.request('/register', { method: 'POST', body: { username, password }, auth: false });
+    /** An account with an email: the server mails a code, and the account plays once it is given (verify). */
+    async register(username, password, email) {
+        const data = await this.request('/register', { method: 'POST', body: { username, password, email }, auth: false });
+        if (data.token) this.setToken(data.token);   // (a server from before codes signs in at once)
+        return data;
+    }
+
+    async verify(username, code) {
+        const data = await this.request('/verify', { method: 'POST', body: { username, code }, auth: false });
+        this.setToken(data.token);
+        return data;
+    }
+
+    resendCode(username) { return this.request('/verify/resend', { method: 'POST', body: { username }, auth: false }); }
+
+    forgotPassword(email) { return this.request('/password/forgot', { method: 'POST', body: { email }, auth: false }); }
+
+    async resetPassword(email, code, password) {
+        const data = await this.request('/password/reset', { method: 'POST', body: { email, code, password }, auth: false });
         this.setToken(data.token);
         return data;
     }

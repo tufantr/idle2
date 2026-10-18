@@ -2455,21 +2455,50 @@ export function renderIntroModal(state) {
  * Log in or register. `required`: the game waits behind it (no guest button); `register`: a new player from
  * the title card, so Register is the button Enter presses.
  */
-export function renderAuthModal(message = '', { required = false, register = false } = {}) {
-    const first = register ? 'register' : 'login';
-    const label = { login: 'Log in', register: 'Register' };
-    const other = first === 'login' ? 'register' : 'login';
-    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
-        <div class="modal-header">${register ? 'Make your account' : required ? 'Sign in to play' : 'Cloud save'}</div>
-        <div class="modal-body">
-            <p class="muted small">${required ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'Create an account to keep your game on the server and play it on any device, or keep playing as a guest in this browser.'}</p>
-            <div class="auth-error" id="auth-error">${esc(message)}</div>
+/**
+ * The account dialog (src/main.js FI.auth and the rest): log in; make an account (a username, an email and a password;
+ * a 6-digit code goes to the email, and the account plays once it is entered here); the code; a forgotten password (a
+ * code to the email, then a new password). `ctx.mode` says which; `email` is the address as shown (part hidden).
+ */
+export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '' } = {}) {
+    const header = { login: required ? 'Sign in to play' : 'Cloud save', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
+    const error = `<div class="auth-error" id="auth-error">${esc(message)}</div>`;
+    const back = `<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode('login')">Back to log in</a></p>`;
+    const codeField = '<input type="text" id="auth-code" placeholder="123456" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" class="text-input code-input" aria-label="The 6-digit code" data-autofocus>';
+    let body;
+    if (mode === 'verify') {
+        body = `<p class="muted small">We sent a 6-digit code to <b>${esc(email)}</b>. Enter it here to start playing (it may take a minute, and can land among spam).</p>${error}
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.verifyCode()">${codeField}
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Confirm</button><button type="button" class="modal-btn" onclick="FI.resendCode()">Send a new code</button></div>
+            </form>${back}`;
+    } else if (mode === 'forgot') {
+        body = `<p class="muted small">Enter your account's email address: a code to set a new password goes there.</p>${error}
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.forgotPassword()">
+                <input type="email" id="auth-email" placeholder="Email" autocomplete="email" class="text-input" data-autofocus>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Send a code</button></div>
+            </form>${back}`;
+    } else if (mode === 'reset') {
+        body = `<p class="muted small">If an account has <b>${esc(email)}</b>, a 6-digit code is on its way there. Enter it with your new password.</p>${error}
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.resetPassword()">${codeField}
+                <input type="password" id="auth-pass" placeholder="New password" autocomplete="new-password" class="text-input">
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Set password</button><button type="button" class="modal-btn" onclick="FI.forgotPassword(true)">Send a new code</button></div>
+            </form>${back}`;
+    } else {
+        const first = mode === 'register' ? 'register' : 'login';
+        const other = first === 'login' ? 'register' : 'login';
+        const label = { login: 'Log in', register: 'Register' };
+        body = `<p class="muted small">${required ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'Create an account to keep your game on the server and play it on any device, or keep playing as a guest in this browser.'}</p>${error}
             <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('${first}')">
-                <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input">
-                <input type="password" id="auth-pass" placeholder="Password" autocomplete="${register ? 'new-password' : 'current-password'}" class="text-input">
-                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.auth('${other}')">${register ? 'Log in instead' : label[other]}</button></div>
+                <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input" value="${esc(username)}">
+                ${first === 'register' ? '<input type="email" id="auth-email" placeholder="Email (for your code)" autocomplete="email" class="text-input">' : ''}
+                <input type="password" id="auth-pass" placeholder="Password" autocomplete="${first === 'register' ? 'new-password' : 'current-password'}" class="text-input">
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.authMode('${other}')">${first === 'register' ? 'Log in instead' : label[other]}</button></div>
             </form>
-        </div>
+            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}`;
+    }
+    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
+        <div class="modal-header">${header}</div>
+        <div class="modal-body">${body}</div>
         ${required ? '' : '<div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Play as guest</button></div>'}
     </div>`;
 }

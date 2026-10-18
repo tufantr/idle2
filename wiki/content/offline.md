@@ -46,4 +46,4 @@ The game plays in one tab at a time: open it in a second tab or window and it pl
 
 **Log out** (Settings) uploads your game first; the browser then keeps nothing of it, and signing in again brings it back. **Hard reset** wipes your game and starts it over, on the server too. It cannot be undone.
 
-> Warning: your password is the key to your game, and there is no way to reset it yet. Keep it somewhere safe.
+An account is made with a username, an email address and a password. The game sends a 6-digit code to the address, and you start playing once you enter it (it may take a minute, and can land among spam; **Send a new code** sends another). Forgot your password? **Forgot your password?** under the log-in sends a code to your account's email, and with it you set a new one. Your email is never shown to other players.

@@ -202,6 +202,10 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .material-select option { background: #1a1510; }
 .text-input { width: 100%; padding: 0.5rem 0.65rem; margin-top: 0.2rem; }
 .auth-error { color: #f87171; font-size: 0.85rem; min-height: 1.2rem; margin-bottom: 0.5rem; }
+/* the 6-digit code from the email: big, spaced, in the middle */
+.auth-form .code-input { font-family: 'Courier New', monospace; font-size: 1.6rem; letter-spacing: 0.45em; text-align: center; padding-left: 0.45em; }
+.auth-links { margin: 0.6rem 0 0; text-align: center; }
+.auth-links a { color: var(--heading); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- sidebar ---------- */
 #sidebar {

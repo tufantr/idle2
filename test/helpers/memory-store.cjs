@@ -3,8 +3,8 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map() };
-    let seq = { users: 0, clans: 0, attacks: 0, rewards: 0 };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [] };
+    let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
     const store = {
@@ -12,9 +12,10 @@ function createMemoryStore() {
         async ensureSchema() {},
         async ping() {},
 
-        async createUser(username, hash) {
+        async createUser(username, hash, email = null) {
             if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) throw unique('users_username_lower');
-            const row = { id: ++seq.users, username, password_hash: hash, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null };
+            if (email && db.users.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) throw unique('users_email_lower');
+            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null };
             db.users.push(row);
             return row.id;
         },
@@ -22,8 +23,25 @@ function createMemoryStore() {
             const same = db.users.filter(x => x.username.toLowerCase() === username.toLowerCase())
                 .sort((a, b) => (b.username === username) - (a.username === username) || a.id - b.id);
             const u = same[0];
-            return u ? { id: u.id, username: u.username, password_hash: u.password_hash } : null;
+            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0 } : null;
         },
+        async findUserByEmail(email) {
+            const u = db.users.find(x => (x.email || '').toLowerCase() === String(email).toLowerCase());
+            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0 } : null;
+        },
+        async setEmailVerified(userId, now) { const u = db.users.find(x => x.id === userId); if (u) u.email_verified_at = now; },
+        async setPassword(userId, hash) { const u = db.users.find(x => x.id === userId); if (u) u.password_hash = hash; },
+        async putEmailCode(userId, purpose, codeHash, expiresAt, now) {
+            db.codes = db.codes.filter(c => !(c.userId === userId && c.purpose === purpose));
+            db.codes.push({ id: ++seq.codes, userId, purpose, codeHash, expiresAt, attempts: 0, createdAt: now });
+        },
+        async getEmailCode(userId, purpose) {
+            const c = db.codes.filter(x => x.userId === userId && x.purpose === purpose).sort((a, b) => b.id - a.id)[0];
+            return c ? { id: c.id, codeHash: c.codeHash, expiresAt: c.expiresAt, attempts: c.attempts, createdAt: c.createdAt } : null;
+        },
+        async bumpEmailCodeAttempts(id) { const c = db.codes.find(x => x.id === id); if (!c) return Infinity; c.attempts += 1; return c.attempts; },
+        async expireEmailCode(id) { const c = db.codes.find(x => x.id === id); if (c) c.expiresAt = 0; },
+        async deleteEmailCodes(userId, purpose) { db.codes = db.codes.filter(c => !(c.userId === userId && c.purpose === purpose)); },
         async userNameOf(userId) {
             return db.users.find(x => x.id === userId)?.username ?? null;
         },

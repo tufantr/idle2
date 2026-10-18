@@ -3,6 +3,8 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const store = require('./store');
+const crypto = require('node:crypto');
+const { sendMail, codeMail } = require('./mail');
 
 const app = express();
 app.use(cors());
@@ -152,26 +154,143 @@ const DUMMY_HASH = '$2b$10$ZMk5iy8eHTrQrJ0rEb/AOeTQMn3zrYOomc0x/UMLwi242hMY5Ytoe
 const clientIp = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
 const TOO_MANY = { error: 'Too many attempts. Try again in a few minutes.' };
 
+// ---------- sign-up by email ----------
+// An account is made with an email address and plays once a 6-digit code sent there is entered (the owner,
+// October 2026, on the fantasyidle.com server; a code, not a link: on a phone a link opens in another browser than
+// the game's). The same kind of code sets a new password. A code lives 15 minutes and takes 5 tries, and is kept only
+// as a hash keyed with the server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour
+// from an address. One account an email, whatever its case; no address is ever shown to another player.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const CODE_MS = 15 * 60 * 1000;
+const CODE_TRIES = 5;
+const RESEND_GAP_MS = 60 * 1000;
+const MAIL_WINDOW_MS = 60 * 60 * 1000;
+const MAX_MAILS_PER_ACCOUNT = 5;
+const MAX_MAILS_PER_IP = 20;
+const MAX_FORGOT_PER_IP = 10;
+
+const cleanEmail = v => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+const validEmail = e => e.length > 0 && e.length <= 254 && EMAIL_RE.test(e);
+/** An address as the player is shown it: enough to know it, not all of it. */
+const maskEmail = e => { const [local = '', domain = ''] = String(e).split('@'); return `${local.slice(0, 2)}${local.length > 2 ? '***' : ''}@${domain}`; };
+const codeHash = (userId, purpose, code) => crypto.createHmac('sha256', JWT_SECRET).update(`${userId}:${purpose}:${code}`).digest('hex');
+const CODE_WORDS = { wrong: 'That code is wrong.', expired: 'That code has run out: ask for a new one.', tries: 'Too many tries: ask for a new code.' };
+
+/** Mail a new code ('verify' or 'reset') to an account: { sent }, or { wait } (seconds) under a minute after the last, or { tooMany }. */
+async function mailCode(user, email, purpose, ip, now) {
+    const last = await store.getEmailCode(user.id, purpose);
+    if (last && now - last.createdAt < RESEND_GAP_MS) return { wait: Math.ceil((RESEND_GAP_MS - (now - last.createdAt)) / 1000) };
+    if (await store.takeAttempt(`mail:user:${user.id}`, now, MAIL_WINDOW_MS) > MAX_MAILS_PER_ACCOUNT) return { tooMany: true };
+    if (await store.takeAttempt(`mail:ip:${ip}`.slice(0, 120), now, MAIL_WINDOW_MS) > MAX_MAILS_PER_IP) return { tooMany: true };
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    await store.putEmailCode(user.id, purpose, codeHash(user.id, purpose, code), now + CODE_MS, now);
+    try { await sendMail({ to: email, ...codeMail({ username: user.username, code, purpose, minutes: CODE_MS / 60000 }) }); } catch (err) {
+        await store.deleteEmailCodes(user.id, purpose);   // never delivered: it mustn't hold the next one back a minute
+        throw err;
+    }
+    return { sent: true };
+}
+
+/** A code given for an account and a purpose: 'ok' (and spent), or 'wrong', 'expired', 'tries'. */
+async function checkCode(user, purpose, code, now) {
+    const c = await store.getEmailCode(user.id, purpose);
+    if (!c || c.expiresAt <= now) return 'expired';
+    const tries = await store.bumpEmailCodeAttempts(c.id);
+    if (tries > CODE_TRIES) { await store.expireEmailCode(c.id); return 'tries'; }   // (kept, run out: the next one still waits its minute)
+    const given = typeof code === 'string' || typeof code === 'number' ? String(code).replace(/\D/g, '') : '';
+    if (given.length !== 6 || !crypto.timingSafeEqual(Buffer.from(codeHash(user.id, purpose, given)), Buffer.from(c.codeHash))) return 'wrong';
+    await store.deleteEmailCodes(user.id, purpose);
+    return 'ok';
+}
+
 app.post('/api/register', async (req, res) => {
     if (!requireSecret(res)) return;
     const invalid = validateCredentials(req.body);
     if (invalid) return res.status(400).json({ error: invalid });
     const { username, password } = req.body;
+    const email = cleanEmail(req.body.email);
+    if (!validEmail(email)) return res.status(400).json({ error: 'An email address is needed: the game sends a code there.' });
+    const ip = clientIp(req);
 
     try {
         // every registration counts, before any work is done
-        if (await store.takeAttempt(`register:${clientIp(req)}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
+        if (await store.takeAttempt(`register:${ip}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
         const hash = await bcrypt.hash(password, 10);
-        const id = await store.createUser(username, hash);
-        res.json({ token: signToken({ id, username }), message: 'Registration successful' });
+        const id = await store.createUser(username, hash, email);
+        const pending = { pending: true, username, email: maskEmail(email) };
+        try { await mailCode({ id, username }, email, 'verify', ip, Date.now()); } catch (err) {
+            console.error('sign-up mail failed', err && err.message);
+            return res.status(502).json({ ...pending, error: "The account is made, but its code couldn't be sent: ask for a new one in a moment." });
+        }
+        res.json({ ...pending, message: 'Check your email for the code' });
     } catch (err) {
         if (err.code === '23505') { // Postgres unique violation
-            return res.status(400).json({ error: 'Username already exists' });
+            return res.status(400).json({ error: err.constraint === 'users_email_lower' ? 'That email already has an account: log in, or reset its password.' : 'Username already exists' });
         }
         console.error('register failed', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+/** The code from the sign-up mail: the address is confirmed and the account plays (a token, as a login gives). */
+app.post('/api/verify', route('verify', async (req, res) => {
+    if (!requireSecret(res)) return;
+    const { username, code } = req.body || {};
+    const user = typeof username === 'string' ? await store.findUserByName(username) : null;
+    if (!user || !user.email) return res.status(400).json({ error: CODE_WORDS.wrong });
+    if (user.emailVerifiedAt) return res.status(400).json({ error: 'This email is confirmed already: log in.' });
+    const now = Date.now();
+    const result = await checkCode(user, 'verify', code, now);
+    if (result !== 'ok') return res.status(400).json({ error: CODE_WORDS[result] });
+    await store.setEmailVerified(user.id, now);
+    res.json({ token: signToken(user), message: 'Email confirmed' });
+}));
+
+/** Another sign-up code, for an account not confirmed yet. */
+app.post('/api/verify/resend', route('resend code', async (req, res) => {
+    if (!requireSecret(res)) return;
+    const { username } = req.body || {};
+    const user = typeof username === 'string' ? await store.findUserByName(username) : null;
+    if (!user || !user.email || user.emailVerifiedAt) return res.status(400).json({ error: 'There is no code to send for that account.' });
+    let sent;
+    try { sent = await mailCode(user, user.email, 'verify', clientIp(req), Date.now()); } catch (err) {
+        console.error('resend mail failed', err && err.message);
+        return res.status(502).json({ error: "The code couldn't be sent: try again in a moment." });
+    }
+    if (sent.wait) return res.status(429).json({ error: `A new code can go in ${sent.wait} s.` });
+    if (sent.tooMany) return res.status(429).json(TOO_MANY);
+    res.json({ sent: true, email: maskEmail(user.email) });
+}));
+
+/** A code to set a new password, mailed to the account with this address. The same answer whether one has it or not. */
+app.post('/api/password/forgot', route('forgot password', async (req, res) => {
+    if (!requireSecret(res)) return;
+    const email = cleanEmail((req.body || {}).email);
+    if (!validEmail(email)) return res.status(400).json({ error: 'Which email address?' });
+    const now = Date.now();
+    const ip = clientIp(req);
+    if (await store.takeAttempt(`forgot:ip:${ip}`.slice(0, 120), now, MAIL_WINDOW_MS) > MAX_FORGOT_PER_IP) return res.status(429).json(TOO_MANY);
+    const user = await store.findUserByEmail(email);
+    if (user) { try { await mailCode(user, email, 'reset', ip, now); } catch (err) { console.error('reset mail failed', err && err.message); } }
+    res.json({ sent: true, email: maskEmail(email) });
+}));
+
+/** The reset code and a new password: set, and the account plays (an unconfirmed address is confirmed: the code reached it). */
+app.post('/api/password/reset', route('reset password', async (req, res) => {
+    if (!requireSecret(res)) return;
+    const { code, password } = req.body || {};
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD || Buffer.byteLength(password) > MAX_PASSWORD) {
+        return res.status(400).json({ error: `Password must be ${MIN_PASSWORD}-${MAX_PASSWORD} characters.` });
+    }
+    const email = cleanEmail((req.body || {}).email);
+    const user = validEmail(email) ? await store.findUserByEmail(email) : null;
+    const now = Date.now();
+    const result = user ? await checkCode(user, 'reset', code, now) : 'wrong';
+    if (result !== 'ok') return res.status(400).json({ error: CODE_WORDS[result] });
+    await store.setPassword(user.id, await bcrypt.hash(password, 10));
+    if (!user.emailVerifiedAt) await store.setEmailVerified(user.id, now);
+    res.json({ token: signToken(user), message: 'Password changed' });
+}));
 
 app.post('/api/login', route('login', async (req, res) => {
     if (!requireSecret(res)) return;
@@ -191,6 +310,10 @@ app.post('/api/login', route('login', async (req, res) => {
     await store.clearAuthFailures(keys.nameIp);
     await store.refundAttempt(keys.name);
     await store.refundAttempt(keys.ip);
+    // an address not confirmed yet: the code first (409, not 403: a 403 is the game's word for a session gone)
+    if (user.email && !user.emailVerifiedAt) {
+        return res.status(409).json({ error: 'Confirm your email first: enter the code we sent.', pending: true, username: user.username, email: maskEmail(user.email) });
+    }
     res.json({ token: signToken(user), message: 'Login successful' });
 }));
 
