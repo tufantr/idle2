@@ -397,9 +397,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   Auto on), against about 1% before, when 95–99% of gold was lost at prestige unspent.
 - **Camp** (`src/data/camp.js`) — the run-scoped power layer, bought with gold and **reset on
   prestige**: Whetstone +5% ATK, Armour Rack +5% DEF, Hearth +4% HP per level, multiplicative, without end
-  (×3.39 / ×3.39 / ×2.67 at level 25; past 25 a level costs plain gold, §3.30). Up to 25 a level costs `max(base, 0.008 × a kill's gold at
-  the best stage) × 1.36^level` (base 20 / 20 / 15): the base price until about best stage 85, so a new
-  player's camp is as it was (§3.24); past that, a whole upgrade costs about 50 kills at the best stage,
+  (×3.39 / ×3.39 / ×2.67 at level 25; besides those 25, endless levels in plain gold, the cheaper bought first, §3.30).
+  The 25 cost `max(base, 0.008 × a kill's gold at the best stage) × 1.36^i` (base 20 / 20 / 15): the base price until
+  about best stage 85, so a new player's camp is as it was (§3.24); past that, a whole upgrade costs about 50 kills at the best stage,
   so each run buys its camp again as it nears its best (the owner's choice 3a). At 0.016 the camp took
   80% of gold but each late run took 0.7 h instead of 0.5 h. It turns each new run into a climb and
   gives gold a job.
@@ -1584,12 +1584,20 @@ paid ever less per prestige. Three changes, measured together with `tools/batch.
   much to it as an early one, where its tokens add less and less to a big stock. 100 prestiges ×1.22, 1,000
   ×7.4. The prestige dialog shows it from the second prestige (`seen('legacy')`), with the Shop's prestige
   panel and the Hall's records.
-- **The camp past 25.** Levels go on without end (`max: Infinity`); past level 25 (`CAMP_GOLD.from`) each level
-  costs plain gold, 1,000,000 × 1.6^(levels held − 25), the same at any depth (`campCost`). Gold a kill pays grows
-  with the monsters' health, so a deeper hero's run buys more of them: about one more level of each for every
-  14 stages of the dense Abyss. Deep down a level past 25 can cost less than the 25th did, which follows the
-  best stage; that is the point, and the 25 levels below still ask about 50 kills at the best stage, so gold
-  keeps its job.
+- **The camp past 25.** Levels go on without end (`max: Infinity`): besides the 25 (`CAMP_GOLD.from`) priced by the
+  best stage (§3.8), each upgrade has endless levels in plain gold, 1,000,000 × 1.6^j for the j-th, the same at any
+  depth (`campCost`). Gold a kill pays grows with the monsters' health, so a deeper hero's run buys more of them:
+  about one more level of each for every 14 stages of the dense Abyss. Every level gives the same, so the next one is
+  the cheaper of the two kinds' next (the levels held count as the cheapest of both) and a price never drops.
+  At first the plain-gold levels came after the 25, and from best stage 128 level 25 cost less than level 24 (at
+  300: 1.26T, then 1,000,000), which the owner reported as the price resetting (18 October 2026). Below best stage
+  128 nothing changed; deeper, the plain-gold levels come first, from early in a run, and a run whose gold pays for
+  all 25 (about 50 kills at the best stage, so gold keeps its job) ends with the same camp, only sooner. The deep
+  climb is faster for it (seven seeds with Auto, before → after): the best stage at 100 h 520 → 650, 150 h 710 → 980,
+  200 h 920 → 1,260, 300 h 1,270 → 1,520, 600 h 1,790 → 1,870; stage 1,000 at hour 153 instead of 201 and 1,500 at
+  290 instead of 401; a run lasts 0.6 h instead of 0.5, so 995 prestiges in 600 h instead of 1,240. A player without
+  Auto at first (12 seeds): 430 → 545 at 100 h, 560 → 780 at 150 h; one who checks in three times a day stays below
+  stage 200, where nothing changed. The owner chose this pace over a counterweight that would keep the old one.
 
 Numbers (median of 7 seeds, with Auto; before → after): the best stage at 50 h 260 → 290, 100 h 370 → 420,
 150 h 460 → 610, 200 h 490 → 740, 300 h 570 → 1,010, 400 h 610 → 1,190, 600 h 650 → 1,410, 1,000 h 690 → 1,660,

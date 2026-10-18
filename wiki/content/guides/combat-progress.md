@@ -35,7 +35,7 @@ Gear is the base your hero's attack and defence are built on, and armour adds he
 
 ## 2. Spend your gold at the camp
 
-The [[/camp|camp]] multiplies your hero's attack (the Whetstone), defence (the Armour Rack) and health (the Hearth). {{CAMP_GOLD.from}} levels of the Whetstone make attack ×{{fmt(campMultiplier(CAMP_UPGRADES[0], CAMP_GOLD.from))}}, and past level {{CAMP_GOLD.from}} the levels go on without end, at a set price in gold. The camp starts over at each prestige, so it is the first thing to buy in every run. When you are stuck, the gold you earn while waiting is more camp levels. See [[/guides/gold|Gold]].
+The [[/camp|camp]] multiplies your hero's attack (the Whetstone), defence (the Armour Rack) and health (the Hearth). {{CAMP_GOLD.from}} levels of the Whetstone make attack ×{{fmt(campMultiplier(CAMP_UPGRADES[0], CAMP_GOLD.from))}}, and beside those the levels go on without end, at a set price in gold. The camp starts over at each prestige, so it is the first thing to buy in every run. When you are stuck, the gold you earn while waiting is more camp levels. See [[/guides/gold|Gold]].
 
 ## 3. Bring food
 

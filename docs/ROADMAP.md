@@ -1288,6 +1288,12 @@ Keeping it running:
       plays once the 6-digit code mailed there is entered; "Forgot your password?" sets a new one with a code. One
       account an email; codes last 15 minutes and take 5 tries; the mail comes from noreply@fantasyidle.com (DESIGN
       §3.17). Checked in a browser at both widths, and against the server's real PostgreSQL
+- [x] **A camp level never costs less than the one before** (the owner's report, 18 October 2026: "at certain levels
+      (i found it on 25) the cost resets"): from best stage 128 the 25th level, the first in plain gold, cost less than
+      the 24th, priced by the best stage. Every level gives the same, so the camp now sells the cheaper of its two kinds
+      first (DESIGN §3.30). Nothing changes below best stage 128; deeper, the plain-gold levels come early in a run,
+      and a deep run climbs faster for it, the owner's choice (stage 780 at hour 150 instead of 560; with Auto, 1,000 at
+      hour 153 instead of 201). The camp's "?" card and the wiki say the new rule; checked in a browser at both widths
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

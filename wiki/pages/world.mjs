@@ -6,7 +6,7 @@ import { STRATA, STRATA_FROM, STRATUM_STAGES, stratumAt } from '../../src/data/s
 import { DUNGEONS, UNIQUES, DUNGEON_MILESTONES, ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, FRAGMENTS_PER_UNIQUE, DIRECT_UNIQUE_CHANCE,
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE, TITAN_TIME_MS, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_BONUS, TITAN_LATE_FROM, TITAN_BANK, TITAN_UNLOCK_STAGE, titanStage } from '../../src/data/dungeons.js';
 import { BESTIARY, KILL_STARS } from '../../src/data/bestiary.js';
-import { enemyForStage, goldForKill, combatXpForKill, BALANCE } from '../../src/core/formulas.js';
+import { enemyForStage, goldForKill, goldPerKillAtStage, combatXpForKill, BALANCE } from '../../src/core/formulas.js';
 import { BASE } from '../../src/core/modifiers.js';
 import { GEAR_TIERS, GEAR_DROP_CHANCE, TIER_WEAR_LEVEL } from '../../src/data/items.js';
 import { VOIDSTONE_DEPTH, VOIDSTONE_CHANCE } from '../../src/data/workshop.js';
@@ -299,11 +299,12 @@ function titanPage(help) {
 function campPage(help) {
     const top = CAMP_GOLD.from;
     const levels = [1, 2, 3, 5, 10, 15, 20, top, top + 1, top + 5, top + 10, top + 25, top + 50, top + 75];
-    const rows = levels.map(l => [l, ...CAMP_UPGRADES.map(u => fmt(campCost(u, l - 1)))]);
+    const deep = [200, 600];   // a whetstone's prices for a hero whose best stage is this deep
+    const rows = levels.map(l => [l, ...CAMP_UPGRADES.map(u => fmt(campCost(u, l - 1))), ...deep.map(s => fmt(campCost(CAMP_UPGRADES[0], l - 1, goldPerKillAtStage(s))))]);
     const info = table(['Upgrade', 'Each level', `At level ${top} #`, `At level ${top * 2} #`, `At level ${top * 4} #`], CAMP_UPGRADES.map(u => [`<span class="act">${icon(u.art, 1)}<span>${esc(u.name)}</span></span>`, esc(u.desc), `×${fmt(campMultiplier(u, top))}`, `×${fmt(campMultiplier(u, top * 2))}`, `×${fmt(campMultiplier(u, top * 4))}`]), { sort: false });
     return {
         infobox: infobox({ title: 'Camp', image: icon('campfire', 3), rows: [['Paid with', 'gold'], ['Resets', 'every prestige'], ['Upgrades', CAMP_UPGRADES.map(u => esc(u.name)).join(', ')]] }),
-        body: `${help.prose('/camp')}\n${section('Upgrades', info)}\n${section('Price of each level', `<p>The base price of each level, in gold. Up to level ${top}, prices follow your best stage later on, when that is higher; past it, a level costs the same at any depth:</p>${table(['Level #', ...CAMP_UPGRADES.map(u => `${esc(u.name)} #`)], rows, { sort: false })}`)}`
+        body: `${help.prose('/camp')}\n${section('Upgrades', info)}\n${section('Price of each level', `<p>The price of each level, in gold, for a new player, and the ${esc(CAMP_UPGRADES[0].name)}'s for a hero whose best stage is ${deep.join(' or ')}: ${top} levels follow the best stage, the others cost the same at any depth, and the cheaper comes next.</p>${table(['Level #', ...CAMP_UPGRADES.map(u => `${esc(u.name)} #`), ...deep.map(s => `Best stage ${s} #`)], rows, { sort: false })}`)}`
     };
 }
 

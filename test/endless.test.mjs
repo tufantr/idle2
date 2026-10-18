@@ -8,7 +8,7 @@ import { Game } from '../src/game.js';
 import { BASE, legacyMult } from '../src/core/modifiers.js';
 import { BALANCE, enemyBaseStats, abyssDropMult, easedGrowthLog } from '../src/core/formulas.js';
 import { AUTHORED_STAGES, STAGES_PER_ZONE } from '../src/data/zones.js';
-import { CAMP_UPGRADES, CAMP_GOLD, campCost } from '../src/data/camp.js';
+import { CAMP_UPGRADES, CAMP_GOLD, CAMP_PRICE_KILLS, campCost } from '../src/data/camp.js';
 import { campPrice, nextCampCost } from '../src/systems/camp.js';
 import { goldPerKillAtStage } from '../src/core/formulas.js';
 import { fmt } from '../src/ui/format.js';
@@ -82,26 +82,74 @@ test('every prestige ever made adds to the Legacy, for good, and an Ascension ke
     assert.equal(legacyMult(loaded), (1 + BASE.legacyPerPrestige) ** 250);
 });
 
+// the camp as it was priced before October 2026: the 25 best-stage levels first, then plain gold
+const campCostInTurn = (u, level, gold) => level >= CAMP_GOLD.from ? Math.ceil(CAMP_GOLD.base * CAMP_GOLD.growth ** (level - CAMP_GOLD.from))
+    : Math.ceil(Math.max(u.baseCost, CAMP_PRICE_KILLS * gold) * u.growth ** level);
+const levelsFor = (price, budget) => { let level = 0; for (let spent = 0; spent + price(level) <= budget; level++) spent += price(level); return level; };
+
 test('the camp goes on past level 25, at a price in plain gold that a deeper hero affords more of', () => {
     const [whetstone, , hearth] = CAMP_UPGRADES;
     for (const u of CAMP_UPGRADES) assert.equal(u.max, Infinity);
-    // levels below CAMP_GOLD.from as before; from it, plain gold at any depth
+    // a new player's 25 levels cost less than the first plain-gold one, which comes after them
     assert.equal(campCost(whetstone, CAMP_GOLD.from), Math.ceil(CAMP_GOLD.base));
-    assert.equal(campCost(whetstone, CAMP_GOLD.from + 3, goldPerKillAtStage(900)), Math.ceil(CAMP_GOLD.base * CAMP_GOLD.growth ** 3));
+    assert.equal(campCost(whetstone, CAMP_GOLD.from + 3), Math.ceil(CAMP_GOLD.base * CAMP_GOLD.growth ** 3));
     assert.equal(campCost(hearth, CAMP_GOLD.from + 3), campCost(whetstone, CAMP_GOLD.from + 3));
+    // deep down the plain-gold levels are the cheaper and come first, from the first level of a run
+    assert.equal(campCost(whetstone, 0, goldPerKillAtStage(900)), Math.ceil(CAMP_GOLD.base));
+    assert.equal(campCost(whetstone, 3, goldPerKillAtStage(900)), Math.ceil(CAMP_GOLD.base * CAMP_GOLD.growth ** 3));
     const game = new Game(null, T0);
     const s = game.state;
     s.combat.bestStage = 600;
     s.camp.whetstone = CAMP_GOLD.from;
     assert.equal(nextCampCost(s, 'whetstone'), campPrice(s, whetstone, CAMP_GOLD.from));
-    // a run's gold at stage 600 buys dozens of levels past 25 with Max
+    // a run's gold at stage 600 buys dozens of levels with Max
+    s.camp.whetstone = 0;
     s.gold = 100 * goldPerKillAtStage(600);
     const bought = game.buyCampUpgrade('whetstone', 'max');
-    assert.ok(bought > 30, `${bought} levels`);
-    assert.equal(s.camp.whetstone, CAMP_GOLD.from + bought);
+    assert.ok(bought > CAMP_GOLD.from + 30, `${bought} levels`);
+    assert.equal(s.camp.whetstone, bought);
     // and a save keeps them
     const loaded = loadState(JSON.parse(JSON.stringify(s)), T0);
-    assert.equal(loaded.camp.whetstone, CAMP_GOLD.from + bought);
+    assert.equal(loaded.camp.whetstone, bought);
+});
+
+test('a camp level never costs less than the one before it, at any depth (the owner\'s report: level 25 cost less than 24)', () => {
+    for (const stage of [1, 40, 85, 120, 127, 128, 129, 150, 200, 300, 600, 900, 1500, 3000, 6000]) {
+        const gold = goldPerKillAtStage(stage);
+        for (const u of CAMP_UPGRADES) {
+            for (let level = 0; level < 600; level++) {
+                const now = campCost(u, level, gold), next = campCost(u, level + 1, gold);
+                assert.ok(next >= now, `${u.id} at best stage ${stage}: level ${level + 1} costs ${next}, level ${level} ${now}`);
+            }
+        }
+    }
+    // nor when the best stage moves on: a deeper best never makes a level cheaper
+    for (const u of CAMP_UPGRADES) {
+        for (const level of [0, 10, 24, 25, 26, 40, 80]) {
+            let last = 0;
+            for (let stage = 1; stage <= 1200; stage += 7) {
+                const now = campCost(u, level, goldPerKillAtStage(stage));
+                assert.ok(now >= last, `${u.id} level ${level} at best stage ${stage}`);
+                last = now;
+            }
+        }
+    }
+});
+
+test('a new player\'s camp costs what it did; deep down the cheaper levels come first, and a run ends with the same camp', () => {
+    for (let stage = 1; stage <= 127; stage++) {
+        const gold = goldPerKillAtStage(stage);
+        for (const u of CAMP_UPGRADES) for (let level = 0; level < 120; level++) assert.equal(campCost(u, level, gold), campCostInTurn(u, level, gold), `${u.id} level ${level} at best stage ${stage}`);
+    }
+    for (const stage of [150, 300, 600, 1500]) {
+        const gold = goldPerKillAtStage(stage);
+        for (const u of CAMP_UPGRADES) {
+            // a run's gold that pays for all 25 best-stage levels buys the same camp in either order
+            for (const kills of [100, 300, 1000]) assert.equal(levelsFor(l => campCost(u, l, gold), kills * gold), levelsFor(l => campCostInTurn(u, l, gold), kills * gold), `${u.id}, ${kills} kills at ${stage}`);
+            // and less gold, early in a run, buys more levels than it did
+            assert.ok(levelsFor(l => campCost(u, l, gold), 10 * gold) > levelsFor(l => campCostInTurn(u, l, gold), 10 * gold), `${u.id}, 10 kills at ${stage}`);
+        }
+    }
 });
 
 test('numbers past a nonillion keep their names, to the end of what a number holds', () => {

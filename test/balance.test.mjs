@@ -80,7 +80,8 @@ test('camp prices are the old ones for a new player, and follow the best stage l
     s.combat.bestStage = 200;
     const first = campPrice(s, whetstone, 0);
     assert.equal(first, Math.ceil(CAMP_PRICE_KILLS * goldPerKillAtStage(200)));
-    assert.ok(Math.abs(campPrice(s, whetstone, 5) / first - whetstone.growth ** 5) < 0.01);
+    // (level 4 is the last at stage 200 below the first plain-gold level, which comes before level 5: data/camp.js)
+    assert.ok(Math.abs(campPrice(s, whetstone, 4) / first - whetstone.growth ** 4) < 0.01);
     // buying pays that price, and a prestige packs the camp up as before
     s.gold = first * 3;
     assert.equal(game.buyCampUpgrade('whetstone', 1), 1);

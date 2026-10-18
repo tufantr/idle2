@@ -114,8 +114,8 @@ function formulasPage(help) {
                 `a pet's chance per action = action seconds × skill level ÷ ${fmt(PET_BASE)}`
             ]) + f('Gear and prices', [
                 `a piece's attack or defence = ${STAT_UNIT} × tier power × rarity quality × slot weight (± 5%)`,
-                `the camp: a level costs base × growth^level, or ${CAMP_PRICE_KILLS} × a kill's gold at your best stage × growth^level when that is higher;`,
-                `          from level ${CAMP_GOLD.from} on, ${fmt(CAMP_GOLD.base)} × ${CAMP_GOLD.growth}^(level − ${CAMP_GOLD.from}) at any depth`,
+                `the camp: ${CAMP_GOLD.from} levels at max(base, ${CAMP_PRICE_KILLS} × a kill's gold at your best stage) × growth^i, and endless ones at`,
+                `          ${fmt(CAMP_GOLD.base)} × ${CAMP_GOLD.growth}^j at any depth (i, j: levels of each kind held); the cheaper comes next`,
                 `the Shop: kills × a kill's gold at your best stage`,
                 `selling: a category's base price × 1.6^(tier − 1) (an ore ${sellValue('copper_ore')} gold at tier 1)`
             ]))
