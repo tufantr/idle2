@@ -1294,6 +1294,12 @@ Keeping it running:
       first (DESIGN §3.30). Nothing changes below best stage 128; deeper, the plain-gold levels come early in a run,
       and a deep run climbs faster for it, the owner's choice (stage 780 at hour 150 instead of 560; with Auto, 1,000 at
       hour 153 instead of 201). The camp's "?" card and the wiki say the new rule; checked in a browser at both widths
+- [x] **A clan attack is the hero at his best of the week** (the owner, 20 October 2026: a member hit the boss for
+      626M in one attack against 78M in three, attacking at a run's end with the camp full; "making it only about
+      max stage"; the week's best attack was suggested instead, and taken): an attack is the hero's best plain attack of the past seven days, wherever in a run it is made, with
+      this fight's strikes and potion on top, and the fight on screen hits as hard; the boss is sized again each UTC
+      day from the members as they are, and the week's board keeps each attack as it was dealt (DESIGN §3.18). Tested
+      against the server's real PostgreSQL too
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

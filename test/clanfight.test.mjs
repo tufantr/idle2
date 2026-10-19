@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { clanFightDamage, cleanStrikes, clanGuardDown, clanAttackFromSave, expectedDps } from '../src/core/power.js';
+import { clanFightDamage, cleanStrikes, clanGuardDown, clanAttackFromSave, clanAttackScale, plainAttack, expectedDps } from '../src/core/power.js';
 import { CLAN_FIGHT_MS, CLAN_GUARD, clanBossFor } from '../src/data/social.js';
 import { BALANCE } from '../src/core/formulas.js';
 import { fightTab } from '../src/ui/features.js';
@@ -67,6 +67,46 @@ test('the server reckons a fight from a stored save, whatever the page claims', 
     assert.equal(clanAttackFromSave(save, [], 'lots', T0).damage, plain.damage, 'a nonsense length is the whole fight');
     assert.ok(clanAttackFromSave(save, [], 999_999, T0).damage === plain.damage, 'no fight is longer than the clock');
     assert.ok(clanAttackFromSave(save, everyQuarter, CLAN_FIGHT_MS, T0).damage > plain.damage);
+});
+
+test('a clan attack is the hero at his best of the week: the fight from the stored save, raised to that best', () => {
+    // the owner, October 2026: the same hero hit seven times harder at a run's end (the camp full) than just after a prestige
+    const game = new Game(null, T0);
+    game.state.combat.bestStage = 40;
+    game.recompute();
+    const save = JSON.parse(game.serialize(T0));
+    const plain = plainAttack(save, T0);
+    const fight = clanAttackFromSave(save, everyQuarter, CLAN_FIGHT_MS, T0);
+    assert.equal(fight.damage, clanAttackFromSave(save, everyQuarter, CLAN_FIGHT_MS, T0, plain / 2).damage, 'a best below the hero now changes nothing');
+    const best = clanAttackFromSave(save, everyQuarter, CLAN_FIGHT_MS, T0, plain * 3);
+    assert.ok(Math.abs(best.damage - fight.damage * 3) <= 3, `${best.damage} = 3 × ${fight.damage}`);
+    assert.equal(best.scale, 3);
+    assert.equal(best.guarded, fight.guarded, 'the strikes are this fight\'s');
+    // half a fight is half of it, at the best as well
+    const half = clanAttackFromSave(save, [], CLAN_FIGHT_MS / 2, T0, plain * 3).damage;
+    assert.ok(half > plain * 3 * 0.4 && half < plain * 3 * 0.6, `${half} of ${plain * 3}`);
+    for (const [b, p] of [[0, 10], [NaN, 10], [-5, 10], [10, 0], [Infinity, 10], [5, 10]]) assert.equal(clanAttackScale(b, p), 1, `${b} over ${p}`);
+    assert.equal(clanAttackScale(30, 10), 3);
+});
+
+test('the clan fight in the game hits at the hero\'s best of the week, as the server will count it', () => {
+    const hitsAt = scale => {
+        rng.setSource(seededRandom(5));
+        const game = new Game(null, T0);
+        game.state.combat.bestStage = 40;
+        game.state.prestige.tokens = 20000;   // hits big enough that rounding them to whole numbers is nothing
+        game.recompute();
+        game.startClanFight({ week: '2026-W41', hp: 1e15, maxHp: 1e15, scale });
+        game.drainEvents();
+        for (let t = T0 + 1000; t <= T0 + 10000; t += 1000) game.tick(t);
+        return game.drainEvents().filter(e => e.type === 'hit').reduce((sum, e) => sum + e.dmg, 0);
+    };
+    const own = hitsAt(undefined);
+    assert.ok(own > 0);
+    assert.equal(hitsAt(1), own);
+    assert.equal(hitsAt('lots'), own, 'a scale that is not a number is none');
+    const four = hitsAt(4);
+    assert.ok(Math.abs(four / own - 4) < 0.05, `x${(four / own).toFixed(3)}`);
 });
 
 test('the clan fight in the game: the week\'s boss, strikes kept and landing in the openings, back to work after', () => {

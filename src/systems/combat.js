@@ -219,11 +219,11 @@ export function playerAttack(game, { manual = false } = {}) {
     const enemy = c.enemy;
     if (!enemy || enemy.hp <= 0) return 0;
 
-    const clan = c.mode === 'clan';   // the clan boss: strikes land harder in its openings (and no potion works there: core/modifiers.js)
+    const clan = c.mode === 'clan';   // the clan boss: strikes land harder in its openings, and every hit at the hero's best of the week (systems/clanfight.js)
     const combo = c.combo || 0;
     const critChance = Math.min(BASE.caps.critChance, d.critChance);
     const isCrit = rng.chance(critChance);
-    let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult * (clan ? CLAN_GUARD.mult : 1) : 1);
+    let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult * (clan ? CLAN_GUARD.mult : 1) : 1) * (clan ? state.clanFight?.scale || 1 : 1);
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
     const dealt = Math.min(dmg, Math.max(0, enemy.hp));   // what the monster really lost (a killing blow's excess heals nothing)
     enemy.hp -= dmg;

@@ -1269,7 +1269,7 @@ window.FI = {
             if (!mine.clan || !boss) { toast('Join a clan first.', 'info'); return; }
             if (boss.killed) { toast("This week's boss is already defeated.", 'info'); return; }
             if (!(mine.attacksLeft > 0)) { toast(`No attacks waiting: ${ui.social.attacksPerDay} more come each day.`, 'info'); return; }
-            if (!game.startClanFight({ week: boss.week, hp: boss.hp, maxHp: boss.maxHp })) return;
+            if (!game.startClanFight({ week: boss.week, hp: boss.hp, maxHp: boss.maxHp, scale: mine.attackScale })) return;
             ui.battleHoldUntil = 0;
             setBattleFull(true);
             window.FI.switchTab('clan');   // fought on the Clan tab, which shows the clan again when it is over (fightTab)

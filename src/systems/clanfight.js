@@ -1,8 +1,9 @@
 // The clan boss fight (DESIGN §3.18): a clan attack is a short fight on screen against the week's clan
 // boss, in the battle scene like the Titan's. The hero attacks by himself; strikes land only while the
 // boss's guard is down (core/power.js CLAN_GUARD). The boss doesn't hit back. The game shows the fight
-// and keeps what the player did (the strike times); the server reckons the damage from the stored save
-// and those times (core/power.js clanAttackFromSave), so the page never says how much was dealt.
+// and keeps what the player did (the strike times); the server reckons the damage from the stored save,
+// raised to the hero's best plain attack of the past week, and those times (core/power.js clanAttackFromSave),
+// so the page never says how much was dealt. The hero hits as hard on screen (`scale`, the server's).
 
 import { clanGuardDown } from '../core/power.js';
 import { clanBossFor, CLAN_FIGHT_MS, CLAN_BANNER } from '../data/social.js';
@@ -38,9 +39,10 @@ export function clanBossEnemy(state) {
 }
 
 /**
- * Begin a clan attack against `boss` ({ week, hp, maxHp }, the server's): the hero leaves what he is
- * doing (a dungeon run is given up) and goes back to it when the fight ends. Refused while another
- * special fight is on, or while the last attack's result waits to be sent.
+ * Begin a clan attack against `boss` ({ week, hp, maxHp, scale }, the server's; `scale` how much harder than he is now
+ * the hero's attack counts, his best of the week): the hero leaves what he is doing (a dungeon run is given up) and
+ * goes back to it when the fight ends. Refused while another special fight is on, or while the last attack's result
+ * waits to be sent.
  */
 export function startClanFight(game, boss) {
     const state = game.state;
@@ -51,7 +53,9 @@ export function startClanFight(game, boss) {
     if (!boss || !(Number(boss.hp) > 0)) { game.emit({ type: 'error', text: "This week's boss is already defeated." }); return false; }
     const before = doingNow(state);
     if (c.mode === 'dungeon') failDungeon(game, 'you left for the clan boss');
-    state.clanFight = { week: String(boss.week || ''), hp: Math.floor(Number(boss.hp)), maxHp: Math.floor(Number(boss.maxHp) || Number(boss.hp)), strikes: [], before };
+    const scale = Number(boss.scale);
+    state.clanFight = { week: String(boss.week || ''), hp: Math.floor(Number(boss.hp)), maxHp: Math.floor(Number(boss.maxHp) || Number(boss.hp)), strikes: [], before,
+        scale: Number.isFinite(scale) && scale > 1 ? Math.min(scale, 1e6) : 1 };
     c.mode = 'clan';
     c.dungeon = null;
     c.regroupLeft = 0;

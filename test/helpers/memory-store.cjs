@@ -129,9 +129,9 @@ function createMemoryStore() {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
             return b ? { ...b } : null;
         },
-        async createBoss(clanId, week, maxHp, shares = [], unit = 0) {
+        async createBoss(clanId, week, maxHp, shares = [], unit = 0, day = 0) {
             if (!db.bosses.some(x => x.clanId === clanId && x.week === week)) {
-                db.bosses.push({ clanId, week, level: 1, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false, killPaid: false, unit });
+                db.bosses.push({ clanId, week, level: 1, maxHp, hp: maxHp, killedAt: 0, lastHitUser: null, settled: false, killPaid: false, unit, unitDay: day });
                 for (const s of shares) db.shares.push({ clanId, week, userId: s.userId, share: s.share });
             }
             return store.getBoss(clanId, week);
@@ -172,9 +172,11 @@ function createMemoryStore() {
             db.auth.set(key, r && now - r.since < windowMs ? { count: r.count + 1, since: r.since } : { count: 1, since: now });
         },
         async clearAuthFailures(key) { db.auth.delete(key); },
-        async setBossUnit(clanId, week, unit) {
+        async setBossUnit(clanId, week, unit, day = 0) {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
-            if (b) b.unit = unit;
+            if (!b) return;
+            if (b.unit > 0) for (const a of db.attacks.filter(x => x.clanId === clanId && x.week === week && (x.dealt === null || x.dealt === undefined))) a.dealt = a.damage / 1000 * b.unit;
+            Object.assign(b, { unit, unitDay: day });
         },
         async convertBoss(clanId, week, unit, maxHp, hp, factor) {
             const b = db.bosses.find(x => x.clanId === clanId && x.week === week && !(x.unit > 0));
@@ -208,15 +210,15 @@ function createMemoryStore() {
         async levelFighters(clanId, week, level) {
             return [...new Set(db.attacks.filter(a => a.clanId === clanId && a.week === week && (a.level || 1) === level).map(a => a.userId))];
         },
-        async recordAttack({ clanId, userId, week, day, damage, now, fightAt = null, level = 1 }) {
+        async recordAttack({ clanId, userId, week, day, damage, dealt = null, now, fightAt = null, level = 1 }) {
             if (fightAt !== null && db.attacks.some(a => a.userId === userId && a.fightAt === fightAt)) throw unique('clan_attacks_fight');
             const slot = Math.max(0, ...db.attacks.filter(a => a.userId === userId && a.day === day).map(a => a.slot)) + 1;
-            db.attacks.push({ id: ++seq.attacks, clanId, userId, week, day, slot, damage, at: now, fightAt, level });
+            db.attacks.push({ id: ++seq.attacks, clanId, userId, week, day, slot, damage, dealt, at: now, fightAt, level });
             return slot;
         },
         async attackByFight(userId, fightAt) {
             const a = db.attacks.find(x => x.userId === userId && x.fightAt === fightAt);
-            return a ? { clanId: a.clanId, week: a.week, damage: a.damage, at: a.at } : null;
+            return a ? { clanId: a.clanId, week: a.week, damage: a.damage, dealt: a.dealt ?? null, at: a.at } : null;
         },
         async deleteAttack(userId, day, slot) {
             db.attacks = db.attacks.filter(a => !(a.userId === userId && a.day === day && a.slot === slot));
@@ -242,9 +244,11 @@ function createMemoryStore() {
         async weeklyDamage(clanId, week) {
             const byUser = new Map();
             for (const a of db.attacks.filter(x => x.clanId === clanId && x.week === week)) {
-                const row = byUser.get(a.userId) || { userId: a.userId, username: db.users.find(u => u.id === a.userId).username, damage: 0, attacks: 0 };
+                const row = byUser.get(a.userId) || { userId: a.userId, username: db.users.find(u => u.id === a.userId).username, damage: 0, attacks: 0, dealt: 0, undealt: 0 };
                 row.damage += a.damage;
                 row.attacks += 1;
+                if (a.dealt === null || a.dealt === undefined) row.undealt += a.damage;
+                else row.dealt += a.dealt;
                 byUser.set(a.userId, row);
             }
             return [...byUser.values()].sort((a, b) => b.damage - a.damage);

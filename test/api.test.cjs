@@ -47,6 +47,21 @@ const peek = {
         if (memory) { memory.db.bosses.forEach(boss => { if (boss.hp > 0) boss.hp = 1; }); return; }
         await pool.query('UPDATE clan_bosses SET hp = 1 WHERE hp > 0');
     },
+    /** Every attack as an older server kept it: in the clan's attacks only, not as dealt. */
+    async forgetDealt() {
+        if (memory) { memory.db.attacks.forEach(a => { a.dealt = null; }); return; }
+        await pool.query('UPDATE clan_attacks SET dealt = NULL');
+    },
+    /** A player's stored numbers, as an older server left them. */
+    async setMetrics(username, metrics) {
+        if (memory) { memory.db.users.find(u => u.username === username).metrics = JSON.stringify(metrics); return; }
+        await pool.query('UPDATE users SET metrics = $1 WHERE username = $2', [JSON.stringify(metrics), username]);
+    },
+    async metrics(username) {
+        if (memory) return JSON.parse(memory.db.users.find(u => u.username === username).metrics);
+        const { rows } = await pool.query('SELECT metrics FROM users WHERE username = $1', [username]);
+        return JSON.parse(rows[0].metrics);
+    },
     /** A clan's boss this week as one from before the clan's attacks counted it: health in damage, no unit. */
     async oldBoss(username, maxHp, hp) {
         if (memory) {
@@ -92,9 +107,9 @@ async function register(username) {
     return (await confirmed.json()).token;
 }
 
-/** A small but valid save: the server migrates whatever it gets, so a partial state is enough. */
-function heroSave({ tokens = 0, bestStage = 1, playtimeMs = 0, xp = 0 } = {}) {
-    return { version: 3, meta: { playtimeMs, savedAt: clock }, prestige: { tokens }, combat: { bestStage, maxStage: bestStage }, skills: { combat: { xp } } };
+/** A small but valid save: the server migrates whatever it gets, so a partial state is enough. `camp`: its levels (a run's end). */
+function heroSave({ tokens = 0, bestStage = 1, playtimeMs = 0, xp = 0, camp = null } = {}) {
+    return { version: 3, meta: { playtimeMs, savedAt: clock }, prestige: { tokens }, combat: { bestStage, maxStage: bestStage }, skills: { combat: { xp } }, ...(camp ? { camp } : {}) };
 }
 
 test('register validates username and password', async () => {
@@ -861,13 +876,111 @@ test("this week's board counts from where the player stood when the week began, 
 test("the boss is sized from each member's attack at its best this week (a weak save just before Monday doesn't shrink it)", async () => {
     const t = await register('sly_sizer');
     await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, t);
-    const strong = (await (await get('/load', t)).json());
-    assert.ok(strong.state);
+    const { plainAttack } = await import('../src/core/power.js');
+    const strong = plainAttack(heroSave({ tokens: 900, bestStage: 120 }), clock);
     await post('/save', { state: heroSave({ tokens: 0, bestStage: 120 }) }, t);   // weak, just before the boss is made
     await post('/clans', { name: 'Sly Ones', tag: 'SLY' }, t);
     const view = await (await get('/clan', t)).json();
-    const weakShare = view.members[0].attackDamage * 12;
-    assert.ok(view.boss.maxHp > weakShare, `${view.boss.maxHp} > ${weakShare}`);
+    near(view.members[0].attackDamage, strong, 'the member\'s attack is their best of the week');
+    near(view.boss.maxHp, 30 * strong);
+});
+
+test("a clan attack is the hero's best of the past week, wherever in a run it is made (the owner's report: a run's end hit 7x harder)", async () => {
+    toMonday(2);
+    const { plainAttack } = await import('../src/core/power.js');
+    const hero = await register('run_ender');
+    await post('/clans', { name: 'Run Enders', tag: 'END' }, hero);
+    // at a run's end: forty whetstone levels; then a prestige packs the camp up
+    await post('/save', { state: heroSave({ tokens: 500, bestStage: 120, camp: { whetstone: 40 } }) }, hero);
+    const atBest = (await (await get('/clan', hero)).json()).members[0].attackDamage;
+    await post('/save', { state: heroSave({ tokens: 500, bestStage: 120 }) }, hero);
+    const view = await (await get('/clan', hero)).json();
+    assert.equal(view.members[0].attackDamage, atBest, 'the Clan tab shows the attack that counts');
+    const now = plainAttack(heroSave({ tokens: 500, bestStage: 120 }), clock);
+    near(view.attackScale, atBest / now, 'the fight on screen hits as hard');
+    assert.ok(view.attackScale > 6, `x${view.attackScale}`);
+    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, hero)).json();
+    near(hit.damage, atBest, 'just after a prestige, the attack is the one at the run\'s end');
+    const half = await (await post('/clan/attack', { strikes: [], ms: 15000 }, hero)).json();
+    assert.ok(half.damage > atBest * 0.4 && half.damage < atBest * 0.6, `half a fight: ${half.damage} of ${atBest}`);
+    // that best is kept a week, then the attack is the hero as he is
+    clock += 8 * DAY_MS;
+    await post('/save', { state: heroSave({ tokens: 500, bestStage: 120 }) }, hero);
+    const later = await (await get('/clan', hero)).json();
+    near(later.members[0].attackDamage, now);
+    assert.equal(later.attackScale, 1);
+});
+
+test("each day the boss is sized again from the members' best attacks; what was dealt stays dealt, on the board too", async () => {
+    toMonday(3);
+    const grower = await register('fast_grower');
+    await post('/clans', { name: 'Fast Growers', tag: 'GROW' }, grower);
+    await post('/save', { state: heroSave({ tokens: 200, bestStage: 100 }) }, grower);
+    const monday = await (await get('/clan', grower)).json();
+    const weak = monday.members[0].attackDamage;
+    near(monday.boss.maxHp, 30 * weak);
+    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, grower)).json();
+    near(hit.damage, weak);
+    // stronger the same day: the boss stays as it was until the day is over
+    await post('/save', { state: heroSave({ tokens: 200, bestStage: 100, camp: { whetstone: 30 } }) }, grower);
+    const evening = await (await get('/clan', grower)).json();
+    near(evening.boss.maxHp, 30 * weak, 'sized once a day');
+    const strong = evening.members[0].attackDamage;
+    assert.ok(strong > 3 * weak, `${strong} vs ${weak}`);
+    // the next day: thirty of the attacks the clan has now, as far down as it was, and Monday's attack as it was dealt
+    clock += DAY_MS;
+    const tuesday = await (await get('/clan', grower)).json();
+    near(tuesday.boss.maxHp, 30 * strong);
+    near(tuesday.boss.hp / tuesday.boss.maxHp, hit.hp / hit.maxHp, 'what was dealt stays dealt');
+    near(tuesday.board[0].damage, hit.damage, 'the board keeps the damage as it was dealt');
+    const second = await (await post('/clan/attack', { strikes: [], ms: 30000 }, grower)).json();
+    near(second.damage, strong);
+    const board = (await (await get('/clan', grower)).json()).board;
+    near(board[0].damage, hit.damage + second.damage);
+    assert.equal(board[0].attacks, 2);
+});
+
+test('attacks from before the board kept them as dealt still show as they did when the boss is sized again', async () => {
+    toMonday(5);
+    const vet = await register('board_vet');
+    await post('/clans', { name: 'Board Vets', tag: 'VET' }, vet);
+    await post('/save', { state: heroSave({ tokens: 150, bestStage: 90 }) }, vet);
+    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, vet)).json();
+    await peek.forgetDealt();
+    near((await (await get('/clan', vet)).json()).board[0].damage, hit.damage, 'shown in the unit, as before');
+    await post('/save', { state: heroSave({ tokens: 150, bestStage: 90, camp: { whetstone: 30 } }) }, vet);
+    clock += DAY_MS;
+    const view = await (await get('/clan', vet)).json();
+    assert.ok(view.members[0].attackDamage > 3 * hit.damage, 'the boss is sized from a stronger hero now');
+    near(view.board[0].damage, hit.damage, 'and the old attack still shows what it dealt');
+});
+
+test("a save flagged for impossible numbers adds nothing to the hero's best of the week", async () => {
+    toMonday(6);
+    const sly = await register('one_big_save');
+    await post('/clans', { name: 'Big Savers', tag: 'BIG' }, sly);
+    await post('/save', { state: heroSave({ tokens: 100, bestStage: 60 }) }, sly);
+    const honest = (await (await get('/clan', sly)).json()).members[0].attackDamage;
+    const forged = await (await post('/save', { state: heroSave({ tokens: 1e19, bestStage: 60 }) }, sly)).json();
+    assert.equal(forged.flagged, true);
+    await post('/save', { state: heroSave({ tokens: 100, bestStage: 60 }) }, sly);
+    near((await (await get('/clan', sly)).json()).members[0].attackDamage, honest, 'the forged save left no best behind');
+});
+
+test("numbers stored before the days' bests were kept: their one high still counts, and joins the days", async () => {
+    toMonday(4);
+    const old = await register('old_timer');
+    await post('/clans', { name: 'Old Timers', tag: 'OLD' }, old);
+    await post('/save', { state: heroSave({ tokens: 100, bestStage: 80 }) }, old);
+    const { attackDamage, bestStage } = await peek.metrics('old_timer');
+    const high = attackDamage * 5;
+    await peek.setMetrics('old_timer', { attackDamage, bestStage, attackPeak: { v: high, at: clock - 2 * DAY_MS } });
+    clock += DAY_MS;
+    near((await (await get('/clan', old)).json()).members[0].attackDamage, high, 'read as it was');
+    await post('/save', { state: heroSave({ tokens: 100, bestStage: 80 }) }, old);
+    const kept = await peek.metrics('old_timer');
+    assert.equal(Object.values(kept.attackDays).length, 2, 'its day and today');
+    near((await (await get('/clan', old)).json()).members[0].attackDamage, high);
 });
 
 // ---------- sign-up by email (the owner, October 2026; README "The API") ----------

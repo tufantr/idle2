@@ -890,8 +890,12 @@ with the game's own stat code; the client never submits damage or scores.
   best stage allows; level 1 takes `CLAN_BOSS.first` (30) of them, kept in thousandths of the unit
   (`clanBossHealth`, `src/data/social.js`), and an attack counts its damage over the unit, so a stronger member's
   counts for more. Members joining, leaving or removed move the unit (`resizeBoss`), never the boss's health in
-  attacks, so the more members fight the sooner it falls, and a player alone gets little past level 1. The answers
-  give health and damage back as damage, in the unit, for the screen. A boss of the week it went live (counted in
+  attacks, so the more members fight the sooner it falls, and a player alone gets little past level 1. The unit is
+  measured again at each UTC day's first look (`unit_day`, `currentBoss`; October 2026, after a boss sized on
+  Monday morning fell to one attack that evening): what was dealt stays dealt, in attacks, while the boss keeps up
+  with a clan that grows through the week. The answers give health and damage back as damage, in the unit, for the
+  screen; the week's board shows each attack as it was dealt (`dealt`), so a boss sized again leaves it alone
+  (attacks from before were kept at the unit they were shown in). A boss of the week it went live (counted in
   damage, unit 0) moves once to the same share of its health, its attacks scaled with it. The ten lands' rulers take
   turns as the boss, one an ISO week (`clanBossFor`, `src/data/social.js`).
 - **Levels: one kill a day** (October 2026, the owner's design, after a boss sized on Monday morning fell
@@ -923,8 +927,13 @@ with the game's own stat code; the client never submits damage or scores.
   `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
   and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
   rule inside the fight, expected values, no dice, Focus or timed boosts; the combat potion picked counts,
-  §3.6), never more than twice
-  what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
+  §3.6), **raised to the hero's best of the past week**: his best plain attack of each of the last seven UTC days is
+  kept with his stored numbers (`attackDays`, from every save not flagged), and the attack is the fight times the
+  best over his plain attack now (`clanAttackScale`, never below 1). The camp is packed up at every prestige and
+  grows through a run, so the same hero hit seven times harder at a run's end than just after a prestige: the owner
+  saw another member deal 24 times their damage (October 2026) and asked that the time of an attack not matter. The fight on
+  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`), and the members' table shows each
+  one's best. Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real

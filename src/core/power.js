@@ -90,10 +90,31 @@ export function clanFightDamage(derived, strikes, ms = CLAN_FIGHT_MS) {
     return { damage: Math.floor(base + struck), base: Math.floor(base), struck: Math.floor(struck), strikes: strikes.length, guarded };
 }
 
-/** A clan attack from a stored save (the server's reckoning): `strikes` and `ms` as the page sent them. */
-export function clanAttackFromSave(rawState, strikes, ms = CLAN_FIGHT_MS, now = Date.now()) {
+/** The hero's plain attack: a whole clan fight without a strike or a potion (the clan's boss is sized by it, and the boards show it). */
+export function plainAttack(rawState, now = Date.now()) {
+    return clanFightDamage(deriveStats(stableState(rawState, now)), []).damage;
+}
+
+/**
+ * How much harder than the hero is now a clan attack lands: his best plain attack of the past week over his plain
+ * attack now, never below 1. The camp is packed up at every prestige and grows through a run, so the same hero hit
+ * seven times harder at a run's end than just after a prestige (the owner, October 2026): the attack is his best.
+ */
+export function clanAttackScale(best, plain) {
+    return Number.isFinite(best) && best > 0 && Number.isFinite(plain) && plain > 0 ? Math.max(1, best / plain) : 1;
+}
+
+/**
+ * A clan attack from a stored save (the server's reckoning): `strikes` and `ms` as the page sent them, `best` the hero's
+ * best plain attack of the past week (the server's record of his saves: api/index.js). The fight is the hero's own, so
+ * its strikes, its potion and its length count as they do; its damage is then raised to his best (clanAttackScale).
+ */
+export function clanAttackFromSave(rawState, strikes, ms = CLAN_FIGHT_MS, now = Date.now(), best = 0) {
     const fightMs = Math.max(0, Math.min(CLAN_FIGHT_MS, Number.isFinite(Number(ms)) ? Number(ms) : CLAN_FIGHT_MS));
-    return clanFightDamage(deriveStats(stableState(rawState, now, { clan: true })), cleanStrikes(strikes, fightMs), fightMs);
+    const fight = clanFightDamage(deriveStats(stableState(rawState, now, { clan: true })), cleanStrikes(strikes, fightMs), fightMs);
+    const plain = plainAttack(rawState, now);
+    const scale = clanAttackScale(best, plain);
+    return { ...fight, damage: Math.floor(fight.damage * scale), base: Math.floor(fight.base * scale), struck: Math.floor(fight.struck * scale), plain, scale };
 }
 
 /** Summary of a stored save for social features. Accepts any raw save object. */
