@@ -109,9 +109,9 @@ Late-game choices in the prestige dialog. From best stage {{TRIALS_FROM}}, [[/tr
 
 Each gear tier needs a combat level: {{GEAR_TIERS.map(t => `${t.name} ${TIER_WEAR_LEVEL[t.tier]}`).join(', ')}}. Keep fighting to level up, or [[/guides/combat-progress|stay on a stage]] you can beat for a while. Inside a dungeon you cannot change gear at all. See [[/equipment|Equipment]].
 
-### Why can I only forge copper gear?
+### Why can't I forge gear?
 
-Forging makes a first set of copper weapons and armour. Everything stronger drops in the fight: from bosses on their first fall in a run, now and then from ordinary monsters, and from dungeon chests. A boss that leaves no upgrade fills a mark on a ring round its stone on the stage path, and the {{PITY_MARKS}}th mark brings a sure piece for your weakest slot. Past copper, Smithing's job is the anvil.
+Weapons and armour all drop in the fight: from bosses on their first fall in a run, now and then from ordinary monsters, and from dungeon chests. A boss that leaves no upgrade fills a mark on a ring round its stone on the stage path, and the {{PITY_MARKS}}th mark brings a sure piece for your weakest slot. Smithing's job is the anvil, where the gear you wear gets stronger. (Copper gear was forged until October 2026.)
 
 ### How do I upgrade gear?
 

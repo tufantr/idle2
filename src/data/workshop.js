@@ -15,9 +15,8 @@ export const SMELTING_RECIPES = [
     { id: 'runite_bar',  name: 'Runite Bar',  levelReq: 75, interval: 2600, xp: 90,  consumes: { runite_ore: 1, coal: 3 },        produces: 'runite_bar' }
 ];
 
-// Armour/weapon metals in ladder order. Smithing level to forge each tier; XP per bar used.
-// XP per bar was raised 1.5x after tools/pacing.mjs showed a self-sufficient smith (mine -> smelt -> forge)
-// needed ~48 h for level 75 (then ~34 h). At Melvor pace (data/pace.js) it takes ~55 h, and ~600 h to 99.
+// Armour/weapon metals in ladder order: the bars the anvil works each tier of gear with, and the XP a bar pays
+// there. (They were forged too: XP per bar was raised 1.5x when a self-sufficient smith needed ~48 h for 75.)
 export const METALS = [
     { bar: 'copper_bar',  name: 'Copper',  tier: 1, levelReq: 1,  xpPerBar: 18 },
     { bar: 'iron_bar',    name: 'Iron',    tier: 2, levelReq: 10, xpPerBar: 30 },
@@ -25,15 +24,12 @@ export const METALS = [
     { bar: 'adamant_bar', name: 'Adamant', tier: 4, levelReq: 55, xpPerBar: 90 },
     { bar: 'runite_bar',  name: 'Runite',  tier: 5, levelReq: 75, xpPerBar: 135 }
 ];
-export const SMITH_INTERVAL = 3000;
-
-// Forging makes copper gear only: every stronger weapon and piece of armour drops in the fight
-// (DESIGN §3.25). The smith's work on them is the anvil: reinforcing what the hero wears and rerolling
+// No forging (the owner, October 2026: not even the copper set it had kept): every weapon and piece of armour drops
+// in the fight (DESIGN §3.25). The smith's work on them is the anvil: reinforcing what the hero wears and rerolling
 // its bonuses, with bars of its own metal. Dragonbone and Abyssal gear takes runite, two and three times
 // as many. The anvil opens at Smithing 5; each step of reinforcing up to +10 takes half as many bars again
 // as the last, needs 5 more levels, and pays the bars' forging XP. The bars are the real gate: smelting
 // each metal needs its level, or they come from salvaging gear of that metal.
-export const FORGE_METALS = METALS.filter(m => m.tier === 1);
 export const ANVIL_LEVEL_PER_UPGRADE = 5;
 export const ANVIL_BAR_GROWTH = 1.5;
 // The forge without a top (the endless climb, October 2026; DESIGN §3.31): reinforcing belongs to the slot, not
@@ -108,15 +104,8 @@ export function salvageBars(item) {
     return qty > 0 ? { bar: anvilMetal(tier).bar, qty } : null;
 }
 
-// Extra smithing levels per armour type on top of the metal's level (OSRS-style "tier base + slot
-// offset"), so each metal unlocks piece by piece and smithing gives something new most levels.
-export const SMITH_SLOT_OFFSET = { Weapon: 0, Boots: 1, Gloves: 2, Head: 3, Shield: 5, Legs: 7, Body: 9 };
-// Same idea for jewellery: rings first, amulets last.
+// Extra crafting levels per kind of jewellery on top of the gem's level: rings first, amulets last.
 export const CRAFT_SLOT_OFFSET = { Ring: 0, Ear: 2, Neck: 4 };
-
-export function smithLevelReq(metal, type) {
-    return Math.min(99, metal.levelReq + (SMITH_SLOT_OFFSET[type] || 0));
-}
 
 // Jewellery: precious bar + gem. Crafting level gate comes from the gem; gold bars need level 30.
 // The gem sets a piece's tier and power (like dropped jewellery of that tier); a gold setting adds 20%.

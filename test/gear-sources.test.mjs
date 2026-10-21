@@ -22,14 +22,12 @@ const piece = (game, type, tier, { rarity = 'common', ...extra } = {}) => Object
     type, tier, power: GEAR_TIERS[tier - 1].power, materialName: GEAR_TIERS[tier - 1].name, rarity: RARITIES.find(r => r.id === rarity), source: 'drop'
 }, game.state.idCounter++), extra);
 
-test('forging makes copper gear only; an old order for iron stops by itself', () => {
+test('nothing is forged (the owner, October 2026); an old order to forge stops by itself', () => {
     const game = new Game(null, T0);
     const s = game.state;
     s.skills.smithing.xp = xpForLevel(60);
     s.resources.iron_bar = 50;
-    s.resources.copper_bar = 50;
-    assert.equal(game.startSmithing('Weapon', 'iron_bar'), false);
-    assert.equal(game.startSmithing('Weapon', 'copper_bar'), true);
+    assert.equal(game.startSmithing, undefined, 'no forging to start');
     // a save from before, caught forging iron
     s.action = { kind: 'smith', type: 'Weapon', bar: 'iron_bar', progress: 0 };
     const loaded = new Game(migrateState(JSON.parse(game.serialize(T0)), T0), T0);

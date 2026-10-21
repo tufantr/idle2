@@ -6,7 +6,7 @@ import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
-import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, forgeMult } from '../data/workshop.js';
+import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, forgeMult } from '../data/workshop.js';
 import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
@@ -1001,7 +1001,8 @@ export function renderSmithing(game, ui) {
     const level = skillLevel(state, 'smithing');
     const action = state.action;
     const anvil = seen(state, 'anvil');
-    const view = ['smelt', 'forge', ...(anvil ? ['anvil'] : [])].includes(ui.smithView) ? ui.smithView : 'smelt';   // (tools are bought in the Shop now)
+    // smelting, and the anvil once it opens (forging is gone: every weapon and piece of armour drops; tools are bought in the Shop)
+    const view = anvil && ui.smithView === 'anvil' ? 'anvil' : 'smelt';
     let body = '';
     if (view === 'smelt') {
         body = `<div class="node-grid">${withNext(SMELTING_RECIPES, r => r.levelReq, level).map(r => {
@@ -1014,27 +1015,12 @@ export function renderSmithing(game, ui) {
                 onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: `Level ${r.levelReq}`
             }, state);
         }).join('')}</div>`;
-    } else if (view === 'forge') {
-        const metals = FORGE_METALS.filter(m => level >= m.levelReq);
-        // The metal on the anvil: the one picked, else the best there are bars for, else the best known.
-        const metal = metals.find(m => m.bar === ui.smithMetal) || [...metals].reverse().find(m => state.resources[m.bar] > 0) || metals[metals.length - 1] || FORGE_METALS[0];
-        const recipes = SMITHING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'smith', type, bar: metal.bar }) }));
-        const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
-            title: `${metal.name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${metal.tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`forge_${type}`, 'smithy'), color: res(metal.bar).color,
-            inputs: Object.entries(recipe.consumes), skill: 'smithing', xp: Math.round(recipe.xp * d.xpMult), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
-            active: action?.kind === 'smith' && action.type === type && action.bar === metal.bar, stalled: action?.stalled,
-            onclick: `FI.smith('${type}','${metal.bar}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
-        }, state)).join('');
-        const picker = metals.length > 1 ? materialPicks('Metal', metals.map(m => ({ id: m.bar, name: `${m.name} bars`, have: state.resources[m.bar] })), metal.bar, 'FI.selectSmithMetal') : '';
-        const mastery = masteryRow(state, 'smithing', resolveAction(state, { kind: 'smith', type: SMITHING_TYPES[0], bar: metal.bar }).mastery, `${metal.name} forging`);
-        body = `${picker || mastery ? `<div class="forge-bar">${picker}${mastery}</div>` : ''}
-            <div class="node-grid">${cards}</div>`;
     } else if (view === 'anvil') {
         body = renderAnvil(state);
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
         ${xpHeader(game, 'smithing', skillPotionChip(game, ui))}
-        ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ...(anvil ? [['anvil', 'Anvil']] : [])], view, 'FI.smithView', 'Smithing steps')}
+        ${anvil ? segments([['smelt', 'Smelt'], ['anvil', 'Anvil']], view, 'FI.smithView', 'Smithing steps') : ''}
         ${body}
     </section>`;
 }

@@ -14,7 +14,7 @@ Your hero has {{SKILL_IDS.length}} [[/skills|skills]]. Combat levels come from f
 
 Almost everything one skill makes, another skill uses.
 
-- **[[/skills/mining|Mining]]** digs ore and {{res('coal')}}. **[[/skills/smithing|Smithing]]** smelts them into bars: copper bars forge a first set of weapons and armour, and bars of each metal make tools and reinforce your hero's gear at the anvil. Silver and gold bars go to Crafting.
+- **[[/skills/mining|Mining]]** digs ore and {{res('coal')}}. **[[/skills/smithing|Smithing]]** smelts them into bars: bars of each metal buy tools in the [[/shop|Shop]] and reinforce your hero's gear at the anvil. Silver and gold bars go to Crafting.
 - **[[/skills/woodcutting|Woodcutting]]** cuts logs. They are the fuel for Cooking (a log for each dish, the better the dish the better the log), the bonfire in **[[/skills/firemaking|Firemaking]]**, the handles of tools and bows, and part of every agility obstacle.
 - **[[/skills/hunting|Hunting]]** brings raw meat from the forest and fish from the river. **[[/skills/cooking|Cooking]]** turns them into [[/food|food]] for the fight.
 - **[[/skills/alchemy|Alchemy]]** forages herbs and brews them with a second ingredient into [[/potions|potions]]: {{SKILLS.alchemy.nodes.filter(n => n.consumes).map(n => `${n.name} (${Object.keys(n.consumes).map(id => RESOURCES[id].name).join(' + ')})`).join(', ')}}.
@@ -29,7 +29,7 @@ The places open one after another as you work (see [[/guides/getting-started|Get
 
 1. **Mine copper.** {{UNLOCKS.find(u => u.id === 'smithing').task}} and Smithing opens.
 2. **Smelt copper bars.** The first bar opens Woodcutting: cut some logs.
-3. **Buy tools.** At Mining and Woodcutting {{TOOLS.pickaxe.tiers[0].levelReq}}, a Copper Pickaxe and a Copper Axe from the [[/shop|Shop]], each for copper bars and a log. Forge copper armour for any slot your hero has empty.
+3. **Buy tools.** At Mining and Woodcutting {{TOOLS.pickaxe.tiers[0].levelReq}}, a Copper Pickaxe and a Copper Axe from the [[/shop|Shop]], each for copper bars and a log.
 4. **Hunt and cook.** Hunting opens as you climb in the fight. Your first hunt opens Cooking: a stack of food makes the climb easier. {{UNLOCKS.find(u => u.id === 'firemaking').task}} and Firemaking opens: burn spare logs to keep the bonfire lit.
 5. **Go for iron.** The Iron Vein opens at Mining {{SKILLS.mining.nodes.find(n => n.id === 'iron_ore').levelReq}} and coal at Mining {{SKILLS.mining.nodes.find(n => n.id === 'coal').levelReq}}. Iron bars (Smithing {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').levelReq}}) reinforce the iron gear the fight drops, and with oak logs (Woodcutting {{SKILLS.woodcutting.nodes.find(n => n.id === 'oak_log').levelReq}}) buy the next tools in the [[/shop|Shop]] at Mining and Woodcutting {{TOOLS.pickaxe.tiers[1].levelReq}}.
 6. **Brew.** When Alchemy opens, forage Guam and, from Alchemy {{SKILLS.alchemy.nodes.find(n => n.id === 'combat_potion_1').levelReq}}, brew it with copper ore into {{potionName('combat_potion_1')}}s for the fight.

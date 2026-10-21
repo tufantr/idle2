@@ -5,8 +5,8 @@
 // level. The smithing "pipeline" row models a dedicated smith who mines their own ore and coal,
 // smelts it, and forges the most bar-efficient piece they can — the realistic smithing pace.
 import { SKILLS } from '../src/data/skills.js';
-import { SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, SMITH_INTERVAL, smithLevelReq, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET } from '../src/data/workshop.js';
-import { SMITHING_TYPES, SMITHING_BAR_COST, CRAFTING_TYPES } from '../src/data/items.js';
+import { SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET } from '../src/data/workshop.js';
+import { CRAFTING_TYPES } from '../src/data/items.js';
 import { xpForLevel, levelForXp } from '../src/core/xp.js';
 import { FARMING_PLOTS, CROPS } from '../src/data/farming.js';
 import { AGILITY_SLOTS } from '../src/data/agility.js';
@@ -58,10 +58,7 @@ function smithingPipeline() {
         // Smelting the bar.
         seconds += recipe.interval / 1000;
         smithXp += recipe.xp;
-        // Forging: the piece with the most bars per action that this level allows is the fastest XP per bar.
-        const piece = SMITHING_TYPES.filter(t => sl >= smithLevelReq(metal, t)).sort((a, b) => SMITHING_BAR_COST[b] - SMITHING_BAR_COST[a])[0];
-        seconds += SMITH_INTERVAL / 1000 / SMITHING_BAR_COST[piece];
-        smithXp += metal.xpPerBar;
+        // (No forging since October 2026: a bar's own XP comes at the anvil, on the gear the fight drops.)
         const level = levelForXp(smithXp);
         for (const m of MILESTONES) if (level >= m && out[m] === undefined) { out[m] = seconds / 3600; mineLevels[m] = levelForXp(mineXp); }
     }
@@ -113,9 +110,7 @@ for (const id of ['mining', 'woodcutting', 'hunting', 'cooking', 'firemaking', '
     rows.push([id, pace(nodes), tool ? pace(nodes, { toolFor: toolTierAt(tool) }) : null]);
 }
 rows.push(['smithing (smelting only)', pace(SMELTING_RECIPES.map(r => ({ ...r }))), null]);
-// forging and jewellery, with the bars and gems already in the bank: every piece of every metal or gem as a node
-const forging = METALS.flatMap(m => SMITHING_TYPES.map(t => ({ levelReq: smithLevelReq(m, t), interval: SMITH_INTERVAL, xp: m.xpPerBar * SMITHING_BAR_COST[t] })));
-rows.push(['smithing (forging, bars in the bank)', pace(forging), null]);
+// jewellery, with the bars and gems already in the bank: every piece of every gem as a node
 const jewellery = JEWEL_BARS.flatMap(b => GEM_TIERS.flatMap(g => CRAFTING_TYPES.map(t => ({ levelReq: Math.min(99, Math.max(b.levelReq, g.levelReq) + (CRAFT_SLOT_OFFSET[t] || 0)), interval: CRAFT_INTERVAL, xp: g.xp }))));
 rows.push(['crafting (jewellery, bars and gems in the bank)', pace(jewellery), null]);
 rows.push(['farming (every plot, harvested on time)', farmingPace(), null]);

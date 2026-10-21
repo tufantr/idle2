@@ -3,7 +3,7 @@
 
 import { createDefaultState, migrateState, clampTimers } from './core/state.js';
 import { collectModifiers, deriveStats, isFocused, bonfireLit, rallyOn } from './core/modifiers.js';
-import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startAgility, stopAction, resolveAction } from './systems/skilling.js';
+import { tickAction, startNodeAction, startSmelting, startCrafting, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
@@ -221,7 +221,6 @@ export class Game {
     }
     startNodeAction(skill, node) { return this._act(() => startNodeAction(this, skill, node)); }
     startSmelting(recipe) { return this._act(() => startSmelting(this, recipe)); }
-    startSmithing(type, bar) { return this._act(() => startSmithing(this, type, bar)); }
     startCrafting(type, bar, gem) { return this._act(() => startCrafting(this, type, bar, gem)); }
     buyTool(toolId) { return this._act(() => buyTool(this, toolId)); }
     startAgility() { return this._act(() => startAgility(this)); }

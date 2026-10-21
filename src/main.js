@@ -68,10 +68,9 @@ const ui = {
     auth: null,          // the account dialog's step: { mode, username, email (as shown), resetEmail } (showAuth)
     tab: (t => (t === 'fishing' ? 'hunting' : t))(prefs.get('fantasyIdle.tab') || 'combat'),   // (Fishing joined Hunting)
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
-    smithView: 'smelt',  // the step of Smithing on screen: smelt, forge, anvil or tools
+    smithView: 'smelt',  // the step of Smithing on screen: smelt or anvil (forging and tools are gone)
     potionMenu: false,   // the skill potion's tray, open under its chip in a skill's header
     hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
-    smithMetal: null,    // null: the best metal there are bars for
     craftBar: null,
     craftGem: null,
     open: {},            // drawers the player has opened (the battle log, the crop table)
@@ -1299,12 +1298,10 @@ window.FI = {
     startNode(skill, node) { game.startNodeAction(skill, node); render(); },
     stopAction() { game.stopAction(); render(); },
     smelt(id) { game.startSmelting(id); render(); },
-    smith(type, bar) { game.startSmithing(type, bar); render(); },
     craft(type, bar, gem) { game.startCrafting(type, bar, gem); render(); },
     buyTool(toolId) { if (game.buyTool(toolId)) sound.play('buy'); render(); },   // the Shop's tools (systems/tools.js)
     smithView(view) { ui.smithView = view; render(); },
     hallView(view) { ui.hallView = view; render(); },
-    selectSmithMetal(bar) { ui.smithMetal = bar; render(); },
     selectCraftBar(bar) { ui.craftBar = bar; render(); },
     selectCraftGem(gem) { ui.craftGem = gem; render(); },
 

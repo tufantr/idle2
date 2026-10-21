@@ -132,8 +132,7 @@ export function buildXref() {
     for (const [toolId, tool] of Object.entries(TOOLS)) {
         for (const t of tool.tiers) for (const [id, qty] of Object.entries(t.consumes)) add(uses, id, 'tools', { toolId, tool, tier: t, takes: qty });
     }
-    // bars: the copper set is forged; every metal works its gear at the anvil; precious bars set jewellery
-    add(uses, 'copper_bar', 'forge', {});
+    // bars: every metal works its gear at the anvil; precious bars set jewellery
     for (const m of METALS) add(uses, m.bar, 'anvil', { metal: m });
     for (const b of JEWEL_BARS) add(uses, b.bar, 'jewellery', { bar: b });
     for (const g of GEM_TIERS) add(uses, g.gem, 'jewellery', { gem: g });

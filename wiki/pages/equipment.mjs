@@ -53,7 +53,7 @@ function tierPage(t, help) {
     const where = table(['Place', 'Stages', 'Share of its gear #'], d.places.map(p => [placeName(p), placeStages(p), pct(p.share, 0)]), { sort: false });
     const more = [
         d.chests.length ? `<li>The chests of ${d.chests.map(x => link(path.dungeon(x.id), esc(x.name))).join(', ')}.</li>` : '',
-        t.tier === 1 ? `<li>Forged from copper bars in ${link('/skills/smithing#forging', 'Smithing')}.</li>` : ''
+        ''
     ].join('');
     return {
         infobox: infobox({

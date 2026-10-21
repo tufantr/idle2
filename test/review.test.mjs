@@ -156,10 +156,10 @@ test('offline skilling happens on the clock: the bonfire goes out and events sta
 
 test('the welcome-back summary counts each salvaged item once', () => {
     const game = new Game(null, T0);
-    game.state.skills.smithing.xp = xpForLevel(30);
-    game.state.resources.copper_bar = 5000;
+    game.state.unlocks.crafting = true;
+    game.state.resources.silver_bar = 5000; game.state.resources.amethyst = 5000;
     game.state.settings.autoSalvage = 'off';
-    game.startSmithing('Boots', 'copper_bar');
+    game.startCrafting('Ring', 'silver_bar', 'amethyst');
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 3600 * 1000;
     const back = new Game(saved, later);

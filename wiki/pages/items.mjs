@@ -106,7 +106,6 @@ function usesHtml(r) {
         out.push(section('Used to make', table(['Action', 'Skill', 'Level #', 'Time #', 'XP #', 'XP/hour #', 'Takes #', 'Makes'], rows, { wide: true })));
     }
     if (u.burn) out.push(section('Burned', `<p>${skillLink('firemaking')}: burning one gives ${fmt(u.burn[0].action.xp)} XP (level ${u.burn[0].action.levelReq}) and keeps the bonfire lit ${BASE.bonfireSecondsPerLogTier * r.tier} seconds longer (${BASE.bonfireSecondsPerLogTier} seconds a tier).</p>`));
-    if (u.forge) out.push(section('Forging', `<p>${skillLink('smithing', 'forging')}: copper bars forge the first set of weapons and armour. Every stronger piece drops in the fight.</p>`));
     if (u.anvil) {
         const m = u.anvil[0].metal;
         const tiers = GEAR_TIERS.filter(t => Math.min(METALS.length, t.tier) === m.tier);

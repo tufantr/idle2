@@ -8,7 +8,7 @@ Every action you repeat has a **mastery** of its own, from level 1 to {{MASTERY_
 
 - Every spot in [[/skills/mining|Mining]], [[/skills/woodcutting|Woodcutting]] and [[/skills/hunting|Hunting]], the river's too.
 - Every dish in [[/skills/cooking|Cooking]], every kind of log in [[/skills/firemaking|Firemaking]], and every herb and potion in [[/skills/alchemy|Alchemy]].
-- In [[/skills/smithing|Smithing]], every bar you smelt, and one mastery per metal for working its gear: forging copper, and reinforcing or rerolling each metal's gear at the anvil. All the pieces of one metal share it.
+- In [[/skills/smithing|Smithing]], every bar you smelt, and one mastery per metal for working its gear: reinforcing or rerolling each metal's gear at the anvil. All the pieces of one metal share it.
 - In [[/skills/crafting|Crafting]], one mastery per gem, shared by every ring, earring and amulet set with it.
 
 [[/skills/farming|Farming]], [[/skills/agility|Agility]], making tools and combat have no mastery. The last table below counts the actions of each skill.
@@ -26,7 +26,7 @@ Every level above 1 adds to that one action:
 - **Doubles:** +{{pct(MASTERY_PER_LEVEL.double, 2)}} a level chance that the action makes twice as much, for actions that make a resource: gathering, cooking, alchemy and smelting. In Firemaking it is the chance that a log burns twice, for twice the XP and bonfire time.
 - **Ingredients kept:** +{{pct(MASTERY_PER_LEVEL.preserve, 1)}} a level chance to use up nothing, for actions with ingredients: a dish's raw food and its log, a potion's herb and second ingredient, ore for smelting, logs for burning, and the bars and gems of forged and crafted pieces. At the anvil, a metal's mastery takes that share of the bars off the price instead.
 
-These add to the speed and double chance your skill already has from [[Tools|tools]], [[Perks|perks]], medals, [[/capes|capes]] and the rest. Forging and jewellery make a piece of gear, so they get speed and kept ingredients but no doubles.
+These add to the speed and double chance your skill already has from [[Tools|tools]], [[Perks|perks]], medals, [[/capes|capes]] and the rest. Jewellery makes a piece of gear, so it gets speed and kept ingredients but no doubles.
 
 ## A skill's whole mastery
 

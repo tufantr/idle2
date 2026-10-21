@@ -382,20 +382,20 @@ test('the forge keeps its work in the slot: a piece salvaged gives back only wha
     rng.setSource(seededRandom(2026));
 });
 
-test('a piece forged into a full bag that is salvaged at once says so, with no "made" card', () => {
+test('a piece crafted into a full bag that is salvaged at once says so, with no "made" card', () => {
     const game = new Game(null, T0);
     const s = game.state;
-    s.skills.smithing.xp = xpForLevel(30);
-    for (let i = 0; i < BAG_SIZE; i++) s.inventory.push({ ...generateEquipment({ type: 'Body', tier: 3, power: GEAR_TIERS[2].power, materialName: GEAR_TIERS[2].name, rarity: RARITIES[3], source: 'drop' }, s.idCounter++), locked: false });
+    s.unlocks.crafting = true;
+    for (let i = 0; i < BAG_SIZE; i++) s.inventory.push({ ...generateEquipment({ type: 'Ring', tier: 3, power: GEAR_TIERS[2].power, gemName: 'Sapphire', rarity: RARITIES[3], source: 'drop' }, s.idCounter++), locked: false });
     s.equipped.Weapon = generateEquipment({ type: 'Weapon', tier: 3, power: GEAR_TIERS[2].power, materialName: GEAR_TIERS[2].name, rarity: RARITIES[3], source: 'drop' }, s.idCounter++);
-    s.resources.copper_bar = 100;
-    game.startSmithing('Weapon', 'copper_bar');
+    s.resources.silver_bar = 100; s.resources.amethyst = 100;
+    game.startCrafting('Ring', 'silver_bar', 'amethyst');
     game.drainEvents();
     let now = T0;
     while (s.stats.itemsCrafted < 1 && now < T0 + 60_000) game.tick(now += 500);
     assert.equal(s.stats.itemsCrafted, 1);
     const events = game.drainEvents();
-    assert.equal(s.inventory.some(i => i.source === 'crafted'), false, 'the weakest piece, the new sword, made room');
+    assert.equal(s.inventory.some(i => i.source === 'crafted'), false, 'the weakest piece, the new ring, made room');
     assert.equal(events.some(e => e.type === 'itemCrafted'), false);
     assert.ok(s.log.some(l => /salvaged it at once: the bag is full/.test(l.text)));
 });

@@ -29,7 +29,7 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
 import { isUnlocked } from '../src/data/unlocks.js';
-import { FORGE_METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq, anvilMetal } from '../src/data/workshop.js';
+import { SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, anvilMetal } from '../src/data/workshop.js';
 import { anvilCost, forgeTier } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
 import { zoneForStage } from '../src/data/zones.js';
@@ -234,12 +234,7 @@ function train(skillId, minutes = 20) {
         const job = WITHOUT.has('anvil') ? null : anvilJob();
         const smeltable = job && lvl('smithing') >= SMELTING_RECIPES.find(r => r.produces === job.cost.bar).levelReq;
         if (smeltable) { const t = obtain(job.cost.bar, job.cost.bars); if (t) return t; }
-        // Then forge copper if bars are on hand, otherwise smelt the best bar we can source ore for.
-        const metal = [...FORGE_METALS].reverse().find(m => lvl('smithing') >= m.levelReq && S.resources[m.bar] >= 5);
-        if (metal) {
-            const piece = SMITHING_TYPES.filter(t => lvl('smithing') >= smithLevelReq(metal, t)).sort((a, b) => SMITHING_BAR_COST[b] - SMITHING_BAR_COST[a])[0];
-            return { kind: 'smith', type: piece, bar: metal.bar, until: () => now >= end || S.resources[metal.bar] < SMITHING_BAR_COST[piece], why: `train smithing (forge ${metal.name} ${piece})` };
-        }
+        // Then smelt the best bar we can source ore for (no forging since October 2026).
         for (const recipe of [...SMELTING_RECIPES].reverse()) {
             if (lvl('smithing') < recipe.levelReq) continue;
             const ins = Object.entries(recipe.consumes);
@@ -259,32 +254,6 @@ function train(skillId, minutes = 20) {
     }
     const node = bestNode(skillId);
     return { kind: 'node', skill: skillId, node: node.id, until: () => now >= end, why: `train ${skillId} (${node.name})` };
-}
-
-// A forged piece's expected score (common quality), to compare with what is worn: an upgraded or
-// rare piece of a lower metal can beat a fresh common one, and forging it anyway loops forever.
-function forgedScore(metal, type) {
-    const probe = generateEquipment({ type, tier: metal.tier, power: RESOURCES[metal.bar].power, materialName: metal.name, rarity: RARITIES[0] }, -1);
-    return itemScore(probe);
-}
-const forgeAttempts = {};
-function gearTask() {
-    for (const type of ARMOUR_PRIORITY) {
-        // The best metal this piece can be forged in at the current smithing level (copper: the rest drops).
-        const metal = [...FORGE_METALS].reverse().find(m => lvl('smithing') >= smithLevelReq(m, type));
-        if (!metal || equippedTier(type) >= metal.tier) continue;
-        const worn = Math.min(...TYPE_SLOTS[type].map(slot => itemScore(S.equipped[slot])));
-        if (worn >= forgedScore(metal, type)) continue;
-        const key = `${metal.bar}:${type}`;
-        if ((forgeAttempts[key] || 0) >= 5) continue; // it keeps rolling worse than what we wear; move on
-        const cost = SMITHING_BAR_COST[type];
-        const t = obtain(metal.bar, cost);
-        if (t) return t;
-        const made = S.stats.itemsCrafted;
-        forgeAttempts[key] = (forgeAttempts[key] || 0) + 1;
-        return { kind: 'smith', type, bar: metal.bar, until: () => S.stats.itemsCrafted > made, why: `forge ${metal.name} ${type}` };
-    }
-    return null;
 }
 
 // Tools are bought in the Shop (systems/tools.js), each tier at the level of the skill it serves: the bars and logs
@@ -633,7 +602,7 @@ function decide() {
     drinkPotions();
     if (WITHOUT.has('food') && S.combat.autoEat !== 'none') game.setAutoEat('none');
     // (potions before food: a stock of food is eaten as the hero fights, and its task would always come first)
-    return gearTask() || agilityTask() || toolTask() || potionTask() || foodTask() || jewelTask() || stallTask() || combatTask();
+    return agilityTask() || toolTask() || potionTask() || foodTask() || jewelTask() || stallTask() || combatTask();
 }
 
 // After combat stalls (no stage gain), work toward the next gear tier: the skill gating the next
@@ -700,7 +669,6 @@ function apply(task) {
     let ok = true;
     if (task.kind === 'node') ok = game.startNodeAction(task.skill, task.node);
     else if (task.kind === 'smelt') ok = game.startSmelting(task.recipe);
-    else if (task.kind === 'smith') ok = game.startSmithing(task.type, task.bar);
     else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
     else if (task.kind === 'agility') ok = game.startAgility();
     else if (task.kind === 'dungeon') { ok = game.enterDungeon(task.id); if (ok) { game.setDungeonRepeat(true); lastStageGainAt = now; } }   // the player keeps going, decided up front

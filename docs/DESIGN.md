@@ -44,10 +44,8 @@ flowchart LR
     Firemaking -->|bonfire: +XP, doubles| Skills["Every skill"]
     Farming -->|herbs| Alchemy
     Farming -->|crops| Cooking
-    Woodcutting -->|log handles| Tools
-    Woodcutting -->|logs| Bows
+    Woodcutting -->|logs| Tools["Tools (the Shop)"]
     Hunting -->|raw meat and fish| Cooking
-    Smelting -->|copper bars| Forging
     Smelting -->|bars| Anvil["Anvil: reinforce, reroll"]
     Smelting -->|bars| Tools
     Smelting -->|silver/gold bars| Crafting
@@ -56,10 +54,9 @@ flowchart LR
     Mining -->|ore| Alchemy
     Cooking -->|dishes| Alchemy
     Cooking -->|food| Combat
-    Forging -->|a copper set| Combat
     Anvil -->|stronger worn gear| Combat
     Crafting -->|jewellery| Combat
-    Tools -->|pickaxe, axe| Mining & Woodcutting
+    Tools -->|pickaxe, axe, bow, tinderbox, hoe| Skills
     Bows -->|faster hunting| Hunting
     Combat -->|zone materials, gems| Mining & Woodcutting & Hunting
     Combat -->|weapons, armour, epic jewellery| Salvage["Salvage: essence, bars"]
@@ -129,7 +126,7 @@ consumes what:
 | Resource | Made by | Consumed by |
 |---|---|---|
 | Ores, coal | Mining, zone drops | Smelting (coal: 0 / 1 / 2 / 2 / 3 per bar for copper / iron / mithril / adamant / runite); combat potions (copper, iron, mithril, adamant ore) |
-| Bars | Smelting, salvaging weapons and armour | Forging copper (1–5 per piece), the anvil (reinforcing and rerolling worn gear), tools, bows, jewellery (silver/gold only) |
+| Bars | Smelting, salvaging weapons and armour | The anvil (reinforcing and rerolling worn gear), tools and bows (the Shop), jewellery (silver/gold only) |
 | Gems | Mining (2%), zone drops, chests | Jewellery |
 | Logs | Woodcutting, zone drops | **Cooking: one a dish, of the dish's tier** (normal up to magic), Firemaking, tool handles, bows, agility obstacles, skill potions (normal, oak, willow, maple) |
 | Raw meat | Hunting (the forest), zone drops | Cooking |
@@ -159,11 +156,10 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
 
 - **Smelting:** 2.0–2.6 s per bar; smithing level 1 / 10 / 20 / 35 / 45 / 55 / 75 for copper / iron /
   silver / mithril / gold / adamant / runite; 10–90 XP per bar.
-- **Forging:** copper only (§3.25): 3 s per piece, Weapon at level 1 and each piece a few levels on —
-  Boots +1, Gloves +2, Head +3, Shield +5, Legs +7, Body +9. Bars per piece: Weapon 3, Shield 3,
-  Head 2, Body 5, Legs 4, Boots 1, Gloves 1 (19 for a full set); 18 XP a bar. Every stronger weapon
-  and piece of armour drops in the fight. (Until October 2026 each metal forged its own set, from
-  levels 10 / 35 / 55 / 75.)
+- **No forging** (§3.25): every weapon and piece of armour drops in the fight. Until early October 2026 each metal
+  forged its own set; then copper alone made a first set (3 s a piece, 19 bars for all seven, 18 XP a bar), which
+  measured at stage 100 in 2.5 h against 4.4 h without it (12 seeds, 150 h); the owner had it go too (21 October
+  2026). Smithing is smelting and the anvil; an old order to forge is dropped when the save loads.
 - **The anvil** (`src/systems/anvil.js`, from Smithing 5): reinforces a worn weapon or piece of armour
   (+5% base stats a step, to +10) and rerolls its bonuses, with bars of its metal — copper, iron,
   mithril, adamant, runite for tiers 1–5; Dragonbone takes twice the runite, Abyssal three times — and
@@ -1132,7 +1128,7 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   it. The hero's numbers are in the Inventory, by the hero.
 - **Cards are quiet at rest.** An action card shows its art, its name, what it needs and how long
   it takes. The card being worked opens up: the pile it has made, XP, luck, mastery, the progress
-  bar. The rest is in the tooltip. Smithing is three steps (Smelt, Forge, Tools), one on screen.
+  bar. The rest is in the tooltip. Smithing is two steps (Smelt, and the Anvil once it opens), one on screen.
   What an action needs is a row of chips, each the item's icon and how many you hold of how many it
   takes ("0/1", red when short); hovered (tapped on a phone), a chip names its item in the game's own
   tooltip, with where it comes from ("Raw Fox · needs 1, you have 11 · from Hunting"). The figures
@@ -1347,9 +1343,9 @@ was all dropped by hour 5–10 anyway (forged sets lasted about four hours), and
 late hero's log power, so where it comes from decides what a run is for. Since October 2026 (the
 owner's choice of option 1a):
 
-- **Weapons and armour past copper only drop.** Forging makes a copper set (§3.4); bosses, regular
-  monsters (one kill in 500), dungeon chests and the Abyss make the rest. Old forged pieces stay; an old
-  order to forge iron stops by itself when the save loads.
+- **Weapons and armour only drop.** Bosses, regular monsters (one kill in 500), dungeon chests and the Abyss make
+  them (copper too since 21 October 2026, when the owner had the copper forge go; §3.4). Old forged pieces stay; an
+  old order to forge stops by itself when the save loads.
 - **Drops are mostly of the place's own tier:** one below 25%, the same 65%, one above 10% (it was
   60 / 35 / 5 while forging carried the tiers). **What the hero lacks comes more often:** a kind with
   an empty slot is four times as likely, one whose worn piece is of a lower tier than the place's
@@ -1367,8 +1363,7 @@ owner's choice of option 1a):
   which 4–9% were ever worn; comparing drop power it pays 2–7 times, where it can help
   (`docs/research_notes/robust-and-fun/D_robustness_methods.md` §4).
 - **Smithing's job is the anvil** (§3.4): bars of the worn piece's own metal make it stronger, and
-  salvaging pieces gives their bars back. The anvil is a step of Smithing (Smelt · Forge · Anvil ·
-  Tools) from level 5; a worn piece in the bag's detail has an Anvil button instead of Upgrade.
+  salvaging pieces gives their bars back. The anvil is a step of Smithing (Smelt · Anvil) from level 5; a worn piece in the bag's detail has an Anvil button instead of Upgrade.
 - **The smith refits the reinforcing** (October 2026): a weapon or piece of armour put on in place of a
   reinforced one takes its levels but one and the bars that went into them, and the old piece comes off
   plain (`refitLevel` in `src/systems/inventory.js`; a toast says so). Whether a new piece is better is

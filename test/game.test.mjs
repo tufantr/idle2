@@ -39,15 +39,27 @@ test('XP table matches the RuneScape/Melvor curve', () => {
     assert.equal(levelForXp(xpForLevel(50) - 1), 49);
 });
 
-test('regression: smithing creates an item and consumes bars (getRandomRarity used to throw)', () => {
+test('regression: crafting creates an item and consumes its bar and gem (getRandomRarity used to throw)', () => {
     const game = new Game(null, T0);
-    game.state.resources.copper_bar = 10;
-    assert.ok(game.startSmithing('Weapon', 'copper_bar'));
+    game.state.unlocks.crafting = true;
+    game.state.resources.silver_bar = 10; game.state.resources.amethyst = 10;
+    assert.ok(game.startCrafting('Ring', 'silver_bar', 'amethyst'));
     run(game, 3100);
     assert.equal(game.state.inventory.length, 1);
-    assert.equal(game.state.resources.copper_bar, 7);
-    assert.ok(game.state.skills.smithing.xp > 0);
-    assert.ok(game.state.inventory[0].atk > 0);
+    assert.equal(game.state.resources.silver_bar, 9);
+    assert.ok(game.state.skills.crafting.xp > 0);
+});
+
+test('nothing is forged: an order to forge from a save is dropped, its bars kept', () => {
+    const game = new Game(null, T0);
+    game.state.resources.copper_bar = 10;
+    const raw = JSON.parse(game.serialize(T0));
+    raw.action = { kind: 'smith', type: 'Weapon', bar: 'copper_bar', progress: 0 };
+    const loaded = new Game(raw, T0);
+    loaded.tick(T0 + 5000);
+    assert.equal(loaded.state.action, null);
+    assert.equal(loaded.state.resources.copper_bar, 10);
+    assert.equal(loaded.state.inventory.length, 0);
 });
 
 test('regression: rarity is a bounded quality bonus — a legendary copper sword never beats a common runite one', () => {
@@ -63,15 +75,16 @@ test('regression: rarity is a bounded quality bonus — a legendary copper sword
 test('regression: offline progress with a workshop action does not throw and makes items', () => {
     rng.setSource(seededRandom(1234));   // its own sequence: what the tests before it drew doesn't matter
     const game = new Game(null, T0);
-    game.state.resources.copper_bar = 30;
-    assert.ok(game.startSmithing('Weapon', 'copper_bar'));
+    game.state.unlocks.crafting = true;
+    game.state.resources.silver_bar = 10; game.state.resources.amethyst = 30;
+    assert.ok(game.startCrafting('Ring', 'silver_bar', 'amethyst'));
     const saved = JSON.parse(game.serialize(T0));
     const later = T0 + 10 * 60 * 1000;
     const g2 = new Game(saved, later);
     const summary = g2.resumeFromSave(later);
     assert.equal(summary.mode, 'skill');
-    assert.equal(summary.items, 10, 'three bars per sword, 30 bars');
-    assert.equal(g2.state.resources.copper_bar, 0);
+    assert.ok(summary.items >= 10 && summary.items <= 13, `a bar a ring, 10 bars, a few kept by mastery: ${summary.items}`);
+    assert.ok(g2.state.resources.silver_bar <= 1);
     assert.match(summary.stalledReason || '', /ran out of materials/);
 });
 
@@ -240,15 +253,6 @@ test('daily crate is available on a fresh save and then waits 20 hours', () => {
     assert.ok(game.dailyReady());
 });
 
-test('smithing unlocks armour piece by piece', () => {
-    const game = new Game(null, T0);
-    game.state.resources.copper_bar = 10;
-    assert.ok(game.startSmithing('Weapon', 'copper_bar'), 'swords at level 1');
-    game.stopAction();
-    assert.equal(game.startSmithing('Body', 'copper_bar'), false, 'plate bodies need level 10');
-    game.state.skills.smithing.xp = xpForLevel(10);
-    assert.ok(game.startSmithing('Body', 'copper_bar'));
-});
 
 test('a boss that survives 30 s of fighting escapes; the player regroups one stage back', () => {
     const game = new Game(null, T0);

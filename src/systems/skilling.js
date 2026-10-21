@@ -2,15 +2,15 @@
 // The same `completeAction` runs online (from the tick loop) and offline (in a loop).
 
 import { SKILLS, skillNode } from '../data/skills.js';
-import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, SMITH_INTERVAL, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
-import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
+import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET } from '../data/workshop.js';
+import { CRAFTING_TYPES, TYPE_NAMES, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
 import { zoneForStage } from '../data/zones.js';
 import { actionInterval, skillLevel, BASE } from '../core/modifiers.js';
 import { courseDef } from './agility.js';
 import { eventProgress } from './events.js';
 import { masteryFor, addMasteryXp } from './mastery.js';
-import { forgeKey, jewelKey } from '../data/mastery.js';
+import { jewelKey } from '../data/mastery.js';
 import { generateEquipment, abyssDropMult } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
 import { withArticle } from '../core/text.js';
@@ -47,17 +47,6 @@ function resolveBase(state, action) {
             const recipe = SMELTING_RECIPES.find(r => r.id === action.id);
             if (!recipe) return null;
             return { ...recipe, kind: 'smelt', skill: 'smithing', label: `Smelt ${recipe.name}`, output: recipe.produces, masteryKey: recipe.id };
-        }
-        case 'smith': {
-            const metal = FORGE_METALS.find(m => m.bar === action.bar);   // copper only: stronger gear drops (an old iron order stops)
-            if (!metal || !SMITHING_TYPES.includes(action.type)) return null;
-            const cost = SMITHING_BAR_COST[action.type];
-            return {
-                kind: 'smith', skill: 'smithing', id: `${action.bar}:${action.type}`, label: `Forge ${metal.name} ${TYPE_NAMES[action.type]}`,
-                levelReq: smithLevelReq(metal, action.type), interval: SMITH_INTERVAL, xp: metal.xpPerBar * cost,
-                consumes: { [action.bar]: cost }, item: { type: action.type, tier: metal.tier, power: RESOURCES[action.bar].power, materialName: metal.name },
-                masteryKey: forgeKey(action.bar)
-            };
         }
         case 'craft': {
             const jewelBar = JEWEL_BARS.find(b => b.bar === action.bar);
@@ -123,11 +112,6 @@ export function startNodeAction(game, skillId, nodeId) {
 }
 export function startSmelting(game, recipeId) {
     const action = { kind: 'smelt', id: recipeId };
-    const def = resolveAction(game.state, action);
-    return def ? setAction(game, action, def) : false;
-}
-export function startSmithing(game, type, bar) {
-    const action = { kind: 'smith', type, bar };
     const def = resolveAction(game.state, action);
     return def ? setAction(game, action, def) : false;
 }
@@ -237,8 +221,8 @@ export function completeAction(game, def, { offline = false } = {}) {
             if (!offline) log(game, `💎 Found ${withArticle(RESOURCES[gem].name)} while mining!`, 'info'); // not 'loot': that is the battle log's
         }
         if (!offline && amount === 2) game.emit({ type: 'doubleDrop', resource: def.output });
-    } else if (def.kind === 'smith' || def.kind === 'craft') {
-        const maxRarity = def.kind === 'craft' ? craftMaxRarity(skillLevel(state, 'crafting')) : CRAFT_MAX_RARITY;   // jewellery's rises with Crafting
+    } else if (def.kind === 'craft') {
+        const maxRarity = craftMaxRarity(skillLevel(state, 'crafting'));   // jewellery's best rises with Crafting
         const item = generateEquipment({ ...def.item, qualityBonus: derived.craftQuality, maxRarity, materials: def.consumes, source: 'crafted' }, state.idCounter++);
         if (def.item.depth) item.depth = def.item.depth;
         const { kept } = addItem(game, item);

@@ -41,11 +41,12 @@ test('bosses drop better rarities than regular monsters', () => {
     assert.ok(avg(true) > avg(false) + 0.4);
 });
 
-test('forged gear never rolls above Rare', () => {
+test('crafted jewellery below Crafting 75 never rolls above Rare', () => {
     const game = new Game(null, T0);
-    game.state.resources.copper_bar = 3 * 300;
+    game.state.unlocks.crafting = true;
+    game.state.resources.silver_bar = 300; game.state.resources.amethyst = 300;
     game.state.settings.autoSalvage = 'off';
-    game.startSmithing('Weapon', 'copper_bar');
+    game.startCrafting('Ring', 'silver_bar', 'amethyst');
     let now = T0;
     for (let i = 0; i < 300 * 32; i++) { now += 100; game.tick(now); }
     const made = game.state.stats.itemsCrafted;

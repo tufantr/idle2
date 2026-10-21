@@ -8,7 +8,7 @@ import { xpForLevel } from '../src/core/xp.js';
 import { migrateState } from '../src/core/state.js';
 import { resolveAction, intervalFor } from '../src/systems/skilling.js';
 import { masteryBonus, masteryLevel, skillMastery, addMasteryXp } from '../src/systems/mastery.js';
-import { MASTERY_XP_DIVISOR, MASTERY_SKILLS, MASTERY_CHECKPOINTS, MASTERY_MAX_LEVEL, masteryActions, masteryShare, checkpointsAt, forgeKey } from '../src/data/mastery.js';
+import { MASTERY_XP_DIVISOR, MASTERY_SKILLS, MASTERY_CHECKPOINTS, MASTERY_MAX_LEVEL, masteryActions, masteryShare, checkpointsAt, jewelKey, forgeKey } from '../src/data/mastery.js';
 import { RESOURCES } from '../src/data/resources.js';
 import { generateDrop } from '../src/core/formulas.js';
 import { reinforceCost } from '../src/data/workshop.js';
@@ -45,15 +45,16 @@ test('the bonuses: speed for all, doubling for resources, preservation for ingre
     const s = game.state;
     s.skills.smithing.xp = xpForLevel(99);
     s.skills.mining.xp = xpForLevel(99);
-    for (const [skill, key] of [['mining', 'copper_ore'], ['smithing', 'iron_bar'], ['smithing', forgeKey('copper_bar')]]) s.mastery[skill][key] = practiceFor(99);
+    s.skills.crafting.xp = xpForLevel(99);
+    for (const [skill, key] of [['mining', 'copper_ore'], ['smithing', 'iron_bar'], ['crafting', jewelKey('amethyst')]]) s.mastery[skill][key] = practiceFor(99);
     const ore = resolveAction(s, { kind: 'node', skill: 'mining', id: 'copper_ore' });
     assert.ok(ore.mastery.double > 0.24 && ore.mastery.preserve === 0, 'gathering has nothing to keep');
     const bar = resolveAction(s, { kind: 'smelt', id: 'iron_bar' });
     assert.ok(bar.mastery.double > 0.24 && bar.mastery.preserve > 0.19);
-    const sword = resolveAction(s, { kind: 'smith', type: 'Weapon', bar: 'copper_bar' });
-    const body = resolveAction(s, { kind: 'smith', type: 'Body', bar: 'copper_bar' });
-    assert.equal(sword.mastery.key, body.mastery.key, 'one mastery per metal');
-    assert.ok(sword.mastery.double === 0 && sword.mastery.preserve > 0.19, 'no double gear, but bars are kept');
+    const ring = resolveAction(s, { kind: 'craft', type: 'Ring', bar: 'silver_bar', gem: 'amethyst' });
+    const amulet = resolveAction(s, { kind: 'craft', type: 'Neck', bar: 'silver_bar', gem: 'amethyst' });
+    assert.equal(ring.mastery.key, amulet.mastery.key, 'one mastery per gem');
+    assert.ok(ring.mastery.double === 0 && ring.mastery.preserve > 0.19, 'no double gear, but the bar and gem are kept');
     assert.ok(intervalFor(ore, game.derived) < intervalFor({ ...ore, mastery: null }, game.derived), 'faster with mastery');
 });
 
@@ -77,16 +78,16 @@ test('preservation keeps the ingredients and the log; doubling adds output', () 
     assert.ok(extra / cooks > 0.28 && extra / cooks < 0.41, `doubled ${extra} of ${cooks}`);
 });
 
-test('forging mastery is shared by every piece of a metal; jewellery by gem', () => {
+test('jewellery mastery is shared by every piece of a gem; nothing is forged, and tools are bought', () => {
     const game = new Game(null, T0);
     const s = game.state;
-    s.skills.smithing.xp = xpForLevel(40);
-    s.resources.copper_bar = 500;
-    game.startSmithing('Weapon', 'copper_bar');
+    s.unlocks.crafting = true;
+    s.skills.crafting.xp = xpForLevel(10);
+    s.resources.silver_bar = 500; s.resources.amethyst = 500;
+    game.startCrafting('Ring', 'silver_bar', 'amethyst');
     run(game, 30_000);
-    const practice = s.mastery.smithing[forgeKey('copper_bar')];
-    assert.ok(practice > 0);
-    assert.ok(resolveAction(s, { kind: 'smith', type: 'Head', bar: 'copper_bar' }).mastery.level > 1);
+    assert.ok(resolveAction(s, { kind: 'craft', type: 'Ear', bar: 'silver_bar', gem: 'amethyst' }).mastery.level > 1, 'the earring shares the ring\'s mastery');
+    assert.equal(resolveAction(s, { kind: 'smith', type: 'Head', bar: 'copper_bar' }), null, 'no forging (the owner, October 2026)');
     assert.equal(resolveAction(s, { kind: 'tool', tool: 'pickaxe', tier: 1 }), null, 'tools are bought, not made (systems/tools.js)');
 });
 

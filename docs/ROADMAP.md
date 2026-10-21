@@ -1310,6 +1310,9 @@ Keeping it running:
       tinderboxes, hoes and bows bought in the Shop's Tools panel for the bars and logs they always took, each tier
       once the skill it serves reaches its level; the Shop's button shows ▲ when one is ready. Smithing's Tools step
       and Crafting's bows are gone (DESIGN §3.3)
+- [x] **No forging** (the owner, 21 October 2026, after the measurement: copper forging kept stage 100 at 2.5 h
+      against 4.4 h without it, and the owner chose to let it go): every weapon and piece of armour drops; Smithing
+      is smelting and the anvil; an old order to forge is dropped (DESIGN §3.4)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

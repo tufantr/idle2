@@ -39,7 +39,7 @@ export function masteryActions(skillId) {
     if (skillId === 'smithing') {
         return [
             ...SMELTING_RECIPES.map(r => ({ key: r.id, name: `Smelt ${r.name}`, icon: RESOURCES[r.produces].icon, levelReq: r.levelReq })),
-            ...METALS.map(m => ({ key: forgeKey(m.bar), name: m.tier === 1 ? `Forge ${m.name}` : `${m.name} at the anvil`, icon: '⚒️', levelReq: m.levelReq }))
+            ...METALS.map(m => ({ key: forgeKey(m.bar), name: `${m.name} at the anvil`, icon: '⚒️', levelReq: m.levelReq }))
         ];
     }
     if (skillId === 'crafting') {

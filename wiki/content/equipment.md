@@ -34,8 +34,7 @@ Each tier needs a combat level before your hero can wear it (the table below). Y
 
 ## Where gear comes from
 
-- **Forged:** Smithing forges a first set of {{GEAR_TIERS[0].name}} gear, and nothing stronger.
-- **Dropped:** every stronger weapon and piece of armour drops in the fight, {{pct(GEAR_DROP_CHANCE.regular, 1)}} of the time from an ordinary kill and {{pct(GEAR_DROP_CHANCE.boss, 0)}} from a boss's first fall in a run, and from [[Dungeons|dungeon]] chests. {{GEAR_TIERS.filter(t => t.dropOnly).map(t => link(path.tier(t.name), `${t.name}`)).join(' and ')}} gear only ever drops, deep in the Abyss and in the deepest dungeons.
+- **Dropped:** every weapon and piece of armour drops in the fight (nothing is forged since October 2026), {{pct(GEAR_DROP_CHANCE.regular, 1)}} of the time from an ordinary kill and {{pct(GEAR_DROP_CHANCE.boss, 0)}} from a boss's first fall in a run, and from [[Dungeons|dungeon]] chests. {{GEAR_TIERS.filter(t => t.dropOnly).map(t => link(path.tier(t.name), `${t.name}`)).join(' and ')}} gear only ever drops, deep in the Abyss and in the deepest dungeons.
 - **Crafted:** jewellery is made in Crafting. Jewellery that drops is always {{RARITIES[JEWEL_DROP_MIN_RANK].name.toLowerCase()}} or {{RARITIES.at(-1).name.toLowerCase()}}.
 - **Unique:** each dungeon has a [[Unique items|unique item]] of its own.
 
