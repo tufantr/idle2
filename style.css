@@ -2894,3 +2894,16 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
 .shop-item-req { font-size: 0.75rem; font-weight: 700; color: #fca5a5; }
 .tool-item.ready { border-color: rgba(250, 204, 21, 0.6); box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 0 16px rgba(250, 204, 21, 0.18); }
 .tool-item.best { opacity: 0.75; }
+
+/* the anvil's bonuses (render.js anvilCard): every piece shows them; after a reroll the ones it brought glow, "new" */
+.anvil-bonuses { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.2rem 0.4rem; color: #c4b5fd; }
+.anvil-bonuses li { padding: 0.05rem 0.4rem; border-radius: 999px; background: rgba(76, 29, 149, 0.35); border: 1px solid rgba(167, 139, 250, 0.35); white-space: nowrap; }
+.anvil-bonuses li.new { color: #fef3c7; border-color: #fde047; background: rgba(161, 98, 7, 0.45); box-shadow: 0 0 10px rgba(250, 204, 21, 0.55); animation: bonusIn 0.5s ease-out; }
+.anvil-bonuses li.new::after { content: ' new'; font-size: 0.68em; font-weight: 800; color: #fde047; text-transform: uppercase; letter-spacing: 0.05em; }
+@keyframes bonusIn { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+body.reduced-motion .anvil-bonuses li.new { animation: none; }
+@media (prefers-reduced-motion: reduce) { .anvil-bonuses li.new { animation: none; } }
+@media (max-width: 600px) {
+    .anvil-card { grid-template-areas: "art name" "art stats" "art next" "bonuses bonuses" "jobs jobs"; }
+    .anvil-bonuses { grid-area: bonuses; justify-content: flex-start; }
+}

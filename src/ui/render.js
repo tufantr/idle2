@@ -1016,7 +1016,7 @@ export function renderSmithing(game, ui) {
             }, state);
         }).join('')}</div>`;
     } else if (view === 'anvil') {
-        body = renderAnvil(state);
+        body = renderAnvil(state, ui);
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
         ${xpHeader(game, 'smithing', skillPotionChip(game, ui))}
@@ -1030,15 +1030,20 @@ export function renderSmithing(game, ui) {
  * reinforcing (+1) and rerolling its bonuses, and the bars and essence each takes. A job that can be
  * done now glows; one that waits on Smithing names the level.
  */
-function renderAnvil(state) {
+function renderAnvil(state, ui = {}) {
     const worn = SMITHING_TYPES.map(type => state.equipped[type]).filter(Boolean);
     if (!worn.length) return '<p class="muted small anvil-empty">Wear a weapon or a piece of armour to work it here.</p>';
-    return `<div class="anvil-grid">${worn.map(item => anvilCard(state, item)).join('')}</div>`;
+    // a reroll just made (main.js FI.reroll): its piece's new bonuses glow a few seconds
+    const rolled = ui.anvilRolled && Date.now() - ui.anvilRolled.at < ANVIL_ROLL_GLOW_MS ? ui.anvilRolled : null;
+    return `<div class="anvil-grid">${worn.map(item => anvilCard(state, item, rolled && Number(rolled.id) === Number(item.id) ? rolled.before : null)).join('')}</div>`;
 }
+/** How long a reroll's new bonuses glow on the anvil. */
+export const ANVIL_ROLL_GLOW_MS = 4000;
 
 // The forge's levels belong to the slot (data/workshop.js): the card is the slot's, with the piece worn there, its
-// plate (+14), what the next level does ("Weapon slot +14 → +15: +5% attack") and the jobs.
-function anvilCard(state, item) {
+// plate (+14), its bonuses (each one a reroll just brought glowing: `before`, the bonuses it had), what the next level
+// does ("Weapon slot +14 → +15: +5% attack") and the jobs.
+function anvilCard(state, item, before = null) {
     const id = Number(item.id);
     const slot = item.type;
     const up = forgeLevel(state, slot);
@@ -1058,11 +1063,16 @@ function anvilCard(state, item) {
     };
     const lines = [item.atk ? `${ATK_ICON} ${stat(item.atk, now)} <i>→ ${stat(item.atk, next)}</i>` : '', item.def ? `${DEF_ICON} ${stat(item.def, now)} <i>→ ${stat(item.def, next)}</i>` : ''].filter(Boolean);
     const bonuses = item.affixes?.length ? item.affixes.map(describeAffix).join(', ') : '';
+    const kept = new Set(before || []);
+    const bonusList = item.affixes?.length
+        ? `<ul class="anvil-bonuses small${before ? ' rolled' : ''}">${item.affixes.map(a => { const text = describeAffix(a); const fresh = before && !kept.has(text); return `<li${fresh ? ' class="new"' : ''}>${esc(text)}</li>`; }).join('')}</ul>`
+        : '<div class="anvil-bonuses muted small">No bonuses</div>';
     const rung = `${slotName} slot +${up} → +${up + 1}: +${step} ${what}`;
     return `<div class="anvil-card" id="anvil-${id}" style="--r:${esc(item.color || '#e2e8f0')}">
         <div class="anvil-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}${up ? `<span class="anvil-plus" title="${esc(`The ${slotName.toLowerCase()} slot's forge levels: every piece worn there has them`)}">+${up}</span>` : ''}</div>
-        <div class="anvil-name" title="${esc(bonuses)}">${esc(item.name)}</div>
+        <div class="anvil-name">${esc(item.name)}</div>
         <div class="anvil-stats small">${lines.join(' ')}</div>
+        ${bonusList}
         <div class="anvil-next small">${esc(rung)}</div>
         <div class="anvil-jobs">
             ${job('reinforce', glyph('up'), `+${up + 1}`, rung)}

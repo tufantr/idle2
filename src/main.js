@@ -5,12 +5,13 @@ import {
     loadLocal, saveLocal, clearLocal, CloudClient, syncChoice,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle, fightTab } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { TOOLS } from './data/workshop.js';
+import { describeAffix } from './core/formulas.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -22,7 +23,7 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
-import { isUpgrade, canWear, equipGain, gainStages } from './systems/inventory.js';
+import { isUpgrade, canWear, equipGain, gainStages, findGear } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -1382,7 +1383,15 @@ window.FI = {
     upgrade(id) { const ok = game.upgradeItem(id); if (ok) sound.play('craft'); render(); if (ok) flourish('#item-detail .detail-art'); },
     setAutoPrestige(on) { if (game.setAutoPrestige(on)) sound.play(on ? 'unlock' : 'click'); render(); },
     reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
-    reroll(id) { const ok = game.rerollItem(id); sound.play(ok ? 'rare' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)'); },
+    // a reroll: the bonuses it brought glow on the card a few seconds (render.js anvilCard)
+    reroll(id) {
+        const before = (findGear(game.state, id)?.affixes || []).map(describeAffix);
+        const ok = game.rerollItem(id);
+        sound.play(ok ? 'rare' : 'error');
+        if (ok) { ui.anvilRolled = { id: Number(id), before, at: Date.now() }; setTimeout(() => render(), ANVIL_ROLL_GLOW_MS + 50); }
+        render();
+        if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
+    },
     toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },
     reforge(id) { const ok = game.reforgeItem(id); if (ok) sound.play('rare'); render(); if (ok) flourish('#item-detail .detail-art', 'rgba(196, 165, 255, 0.95)'); },
     salvage(id) {

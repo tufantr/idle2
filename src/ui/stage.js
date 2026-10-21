@@ -24,7 +24,7 @@ const IDLE = {
     mining: 'Pick a vein below to start mining', woodcutting: 'Pick a tree below to start cutting',
     hunting: 'Pick a quarry or a fishing spot below to start hunting',
     cooking: 'Pick a dish below to start cooking', firemaking: 'Pick logs below to light the fire',
-    alchemy: 'Pick a potion below to start brewing', smithing: 'Pick a bar or a piece below to start smithing',
+    alchemy: 'Pick a potion below to start brewing', smithing: 'Pick a bar below to start smelting',
     crafting: 'Pick a piece below to start crafting', farming: 'Plant seeds below: they grow while you do something else',
     agility: 'Build an obstacle below, then run the course'
 };
