@@ -1328,7 +1328,9 @@ Keeping it running:
       nearly every chain, every one on a phone), a click on the monster is always a strike, the chain counts its clicks
       on its own clock, striking its points keeps the combo; a press on a point takes no focus and plays no click
       (an auto-clicker on one moved the focus 2,000 times a second). Mashing through chains lands as many strikes as
-      before the chain. Checked in a browser at both widths, with a simulated auto-clicker (DESIGN §3.6)
+      before the chain. Checked in a browser at both widths, with a simulated auto-clicker (DESIGN §3.6). Then (as the
+      chain's design said, and wasn't done) the points keep off the health bars and names too, where there is room
+      (on a phone they give way), and never overlap one another
 - [x] **Crafting levels like a skill again** (the owner, 21 October 2026: "levelling up crafting feels too hard"; the
       options were given that morning and waited for a pick; "why didn't you do your recommendations"): **plain
       pieces**, a ring, earring or amulet from the setting alone (a bar, no gem) for 70% of the XP of the best gem the

@@ -31,36 +31,48 @@ export function chainReady(state, now) {
     return chainFight(state) && !c.chain && c.chainAt > 0 && now >= c.chainAt;
 }
 
-/** The page's boxes to keep the points out of, checked: at most four, each { x0, y0, x1, y1 } finite and not empty. */
+/**
+ * The page's boxes to keep the points out of, checked: at most four, each { x0, y0, x1, y1 } finite and not empty, and
+ * `soft` if it may give way when there is no room without it.
+ */
 function keepOut(avoid) {
     if (!Array.isArray(avoid)) return [];
-    return avoid.slice(0, 4).map(b => ({ x0: Number(b?.x0), y0: Number(b?.y0), x1: Number(b?.x1), y1: Number(b?.y1) }))
+    return avoid.slice(0, 4).map(b => ({ x0: Number(b?.x0), y0: Number(b?.y0), x1: Number(b?.x1), y1: Number(b?.y1), soft: !!b?.soft }))
         .filter(b => [b.x0, b.y0, b.x1, b.y1].every(Number.isFinite) && b.x1 > b.x0 && b.y1 > b.y0);
 }
 
 /**
  * Where the points go, as fractions of the layer's width and height: anywhere inside its margins, each at least
  * BALANCE.chain.spacing (in heights) from the others, and none with its middle inside an `avoid` box (fractions of
- * the layer too: the monster, widened by a point's half, so a tap meant for the monster never meets a point).
- * `aspect` is the layer's width over its height.
+ * the layer too: the monster, widened by a point's half, so a tap meant for the monster never meets a point; the
+ * fighters' bars and names, `soft`). Where there is no room, the spacing narrows, never below `minGap` (a point's
+ * width: points never overlap), and then the soft boxes give way, never the others. `aspect` is the layer's width
+ * over its height.
  */
-export function placePoints(count = BALANCE.chain.points, aspect = 2, spacing = BALANCE.chain.spacing, avoid = []) {
+export function placePoints(count = BALANCE.chain.points, aspect = 2, spacing = BALANCE.chain.spacing, avoid = [], minGap = 0) {
     const a = Math.max(0.6, Math.min(4, Number(aspect) || 2));
-    const boxes = keepOut(avoid);
-    const clear = p => boxes.every(b => p.x <= b.x0 || p.x >= b.x1 || p.y <= b.y0 || p.y >= b.y1);
+    const all = keepOut(avoid);
+    const hard = all.filter(b => !b.soft);
+    const floor = Math.max(0, Math.min(spacing, Number(minGap) || 0));
+    const outside = boxes => p => boxes.every(b => p.x <= b.x0 || p.x >= b.x1 || p.y <= b.y0 || p.y >= b.y1);
     const apart = (p, q) => Math.hypot((p.x - q.x) * a, p.y - q.y);
     const rounded = p => ({ x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000 });
-    let gap = spacing;
-    for (let round = 0; round < 6; round++, gap *= 0.85) {
-        const points = [];
-        for (let tries = 0; tries < 400 && points.length < count; tries++) {
-            const p = { x: rng.float(0.1, 0.9), y: rng.float(0.16, 0.84) };
-            if (clear(p) && points.every(q => apart(p, q) >= gap)) points.push(p);
+    for (const boxes of hard.length < all.length ? [all, hard] : [all]) {
+        const clear = outside(boxes);
+        for (let round = 0, gap = spacing; round < 6; round++, gap *= 0.85) {
+            const g = Math.max(gap, floor);
+            const points = [];
+            for (let tries = 0; tries < 400 && points.length < count; tries++) {
+                const p = { x: rng.float(0.1, 0.9), y: rng.float(0.16, 0.84) };
+                if (clear(p) && points.every(q => apart(p, q) >= g)) points.push(p);
+            }
+            if (points.length === count) return points.map(rounded);
+            if (g === floor) break;   // (no narrower spacing is allowed)
         }
-        if (points.length === count) return points.map(rounded);
     }
-    // (too little room left to space them at random): spots on a fine grid outside the boxes, each the farthest from
-    // those taken; a layer the boxes cover all over gets a row across its middle
+    // (too little room left to space them at random): spots on a fine grid outside the hard boxes, each the farthest
+    // from those taken; a layer the boxes cover all over gets a row across its middle
+    const clear = outside(hard);
     const free = [];
     for (let i = 0; i <= 16; i++) for (let j = 0; j <= 12; j++) {
         const p = { x: 0.1 + 0.8 * i / 16, y: 0.16 + 0.68 * j / 12 };
@@ -95,14 +107,15 @@ export function tickChain(game) {
 
 /**
  * Five points over the fight (`aspect`: the layer's width over its height; `avoid`: boxes no point may sit in, the
- * monster's, placePoints). Null if no chain may start.
+ * monster's, and the fighters' bars and names, soft; `minGap`: a point's width in the layer's heights; placePoints).
+ * Null if no chain may start.
  */
-export function startChain(game, aspect = 2, avoid = []) {
+export function startChain(game, aspect = 2, avoid = [], minGap = 0) {
     const state = game.state;
     const c = state.combat;
     const now = game.now;
     if (!chainReady(state, now)) return null;
-    c.chain = { points: placePoints(BALANCE.chain.points, aspect, BALANCE.chain.spacing, avoid), next: 0, startedAt: now, endsAt: now + BALANCE.chain.ms, clickAt: 0 };
+    c.chain = { points: placePoints(BALANCE.chain.points, aspect, BALANCE.chain.spacing, avoid, minGap), next: 0, startedAt: now, endsAt: now + BALANCE.chain.ms, clickAt: 0 };
     game.emit({ type: 'chainStart', points: c.chain.points.length });
     return c.chain;
 }

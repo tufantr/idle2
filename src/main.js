@@ -168,7 +168,7 @@ window.addEventListener('storage', event => { if (event.key === OWNER_KEY && eve
 // The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
 const scene = createScene(document.getElementById('scene'), {
     strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
-    startChain: (aspect, avoid) => { advance(Date.now()); return game.startChain(aspect, avoid); },
+    startChain: (aspect, avoid, minGap) => { advance(Date.now()); return game.startChain(aspect, avoid, minGap); },
     chainClick: index => { advance(Date.now()); return game.chainClick(index); },
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },

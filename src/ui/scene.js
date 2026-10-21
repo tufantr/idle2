@@ -104,7 +104,7 @@ const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
 /**
  * Builds the scene into `root` and returns its controls.
  * `actions`: { strike() -> bool (a click on the monster; true if it landed), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map),
- * startChain(aspect, avoid) (a chain over the fight, its points kept out of the boxes `avoid`: systems/chain.js), chainClick(index | null) (a click in the fight while one is up) }.
+ * startChain(aspect, avoid, minGap) (a chain over the fight, its points kept out of the boxes `avoid` and `minGap` apart: systems/chain.js), chainClick(index | null) (a click in the fight while one is up) }.
  */
 export function createScene(root, actions) {
     root.innerHTML = `
@@ -271,20 +271,27 @@ export function createScene(root, actions) {
         chainGone = setTimeout(() => { if (!chainKey) { el.chain.hidden = true; el.chain.innerHTML = ''; } }, quietNow() ? 0 : 260);
     }
     /**
-     * The box no point may sit in, in fractions of the fight `f`, so a tap meant for the monster always strikes it
-     * (systems/chain.js placePoints): where the monster stands as laid out (its spawn and lunges are transforms, and a
-     * box taken mid-move was too small), half a cell wider each side for a boss arriving one size up (bossScale), and
-     * half a point and a little more all round.
+     * The boxes no point may sit in, in fractions of the fight `f` (systems/chain.js placePoints), each widened by half
+     * a point and a little: the monster, so a tap meant for it always strikes it, where it stands as laid out (its
+     * spawn and lunges are transforms, and a box taken mid-move was too small) and half a cell wider each side for a
+     * boss arriving one size up (bossScale); and the band of the fighters' health bars and the band of their names,
+     * so a chain never hides them.
      */
     function keepClear(f) {
+        const r = (parseFloat(getComputedStyle(el.chain).getPropertyValue('--chain-size')) || 58) / 2 + 4;
+        const box = (left, top, right, bottom) => ({ x0: (left - r - f.left) / f.width, y0: (top - r - f.top) / f.height, x1: (right + r - f.left) / f.width, y1: (bottom + r - f.top) / f.height });
         const stand = el.foeStand.getBoundingClientRect();
         const sp = el.foeSprite;
-        const r = (parseFloat(getComputedStyle(el.chain).getPropertyValue('--chain-size')) || 58) / 2 + 4;
         const grow = ATLAS_CELL / 2;
-        const left = stand.left + sp.offsetLeft - grow - r, right = stand.left + sp.offsetLeft + sp.offsetWidth + grow + r;
-        const top = stand.top + sp.offsetTop - grow - r, bottom = stand.top + sp.offsetTop + sp.offsetHeight + r;
-        return { x0: (left - f.left) / f.width, y0: (top - f.top) / f.height, x1: (right - f.left) / f.width, y1: (bottom - f.top) / f.height };
+        const boxes = [box(stand.left + sp.offsetLeft - grow, stand.top + sp.offsetTop - grow, stand.left + sp.offsetLeft + sp.offsetWidth + grow, stand.top + sp.offsetTop + sp.offsetHeight)];
+        for (const sel of ['.fighter-bars', '.fighter-name, .fighter-meta, .attack-bar, .boss-clock']) {   // (soft: on a phone they give way to room)
+            const rects = [...el.field.querySelectorAll(sel)].map(n => n.getBoundingClientRect()).filter(b => b.width && b.height);
+            if (rects.length) boxes.push({ ...box(Math.min(...rects.map(b => b.left)), Math.min(...rects.map(b => b.top)), Math.max(...rects.map(b => b.right)), Math.max(...rects.map(b => b.bottom))), soft: true });
+        }
+        return boxes;
     }
+    /** A point's width and a little, in the fight's heights: the least the points stand apart (they never overlap). */
+    const chainGap = f => ((parseFloat(getComputedStyle(el.chain).getPropertyValue('--chain-size')) || 58) + 6) / f.height;
     /** Where a point is, in % of the effects layer (for its spark). */
     function pointSpot(index) {
         const node = el.chain.querySelector(`.chain-point[data-i="${index}"]`);
@@ -867,7 +874,7 @@ export function createScene(root, actions) {
             else if (!fightSeenSince) fightSeenSince = now;
             if (!ch && fightSeenSince && now - fightSeenSince >= CHAIN_SETTLE_MS && chainReady(state, game.now)) {
                 const f = el.field.getBoundingClientRect();
-                if (f.width > 0 && f.height > 0) actions.startChain?.(f.width / f.height, [keepClear(f)]);
+                if (f.width > 0 && f.height > 0) actions.startChain?.(f.width / f.height, keepClear(f), chainGap(f));
             }
 
             const combo = Math.floor(c.combo || 0);

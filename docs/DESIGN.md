@@ -332,6 +332,9 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   `ui/scene.js`, `placePoints`' `avoid`); a click on the monster is a strike and never reaches the chain; the chain
   keeps its own clock (`chain.clickAt`), so strikes and points never wait on each other; and a point struck in turn
   keeps the combo from fading. Mashing the monster through chains now lands as many strikes as before the chain.
+  The points keep off the fighters' health bars and names too (as the chain's design promised): those boxes are
+  `soft` and give way where there is no room for five points without them (on a phone, most chains), the monster's
+  never; points are never closer than a point's width (`minGap`).
   And it never stalls the machine (the owner's report: an auto-clicker froze the computer): a point is a `<button>`,
   and main.js lets a clicked button's focus go, so a clicker on a point moved the focus some 2,000 times a second,
   each change also reported to the system, and every press played the buttons' click. A press on a point now takes

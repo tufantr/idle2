@@ -178,6 +178,34 @@ test('the points keep off the monster: none in its box, on a phone or a wide scr
     assert.equal(placePoints(b.points, 2, b.spacing, [null, { x0: 'a' }, { x0: 0.5, y0: 0.5, x1: 0.4, y1: 0.6 }]).length, b.points);
 });
 
+test('the fighters\' bars and names give way where there is no room, the monster never, and points never overlap', () => {
+    rng.setSource(seededRandom(12));
+    const inside = (p, b) => p.x > b.x0 && p.x < b.x1 && p.y > b.y0 && p.y < b.y1;
+    const cases = [
+        // a phone: the monster (hard) takes the right half, the bars and the names (soft) the top and bottom bands
+        { aspect: 390 / 292, minGap: 64 / 292, roomy: false,
+          boxes: [{ x0: 0.48, y0: 0.02, x1: 0.95, y1: 0.93 }, { x0: 0, y0: 0, x1: 1, y1: 0.3, soft: true }, { x0: 0, y0: 0.75, x1: 1, y1: 1, soft: true }] },
+        // a wide screen: room for all of them
+        { aspect: 1100 / 449, minGap: 64 / 449, roomy: true,
+          boxes: [{ x0: 0.56, y0: 0.0, x1: 0.78, y1: 0.86 }, { x0: 0.1, y0: 0, x1: 0.95, y1: 0.12, soft: true }, { x0: 0.1, y0: 0.86, x1: 0.95, y1: 1, soft: true }] }
+    ];
+    for (const { aspect, minGap, roomy, boxes } of cases) {
+        let gaveWay = 0;
+        for (let n = 0; n < 300; n++) {
+            const pts = placePoints(b.points, aspect, b.spacing, boxes, minGap);
+            assert.equal(pts.length, b.points);
+            for (const p of pts) assert.ok(!inside(p, boxes[0]), `aspect ${aspect.toFixed(2)}: ${JSON.stringify(p)} on the monster`);
+            if (pts.some(p => boxes.slice(1).some(x => inside(p, x)))) gaveWay++;
+            for (let i = 0; i < pts.length; i++) for (let j = 0; j < i; j++) {
+                const d = Math.hypot((pts[i].x - pts[j].x) * aspect, pts[i].y - pts[j].y);
+                assert.ok(d >= minGap - 0.002, `aspect ${aspect.toFixed(2)}: two points ${d.toFixed(3)} apart, under ${minGap.toFixed(3)}`);
+            }
+        }
+        if (roomy) assert.equal(gaveWay, 0, 'with room, the bars and names are left clear');
+        else assert.ok(gaveWay > 0, 'with none, they give way');
+    }
+});
+
 test('its clock runs out: the chain goes, nothing is lost, the next is set', () => {
     const game = fighter();
     let t = b.firstMs + 500;
