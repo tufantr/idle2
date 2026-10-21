@@ -1,13 +1,15 @@
 // The chain (systems/chain.js; the owner, October 2026): five numbered points over the fight, struck in order before
-// its clock runs out, for a flurry and combo. A click elsewhere or out of turn does nothing; a click counts every
-// strikeGapMs at most; a random clicker almost never finishes one; clicking the monster strikes only the clan boss.
+// its clock runs out, for a little gold, and a quick one rallies the hero. A click elsewhere or out of turn does
+// nothing; a click counts every strikeGapMs at most; a random clicker almost never finishes one. Strikes on the
+// monster are as they were.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { BALANCE } from '../src/core/formulas.js';
-import { chainReady, placePoints, giveChainFind } from '../src/systems/chain.js';
+import { BALANCE, goldPerKillAtStage } from '../src/core/formulas.js';
+import { chainReady, placePoints } from '../src/systems/chain.js';
+import { BASE } from '../src/core/modifiers.js';
 import { migrateState } from '../src/core/state.js';
 
 const T0 = 1_760_000_000_000;
@@ -52,27 +54,35 @@ test('the first chain comes 8 s into a fight; the next 20–30 s after one ends'
     assert.equal(game.state.stats.chains, 1);
 });
 
-test('struck in order: a flurry of three attacks and five combo; fast, a find always', () => {
+test('struck in order: a little gold; struck fast, a rally of attack speed for a few seconds', () => {
     const game = fighter();
     at(game, b.firstMs + 1000);
     const c = game.state.combat;
-    const atk = game.derived.atk;
+    const speed = game.derived.attackInterval;
+    // a slow chain: gold only
     game.startChain(2);
-    game.drainEvents();
     let t = b.firstMs + 1000;
-    for (let i = 0; i < b.points; i++) { t += 260; at(game, t); game.chainClick(i); }
-    const events = game.drainEvents();
-    const done = events.find(e => e.type === 'chainDone');
-    assert.ok(done, 'finished');
-    assert.equal(done.fast, true, `${done.ms} ms`);
-    assert.ok(done.find, 'a fast chain always finds something');
-    const flurry = events.find(e => e.type === 'hit' && e.flurry);
-    const comboMult = 1 + Math.min(BALANCE.combat.comboMax, c.combo) * BALANCE.combat.comboDmgPerStack;
-    const plain = flurry.dmg / (flurry.crit ? game.derived.critDmg : 1) / comboMult / atk;
-    assert.ok(plain > b.flurry * 0.88 && plain < b.flurry * 1.12, `a flurry of ${plain.toFixed(2)} attacks`);
-    assert.ok(c.combo >= b.combo - 0.1 && c.combo <= b.combo, `combo ${c.combo}`);
-    assert.equal(events.filter(e => e.type === 'chainHit').length, b.points);
+    const goldBefore = game.state.gold;
+    for (let i = 0; i < b.points; i++) { t += 700; at(game, t); game.chainClick(i); }
+    let done = game.drainEvents().find(e => e.type === 'chainDone');
+    assert.ok(done && !done.fast, `${done?.ms} ms`);
+    assert.equal(done.gold, goldPerKillAtStage(c.stage, game.derived.goldMult) * b.goldKills, 'a couple of kills\' gold at the stage');
+    assert.ok(game.state.gold >= goldBefore + done.gold);
+    assert.equal(game.derived.rally, false);
+    assert.equal(c.combo, 0, 'no combo from a chain: strikes build it');
+    // a fast one: the rally, a little more attack speed, for its seconds
+    c.chainAt = game.now;
+    game.startChain(2);
+    for (let i = 0; i < b.points; i++) { t += 300; at(game, t); game.chainClick(i); }
+    done = game.drainEvents().find(e => e.type === 'chainDone');
+    assert.ok(done.fast && done.rallyMs === b.rallyMs);
+    assert.equal(game.derived.rally, true);
+    assert.ok(game.derived.attackInterval < speed, `faster: ${game.derived.attackInterval} < ${speed}`);
     assert.equal(game.state.stats.chainsFast, 1);
+    at(game, t + b.rallyMs + 100);
+    assert.equal(game.derived.rally, false, 'over after its seconds');
+    assert.ok(Math.abs(game.derived.attackInterval - speed) < 1e-6);
+    assert.ok(BASE.rallyAttackSpeed > 0 && BASE.rallyAttackSpeed <= 0.25, 'small');
 });
 
 test('a click out of turn, elsewhere, or too soon after the last does nothing, and costs nothing', () => {
@@ -169,43 +179,26 @@ test('the points fall anywhere inside the margins, apart from one another, on wi
     assert.ok(spots.size > 500, `${spots.size} spots`);
 });
 
-test('clicking the monster strikes only the clan boss; no chain in the clan fight', () => {
+test('clicking the monster strikes as it did; no chain in the clan fight', () => {
     const game = fighter();
     at(game, 1000);
-    assert.equal(game.clickAttack(), false, 'the stages: a click strikes no more');
-    assert.equal(game.state.stats.strikes, 0);
+    assert.equal(game.clickAttack(), true, 'a strike: a tenth of an attack, and combo');
+    assert.equal(game.state.stats.strikes, 1);
+    assert.ok(game.state.combat.combo > 0);
     game.state.combat.mode = 'clan';
     game.state.combat.chainAt = T0;
     assert.equal(chainReady(game.state, T0 + 5000), false, 'the clan boss has its openings, not a chain');
 });
 
-test('the combo fades evenly, a full one over 30 s, outside the clan fight', () => {
+test('a rally is never in a clan attack or on the boards (the server\'s reckoning leaves it out)', async () => {
+    const { powerSummary } = await import('../src/core/power.js');
     const game = fighter();
     at(game, 1000);
-    const c = game.state.combat;
-    c.combo = BALANCE.combat.comboMax;
-    c.chainAt = T0 + 10 * 60000;   // no chain meanwhile
-    at(game, 1000 + b.comboFadeMs / 2);
-    assert.ok(Math.abs(c.combo - BALANCE.combat.comboMax / 2) < 0.3, `half gone at 15 s: ${c.combo}`);
-    at(game, 1000 + b.comboFadeMs + 1000);
-    assert.equal(c.combo, 0);
-});
-
-test('a find: gold most often, essence once it has turned up, a bottle of the picked potion, the best dish', () => {
-    const game = fighter(20);
-    at(game, 1000);
-    const s = game.state;
-    const tally = () => { const t = {}; for (let n = 0; n < 400; n++) { const f = giveChainFind(game); t[f.kind] = (t[f.kind] || 0) + 1; } return t; };
-    const goldBefore = s.gold;
-    assert.deepEqual(Object.keys(tally()), ['gold'], 'nothing else to find yet');
-    assert.ok(s.gold > goldBefore);
-    s.resources.essence = 1;
-    s.resources.cooked_shrimp = 3;
-    s.resources.combat_potion_1 = 1;
-    s.combat.potion = 'combat_potion_1';
-    const t = tally();
-    assert.ok(t.gold > t.essence && t.essence > 0 && t.potion > 0 && t.food > 0, JSON.stringify(t));
-    assert.ok(s.resources.cooked_shrimp >= 3 + 2 * t.food - 1);
+    const plain = powerSummary(JSON.parse(game.serialize(game.now)), game.now).dps;
+    game.state.combat.rallyUntil = game.now + b.rallyMs;
+    game.recompute();
+    assert.equal(game.derived.rally, true);
+    assert.equal(powerSummary(JSON.parse(game.serialize(game.now)), game.now).dps, plain);
 });
 
 test('a chain never outlasts its fight or a reload, and nothing is lost', () => {

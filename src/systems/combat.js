@@ -242,24 +242,6 @@ export function playerAttack(game, { manual = false } = {}) {
     return dmg;
 }
 
-/**
- * A finished chain's flurry (systems/chain.js): `attacks` of the hero's attacks at once, its crit rolled once, the
- * combo on it. No lifesteal: it is a bonus for playing, not a heal.
- */
-export function flurryStrike(game, attacks) {
-    const state = game.state;
-    const c = state.combat;
-    const d = game.derived;
-    const enemy = c.enemy;
-    if (!enemy || enemy.hp <= 0 || enemy.chest) return 0;
-    const isCrit = rng.chance(Math.min(BASE.caps.critChance, d.critChance));
-    const dmg = Math.max(1, Math.round(d.atk * attacks * (isCrit ? d.critDmg : 1) * comboMultiplier(c.combo || 0) * rng.float(0.9, 1.1)));
-    enemy.hp -= dmg;
-    game.emit({ type: 'hit', dmg, crit: isCrit, manual: true, flurry: true });
-    if (enemy.hp <= 0) onEnemyDeath(game);
-    return dmg;
-}
-
 export function enemyAttack(game) {
     const state = game.state;
     const c = state.combat;
@@ -565,20 +547,18 @@ export function onBossTimeout(game) {
     game.markDirty();
 }
 
-/**
- * A strike on the clan boss (a click, a tap or Space): a tenth of an attack, and a stack of the combo. Only there:
- * elsewhere a click strikes no more, and the chain's points take the player's hand (systems/chain.js).
- */
+/** A strike on the enemy (a click, a tap or Space): a tenth of an attack, and a stack of the combo. */
 export function clickAttack(game) {
     const state = game.state;
     const c = state.combat;
-    if (!c.active || !c.enemy || choosingAfterClear(state) || c.mode !== 'clan') return false;
+    if (!c.active || !c.enemy || choosingAfterClear(state)) return false;
     if (game.now - (c.lastClickAt || 0) < BALANCE.combat.strikeGapMs) return false;   // faster clicking (or an auto-clicker) adds nothing
     c.lastClickAt = game.now;
-    bumpStat(game, 'strikes');   // the player's own strikes on the clan boss
-    // every strike's time is kept; one lands only while its guard is down
-    noteClanStrike(state);
-    if (!clanGuardOpen(state)) { game.emit({ type: 'glance' }); return true; }
+    bumpStat(game, 'strikes');   // the player's own strikes (the guide's hand leaves the monster after three)
+    if (c.mode === 'clan') {   // the clan boss: every strike's time is kept; one lands only while its guard is down
+        noteClanStrike(state);
+        if (!clanGuardOpen(state)) { game.emit({ type: 'glance' }); return true; }
+    }
     c.combo = Math.min(BALANCE.combat.comboMax, (c.combo || 0) + 1 / (1 + (c.combo || 0) / 40));
     c.lastComboAt = game.now;
     playerAttack(game, { manual: true });
@@ -623,12 +603,8 @@ export function tickCombat(game, dt) {
     spendFightPotion(game, dt);   // the fight potion's dose runs while he fights (systems/potions.js)
     if (!c.enemy) spawnEnemy(game);
 
-    // the combo: in the clan fight it fades fast once the strikes stop; elsewhere the chains build it and it fades
-    // evenly, a full one over BALANCE.chain.comboFadeMs, so a chain every 20–30 seconds keeps it up
-    if (c.combo > 0 && c.mode === 'clan' && game.now - (c.lastComboAt || 0) > BALANCE.combat.comboDecayAfterMs) {
+    if (c.combo > 0 && game.now - (c.lastComboAt || 0) > BALANCE.combat.comboDecayAfterMs) {
         c.combo = Math.max(0, c.combo - (0.05 + c.combo / 100) * (dt / 50));
-    } else if (c.combo > 0 && c.mode !== 'clan') {
-        c.combo = Math.max(0, c.combo - BALANCE.combat.comboMax * dt / BALANCE.chain.comboFadeMs);
     }
     // The regroup's minute ends at a moment in this step (ms from its start): each attack sees what is left
     // of it at its own moment, so a kill early in a long step doesn't move the hero on to the boss early.

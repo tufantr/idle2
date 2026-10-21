@@ -103,7 +103,7 @@ const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
 
 /**
  * Builds the scene into `root` and returns its controls.
- * `actions`: { strike() -> bool (a click on the monster; true if it landed: the clan boss only), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map),
+ * `actions`: { strike() -> bool (a click on the monster; true if it landed), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map),
  * startChain(aspect) (a chain over the fight: systems/chain.js), chainClick(index | null) (a click in the fight while one is up) }.
  */
 export function createScene(root, actions) {
@@ -276,11 +276,6 @@ export function createScene(root, actions) {
         const f = el.fx.getBoundingClientRect();
         const b = node?.getBoundingClientRect();
         return b && f.width && f.height ? { x: (b.left + b.width / 2 - f.left) / f.width * 100, y: (b.top + b.height / 2 - f.top) / f.height * 100 } : null;
-    }
-    /** A chain's find, in a few words with its icon. */
-    function findText(find) {
-        if (find.kind === 'gold') return `+${fmt(find.qty)} ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })}`;
-        return `+${fmt(find.qty)} ${resIcon(find.id)}`;
     }
 
     function banner(html, kind = '', ms = 1800) {
@@ -635,9 +630,8 @@ export function createScene(root, actions) {
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
         el.foe.classList.toggle('gilded', !!enemy.gilded);
-        // a click strikes only the clan boss (its openings); elsewhere the chain's points take the player's hand
-        el.foe.setAttribute('aria-label', enemy.clan ? `Strike ${enemy.name} when its guard drops: ${STRIKE_SHARE} of an attack, builds your combo` : enemy.name);
-        el.foe.title = enemy.clan ? `Click to strike ${enemy.name} when its guard drops` : '';
+        el.foe.setAttribute('aria-label', `Strike ${enemy.name}: ${STRIKE_SHARE} of an attack, builds your combo`);
+        el.foe.title = `Click to strike ${enemy.name}: ${STRIKE_SHARE} of an attack, builds your combo`;
         setMarkup(el.foeMeta, foeMeta(game.state, game.derived, enemy));
         resetTrail(trails.foe, Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100))); // a fresh monster has no damage trail
         if (silent) return;
@@ -870,14 +864,6 @@ export function createScene(root, actions) {
             switch (ev.type) {
                 case 'hit': {
                     const { foe } = anchor();
-                    if (ev.flurry) {   // a finished chain's flurry: the hero throws himself at it, three slashes and a big number
-                        move(el.heroSprite, 'lunge');
-                        move(el.foeSprite, 'crit');
-                        fxBudget = Math.max(fxBudget, 4);
-                        for (let k = 0; k < 3; k++) spawnFx('slash flurry', '', foe.x + jitter(16), foe.mid + jitter(22), 380 + k * 90);
-                        spawnFx('dmg crit flurry', `${fmt(ev.dmg)}!`, foe.x + jitter(12), foe.top + Math.random() * 8, 1300);
-                        break;
-                    }
                     if (ev.manual) {   // the player's strike: the hero swings with it, a light slash
                         move(el.heroSprite, 'jab');
                         spawnFx('slash light', '', foe.x + jitter(14), foe.mid + jitter(18), 220);
@@ -925,11 +911,12 @@ export function createScene(root, actions) {
                     if (spot) spawnFx('chain-spark', '✦', spot.x, spot.y, 420);
                     break;
                 }
-                case 'chainDone': {   // all five: the flurry's words over the monster, and what it found
-                    const { foe } = anchor();
+                case 'chainDone': {   // all five: its gold over the fight, and a quick one's rally over the hero
+                    const { hero, foe } = anchor();
                     fxBudget = Math.max(fxBudget, 2);
-                    spawnFx('dmg chain-done', ev.fast ? 'Flurry · fast!' : 'Flurry!', foe.x, Math.max(4, foe.top - 10), 1400);
-                    if (ev.find) spawnFx('drop-pop chain-find', findText(ev.find), foe.x, foe.bottom - 6, 1600);
+                    spawnFx('drop-pop chain-find', `+${fmt(ev.gold)} ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })}`, (hero.x + foe.x) / 2, foe.mid, 1600);
+                    if (ev.fast) { spawnFx('dmg chain-done', 'Rally!', hero.x, Math.max(4, hero.top - 10), 1400); move(el.heroSprite, 'cheer'); }
+                    coinBurst(2);
                     break;
                 }
                 case 'glance': {   // a strike while the clan boss's guard is up

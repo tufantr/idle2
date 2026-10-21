@@ -116,22 +116,18 @@ export const BALANCE = {
         denseDropGrowth: 1.225
     },
     // The chain (systems/chain.js; the owner, October 2026): five numbered points over the fight, struck in order before
-    // its clock runs out, for a flurry, a chunk of combo and sometimes a find. Struck at random they almost never fall
-    // in order (a click counts every combat.strikeGapMs at most), so an auto-clicker gets nothing from it.
+    // its clock runs out, for a little gold, and a quick one rallies the hero. Small by the owner's word: the strikes are
+    // what matters in a fight, the chain only a bonus for the player who watches. Struck at random the points almost
+    // never fall in order (a click counts every combat.strikeGapMs at most), so an auto-clicker gets nothing from it.
     chain: {
         points: 5,
         ms: 4000,                  // to strike all five
         everyMs: [20000, 30000],   // between chains, while the fight is on screen
         firstMs: 8000,             // the first chain of a fight that has had none
         spacing: 0.3,              // points at least this far apart (in the layer's heights)
-        flurry: 3,                 // a finished chain lands this many of the hero's attacks at once
-        combo: 5,                  // and adds this much combo (combat.comboMax at most)
-        fastMs: 2000,              // finished this fast: a find, always
-        findChance: 0.25,          // otherwise one this often
-        findGoldKills: 5,          // a find of gold: this many kills at the stage
-        findEssence: 2,
-        findFood: 2,
-        comboFadeMs: 30000         // a full combo fades over this long outside the clan fight
+        goldKills: 2,              // a finished chain pays this many kills' gold at the stage
+        fastMs: 2000,              // finished this fast, it rallies the hero too:
+        rallyMs: 15000             // BASE.rallyAttackSpeed more attack speed this long (core/modifiers.js)
     },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)

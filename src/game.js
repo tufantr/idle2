@@ -2,7 +2,7 @@
 // It never touches the DOM, so tools/simulate.mjs and the tests drive it the same way the UI does.
 
 import { createDefaultState, migrateState, clampTimers } from './core/state.js';
-import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
+import { collectModifiers, deriveStats, isFocused, bonfireLit, rallyOn } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startSmithing, startCrafting, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
@@ -141,7 +141,7 @@ export class Game {
             this.state.meta.playtimeMs += step;
             if (this.attending || this.now - (this.state.meta.lastInputAt || 0) < ATTEND_INPUT_MS) this.state.meta.attendedMs = (this.state.meta.attendedMs || 0) + step;
             expireMinigames(this);
-            if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || this.eventId(this.now) !== this.derived.event) this.recompute();
+            if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || rallyOn(this.state, this.now) !== this.derived.rally || this.eventId(this.now) !== this.derived.event) this.recompute();
             this.state.meta.lastActiveAt = this.now;
             accrueDaily(this.state, this.now);
             syncWeekly(this.state, this.now);   // a new week notes what its Trial's laurel asks (systems/trials.js)

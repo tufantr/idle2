@@ -2,7 +2,7 @@
 // A new player's first minutes, played five ways, and when each "first" happens (median over seeds):
 //   idle        does nothing after Begin
 //   watcher     never strikes, but takes what the screen offers: wears an upgrade, buys a camp level
-//   tapper      plays every chain over the fight (systems/chain.js), a point every 0.4 s, and takes the same offers
+//   tapper      strikes the monster five times a second, plays every chain over the fight (systems/chain.js), and takes the same offers
 //   skiller     mines, then smelts, hunts and cooks as those places open (and takes the offers)
 //   background  begins, then leaves the game in a background tab: nobody looks, nothing is clicked
 // Also: when each place opens (the first seed), the longest stretch with nothing new (a kill of a
@@ -65,7 +65,7 @@ function play(policy, seed) {
     let now = T0;
     for (let i = 0; now < T0 + minutes * 60000; i++) {
         now += 100;
-        if (policy === 'tapper') playChain(game, now);
+        if (policy === 'tapper') { if (i % 2 === 0) game.clickAttack(); playChain(game, now); }
         if (policy === 'skiller' && i % 300 === 0) skillerWork(game);
         game.tick(now);
         const bossOn = !!(game.state.combat.active && game.state.combat.enemy?.boss);   // a place is decided at the end of the tick

@@ -1,6 +1,6 @@
 ---
 path: /combat
-keywords: fight, fighting, battle, stage, stages, boss, boss timer, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, chain, flurry, combo, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
+keywords: fight, fighting, battle, stage, stages, boss, boss timer, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, chain, rally, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
 aliases: Fighting, Battle, Combo, Strikes, Gilded monsters, Boss timer, Bosses' due
 ---
 Your hero fights by himself. He and the monster in front of him attack on their own timers, and when the monster falls the next one steps up. You can simply watch, help with strikes, and spend what the fight brings. The same fight runs the stage ladder, [[Dungeons|dungeon runs]] and [[The Titan]], and it goes on while you are away ([[/offline|offline progress]]).
@@ -68,17 +68,19 @@ The totals are capped (critical damage is not):
 | Lifesteal | {{pct(BASE.caps.lifesteal, 0)}} |
 | Attack speed | +{{pct(BASE.caps.attackSpeed, 0)}} |
 
-## The chain and the combo
+## Strikes and the combo
 
-Every {{BALANCE.chain.everyMs[0] / 1000}} to {{BALANCE.chain.everyMs[1] / 1000}} seconds of a fight you are watching, {{BALANCE.chain.points}} numbered points appear over it. Strike them in order, 1 to {{BALANCE.chain.points}}, within {{BALANCE.chain.ms / 1000}} seconds:
+Tap the monster (or press Space) to strike: a hit for {{pct(BALANCE.combat.manualHitMult, 0)}} of your hero's attack, on top of his own attacks. Strikes count at most {{fmt(1000 / BALANCE.combat.strikeGapMs)}} times a second: clicking faster adds nothing.
 
-- your hero throws a **flurry**, {{BALANCE.chain.flurry}} of his attacks at once;
-- the **combo** rises by {{BALANCE.chain.combo}}, up to {{BALANCE.combat.comboMax}}. Every point of combo makes all your hero's hits deal {{pct(BALANCE.combat.comboDmgPerStack, 0)}} more: +{{pct(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack, 0)}} at full combo. It fades evenly, a full combo over {{BALANCE.chain.comboFadeMs / 1000}} seconds, so a chain every half minute keeps it up;
-- now and then it leaves a find: gold (a few kills' worth), Monster Essence, a bottle of the combat potion you picked, or a few of your best dish. Finish all {{BALANCE.chain.points}} within {{BALANCE.chain.fastMs / 1000}} seconds and it always does.
+Each strike builds the combo, up to {{BALANCE.combat.comboMax}}; each one adds a little less as it grows. Every point of combo makes all your hero's hits, his own and your strikes, deal {{pct(BALANCE.combat.comboDmgPerStack, 0)}} more: +{{pct(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack, 0)}} at full combo. Strikes matter most against a boss on its timer and in the Titan's race.
 
-A click on the wrong number, or anywhere else, does nothing and costs nothing; the fight counts one click every {{BALANCE.combat.strikeGapMs / 1000}} seconds at most. When the time runs out the points go, and the next chain comes as usual. The chain only comes while the fight is on your screen, so leaving the game alone loses nothing it would otherwise have had, and clicking the chain doesn't end [[Mini-games and Focus|Focus]].
+The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} seconds after your last strike, faster the higher it is, and it is gone when your hero leaves the fight or falls.
 
-Clicking the monster itself does nothing any more, except on the [[Clans|clan boss]], whose openings take strikes. (A strike used to hit for a tenth of an attack; an auto-clicker got half again an idle hero's damage from it, while random clicks almost never finish a chain.)
+## The chain
+
+Every {{BALANCE.chain.everyMs[0] / 1000}} to {{BALANCE.chain.everyMs[1] / 1000}} seconds of a fight you are watching, {{BALANCE.chain.points}} numbered points appear over it. Strike them in order, 1 to {{BALANCE.chain.points}}, within {{BALANCE.chain.ms / 1000}} seconds, and they pay {{BALANCE.chain.goldKills}} kills' worth of gold at your stage. Finish within {{BALANCE.chain.fastMs / 1000}} seconds and your hero **rallies** too: +{{pct(BASE.rallyAttackSpeed, 0)}} attack speed for {{BALANCE.chain.rallyMs / 1000}} seconds.
+
+A click on the wrong number, or anywhere else, does nothing and costs nothing; the fight counts one click every {{BALANCE.combat.strikeGapMs / 1000}} seconds at most, strikes and points together. When the time runs out the points go, and the next chain comes as usual. The chain only comes while the fight is on your screen, and clicking it doesn't end [[Mini-games and Focus|Focus]]. It is a small bonus for watching: your strikes are what count in a fight.
 
 ## Food and potions
 

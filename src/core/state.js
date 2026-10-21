@@ -91,7 +91,8 @@ export function createDefaultState(now = Date.now()) {
             stallMs: 0,        // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
             pack: null,        // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
             chain: null,       // the chain over the fight (systems/chain.js): { points, next, startedAt, endsAt }
-            chainAt: 0         // when the next chain may come (0: set at the fight's first tick)
+            chainAt: 0,        // when the next chain may come (0: set at the fight's first tick)
+            rallyUntil: 0      // a quick chain's rally lasts until then (core/modifiers.js rallyOn)
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
@@ -301,6 +302,7 @@ export function clampTimers(state, now) {
         state.combat.lastClickAt = upTo(state.combat.lastClickAt, now);
         state.combat.lastComboAt = upTo(state.combat.lastComboAt, now);
         state.combat.chainAt = upTo(state.combat.chainAt, now + BALANCE.chain.everyMs[1]);
+        state.combat.rallyUntil = upTo(state.combat.rallyUntil, now + BALANCE.chain.rallyMs);
     }
     const mgMax = BALANCE.minigame;
     for (const mg of Object.values(state.minigame || {})) {
@@ -636,6 +638,7 @@ function normalise(data, now) {
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
     state.combat.chain = null;   // a chain never outlasts the page it was on: none is lost, none kept
     state.combat.chainAt = Math.max(0, finite(state.combat.chainAt));
+    state.combat.rallyUntil = Math.max(0, finite(state.combat.rallyUntil));
     const pack = state.combat.pack;
     state.combat.pack = isPlainObject(pack) && Math.floor(Number(pack.stage)) === state.combat.stage && Number(pack.killed) >= 1
         ? { stage: state.combat.stage, killed: Math.min(9, Math.floor(Number(pack.killed))) } : null;

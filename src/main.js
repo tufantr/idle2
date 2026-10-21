@@ -627,10 +627,10 @@ function findWords(find) {
 
 function soundFor(ev, onCombat) {
     switch (ev.type) {
-        case 'hit': return ev.flurry ? ['flurry'] : ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
+        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
         case 'chainStart': return onCombat ? ['chainStart'] : null;
         case 'chainHit': return onCombat ? ['chainNote', ev.index] : null;
-        case 'chainDone': return onCombat && ev.fast ? ['perfect'] : null;   // (the flurry's own sound plays with its hit)
+        case 'chainDone': return onCombat ? [ev.fast ? 'perfect' : 'gold'] : null;
         case 'enemyHit': return onCombat ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;

@@ -1,9 +1,9 @@
 // The chain (the owner, October 2026): every 20–30 seconds of a fight on screen, five numbered points appear over
-// it. Struck in order, 1 to 5, before its clock runs out (BALANCE.chain.ms), they land a flurry of the hero's
-// attacks and a chunk of combo, and now and then leave a small find; a fast chain always does. A click anywhere
-// else, or on a point out of turn, does nothing: a player still clicking when they appear loses nothing. Clicking
-// the monster no longer strikes it (a strike was a tenth of an attack, and an auto-clicker got 1.5 times an idle
-// hero's damage from it); the clan boss's openings keep their strikes (systems/clanfight.js).
+// it. Struck in order, 1 to 5, before its clock runs out (BALANCE.chain.ms), they pay a little gold, and one struck
+// fast rallies the hero (a little more attack speed for a few seconds). Small by the owner's word: strikes on the
+// monster are what matters in a fight (systems/combat.js clickAttack), the chain only a bonus for the player who
+// watches. A click anywhere else, or on a point out of turn, does nothing: a player still clicking when they appear
+// loses nothing.
 //
 // What keeps a macro out: the fight counts one click every BALANCE.combat.strikeGapMs, wherever it lands, so a
 // tool clicking at random over the fight gets about sixteen counted clicks in a chain's four seconds, each on the
@@ -13,11 +13,8 @@
 
 import { BALANCE, goldPerKillAtStage } from '../core/formulas.js';
 import { rng } from '../core/rng.js';
-import { POTIONS } from '../data/potions.js';
-import { foodsByHealing } from '../data/resources.js';
 import { bumpStat } from './progress.js';
 import { choosingAfterClear } from './dungeon.js';
-import { flurryStrike } from './combat.js';
 
 /** A fight a chain can come to: under way, against a monster, not the clan boss's (it has its openings), not at a chest. */
 function chainFight(state) {
@@ -98,7 +95,7 @@ export function chainClick(game, index) {
     return true;
 }
 
-/** All five in order: the flurry, the combo, perhaps a find; the next chain set. */
+/** All five in order: gold (a few kills' worth at the stage), a rally if it was quick; the next chain set. */
 function finishChain(game) {
     const state = game.state;
     const c = state.combat;
@@ -107,50 +104,13 @@ function finishChain(game) {
     const fast = ms <= b.fastMs;
     c.chain = null;
     c.chainAt = game.now + rng.int(...b.everyMs);
-    c.combo = Math.min(BALANCE.combat.comboMax, (c.combo || 0) + b.combo);
-    c.lastComboAt = game.now;
+    const gold = goldPerKillAtStage(c.stage, game.derived?.goldMult || 1) * b.goldKills;
+    state.gold += gold;
+    bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'chains');
-    if (fast) bumpStat(game, 'chainsFast');
-    const dmg = flurryStrike(game, b.flurry);
-    const find = fast || rng.chance(b.findChance) ? giveChainFind(game) : null;
-    game.emit({ type: 'chainDone', ms, fast, dmg, find });
-}
-
-/**
- * A chain's find: gold (a few kills at the stage) most often; essence once it has turned up, a bottle of the fight's
- * potion when one is picked, a few of the best dish when he has one. Small by design: it is there for the player
- * who plays, not to make the fight.
- */
-export function giveChainFind(game) {
-    const state = game.state;
-    const c = state.combat;
-    const b = BALANCE.chain;
-    const potion = c.mode === 'dungeon' ? c.dungeonPotion : c.potion;
-    const dish = foodsByHealing().filter(f => state.resources[f.id] > 0).pop() || null;
-    const kinds = [['gold', 4]];
-    if ((state.stats.essenceFound || 0) > 0 || (state.resources.essence || 0) > 0) kinds.push(['essence', 2]);
-    if (potion && POTIONS[potion]) kinds.push(['potion', 1]);
-    if (dish) kinds.push(['food', 1]);
-    let roll = rng.float(0, kinds.reduce((sum, [, w]) => sum + w, 0));
-    const kind = (kinds.find(([, w]) => (roll -= w) < 0) || kinds[0])[0];
-    let find;
-    if (kind === 'gold') {
-        const qty = goldPerKillAtStage(c.stage, game.derived?.goldMult || 1) * b.findGoldKills;
-        state.gold += qty;
-        bumpStat(game, 'goldEarned', qty);
-        find = { kind, id: 'gold', qty };
-    } else if (kind === 'essence') {
-        state.resources.essence = (state.resources.essence || 0) + b.findEssence;
-        bumpStat(game, 'essenceFound', b.findEssence);
-        find = { kind, id: 'essence', qty: b.findEssence };
-    } else if (kind === 'potion') {
-        state.resources[potion] = (state.resources[potion] || 0) + 1;
-        find = { kind, id: potion, qty: 1 };
-    } else {
-        state.resources[dish.id] = (state.resources[dish.id] || 0) + b.findFood;
-        find = { kind, id: dish.id, qty: b.findFood };
+    if (fast) {
+        c.rallyUntil = game.now + b.rallyMs;
+        bumpStat(game, 'chainsFast');
     }
-    bumpStat(game, 'chainFinds');
-    game.markDirty();
-    return find;
+    game.emit({ type: 'chainDone', ms, fast, gold, rallyMs: fast ? b.rallyMs : 0 });
 }

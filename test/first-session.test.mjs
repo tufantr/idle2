@@ -10,7 +10,7 @@ import { enemyForStage, enemyBaseStats, goldForKill, combatXpForKill, tokensForS
 import { CAMP_UPGRADES } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
 import { findUpgrade } from '../src/systems/inventory.js';
-import { guideStep, campOnOffer } from '../src/systems/guide.js';
+import { guideStep, campOnOffer, GUIDE_STRIKES } from '../src/systems/guide.js';
 import { PERKS } from '../src/data/perks.js';
 import { seen } from '../src/systems/disclosure.js';
 import { spawnEnemy, onEnemyDeath, onPlayerDeath, packSize } from '../src/systems/combat.js';
@@ -109,7 +109,7 @@ test('the guide points at one thing at a time, and never for a veteran', () => {
     const game = new Game(null, T0);
     game.enterCombat();
     const view = { battle: true };
-    assert.equal(guideStep(game.state, game.derived, view), null, 'nothing to point at yet: the monster takes no strikes');
+    assert.equal(guideStep(game.state, game.derived, view), 'strike');
     assert.equal(guideStep(game.state, game.derived, { battle: false, tab: 'combat' }), null, 'only where the fight is in sight');
     // the sword lands: wear it
     rng.setSource(seededRandom(1));
@@ -123,6 +123,8 @@ test('the guide points at one thing at a time, and never for a veteran', () => {
     assert.ok(!campOnOffer(game.state, game.derived).some(u => u.stat === 'def'));
     assert.equal(guideStep(game.state, game.derived, view), 'camp:hearth');
     game.buyCampUpgrade('hearth', 1);
+    assert.equal(guideStep(game.state, game.derived, view), 'strike');
+    for (let i = 0; i < GUIDE_STRIKES; i++) { now += 300; game.tick(now); game.clickAttack(); }
     assert.equal(guideStep(game.state, game.derived, view), null);
     // his first chain (systems/chain.js): the hand on its points, one by one, until it is done
     game.state.combat.chainAt = game.now;
@@ -159,6 +161,7 @@ test('while the hero regroups after a boss held out, the hand points at the boss
     const game = new Game(null, T0);
     const c = game.state.combat;
     Object.assign(c, { stage: 9, maxStage: 10, bestStage: 10 });
+    game.state.stats.strikes = GUIDE_STRIKES;
     c.enemy = null;
     game.enterCombat();
     assert.equal(guideStep(game.state, game.derived, { battle: true }), null);
