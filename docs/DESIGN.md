@@ -310,36 +310,17 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   ×6.7 at best before, ×1.54 now (×1.5 for anything faster than four a second, ×1.2 at two a second,
   ×1.08 at one), and no healing. A player who taps through the first hour stands at stage 70 (110
   before) against 50 for one who only watches (`node tools/opening.mjs 60 3`).
-- **The chain** (October 2026, the owner: macros clicking the monster gained more than a player watching; a
-  spot that appears at random could be found by a macro spraying clicks, and a rule that a wrong click breaks
-  it caught players still clicking when it appeared, so the owner's numbered points; `src/systems/chain.js`,
-  `BALANCE.chain`): every 20–30 s of a fight on screen (the page asks for one, `ui/scene.js`, once the fight has
-  been in view 2.5 s; a fight's first after 8 s), five numbered points appear anywhere over the fight, at least
-  0.3 of its height apart. Struck in order within 4 s they pay two kills' gold at the stage; within 2 s, a
-  **rally** too: +20% attack speed for 15 s (`BASE.rallyAttackSpeed`, `rallyOn`; never in the clan fight, on the
-  boards or in a clan attack, `stableState`). Small by the owner's word: strikes stay what they were and are what
-  counts ("clicking is the important aspect"); a first version gave a flurry, combo and finds and made the monster
-  take no strikes, and was taken back the same day. A wrong number or a click elsewhere does nothing and costs
-  nothing; the chain counts one click a quarter second wherever it lands (`BALANCE.chain.clickGapMs`), so a tool
-  clicking at random gets about sixteen counted clicks in a chain, each on the next point about one time in
-  twenty: tested, fewer than one chain in 200 (`test/chain.test.mjs`), while one who aims finishes every one. The
-  points' tab order is shuffled, and a click on them doesn't end Focus. The first chain's points get the guide's
-  hand (`systems/guide.js` 'chain').
-  It never gets in the strikes' way (the owner, the same day: "clicking doesn't feel like before"; measured, the
-  points covered the monster in nearly nine chains in ten on a desktop and in every one on a phone, where a tap in
-  five during a chain met a point instead of the monster, and a point's tap held up the next strike): the points keep
-  out of the monster's place as laid out, half a cell wider each side for a boss arriving one size up (`keepClear` in
-  `ui/scene.js`, `placePoints`' `avoid`); a click on the monster is a strike and never reaches the chain; the chain
-  keeps its own clock (`chain.clickAt`), so strikes and points never wait on each other; and a point struck in turn
-  keeps the combo from fading. Mashing the monster through chains now lands as many strikes as before the chain.
-  The points keep off the fighters' health bars and names too (as the chain's design promised): those boxes are
-  `soft` and give way where there is no room for five points without them (on a phone, most chains), the monster's
-  never; points are never closer than a point's width (`minGap`).
-  And it never stalls the machine (the owner's report: an auto-clicker froze the computer): a point is a `<button>`,
-  and main.js lets a clicked button's focus go, so a clicker on a point moved the focus some 2,000 times a second,
-  each change also reported to the system, and every press played the buttons' click. A press on a point now takes
-  no focus (the keyboard still reaches them) and plays no click (its note sounds when it is struck in turn):
-  measured at about 2,000 clicks a second, no focus change, 60 frames a second, no long task.
+- **The chain** (21 October 2026, gone the same day): five numbered points over the fight every 20–30 s, struck in
+  order within 4 s for two kills' gold and, within 2 s, a 15-s rally of +20% attack speed, the owner's answer to
+  macros clicking the monster. It got in the strikes' way (its points covered the monster) and was moved off it;
+  then the owner's auto-clicker froze the game in Chrome while it ran, and the owner decided that a mouse macro is
+  fair play ("there is nothing wrong with using mouse macro"), which left the chain no purpose. In tests in real
+  Chrome with a stage-450 hero under ~2,000 clicks a second, the builds with the chain stalled now and then as a
+  chain came (once for over 5 s, once with no frames drawn for seconds), the one before it never. It was removed, and
+  a save's leftovers of it (`combat.chain`, `chainAt`, `rallyUntil`) go as it loads. Since then a click inside the
+  strike's quarter second costs nothing at all (`strike` in main.js runs no tick of the game for it), the touch-screen
+  tip handlers ask `matchMedia` once instead of on every click, and the sound's unlock asks a suspended context to
+  resume once at a time instead of on every press.
 - **Boss timer:** a boss must fall within **30 seconds of fighting** (the clock only runs while you
   fight, so it works the same offline). If it holds out you step back one stage and farm there for
   60 seconds before it is retried automatically; beating it sooner (by stepping forward) ends the

@@ -1340,6 +1340,10 @@ Keeping it running:
       fixed: text left from moving the tools to the Shop and from the end of forging (bows "made in Crafting",
       tools "forged in Smithing", "past copper", "forged or crafted") in the help cards, medals and wiki (DESIGN §3.4,
       §5.1). Checked in a browser at both widths
+- [x] **The chain over the fight is gone** (the owner, 21 October 2026: "mouse macro still freezes the game, remove
+      minigame if needed"; "there is nothing wrong with using mouse macro"): with macros fair play the chain had no
+      purpose, and in real Chrome under ~2,000 clicks a second only the builds with it stalled. The fight is as it was
+      before it, and a click inside the strike's quarter second costs nothing now (DESIGN §3.6)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

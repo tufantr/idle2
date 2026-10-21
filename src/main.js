@@ -11,7 +11,7 @@ import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle, fightTab } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
 import { TOOLS } from './data/workshop.js';
-import { describeAffix } from './core/formulas.js';
+import { BALANCE, describeAffix } from './core/formulas.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -167,9 +167,14 @@ window.addEventListener('storage', event => { if (event.key === OWNER_KEY && eve
 
 // The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
 const scene = createScene(document.getElementById('scene'), {
-    strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
-    startChain: (aspect, avoid, minGap) => { advance(Date.now()); return game.startChain(aspect, avoid, minGap); },
-    chainClick: index => { advance(Date.now()); return game.chainClick(index); },
+    // On the real clock, not the last tick's. A click inside the strike's quarter second does nothing, so it costs
+    // nothing either: no tick of the game for it (an auto-clicker's thousands a second each ran one; the owner's froze).
+    strike: () => {
+        const now = Date.now();
+        if (now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs) return false;
+        advance(now);
+        return game.clickAttack();
+    },
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },
     map: () => window.FI.openMap(),
@@ -331,9 +336,9 @@ document.addEventListener('pointerdown', event => {
     pointer.down = true;
     pointer.downAt = Date.now();
     sound.unlock();
-    // Every button answers with a click; the monster has its own strike sound, the chain's points their notes.
+    // Every button answers with a click; the monster has its own strike sound.
     const button = event.target?.closest?.('button, [role="button"]');
-    if (button && !button.disabled && !button.closest('.foe, .chain-layer')) sound.play('click');
+    if (button && !button.disabled && !button.closest('.foe')) sound.play('click');
 }, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
 // A button clicked with the mouse or a finger lets the focus go once its click is done: kept, Space (the
@@ -370,9 +375,11 @@ function showTip(el, text, { title = '', stay = false } = {}) {
     if (!stay) tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
 }
 // A tap on a chip or figure inside a card (an item a recipe needs, its XP or time) names it, and does not
-// also start or stop the card's action; the bubble is placed before anything is drawn again.
+// also start or stop the card's action; the bubble is placed before anything is drawn again. (Touch screens only: the
+// query is made once, not on every click.)
+const noHover = window.matchMedia?.('(hover: none)');
 document.addEventListener('click', event => {
-    if (!window.matchMedia?.('(hover: none)').matches) return;
+    if (!noHover?.matches) return;
     const el = event.target?.closest?.('[data-tip]');
     if (!el || !el.parentElement?.closest('[role="button"]') || el.closest('button, a')) return;
     event.stopPropagation();
@@ -380,7 +387,7 @@ document.addEventListener('click', event => {
     showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '' });
 }, { capture: true });
 document.addEventListener('click', event => {
-    if (!window.matchMedia?.('(hover: none)').matches) return;
+    if (!noHover?.matches) return;
     const el = event.target?.closest?.(TIP_TARGETS);
     if (!el || (el.closest('button, a') && !el.matches('.pg-keep-item'))) { tipNode?.remove(); tipNode = null; return; }
     const text = el.getAttribute('title') || el.dataset.tip || el.getAttribute('aria-label');
@@ -415,13 +422,12 @@ document.addEventListener('change', event => {
 });
 
 // Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone. Not a
-// mini-game's, nor a click on the chain over the fight: playing one took Focus's +15% away for a minute, and ate
-// into what the win gave.
+// mini-game's: playing one took Focus's +15% away for a minute, and ate into what the win gave.
 let lastInputNote = 0;
 const noteInput = event => {
     const now = Date.now();
     lastPresenceAt = now;
-    if (event?.target?.closest?.('.minigame-panel, .chain-layer')) return;
+    if (event?.target?.closest?.('.minigame-panel')) return;
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
         advance(now); // the first click after a long absence still gets its welcome-back report
@@ -640,9 +646,6 @@ function findWords(find) {
 function soundFor(ev, onCombat) {
     switch (ev.type) {
         case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
-        case 'chainStart': return onCombat ? ['chainStart'] : null;
-        case 'chainHit': return onCombat ? ['chainNote', ev.index] : null;
-        case 'chainDone': return onCombat ? [ev.fast ? 'perfect' : 'gold'] : null;
         case 'enemyHit': return onCombat ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;

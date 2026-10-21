@@ -13,7 +13,7 @@ const TIP = { x: 14, y: 6 };            // the fingertip in the hand's 32 px cel
 const CELL = 32;
 // A step holds this long before the hand comes: long enough that a player who would do it anyway never
 // sees it (hints are for those who need them), short enough that one who doesn't is not left waiting.
-const SHOW_AFTER_MS = { strike: 3000, chain: 400, equip: 1200, camp: 4000, retry: 1500, vein: 2500,
+const SHOW_AFTER_MS = { strike: 3000, equip: 1200, camp: 4000, retry: 1500, vein: 2500,
     prestige: 1500, 'prestige-confirm': 3000, perks: 2000, 'perk-learn': 2500 };
 // Steps inside a dialog: the hand stands over the dialog there, where it hides under any other.
 const IN_DIALOG = new Set(['prestige-confirm', 'perk-learn']);
@@ -22,7 +22,6 @@ const STRIKE_PATIENCE_MS = 15000;       // on the monster: then the player is le
 // Where each step points: the element, and the spot on it (fractions of its box).
 const TARGETS = {
     strike: () => [document.querySelector('#scene .foe .fighter-stand'), 0.5, 0.6],
-    chain: () => [document.querySelector('#scene .chain-point.next'), 0.5, 0.55],   // the first chain: each point in turn
     equip: () => [document.querySelector('.dock-equip'), 0.5, 0.75],
     vein: () => [document.querySelector('#tab .node-card'), 0.5, 0.45],
     retry: () => [document.querySelector('#scene .stage-path li.boss button'), 0.5, 0.8],

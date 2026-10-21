@@ -66,7 +66,6 @@ export const BASE = {
     focusAfterMs: 60000,
     focusSkillSpeed: 0.15,
     focusAttackSpeed: 0.15,
-    rallyAttackSpeed: 0.2,     // a quick chain's rally (systems/chain.js), for BALANCE.chain.rallyMs
     // Bonfire: every log burnt adds time; while it burns, all skills (combat too) earn more XP, and every
     // gathering and production action may make two (the owner, October 2026: XP alone went unnoticed).
     bonfireXp: 0.05,            // at firemaking level 1 ...
@@ -97,11 +96,6 @@ const BONFIRE_DOUBLES = SPEED_SKILLS.filter(id => !['firemaking', 'farming', 'ag
 
 export function bonfireLit(state, now = state.meta.lastActiveAt || Date.now()) {
     return (state.bonfire?.until || 0) > now;
-}
-
-/** A quick chain's rally is on (systems/chain.js): BASE.rallyAttackSpeed more attack speed in the fight, a few seconds. */
-export function rallyOn(state, now = state.meta.lastActiveAt || Date.now()) {
-    return (state.combat?.rallyUntil || 0) > now;
 }
 
 /** True once the player has left the game alone for `focusAfterMs`. */
@@ -275,9 +269,6 @@ export function collectModifiers(state) {
         for (const id of Object.keys(mods.skillSpeed)) if (id !== 'farming') mods.skillSpeed[id] += BASE.focusSkillSpeed;
         if (state.combat.mode !== 'clan') mods.attackSpeed += BASE.focusAttackSpeed;   // (the clan fight is watched, and the server counts no Focus)
     }
-    // A quick chain's rally (systems/chain.js): a little more attack speed for a few seconds; not in the clan fight.
-    mods.rally = rallyOn(state, now);
-    if (mods.rally && state.combat.mode !== 'clan') mods.attackSpeed += BASE.rallyAttackSpeed;
 
     return mods;
 }
@@ -376,7 +367,6 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         campMult: camp,
         focused: !!mods.focused,
         bonfire: bonfireLit(state),
-        rally: rallyOn(state),
         event: mods.event || null
     };
 }

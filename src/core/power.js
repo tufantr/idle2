@@ -33,7 +33,6 @@ function stableState(rawState, now, { clan = false } = {}) {
     state.meta.lastActiveAt = now;
     for (const mg of Object.values(state.minigame)) mg.boostUntil = 0;
     state.bonfire.until = 0;
-    state.combat.rallyUntil = 0;   // a quick chain's rally lasts seconds: never on the boards, nor in a clan attack
     if (clan) state.combat.mode = 'clan';
     else state.combat.potion = 'none';
     state.combat.dungeonPotion = 'none';

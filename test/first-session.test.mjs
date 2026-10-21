@@ -126,13 +126,6 @@ test('the guide points at one thing at a time, and never for a veteran', () => {
     assert.equal(guideStep(game.state, game.derived, view), 'strike');
     for (let i = 0; i < GUIDE_STRIKES; i++) { now += 300; game.tick(now); game.clickAttack(); }
     assert.equal(guideStep(game.state, game.derived, view), null);
-    // his first chain (systems/chain.js): the hand on its points, one by one, until it is done
-    game.state.combat.chainAt = game.now;
-    assert.ok(game.startChain(2));
-    assert.equal(guideStep(game.state, game.derived, view), 'chain');
-    for (let i = 0; i < 5; i++) { now += 300; game.tick(now); game.chainClick(i); }
-    assert.equal(game.state.stats.chains, 1);
-    assert.equal(guideStep(game.state, game.derived, view), null, 'one is enough: the next chains come without it');
     // the first vein, on the Mining tab, before any skill has been worked
     assert.equal(guideStep(game.state, game.derived, { tab: 'mining' }), 'vein');
     game.startNodeAction('mining', 'copper_ore');

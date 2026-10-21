@@ -24,7 +24,6 @@ The [[/combat|fight]] fills the screen. Your hero and the monster attack on thei
 
 - **Tap the monster** (or press **Space** on a keyboard) to strike as well. A strike hits for {{pct(BALANCE.combat.manualHitMult, 0)}} of a normal attack and builds a **combo**.
 - Each combo stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} damage to every hit, your hero's own attacks included, up to {{BALANCE.combat.comboMax}} stacks. Stop striking for {{BALANCE.combat.comboDecayAfterMs / 1000}} seconds and it starts to fade.
-- **The chain:** a few seconds in, {{BALANCE.chain.points}} numbered points appear over the fight (a hand shows the way the first time). Tap them in order, 1 to {{BALANCE.chain.points}}, within {{BALANCE.chain.ms / 1000}} seconds for a little gold; quickly, and your hero rallies for a few seconds. Another comes every half minute or so while you watch.
 - Each monster you beat moves you on a stage. Every {{STAGES_PER_ZONE}}th stage is a boss, and each run of {{STAGES_PER_ZONE}} stages is a place of its own (see [[/zones|Zones]]).
 - The first stages are gentle: the monsters hit softer and have less health, growing to their full strength over the first {{BALANCE.enemy.ease.to}} stages.
 - Combat levels come quickly at first, and every combat level refills your hero's health. Each level adds {{BASE.hpPerCombatLevel}} health and {{pct(BASE.atkPerCombatLevel, 1)}} attack and defence.

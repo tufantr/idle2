@@ -115,22 +115,6 @@ export const BALANCE = {
         // from the depth of BALANCE.enemy.deepFrom a depth's growth eases evenly to this by the depth of denseFrom
         denseDropGrowth: 1.225
     },
-    // The chain (systems/chain.js; the owner, October 2026): five numbered points over the fight, struck in order before
-    // its clock runs out, for a little gold, and a quick one rallies the hero. Small by the owner's word: the strikes are
-    // what matters in a fight, the chain only a bonus for the player who watches, and it never gets in their way: its
-    // points keep off the monster, and its clicks have their own clock. Struck at random the points almost never fall
-    // in order (the chain counts a click every clickGapMs at most), so an auto-clicker gets nothing from it.
-    chain: {
-        points: 5,
-        ms: 4000,                  // to strike all five
-        everyMs: [20000, 30000],   // between chains, while the fight is on screen
-        firstMs: 8000,             // the first chain of a fight that has had none
-        clickGapMs: 250,           // one click in the fight counted this often, wherever it lands (the monster's are strikes)
-        spacing: 0.3,              // points at least this far apart (in the layer's heights)
-        goldKills: 2,              // a finished chain pays this many kills' gold at the stage
-        fastMs: 2000,              // finished this fast, it rallies the hero too:
-        rallyMs: 15000             // BASE.rallyAttackSpeed more attack speed this long (core/modifiers.js)
-    },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
         regenResting: 0.02,     // fraction of max HP per second out of combat (full in under a minute)

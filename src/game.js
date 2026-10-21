@@ -2,7 +2,7 @@
 // It never touches the DOM, so tools/simulate.mjs and the tests drive it the same way the UI does.
 
 import { createDefaultState, migrateState, clampTimers } from './core/state.js';
-import { collectModifiers, deriveStats, isFocused, bonfireLit, rallyOn } from './core/modifiers.js';
+import { collectModifiers, deriveStats, isFocused, bonfireLit } from './core/modifiers.js';
 import { tickAction, startNodeAction, startSmelting, startCrafting, startAgility, stopAction, resolveAction } from './systems/skilling.js';
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
@@ -13,7 +13,6 @@ import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, se
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, tickChallenge, setDragValue, expireMinigames } from './systems/minigame.js';
-import { tickChain, startChain, chainClick } from './systems/chain.js';
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
@@ -141,7 +140,7 @@ export class Game {
             this.state.meta.playtimeMs += step;
             if (this.attending || this.now - (this.state.meta.lastInputAt || 0) < ATTEND_INPUT_MS) this.state.meta.attendedMs = (this.state.meta.attendedMs || 0) + step;
             expireMinigames(this);
-            if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || rallyOn(this.state, this.now) !== this.derived.rally || this.eventId(this.now) !== this.derived.event) this.recompute();
+            if (this.dirty || isFocused(this.state, this.now) !== this.derived.focused || bonfireLit(this.state, this.now) !== this.derived.bonfire || this.eventId(this.now) !== this.derived.event) this.recompute();
             this.state.meta.lastActiveAt = this.now;
             accrueDaily(this.state, this.now);
             syncWeekly(this.state, this.now);   // a new week notes what its Trial's laurel asks (systems/trials.js)
@@ -154,7 +153,6 @@ export class Game {
                     tickChallenge(this, action.skill, step);   // a held game: the heat falls, the band moves, the dish fills
                 }
                 tickCombat(this, step);
-                tickChain(this);   // the chain's clock (systems/chain.js): its first set, one left too long gone
                 tickAutoPrestige(this);
             }
         } while (dt > 0);
@@ -238,13 +236,6 @@ export class Game {
         });
     }
     clickAttack() { return this._act(() => clickAttack(this)); }
-    /**
-     * The chain over the fight (systems/chain.js): start one (`aspect`: its layer's width over height; `avoid`: boxes
-     * its points keep out of, the monster's and the fighters' labels; `minGap`: how far apart they must be at least), or
-     * a click on point `index` (null: elsewhere).
-     */
-    startChain(aspect, avoid, minGap) { return this._act(() => startChain(this, aspect, avoid, minGap)); }
-    chainClick(index) { return this._act(() => chainClick(this, index)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setDungeonPotion(id) { return this._act(() => setDungeonPotion(this, id)); }
     setWorkPotion(id) { return this._act(() => setWorkPotion(this, id)); }
