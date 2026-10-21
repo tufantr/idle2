@@ -108,6 +108,10 @@ export function createSound(isOn, volume = () => 1) {
         kill() { tone({ type: 'square', f0: 420, f1: 140, ms: 120, gain: 0.1 }); noise({ ms: 180, gain: 0.22, filter: 'lowpass', f0: 2400, f1: 200 }); },
         coin() { const f = vary(NOTE(83), 15); tone({ type: 'sine', f0: f, ms: 70, gain: 0.16 }); tone({ type: 'sine', f0: f * 1.335, ms: 260, gain: 0.16, at: 0.07 }); },
         gold() { for (let i = 0; i < 3; i++) tone({ type: 'sine', f0: NOTE(84 + i * 4), ms: 160, gain: 0.12, at: i * 0.045 }); },
+        // the chain (systems/chain.js): its points come with a soft rising pair, each struck one a step up the scale
+        chainStart() { tone({ type: 'sine', f0: NOTE(79), ms: 160, gain: 0.08 }); tone({ type: 'sine', f0: NOTE(86), ms: 240, gain: 0.07, at: 0.08 }); },
+        chainNote(step = 0) { tone({ type: 'triangle', f0: NOTE(76 + [0, 2, 4, 7, 9, 12][Math.max(0, Math.min(5, step))]), ms: 150, gain: 0.14 }); },
+        flurry() { [0, 0.06, 0.12].forEach((at, i) => { noise({ ms: 70, gain: 0.2, filter: 'bandpass', f0: 2400 - i * 500, f1: 600, q: 1.4, at }); tone({ type: 'sine', f0: vary(220 - i * 20), f1: 60, ms: 120, gain: 0.35, at }); }); },
         combo(count = 1) { tone({ type: 'triangle', f0: 500 * Math.pow(2, Math.min(30, count) / 24), ms: 60, gain: 0.14 }); },
         drop() { tone({ type: 'triangle', f0: vary(660, 80), f1: 520, ms: 90, gain: 0.12 }); },
         rare() { [0, 4, 7, 12].forEach((n, i) => tone({ type: 'sine', f0: NOTE(79 + n), ms: 220, gain: 0.14, at: i * 0.07 })); noise({ ms: 300, gain: 0.05, filter: 'highpass', f0: 6000 }); },

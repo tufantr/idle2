@@ -1300,6 +1300,12 @@ Keeping it running:
       this fight's strikes and potion on top, and the fight on screen hits as hard; the boss is sized again each UTC
       day from the members as they are, and the week's board keeps each attack as it was dealt (DESIGN §3.18). Tested
       against the server's real PostgreSQL too
+- [x] **The chain over the fight** (the owner's numbered points, 21 October 2026, so macros clicking the monster stop
+      gaining from it): every 20–30 seconds of a fight on screen, five numbered points; struck in order within 4 s,
+      a flurry of three attacks and combo, and sometimes a small find (gold, essence, a potion, food), always for a
+      fast one. A wrong click does nothing; random clicking almost never finishes one. Clicking the monster now
+      strikes only the clan boss; the guide's hand shows the first chain (DESIGN §3.6). Checked in a browser at
+      both widths
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

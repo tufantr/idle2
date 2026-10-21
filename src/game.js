@@ -12,6 +12,7 @@ import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, se
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, tickChallenge, setDragValue, expireMinigames } from './systems/minigame.js';
+import { tickChain, startChain, chainClick } from './systems/chain.js';
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
@@ -152,6 +153,7 @@ export class Game {
                     tickChallenge(this, action.skill, step);   // a held game: the heat falls, the band moves, the dish fills
                 }
                 tickCombat(this, step);
+                tickChain(this);   // the chain's clock (systems/chain.js): its first set, one left too long gone
                 tickAutoPrestige(this);
             }
         } while (dt > 0);
@@ -236,6 +238,9 @@ export class Game {
         });
     }
     clickAttack() { return this._act(() => clickAttack(this)); }
+    /** The chain over the fight (systems/chain.js): start one (`aspect`: its layer's width over height), or a click on point `index` (null: elsewhere). */
+    startChain(aspect) { return this._act(() => startChain(this, aspect)); }
+    chainClick(index) { return this._act(() => chainClick(this, index)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setDungeonPotion(id) { return this._act(() => setDungeonPotion(this, id)); }
     setWorkPotion(id) { return this._act(() => setWorkPotion(this, id)); }

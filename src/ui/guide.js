@@ -1,9 +1,8 @@
 // The guide's hand (src/systems/guide.js says what to point at): a white glove pointing at the one
 // thing to do in a new hero's first minutes, pressing it gently, a ring opening where it presses. No
 // words. It never takes a click (the thing under it does), waits a few seconds before it comes (a
-// player who would do the thing anyway never sees it), and hides under dialogs and celebration cards. On the monster
-// it gives up after a while if the player would rather watch, and comes back for the first boss,
-// where a strike counts most.
+// player who would do the thing anyway never sees it), and hides under dialogs and celebration cards. On a hero's
+// first chain it comes at once (the chain lasts four seconds) and moves to each point in turn.
 
 import { sprite } from './sprites.js';
 import { guideStep } from '../systems/guide.js';
@@ -13,15 +12,14 @@ const TIP = { x: 14, y: 6 };            // the fingertip in the hand's 32 px cel
 const CELL = 32;
 // A step holds this long before the hand comes: long enough that a player who would do it anyway never
 // sees it (hints are for those who need them), short enough that one who doesn't is not left waiting.
-const SHOW_AFTER_MS = { strike: 3000, equip: 1200, camp: 4000, retry: 1500, vein: 2500,
+const SHOW_AFTER_MS = { chain: 400, equip: 1200, camp: 4000, retry: 1500, vein: 2500,
     prestige: 1500, 'prestige-confirm': 3000, perks: 2000, 'perk-learn': 2500 };
 // Steps inside a dialog: the hand stands over the dialog there, where it hides under any other.
 const IN_DIALOG = new Set(['prestige-confirm', 'perk-learn']);
-const STRIKE_PATIENCE_MS = 15000;       // on the monster: then the player is left to watch, until the first boss
 
 // Where each step points: the element, and the spot on it (fractions of its box).
 const TARGETS = {
-    strike: () => [document.querySelector('#scene .foe .fighter-stand'), 0.5, 0.6],
+    chain: () => [document.querySelector('#scene .chain-point.next'), 0.5, 0.55],
     equip: () => [document.querySelector('.dock-equip'), 0.5, 0.75],
     vein: () => [document.querySelector('#tab .node-card'), 0.5, 0.45],
     retry: () => [document.querySelector('#scene .stage-path li.boss button'), 0.5, 0.8],
@@ -42,9 +40,6 @@ export function createGuide(parent) {
     parent.appendChild(hand);
     let step = null;
     let since = 0;
-    let lastFrame = 0;
-    let strikeShown = 0;      // how long the hand has stood on the monster
-    let bossBefore = false;
 
     function hide() { if (!hand.hidden) hand.hidden = true; }
 
@@ -53,23 +48,14 @@ export function createGuide(parent) {
         sync(game, view) {
             const next = guideStep(game.state, game.derived, view);
             if (next !== step) { step = next; since = performance.now(); }
-            const boss = !!game.state.combat.enemy?.boss;
-            if (boss && !bossBefore) strikeShown = 0;   // a boss: worth pointing at the strike again
-            bossBefore = boss;
         },
 
         /** Every animation frame: keep the hand on its target (hidden under a dialog, unless it points inside it, and under a card). */
         frame({ modal = false, card = false } = {}) {
             const now = performance.now();
-            const dt = Math.min(250, now - (lastFrame || now));
-            lastFrame = now;
             const inDialog = !!step && IN_DIALOG.has(step);
             if (!step || card || (modal && !inDialog) || now - since < (SHOW_AFTER_MS[step.split(':')[0]] ?? 1000)) return hide();
             hand.classList.toggle('over-dialog', inDialog);
-            if (step === 'strike') {
-                if (strikeShown > STRIKE_PATIENCE_MS) return hide();
-                strikeShown += dt;
-            }
             const [kind, arg] = step.split(':');
             const [el, fx, fy] = TARGETS[kind]?.(arg) || [];
             const box = el?.getBoundingClientRect();

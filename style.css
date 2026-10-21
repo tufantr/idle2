@@ -1486,6 +1486,35 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 /* the monster that leaves a piece worth seeing flashes in its colour as it falls */
 .corpse.loot { animation-name: corpseLoot; }
 .click-spark { font-size: 1.6rem; line-height: 1; color: #fde68a; text-shadow: 0 0 10px rgba(251, 191, 36, 0.9); animation: spark 0.45s ease-out forwards; }
+/* the chain (systems/chain.js): five numbered points over the fight, struck in order. The next one glows and its
+   ring closes with the time left (--left, set each frame); a struck one bursts and goes. Only the points take clicks. */
+.chain-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; transition: opacity 0.25s ease-out; }
+.chain-layer.gone { opacity: 0; }
+.chain-point { position: absolute; width: 48px; height: 48px; margin: -24px 0 0 -24px; padding: 0; border-radius: 50%;
+    border: 2px solid rgba(253, 230, 138, 0.8); background: radial-gradient(circle at 50% 38%, rgba(120, 53, 15, 0.95), rgba(28, 25, 23, 0.95));
+    color: #fef3c7; font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; line-height: 1; cursor: pointer;
+    pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.6); text-shadow: 0 2px 0 #451a03; animation: chainIn 0.22s ease-out both; }
+.chain-point b { position: relative; z-index: 1; }
+.chain-point .chain-ring { position: absolute; inset: -8px; border-radius: 50%; pointer-events: none; opacity: 0;
+    background: conic-gradient(#fde047 calc(var(--left, 1) * 360deg), rgba(0, 0, 0, 0.35) 0);
+    -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%); mask: radial-gradient(circle, transparent 60%, #000 62%); }
+.chain-point.next { border-color: #fde047; color: #fffbeb; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.45), 0 0 18px rgba(250, 204, 21, 0.85);
+    animation: chainIn 0.22s ease-out both, chainPulse 0.9s ease-in-out 0.22s infinite; }
+.chain-point.next .chain-ring { opacity: 1; }
+.chain-point.done { animation: chainDone 0.28s ease-out forwards; pointer-events: none; }
+.chain-point:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+body.battle-full .chain-point { width: 58px; height: 58px; margin: -29px 0 0 -29px; font-size: 1.55rem; }
+.chain-spark { font-size: 2rem; line-height: 1; color: #fef08a; text-shadow: 0 0 12px rgba(250, 204, 21, 0.95); animation: spark 0.42s ease-out forwards; }
+.dmg.chain-done { font-family: var(--font-display); font-size: 1.4rem; white-space: nowrap; color: #fde047; text-shadow: 0 2px 0 #713f12, 0 0 14px rgba(250, 204, 21, 0.95); animation: dmgRise 1.4s ease-out forwards; }
+.dmg.flurry { font-size: 2.1rem; }
+.slash.flurry { width: 150px; height: 6px; }
+@keyframes chainIn { 0% { opacity: 0; transform: scale(0.4); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes chainPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes chainDone { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+body.reduced-motion .chain-point, body.reduced-motion .chain-point.next { animation: none; }
+body.reduced-motion .chain-point.done { animation: none; opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .chain-point, .chain-point.next { animation: none; } .chain-point.done { animation: none; opacity: 0; } }
 .flying-coin { position: fixed; z-index: 450; margin: -16px 0 0 -16px; font-size: 20px; line-height: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
 
 /* banner, combo, call to action */

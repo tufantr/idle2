@@ -167,6 +167,8 @@ window.addEventListener('storage', event => { if (event.key === OWNER_KEY && eve
 // The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
 const scene = createScene(document.getElementById('scene'), {
     strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
+    startChain: aspect => { advance(Date.now()); return game.startChain(aspect); },
+    chainClick: index => { advance(Date.now()); return game.chainClick(index); },
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },
     map: () => window.FI.openMap(),
@@ -412,12 +414,13 @@ document.addEventListener('change', event => {
 });
 
 // Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone. Not a
-// mini-game's: playing one took Focus's +15% away for a minute, and ate into what the win gave.
+// mini-game's, nor a click on the chain over the fight: playing one took Focus's +15% away for a minute, and ate
+// into what the win gave.
 let lastInputNote = 0;
 const noteInput = event => {
     const now = Date.now();
     lastPresenceAt = now;
-    if (event?.target?.closest?.('.minigame-panel')) return;
+    if (event?.target?.closest?.('.minigame-panel, .chain-layer')) return;
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
         advance(now); // the first click after a long absence still gets its welcome-back report
@@ -623,7 +626,10 @@ function findWords(find) {
 
 function soundFor(ev, onCombat) {
     switch (ev.type) {
-        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
+        case 'hit': return ev.flurry ? ['flurry'] : ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
+        case 'chainStart': return onCombat ? ['chainStart'] : null;
+        case 'chainHit': return onCombat ? ['chainNote', ev.index] : null;
+        case 'chainDone': return onCombat && ev.fast ? ['perfect'] : null;   // (the flurry's own sound plays with its hit)
         case 'enemyHit': return onCombat ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;

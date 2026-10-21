@@ -115,10 +115,28 @@ export const BALANCE = {
         // from the depth of BALANCE.enemy.deepFrom a depth's growth eases evenly to this by the depth of denseFrom
         denseDropGrowth: 1.225
     },
+    // The chain (systems/chain.js; the owner, October 2026): five numbered points over the fight, struck in order before
+    // its clock runs out, for a flurry, a chunk of combo and sometimes a find. Struck at random they almost never fall
+    // in order (a click counts every combat.strikeGapMs at most), so an auto-clicker gets nothing from it.
+    chain: {
+        points: 5,
+        ms: 4000,                  // to strike all five
+        everyMs: [20000, 30000],   // between chains, while the fight is on screen
+        firstMs: 8000,             // the first chain of a fight that has had none
+        spacing: 0.3,              // points at least this far apart (in the layer's heights)
+        flurry: 3,                 // a finished chain lands this many of the hero's attacks at once
+        combo: 5,                  // and adds this much combo (combat.comboMax at most)
+        fastMs: 2000,              // finished this fast: a find, always
+        findChance: 0.25,          // otherwise one this often
+        findGoldKills: 5,          // a find of gold: this many kills at the stage
+        findEssence: 2,
+        findFood: 2,
+        comboFadeMs: 30000         // a full combo fades over this long outside the clan fight
+    },
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
         regenResting: 0.02,     // fraction of max HP per second out of combat (full in under a minute)
-        // A strike: a tenth of an attack, at most one every `strikeGapMs`, and the combo it builds adds up to
+        // A strike (the clan boss's openings only since the chain, BALANCE.chain): a tenth of an attack, at most one every `strikeGapMs`, and the combo it builds adds up to
         // comboMax × comboDmgPerStack to every hit (+10%). It was half an attack, then a fifth, at up to eight a
         // second, with a combo of +90% and, from 10, 20 and 30 stacks, +10% crit, 15% lifesteal and echo strikes:
         // fast clicking dealt nearly seven times an idle hero's damage and healed him, so the owner's hero reached

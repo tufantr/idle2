@@ -6,6 +6,7 @@
 import { ZONES, zoneForStage, STAGES_PER_ZONE, isBossStage, isLordStage } from '../data/zones.js';
 import { clanBossFor } from '../data/social.js';
 import { clanGuardOpen } from '../systems/clanfight.js';
+import { chainReady } from '../systems/chain.js';
 import { dungeonById } from '../data/dungeons.js';
 import { RARITIES, PITY_MARKS } from '../data/items.js';
 import { laggingSlot, PITY_LAG, isUpgrade, canWear, equipGain } from '../systems/inventory.js';
@@ -34,6 +35,7 @@ const landScene = zone => (zone.depth > 0 ? zone.stratum || 'abyss' : zone.id);
 const PARTICLE_COUNT = 18;
 const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
+const CHAIN_SETTLE_MS = 2500; // the fight on screen this long before a chain comes (a tab just opened settles first)
 const MAX_COINS_IN_FLIGHT = 14;
 // Loot worth seeing (playLoot): how long it glows on the ground before it flies off, and its sparks.
 const LOOT_HOLD = { rare: 950, epic: 1300, legendary: 2000, mythic: 2600, primal: 3200 };
@@ -101,7 +103,8 @@ const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
 
 /**
  * Builds the scene into `root` and returns its controls.
- * `actions`: { strike() -> bool (a click on the monster; true if it landed), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map) }.
+ * `actions`: { strike() -> bool (a click on the monster; true if it landed: the clan boss only), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map),
+ * startChain(aspect) (a chain over the fight: systems/chain.js), chainClick(index | null) (a click in the fight while one is up) }.
  */
 export function createScene(root, actions) {
     root.innerHTML = `
@@ -134,6 +137,7 @@ export function createScene(root, actions) {
                 <div class="boss-clock" hidden><i></i><span></span></div>
             </div>
             <div class="fx-layer" aria-hidden="true"></div>
+            <div class="chain-layer" role="group" aria-label="The chain: strike the points in order, 1 to 5" hidden></div>
         </div>
         <div class="battle-banner" aria-live="polite"></div>
         <div class="battle-combo" hidden><b></b><span>Combo</span><em></em></div>
@@ -148,7 +152,7 @@ export function createScene(root, actions) {
         foe: $('.foe'), foeStand: $('.foe .fighter-stand'), foeSprite: $('.foe .fighter-sprite'), foeBar: $('.foe .fill'), foeTrail: $('.foe .trail'), foeText: $('.foe .fbar-text'),
         foeName: $('.foe .fighter-name'), foeMeta: $('.foe .fighter-meta'), foeIcon: $('.foe-icon'), foeAtkBar: $('.foe .attack-bar'), foeAtk: $('.foe .attack-bar i'),
         clock: $('.boss-clock'), clockBar: $('.boss-clock i'), clockText: $('.boss-clock span'),
-        fx: $('.fx-layer'), banner: $('.battle-banner'), combo: $('.battle-combo'), comboN: $('.battle-combo b'), comboBuffs: $('.battle-combo em'), cta: $('.battle-cta')
+        fx: $('.fx-layer'), field: $('.battle-field'), chain: $('.chain-layer'), banner: $('.battle-banner'), combo: $('.battle-combo'), comboN: $('.battle-combo b'), comboBuffs: $('.battle-combo em'), cta: $('.battle-cta')
     };
     let lastEnemy = null;
     let preview = null;       // the monster waiting on this stage before the first fight
@@ -165,6 +169,9 @@ export function createScene(root, actions) {
     // The pale "damage trail" behind each health bar: it holds for a moment after a hit, then slides down.
     const trails = { hero: { shown: 100, last: 100, holdUntil: 0 }, foe: { shown: 100, last: 100, holdUntil: 0 } };
     let lastFrameAt = 0;
+    let chainKey = 0;         // the chain drawn (its start), 0 for none (systems/chain.js)
+    let chainGone = 0;        // the fade of the last chain's points
+    let fightSeenSince = 0;   // since when the fight has been on screen (a chain waits CHAIN_SETTLE_MS of it)
     const running = new WeakMap();
     const reduced = () => document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const quietNow = () => document.hidden || reduced();
@@ -240,6 +247,40 @@ export function createScene(root, actions) {
         el.fx.appendChild(node);
         setTimeout(() => node.remove(), ms);
         return node;
+    }
+
+    // ---------- the chain (systems/chain.js) ----------
+    /** Its points, in an order of their own (tabbing through them gives no order away), each with its number and ring. */
+    function drawChain(ch) {
+        clearTimeout(chainGone);
+        chainKey = ch.startedAt;
+        const order = ch.points.map((_, i) => i);
+        for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+        el.chain.innerHTML = order.map(i => {
+            const p = ch.points[i];
+            return `<button type="button" class="chain-point" data-i="${i}" style="left:${(p.x * 100).toFixed(1)}%;top:${(p.y * 100).toFixed(1)}%" aria-label="Point ${i + 1}"><i class="chain-ring" aria-hidden="true"></i><b>${i + 1}</b></button>`;
+        }).join('');
+        el.chain.classList.remove('gone');
+        el.chain.hidden = false;
+    }
+    /** The chain is over (done, out of time, or the fight left): its points fade, then go. */
+    function clearChain() {
+        chainKey = 0;
+        el.chain.classList.add('gone');
+        clearTimeout(chainGone);
+        chainGone = setTimeout(() => { if (!chainKey) { el.chain.hidden = true; el.chain.innerHTML = ''; } }, quietNow() ? 0 : 260);
+    }
+    /** Where a point is, in % of the effects layer (for its spark). */
+    function pointSpot(index) {
+        const node = el.chain.querySelector(`.chain-point[data-i="${index}"]`);
+        const f = el.fx.getBoundingClientRect();
+        const b = node?.getBoundingClientRect();
+        return b && f.width && f.height ? { x: (b.left + b.width / 2 - f.left) / f.width * 100, y: (b.top + b.height / 2 - f.top) / f.height * 100 } : null;
+    }
+    /** A chain's find, in a few words with its icon. */
+    function findText(find) {
+        if (find.kind === 'gold') return `+${fmt(find.qty)} ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })}`;
+        return `+${fmt(find.qty)} ${resIcon(find.id)}`;
     }
 
     function banner(html, kind = '', ms = 1800) {
@@ -594,8 +635,9 @@ export function createScene(root, actions) {
         el.foe.classList.toggle('boss', !!enemy.boss);
         el.foe.classList.toggle('elite', !!enemy.elite);
         el.foe.classList.toggle('gilded', !!enemy.gilded);
-        el.foe.setAttribute('aria-label', `Strike ${enemy.name}: ${STRIKE_SHARE} of an attack, builds your combo`);
-        el.foe.title = `Click to strike ${enemy.name}: ${STRIKE_SHARE} of an attack, builds your combo`;
+        // a click strikes only the clan boss (its openings); elsewhere the chain's points take the player's hand
+        el.foe.setAttribute('aria-label', enemy.clan ? `Strike ${enemy.name} when its guard drops: ${STRIKE_SHARE} of an attack, builds your combo` : enemy.name);
+        el.foe.title = enemy.clan ? `Click to strike ${enemy.name} when its guard drops` : '';
         setMarkup(el.foeMeta, foeMeta(game.state, game.derived, enemy));
         resetTrail(trails.foe, Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100))); // a fresh monster has no damage trail
         if (silent) return;
@@ -624,6 +666,13 @@ export function createScene(root, actions) {
         const box = el.fx.getBoundingClientRect();
         fxBudget = Math.max(fxBudget, 1);
         spawnFx('click-spark', '✦', (event.clientX - box.left) / box.width * 100, (event.clientY - box.top) / box.height * 100, 450);
+    });
+    // A click anywhere in the fight while a chain is up goes to it: on a point, its number; elsewhere, nothing but the
+    // quarter second it takes (systems/chain.js), so clicking at random over the fight gets nowhere.
+    el.field.addEventListener('click', event => {
+        if (!chainKey) return;
+        const point = event.target.closest?.('.chain-point');
+        actions.chainClick?.(point ? Number(point.dataset.i) : null);
     });
     el.cta.addEventListener('click', () => actions.toggle());
     // A pat for the pet at the hero's feet: it hops, a heart floats up, and it chirps.
@@ -729,6 +778,7 @@ export function createScene(root, actions) {
             fxBudget = MAX_FX_PER_FRAME;
             anchors = null;
             const now = performance.now();
+            if (now - (lastFrameAt || now) > 1000) fightSeenSince = 0;   // back from a hidden tab or another screen: settle again
             const dt = Math.min(100, now - (lastFrameAt || now));
             lastFrameAt = now;
             const state = game.state;
@@ -786,6 +836,24 @@ export function createScene(root, actions) {
             if (regroup) setMarkup(el.regroup, `${CAMPFIRE} Regrouping · boss in ${Math.ceil(c.regroupLeft / 1000)}s`);
             else if (resting) setMarkup(el.regroup, `${CAMPFIRE} Resting · back in the fight in ${Math.max(1, Math.ceil((game.derived.maxHp - c.hp) / (game.derived.maxHp * BALANCE.combat.regenResting)))}s`);
 
+            // the chain: drawn while it lasts, its ring closing; asked for once the fight has been on screen a moment
+            const ch = c.chain;
+            if (ch) {
+                if (chainKey !== ch.startedAt) drawChain(ch);
+                el.chain.style.setProperty('--left', Math.max(0, Math.min(1, (ch.endsAt - game.now) / BALANCE.chain.ms)).toFixed(3));
+                for (const node of el.chain.children) {
+                    const i = Number(node.dataset.i);
+                    node.classList.toggle('next', i === ch.next);
+                    node.classList.toggle('done', i < ch.next);
+                }
+            } else if (chainKey) clearChain();
+            if (!(c.active && c.enemy)) fightSeenSince = 0;
+            else if (!fightSeenSince) fightSeenSince = now;
+            if (!ch && fightSeenSince && now - fightSeenSince >= CHAIN_SETTLE_MS && chainReady(state, game.now)) {
+                const f = el.field.getBoundingClientRect();
+                if (f.width > 0 && f.height > 0) actions.startChain?.(f.width / f.height);
+            }
+
             const combo = Math.floor(c.combo || 0);
             el.combo.hidden = combo <= 0;
             if (combo > 0) {
@@ -802,6 +870,14 @@ export function createScene(root, actions) {
             switch (ev.type) {
                 case 'hit': {
                     const { foe } = anchor();
+                    if (ev.flurry) {   // a finished chain's flurry: the hero throws himself at it, three slashes and a big number
+                        move(el.heroSprite, 'lunge');
+                        move(el.foeSprite, 'crit');
+                        fxBudget = Math.max(fxBudget, 4);
+                        for (let k = 0; k < 3; k++) spawnFx('slash flurry', '', foe.x + jitter(16), foe.mid + jitter(22), 380 + k * 90);
+                        spawnFx('dmg crit flurry', `${fmt(ev.dmg)}!`, foe.x + jitter(12), foe.top + Math.random() * 8, 1300);
+                        break;
+                    }
                     if (ev.manual) {   // the player's strike: the hero swings with it, a light slash
                         move(el.heroSprite, 'jab');
                         spawnFx('slash light', '', foe.x + jitter(14), foe.mid + jitter(18), 220);
@@ -841,6 +917,19 @@ export function createScene(root, actions) {
                 case 'eat': {   // auto-eat: the dish and the health it gave back, green over the hero
                     const { hero } = anchor();
                     spawnFx('dmg heal', `${RESOURCES[ev.food] ? resIcon(ev.food, { scale: 0.75 }) : ''}+${fmt(ev.heal)}${ev.count > 1 ? `<small>×${ev.count}</small>` : ''}`, hero.x + 7 + jitter(6), hero.top + 12, 1100);
+                    break;
+                }
+                case 'chainHit': {   // a point struck in turn: a spark where it stood
+                    const spot = pointSpot(ev.index);
+                    fxBudget = Math.max(fxBudget, 1);
+                    if (spot) spawnFx('chain-spark', '✦', spot.x, spot.y, 420);
+                    break;
+                }
+                case 'chainDone': {   // all five: the flurry's words over the monster, and what it found
+                    const { foe } = anchor();
+                    fxBudget = Math.max(fxBudget, 2);
+                    spawnFx('dmg chain-done', ev.fast ? 'Flurry · fast!' : 'Flurry!', foe.x, Math.max(4, foe.top - 10), 1400);
+                    if (ev.find) spawnFx('drop-pop chain-find', findText(ev.find), foe.x, foe.bottom - 6, 1600);
                     break;
                 }
                 case 'glance': {   // a strike while the clan boss's guard is up

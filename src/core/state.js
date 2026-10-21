@@ -89,7 +89,9 @@ export function createDefaultState(now = Date.now()) {
             frontierDrop: false,   // this run's piece from the best stage's depth is found (data/items.js FRONTIER_DROP)
             lordsBeaten: 0,        // the deepest Lord ever felled (data/zones.js LORDS): each pays its due once
             stallMs: 0,        // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
-            pack: null         // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
+            pack: null,        // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
+            chain: null,       // the chain over the fight (systems/chain.js): { points, next, startedAt, endsAt }
+            chainAt: 0         // when the next chain may come (0: set at the fight's first tick)
         },
         dungeons: {},          // id -> { clears, fragments }
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
@@ -113,7 +115,7 @@ export function createDefaultState(now = Date.now()) {
         hero: { name: '', look: DEFAULT_LOOK, pet: '', cape: '' },    // the name the player gave the hero ('' is "You"), the look (data/looks.js), the pet at their side ('' for the default), the skill cape worn ('' for the rank's cloak)
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
-            minigameWins: 0, minigamePerfects: 0, minigameFinds: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
+            minigameWins: 0, minigamePerfects: 0, minigameFinds: 0, chains: 0, chainsFast: 0, chainFinds: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
             itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0, mythicsFound: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0, potionFragments: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
@@ -298,6 +300,7 @@ export function clampTimers(state, now) {
     if (isPlainObject(state.combat)) {
         state.combat.lastClickAt = upTo(state.combat.lastClickAt, now);
         state.combat.lastComboAt = upTo(state.combat.lastComboAt, now);
+        state.combat.chainAt = upTo(state.combat.chainAt, now + BALANCE.chain.everyMs[1]);
     }
     const mgMax = BALANCE.minigame;
     for (const mg of Object.values(state.minigame || {})) {
@@ -631,6 +634,8 @@ function normalise(data, now) {
     // a save from before the Lords counts those above its best as felled (their due is for new ground)
     state.combat.lordsBeaten = Number.isFinite(Number(data?.combat?.lordsBeaten)) ? intIn(state.combat.lordsBeaten, 0, MAX_STAGE, 0) : Math.floor(state.combat.bestStage / LORDS.every) * LORDS.every;
     state.combat.stallMs = Math.max(0, finite(state.combat.stallMs));
+    state.combat.chain = null;   // a chain never outlasts the page it was on: none is lost, none kept
+    state.combat.chainAt = Math.max(0, finite(state.combat.chainAt));
     const pack = state.combat.pack;
     state.combat.pack = isPlainObject(pack) && Math.floor(Number(pack.stage)) === state.combat.stage && Number(pack.killed) >= 1
         ? { stage: state.combat.stage, killed: Math.min(9, Math.floor(Number(pack.killed))) } : null;

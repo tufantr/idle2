@@ -2,7 +2,7 @@
 // A new player's first minutes, played five ways, and when each "first" happens (median over seeds):
 //   idle        does nothing after Begin
 //   watcher     never strikes, but takes what the screen offers: wears an upgrade, buys a camp level
-//   tapper      strikes the monster five times a second, and takes the same offers
+//   tapper      plays every chain over the fight (systems/chain.js), a point every 0.4 s, and takes the same offers
 //   skiller     mines, then smelts, hunts and cooks as those places open (and takes the offers)
 //   background  begins, then leaves the game in a background tab: nobody looks, nothing is clicked
 // Also: when each place opens (the first seed), the longest stretch with nothing new (a kill of a
@@ -31,6 +31,14 @@ const PACED = new Set(UNLOCKS.filter(u => u.pace).map(u => u.id));
 const CAPS = [[3, 1, 2], [10, 3, 4], [20, 5, 6], [60, 7, 8]];
 
 /** The skiller's next job: mine, smelt what was mined, hunt, cook what was hunted. */
+/** The tapper's hands on the chain: one as soon as it may come, a point every 0.4 s after the first half second. */
+let chainSeen = 0;
+function playChain(game, now) {
+    const c = game.state.combat;
+    if (!c.chain) { if (game.startChain(2)) chainSeen = now; return; }
+    if (now - chainSeen >= 500 && (now - chainSeen - 500) % 400 < 100) game.chainClick(c.chain.next);
+}
+
 function skillerWork(game) {
     const s = game.state;
     const doing = s.action ? `${s.action.kind}:${s.action.id}` : '';
@@ -57,7 +65,7 @@ function play(policy, seed) {
     let now = T0;
     for (let i = 0; now < T0 + minutes * 60000; i++) {
         now += 100;
-        if (policy === 'tapper' && i % 2 === 0) game.clickAttack();
+        if (policy === 'tapper') playChain(game, now);
         if (policy === 'skiller' && i % 300 === 0) skillerWork(game);
         game.tick(now);
         const bossOn = !!(game.state.combat.active && game.state.combat.enemy?.boss);   // a place is decided at the end of the tick

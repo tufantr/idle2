@@ -22,8 +22,8 @@ The game opens on a title card: your hero on a sunny meadow, with a [[Slime|slim
 
 The [[/combat|fight]] fills the screen. Your hero and the monster attack on their own timers, so you do not have to do anything: your hero wins the first fights alone.
 
-- **Tap the monster** (or press **Space** on a keyboard) to strike as well. A strike hits for {{pct(BALANCE.combat.manualHitMult, 0)}} of a normal attack and builds a **combo**.
-- Each combo stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} damage to every hit, your hero's own attacks included, up to {{BALANCE.combat.comboMax}} stacks. Stop striking for {{BALANCE.combat.comboDecayAfterMs / 1000}} seconds and it starts to fade.
+- **The chain:** a few seconds in, {{BALANCE.chain.points}} numbered points appear over the fight (a hand shows the way the first time). Tap them in order, 1 to {{BALANCE.chain.points}}, within {{BALANCE.chain.ms / 1000}} seconds, and your hero throws a flurry of {{BALANCE.chain.flurry}} attacks and builds a **combo**. A wrong tap does nothing. Another chain comes every half minute or so while you watch.
+- Each combo stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} damage to every hit, up to {{BALANCE.combat.comboMax}} stacks, and a full combo fades over {{BALANCE.chain.comboFadeMs / 1000}} seconds.
 - Each monster you beat moves you on a stage. Every {{STAGES_PER_ZONE}}th stage is a boss, and each run of {{STAGES_PER_ZONE}} stages is a place of its own (see [[/zones|Zones]]).
 - The first stages are gentle: the monsters hit softer and have less health, growing to their full strength over the first {{BALANCE.enemy.ease.to}} stages.
 - Combat levels come quickly at first, and every combat level refills your hero's health. Each level adds {{BASE.hpPerCombatLevel}} health and {{pct(BASE.atkPerCombatLevel, 1)}} attack and defence.
@@ -62,7 +62,7 @@ Each level costs {{CAMP_UPGRADES[0].growth}} times as much as the one before. An
 Stage {{STAGES_PER_ZONE}} is the first boss, the [[Goblin Chieftain]]. A boss must fall within {{BALANCE.combat.bossTimeMs / 1000}} seconds of fighting, and a timer shows how much is left.
 
 - If the boss holds out, your hero steps back a stage and regroups: {{BALANCE.combat.regroupMs / 1000}} seconds of fighting there, then the boss again, all by itself.
-- You need not wait. Tap the boss's skull on the stage path to fight it again at once. A boss is a race against its timer, so this is where your strikes count most.
+- You need not wait. Tap the boss's skull on the stage path to fight it again at once. A boss is a race against its timer, so this is where a chain's flurry counts most.
 - Beat it and your hero walks into a new place, the [[Whispering Forest]].
 
 If your hero's health runs out, your hero falls back to the start of the place, rests at the campfire until healed, then goes back into the fight. Nothing is lost but a few stages.

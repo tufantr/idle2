@@ -43,9 +43,9 @@ No: your hero does one thing at a time, and starting one stops the other. While 
 
 ## Fighting
 
-### Is tapping the monster worth it?
+### Is playing the chains worth it?
 
-It helps, but you never have to. A strike hits for {{pct(BALANCE.combat.manualHitMult, 0)}} of an attack and builds a combo, and each stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} to every hit, up to {{BALANCE.combat.comboMax}} stacks. That matters most against a boss's timer and in the Titan's race. Leave the game alone instead and **Focus** gives your hero +{{pct(BASE.focusAttackSpeed, 0)}} attack speed. See [[/combat|Combat]].
+It helps, but you never have to. Every half minute or so of a fight on screen, {{BALANCE.chain.points}} numbered points appear: strike them in order and your hero throws a flurry of {{BALANCE.chain.flurry}} attacks, the combo rises (each stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} to every hit, up to {{BALANCE.combat.comboMax}} stacks), and sometimes you find a little gold, essence, a potion or food. That matters most against a boss's timer and in the Titan's race. Clicking the chain doesn't end **Focus** (+{{pct(BASE.focusAttackSpeed, 0)}} attack speed when you leave the game alone). Tapping the monster itself does nothing. See [[/combat|Combat]].
 
 ### What is the boss timer?
 

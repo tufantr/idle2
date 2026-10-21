@@ -298,7 +298,23 @@ harvest. Tools are the main reason a gathering player visits the workshop and a 
   interval between clicks from 1 ms to 2 s (each click also ends Focus) against an idle hero's was
   ×6.7 at best before, ×1.54 now (×1.5 for anything faster than four a second, ×1.2 at two a second,
   ×1.08 at one), and no healing. A player who taps through the first hour stands at stage 70 (110
-  before) against 50 for one who only watches (`node tools/opening.mjs 60 3`).
+  before) against 50 for one who only watches (`node tools/opening.mjs 60 3`). **Since the chain (below), a
+  click strikes only the clan boss** (its openings, §3.18).
+- **The chain** (October 2026, the owner: macros clicking the monster gained more than a player watching; a
+  spot that appears at random could be found by a macro spraying clicks, and a rule that a wrong click breaks
+  it caught players still clicking when it appeared, so the owner's numbered points; `src/systems/chain.js`,
+  `BALANCE.chain`): every 20–30 s of a fight on screen (the page asks for one, `ui/scene.js`, once the fight has
+  been in view 2.5 s; a fight's first after 8 s), five numbered points appear anywhere over the fight, at least
+  0.3 of its height apart. Struck in order within 4 s they land a flurry (three attacks at once, its crit rolled
+  once, no lifesteal) and +5 combo (max 10, +1% damage a stack, fading evenly over 30 s outside the clan fight);
+  a find comes one time in four, always for a chain finished within 2 s: gold (five kills at the stage) most
+  often, essence once some has turned up, a bottle of the picked fight potion, two of the best dish. A wrong
+  number or a click elsewhere does nothing and costs nothing; every click in the fight counts against the
+  quarter second (`strikeGapMs`), so a tool clicking at random gets about sixteen counted clicks in a chain,
+  each on the next point about one time in twenty: tested, fewer than one chain in 200 (`test/chain.test.mjs`),
+  while one who aims finishes every one. The points' tab order is shuffled, and a click on them doesn't end
+  Focus. The first chain's points get the guide's hand (`systems/guide.js` 'chain'). First 20 minutes
+  (`tools/opening.mjs 20 3`): best stage 34 watching, 45 playing every chain, 50 mashing the old strike.
 - **Boss timer:** a boss must fall within **30 seconds of fighting** (the clock only runs while you
   fight, so it works the same offline). If it holds out you step back one stage and farm there for
   60 seconds before it is retried automatically; beating it sooner (by stepping forward) ends the
