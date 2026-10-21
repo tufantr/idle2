@@ -1,9 +1,9 @@
 ---
 path: /equipment/jewellery
-keywords: jewellery, jewelry, ring, rings, amulet, earring, earrings, crafting, gem, gems, silver bar, gold bar, setting, voidstone, upgrade, reforge, rarity, amulets
+keywords: jewellery, jewelry, ring, rings, amulet, earring, earrings, crafting, gem, gems, silver bar, gold bar, setting, voidstone, upgrade, reroll, reforge, bench, jeweller's bench, rarity, amulets
 aliases: Jewelry, Rings, Amulets, Earrings
 ---
-Jewellery fills {{CRAFTING_TYPES.reduce((n, t) => n + TYPE_SLOTS[t].length, 0)}} of your hero's slots: two rings, an amulet and two earrings. A piece adds a little attack and defence, and its real worth is in its bonuses. You make it in [[Crafting]]; the table below lists every piece you can craft.
+Jewellery fills {{CRAFTING_TYPES.reduce((n, t) => n + TYPE_SLOTS[t].length, 0)}} of your hero's slots: two rings, an amulet and two earrings. A piece adds a little attack and defence, and its real worth is in its bonuses. It drops in the fight at every rarity, and you can make it in [[Crafting]] (the table below lists every piece you can craft), whose bench makes what you wear stronger.
 
 ## Crafting a piece
 
@@ -25,16 +25,16 @@ A crafted piece rolls its rarity like any made gear, and how rare it can be rise
 
 Quality bonuses tilt every roll toward the rarer side: the {{achievementById('blacksmith').name}} and {{achievementById('jeweller').name}} medals, the Crafting cape ([[Skill capes]]) and the {{eventById('guild_fair').name}} weekend.
 
-## Upgrading and reforging
+## The jeweller's bench
 
-Jewellery is upgraded and reforged in the Inventory, from the piece's detail, with [[Monster Essence|essence]] and gold. It is never worked at the anvil.
+From Crafting {{BENCH_LEVEL_PER_UPGRADE}}, the bench (the Crafting tab's second step) works the jewellery your hero wears, as the anvil works weapons and armour:
 
-- **Upgrade:** +{{pct(UPGRADE_STEP, 0)}} base attack and defence a level, up to +{{MAX_UPGRADE}}. The gold is counted in kills at your best stage, so it keeps pace with what a run earns.
-- **Reforge:** new bonuses for the piece, not its rarity or base stats, for essence and {{reforgeCost({ tier: 1 }, 1).gold}} kills' worth of gold. The essence grows with each reforge, up to {{MAX_REFORGE_MULT}} times the first. A common piece has no bonuses to reforge, and a unique's are fixed.
+- **Upgrade:** +{{pct(UPGRADE_STEP, 0)}} base attack and defence a level, up to +{{MAX_UPGRADE}}. Each level asks {{BENCH_LEVEL_PER_UPGRADE}} more Crafting and takes {{BENCH_GEM_GROWTH}} times the gems of the one before.
+- **Reroll:** new bonuses for the piece, not its rarity or base stats, for a piece's worth of gems and essence that grows with each reroll, up to {{MAX_REFORGE_MULT}} times the first. A common piece has no bonuses to reroll, and a unique's are fixed.
 
-A salvaged piece gives back half the essence its upgrades took. The price of each upgrade level:
+The work takes gems of the piece's tier and [[Monster Essence|essence]], and no gold: {{GEM_TIERS.slice(0, 6).map((g, i) => `${res(g.gem)} for tier ${i + 1}`).join(', ')}}, and twice the diamonds for tier 7. A ring or an earring takes {{BENCH_GEM_COST.Ring}} gem at +1, an amulet {{BENCH_GEM_COST.Neck}}. It pays half the gems' Crafting XP (a piece crafted with them pays all of it) and practice in their jewellery's mastery, whose levels take gems off the price. A salvaged piece gives back half the essence its upgrades took and {{pct(ANVIL_REFUND, 0)}} of their gems. (Until October 2026 jewellery was upgraded and reforged in the Inventory, with essence and gold; the levels it got there stay with it.)
 
-{{table(['Level', 'Essence, times the tier #', 'Gold, in kills at your best stage #'], Array.from({ length: MAX_UPGRADE }, (_, i) => [`+${i + 1}`, upgradeCost({ tier: 1, upgrade: i }, 1).essence, upgradeCost({ tier: 1, upgrade: i }, 1).gold]), { sort: false })}}
+{{table(['Level', 'Crafting #', 'Ring or earring, gems #', 'Amulet, gems #', 'Essence, times the tier #'], Array.from({ length: MAX_UPGRADE }, (_, i) => [`+${i + 1}`, benchUpgradeCost('Ring', i, 1).level, benchUpgradeCost('Ring', i, 1).gems, benchUpgradeCost('Neck', i, 1).gems, benchUpgradeCost('Ring', i, 1).essence]), { sort: false })}}
 
 ## Voidstone pieces
 
@@ -44,4 +44,4 @@ A Voidstone piece is cut to the deepest depth you have ever reached. Past depth 
 
 ## Jewellery that drops
 
-Jewellery also drops in the fight, but only {{RARITIES[JEWEL_DROP_MIN_RANK].name.toLowerCase()}} or {{RARITIES.at(-1).name.toLowerCase()}} (see [[Equipment]]). Some dungeons' [[Unique items|unique items]] are jewellery too: {{Object.values(UNIQUES).filter(u => CRAFTING_TYPES.includes(u.type)).map(u => `the ${link(path.unique(u.id), u.name)} (${TYPE_NAMES[u.type].toLowerCase()})`).join(' and ')}}.
+Jewellery drops in the fight at every rarity, as weapons and armour do (until October 2026 it was epic or legendary only; see [[Equipment]]). Some dungeons' [[Unique items|unique items]] are jewellery too: {{Object.values(UNIQUES).filter(u => CRAFTING_TYPES.includes(u.type)).map(u => `the ${link(path.unique(u.id), u.name)} (${TYPE_NAMES[u.type].toLowerCase()})`).join(' and ')}}.

@@ -7,7 +7,8 @@ import { tickAction, startNodeAction, startSmelting, startCrafting, startAgility
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
-import { equipItem, unequipItem, sellItem, sellAllItems, upgradeItem, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, reforgeItem, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
+import { equipItem, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
+import { upgradeJewel, rerollJewel } from './systems/bench.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
@@ -248,16 +249,17 @@ export class Game {
     unequipItem(slot) { return this._act(() => unequipItem(this, slot)); }
     sellItem(id) { return this._act(() => sellItem(this, id)); }
     sellAllItems(rarity) { return this._act(() => sellAllItems(this, rarity)); }
-    upgradeItem(id) { return this._act(() => upgradeItem(this, id)); }
     sellResource(id, amount) { return Number.isFinite(amount) ? this._act(() => sellResource(this, id, amount)) : 0; }
     buyGoldShopItem(id) { return this._act(() => buyGoldShopItem(this, id)); }
     salvageItem(id) { return this._act(() => salvageItem(this, id)); }
     salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
     salvageWeaker() { return this._act(() => salvageWeaker(this)); }
     buyBagUpgrade() { return this._act(() => buyBagUpgrade(this)); }
-    reforgeItem(id) { return this._act(() => reforgeItem(this, id)); }
     reinforceItem(id) { return this._act(() => reinforceItem(this, id)); }
     rerollItem(id) { return this._act(() => rerollItem(this, id)); }
+    /** The jeweller's bench (systems/bench.js): a worn piece of jewellery upgraded one level, or its bonuses rerolled. */
+    upgradeJewel(id) { return this._act(() => upgradeJewel(this, id)); }
+    rerollJewel(id) { return this._act(() => rerollJewel(this, id)); }
     toggleLock(id) { return this._act(() => toggleLock(this, id)); }
     setAutoSalvage(rarity) { return this._act(() => setAutoSalvage(this, rarity)); }
 

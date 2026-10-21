@@ -116,7 +116,7 @@ Weapons and armour all drop in the fight: from bosses on their first fall in a r
 ### How do I upgrade gear?
 
 - **Weapons and armour** are reinforced at the anvil in [[/skills/smithing|Smithing]] (from Smithing {{ANVIL_LEVEL_PER_UPGRADE}}) with bars and essence: +{{pct(UPGRADE_STEP, 0)}} base stats a level up to +{{MAX_UPGRADE}}, then ×{{FORGE_STEP}} a level with no top. The anvil also rerolls a piece's bonuses.
-- **Jewellery** is upgraded in the Inventory with essence and gold, and reforged there to reroll its bonuses. See [[/equipment/jewellery|Jewellery]].
+- **Jewellery** is upgraded at the jeweller's bench in [[/skills/crafting|Crafting]] (from Crafting {{BENCH_LEVEL_PER_UPGRADE}}) with gems of its tier and essence, and the bench rerolls its bonuses too. See [[/equipment/jewellery|Jewellery]].
 - The anvil's levels belong to the slot: every weapon or piece of armour you wear there has them. Jewellery keeps its upgrades on the piece.
 
 ### Why did a drop disappear?

@@ -1,11 +1,12 @@
-// Equipment and resource management: the bag, equip/unequip, sell, salvage, upgrade, reforge, lock.
+// Equipment and resource management: the bag, equip/unequip, sell, salvage, lock. (Weapons and armour are worked at the
+// anvil, systems/anvil.js; jewellery at the jeweller's bench, systems/bench.js.)
 
 import {
-    TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, upgradeCost, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
-    BAG_SIZE, BAG_UPGRADE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, reforgeCost, codexKey,
+    TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
+    BAG_SIZE, BAG_UPGRADE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, codexKey,
     SMITHING_TYPES, AUTO_SALVAGE_OPTIONS, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
 } from '../data/items.js';
-import { salvageBars, ANVIL_REFUND } from '../data/workshop.js';
+import { salvageBars, ANVIL_REFUND, benchGem } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
 import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, enemyBaseStats } from '../core/formulas.js';
@@ -28,14 +29,17 @@ export function findGear(state, id) {
 }
 
 /**
- * The drop table's kinds, weighted for this hero where the gear tier is `zoneTier`: a kind with an
- * empty slot is DROP_EMPTY_SLOT_MULT times as likely, one whose worn piece is of a lower tier
+ * The drop table's kinds, weighted for this hero where the gear tier is `zoneTier`: a weapon or armour kind with an
+ * empty slot is DROP_EMPTY_SLOT_MULT times as likely, a kind whose worn piece is of a lower tier
  * DROP_BEHIND_SLOT_MULT times (core/formulas.js generateDrop).
  */
 export function dropTypesFor(state, zoneTier) {
     return DROP_TYPE_WEIGHTS.map(entry => {
         const worn = (TYPE_SLOTS[entry.type] || []).map(slot => state.equipped[slot]);
-        const mult = worn.some(i => !i) ? DROP_EMPTY_SLOT_MULT : Math.min(...worn.map(i => i.tier || 1)) < zoneTier ? DROP_BEHIND_SLOT_MULT : 1;
+        // (jewellery takes its plain share for an empty slot: since it drops at every rarity, five empty slots ×4 made
+        // nearly a third of a new hero's drops rings and amulets in place of the armour he needs first)
+        const empty = worn.some(i => !i) ? (SMITHING_TYPES.includes(entry.type) ? DROP_EMPTY_SLOT_MULT : 1) : null;
+        const mult = empty ?? (Math.min(...worn.map(i => i.tier || 1)) < zoneTier ? DROP_BEHIND_SLOT_MULT : 1);
         return { type: entry.type, weight: entry.weight * mult };
     });
 }
@@ -212,7 +216,8 @@ export function addItem(game, item) {
 
 /**
  * What salvaging an item would give: essence for drops, part of the materials back for crafted gear,
- * and for weapons and armour bars of their metal (data/workshop.js salvageBars).
+ * for weapons and armour bars of their metal (data/workshop.js salvageBars), and for jewellery three quarters of the gems
+ * the bench put into it (systems/bench.js).
  */
 export function salvagePreview(item) {
     const materials = {};
@@ -227,6 +232,11 @@ export function salvagePreview(item) {
     for (const [bar, qty] of Object.entries(item.barsCarried || {})) {
         const back = Math.floor(ANVIL_REFUND * qty);
         if (back > 0) materials[bar] = (materials[bar] || 0) + back;
+    }
+    if (item.gemsIn > 0) {
+        const gem = benchGem(item.tier || 1).gem;
+        const back = Math.floor(ANVIL_REFUND * item.gemsIn);
+        if (back > 0) materials[gem] = (materials[gem] || 0) + back;
     }
     return { essence, materials };
 }
@@ -382,59 +392,6 @@ export function sellAllItems(game, maxRarity = 'common') {
 }
 
 // ---------- upgrade, reforge, lock ----------
-
-export function itemUpgradeCost(game, item) {
-    return upgradeCost(item, goldPerKillAtStage(game.state.combat.bestStage));
-}
-
-/** Upgrade a piece of jewellery (equipped or in the bag) with essence + gold; weapons and armour go to the anvil. */
-export function upgradeItem(game, id) {
-    const state = game.state;
-    const item = findGear(state, id);
-    if (!item) return false;
-    if (SMITHING_TYPES.includes(item.type)) { game.emit({ type: 'error', text: 'Weapons and armour are reinforced at the anvil.' }); return false; }
-    if ((item.upgrade || 0) >= MAX_UPGRADE) { game.emit({ type: 'error', text: 'That item is fully upgraded.' }); return false; }
-    const cost = itemUpgradeCost(game, item);
-    if (state.resources.essence < cost.essence || state.gold < cost.gold) {
-        game.emit({ type: 'error', text: `Upgrade needs ${cost.essence} essence and ${cost.gold} gold.` });
-        return false;
-    }
-    state.resources.essence -= cost.essence;
-    state.gold -= cost.gold;
-    bumpStat(game, 'goldSpent', cost.gold);
-    item.upgrade = (item.upgrade || 0) + 1;
-    game.emit({ type: 'upgrade', item });
-    game.markDirty();
-    return true;
-}
-
-export function itemReforgeCost(game, item) {
-    return reforgeCost(item, goldPerKillAtStage(game.state.combat.bestStage));
-}
-
-/** Reroll an item's affixes (not its rarity or base stats). Cost grows with each reforge, capped. */
-export function reforgeItem(game, id) {
-    const state = game.state;
-    const item = findGear(state, id);
-    if (!item) return false;
-    if (SMITHING_TYPES.includes(item.type)) { game.emit({ type: 'error', text: 'Weapons and armour are rerolled at the anvil.' }); return false; }
-    if (!item.affixes?.length) { game.emit({ type: 'error', text: 'Common items have no affixes to reforge.' }); return false; }
-    if (item.uniqueId) { game.emit({ type: 'error', text: 'Unique items have fixed bonuses and cannot be reforged.' }); return false; }
-    const cost = itemReforgeCost(game, item);
-    if (state.resources.essence < cost.essence || state.gold < cost.gold) {
-        game.emit({ type: 'error', text: `Reforging needs ${cost.essence} essence and ${cost.gold} gold.` });
-        return false;
-    }
-    state.resources.essence -= cost.essence;
-    state.gold -= cost.gold;
-    bumpStat(game, 'goldSpent', cost.gold);
-    rerollAffixes(item);
-    item.reforges = (item.reforges || 0) + 1;
-    bumpStat(game, 'reforges');
-    game.emit({ type: 'reforge', item });
-    game.markDirty();
-    return true;
-}
 
 export function toggleLock(game, id) {
     const item = findGear(game.state, id);

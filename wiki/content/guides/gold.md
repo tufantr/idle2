@@ -53,7 +53,7 @@ Since gold resets at prestige, an obstacle has to be bought within one run: save
 
 ### Jewellery
 
-Rings, amulets and earrings are upgraded in the Inventory with essence and gold, up to +{{MAX_UPGRADE}}. The gold for each level is {{upgradeCost({ upgrade: 0, tier: 1 }, 1).gold}} kills' worth at your best stage times the level, {{[...Array(MAX_UPGRADE).keys()].reduce((sum, l) => sum + upgradeCost({ upgrade: l, tier: 1 }, 1).gold, 0)}} kills' worth for all {{MAX_UPGRADE}}. Rerolling a piece's bonuses (a reforge) costs {{reforgeCost({ tier: 1 }, 1).gold}} kills' worth and some essence. Weapons and armour are reinforced at the anvil with bars and essence instead, and need no gold. See [[/equipment/jewellery|Jewellery]].
+Rings, amulets and earrings are upgraded and rerolled at the jeweller's bench in Crafting, with gems and essence: they need no gold (they took gold until October 2026), and neither do weapons and armour, reinforced at the anvil with bars and essence. See [[/equipment/jewellery|Jewellery]].
 
 ## Spend it within the run
 

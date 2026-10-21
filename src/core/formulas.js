@@ -2,7 +2,7 @@
 // change a constant here and re-run the simulator to see the pacing move.
 
 import { AUTHORED_STAGES, zoneForStage, isBossStage, isLordStage, STAGES_PER_ZONE } from '../data/zones.js';
-import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER, JEWEL_DROP_MIN_RANK, MYTHIC, PRIMAL } from '../data/items.js';
+import { RARITIES, AFFIXES, SLOT_STATS, STAT_UNIT, TYPE_NAMES, TYPE_ICONS, CRAFTING_TYPES, GEAR_TIERS, MAX_GEAR_TIER, DROP_TIER_OFFSETS, DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, JEWEL_POWER, MYTHIC, PRIMAL } from '../data/items.js';
 import { rng } from './rng.js';
 
 export const BALANCE = {
@@ -389,7 +389,7 @@ export function abyssDropMult(depth = 0) {
  * Gear dropped where the gear tier is `zoneTier` (a zone's gearTier or a chest's tier): mostly of
  * that tier, sometimes one below, rarely one above (`tier` fixes it). `types` weighs the kinds
  * (systems/inventory.js dropTypesFor tilts them toward what the hero lacks); a ring, amulet or
- * earring only comes epic or legendary. `depth` (the Abyss depth) scales its power past depth 5.
+ * earring comes at every rarity, as the rest do. `depth` (the Abyss depth) scales its power past depth 5.
  */
 export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYPE_WEIGHTS, { tier: fixedTier = null, frontier = null, rarity: fixedRarity = null } = {}) {
     const tier = fixedTier ?? Math.max(1, Math.min(MAX_GEAR_TIER, zoneTier + rng.weighted(DROP_TIER_OFFSETS).offset));
@@ -402,8 +402,7 @@ export function generateDrop(zoneTier, boss, nextId, depth = 0, types = DROP_TYP
         const above = frontier.stage >= PRIMAL.from && rng.chance(1 / PRIMAL.odds) ? 'primal' : 'mythic';
         rarity = RARITIES.find(r => r.id === above);
     }
-    const kinds = RARITIES.findIndex(r => r.id === rarity.id) >= JEWEL_DROP_MIN_RANK ? types : types.filter(t => !CRAFTING_TYPES.includes(t.type));
-    const type = rng.weighted(kinds.length ? kinds : types).type;
+    const type = rng.weighted(types).type;
     const jewel = CRAFTING_TYPES.includes(type);
     const mult = abyssDropMult(depth);
     const item = generateEquipment({

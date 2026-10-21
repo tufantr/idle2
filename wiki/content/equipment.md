@@ -35,7 +35,7 @@ Each tier needs a combat level before your hero can wear it (the table below). Y
 ## Where gear comes from
 
 - **Dropped:** every weapon and piece of armour drops in the fight (nothing is forged since October 2026), {{pct(GEAR_DROP_CHANCE.regular, 1)}} of the time from an ordinary kill and {{pct(GEAR_DROP_CHANCE.boss, 0)}} from a boss's first fall in a run, and from [[Dungeons|dungeon]] chests. {{GEAR_TIERS.filter(t => t.dropOnly).map(t => link(path.tier(t.name), `${t.name}`)).join(' and ')}} gear only ever drops, deep in the Abyss and in the deepest dungeons.
-- **Crafted:** jewellery is made in Crafting. Jewellery that drops is always {{RARITIES[JEWEL_DROP_MIN_RANK].name.toLowerCase()}} or {{RARITIES.at(-1).name.toLowerCase()}}.
+- **Crafted:** jewellery is also made in Crafting; it drops at every rarity too.
 - **Unique:** each dungeon has a [[Unique items|unique item]] of its own.
 
 ## How a drop is picked
@@ -44,7 +44,7 @@ A piece of gear that drops is rolled in four steps:
 
 1. **Its tier:** the land's gear tier {{pct(DROP_TIER_OFFSETS.find(o => o.offset === 0).weight / DROP_TIER_OFFSETS.reduce((a, o) => a + o.weight, 0), 0)}} of the time, one tier below {{pct(DROP_TIER_OFFSETS.find(o => o.offset === -1).weight / DROP_TIER_OFFSETS.reduce((a, o) => a + o.weight, 0), 0)}}, one above {{pct(DROP_TIER_OFFSETS.find(o => o.offset === 1).weight / DROP_TIER_OFFSETS.reduce((a, o) => a + o.weight, 0), 0)}}. Each land's gear tier is on its page ([[Zones]]); in the Abyss it rises with the depth.
 2. **Its rarity:** a boss's first fall (and a dungeon chest) rolls far better than an ordinary kill (the Rarities table below), and epic and legendary pieces grow more likely with the land's gear tier, about {{fmt(1 + DROP_HIGH_RARITY_PER_TIER * (MAX_GEAR_TIER - 1))}} times as likely on the top tier as on the first.
-3. **Its kind:** what your hero lacks comes more often. A kind with an empty slot is {{DROP_EMPTY_SLOT_MULT}} times as likely, and a kind whose worn piece is of a lower tier than the land's gear {{DROP_BEHIND_SLOT_MULT}} times. A ring, amulet or earring can only come {{RARITIES[JEWEL_DROP_MIN_RANK].name.toLowerCase()}} or better: a lower roll is always a weapon or armour.
+3. **Its kind:** what your hero lacks comes more often. A weapon or armour kind with an empty slot is {{DROP_EMPTY_SLOT_MULT}} times as likely (an empty jewellery slot draws no more jewellery), and a kind whose worn piece is of a lower tier than the land's gear {{DROP_BEHIND_SLOT_MULT}} times.
 4. **Its depth:** past depth {{BALANCE.abyss.dropScalingFrom}} of the Abyss every depth makes dropped gear {{BALANCE.abyss.dropGrowth}} times as strong as the depth before (easing to {{BALANCE.abyss.denseDropGrowth}} times by stage {{BALANCE.enemy.denseFrom}}, with the monsters), and the piece shows its depth.
 
 ## Above legendary
@@ -104,12 +104,12 @@ Salvage a piece you don't need from its detail, or with **Salvage commons**:
 
 - A dropped piece gives [[Monster Essence]]: more for a higher tier and a rarer piece, from {{salvageEssence({ tier: 1, rarity: 'common' })}} for a common {{GEAR_TIERS[0].name}} piece to {{salvageEssence({ tier: MAX_GEAR_TIER, rarity: 'legendary' })}} for a legendary {{GEAR_TIERS.at(-1).name}} one and {{salvageEssence({ tier: MAX_GEAR_TIER, rarity: 'primal' })}} for a Primal. The forge needs it.
 - A dropped weapon or piece of armour also gives bars of its metal: from {{salvageBars({ type: 'Weapon', tier: 1, rarity: 'common', source: 'drop' }).qty}} for a common piece to {{salvageBars({ type: 'Weapon', tier: 1, rarity: 'legendary', source: 'drop' }).qty}} for a legendary one, {{anvilBarMult(6)}} and {{anvilBarMult(7)}} times that for {{GEAR_TIERS[5].name}} and {{GEAR_TIERS[6].name}}.
-- A piece of jewellery gives back half the essence its upgrades took. The anvil's work stays with the slot, so a weapon or piece of armour gives back only what it is made of (one still carrying its own reinforcing from before the slots gives back {{pct(ANVIL_REFUND, 0)}} of those bars).
+- A piece of jewellery gives back half the essence its upgrades took, and {{pct(ANVIL_REFUND, 0)}} of the gems the bench put into it. The anvil's work stays with the slot, so a weapon or piece of armour gives back only what it is made of (one still carrying its own reinforcing from before the slots gives back {{pct(ANVIL_REFUND, 0)}} of those bars).
 - A piece you crafted gives back about {{pct(SALVAGE_MATERIAL_RETURN, 0)}} of its materials instead, in whole bars and gems that come out fair on average.
 
-## Reforging and upgrading jewellery
+## Upgrading and rerolling jewellery
 
-Jewellery is not worked at the anvil. It is upgraded (+{{pct(UPGRADE_STEP, 0)}} a level, up to +{{MAX_UPGRADE}}) and reforged (new bonuses) with essence and gold from its detail in the Inventory: see [[Jewellery]].
+Jewellery is worked at the jeweller's bench in [[/skills/crafting|Crafting]], from Crafting {{BENCH_LEVEL_PER_UPGRADE}}: upgraded (+{{pct(UPGRADE_STEP, 0)}} a level, up to +{{MAX_UPGRADE}}) and its bonuses rerolled, with gems of its tier and essence. A worn piece's detail has a **Bench** button that goes there. See [[Jewellery]].
 
 ## Selling
 

@@ -36,20 +36,21 @@ test('nothing is forged (the owner, October 2026); an old order to forge stops b
     assert.equal(loaded.state.resources.iron_bar, 50, 'no bars lost');
 });
 
-test('drops are mostly of the place\'s own tier, and ordinary jewellery is left to Crafting', () => {
+test('drops are mostly of the place\'s own tier, and jewellery comes at every rarity', () => {
     rng.setSource(seededRandom(7));
     const tiers = { 2: 0, 3: 0, 4: 0 };
+    const jewelRarities = new Set();
     let jewels = 0;
     for (let i = 0; i < 4000; i++) {
         const drop = generateDrop(3, i % 2 === 0, i);
         tiers[drop.tier]++;
-        if (CRAFTING_TYPES.includes(drop.type)) {
-            jewels++;
-            assert.ok(RARITIES.findIndex(r => r.id === drop.rarity) >= 3, `a ${drop.rarity} ${drop.type} dropped`);
-        }
+        if (CRAFTING_TYPES.includes(drop.type)) { jewels++; jewelRarities.add(drop.rarity); }
     }
     assert.ok(tiers[3] / 4000 > 0.6 && tiers[2] / 4000 < 0.3 && tiers[4] / 4000 < 0.13, JSON.stringify(tiers));
-    assert.ok(jewels > 0, 'epic and legendary jewellery still drops');
+    // its share of the table (rings, amulets, earrings), at every rarity
+    const share = DROP_TYPE_WEIGHTS.filter(e => CRAFTING_TYPES.includes(e.type)).reduce((a, e) => a + e.weight, 0) / DROP_TYPE_WEIGHTS.reduce((a, e) => a + e.weight, 0);
+    assert.ok(Math.abs(jewels / 4000 - share) < 0.03, `${jewels} pieces of jewellery in 4000`);
+    for (const r of ['common', 'uncommon', 'rare', 'epic', 'legendary']) assert.ok(jewelRarities.has(r), `${r} jewellery drops`);
 });
 
 test('what drops leans toward the slots the hero lacks', () => {
@@ -62,6 +63,8 @@ test('what drops leans toward the slots the hero lacks', () => {
     assert.equal(weights.Weapon, base.Weapon, 'a weapon of the place\'s tier: as it was');
     assert.equal(weights.Body, base.Body * 2, 'a body of a lower tier: twice');
     assert.equal(weights.Head, base.Head * 4, 'an empty head: four times');
+    assert.equal(weights.Ring, base.Ring, 'an empty ring slot: its plain share (jewellery takes no tilt for an empty slot)');
+    assert.equal(weights.Neck, base.Neck);
     rng.setSource(seededRandom(3));
     let heads = 0;
     let weapons = 0;
@@ -190,13 +193,16 @@ test('the anvil reinforces with bars of the piece\'s metal and essence, for Smit
     assert.equal(sword.reforges, 1);
     assert.equal(s.resources.mithril_bar, 1000 - cost.bars - reroll.bars);
     assert.equal(s.gold, gold);
-    // the old essence-and-gold upgrade is for jewellery only
-    assert.equal(game.upgradeItem(sword.id), false);
-    assert.equal(game.reforgeItem(sword.id), false);
+    // the bench is jewellery's, the anvil weapons' and armour's
+    assert.equal(game.upgradeJewel(sword.id), false);
+    assert.equal(game.rerollJewel(sword.id), false);
     const ring = piece(game, 'Ring', 3, { rarity: 'epic' });
     s.equipped.Ring1 = ring;
-    s.gold = 1e9;
-    assert.ok(game.upgradeItem(ring.id));
+    assert.equal(game.rerollItem(ring.id), false);
+    s.skills.crafting.xp = xpForLevel(10);
+    s.resources.sapphire = 10;
+    assert.ok(game.upgradeJewel(ring.id));
+    assert.equal(s.gold, gold, 'no gold');
 });
 
 test('salvaging a weapon or armour gives bars back: more for rarer pieces, and most of the reinforcing', () => {

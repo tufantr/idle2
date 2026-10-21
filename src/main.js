@@ -70,6 +70,7 @@ const ui = {
     tab: (t => (t === 'fishing' ? 'hunting' : t))(prefs.get('fantasyIdle.tab') || 'combat'),   // (Fishing joined Hunting)
     fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
     smithView: 'smelt',  // the step of Smithing on screen: smelt or anvil (forging and tools are gone)
+    craftView: 'craft',  // the step of Crafting on screen: craft or bench (the jeweller's bench, systems/bench.js)
     potionMenu: false,   // the skill potion's tray, open under its chip in a skill's header
     hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
     craftBar: null,
@@ -1318,6 +1319,7 @@ window.FI = {
     craft(type, bar, gem) { game.startCrafting(type, bar, gem); render(); },
     buyTool(toolId) { if (game.buyTool(toolId)) sound.play('buy'); render(); },   // the Shop's tools (systems/tools.js)
     smithView(view) { ui.smithView = view; render(); },
+    craftView(view) { ui.craftView = view; render(); },
     hallView(view) { ui.hallView = view; render(); },
     selectCraftBar(bar) { ui.craftBar = bar; render(); },
     selectCraftGem(gem) { ui.craftGem = gem; render(); },
@@ -1396,7 +1398,6 @@ window.FI = {
     unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
     sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
     sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
-    upgrade(id) { const ok = game.upgradeItem(id); if (ok) sound.play('craft'); render(); if (ok) flourish('#item-detail .detail-art'); },
     setAutoPrestige(on) { if (game.setAutoPrestige(on)) sound.play(on ? 'unlock' : 'click'); render(); },
     reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
     // a reroll: the bonuses it brought glow on the card a few seconds (render.js anvilCard)
@@ -1409,7 +1410,17 @@ window.FI = {
         if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
     },
     toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },
-    reforge(id) { const ok = game.reforgeItem(id); if (ok) sound.play('rare'); render(); if (ok) flourish('#item-detail .detail-art', 'rgba(196, 165, 255, 0.95)'); },
+    // The jeweller's bench (systems/bench.js): an upgrade, or a reroll whose new bonuses glow a few seconds (render.js benchCard)
+    benchUpgrade(id) { const ok = game.upgradeJewel(id); sound.play(ok ? 'craft' : 'error'); render(); if (ok) flourish(`#bench-${Number(id)} .anvil-art`); },
+    benchReroll(id) {
+        const before = (findGear(game.state, id)?.affixes || []).map(describeAffix);
+        const ok = game.rerollJewel(id);
+        sound.play(ok ? 'rare' : 'error');
+        if (ok) { ui.benchRolled = { id: Number(id), before, at: Date.now() }; setTimeout(() => render(), ANVIL_ROLL_GLOW_MS + 50); }
+        render();
+        if (ok) flourish(`#bench-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
+    },
+    toBench() { ui.craftView = 'bench'; ui.invSelected = null; window.FI.switchTab('crafting'); },
     salvage(id) {
         const g = game.salvageItem(id);
         if (g) {

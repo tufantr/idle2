@@ -41,7 +41,8 @@ export const TYPE_ICONS = {
 // Rarity = quality multiplier on base stats + number of affixes. `weight` is the crafting roll,
 // which stops at Rare for forging; jewellery's rises with Crafting (CRAFT_RARITY_LEVELS): epic from
 // level 75, legendary at 99, at the roll's own odds (about 3% and under 1%, more with the quality bonuses).
-// The fight's jewellery is epic or legendary (JEWEL_DROP_MIN_RANK, DROP_RARITY_WEIGHTS).
+// The fight's jewellery comes at every rarity, as weapons and armour do (it came epic or legendary only, while Crafting
+// was to make the ordinary pieces; the owner, October 2026, chose the drop and the jeweller's bench, systems/bench.js).
 // A legendary is 2.8 times a common (the owner, October 2026: a legendary drop must make the hero
 // stronger at once; it was 1.4, less than one Abyss depth's 1.45, so a common from one depth deeper
 // beat it): worth a tier up (x2.2), or nearly three depths. Saves from before have their gear
@@ -87,20 +88,12 @@ export const AFFIXES = [
     { id: 'maxHp',       name: 'Max HP',       stat: 'hpMult',          min: 0.02, max: 0.05, format: 'pct' }
 ];
 
-// Upgrades: +UPGRADE_STEP base stats per level, up to MAX_UPGRADE. Paid in essence (combat drop) and
-// gold priced in "kills at your best stage" so the cost keeps pace with gold inflation.
+// Upgrades: +UPGRADE_STEP base stats per level, up to MAX_UPGRADE: a weapon's or armour's slot at the anvil (with no
+// top there, data/workshop.js forgeMult), a piece of jewellery at the jeweller's bench (systems/bench.js).
 export const MAX_UPGRADE = 10;
 // Jewellery carries less raw power than armour of its tier (it brings the affixes instead).
 export const JEWEL_POWER = 0.8;
 export const UPGRADE_STEP = 0.05;
-export function upgradeCost(item, goldPerKill = 10) {
-    const next = (item.upgrade || 0) + 1;
-    const tier = item.tier || 1;
-    return {
-        essence: Math.ceil(2 * next * tier),
-        gold: Math.ceil(goldPerKill * 4 * next)
-    };
-}
 
 /**
  * The combat level to wear each tier. At Melvor pace the top two came down (from 75 and 90), so
@@ -141,8 +134,6 @@ export const DROP_TIER_OFFSETS = [ { offset: -1, weight: 25 }, { offset: 0, weig
 // piece is of a lower tier than the place's gear twice.
 export const DROP_EMPTY_SLOT_MULT = 4;
 export const DROP_BEHIND_SLOT_MULT = 2;
-// Ordinary jewellery is Crafting's: a ring, amulet or earring only drops epic or legendary.
-export const JEWEL_DROP_MIN_RANK = 3;
 // The pity count: a boss's first fall at the hero's frontier that leaves no upgrade marks one; the
 // eighth mark brings a sure piece of the place's tier for the weakest slot (DESIGN §3.25).
 export const PITY_MARKS = 8;
@@ -186,8 +177,5 @@ export function salvageEssence(item) {
 // Crafted items give back part of their materials instead (so smithing can't farm essence).
 export const SALVAGE_MATERIAL_RETURN = 0.4;
 
+// A reroll's essence grows with each one before it, up to this many times the first (the anvil's and the bench's).
 export const MAX_REFORGE_MULT = 10;
-export function reforgeCost(item, goldPerKill = 10) {
-    const times = Math.min(MAX_REFORGE_MULT, 1 + (item.reforges || 0));
-    return { essence: 3 * (item.tier || 1) * times, gold: Math.ceil(10 * goldPerKill) };
-}

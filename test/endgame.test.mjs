@@ -283,7 +283,8 @@ test('fragments assemble the unique; uniques are legendary, locked and cannot be
 
     game.state.resources.essence = 1e6;
     game.state.gold = 1e9;
-    assert.equal(game.reforgeItem(item.id), false);
+    assert.equal(game.rerollItem(item.id), false, 'not at the anvil');
+    assert.equal(game.rerollJewel(item.id), false, 'nor at the bench');
     assert.deepEqual(item.affixes.map(a => a.stat), UNIQUES[warren.unique].affixes.map(a => a.stat));
 
     // A second copy is a spare: unlocked, so the bag rules can salvage it for essence.

@@ -142,6 +142,45 @@ export function plainXp(level, bar) {
     return Math.max(1, Math.round(best.xp * PLAIN_XP_SHARE * (bar?.powerMult || 1)));
 }
 
+// The jeweller's bench (Crafting; the owner, October 2026: "do jewellery bench"): what the anvil is to weapons and
+// armour, for the jewellery the hero wears. Upgrading a piece (+UPGRADE_STEP of its base stats a level, up to
+// MAX_UPGRADE, its own) and rerolling its bonuses take gems of its tier and essence, and no gold (they took gold and
+// essence in the Inventory before): amethyst for a tier-1 piece up to diamond for tier 6, and twice the diamonds for
+// tier 7 (the Voidstone, a boss's rare gift, is no price). Each step of upgrading takes half as many gems again as
+// the last and BENCH_LEVEL_PER_UPGRADE more Crafting, the essence the anvil's; the work pays BENCH_XP_SHARE of the gems'
+// Crafting XP (a piece made with them pays it all, and takes a bar and the time to make it; at the full XP the deep
+// fight's diamonds took the simulated hero to Crafting 92 in 150 hours, against 80 at half and Smithing's 77) and
+// practice in their jewellery's mastery, whose levels take gems off the price.
+export const BENCH_LEVEL_PER_UPGRADE = 5;
+export const BENCH_XP_SHARE = 0.5;
+export const BENCH_GEM_GROWTH = 1.5;
+export const BENCH_GEM_COST = { Ring: 1, Ear: 1, Neck: 2 };   // an amulet, the strongest piece, takes twice the gems
+/** The gem that works jewellery of a tier at the bench: { gem, mult } (twice the diamonds past their tier). */
+export function benchGem(tier) {
+    const t = Math.max(1, Math.round(Number(tier)) || 1);
+    const diamond = GEM_TIERS.findIndex(g => g.gem === 'diamond');
+    return { gem: GEM_TIERS[Math.min(t - 1, diamond)].gem, mult: Math.max(1, t - diamond) };
+}
+/** Upgrading a piece of jewellery of `type` and `tier` from `level` to the next: { gem, gems, essence, level, xp }. */
+export function benchUpgradeCost(type, level = 0, tier = 1) {
+    const next = Math.max(0, Math.floor(level) || 0) + 1;
+    const { gem, mult } = benchGem(tier);
+    const gems = Math.ceil((BENCH_GEM_COST[type] || 1) * Math.pow(BENCH_GEM_GROWTH, next - 1)) * mult;
+    return { gem, gems, essence: Math.ceil(2 * next * tier), level: BENCH_LEVEL_PER_UPGRADE * next, xp: benchXp(gem, gems) };
+}
+/** Rerolling a piece's bonuses: a piece's worth of gems, and essence that grows with each reroll (capped). */
+export function benchRerollCost(item) {
+    const tier = item.tier || 1;
+    const { gem, mult } = benchGem(tier);
+    const gems = (BENCH_GEM_COST[item.type] || 1) * mult;
+    const times = Math.min(MAX_REFORGE_MULT, 1 + (item.reforges || 0));
+    return { gem, gems, essence: 3 * tier * times, level: BENCH_LEVEL_PER_UPGRADE, xp: benchXp(gem, gems) };
+}
+/** The Crafting XP of `gems` of a gem worked at the bench. */
+function benchXp(gem, gems) {
+    return Math.round(BENCH_XP_SHARE * gems * GEM_TIERS.find(g => g.gem === gem).xp);
+}
+
 // Tools. Each tier: -TOOL_SPEED_PER_TIER interval and +TOOL_DOUBLE_PER_TIER chance of a double yield.
 // Bought in the Shop (systems/tools.js; the owner, October 2026: tools are purchases, not skill work) with the bars and
 // logs they always took, each tier once the skill it serves reaches `levelReq` (they were made in Smithing, and the bow

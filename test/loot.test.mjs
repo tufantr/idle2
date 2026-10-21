@@ -120,22 +120,29 @@ test('auto-salvage takes junk drops but never an upgrade', () => {
     assert.equal(upgrade.kept, true, 'a common that beats an empty slot is kept');
 });
 
-test('reforge rerolls affixes with a rising, capped cost; commons cannot be reforged', () => {
+test('the bench rerolls a worn piece\'s bonuses with a rising, capped essence cost; commons cannot be rerolled', () => {
     const game = new Game(null, T0);
     game.state.resources.essence = 10_000;
-    game.state.gold = 1e9;
+    game.state.resources.emerald = 100;
+    game.state.skills.crafting.xp = xpForLevel(10);
+    game.state.skills.combat.xp = xpForLevel(40);   // (a tier-4 piece is worn from combat 40)
     const epic = generateEquipment({ type: 'Ring', tier: 4, power: 10, gemName: 'Emerald', source: 'drop', rarity: RARITIES.find(r => r.id === 'epic') }, 4000);
     game.state.inventory.push(epic);
+    assert.equal(game.rerollJewel(4000), false, 'in the bag: put it on first');
+    game.equipItem(4000);
     const costs = [];
     for (let i = 0; i < 12; i++) {
         const essenceBefore = game.state.resources.essence;
-        assert.ok(game.reforgeItem(4000));
+        assert.ok(game.rerollJewel(4000));
         costs.push(essenceBefore - game.state.resources.essence);
     }
     assert.equal(epic.affixes.length, 3);
     assert.ok(costs[1] > costs[0] && costs[11] === costs[10], `costs ${costs.join(',')}`);
-    game.state.inventory.push(copperBoots(4001, 'common'));
-    assert.equal(game.reforgeItem(4001), false);
+    assert.equal(game.state.resources.emerald, 100 - 12, 'an emerald a reroll for a tier-4 ring');
+    const plain = generateEquipment({ type: 'Ring', tier: 1, power: 1, gemName: 'Amethyst', source: 'drop', rarity: RARITIES[0] }, 4001);
+    game.state.inventory.push(plain);
+    game.equipItem(4001, 'Ring2');
+    assert.equal(game.rerollJewel(4001), false, 'a common piece has no bonuses to reroll');
 });
 
 test('bosses really drop gear in play, and drops reach the bag', () => {

@@ -114,7 +114,7 @@ export function createDefaultState(now = Date.now()) {
         stats: {
             kills: 0, bossKills: 0, bossEscapes: 0, deaths: 0, maxStage: 1, goldEarned: 0, itemsCrafted: 0, barsSmelted: 0,
             minigameWins: 0, minigamePerfects: 0, minigameFinds: 0, gemsFound: 0, legendariesEquipped: 0, skills99: 0, prestiges: 0, essenceFound: 0,
-            itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, pityDrops: 0, mythicsFound: 0,
+            itemsDropped: 0, itemsSalvaged: 0, itemsAutoSalvaged: 0, reforges: 0, reinforced: 0, barsWorked: 0, jewelsUpgraded: 0, gemsWorked: 0, pityDrops: 0, mythicsFound: 0,
             dungeonClears: 0, titanKills: 0, petsFound: 0, uniquesFound: 0, uniquesAssembled: 0, potionFragments: 0,
             fishCaught: 0, baitUsed: 0, logsBurnt: 0, cropsHarvested: 0, obstaclesBuilt: 0, obstacleUpgrades: 0, courseRuns: 0, goldSpent: 0,
             clanRewards: 0, clanLastHits: 0,
@@ -373,6 +373,8 @@ function sanitizeItem(raw, ids, nextId) {
         if (Object.keys(carried).length) item.barsCarried = carried;
     }
     if (finite(raw.essenceIn, -1) >= 0) item.essenceIn = Math.min(Math.floor(raw.essenceIn), 1e9);
+    const gemsIn = Math.floor(finite(raw.gemsIn));   // gems the jeweller's bench put into a piece of jewellery (systems/bench.js)
+    if (gemsIn > 0) item.gemsIn = Math.min(gemsIn, 1e7);
     if (Number.isSafeInteger(raw.depth) && raw.depth > 0) item.depth = raw.depth;
     return item;
 }

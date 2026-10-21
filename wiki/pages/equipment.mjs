@@ -1,7 +1,7 @@
 // Equipment: how gear works, every tier (with the hero wearing its set), jewellery and the unique items.
 
 import { GEAR_TIERS, TIER_WEAR_LEVEL, SLOT_STATS, STAT_UNIT, TYPE_NAMES, RARITIES, AFFIXES, JEWEL_POWER, SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST,
-    DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, GEAR_DROP_CHANCE, JEWEL_DROP_MIN_RANK, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT,
+    DROP_TYPE_WEIGHTS, DROP_RARITY_WEIGHTS, DROP_HIGH_RARITY_PER_TIER, GEAR_DROP_CHANCE, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT,
     PITY_MARKS, MAX_UPGRADE, UPGRADE_STEP, BAG_SIZE, MAX_REFORGE_MULT, EQUIP_SLOTS, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, MYTHIC, PRIMAL } from '../../src/data/items.js';
 import { ZONES, STAGES_PER_ZONE } from '../../src/data/zones.js';
 import { DUNGEONS, UNIQUES, FRAGMENTS_PER_UNIQUE } from '../../src/data/dungeons.js';
@@ -93,7 +93,7 @@ function overviewPage(help) {
             section('Pieces and slots', `<p>A piece's attack and defence are ${STAT_UNIT} × its tier's power × its rarity's quality × its weights below (jewellery at ${pct(JEWEL_POWER, 0)} of the power). Up to +${MAX_UPGRADE} each level of reinforcing or upgrading adds ${pct(UPGRADE_STEP, 0)} of the piece's own figures; past it the anvil's levels multiply them by ${FORGE_STEP} each.</p>${slots}`),
             section('Rarities', `<p>A rarer piece is a little stronger and carries more bonuses. Epic and legendary drops grow likelier where the gear that drops is of a higher tier (up to ×${scale.toFixed(1)} for Abyssal).</p>${rarities}`),
             section('Bonuses', `<p>Each bonus rolls once, in its range, a little higher on better tiers.</p>${affixes}`),
-            section('What drops', `<p>A regular monster leaves a piece ${pct(GEAR_DROP_CHANCE.regular, 1)} of the time and a boss on its first fall half the time. The piece is mostly of the land's own tier (sometimes one below or above), and its kind leans to what you lack: a slot you have empty is ${DROP_EMPTY_SLOT_MULT} times as likely, one behind the land's tier twice. Jewellery from the fight is only epic or legendary. A boss whose fall leaves no upgrade marks the gold ring round its node; the ${PITY_MARKS}th mark brings a sure piece for your weakest slot.</p>${kindRows}`),
+            section('What drops', `<p>A regular monster leaves a piece ${pct(GEAR_DROP_CHANCE.regular, 1)} of the time and a boss on its first fall half the time. The piece is mostly of the land's own tier (sometimes one below or above), and its kind leans to what you lack: a weapon or armour slot you have empty is ${DROP_EMPTY_SLOT_MULT} times as likely, one behind the land's tier twice. Jewellery comes at every rarity, and an empty jewellery slot draws no more of it. A boss whose fall leaves no upgrade marks the gold ring round its node; the ${PITY_MARKS}th mark brings a sure piece for your weakest slot.</p>${kindRows}`),
             section('Upgrades and salvage', `<ul>
                 <li><strong>Weapons and armour</strong> are reinforced at the anvil, their slot with no top, and rerolled there: see ${link('/skills/smithing#the-anvil', 'Smithing')} and each tier's page.</li>
                 <li><strong>Jewellery</strong> is upgraded with essence (2 × the next level × its tier) and gold, and its bonuses can be reforged (essence that grows each time, up to ${MAX_REFORGE_MULT} times the first).</li>
@@ -111,7 +111,7 @@ function jewelleryPage(help) {
     });
     const best = [[1, CRAFT_MAX_RARITY], ...[...CRAFT_RARITY_LEVELS].reverse()].map(([lv, r]) => `from Crafting ${lv}: ${RARITIES.find(x => x.id === r).name.toLowerCase()}`).join('; ');
     return {
-        infobox: infobox({ title: 'Jewellery', image: icon('item/Ring/4', 3), rows: [['Slots', '2 rings, an amulet, 2 earrings'], ['Made in', link('/skills/crafting', 'Crafting')], ['Settings', JEWEL_BARS.map(b => res(b.bar)).join(' ')], ['From the fight', 'epic or legendary only']] }),
+        infobox: infobox({ title: 'Jewellery', image: icon('item/Ring/4', 3), rows: [['Slots', '2 rings, an amulet, 2 earrings'], ['Made in', link('/skills/crafting', 'Crafting')], ['Settings', JEWEL_BARS.map(b => res(b.bar)).join(' ')], ['From the fight', 'every rarity'], ['Worked at', link('/skills/crafting', 'the bench (Crafting)')]] }),
         body: [
             help.prose('/equipment/jewellery'),
             section('Crafted jewellery', `<p>Crafting levels for each piece, and its attack and defence (common, silver setting; a gold setting adds ${pct(JEWEL_BARS[1].powerMult - 1, 0)}). The best quality a crafted piece can roll: ${best}.</p>${table(['Gem', 'Tier #', 'Ring #', 'Earring #', 'Amulet #', 'Amulet atk / def', 'Ring atk / def'], rows)}`)

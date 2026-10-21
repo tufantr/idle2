@@ -8,6 +8,7 @@ import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '..
 import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, forgeMult } from '../data/workshop.js';
 import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
+import { benchCost, onBench } from '../systems/bench.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
@@ -22,7 +23,7 @@ import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
-import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
@@ -1063,19 +1064,66 @@ function anvilCard(state, item, before = null) {
     };
     const lines = [item.atk ? `${ATK_ICON} ${stat(item.atk, now)} <i>→ ${stat(item.atk, next)}</i>` : '', item.def ? `${DEF_ICON} ${stat(item.def, now)} <i>→ ${stat(item.def, next)}</i>` : ''].filter(Boolean);
     const bonuses = item.affixes?.length ? item.affixes.map(describeAffix).join(', ') : '';
-    const kept = new Set(before || []);
-    const bonusList = item.affixes?.length
-        ? `<ul class="anvil-bonuses small${before ? ' rolled' : ''}">${item.affixes.map(a => { const text = describeAffix(a); const fresh = before && !kept.has(text); return `<li${fresh ? ' class="new"' : ''}>${esc(text)}</li>`; }).join('')}</ul>`
-        : '<div class="anvil-bonuses muted small">No bonuses</div>';
     const rung = `${slotName} slot +${up} → +${up + 1}: +${step} ${what}`;
     return `<div class="anvil-card" id="anvil-${id}" style="--r:${esc(item.color || '#e2e8f0')}">
         <div class="anvil-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}${up ? `<span class="anvil-plus" title="${esc(`The ${slotName.toLowerCase()} slot's forge levels: every piece worn there has them`)}">+${up}</span>` : ''}</div>
         <div class="anvil-name">${esc(item.name)}</div>
         <div class="anvil-stats small">${lines.join(' ')}</div>
-        ${bonusList}
+        ${bonusList(item, before)}
         <div class="anvil-next small">${esc(rung)}</div>
         <div class="anvil-jobs">
             ${job('reinforce', glyph('up'), `+${up + 1}`, rung)}
+            ${job('reroll', glyph('dice'), 'Reroll', `New bonuses in place of ${bonuses || 'these'}`)}
+        </div>
+    </div>`;
+}
+
+/** A piece's bonuses on an anvil's or a bench's card, each one a reroll just brought glowing ("new"): `before`, the bonuses it had. */
+function bonusList(item, before = null) {
+    if (!item.affixes?.length) return '<div class="anvil-bonuses muted small">No bonuses</div>';
+    const kept = new Set(before || []);
+    return `<ul class="anvil-bonuses small${before ? ' rolled' : ''}">${item.affixes.map(a => { const text = describeAffix(a); const fresh = before && !kept.has(text); return `<li${fresh ? ' class="new"' : ''}>${esc(text)}</li>`; }).join('')}</ul>`;
+}
+
+/**
+ * The jeweller's bench (systems/bench.js): every piece of jewellery the hero wears, with its two jobs, upgrading it a
+ * level and rerolling its bonuses, and the gems and essence each takes. A job that can be done now glows; one that
+ * waits on Crafting names the level.
+ */
+function renderBench(state, ui = {}) {
+    const worn = ['Neck', 'Ring1', 'Ring2', 'Ear1', 'Ear2'].map(slot => state.equipped[slot]).filter(Boolean);
+    if (!worn.length) return '<p class="muted small anvil-empty">Wear a ring, an earring or an amulet to work it here.</p>';
+    // a reroll just made (main.js FI.benchReroll): its piece's new bonuses glow a few seconds
+    const rolled = ui.benchRolled && Date.now() - ui.benchRolled.at < ANVIL_ROLL_GLOW_MS ? ui.benchRolled : null;
+    return `<div class="anvil-grid">${worn.map(item => benchCard(state, item, rolled && Number(rolled.id) === Number(item.id) ? rolled.before : null)).join('')}</div>`;
+}
+
+// A piece's upgrades are its own (data/workshop.js benchUpgradeCost): the card has the piece, its +N, what the next
+// level does, its bonuses and the jobs, priced in gems of its tier and essence.
+function benchCard(state, item, before = null) {
+    const id = Number(item.id);
+    const up = item.upgrade || 0;
+    const top = up >= MAX_UPGRADE;
+    const stat = (value, level) => fmt(Math.round((value || 0) * (1 + UPGRADE_STEP * level)));
+    const line = (value, icon) => (value ? `${icon} ${stat(value, up)}${top ? '' : ` <i>→ ${stat(value, up + 1)}</i>`}` : '');
+    const job = (kind, art, label, tip) => {
+        const cost = benchCost(state, item, kind);
+        if (cost.why === 'none') return '';
+        if (cost.why === 'max') return '<span class="anvil-done">Fully upgraded</span>';
+        if (cost.why === 'level') return `<span class="req">Crafting ${cost.level}</span>`;
+        return `<button class="anvil-btn${cost.ok ? ' ready' : ''}" onclick="FI.${kind === 'upgrade' ? 'benchUpgrade' : 'benchReroll'}(${id})" ${cost.ok ? '' : 'aria-disabled="true"'} title="${esc(tip)}">
+            <span class="anvil-job">${art}<b>${label}</b></span><span class="anvil-cost">${needChips(state, { [cost.gem]: cost.gems, essence: cost.essence })}</span></button>`;
+    };
+    const bonuses = item.affixes?.length ? item.affixes.map(describeAffix).join(', ') : '';
+    const rung = top ? `+${up}: as far as the bench goes` : `+${up} → +${up + 1}: +${pct(UPGRADE_STEP, 0)} of its attack and defence`;
+    return `<div class="anvil-card bench-card" id="bench-${id}" style="--r:${esc(item.color || '#e2e8f0')}">
+        <div class="anvil-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}${up ? `<span class="anvil-plus">+${up}</span>` : ''}</div>
+        <div class="anvil-name">${esc(item.name)}</div>
+        <div class="anvil-stats small">${[line(item.atk, ATK_ICON), line(item.def, DEF_ICON)].filter(Boolean).join(' ')}</div>
+        ${bonusList(item, before)}
+        <div class="anvil-next small">${esc(rung)}</div>
+        <div class="anvil-jobs">
+            ${job('upgrade', glyph('up'), `+${up + 1}`, rung)}
             ${job('reroll', glyph('dice'), 'Reroll', `New bonuses in place of ${bonuses || 'these'}`)}
         </div>
     </div>`;
@@ -1117,6 +1165,18 @@ function toolShopItem(game, toolId) {
 
 export function renderCrafting(game, ui) {
     const state = game.state;
+    const bench = seen(state, 'bench');
+    const view = bench && ui.craftView === 'bench' ? 'bench' : 'craft';
+    return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
+        ${xpHeader(game, 'crafting', skillPotionChip(game, ui))}
+        ${bench ? segments([['craft', 'Craft'], ['bench', 'Bench']], view, 'FI.craftView', 'Crafting steps') : ''}
+        ${view === 'bench' ? renderBench(state, ui) : renderCraftStep(game, ui)}
+    </section>`;
+}
+
+/** Crafting's first step: the setting and the gem picked, and a card for each piece they make. */
+function renderCraftStep(game, ui) {
+    const state = game.state;
     const d = game.derived;
     const level = skillLevel(state, 'crafting');
     const action = state.action;
@@ -1136,15 +1196,12 @@ export function renderCrafting(game, ui) {
     }, state)).join('');
     const plainPick = { id: PLAIN, name: 'No gem', have: state.resources[bar.bar], icon: sprite('item/Ring/1', { scale: 1.25, fallback: TYPE_ICONS.Ring }), sub: 'plain',
         title: 'No gem: a plain piece, the setting alone, for less XP' };
-    return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
-        ${xpHeader(game, 'crafting', skillPotionChip(game, ui))}
-        <div class="forge-bar">
+    return `<div class="forge-bar">
             ${materialPicks('Setting', bars.map(b => ({ id: b.bar, name: `${b.name} setting`, have: state.resources[b.bar] })), bar.bar, 'FI.selectCraftBar')}
             ${materialPicks('Gem', [plainPick, ...gems.map(g => ({ id: g.gem, name: res(g.gem).name, have: state.resources[g.gem] }))], gemId, 'FI.selectCraftGem')}
             ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gemId }).mastery, plain ? 'Plain jewellery' : `${res(gem.gem).name} jewellery`)}
         </div>
-        <div class="node-grid">${cards}</div>
-    </section>`;
+        <div class="node-grid">${cards}</div>`;
 }
 
 // ---------- inventory ----------
@@ -1233,22 +1290,15 @@ export function renderItemDetail(game, id) {
     const rarity = RARITIES.find(r => r.id === item.rarity);
     const wearable = canWear(state, item);
     const locked = gearIsLocked(state);   // inside a dungeon run
-    const afford = c => state.resources.essence >= c.essence && state.gold >= c.gold;
     const atk = Math.round((item.atk || 0) * mult);
     const def = Math.round((item.def || 0) * mult);
-    const cost = itemUpgradeCost(game, item);
-    // Upgrading and reforging cost essence: they show once the player has met essence. Weapons and
-    // armour are worked at the anvil instead (a step of Smithing): the worn ones say so.
-    const essence = seen(state, 'essence') && !onAnvil(item);
+    // Worn gear is worked where its skill works it: weapons and armour at the anvil (a step of Smithing), jewellery at
+    // the bench (a step of Crafting); the detail says so with a button that goes there.
     const anvilBtn = onAnvil(item) && slot && seen(state, 'anvil') && isUnlocked(state, 'smithing')
         ? `<button class="mini-btn" onclick="FI.toAnvil(${itemId})" title="Reinforce it and reroll its bonuses with bars">${glyph('up')} Anvil</button>` : '';
-    const upgradeBtn = !essence ? anvilBtn : up < MAX_UPGRADE
-        ? `<button class="mini-btn" onclick="FI.upgrade(${itemId})" ${afford(cost) ? '' : 'disabled'} title="+5% base stats per level">${glyph('up')} Upgrade to +${up + 1}: ${resIcon('essence')} ${cost.essence} ${coinIcon()} ${fmt(cost.gold)}</button>`
-        : '<span class="muted small">Fully upgraded</span>';
-    const reforge = itemReforgeCost(game, item);
-    const reforgeBtn = essence && item.affixes?.length && !item.uniqueId
-        ? `<button class="mini-btn" onclick="FI.reforge(${itemId})" ${afford(reforge) ? '' : 'disabled'} title="Reroll this item's affixes (the cost rises with each reforge)">${glyph('dice')} Reforge: ${resIcon('essence')} ${reforge.essence} ${coinIcon()} ${fmt(reforge.gold)}</button>`
-        : '';
+    const benchBtn = onBench(item) && slot && seen(state, 'bench') && isUnlocked(state, 'crafting')
+        ? `<button class="mini-btn" onclick="FI.toBench(${itemId})" title="Upgrade it and reroll its bonuses with gems">${glyph('up')} Bench</button>` : '';
+    const upgradeBtn = forged ? anvilBtn : benchBtn;
     const salvage = salvagePreview(item);
     const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([mid, q]) => `~${q.toFixed(1)} ${RESOURCES[mid].name}`)].filter(Boolean).join(', ') || 'nothing';
     const source = item.source === 'drop' ? 'dropped' : item.source === 'unique' ? 'unique' : 'crafted';
@@ -1283,7 +1333,7 @@ export function renderItemDetail(game, id) {
         ${locked ? '<div class="req">Gear is locked until the dungeon run ends</div>' : ''}
         <div class="detail-actions">
             ${slot ? `<button class="mini-btn" onclick="FI.unequip('${slot}')" ${locked ? 'disabled' : ''}>Take off</button>` : `<button class="prestige-btn" onclick="FI.equip(${itemId})" ${wearable && !locked ? '' : 'disabled'}>Equip</button>`}
-            ${upgradeBtn}${reforgeBtn}
+            ${upgradeBtn}
             ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">${resIcon('essence')} Salvage${forged && salvage.essence ? `: +${fmt(salvage.essence)} essence for the forge` : ''}</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell for ${fmt(itemSellValue(item))}</button>`}
         </div>
     </div>`;

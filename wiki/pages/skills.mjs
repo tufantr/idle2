@@ -3,8 +3,8 @@
 
 import { SKILLS, GATHERING_SKILLS, PRODUCTION_SKILLS } from '../../src/data/skills.js';
 import { RESOURCES } from '../../src/data/resources.js';
-import { CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, PLAIN_XP_SHARE, plainXp, reinforceCost, FORGE_STEP, FORGE_BAR_GROWTH, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
-import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES, GEAR_TIERS } from '../../src/data/items.js';
+import { CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, PLAIN_XP_SHARE, plainXp, benchUpgradeCost, benchGem, BENCH_LEVEL_PER_UPGRADE, BENCH_GEM_GROWTH, reinforceCost, FORGE_STEP, FORGE_BAR_GROWTH, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
+import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, UPGRADE_STEP, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES, GEAR_TIERS } from '../../src/data/items.js';
 import { CROPS, FARMING_PLOTS } from '../../src/data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL, obstacleUpgradeGold, obstacleUpgradeLevelReq } from '../../src/data/agility.js';
 import { courseDef } from '../../src/systems/agility.js';
@@ -145,11 +145,16 @@ function craftingSections() {
     // plain pieces: their XP follows the best gem the jeweller can set
     const plain = table(['From Crafting level', ...JEWEL_BARS.map(b => `${b.name} setting XP #`)], GEM_TIERS.filter(g => g.gem !== 'voidstone').map(g => [g.levelReq, ...JEWEL_BARS.map(b => (g.levelReq >= b.levelReq ? fmt(plainXp(g.levelReq, b)) : '–'))]), { sort: false });
     const best = [[1, CRAFT_MAX_RARITY], ...[...CRAFT_RARITY_LEVELS].reverse()].map(([lv, r]) => `<li>From level ${lv}: up to <strong>${esc(RARITIES.find(x => x.id === r).name)}</strong></li>`).join('');
+    const benchTable = table(['Level', 'Crafting #', 'Ring or earring, gems #', 'Amulet, gems #', 'Essence (tier 1) #', 'XP (tier 1) #'], Array.from({ length: MAX_UPGRADE }, (_, i) => {
+        const ring = benchUpgradeCost('Ring', i, 1), neck = benchUpgradeCost('Neck', i, 1);
+        return [`+${i + 1}`, ring.level, ring.gems, neck.gems, ring.essence, `${fmt(ring.xp)} / ${fmt(neck.xp)}`];
+    }), { sort: false });
     const pouches = GOLD_SHOP.filter(e => e.craft).map(e => `<li>${link('/shop', esc(e.name))}: ${resList(e.gives)}, while Crafting is ${e.craft[0]}–${e.craft[1]}</li>`).join('');
     return [
         section('Jewellery', `<p>A ring, earring or amulet is a precious bar set with a gem: ${JEWEL_BARS.map(b => `${res(b.bar)} from level ${b.levelReq}${b.powerMult > 1 ? ` (+${pct(b.powerMult - 1, 0)} power)` : ''}`).join(', ')}. The gem sets the piece's tier and power; rings come first, amulets last. A Voidstone piece is cut to the deepest depth of the Abyss you have reached: past depth ${BALANCE.abyss.dropScalingFrom}, every depth makes it ${BALANCE.abyss.dropGrowth} times as strong, like the gear that drops there.</p>${jewels}
             <p>The best quality a piece can roll rises with your level:</p><ul>${best}</ul>`, { id: 'jewellery' }),
         section('Plain pieces', `<p>With no gem, a ring, earring or amulet is the setting alone: one bar, at the setting's level (rings first, earrings ${CRAFT_SLOT_OFFSET.Ear} levels later, amulets ${CRAFT_SLOT_OFFSET.Neck}). It is as weak as an amethyst piece, and teaches ${pct(PLAIN_XP_SHARE, 0)} of what a piece of the best gem you can set teaches, a gold setting ${pct(JEWEL_BARS[1].powerMult - 1, 0)} more; the Voidstone sets no pace for it.</p>${plain}`, { id: 'plain' }),
+        section('The bench', `<p>From Crafting ${BENCH_LEVEL_PER_UPGRADE}, the bench works the jewellery your hero wears: it upgrades a piece a level (+${pct(UPGRADE_STEP, 0)} of its attack and defence, up to +${MAX_UPGRADE}) or rerolls its bonuses, with gems of its tier and essence, and no gold. Each level takes ${BENCH_GEM_GROWTH} times the gems of the one before and ${BENCH_LEVEL_PER_UPGRADE} more Crafting, and pays half the gems' XP (a piece made with them pays it all). The gems: ${[1, 2, 3, 4, 5, 6].map(t => `${res(benchGem(t).gem)} for tier ${t}`).join(', ')}, twice the diamonds for tier 7.</p>${benchTable}`, { id: 'bench' }),
         section('Gem pouches', `<p>So that Crafting can be trained at any point, the Shop sells the low gems for gold, one pouch at a time as your level climbs:</p><ul>${pouches}</ul>`)
     ].join('\n');
 }

@@ -187,6 +187,22 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   with the pouches at 4–18 kills (§3.8) 8–12 / 90–150 / 970–1,600 h; with plain pieces and the pace below
   (§5.1) about 6 / 48 / 414 h. In the simulator (12 seeds, 150 h) the climb is unchanged (best stage 140 / 270 /
   770 at 10 / 50 / 150 h against 140 / 275 / 770) and its player's Crafting ends at 50 instead of 46.
+- **The jeweller's bench** (the owner, 21 October 2026: "do jewellery bench"; `src/systems/bench.js`, from
+  Crafting 5): what the anvil is to weapons and armour, for the jewellery the hero wears, on the Crafting tab's
+  second step (`benchCard` in render.js; a worn piece's detail has a Bench button). Upgrading a piece (+5% of its
+  base stats a level, to +10, the piece's own) and rerolling its bonuses take gems of its tier (`benchGem`:
+  amethyst for tier 1 up to diamond for tier 6, twice the diamonds for tier 7, the Voidstone being too rare to
+  be a price) and essence, and no gold. Step n takes `ceil(gems × 1.5^(n−1))` gems (a ring or an earring 1, an
+  amulet 2: 119 and 231 to +10), `2 × n × tier` essence and Crafting `5n`; a reroll a piece's worth of gems and
+  the anvil's rising essence. The work pays half the gems' Crafting XP (`BENCH_XP_SHARE`; a piece made with
+  them pays it all, and takes a bar and its time: at the full XP the deep fight's diamonds took the simulated
+  hero to Crafting 92 in 150 hours, against 80 at half, its Smithing 77) and practice in their jewellery's
+  mastery, whose levels take gems off the price, and the gems an upgrade took come back three quarters on
+  salvage. In the simulator (12 seeds, 150 h) the climb is as before (best stage 280 / 540 / 770 at 50 / 100 /
+  150 h against 270 / 540 / 770), and a new player's first hour too (stage 70 for one who watches, 60 before;
+  78 for one who taps, 79).
+  It is the sink the deep heroes' diamonds lacked (thousands, unusable below Crafting 70), and jewellery
+  drops at every rarity with it (§3.25).
 - **Crafted gear rolls Common to Rare**, forged and below Crafting 75 alike. Jewellery's best rises with
   Crafting (October 2026, §5.7): Epic possible from level 75, Legendary at 99, at the roll's own odds
   (about 3% and under 1% a piece, more with the quality bonuses; `CRAFT_RARITY_LEVELS` in `src/data/items.js`).
@@ -225,14 +241,16 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
 - **Upgrades:** +5% base stats per level, max +10. Weapons and armour are reinforced at the anvil
-  with bars and essence (§3.4). Jewellery is upgraded with `2 × level × tier` essence plus
-  `4 × level × (gold per kill at your best stage)` gold, so the price keeps pace with gold income.
-- **Reforge:** rerolls an item's affixes (not its rarity or base stats) for `3 × tier × min(10, 1 +
-  reforges so far)` essence and, for jewellery, 10 kills of gold (weapons and armour: bars, at the anvil).
+  with bars and essence (§3.4), jewellery at the jeweller's bench with gems and essence (§3.4); neither
+  takes gold. (Jewellery was upgraded in the Inventory with `2 × level × tier` essence plus 4 kills' gold a
+  level until 21 October 2026; the levels it got there stay with it.)
+- **Reroll** (reforge): an item's affixes rolled again (not its rarity or base stats) for `3 × tier × min(10,
+  1 + rerolls so far)` essence and a piece's worth of its material: bars at the anvil, gems at the bench.
 - **Salvage:** dropped gear → essence (`ceil(0.8 × tier × (rarity rank + 1))`), crafted gear → ~40% of
   its bars back (whole bars, fair on average). Either way, half of the essence spent upgrading the
   item comes back. A dropped weapon or piece of armour also gives bars of its metal (1 common … 5
-  legendary, ×2 / ×3 past runite), and any of them three quarters of the bars reinforcing it took.
+  legendary, ×2 / ×3 past runite), and any of them three quarters of the bars reinforcing it took; a piece
+  of jewellery three quarters of the gems the bench put into it (`gemsIn`).
 - **Bag and lock:** 40 rolled items, and 5 more for each bag upgrade bought with gold (up to 12, a bag
   of 100), priced like the gold shop at 150 kills' worth of gold at the best stage, ×1.5 each time
   (`BAG_UPGRADE`; October 2026, the owner's ask: the bag sat at 40/40, and gold piles up). Overflow
@@ -1364,8 +1382,10 @@ owner's choice of option 1a):
   60 / 35 / 5 while forging carried the tiers). **What the hero lacks comes more often:** a kind with
   an empty slot is four times as likely, one whose worn piece is of a lower tier than the place's
   twice (`dropTypesFor` in `src/systems/inventory.js`; chests too).
-- **Ordinary jewellery is Crafting's:** a ring, amulet or earring drops only epic or legendary (the
-  rarity is rolled first; a lower one picks among weapons and armour).
+- **Jewellery drops at every rarity** (since 21 October 2026, with the jeweller's bench, §3.4; it was epic
+  or legendary only while Crafting was to make the ordinary pieces). An empty jewellery slot takes no ×4:
+  with five of them empty, a new hero's drops would have been nearly a third rings and amulets in place of
+  the armour he needs first.
 - **The bosses' due** (pity): a boss's first fall in a run, where a common piece of the place's tier
   at its Abyss depth would outscore one of the hero's worn weapon or armour (`laggingSlot`: worn
   score under 95% of it, an empty slot always), marks one when it leaves no upgrade; the eighth mark

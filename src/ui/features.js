@@ -16,7 +16,7 @@ import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { POTION_MINUTES } from '../data/potions.js';
-import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE } from '../data/workshop.js';
+import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE, BENCH_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
@@ -57,7 +57,8 @@ export const FEATURES = {
             `A bottle lasts ${POTION_MINUTES} minutes of its work, and the next is drunk as it runs out.`] },
     crafting: { name: 'Crafting', art: 'workshop', icon: 'item/Ring/4', blurb: SKILLS.crafting.desc,
         points: ['Jewellery is a precious bar set with a gem. It adds a little attack and defence and carries the most bonuses.', 'Gems turn up while mining and drop from monsters.',
-            `Out of gems? A plain piece is the setting alone, a bar and no gem, for ${pc(PLAIN_XP_SHARE)} of the XP of your best gem.`] },
+            `Out of gems? A plain piece is the setting alone, a bar and no gem, for ${pc(PLAIN_XP_SHARE)} of the XP of your best gem.`,
+            `From level ${BENCH_LEVEL_PER_UPGRADE}, the bench upgrades the jewellery you wear and rerolls its bonuses, with gems of its tier and essence.`] },
     farming: { name: 'Farming', art: 'farm', icon: 'farm/growing', blurb: 'Plots grow on the clock while you do something else.',
         points: ['Seeds are bought with gold when you plant.', 'Herbs go to Alchemy; potatoes, cabbages, pumpkins and starfruit to Cooking.', 'A hoe makes crops grow faster.'] },
     agility: { name: 'Agility', art: 'course', icon: 'item/Boots/3', blurb: 'Build an obstacle course, then run it to train.',

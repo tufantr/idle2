@@ -8,7 +8,7 @@ import { CAMP_UPGRADES } from '../data/camp.js';
 import { RESOURCES } from '../data/resources.js';
 import { NON_COMBAT_SKILLS, SKILLS } from '../data/skills.js';
 import { STAGES_PER_ZONE } from '../data/zones.js';
-import { ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
+import { ANVIL_LEVEL_PER_UPGRADE, BENCH_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { SMITHING_TYPES } from '../data/items.js';
 import { levelForXp } from '../core/xp.js';
 import { BALANCE } from '../core/formulas.js';
@@ -55,6 +55,8 @@ export const DISCLOSURES = [
     { id: 'auto_salvage', when: s => s.stats.itemsDropped >= 10 },
     // the skill tabs
     { id: 'anvil',        when: s => levelForXp(s.skills.smithing.xp) >= ANVIL_LEVEL_PER_UPGRADE || SMITHING_TYPES.some(t => (s.forge?.[t]?.level || 0) > 0) },   // Smithing's anvil: the first reinforcing a smith can do
+    // Crafting's bench (systems/bench.js): the first upgrade a jeweller can do, or a piece upgraded before the bench
+    { id: 'bench',        when: s => levelForXp(s.skills.crafting.xp) >= BENCH_LEVEL_PER_UPGRADE || gear(s).some(item => JEWELLERY.has(item.type) && (item.upgrade || 0) > 0) },
     // Hunting's river spots: once the kitchen has been used (as Fishing opened, before it joined Hunting)
     { id: 'river',        when: s => (s.stats.actionsBySkill.cooking || 0) >= 5 || (s.stats.fishCaught || 0) > 0 || RIVER_CATCH.some(id => s.resources[id] > 0) },
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },

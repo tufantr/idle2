@@ -39,7 +39,8 @@ import { skillLevel } from '../src/core/modifiers.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../src/data/perks.js';
 import { CAMP_UPGRADES, CAMP_GOLD } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
-import { itemUpgradeCost, itemScore, goldShopPrice, goldShopOpen } from '../src/systems/inventory.js';
+import { itemScore, goldShopPrice, goldShopOpen } from '../src/systems/inventory.js';
+import { benchCost } from '../src/systems/bench.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
 import { resolveAction } from '../src/systems/skilling.js';
@@ -65,7 +66,7 @@ const SEED = Number(args.seed || 1);
 const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
-// --without=dungeons,titan,farming,agility,anvil,camp,perks,crafting,essence: the bot leaves those alone
+// --without=dungeons,titan,farming,agility,anvil,bench,camp,perks,crafting,essence: the bot leaves those alone
 // (restricted play: what each system is worth, robust-and-fun/D §2.3). food, potions, or consumables (both):
 // it neither makes nor uses them, and eats nothing (what they are worth to a push, DESIGN §3.6).
 const WITHOUT = new Set(String(args.without || '').split(',').filter(Boolean));
@@ -129,7 +130,7 @@ const S = game.state;
 
 // Where the gold goes: wrap every gold sink and record the gold it removed.
 const spentOn = {};
-for (const [method, label] of [['buyCampUpgrade', 'camp'], ['upgradeItem', 'upgrades'], ['reforgeItem', 'reforges'], ['buyGoldShopItem', 'supplies'], ['plant', 'seeds'], ['harvestAll', 'seeds'], ['buildObstacle', 'agility']]) {
+for (const [method, label] of [['buyCampUpgrade', 'camp'], ['buyGoldShopItem', 'supplies'], ['plant', 'seeds'], ['harvestAll', 'seeds'], ['buildObstacle', 'agility']]) {
     const original = game[method].bind(game);
     game[method] = (...a) => { const before = S.gold; const r = original(...a); spentOn[label] = (spentOn[label] || 0) + Math.max(0, before - S.gold); return r; };
 }
@@ -372,6 +373,11 @@ function spendPoints() {
     for (const slot of WITHOUT.has('anvil') ? [] : ARMOUR_PRIORITY) {
         const item = S.equipped[slot];
         for (let g = 0; item && g < 200 && anvilCost(S, item).ok; g++) game.reinforceItem(item.id);
+    }
+    // Gems and essence into the worn jewellery at the bench, the amulet first (systems/bench.js).
+    for (const slot of WITHOUT.has('bench') ? [] : ['Neck', 'Ring1', 'Ring2', 'Ear1', 'Ear2']) {
+        const item = S.equipped[slot];
+        for (let g = 0; item && g < 20 && benchCost(S, item).ok; g++) game.upgradeJewel(item.id);
     }
     buyCamp();
 }

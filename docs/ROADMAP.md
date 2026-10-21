@@ -1344,6 +1344,11 @@ Keeping it running:
       minigame if needed"; "there is nothing wrong with using mouse macro"): with macros fair play the chain had no
       purpose, and in real Chrome under ~2,000 clicks a second only the builds with it stalled. The fight is as it was
       before it, and a click inside the strike's quarter second costs nothing now (DESIGN §3.6)
+- [x] **The jeweller's bench** (the owner, 21 October 2026: "do jewellery bench"): Crafting's second step, from level
+      5, upgrades the jewellery the hero wears (+5% a level to +10) and rerolls its bonuses with gems of its tier and
+      essence, and no gold, for half the gems' Crafting XP and their mastery; the Inventory's gold upgrade and reforge for jewellery
+      are gone (their levels stay). Jewellery drops at every rarity (an empty jewellery slot takes no ×4 tilt). Checked
+      in a browser at both widths (DESIGN §3.4, §3.5, §3.25)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
