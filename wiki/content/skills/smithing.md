@@ -7,7 +7,7 @@ Smithing is the workshop at the heart of the game: it turns ore into bars, bars 
 ## What it is for
 
 - **Bars.** Smelting turns ore into bars, with [[Coal]] for the {{SMELTING_RECIPES.filter(r => r.consumes.coal).map(r => r.name.replace(/ Bar$/, '').toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1')}} bars. Copper, iron, mithril, adamant and runite bars work gear at the anvil and go into tools, bows, rods and the [[/skills/agility|agility]] course; [[Silver Bar|silver]] and [[Gold Bar|gold]] bars are only for jewellery in [[/skills/crafting|Crafting]].
-- **Tools.** Pickaxes, axes, tinderboxes and hoes are forged here, each tier faster than the last (see [[Tools]]).
+- **Bars for tools.** Pickaxes, axes, tinderboxes, hoes and bows are bought in the [[/shop|Shop]] with bars and logs (see [[Tools]]).
 - **A first set of gear.** Copper bars forge a weapon and armour for a new hero. Every stronger piece drops in the fight ([[Equipment]]).
 - **The anvil.** From Smithing {{ANVIL_LEVEL_PER_UPGRADE}}, the slots of the weapons and armour you wear can be reinforced, with no top (up to +{{MAX_UPGRADE}} each level adds {{pct(UPGRADE_STEP, 0)}} of a piece's attack and defence; past it each multiplies them by {{FORGE_STEP}}), and a piece's bonuses rerolled. Both take bars of the metal of the best piece the slot has held, and [[Monster Essence|essence]].
 
@@ -22,6 +22,6 @@ Two rules keep the anvil's work from going to waste:
 ## Training tips
 
 - Smelt copper from the start, then iron at level {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').levelReq}}, once [[/skills/mining|Mining]] reaches the coal. Smelting is the steady XP.
-- Forge a copper pickaxe and axe early (Smithing {{TOOLS.pickaxe.tiers[0].levelReq}}): faster gathering soon repays them.
+- Smelt a few copper bars early for a Copper Pickaxe and Axe from the Shop (Mining and Woodcutting {{TOOLS.pickaxe.tiers[0].levelReq}}): faster gathering soon repays them.
 - Reinforce freely: the levels stay with the slot, so the next piece of that kind has them too. Past +{{MAX_UPGRADE}} each level asks one Smithing level more (up to 99), more bars and more essence.
 - A metal's [[Mastery|mastery]] grows with the bars you work, and takes bars off the anvil's price.

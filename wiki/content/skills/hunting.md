@@ -26,7 +26,7 @@ Hunting has two pets to find: {{PETS.filter(p => p.skill === 'hunting').map(p =>
 
 ## Training tips
 
-- **Make a bow** once Crafting is open: the Shortbow needs Crafting {{TOOLS.bow.tiers[0].levelReq}} ({{resList(TOOLS.bow.tiers[0].consumes)}}). Bows go up to {{TOOLS.bow.tiers.length}} tiers, the last made with [[Magic Logs]].
+- **Buy a bow** in the [[/shop|Shop]]: the Shortbow needs Hunting {{TOOLS.bow.tiers[0].levelReq}} ({{resList(TOOLS.bow.tiers[0].consumes)}}). Bows go up to {{TOOLS.bow.tiers.length}} tiers, the last made with [[Magic Logs]].
 - **Move up as spots open.** A newer spot never gives less XP an hour than the ones before it, and what it brings cooks into better food. The forest and the river open at the same levels, so pick either.
 - **Bring bait to the river.** More fish for the same time means more food for the same XP, and nothing is lost when you run out.
 - **Weekends help.** During the {{EVENTS.find(e => e.id === 'harvest_festival').name}}, Hunting is +{{pct(EVENTS.find(e => e.id === 'harvest_festival').mods.skillSpeed.hunting, 0)}} faster, and {{EVENTS.find(e => e.id === 'miners_rush').name}} speeds up every gathering skill.

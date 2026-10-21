@@ -146,11 +146,14 @@ herb 4, crop 3, potion 30. Selling is a bootstrap; combat gold is the real econo
 
 ### 3.3 Tools
 
-Crafted, not bought (`src/data/workshop.js`): pickaxes, axes, tinderboxes and hoes are forged in
-Smithing; bows are made in Crafting (the bow serves Hunting's river too: the fishing rod went with Fishing). Each tier gives **+5% speed and +5% "double"
-chance** to its skill (tier 5 pickaxe: +25% speed, 25% doubles). For the tinderbox the double is a log
-that burns twice (XP and bonfire time); for the hoe, speed is crop growth and the double is a double
-harvest. Tools are the main reason a gathering player visits the workshop and a smith visits the woods.
+Bought in the Shop (`src/systems/tools.js`, `src/data/workshop.js`; October 2026, the owner: tools are purchases,
+not skill work, as Melvor sells its axes and rods): pickaxes, axes, tinderboxes, hoes and bows (the bow serves Hunting's
+river too: the fishing rod went with Fishing), each tier for the bars and logs it always took, once the skill it serves
+reaches its level (they were made in Smithing, and the bow in Crafting, at those levels of the maker's skill, for a
+sliver of its XP: about 3,500 in all). The Shop's button shows ▲ when a better one can be bought. Each tier gives
+**+5% speed and +5% "double" chance** to its skill (tier 5 pickaxe: +25% speed, 25% doubles). For the tinderbox the
+double is a log that burns twice (XP and bonfire time); for the hoe, speed is crop growth and the double is a double
+harvest. Their bars and logs are still why a gatherer visits the smithy and a smith the woods.
 
 ### 3.4 Workshop
 

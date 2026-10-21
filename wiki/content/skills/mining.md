@@ -19,7 +19,7 @@ Pick a vein and your hero keeps digging, swing after swing, until you give other
 ## Training tips
 
 - **Mine coal early.** Iron bars take {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').consumes.coal}} coal each, mithril and adamant {{SMELTING_RECIPES.find(r => r.id === 'mithril_bar').consumes.coal}}, runite {{SMELTING_RECIPES.find(r => r.id === 'runite_bar').consumes.coal}}. The Coal Seam opens at level {{SKILLS.mining.nodes.find(n => n.id === 'coal').levelReq}}, and the [[Shop]] sells coal by the wagon when you are short.
-- **Get a pickaxe.** The copper one needs Smithing {{TOOLS.pickaxe.tiers[0].levelReq}}: {{resList(TOOLS.pickaxe.tiers[0].consumes)}}. Each tier is +{{pct(TOOL_SPEED_PER_TIER, 0)}} speed and +{{pct(TOOL_DOUBLE_PER_TIER, 0)}} doubles.
+- **Get a pickaxe** in the [[/shop|Shop]]. The copper one needs Mining {{TOOLS.pickaxe.tiers[0].levelReq}} and costs {{resList(TOOLS.pickaxe.tiers[0].consumes)}}. Each tier is +{{pct(TOOL_SPEED_PER_TIER, 0)}} speed and +{{pct(TOOL_DOUBLE_PER_TIER, 0)}} doubles.
 - **Silver and gold are for jewellery.** [[Silver Ore]] and [[Gold Ore]] only become precious bars for Crafting, so mine them when you want rings and amulets.
 - **Move up as veins open.** Late veins give less XP than their base ([[Skills|Melvor pace]]), but never less XP an hour than the veins before them, so the newest vein is always worth a try. Sticking with one vein for a while also builds its mastery.
 - **Mining feeds everything.** When a skill further down the line stalls for want of materials, a stretch of mining is usually the cure.

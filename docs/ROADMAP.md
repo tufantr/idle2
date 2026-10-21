@@ -1306,6 +1306,10 @@ Keeping it running:
       fast one. A wrong click does nothing; random clicking almost never finishes one. Clicking the monster now
       strikes only the clan boss; the guide's hand shows the first chain (DESIGN §3.6). Checked in a browser at
       both widths
+- [x] **Tools in the Shop** (the owner, 21 October 2026: tools are purchases, not skill work): pickaxes, axes,
+      tinderboxes, hoes and bows bought in the Shop's Tools panel for the bars and logs they always took, each tier
+      once the skill it serves reaches its level; the Shop's button shows ▲ when one is ready. Smithing's Tools step
+      and Crafting's bows are gone (DESIGN §3.3)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

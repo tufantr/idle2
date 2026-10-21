@@ -2888,3 +2888,11 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
     .cel-tile { height: 52px; }
     .cel-tile span { font-size: 0.7rem; }
 }
+
+/* the Shop's tools (systems/tools.js): the price is the bars and logs, each one short shown dim; the level a tier waits for under its words */
+.tool-price { gap: 0.55rem; }
+.tool-price > span { display: inline-flex; align-items: center; gap: 0.15rem; }
+.tool-price > span.short { opacity: 0.45; }
+.shop-item-req { font-size: 0.75rem; font-weight: 700; color: #fca5a5; }
+.tool-item.ready { border-color: rgba(250, 204, 21, 0.6); box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 0 16px rgba(250, 204, 21, 0.18); }
+.tool-item.best { opacity: 0.75; }

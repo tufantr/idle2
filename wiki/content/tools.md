@@ -17,12 +17,12 @@ What a double is depends on the skill:
 
 Other bonuses add to the same speed and doubles: [[Mastery]], [[Pets]], [[Perks]], [[Medals]] and [[Skill capes]].
 
-## Who makes them
+## Where to get them
 
-Pickaxes, axes, tinderboxes and hoes are made in [[Smithing]], in its Tools step; bows are made in [[Crafting]]. Each tier takes bars and logs (the tables below) and pays XP in the skill that makes it.
+Tools are bought in the [[/shop|Shop]], once it has opened, in its Tools panel. Each tier costs bars and logs (the tables below) and waits until the skill it serves reaches its level: the Iron Pickaxe needs Mining {{TOOLS.pickaxe.tiers[1].levelReq}}, for one. The Shop's button in the side bar shows a ▲ when a better tool is ready to buy. (Until October 2026 they were made in Smithing, and bows in Crafting.)
 
 ## A better tool replaces the old one
 
-- A tool is made once, as a short piece of work, and the tiers come in order: make each one before the next.
-- A new tier replaces the old one. There is only ever one tool of each kind, the best you have made, and nothing to wear or pick: it works from the moment it is made, whatever your hero is doing.
+- The tiers come in order: buy each one before the next.
+- A new tier replaces the old one. There is only ever one tool of each kind, the best you have bought, and nothing to wear or pick: it works from the moment it is bought, whatever your hero is doing.
 - Tools are kept for good, through every [[Prestige|prestige]].

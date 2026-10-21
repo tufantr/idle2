@@ -21,6 +21,7 @@ import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js'
 import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
+import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
 import { goldShopPrice, goldShopOpen, itemUpgradeCost, itemReforgeCost, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
@@ -147,6 +148,7 @@ function readyBadge(game, id) {
         return whole ? pill('!', `${UNIQUES[whole.unique]?.name || 'A unique'} is ready to assemble`, 'gold') : '';
     }
     if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
+    if (id === 'shop') return toolReady(state) ? pill('▲', 'A better tool is ready to buy') : '';
     return '';
 }
 
@@ -767,7 +769,7 @@ function toolEffect(toolId, tier) {
     return `+${speed}% ${SKILLS[tool.skill].name} speed, +${dbl}% double yield`;   // a speed bonus, as for the hoe and tinderbox (the time falls by less)
 }
 
-/** The tool in hand, once there is one (Smithing's Tools step shows what can be made). */
+/** The tool in hand, once there is one (the Shop sells the next: systems/tools.js). */
 function toolBadge(game, skillId) {
     const skill = SKILLS[skillId];
     if (!skill.tool) return '';
@@ -999,7 +1001,7 @@ export function renderSmithing(game, ui) {
     const level = skillLevel(state, 'smithing');
     const action = state.action;
     const anvil = seen(state, 'anvil');
-    const view = ['smelt', 'forge', 'tools', ...(anvil ? ['anvil'] : [])].includes(ui.smithView) ? ui.smithView : 'smelt';
+    const view = ['smelt', 'forge', ...(anvil ? ['anvil'] : [])].includes(ui.smithView) ? ui.smithView : 'smelt';   // (tools are bought in the Shop now)
     let body = '';
     if (view === 'smelt') {
         body = `<div class="node-grid">${withNext(SMELTING_RECIPES, r => r.levelReq, level).map(r => {
@@ -1029,13 +1031,10 @@ export function renderSmithing(game, ui) {
             <div class="node-grid">${cards}</div>`;
     } else if (view === 'anvil') {
         body = renderAnvil(state);
-    } else {
-        const tools = ['pickaxe', 'axe', 'tinderbox', 'hoe'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
-        body = `<div class="node-grid">${tools.map(toolId => renderToolCard(game, toolId)).join('')}</div>`;
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
         ${xpHeader(game, 'smithing', skillPotionChip(game, ui))}
-        ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ...(anvil ? [['anvil', 'Anvil']] : []), ['tools', 'Tools']], view, 'FI.smithView', 'Smithing steps')}
+        ${segments([['smelt', 'Smelt'], ['forge', 'Forge'], ...(anvil ? [['anvil', 'Anvil']] : [])], view, 'FI.smithView', 'Smithing steps')}
         ${body}
     </section>`;
 }
@@ -1096,22 +1095,24 @@ function materialPicks(label, options, picked, handler) {
     return `<div class="material-picks"><span class="loadout-label">${label}</span><div class="pick-row" role="group" aria-label="${label}">${tiles}</div></div>`;
 }
 
-function renderToolCard(game, toolId) {
+/**
+ * A tool in the Shop (systems/tools.js): its next tier, what it does for its skill, and its bars and logs as the price
+ * (each one short shown dim); the skill's level it waits for, if it does. At its best, said so.
+ */
+function toolShopItem(game, toolId) {
     const state = game.state;
-    const d = game.derived;
     const tool = TOOLS[toolId];
-    const owned = state.tools[toolId] || 0;
-    const next = tool.tiers.find(t => t.tier === owned + 1);
-    const icon = sprite(`tool/${toolId}`, { scale: 1.5, fallback: tool.icon });
-    const best = picBand(cardPic(`tool_${toolId}`, tool.madeBy === 'crafting' ? 'jeweller' : 'smithy'));
-    if (!next) return `<div class="node-card locked${best ? ' has-pic' : ''}">${best}<div class="skill-action-art">${icon}</div><div class="node-name">${esc(tool.tiers[tool.tiers.length - 1].name)}</div><div class="muted small">The best there is</div></div>`;
-    const level = skillLevel(state, tool.madeBy);
-    return recipeCard({
-        title: next.name, icon, pic: cardPic(`tool_${toolId}`, tool.madeBy === 'crafting' ? 'jeweller' : 'smithy'), color: '#facc15', inputs: Object.entries(next.consumes), note: toolEffect(toolId, next.tier),
-        skill: tool.madeBy, xp: Math.round(next.xp * d.xpMult), baseXp: next.xp, interval: actionInterval(4000, d, tool.madeBy), baseInterval: 4000,
-        active: state.action?.kind === 'tool' && state.action.tool === toolId, stalled: state.action?.stalled,
-        onclick: `FI.makeTool('${toolId}', ${next.tier})`, disabled: level < next.levelReq, reqText: `${SKILLS[tool.madeBy].name} ${next.levelReq}`
-    }, state);
+    const buy = toolPurchase(state, toolId);
+    const icon = toolIcon(toolId, { scale: 1.5 });
+    if (!buy.next) return `<div class="shop-item tool-item best"><div class="shop-art">${icon}</div>
+        <div class="shop-item-info"><span class="shop-item-name">${esc(tool.tiers[tool.tiers.length - 1].name)}</span><span class="shop-item-desc">The best there is: ${toolEffect(toolId, tool.tiers.length)}</span></div></div>`;
+    const price = Object.entries(buy.next.consumes).map(([id, qty]) => `<span class="${(state.resources[id] || 0) < qty ? 'short' : ''}" title="${esc(`${qty} ${res(id).name} (you have ${fmt(state.resources[id] || 0)})`)}">${fmt(qty)} ${resIcon(id)}</span>`).join(' ');
+    const waits = buy.why === 'level' ? `<span class="shop-item-req">${esc(SKILLS[tool.skill].name)} ${buy.next.levelReq}</span>` : '';
+    return `<div class="shop-item tool-item${buy.ok ? ' ready' : ''}" title="${esc(`${buy.next.name}: ${toolEffect(toolId, buy.next.tier)}`)}">
+        <div class="shop-art">${icon}</div>
+        <div class="shop-item-info"><span class="shop-item-name">${esc(buy.next.name)}</span><span class="shop-item-desc">${toolEffect(toolId, buy.next.tier)}</span>${waits}</div>
+        <button class="gold-btn tool-price" onclick="FI.buyTool('${toolId}')" ${buy.ok ? '' : 'disabled'} aria-label="${esc(`Buy ${buy.next.name}`)}">${price}</button>
+    </div>`;
 }
 
 export function renderCrafting(game, ui) {
@@ -1130,7 +1131,6 @@ export function renderCrafting(game, ui) {
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
-    const tools = ['bow'].filter(id => isUnlocked(state, TOOLS[id].skill) || state.tools[id] > 0);
     return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
         ${xpHeader(game, 'crafting', skillPotionChip(game, ui))}
         <div class="forge-bar">
@@ -1139,7 +1139,6 @@ export function renderCrafting(game, ui) {
             ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gem.gem }).mastery, `${res(gem.gem).name} jewellery`)}
         </div>
         <div class="node-grid">${cards}</div>
-        ${tools.length ? `<h3 class="section-title">Bows and rods</h3><div class="node-grid">${tools.map(id => renderToolCard(game, id)).join('')}</div>` : ''}
     </section>`;
 }
 
@@ -1451,11 +1450,17 @@ export function renderShop(game, ui) {
             <p class="small perk-purse" title="+1 skill point for a prestige whose run reached half your best stage, +1 per ${BALANCE.prestige.spStageStep} stages of your record">${perkPurse(state)}</p>
             <div class="shop-list">${perks}</div>
         </section>`;
+    // the tools (systems/tools.js): each whose skill has opened, its next tier for the bars and logs it takes
+    const tools = toolsOnOffer(state).map(id => toolShopItem(game, id)).join('');
     return `${banner('shop')}
     <section class="glass-panel ${painted('market', 'center 55%')}">
         <div class="panel-header"><h2>Supplies</h2></div>
         <div class="shop-grid">${goods}</div>
     </section>
+    ${tools ? `<section class="glass-panel ${painted('workshop', 'center 45%')}">
+        <div class="panel-header"><h2>Tools</h2></div>
+        <div class="shop-grid">${tools}</div>
+    </section>` : ''}
     ${prestigePanel || perksPanel ? `<div class="two-col">${prestigePanel}${perksPanel}</div>` : ''}`;
 }
 

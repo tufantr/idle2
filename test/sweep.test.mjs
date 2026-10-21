@@ -206,14 +206,14 @@ test('a mini-game boost lasts its own time while away, and a challenge left open
     assert.equal(game.resolveMinigame('cooking'), false);
 });
 
-test('a tool made counts at once, and "Salvage commons" is not counted as automatic', () => {
+test('a tool bought counts at once, and "Salvage commons" is not counted as automatic', () => {
     const game = new Game(null, T0);
-    game.state.skills.smithing.xp = xpForLevel(30);   // the smithy makes hoes
+    game.state.skills.farming.xp = xpForLevel(30);   // the hoe waits on Farming
     game.state.unlocks.farming = true;
+    game.state.unlocks.shop = true;
     game.state.resources.copper_bar = 10; game.state.resources.normal_log = 10;
     const speed = game.derived.skillSpeed.farming;
-    game.startToolCraft('hoe', 1);
-    tickUntil(game, () => game.state.tools.hoe >= 1, 60000, 500);
+    assert.equal(game.buyTool('hoe'), true);
     assert.equal(game.state.tools.hoe, 1);
     assert.ok(game.derived.skillSpeed.farming > speed, 'the hoe speeds the crops straight away');
     const rarity = RARITIES.find(r => r.id === 'common');

@@ -123,7 +123,7 @@ A little mining opens [[/skills/smithing|Smithing]], which works in steps:
 
 - **Smelt**: ore into bars. Copper ore makes a {{res('copper_bar')}}, and your first bar opens Woodcutting.
 - **Forge**: copper bars into a first set of weapons and armour, from a sword at Smithing {{smithLevelReq(METALS[0], 'Weapon')}} to a body at Smithing {{smithLevelReq(METALS[0], 'Body')}}. Stronger weapons and armour only drop in the fight.
-- **Tools**: a Copper Pickaxe or a Copper Axe, at Smithing {{TOOLS.pickaxe.tiers[0].levelReq}}, from copper bars and a log. Each makes its skill faster.
+- **Tools**: a Copper Pickaxe or a Copper Axe from the [[/shop|Shop]], at Mining or Woodcutting {{TOOLS.pickaxe.tiers[0].levelReq}}, for copper bars and a log. Each makes its skill faster.
 - **Anvil**: from Smithing {{ANVIL_LEVEL_PER_UPGRADE}}, bars of a piece's own metal (and some essence) reinforce the weapon or armour your hero wears.
 
 Iron comes next: the Iron Vein at Mining {{SKILLS.mining.nodes.find(n => n.id === 'iron_ore').levelReq}}, and iron bars at Smithing {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').levelReq}}. Each iron bar also takes {{SMELTING_RECIPES.find(r => r.id === 'iron_bar').consumes.coal}} {{res('coal')}}, which you can mine from Mining {{SKILLS.mining.nodes.find(n => n.id === 'coal').levelReq}}. See [[/guides/training-skills|Training skills]] for how the skills fit together.

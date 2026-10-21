@@ -10,6 +10,7 @@ import { choosingAfterClear } from './systems/dungeon.js';
 import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle, fightTab } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
+import { TOOLS } from './data/workshop.js';
 import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
@@ -758,7 +759,7 @@ function handleEvents(events) {
                 else if (rank >= 2) toast(`${ev.lord ? 'A Lord\'s due: ' : ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
                 break;
             }
-            case 'toolMade': toast('New tool made!', 'craft', toolIcon(ev.tool)); break;
+            case 'toolMade': toast(`${TOOLS[ev.tool]?.tiers.find(t => t.tier === ev.tier)?.name || 'A new tool'}: in hand`, 'craft', toolIcon(ev.tool)); break;
             case 'clanBanner': {   // the clan felled a level of its boss: the banner rises for everyone in it until the week ends
                 const look = clanBossFor(ev.week);
                 rewards.celebrate({ key: `banner:${ev.week}:${ev.kills}`, kind: 'legend', art: paintStyle(look.zone), icon: tabIcon('clan', 2),
@@ -1300,7 +1301,7 @@ window.FI = {
     smelt(id) { game.startSmelting(id); render(); },
     smith(type, bar) { game.startSmithing(type, bar); render(); },
     craft(type, bar, gem) { game.startCrafting(type, bar, gem); render(); },
-    makeTool(tool, tier) { game.startToolCraft(tool, tier); render(); },
+    buyTool(toolId) { if (game.buyTool(toolId)) sound.play('buy'); render(); },   // the Shop's tools (systems/tools.js)
     smithView(view) { ui.smithView = view; render(); },
     hallView(view) { ui.hallView = view; render(); },
     selectSmithMetal(bar) { ui.smithMetal = bar; render(); },

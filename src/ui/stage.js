@@ -92,7 +92,6 @@ export function createStage(root, { sound = () => {}, pat = () => {} } = {}) {
         const scale = phone() ? 1.25 : 1.5;
         if (!action) return { icon: sprite(FEATURES[skill]?.icon, { scale, cls: 'resting', fallback: '✨' }), title: 'Resting', sub: IDLE[skill] || 'Pick a job below' };
         if (action.kind === 'agility') return { icon: sprite(FEATURES.agility.icon, { scale }), title: 'Running the course', sub: '' };
-        if (action.kind === 'tool') return { icon: sprite(`tool/${action.tool}`, { scale, fallback: '🛠️' }), title: action.label, sub: 'A new tool' };
         if (action.kind === 'smith' || action.kind === 'craft') {
             const it = action.item || {};
             return { icon: sprite(`item/${it.type}/${it.tier}`, { scale, fallback: TYPE_ICONS[it.type] || '⚒️' }), title: action.label, sub: '' };

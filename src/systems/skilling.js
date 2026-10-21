@@ -2,7 +2,7 @@
 // The same `completeAction` runs online (from the tick loop) and offline (in a loop).
 
 import { SKILLS, skillNode } from '../data/skills.js';
-import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, TOOLS, SMITH_INTERVAL, CRAFT_INTERVAL, TOOL_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
+import { SMELTING_RECIPES, FORGE_METALS, JEWEL_BARS, GEM_TIERS, SMITH_INTERVAL, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET, smithLevelReq } from '../data/workshop.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, CRAFTING_TYPES, TYPE_NAMES, CRAFT_MAX_RARITY, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
 import { zoneForStage } from '../data/zones.js';
@@ -75,17 +75,7 @@ function resolveBase(state, action) {
                 masteryKey: jewelKey(action.gem)
             };
         }
-        case 'tool': {
-            const tool = Object.hasOwn(TOOLS, action.tool) ? TOOLS[action.tool] : null;   // not 'toString', from a save
-            const tierDef = tool?.tiers.find(t => t.tier === action.tier);
-            if (!tierDef) return null;
-            return {
-                kind: 'tool', skill: tool.madeBy, id: `${action.tool}:${action.tier}`, label: `Make ${tierDef.name}`,
-                levelReq: tierDef.levelReq, interval: TOOL_INTERVAL, xp: tierDef.xp, consumes: tierDef.consumes,
-                tool: action.tool, tier: action.tier, once: true
-            };
-        }
-        default:
+        default:   // (a 'tool' order from a save: tools are bought in the Shop now, systems/tools.js)
             return null;
     }
 }
@@ -144,14 +134,6 @@ export function startSmithing(game, type, bar) {
 export function startCrafting(game, type, bar, gem) {
     const action = { kind: 'craft', type, bar, gem };
     const def = resolveAction(game.state, action);
-    return def ? setAction(game, action, def) : false;
-}
-export function startToolCraft(game, toolId, tier) {
-    const state = game.state;
-    if ((state.tools[toolId] || 0) >= tier) { game.emit({ type: 'error', text: 'You already own that tool tier.' }); return false; }
-    if (tier !== (state.tools[toolId] || 0) + 1) { game.emit({ type: 'error', text: 'Make the previous tier first.' }); return false; }
-    const action = { kind: 'tool', tool: toolId, tier };
-    const def = resolveAction(state, action);
     return def ? setAction(game, action, def) : false;
 }
 
@@ -269,12 +251,6 @@ export function completeAction(game, def, { offline = false } = {}) {
         } else if (!offline || item.rarity !== 'common') {
             log(game, `${item.icon} Made ${named}, and salvaged it at once: the bag is full.`, 'craft');   // it used to vanish with a "Made" card
         }
-    } else if (def.kind === 'tool') {
-        state.tools[def.tool] = def.tier;
-        log(game, `${TOOLS[def.tool].icon} Made ${withArticle(TOOLS[def.tool].tiers.find(t => t.tier === def.tier).name)}!`, 'craft');
-        game.emit({ type: 'toolMade', tool: def.tool, tier: def.tier });
-        state.action = null; // one-off
-        game.markDirty();    // its speed and doubles count from now (the hoe's too, with no action to start)
     }
 
     grantXp(game, skill, def.xp * derived.xpMult * (derived.skillXpMult || 1));   // a Scholar's Tonic's on top

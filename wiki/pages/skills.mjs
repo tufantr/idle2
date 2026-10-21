@@ -52,11 +52,10 @@ function actionsTable(id) {
 function toolsFor(skillId) {
     const out = [];
     for (const [toolId, tool] of Object.entries(TOOLS)) {
-        if (tool.skill !== skillId && tool.madeBy !== skillId) continue;
-        const rows = tool.tiers.map(t => [link(`/tools#${toolId}`, esc(t.name), `tool/${toolId}`), `${esc(SKILLS[tool.madeBy].name)} ${t.levelReq}`, resList(t.consumes), `+${pct(TOOL_SPEED_PER_TIER * t.tier, 0)}`, `+${pct(TOOL_DOUBLE_PER_TIER * t.tier, 0)}`]);
-        const title = tool.skill === skillId ? `Tool: ${tool.name.toLowerCase()}` : `Tools made here: ${tool.name.toLowerCase()}s`;
-        out.push(section(title, `<p>${tool.skill === skillId ? `A ${tool.name.toLowerCase()} makes ${esc(SKILLS[skillId].name)} faster and doubles the yield now and then; a better one replaces the old. It is made in ${skillLink(tool.madeBy)}.` : `${tool.name}s for ${skillLink(tool.skill)}.`}</p>`
-            + table(['Tool', 'Made at', 'Needs', 'Speed #', 'Double chance #'], rows), { id: `tool-${toolId}` }));
+        if (tool.skill !== skillId) continue;
+        const rows = tool.tiers.map(t => [link(`/tools#${toolId}`, esc(t.name), `tool/${toolId}`), `${esc(SKILLS[tool.skill].name)} ${t.levelReq}`, resList(t.consumes), `+${pct(TOOL_SPEED_PER_TIER * t.tier, 0)}`, `+${pct(TOOL_DOUBLE_PER_TIER * t.tier, 0)}`]);
+        out.push(section(`Tool: ${tool.name.toLowerCase()}`, `<p>A ${tool.name.toLowerCase()} makes ${esc(SKILLS[skillId].name)} faster and doubles the yield now and then; a better one replaces the old. It is bought in the ${link('/shop', 'Shop')} with bars and logs, each tier once ${esc(SKILLS[skillId].name)} reaches its level.</p>`
+            + table(['Tool', 'From', 'Costs', 'Speed #', 'Double chance #'], rows), { id: `tool-${toolId}` }));
     }
     return out.join('\n');
 }
@@ -225,8 +224,8 @@ function indexPage(help) {
 }
 
 function toolsPage(help) {
-    const body = Object.entries(TOOLS).map(([toolId, tool]) => section(`${icon(`tool/${toolId}`, 1)} ${esc(tool.name)}`, `<p>For ${skillLink(tool.skill)}, made in ${skillLink(tool.madeBy)}.</p>`
-        + table(['Tier #', 'Tool', 'Level #', 'Needs', 'XP #', 'Speed #', 'Double chance #'], tool.tiers.map(t => [t.tier, esc(t.name), t.levelReq, resList(t.consumes), fmt(t.xp), `+${pct(TOOL_SPEED_PER_TIER * t.tier, 0)}`, `+${pct(TOOL_DOUBLE_PER_TIER * t.tier, 0)}`]), { sort: false }), { id: toolId })).join('\n');
+    const body = Object.entries(TOOLS).map(([toolId, tool]) => section(`${icon(`tool/${toolId}`, 1)} ${esc(tool.name)}`, `<p>For ${skillLink(tool.skill)}, bought in the ${link('/shop', 'Shop')}.</p>`
+        + table(['Tier #', 'Tool', `${esc(SKILLS[tool.skill].name)} level #`, 'Costs', 'Speed #', 'Double chance #'], tool.tiers.map(t => [t.tier, esc(t.name), t.levelReq, resList(t.consumes), `+${pct(TOOL_SPEED_PER_TIER * t.tier, 0)}`, `+${pct(TOOL_DOUBLE_PER_TIER * t.tier, 0)}`]), { sort: false }), { id: toolId })).join('\n');
     return { body: `${help.prose('/tools')}\n${body}` };
 }
 

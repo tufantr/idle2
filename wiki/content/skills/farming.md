@@ -13,7 +13,7 @@ Farming is the one skill that runs alongside everything else: plots grow on the 
 
 - **Plots** open with your Farming level, up to {{FARMING_PLOTS.length}} (the list below).
 - **Planting:** pick a seed, then tap an empty plot. Seeds are bought with gold as you plant, at a fixed price for each crop.
-- **Growing:** a crop takes its time on the clock, faster with Farming speed: a [[Tools|hoe]] (forged in [[/skills/smithing|Smithing]]), the farming [[Pets|pet]], [[Medals|medals]] and some [[/skills/agility|agility obstacles]]. The speed counts when you plant, so a better hoe helps the next planting. [[Mini-games and Focus|Focus]] does not apply to Farming.
+- **Growing:** a crop takes its time on the clock, faster with Farming speed: a [[Tools|hoe]] (bought in the [[/shop|Shop]]), the farming [[Pets|pet]], [[Medals|medals]] and some [[/skills/agility|agility obstacles]]. The speed counts when you plant, so a better hoe helps the next planting. [[Mini-games and Focus|Focus]] does not apply to Farming.
 - **Harvesting:** tap a ready plot. A harvest gives a handful of crops, more with yield bonuses, and the hoe gives a chance to double it. Farming XP is paid for every crop harvested, so a bigger harvest is more XP too. One button harvests every ready plot and plants the same crops again, and another plants every empty plot at once.
 
 There is no mastery in Farming, and no mini-game. Plots and what grows in them are kept through a [[Prestige|prestige]].

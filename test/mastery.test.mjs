@@ -87,7 +87,7 @@ test('forging mastery is shared by every piece of a metal; jewellery by gem', ()
     const practice = s.mastery.smithing[forgeKey('copper_bar')];
     assert.ok(practice > 0);
     assert.ok(resolveAction(s, { kind: 'smith', type: 'Head', bar: 'copper_bar' }).mastery.level > 1);
-    assert.equal(resolveAction(s, { kind: 'tool', tool: 'pickaxe', tier: 1 }).mastery, undefined, 'tools have none');
+    assert.equal(resolveAction(s, { kind: 'tool', tool: 'pickaxe', tier: 1 }), null, 'tools are bought, not made (systems/tools.js)');
 });
 
 test('a metal past copper is practised at the anvil, and its mastery takes bars off the work', () => {

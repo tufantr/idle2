@@ -1,13 +1,12 @@
 ---
 path: /skills/crafting
-keywords: crafting, jewellery, jewelry, rings, earrings, amulets, gems, bows, gem pouches, voidstone
+keywords: crafting, jewellery, jewelry, rings, earrings, amulets, gems, gem pouches, voidstone
 ---
-Crafting makes jewellery, and the bows of Hunting. It opens soon after you have a [[Silver Bar|silver]] or [[Gold Bar|gold bar]] in hand and have found a gem.
+Crafting makes jewellery (Hunting's bows are bought in the [[/shop|Shop]] now). It opens soon after you have a [[Silver Bar|silver]] or [[Gold Bar|gold bar]] in hand and have found a gem.
 
 ## What it is for
 
 - **[[Jewellery]]:** rings, earrings and amulets, each a precious bar set with a gem. A piece adds a little attack and defence, but its bonuses are most of what it is worth. Jewellery from the fight only drops {{RARITIES[JEWEL_DROP_MIN_RANK].name.toLowerCase()}} or better, so most of what your hero wears there is made here.
-- **Tools:** bows for [[/skills/hunting|Hunting]] (its river too), of logs and a bar, from Crafting {{TOOLS.bow.tiers[0].levelReq}} (see [[Tools]]).
 
 It draws on [[/skills/smithing|Smithing]] for bars, [[/skills/mining|Mining]] and the fight for gems, and [[/skills/woodcutting|Woodcutting]] for logs.
 

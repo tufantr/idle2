@@ -22,4 +22,4 @@ A [[Tools|tinderbox]] (forged in [[/skills/smithing|Smithing]]) makes you faster
 - **Light it, then go and do something else.** A full bonfire takes {{BASE.bonfireMaxMs / (BASE.bonfireSecondsPerLogTier * 1000 * RESOURCES.normal_log.tier)}} plain [[Logs]], or {{BASE.bonfireMaxMs / (BASE.bonfireSecondsPerLogTier * 1000 * RESOURCES.magic_log.tier)}} [[Magic Logs]]. Burn a batch, then train or fight for the rest of the hour with the bonus on.
 - **Better logs, more fire.** Higher logs give more XP each and more bonfire time per log: one magic log burns as long as {{RESOURCES.magic_log.tier / RESOURCES.normal_log.tier}} plain ones.
 - **Keep some plain logs for [[/skills/cooking|Cooking]]**, which burns a log for every dish.
-- **Forge a tinderbox** at Smithing {{TOOLS.tinderbox.tiers[0].levelReq}} ({{resList(TOOLS.tinderbox.tiers[0].consumes)}}).
+- **Buy a tinderbox** in the [[/shop|Shop]] at Firemaking {{TOOLS.tinderbox.tiers[0].levelReq}} ({{resList(TOOLS.tinderbox.tiers[0].consumes)}}).

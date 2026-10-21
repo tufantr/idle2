@@ -28,6 +28,7 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
+import { isUnlocked } from '../src/data/unlocks.js';
 import { FORGE_METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, smithLevelReq, anvilMetal } from '../src/data/workshop.js';
 import { anvilCost, forgeTier } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
@@ -286,14 +287,17 @@ function gearTask() {
     return null;
 }
 
+// Tools are bought in the Shop (systems/tools.js), each tier at the level of the skill it serves: the bars and logs
+// first, then the purchase at once (no task).
 function toolTask() {
+    if (!isUnlocked(S, 'shop')) return null;
     for (const toolId of ['pickaxe', 'axe', 'bow']) {
         const tool = TOOLS[toolId];
         const next = tool.tiers.find(t => t.tier === (S.tools[toolId] || 0) + 1);
         if (!next) continue;
-        if (lvl(tool.madeBy) < next.levelReq) continue;
+        if (lvl(tool.skill) < next.levelReq) continue;
         for (const [id, qty] of Object.entries(next.consumes)) { const t = obtain(id, qty); if (t) return t; }
-        return { kind: 'tool', tool: toolId, tier: next.tier, why: `make ${next.name}` };
+        game.buyTool(toolId);
     }
     return null;
 }
@@ -698,7 +702,6 @@ function apply(task) {
     else if (task.kind === 'smelt') ok = game.startSmelting(task.recipe);
     else if (task.kind === 'smith') ok = game.startSmithing(task.type, task.bar);
     else if (task.kind === 'craft') ok = game.startCrafting(task.type, task.bar, task.gem);
-    else if (task.kind === 'tool') ok = game.startToolCraft(task.tool, task.tier);
     else if (task.kind === 'agility') ok = game.startAgility();
     else if (task.kind === 'dungeon') { ok = game.enterDungeon(task.id); if (ok) { game.setDungeonRepeat(true); lastStageGainAt = now; } }   // the player keeps going, decided up front
     else if (task.kind === 'farm') {

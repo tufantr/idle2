@@ -141,69 +141,69 @@ export const VOIDSTONE_CHANCE = 0.25;   // a boss's first fall
 export const CRAFT_INTERVAL = 3000;
 
 // Tools. Each tier: -TOOL_SPEED_PER_TIER interval and +TOOL_DOUBLE_PER_TIER chance of a double yield.
-// Pickaxes and axes are smithed from bars + a log handle; bows are crafted from logs + a bar.
+// Bought in the Shop (systems/tools.js; the owner, October 2026: tools are purchases, not skill work) with the bars and
+// logs they always took, each tier once the skill it serves reaches `levelReq` (they were made in Smithing, and the bow
+// in Crafting, at those levels of the maker's skill).
 export const TOOL_SPEED_PER_TIER = 0.05;
 export const TOOL_DOUBLE_PER_TIER = 0.05;
 export const TOOLS = {
     pickaxe: {
-        name: 'Pickaxe', icon: '⛏️', skill: 'mining', madeBy: 'smithing',
+        name: 'Pickaxe', icon: '⛏️', skill: 'mining',
         tiers: [
-            { tier: 1, name: 'Copper Pickaxe',  levelReq: 5,  consumes: { copper_bar: 2, normal_log: 1 }, xp: 40 },
-            { tier: 2, name: 'Iron Pickaxe',    levelReq: 15, consumes: { iron_bar: 2, oak_log: 1 },      xp: 80 },
-            { tier: 3, name: 'Mithril Pickaxe', levelReq: 40, consumes: { mithril_bar: 2, willow_log: 1 }, xp: 160 },
-            { tier: 4, name: 'Adamant Pickaxe', levelReq: 60, consumes: { adamant_bar: 2, maple_log: 1 }, xp: 260 },
-            { tier: 5, name: 'Runite Pickaxe',  levelReq: 80, consumes: { runite_bar: 2, yew_log: 1 },    xp: 400 }
+            { tier: 1, name: 'Copper Pickaxe',  levelReq: 5,  consumes: { copper_bar: 2, normal_log: 1 } },
+            { tier: 2, name: 'Iron Pickaxe',    levelReq: 15, consumes: { iron_bar: 2, oak_log: 1 } },
+            { tier: 3, name: 'Mithril Pickaxe', levelReq: 40, consumes: { mithril_bar: 2, willow_log: 1 } },
+            { tier: 4, name: 'Adamant Pickaxe', levelReq: 60, consumes: { adamant_bar: 2, maple_log: 1 } },
+            { tier: 5, name: 'Runite Pickaxe',  levelReq: 80, consumes: { runite_bar: 2, yew_log: 1 } }
         ]
     },
     axe: {
-        name: 'Axe', icon: '🪓', skill: 'woodcutting', madeBy: 'smithing',
+        name: 'Axe', icon: '🪓', skill: 'woodcutting',
         tiers: [
-            { tier: 1, name: 'Copper Axe',  levelReq: 5,  consumes: { copper_bar: 2, normal_log: 1 }, xp: 40 },
-            { tier: 2, name: 'Iron Axe',    levelReq: 15, consumes: { iron_bar: 2, oak_log: 1 },      xp: 80 },
-            { tier: 3, name: 'Mithril Axe', levelReq: 40, consumes: { mithril_bar: 2, willow_log: 1 }, xp: 160 },
-            { tier: 4, name: 'Adamant Axe', levelReq: 60, consumes: { adamant_bar: 2, maple_log: 1 }, xp: 260 },
-            { tier: 5, name: 'Runite Axe',  levelReq: 80, consumes: { runite_bar: 2, yew_log: 1 },    xp: 400 }
+            { tier: 1, name: 'Copper Axe',  levelReq: 5,  consumes: { copper_bar: 2, normal_log: 1 } },
+            { tier: 2, name: 'Iron Axe',    levelReq: 15, consumes: { iron_bar: 2, oak_log: 1 } },
+            { tier: 3, name: 'Mithril Axe', levelReq: 40, consumes: { mithril_bar: 2, willow_log: 1 } },
+            { tier: 4, name: 'Adamant Axe', levelReq: 60, consumes: { adamant_bar: 2, maple_log: 1 } },
+            { tier: 5, name: 'Runite Axe',  levelReq: 80, consumes: { runite_bar: 2, yew_log: 1 } }
         ]
     },
     bow: {
-        name: 'Bow', icon: '🏹', skill: 'hunting', madeBy: 'crafting',   // the whole of Hunting, river spots too (the rod went with Fishing)
+        name: 'Bow', icon: '🏹', skill: 'hunting',   // the whole of Hunting, river spots too (the rod went with Fishing)
         tiers: [
-            { tier: 1, name: 'Shortbow',    levelReq: 5,  consumes: { normal_log: 3, copper_bar: 1 }, xp: 40 },
-            { tier: 2, name: 'Oak Bow',     levelReq: 15, consumes: { oak_log: 3, iron_bar: 1 },      xp: 80 },
-            { tier: 3, name: 'Willow Bow',  levelReq: 30, consumes: { willow_log: 3, iron_bar: 1 },   xp: 130 },
-            { tier: 4, name: 'Maple Bow',   levelReq: 45, consumes: { maple_log: 3, mithril_bar: 1 }, xp: 200 },
-            { tier: 5, name: 'Yew Bow',     levelReq: 60, consumes: { yew_log: 3, adamant_bar: 1 },   xp: 300 },
-            { tier: 6, name: 'Magic Bow',   levelReq: 75, consumes: { magic_log: 3, runite_bar: 1 },  xp: 450 }
+            { tier: 1, name: 'Shortbow',    levelReq: 5,  consumes: { normal_log: 3, copper_bar: 1 } },
+            { tier: 2, name: 'Oak Bow',     levelReq: 15, consumes: { oak_log: 3, iron_bar: 1 } },
+            { tier: 3, name: 'Willow Bow',  levelReq: 30, consumes: { willow_log: 3, iron_bar: 1 } },
+            { tier: 4, name: 'Maple Bow',   levelReq: 45, consumes: { maple_log: 3, mithril_bar: 1 } },
+            { tier: 5, name: 'Yew Bow',     levelReq: 60, consumes: { yew_log: 3, adamant_bar: 1 } },
+            { tier: 6, name: 'Magic Bow',   levelReq: 75, consumes: { magic_log: 3, runite_bar: 1 } }
         ]
     },
     tinderbox: {
-        name: 'Tinderbox', icon: '🧰', skill: 'firemaking', madeBy: 'smithing',
+        name: 'Tinderbox', icon: '🧰', skill: 'firemaking',
         tiers: [
-            { tier: 1, name: 'Copper Tinderbox',  levelReq: 5,  consumes: { copper_bar: 1, normal_log: 1 }, xp: 30 },
-            { tier: 2, name: 'Iron Tinderbox',    levelReq: 15, consumes: { iron_bar: 1, oak_log: 1 },      xp: 60 },
-            { tier: 3, name: 'Mithril Tinderbox', levelReq: 40, consumes: { mithril_bar: 1, willow_log: 1 }, xp: 120 },
-            { tier: 4, name: 'Adamant Tinderbox', levelReq: 60, consumes: { adamant_bar: 1, maple_log: 1 }, xp: 200 },
-            { tier: 5, name: 'Runite Tinderbox',  levelReq: 80, consumes: { runite_bar: 1, yew_log: 1 },    xp: 300 }
+            { tier: 1, name: 'Copper Tinderbox',  levelReq: 5,  consumes: { copper_bar: 1, normal_log: 1 } },
+            { tier: 2, name: 'Iron Tinderbox',    levelReq: 15, consumes: { iron_bar: 1, oak_log: 1 } },
+            { tier: 3, name: 'Mithril Tinderbox', levelReq: 40, consumes: { mithril_bar: 1, willow_log: 1 } },
+            { tier: 4, name: 'Adamant Tinderbox', levelReq: 60, consumes: { adamant_bar: 1, maple_log: 1 } },
+            { tier: 5, name: 'Runite Tinderbox',  levelReq: 80, consumes: { runite_bar: 1, yew_log: 1 } }
         ]
     },
     hoe: {
-        name: 'Hoe', icon: '🪏', skill: 'farming', madeBy: 'smithing',
+        name: 'Hoe', icon: '🪏', skill: 'farming',
         tiers: [
-            { tier: 1, name: 'Copper Hoe',  levelReq: 5,  consumes: { copper_bar: 2, normal_log: 1 }, xp: 40 },
-            { tier: 2, name: 'Iron Hoe',    levelReq: 15, consumes: { iron_bar: 2, oak_log: 1 },      xp: 80 },
-            { tier: 3, name: 'Mithril Hoe', levelReq: 40, consumes: { mithril_bar: 2, willow_log: 1 }, xp: 160 },
-            { tier: 4, name: 'Adamant Hoe', levelReq: 60, consumes: { adamant_bar: 2, maple_log: 1 }, xp: 260 },
-            { tier: 5, name: 'Runite Hoe',  levelReq: 80, consumes: { runite_bar: 2, yew_log: 1 },    xp: 400 }
+            { tier: 1, name: 'Copper Hoe',  levelReq: 5,  consumes: { copper_bar: 2, normal_log: 1 } },
+            { tier: 2, name: 'Iron Hoe',    levelReq: 15, consumes: { iron_bar: 2, oak_log: 1 } },
+            { tier: 3, name: 'Mithril Hoe', levelReq: 40, consumes: { mithril_bar: 2, willow_log: 1 } },
+            { tier: 4, name: 'Adamant Hoe', levelReq: 60, consumes: { adamant_bar: 2, maple_log: 1 } },
+            { tier: 5, name: 'Runite Hoe',  levelReq: 80, consumes: { runite_bar: 2, yew_log: 1 } }
         ]
     }
 };
-export const TOOL_INTERVAL = 4000;
 
-// Melvor pace: smelting, forging, jewellery and tools that open late give less than their base XP (data/pace.js).
+// Melvor pace: smelting, forging and jewellery that open late give less than their base XP (data/pace.js).
 paceList('smithing', SMELTING_RECIPES);
 paceList('smithing', METALS, { key: 'xpPerBar' });
 paceList('crafting', GEM_TIERS);
-for (const tool of Object.values(TOOLS)) paceList(tool.madeBy, tool.tiers);
 
 export function toolTierDef(toolId, tier) {
     const tool = TOOLS[toolId];

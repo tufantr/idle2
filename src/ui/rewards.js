@@ -32,9 +32,9 @@ export function unlocksAtLevel(skill, level) {
         for (const g of GEM_TIERS) if (g.levelReq === level) add(resIcon(g.gem), `${RESOURCES[g.gem]?.name || g.gem} jewellery`);
         for (const b of JEWEL_BARS) if (b.levelReq === level) add(resIcon(b.bar), `${b.name} settings`);
     }
-    for (const [id, tool] of Object.entries(TOOLS)) {
-        if (tool.madeBy !== skill) continue;
-        for (const t of tool.tiers) if (t.levelReq === level) add(toolIcon(id), t.name);
+    for (const [id, tool] of Object.entries(TOOLS)) {   // the next tool for this skill is for sale in the Shop (systems/tools.js)
+        if (tool.skill !== skill) continue;
+        for (const t of tool.tiers) if (t.levelReq === level) add(toolIcon(id), `${t.name}, in the Shop`);
     }
     if (skill === 'farming') for (const c of CROPS) if (c.levelReq === level) add(resIcon(c.produces), c.name);
     if (skill === 'agility') AGILITY_SLOTS.forEach((slot, i) => { if (slot.levelReq === level) add(sprite(slot.obstacles[0] ? `obstacle/${slot.obstacles[0].id}` : feature('agility').icon, { scale: 0.625, cls: 'soft res-spr', fallback: '🧱' }), `Obstacle slot ${i + 1}`); });
