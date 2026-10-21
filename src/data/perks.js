@@ -45,21 +45,23 @@ export function perkById(id) {
     return PERKS.find(p => p.id === id) || null;
 }
 
-// Gold shop: convenience materials priced in "kills at your best stage" (costKills), so combat gold
-// can never make gathering pointless and there is no buy-low/sell-high loop.
+// Gold shop: convenience materials priced in kills (costKills): so many kills' worth of gold at the furthest stage this
+// run has reached (systems/inventory.js supplyPrice), never less than a quarter over what they sell back for. They were
+// priced at the best stage ever, at 25 to 40 kills a pack: deep down, the gold of minutes of fighting for what the mine
+// gives in seconds (the owner, October 2026); now a pack costs about as long in the fight as it takes to gather.
 export const GOLD_SHOP = [
-    { id: 'buy_coal',    name: 'Coal Wagon',       desc: '25 coal for the furnace.',      gives: { coal: 25 },        costKills: 40 },
-    { id: 'buy_logs',    name: 'Firewood Bundle',  desc: '25 logs for the kitchen.',       gives: { normal_log: 25 },  costKills: 25 },
-    { id: 'buy_guam',    name: 'Herb Pouch',       desc: '10 guam leaves.',                gives: { guam_leaf: 10 },   costKills: 30 },
-    { id: 'buy_rabbit',  name: 'Hunter\'s Cache',  desc: '10 raw rabbits.',                gives: { raw_rabbit: 10 },  costKills: 25 },
-    { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 bait for the river.',               gives: { fishing_bait: 25 }, costKills: 30 },
-    // The open-ended sink: essence at about the rate combat drops it, for upgrades and reforges.
-    { id: 'buy_essence', name: 'Essence Cache',    desc: '10 monster essence for upgrades and reforges.', gives: { essence: 10 }, costKills: 80 },
+    { id: 'buy_coal',    name: 'Coal Wagon',       desc: '25 coal for the furnace.',      gives: { coal: 25 },        costKills: 6 },
+    { id: 'buy_logs',    name: 'Firewood Bundle',  desc: '25 logs for the kitchen.',       gives: { normal_log: 25 },  costKills: 4 },
+    { id: 'buy_guam',    name: 'Herb Pouch',       desc: '10 guam leaves.',                gives: { guam_leaf: 10 },   costKills: 5 },
+    { id: 'buy_rabbit',  name: 'Hunter\'s Cache',  desc: '10 raw rabbits.',                gives: { raw_rabbit: 10 },  costKills: 4 },
+    { id: 'buy_bait',    name: 'Bait Tin',         desc: '25 bait for the river.',               gives: { fishing_bait: 25 }, costKills: 5 },
+    // The open-ended sink: essence for upgrades and reforges (at 80 kills it was the rate combat drops it).
+    { id: 'buy_essence', name: 'Essence Cache',    desc: '10 monster essence for upgrades and reforges.', gives: { essence: 10 }, costKills: 30 },
     // Gems for Crafting (docs/research_notes/crafting-gems.md): the three low ones, for gold, so Crafting
     // can be trained from level 1 at any point of the game, however deep the fight's gems have gone. Melvor
     // sells Crafting's first material (leather) the same way; the higher gems stay the fight's and the mine's.
     // Each shows once Crafting is open, for the Crafting levels in `craft` (systems/inventory.js goldShopOpen).
-    { id: 'buy_amethyst', name: 'Amethyst Pouch',  desc: '10 amethysts for Crafting.',     gives: { amethyst: 10 }, costKills: 50,  craft: [1, 9] },
-    { id: 'buy_topaz',    name: 'Topaz Pouch',     desc: '10 topaz for Crafting.',         gives: { topaz: 10 },    costKills: 80,  craft: [10, 24] },
-    { id: 'buy_sapphire', name: 'Sapphire Pouch',  desc: '10 sapphires for Crafting.',     gives: { sapphire: 10 }, costKills: 120, craft: [25, 99] }
+    { id: 'buy_amethyst', name: 'Amethyst Pouch',  desc: '10 amethysts for Crafting.',     gives: { amethyst: 10 }, costKills: 8,  craft: [1, 9] },
+    { id: 'buy_topaz',    name: 'Topaz Pouch',     desc: '10 topaz for Crafting.',         gives: { topaz: 10 },    costKills: 12, craft: [10, 24] },
+    { id: 'buy_sapphire', name: 'Sapphire Pouch',  desc: '10 sapphires for Crafting.',     gives: { sapphire: 10 }, costKills: 18, craft: [25, 99] }
 ];

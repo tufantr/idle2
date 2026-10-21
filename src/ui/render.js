@@ -1407,7 +1407,7 @@ export function renderShop(game, ui) {
     const goods = GOLD_SHOP.filter(e => goldShopOpen(state, e)).map(e => {   // a gem pouch once Crafting is open
         const price = goldShopPrice(game, e);
         const [resId] = Object.keys(e.gives);
-        return `<div class="shop-item" title="Priced at ${e.costKills} kills' worth of gold at your best stage">
+        return `<div class="shop-item" title="Priced at ${e.costKills} kills' worth of gold at the furthest stage of this run">
             <div class="shop-art">${resIcon(resId, { scale: 1.5 })}</div>
             <div class="shop-item-info"><span class="shop-item-name">${esc(e.name)}</span><span class="shop-item-desc">${esc(e.desc)}</span></div>
             <button class="gold-btn" onclick="FI.buyShop('${e.id}')" ${state.gold >= price ? '' : 'disabled'}>${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(price)}</button>

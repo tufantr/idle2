@@ -466,9 +466,18 @@ export function sellResource(game, id, amount = 1) {
     return gold;
 }
 
-/** Current gold price of a gold-shop entry: `costKills` kills' worth of gold at the best stage. */
+/** A supply's price never falls below what it sells back for, and a quarter more: no buying low and selling high. */
+export const SUPPLY_RESALE_MARGIN = 1.25;
+
+/** A gold-shop entry's price for a run that has reached `stage`: `costKills` kills' worth of gold there, above its resale. */
+export function supplyPrice(entry, stage) {
+    const resale = Object.entries(entry.gives).reduce((sum, [id, qty]) => sum + sellValue(id) * qty, 0);
+    return Math.max(Math.ceil(entry.costKills * goldPerKillAtStage(stage)), Math.ceil(resale * SUPPLY_RESALE_MARGIN));
+}
+
+/** Current gold price of a gold-shop entry: at the furthest stage this run has reached (the stage its kills pay at). */
 export function goldShopPrice(game, entry) {
-    return Math.ceil(entry.costKills * goldPerKillAtStage(game.state.combat.bestStage));
+    return supplyPrice(entry, game.state.combat.maxStage);
 }
 
 /** Whether the shop offers an entry now: a gem pouch once Crafting is open, at the levels it serves. */

@@ -37,7 +37,7 @@ The camp is packed up at each prestige. Once your best stage passes about {{(() 
 
 ### The Shop
 
-The [[/shop|Shop]] sells supplies: coal, logs, herbs, rabbits, fishing bait and essence. Each is priced in kills' worth of gold at your best stage, from {{Math.min(...GOLD_SHOP.filter(e => !e.craft).map(e => e.costKills))}} to {{Math.max(...GOLD_SHOP.filter(e => !e.craft).map(e => e.costKills))}} kills, so a pack costs about the same share of your income at any point in the game. The Essence Cache ({{GOLD_SHOP.find(e => e.id === 'buy_essence').gives.essence}} essence for {{GOLD_SHOP.find(e => e.id === 'buy_essence').costKills}} kills) is the one you can always use more of.
+The [[/shop|Shop]] sells supplies: coal, logs, herbs, rabbits, fishing bait and essence. Each is priced in kills' worth of gold at the furthest stage your run has reached, from {{Math.min(...GOLD_SHOP.filter(e => !e.craft).map(e => e.costKills))}} to {{Math.max(...GOLD_SHOP.filter(e => !e.craft).map(e => e.costKills))}} kills, so a pack costs about what you earn in a few kills at any point of a run. The Essence Cache ({{GOLD_SHOP.find(e => e.id === 'buy_essence').gives.essence}} essence for {{GOLD_SHOP.find(e => e.id === 'buy_essence').costKills}} kills) is the one you can always use more of.
 
 Once Crafting is open, the Shop also sells a pouch of gems for the Crafting levels you are at: {{GOLD_SHOP.filter(e => e.craft).map(e => `the ${e.name} for ${e.costKills} kills (Crafting ${e.craft[1] >= MAX_LEVEL ? `${e.craft[0]} and up` : `${e.craft[0]} to ${e.craft[1]}`})`).join(', ').replace(/, ([^,]*)$/, ' and $1')}}.
 

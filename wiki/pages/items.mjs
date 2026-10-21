@@ -88,7 +88,7 @@ function sourcesHtml(r) {
             <li><strong>${link('/titan', 'The Titan')}</strong>: ${titanLeaves(1).essence} when the first falls, more for each after it, and some for the damage dealt when it stands.</li>
             <li><strong>Dungeon chests</strong>, the <strong>daily crate</strong>, the <strong>Shop</strong> and the <strong>weekend events</strong>.</li></ul>`.replace('[[Equipment]]', link('/equipment', 'Equipment'))));
     }
-    if (s.shop) out.push(section('Bought', table(['Supply', 'Gives #', 'Price'], s.shop.map(({ entry: e, qty }) => [link('/shop', esc(e.name)), fmt(qty), `${e.costKills} kills' worth of gold at your best stage`]))));
+    if (s.shop) out.push(section('Bought', table(['Supply', 'Gives #', 'Price'], s.shop.map(({ entry: e, qty }) => [link('/shop', esc(e.name)), fmt(qty), `${e.costKills} kills' worth of gold at your run's furthest stage`]))));
     if (s.events) {
         out.push(section('Weekend events', `<ul>${s.events.map(e => (e.entry ? `<li>The event shop: ${esc(e.entry.name)}, ${fmt(e.qty)} for ${e.entry.cost} festival tokens.</li>` : `<li>The ${e.milestone.tokens}-token milestone of every event: ${fmt(e.qty)}.</li>`)).join('')}</ul><p>${link('/events', 'Weekend events')}</p>`));
     }

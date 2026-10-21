@@ -1313,6 +1313,9 @@ Keeping it running:
 - [x] **No forging** (the owner, 21 October 2026, after the measurement: copper forging kept stage 100 at 2.5 h
       against 4.4 h without it, and the owner chose to let it go): every weapon and piece of armour drops; Smithing
       is smelting and the anvil; an old order to forge is dropped (DESIGN §3.4)
+- [x] **Cheaper supplies** (the owner, 21 October 2026: 25 coal is mined in seconds, but a Coal Wagon cost minutes of
+      fighting): priced at the furthest stage of the run instead of the best ever, at 4–6 kills a pack (25–40
+      before), essence 30 (80), gem pouches 8 / 12 / 18 (50 / 80 / 120), never under a quarter over the resale (DESIGN §3.8)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

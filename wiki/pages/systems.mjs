@@ -2,6 +2,7 @@
 // events, clans, offline progress, mini-games; the reference pages (formulas, the XP table, credits); the
 // guides' index; and the page for a link that lands nowhere.
 
+import { supplyPrice } from '../../src/systems/inventory.js';
 import { UNLOCKS, PLACE_GAPS_MS, WORK_GAP_MS } from '../../src/data/unlocks.js';
 import { GOLD_SHOP } from '../../src/data/perks.js';
 import { EVENTS, EVENT_MILESTONES, EVENT_SHOP, EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP, FESTIVAL_CLOAK_COST, EVENT_START_DAY, EVENT_LENGTH_HOURS } from '../../src/data/events.js';
@@ -45,11 +46,11 @@ function cratePage(help) {
 
 function shopPage(help) {
     const stages = [10, 50, 100, 200, 300];
-    const rows = GOLD_SHOP.map(e => [link(`/shop#${e.id}`, esc(e.name)), resList(e.gives), e.costKills, ...stages.map(s => fmt(Math.ceil(e.costKills * goldPerKillAtStage(s)))), e.craft ? `Crafting ${e.craft[0]}–${e.craft[1]}` : 'always']);
+    const rows = GOLD_SHOP.map(e => [link(`/shop#${e.id}`, esc(e.name)), resList(e.gives), e.costKills, ...stages.map(s => fmt(supplyPrice(e, s))), e.craft ? `Crafting ${e.craft[0]}–${e.craft[1]}` : 'always']);
     const anchors = GOLD_SHOP.map(e => `<span id="${e.id}"></span>`).join('');
     return {
-        infobox: infobox({ title: 'Shop', image: icon('gold', 3), rows: [['Prices', 'kills\' worth of gold at your best stage'], ['Also', link('/perks', 'Perks')]] }),
-        body: `${help.prose('/shop')}\n${section('Supplies', `${anchors}<p>The price in gold at a few best stages:</p>${table(['Supply', 'Gives', 'Kills #', ...stages.map(s => `Stage ${s} #`), 'Shown'], rows)}`)}`
+        infobox: infobox({ title: 'Shop', image: icon('gold', 3), rows: [['Prices', 'kills\' worth of gold at the furthest stage of your run'], ['Also', link('/perks', 'Perks')]] }),
+        body: `${help.prose('/shop')}\n${section('Supplies', `${anchors}<p>The price in gold when your run has reached a few stages:</p>${table(['Supply', 'Gives', 'Kills #', ...stages.map(s => `Stage ${s} #`), 'Shown'], rows)}`)}`
     };
 }
 

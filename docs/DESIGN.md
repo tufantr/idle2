@@ -417,12 +417,15 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   so each run buys its camp again as it nears its best (the owner's choice 3a). At 0.016 the camp took
   80% of gold but each late run took 0.7 h instead of 0.5 h. It turns each new run into a climb and
   gives gold a job.
-- **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 80
-  kills — the open-ended late-game sink) priced in "kills at your best stage" (25–40 regular kills;
-  a boss stage prices like its regular monsters), so the price scales with income and can never be
-  resold at a profit (the prototype's Coal Wagon printed +350 gold per purchase). Once Crafting is open,
+- **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 30
+  kills — the open-ended late-game sink) priced in kills at the furthest stage the run has reached (4–6
+  kills a pack; a boss stage prices like its regular monsters), never under 1.25 × what they sell back for
+  (`supplyPrice`, `SUPPLY_RESALE_MARGIN`), so the price follows income and can never be resold at a profit
+  (the prototype's Coal Wagon printed +350 gold per purchase). Until 21 October 2026 they were priced at the
+  best stage ever, at 25–40 kills (essence 80): the owner found 25 coal, mined in seconds, cost minutes of
+  fighting, and dearer still early in a run, whose kills pay a fraction of the best stage's. Once Crafting is open,
   a **gem pouch** too: ten Amethysts (50 kills) to Crafting 9, ten Topaz (80) from 10 to 24, ten
-  Sapphires (120) from 25 on, one at a time as the level climbs (`craft` on the entry, `goldShopOpen`).
+  Sapphires (120; since October 2026 8, 12 and 18 at the run's stage) from 25 on, one at a time as the level climbs (`craft` on the entry, `goldShopOpen`).
   The fight's and the mine's gems follow their zone's or rock's tier, so a deep hero found only gems a
   new crafter cannot cut; the pouches keep Crafting's first forty levels open at any point of the game,
   as Melvor's shop sells Leather (`docs/research_notes/crafting-gems.md`). The higher gems are never sold.

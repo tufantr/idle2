@@ -1,6 +1,7 @@
 // The robustness suite (docs/research_notes/robust-and-fun/D_robustness_methods.md §5–6, experiment E3):
 // the fight replayed offline matches the fight played online; mangled saves load and run without
 // throwing or turning numbers into NaN; nothing the shop sells can be sold back for more than it cost.
+import { supplyPrice } from '../src/systems/inventory.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -101,10 +102,10 @@ test('a thousand mangled saves load, run and keep their numbers finite', () => {
     }
 });
 
-test('nothing the shop sells is worth more sold back than it cost, at any best stage', () => {
+test('nothing the shop sells is worth more sold back than it cost, at any stage a run has reached', () => {
     for (const best of [1, 10, 30, 60, 100, 150, 200, 300, 400]) {
         for (const entry of GOLD_SHOP) {
-            const price = Math.ceil(entry.costKills * goldPerKillAtStage(best));
+            const price = supplyPrice(entry, best);
             const back = Object.entries(entry.gives).reduce((sum, [id, qty]) => sum + (id === 'essence' ? 0 : sellValue(id) * qty), 0);
             assert.ok(back < price, `${entry.id} at stage ${best}: costs ${price}, sells back for ${back}`);
         }

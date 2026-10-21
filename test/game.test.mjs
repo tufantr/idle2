@@ -209,10 +209,22 @@ test('prestige tokens grow with stage and are zero below stage 10', () => {
     }
 });
 
+test('supplies are priced at the furthest stage of the run, a few kills a pack (the owner: a wagon cost minutes of fighting)', async () => {
+    const { goldPerKillAtStage } = await import('../src/core/formulas.js');
+    const game = new Game(null, T0);
+    const c = game.state.combat;
+    c.bestStage = 200; c.maxStage = 150;   // halfway up a run
+    const wagon = GOLD_SHOP.find(e => e.id === 'buy_coal');
+    assert.equal(goldShopPrice(game, wagon), Math.ceil(wagon.costKills * goldPerKillAtStage(150)));
+    assert.ok(goldShopPrice(game, wagon) < goldPerKillAtStage(200), 'less than one kill at the best stage');
+    for (const e of GOLD_SHOP.filter(e => !e.craft && e.id !== 'buy_essence')) assert.ok(e.costKills <= 6, e.id);
+});
+
 test('gold shop has no buy-low/sell-high loop (the old Coal Wagon printed gold)', () => {
     const game = new Game(null, T0);
     for (const stage of [1, 25, 60, 100]) {
         game.state.combat.bestStage = stage;
+        game.state.combat.maxStage = stage;
         for (const entry of GOLD_SHOP) {
             const resale = Object.entries(entry.gives).reduce((sum, [id, qty]) => sum + sellValue(id) * qty, 0);
             assert.ok(goldShopPrice(game, entry) > resale, `${entry.id} at stage ${stage}`);
