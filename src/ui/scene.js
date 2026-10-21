@@ -104,7 +104,7 @@ const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
 /**
  * Builds the scene into `root` and returns its controls.
  * `actions`: { strike() -> bool (a click on the monster; true if it landed), toggle() (enter or leave combat), stage(n) (go to stage n), map() (open the world map),
- * startChain(aspect) (a chain over the fight: systems/chain.js), chainClick(index | null) (a click in the fight while one is up) }.
+ * startChain(aspect, avoid) (a chain over the fight, its points kept out of the boxes `avoid`: systems/chain.js), chainClick(index | null) (a click in the fight while one is up) }.
  */
 export function createScene(root, actions) {
     root.innerHTML = `
@@ -269,6 +269,21 @@ export function createScene(root, actions) {
         el.chain.classList.add('gone');
         clearTimeout(chainGone);
         chainGone = setTimeout(() => { if (!chainKey) { el.chain.hidden = true; el.chain.innerHTML = ''; } }, quietNow() ? 0 : 260);
+    }
+    /**
+     * The box no point may sit in, in fractions of the fight `f`, so a tap meant for the monster always strikes it
+     * (systems/chain.js placePoints): where the monster stands as laid out (its spawn and lunges are transforms, and a
+     * box taken mid-move was too small), half a cell wider each side for a boss arriving one size up (bossScale), and
+     * half a point and a little more all round.
+     */
+    function keepClear(f) {
+        const stand = el.foeStand.getBoundingClientRect();
+        const sp = el.foeSprite;
+        const r = (parseFloat(getComputedStyle(el.chain).getPropertyValue('--chain-size')) || 58) / 2 + 4;
+        const grow = ATLAS_CELL / 2;
+        const left = stand.left + sp.offsetLeft - grow - r, right = stand.left + sp.offsetLeft + sp.offsetWidth + grow + r;
+        const top = stand.top + sp.offsetTop - grow - r, bottom = stand.top + sp.offsetTop + sp.offsetHeight + r;
+        return { x0: (left - f.left) / f.width, y0: (top - f.top) / f.height, x1: (right - f.left) / f.width, y1: (bottom - f.top) / f.height };
     }
     /** Where a point is, in % of the effects layer (for its spark). */
     function pointSpot(index) {
@@ -661,13 +676,19 @@ export function createScene(root, actions) {
         fxBudget = Math.max(fxBudget, 1);
         spawnFx('click-spark', '✦', (event.clientX - box.left) / box.width * 100, (event.clientY - box.top) / box.height * 100, 450);
     });
-    // A click anywhere in the fight while a chain is up goes to it: on a point, its number; elsewhere, nothing but the
-    // quarter second it takes (systems/chain.js), so clicking at random over the fight gets nowhere.
+    // A click in the fight while a chain is up goes to it: on a point, its number; elsewhere, nothing but the quarter
+    // second it takes (systems/chain.js), so clicking at random over the fight gets nowhere. Not one on the monster:
+    // that is a strike, and only that.
     el.field.addEventListener('click', event => {
         if (!chainKey) return;
         const point = event.target.closest?.('.chain-point');
+        if (!point && event.target.closest?.('.foe')) return;
         actions.chainClick?.(point ? Number(point.dataset.i) : null);
     });
+    // A press on a point doesn't take the focus (the keyboard still reaches them): a click on a button lets its focus
+    // go again (main.js), and an auto-clicker on a point turned that into thousands of focus changes a second,
+    // which froze the owner's computer (October 2026).
+    el.chain.addEventListener('mousedown', event => { if (event.target.closest?.('.chain-point')) event.preventDefault(); });
     el.cta.addEventListener('click', () => actions.toggle());
     // A pat for the pet at the hero's feet: it hops, a heart floats up, and it chirps.
     el.petFigure.addEventListener('click', () => {
@@ -846,7 +867,7 @@ export function createScene(root, actions) {
             else if (!fightSeenSince) fightSeenSince = now;
             if (!ch && fightSeenSince && now - fightSeenSince >= CHAIN_SETTLE_MS && chainReady(state, game.now)) {
                 const f = el.field.getBoundingClientRect();
-                if (f.width > 0 && f.height > 0) actions.startChain?.(f.width / f.height);
+                if (f.width > 0 && f.height > 0) actions.startChain?.(f.width / f.height, [keepClear(f)]);
             }
 
             const combo = Math.floor(c.combo || 0);

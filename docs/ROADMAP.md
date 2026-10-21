@@ -1323,6 +1323,12 @@ Keeping it running:
 - [x] **The anvil shows the bonuses** (the owner, 21 October 2026: rerolling meant guessing what came): each card lists
       its piece's bonuses, and after a reroll the new ones glow, marked "new", for a few seconds. Checked in a browser
       at both widths
+- [x] **The chain keeps out of the strikes' way, and off an auto-clicker's** (the owner, 21 October 2026: clicking
+      didn't feel as before, and an auto-clicker froze the computer): the points never sit on the monster (they did in
+      nearly every chain, every one on a phone), a click on the monster is always a strike, the chain counts its clicks
+      on its own clock, striking its points keeps the combo; a press on a point takes no focus and plays no click
+      (an auto-clicker on one moved the focus 2,000 times a second). Mashing through chains lands as many strikes as
+      before the chain. Checked in a browser at both widths, with a simulated auto-clicker (DESIGN §3.6)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

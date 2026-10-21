@@ -238,8 +238,11 @@ export class Game {
         });
     }
     clickAttack() { return this._act(() => clickAttack(this)); }
-    /** The chain over the fight (systems/chain.js): start one (`aspect`: its layer's width over height), or a click on point `index` (null: elsewhere). */
-    startChain(aspect) { return this._act(() => startChain(this, aspect)); }
+    /**
+     * The chain over the fight (systems/chain.js): start one (`aspect`: its layer's width over height; `avoid`: boxes
+     * its points keep out of, the monster's), or a click on point `index` (null: elsewhere).
+     */
+    startChain(aspect, avoid) { return this._act(() => startChain(this, aspect, avoid)); }
     chainClick(index) { return this._act(() => chainClick(this, index)); }
     setPotion(id) { return this._act(() => setPotion(this, id)); }
     setDungeonPotion(id) { return this._act(() => setDungeonPotion(this, id)); }

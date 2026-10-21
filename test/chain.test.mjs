@@ -1,7 +1,8 @@
 // The chain (systems/chain.js; the owner, October 2026): five numbered points over the fight, struck in order before
 // its clock runs out, for a little gold, and a quick one rallies the hero. A click elsewhere or out of turn does
-// nothing; a click counts every strikeGapMs at most; a random clicker almost never finishes one. Strikes on the
-// monster are as they were.
+// nothing; the chain counts a click every clickGapMs at most; a random clicker almost never finishes one. Strikes on
+// the monster are as they were, and the chain never gets in their way: its points keep off the monster, its clicks
+// keep a clock of their own, and striking its points keeps the combo.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -85,7 +86,7 @@ test('struck in order: a little gold; struck fast, a rally of attack speed for a
     assert.ok(BASE.rallyAttackSpeed > 0 && BASE.rallyAttackSpeed <= 0.25, 'small');
 });
 
-test('a click out of turn, elsewhere, or too soon after the last does nothing, and costs nothing', () => {
+test('a click out of turn, elsewhere, or too soon after the chain\'s last does nothing, and costs nothing', () => {
     const game = fighter();
     let t = b.firstMs + 500;
     at(game, t);
@@ -97,13 +98,84 @@ test('a click out of turn, elsewhere, or too soon after the last does nothing, a
     t += 300; at(game, t);
     assert.equal(game.chainClick(null), false, 'the monster, the ground');
     t += 100; at(game, t);
-    assert.equal(game.chainClick(0), false, 'within a quarter second of the last click: not counted');
+    assert.equal(game.chainClick(0), false, 'within a quarter second of its last click: not counted');
     assert.equal(c.chain.next, 0);
     t += 200; at(game, t);
     assert.equal(game.chainClick(0), true, 'counted now');
     for (let i = 1; i < b.points; i++) { t += 300; at(game, t); assert.equal(game.chainClick(i), true); }
     assert.equal(c.chain, null, 'finished, whatever came between');
     assert.ok(chain);
+});
+
+test('a strike and a point never wait on each other: each keeps its own quarter second', () => {
+    const game = fighter();
+    let t = b.firstMs + 500;
+    at(game, t);
+    game.startChain(2);
+    const c = game.state.combat;
+    t += 300; at(game, t);
+    assert.equal(game.clickAttack(), true, 'a strike');
+    t += 10; at(game, t);
+    assert.equal(game.chainClick(0), true, 'the 1, a hundredth of a second after the strike: counted');
+    t += BALANCE.combat.strikeGapMs - 10; at(game, t);
+    assert.equal(game.clickAttack(), true, 'a strike a quarter second after the last strike, whatever came between');
+    t += 5; at(game, t);
+    assert.equal(game.chainClick(1), false, 'the 2 within a quarter second of the 1: not counted');
+    t += 10; at(game, t);
+    assert.equal(game.chainClick(1), true, 'the 2, a quarter second after the 1');
+    assert.equal(c.chain.next, 2);
+    assert.equal(game.state.stats.strikes, 2);
+    assert.equal(b.clickGapMs, BALANCE.combat.strikeGapMs, 'the same pace: four a second each');
+});
+
+test('striking the points keeps the combo from fading; the chain builds none itself', () => {
+    const run = playChain => {
+        const game = fighter();
+        let t = 1000;
+        for (let i = 0; i < 12; i++) { t += 260; at(game, t); game.clickAttack(); }
+        const c = game.state.combat;
+        const built = c.combo;
+        c.chainAt = game.now;
+        game.startChain(2);
+        for (let i = 0; i < b.points; i++) { t += 700; at(game, t); if (playChain) game.chainClick(i); }
+        return { built, after: c.combo, chains: game.state.stats.chains };
+    };
+    const played = run(true);
+    assert.ok(played.built > 5, `combo ${played.built}`);
+    assert.equal(played.chains, 1);
+    assert.ok(Math.abs(played.after - played.built) < 1e-9, `held: ${played.built} -> ${played.after}`);
+    const watched = run(false);
+    assert.ok(watched.after < watched.built - 1, `3.5 s without a strike or a point fades it: ${watched.built} -> ${watched.after}`);
+});
+
+test('the points keep off the monster: none in its box, on a phone or a wide screen', () => {
+    rng.setSource(seededRandom(11));
+    // the monster's box, widened by half a point, in fractions of the fight (measured in a browser: ui/scene.js keepClear)
+    const cases = [
+        { aspect: 390 / 292, box: { x0: 0.48, y0: 0.02, x1: 0.95, y1: 0.93 } },    // a phone
+        { aspect: 1100 / 449, box: { x0: 0.56, y0: 0.0, x1: 0.78, y1: 0.86 } }      // a desktop
+    ];
+    for (const { aspect, box } of cases) {
+        for (let n = 0; n < 500; n++) {
+            const pts = placePoints(b.points, aspect, b.spacing, [box]);
+            assert.equal(pts.length, b.points);
+            for (const p of pts) {
+                assert.ok(p.x <= box.x0 || p.x >= box.x1 || p.y <= box.y0 || p.y >= box.y1, `aspect ${aspect.toFixed(2)}: ${JSON.stringify(p)} in the box`);
+                assert.ok(p.x >= 0.1 && p.x <= 0.9 && p.y >= 0.16 && p.y <= 0.84, JSON.stringify(p));
+            }
+            for (let i = 0; i < pts.length; i++) for (let j = 0; j < i; j++) {
+                const d = Math.hypot((pts[i].x - pts[j].x) * aspect, pts[i].y - pts[j].y);
+                assert.ok(d >= 0.12, `aspect ${aspect.toFixed(2)}: two points ${d.toFixed(3)} apart`);
+            }
+        }
+    }
+    // a box over all but a strip: the points still find room outside it; over everything: a row, as before
+    const strip = placePoints(b.points, 2, b.spacing, [{ x0: 0.3, y0: 0, x1: 1, y1: 1 }]);
+    assert.ok(strip.every(p => p.x <= 0.3), JSON.stringify(strip));
+    assert.equal(new Set(strip.map(p => `${p.x},${p.y}`)).size, b.points, 'five different spots');
+    assert.equal(placePoints(b.points, 2, b.spacing, [{ x0: 0, y0: 0, x1: 1, y1: 1 }]).length, b.points);
+    // what the page sends is checked: odd boxes are left out
+    assert.equal(placePoints(b.points, 2, b.spacing, [null, { x0: 'a' }, { x0: 0.5, y0: 0.5, x1: 0.4, y1: 0.6 }]).length, b.points);
 });
 
 test('its clock runs out: the chain goes, nothing is lost, the next is set', () => {
@@ -138,9 +210,9 @@ test('a random clicker almost never finishes a chain; one who aims finishes ever
         let t = b.firstMs + 100;
         at(game, t);
         if (!game.startChain(2)) continue;
-        // as fast as the game counts clicks (one a quarter second), for the chain's whole four seconds
-        for (let k = 0; k * BALANCE.combat.strikeGapMs <= b.ms; k++) {
-            t += BALANCE.combat.strikeGapMs; at(game, t);
+        // as fast as the chain counts clicks (one a quarter second), for its whole four seconds
+        for (let k = 0; k * b.clickGapMs <= b.ms; k++) {
+            t += b.clickGapMs; at(game, t);
             game.chainClick(randomClicker(game));
             if (!game.state.combat.chain) break;
         }

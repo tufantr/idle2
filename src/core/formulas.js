@@ -117,13 +117,15 @@ export const BALANCE = {
     },
     // The chain (systems/chain.js; the owner, October 2026): five numbered points over the fight, struck in order before
     // its clock runs out, for a little gold, and a quick one rallies the hero. Small by the owner's word: the strikes are
-    // what matters in a fight, the chain only a bonus for the player who watches. Struck at random the points almost
-    // never fall in order (a click counts every combat.strikeGapMs at most), so an auto-clicker gets nothing from it.
+    // what matters in a fight, the chain only a bonus for the player who watches, and it never gets in their way: its
+    // points keep off the monster, and its clicks have their own clock. Struck at random the points almost never fall
+    // in order (the chain counts a click every clickGapMs at most), so an auto-clicker gets nothing from it.
     chain: {
         points: 5,
         ms: 4000,                  // to strike all five
         everyMs: [20000, 30000],   // between chains, while the fight is on screen
         firstMs: 8000,             // the first chain of a fight that has had none
+        clickGapMs: 250,           // one click in the fight counted this often, wherever it lands (the monster's are strikes)
         spacing: 0.3,              // points at least this far apart (in the layer's heights)
         goldKills: 2,              // a finished chain pays this many kills' gold at the stage
         fastMs: 2000,              // finished this fast, it rallies the hero too:
@@ -132,7 +134,7 @@ export const BALANCE = {
     combat: {
         regenInCombat: 0.001,   // fraction of max HP per second while fighting (Melvor: 1% per 10 s)
         regenResting: 0.02,     // fraction of max HP per second out of combat (full in under a minute)
-        // A strike (the clan boss's openings only since the chain, BALANCE.chain): a tenth of an attack, at most one every `strikeGapMs`, and the combo it builds adds up to
+        // A strike: a tenth of an attack, at most one every `strikeGapMs`, and the combo it builds adds up to
         // comboMax × comboDmgPerStack to every hit (+10%). It was half an attack, then a fifth, at up to eight a
         // second, with a combo of +90% and, from 10, 20 and 30 stacks, +10% crit, 15% lifesteal and echo strikes:
         // fast clicking dealt nearly seven times an idle hero's damage and healed him, so the owner's hero reached

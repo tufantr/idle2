@@ -80,7 +80,7 @@ The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} second
 
 Every {{BALANCE.chain.everyMs[0] / 1000}} to {{BALANCE.chain.everyMs[1] / 1000}} seconds of a fight you are watching, {{BALANCE.chain.points}} numbered points appear over it. Strike them in order, 1 to {{BALANCE.chain.points}}, within {{BALANCE.chain.ms / 1000}} seconds, and they pay {{BALANCE.chain.goldKills}} kills' worth of gold at your stage. Finish within {{BALANCE.chain.fastMs / 1000}} seconds and your hero **rallies** too: +{{pct(BASE.rallyAttackSpeed, 0)}} attack speed for {{BALANCE.chain.rallyMs / 1000}} seconds.
 
-A click on the wrong number, or anywhere else, does nothing and costs nothing; the fight counts one click every {{BALANCE.combat.strikeGapMs / 1000}} seconds at most, strikes and points together. When the time runs out the points go, and the next chain comes as usual. The chain only comes while the fight is on your screen, and clicking it doesn't end [[Mini-games and Focus|Focus]]. It is a small bonus for watching: your strikes are what count in a fight.
+A click on the wrong number, or anywhere else, does nothing and costs nothing; the chain counts one click every {{BALANCE.chain.clickGapMs / 1000}} seconds at most. The points never sit on the monster, and a click on the monster is always a strike, so you can keep striking while a chain is up; striking its points in turn keeps your combo from fading. When the time runs out the points go, and the next chain comes as usual. The chain only comes while the fight is on your screen, and clicking it doesn't end [[Mini-games and Focus|Focus]]. It is a small bonus for watching: your strikes are what count in a fight.
 
 ## Food and potions
 

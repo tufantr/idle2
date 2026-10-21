@@ -168,7 +168,7 @@ window.addEventListener('storage', event => { if (event.key === OWNER_KEY && eve
 // The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
 const scene = createScene(document.getElementById('scene'), {
     strike: () => { advance(Date.now()); return game.clickAttack(); }, // on the real clock, not the last tick's
-    startChain: aspect => { advance(Date.now()); return game.startChain(aspect); },
+    startChain: (aspect, avoid) => { advance(Date.now()); return game.startChain(aspect, avoid); },
     chainClick: index => { advance(Date.now()); return game.chainClick(index); },
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },
@@ -331,9 +331,9 @@ document.addEventListener('pointerdown', event => {
     pointer.down = true;
     pointer.downAt = Date.now();
     sound.unlock();
-    // Every button answers with a click; the monster has its own strike sound.
+    // Every button answers with a click; the monster has its own strike sound, the chain's points their notes.
     const button = event.target?.closest?.('button, [role="button"]');
-    if (button && !button.disabled && !button.classList.contains('foe') && !button.closest('.foe')) sound.play('click');
+    if (button && !button.disabled && !button.closest('.foe, .chain-layer')) sound.play('click');
 }, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
 // A button clicked with the mouse or a finger lets the focus go once its click is done: kept, Space (the
