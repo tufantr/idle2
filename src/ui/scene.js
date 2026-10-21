@@ -693,11 +693,12 @@ export function createScene(root, actions) {
         element: root,
 
         /** After each render: visibility, place, path, names and kit. Cheap when nothing changed. */
-        sync(game, ui) {
+        /** `frozen`: a fight that just ended keeps its last moment on screen (main.js endHeld), whatever the hero does meanwhile. */
+        sync(game, ui, { frozen = false } = {}) {
             const onCombat = ui.tab === fightTab(game, ui);   // Combat, Dungeons during a run, or Clan against its boss
             if (root.hidden && onCombat) quiet = true;
             root.hidden = !onCombat;
-            if (!onCombat) return;
+            if (!onCombat || frozen) return;
             const state = game.state;
             const c = state.combat;
             const d = game.derived;
@@ -766,9 +767,9 @@ export function createScene(root, actions) {
             if (!c.active) setMarkup(el.cta, `${CTA_ICON} ${c.recovering ? 'Fight now' : 'Enter combat'}`);   // resting after a fall: go back in at once
         },
 
-        /** Every animation frame: bars, timers, combo and a newly arrived monster. */
-        frame(game) {
-            if (root.hidden) return;
+        /** Every animation frame: bars, timers, combo and a newly arrived monster (none while `frozen`: sync above). */
+        frame(game, { frozen = false } = {}) {
+            if (root.hidden || frozen) return;
             fxBudget = MAX_FX_PER_FRAME;
             anchors = null;
             const now = performance.now();

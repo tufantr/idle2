@@ -1316,6 +1316,10 @@ Keeping it running:
 - [x] **Cheaper supplies** (the owner, 21 October 2026: 25 coal is mined in seconds, but a Coal Wagon cost minutes of
       fighting): priced at the furthest stage of the run instead of the best ever, at 4–6 kills a pack (25–40
       before), essence 30 (80), gem pouches 8 / 12 / 18 (50 / 80 / 120), never under a quarter over the resale (DESIGN §3.8)
+- [x] **A felled Titan or a clan attack goes straight back to its tab** (the owner's report, 21 October 2026: the hero
+      went on farming the stages on screen for seconds first): the fight's last moment holds 1.5 s, frozen (it was 2.4 s,
+      drawing the stage fight the hero was already back at), then the Dungeons or Clan tab shows its page. Checked in a
+      browser at both widths, against the live version that showed the stages
 - [x] **The anvil shows the bonuses** (the owner, 21 October 2026: rerolling meant guessing what came): each card lists
       its piece's bonuses, and after a reroll the new ones glow, marked "new", for a few seconds. Checked in a browser
       at both widths

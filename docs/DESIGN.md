@@ -627,8 +627,8 @@ if he was fighting before it. New work started mid-fight ends it and replaces wh
 October 2026 he was left fighting at the stages whatever he had been doing. A Titan fight never survives
 a reload: the hero is back at what he was doing (a save from before `titan.before` fights on at the
 stages, as it did). A tab put to sleep mid-fight replays the fight, then his work for the rest of the
-time. On screen the fight keeps the screen for its last banner (2.4 s: the win and what it left, "Time
-is up" with the share dealt, or the fall), then goes back to the tab the Titan was challenged from;
+time. On screen the fight keeps the screen for its last banner (1.5 s, frozen on that moment: the win and what it
+left, "Time is up" with the share dealt, or the fall), then goes back to the tab the Titan was challenged from;
 Give up goes back at once (`backFromTitan` in `src/main.js`).
 
 ### 3.13 Pets and the collection
@@ -1231,11 +1231,14 @@ needs another screen: fight, spend, prestige and fight on.
   Combat, the phone hotbar's fight button and the header's pill lead there too. The list comes back once
   it is over (a run left, ended after a clear or lost; the Titan felled, outlasted or given up) and the
   hero goes back to what he was doing, a stage fight under Combat included; a run lost or a Titan's end
-  that was being watched keeps its screen 2.4 seconds, for the fall or the banner to show.
+  that was being watched keeps its screen 1.5 seconds, for the fall or the banner to show. Meanwhile the scene stays
+  on that last moment (`endHeld` in `src/main.js`): it went on drawing the hero's fight at the stages, which he is
+  already back at, and the owner saw him farming there for seconds before the tab came back (21 October 2026; it was
+  2.4 s then).
 - **The clan boss is fought on the Clan tab** the same way (`fightTab`; the owner, 16 October 2026: after an
   attack begun while the hero fought the stages, the screen went on to the stages' fight instead of back to the
-  Clan tab). The tab is the fight while it lasts; when it ends its banner holds the screen 2.4 seconds
-  (`ui.clanHoldUntil`; Give up goes straight back), and then the tab shows the clan again, ready for the next
+  Clan tab). The tab is the fight while it lasts; when it ends its banner holds the screen 1.5 seconds, frozen on
+  that moment (`ui.clanHoldUntil`, `endHeld`; Give up goes straight back), and then the tab shows the clan again, ready for the next
   attack, while the hero goes back to what he was doing, a stage fight under Combat included.
 - **Clears and fragments are told apart** on the dungeon cards, the run's panel and the map: the clears
   beside the chest they open, the unique's fragments as "33/50 fragments" (or "221 fragments" once there

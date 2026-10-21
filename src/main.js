@@ -46,7 +46,7 @@ const BASE_RECORD_MULT = BASE.recordMult;
 const TICK_MS = 100;
 const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
 const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
-const DEFEAT_HOLD_MS = 2400;     // a lost dungeon run stays on screen this long before the list of dungeons comes back
+const DEFEAT_HOLD_MS = 1500;     // a lost dungeon run stays on screen this long before the list of dungeons comes back
 const AUTOSAVE_MS = 15000;
 // Cloud saves: every minute while the page is open, in the background too, and once on leaving it (the
 // owner, October 2026, once the game had its own server: "traffic is not an issue"). On Vercel's free Neon
@@ -55,7 +55,7 @@ const AUTOSAVE_MS = 15000;
 const CLOUD_SAVE_MS = 60000;
 const CLOUD_AWAY_MS = 10 * 60000;    // back after this long away: another device may have played meanwhile
 const CLOUD_LEAVE_GAP_MS = 5000;     // leaving within seconds of an upload sends no other
-const TITAN_HOLD_MS = 2400;      // the Titan's fight keeps the screen this long after it ends (its last banner)
+const TITAN_HOLD_MS = 1500;      // the Titan's fight keeps the screen this long after it ends (its last banner)
 
 // Browser storage can be blocked (private windows, the game embedded in another page). These are
 // conveniences, so failures are ignored; the save itself goes through core/save.js, which checks too.
@@ -280,7 +280,7 @@ function frame(now) {
     requestAnimationFrame(frame);
     try {
         patchLive(game, ui);
-        scene.frame(game);
+        scene.frame(game, { frozen: endHeld() });
         stage.frame(game);
         guide.frame({ modal: !!ui.modalOpen, card: !!document.querySelector('#celebrate .celebration') });
         paintGold(now);
@@ -530,7 +530,7 @@ function render() {
     if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
     if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
-    scene.sync(game, ui);
+    scene.sync(game, ui, { frozen: endHeld() });
     stage.sync(game, ui);
     guide.sync(game, { battle: ui.tab === fightTab(game, ui), tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
     rewards.resume();   // cards held back by a boss fight show once it is over
@@ -573,6 +573,18 @@ const ARRIVALS = {
     auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars'
 };
 const arrivals = new Set();
+
+/**
+ * A fight on its own tab just ended while watched (the Titan's, a dungeon run lost, the clan boss's), and its screen is
+ * held a moment for its last banner (the holds above): the battle scene stays on that last moment meanwhile. The hero is
+ * already back at what he did before, a fight at the stages say, and the held screen showed him farming there (the
+ * owner, October 2026).
+ */
+function endHeld() {
+    const mode = game.state.combat.mode;
+    if (mode === 'titan' || mode === 'dungeon' || mode === 'clan') return false;
+    return Math.max(ui.battleHoldUntil || 0, ui.dungeonHoldUntil || 0, ui.clanHoldUntil || 0) > game.now;
+}
 
 /** A fight on the Dungeons tab is over (a run, the Titan's): the tab, where it was watched, shows the list again (fightTab). */
 function backToDungeons() {
@@ -702,6 +714,7 @@ const REVEAL_TOASTS = {
 const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
 
 function handleEvents(events) {
+    const frozen = endHeld();   // (an ended fight's last moment on screen: what happens meanwhile at the stages isn't drawn)
     // a fight on the Dungeons tab that just ended while watched (a run lost, the Titan's) keeps its screen a moment, for its end to show
     const ended = ui.tab === 'dungeons' && events.find(ev => (ev.type === 'dungeonFail' && ev.lost) || (ev.type === 'titan' && ev.reason !== 'left'));
     if (ended) ui.dungeonHoldUntil = game.now + (ended.type === 'titan' ? TITAN_HOLD_MS : DEFEAT_HOLD_MS) + 1000;
@@ -720,7 +733,7 @@ function handleEvents(events) {
         sound.play('unlock');
     }
     for (const ev of events) {
-        scene.event(ev, game);
+        if (!frozen) scene.event(ev, game);
         const heard = ev.type === 'unlock' ? null : soundFor(ev, onCombat);
         if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
         switch (ev.type) {
