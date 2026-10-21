@@ -13,7 +13,7 @@ Woodcutting brings in logs, and few things in the game don't need some. It opens
 
 ## How it works
 
-Pick a tree and your hero chops on and on, while you are away too; trees never run out. Each chop brings one log, and now and then two: an [[Tools|axe]] (forged in Smithing), the tree's [[Mastery|mastery]] and the [[/capes|Woodcutting cape]] all raise the chance of a double. Monsters drop logs as well, and the [[Shop]] sells plain ones in bundles.
+Pick a tree and your hero chops on and on, while you are away too; trees never run out. Each chop brings one log, and now and then two: an [[Tools|axe]] (bought in the [[/shop|Shop]]), the tree's [[Mastery|mastery]] and the [[/capes|Woodcutting cape]] all raise the chance of a double. Monsters drop logs as well, and the [[Shop]] sells plain ones in bundles.
 
 ## Training tips
 

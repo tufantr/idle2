@@ -19,7 +19,7 @@ Almost everything one skill makes, another skill uses.
 - **[[/skills/hunting|Hunting]]** brings raw meat from the forest and fish from the river. **[[/skills/cooking|Cooking]]** turns them into [[/food|food]] for the fight.
 - **[[/skills/alchemy|Alchemy]]** forages herbs and brews them with a second ingredient into [[/potions|potions]]: {{SKILLS.alchemy.nodes.filter(n => n.consumes).map(n => `${n.name} (${Object.keys(n.consumes).map(id => RESOURCES[id].name).join(' + ')})`).join(', ')}}.
 - **[[/skills/farming|Farming]]** grows crops for Cooking (potatoes, cabbages, pumpkins and starfruit) and herbs for Alchemy ({{CROPS.filter(c => RESOURCES[c.produces].category === 'herb').map(c => c.name).join(', ')}}).
-- **[[/skills/crafting|Crafting]]** sets a gem in a silver or gold bar to make [[/equipment/jewellery|jewellery]], and makes bows for Hunting.
+- **[[/skills/crafting|Crafting]]** sets a gem in a silver or gold bar to make [[/equipment/jewellery|jewellery]], or makes a plain piece from the bar alone.
 - **[[/skills/agility|Agility]]** builds a course of lasting bonuses from gold, logs and bars (and diamonds for the last slot), and you train it by running the course.
 - **The fight** feeds the skills back. Each place drops materials of its own (ore, logs, meat, fish, herbs, fishing bait), and monsters leave gems and essence.
 
@@ -41,15 +41,15 @@ Keep the skills fairly close together: each one's output is another's input, and
 
 Each [[/tools|tool]] tier gives its skill +{{pct(TOOL_SPEED_PER_TIER, 0)}} speed and +{{pct(TOOL_DOUBLE_PER_TIER, 0)}} chance of a double.
 
-| Tool | Helps | Made in |
-| --- | --- | --- |
-| Pickaxe | Mining | Smithing |
-| Axe | Woodcutting | Smithing |
-| Tinderbox | Firemaking: a log sometimes burns twice | Smithing |
-| Hoe | Farming: crops grow faster, and a harvest sometimes doubles | Smithing |
-| Bow | Hunting | Crafting |
+| Tool | Helps |
+| --- | --- |
+| Pickaxe | Mining |
+| Axe | Woodcutting |
+| Tinderbox | Firemaking: a log sometimes burns twice |
+| Hoe | Farming: crops grow faster, and a harvest sometimes doubles |
+| Bow | Hunting |
 
-Each tier is made from bars and logs, in order, starting at level {{TOOLS.pickaxe.tiers[0].levelReq}} of the skill that makes it. Tools are kept for good: a prestige never takes them.
+Each tier is bought in the [[/shop|Shop]] for bars and logs, in order, once the skill it helps reaches its level (the first at {{TOOLS.pickaxe.tiers[0].levelReq}}). Tools are kept for good: a prestige never takes them.
 
 ## Mastery
 

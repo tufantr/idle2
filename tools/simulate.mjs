@@ -29,7 +29,7 @@ import { rng, seededRandom } from '../src/core/rng.js';
 import { levelForXp } from '../src/core/xp.js';
 import { SKILLS } from '../src/data/skills.js';
 import { isUnlocked } from '../src/data/unlocks.js';
-import { SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, anvilMetal } from '../src/data/workshop.js';
+import { SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, PLAIN, anvilMetal } from '../src/data/workshop.js';
 import { anvilCost, forgeTier } from '../src/systems/anvil.js';
 import { SMITHING_BAR_COST, SMITHING_TYPES, TYPE_SLOTS, EQUIP_SLOTS, MAX_GEAR_TIER } from '../src/data/items.js';
 import { zoneForStage } from '../src/data/zones.js';
@@ -655,11 +655,13 @@ function craftTraining() {
         for (let i = 0; pouch && i < 5 && S.gold > 2 * goldShopPrice(game, pouch); i++) game.buyGoldShopItem(pouch.id);
     }
     const gemTier = usable();
-    if (!bar || !gemTier) return mineForGems(30);
+    if (!bar) return mineForGems(30);
     const t = obtain(bar.bar, 5);
     if (t) return t;
     const end = now + POLICY.trainMin * 60000;
-    return { kind: 'craft', type: 'Ring', bar: bar.bar, gem: gemTier.gem, until: () => now >= end, why: `train crafting (${gemTier.gem} rings)` };
+    // with no gem it can cut, plain pieces: the setting alone, for less XP (data/workshop.js PLAIN)
+    const gem = gemTier ? gemTier.gem : PLAIN;
+    return { kind: 'craft', type: 'Ring', bar: bar.bar, gem, until: () => now >= end, why: `train crafting (${gemTier ? gemTier.gem : 'plain'} rings)` };
 }
 
 // Starts a task; returns the task actually running. Anything that fails to start (level too low,

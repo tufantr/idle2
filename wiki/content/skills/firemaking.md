@@ -15,7 +15,7 @@ Firemaking uses up logs and makes nothing else, so it feeds no other skill: its 
 
 Pick a kind of log and your hero burns them one by one until they run out. Each log adds {{BASE.bonfireSecondsPerLogTier}} seconds times its tier to the bonfire, which holds at most {{time(BASE.bonfireMaxMs)}}. The bonfire burns down on the clock, whatever you are doing and while you are away, and its bonus counts for everything you train meanwhile, even after you stop burning.
 
-A [[Tools|tinderbox]] (forged in [[/skills/smithing|Smithing]]) makes you faster and gives a chance that a log burns twice: twice the XP and twice the bonfire time, for one log. The log's [[Mastery|mastery]] and the [[/capes|Firemaking cape]] raise that chance too, and mastery can save the log altogether.
+A [[Tools|tinderbox]] (bought in the [[/shop|Shop]]) makes you faster and gives a chance that a log burns twice: twice the XP and twice the bonfire time, for one log. The log's [[Mastery|mastery]] and the [[/capes|Firemaking cape]] raise that chance too, and mastery can save the log altogether.
 
 ## Training tips
 

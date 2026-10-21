@@ -14,10 +14,14 @@ import { RESOURCES } from './resources.js';
 
 export const PACE_FROM = 20;
 export const PACE_TO = 75;
+// Crafting is paced at half its old 4 (the owner, October 2026: it levelled far slower than any other skill). A piece
+// takes two other skills' work, a bar and a gem, where another skill's action takes one; with both in the bank it is
+// the quickest skill to 99, but no player has them there, and fed by the mine, the furnace and the gem pouches it was
+// the slowest by hundreds of hours (DESIGN §5).
 export const PACE = {
     mining: 2.1, woodcutting: 2.0, hunting: 2.05,
     cooking: 3.2, firemaking: 3.4, alchemy: 1.1,
-    smithing: 2.3, crafting: 4,
+    smithing: 2.3, crafting: 2,
     farming: 1, agility: 1.2
 };
 

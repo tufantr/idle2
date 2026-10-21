@@ -1329,6 +1329,15 @@ Keeping it running:
       on its own clock, striking its points keeps the combo; a press on a point takes no focus and plays no click
       (an auto-clicker on one moved the focus 2,000 times a second). Mashing through chains lands as many strikes as
       before the chain. Checked in a browser at both widths, with a simulated auto-clicker (DESIGN §3.6)
+- [x] **Crafting levels like a skill again** (the owner, 21 October 2026: "levelling up crafting feels too hard"; the
+      options were given that morning and waited for a pick; "why didn't you do your recommendations"): **plain
+      pieces**, a ring, earring or amulet from the setting alone (a bar, no gem) for 70% of the XP of the best gem the
+      jeweller can set, picked for you while you hold no gems; Crafting's late XP paced at 2 instead of 4. With the
+      cheaper gem pouches above, a crafter who mines and smelts their own bars reaches 75 in about 48 h (270–510 h
+      before the pouches, 90–150 h after them) and 99 in about 414 h. The climb is unchanged in the simulator. Also
+      fixed: text left from moving the tools to the Shop and from the end of forging (bows "made in Crafting",
+      tools "forged in Smithing", "past copper", "forged or crafted") in the help cards, medals and wiki (DESIGN §3.4,
+      §5.1). Checked in a browser at both widths
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
@@ -1383,7 +1392,7 @@ later, not only for the online clan side, the game's most important part: see
    and a bcrypt password hash; it is still in the repository's history. If that password is used
    anywhere else, change it.
 5. **Balance intent — decided: Melvor pace** (October 2026). Level 99 takes 190–290 h of training
-   for each skill (no boosts) and 160–210 h of mixed play for combat; the 100 authored stages
+   for each skill (no boosts; Crafting, two inputs a piece, 83 h with them in the bank, since 21 October 2026) and 160–210 h of mixed play for combat; the 100 authored stages
    still take ~5–6 h, and the Abyss goes on from there. One table of factors per skill
    (`src/data/pace.js`) and one for combat (`BALANCE.rewards.xpPace`) set it; DESIGN §5 has the
    numbers.

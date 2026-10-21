@@ -33,7 +33,7 @@ Every clear opens a chest:
 - a piece of gear {{pct(CHEST_GEAR_CHANCE, 0)}} of the time, rolled like a boss's and of the chest's gear tier, as strong as the dungeon's depth in the Abyss makes it;
 - the unique itself, outright, {{pct(DIRECT_UNIQUE_CHANCE, 1)}} of the time.
 
-Drop chance bonuses raise the gem and gear chances. The chests of the deepest dungeons hold {{GEAR_TIERS.filter(t => t.dropOnly).map(t => link(path.tier(t.name), t.name)).join(' and ')}} gear, which nothing can forge.
+Drop chance bonuses raise the gem and gear chances. The chests of the deepest dungeons hold {{GEAR_TIERS.filter(t => t.dropOnly).map(t => link(path.tier(t.name), t.name)).join(' and ')}} gear, which otherwise only drops deep in the Abyss.
 
 ## Fragments and the unique
 

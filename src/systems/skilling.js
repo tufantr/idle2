@@ -2,7 +2,7 @@
 // The same `completeAction` runs online (from the tick loop) and offline (in a loop).
 
 import { SKILLS, skillNode } from '../data/skills.js';
-import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET } from '../data/workshop.js';
+import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET, PLAIN, plainXp } from '../data/workshop.js';
 import { CRAFTING_TYPES, TYPE_NAMES, JEWEL_POWER, MAX_GEAR_TIER, craftMaxRarity } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
 import { zoneForStage } from '../data/zones.js';
@@ -50,6 +50,17 @@ function resolveBase(state, action) {
         }
         case 'craft': {
             const jewelBar = JEWEL_BARS.find(b => b.bar === action.bar);
+            if (action.gem === PLAIN) {   // a plain piece: the setting alone, its XP from the best gem the jeweller can set (data/workshop.js)
+                if (!jewelBar || !CRAFTING_TYPES.includes(action.type)) return null;
+                const first = RESOURCES[GEM_TIERS[0].gem];
+                return {
+                    kind: 'craft', skill: 'crafting', id: `${action.bar}:${PLAIN}:${action.type}`, label: `Craft ${withArticle(`${jewelBar.name} ${TYPE_NAMES[action.type]}`)}`,
+                    levelReq: Math.min(99, jewelBar.levelReq + (CRAFT_SLOT_OFFSET[action.type] || 0)), interval: CRAFT_INTERVAL, xp: plainXp(skillLevel(state, 'crafting'), jewelBar),
+                    consumes: { [action.bar]: 1 },
+                    item: { type: action.type, tier: first.tier, power: first.power * JEWEL_POWER * jewelBar.powerMult, materialName: jewelBar.name, gemName: null },
+                    masteryKey: jewelKey(PLAIN)
+                };
+            }
             const gemTier = GEM_TIERS.find(g => g.gem === action.gem);
             if (!jewelBar || !gemTier || !CRAFTING_TYPES.includes(action.type)) return null;
             const gem = RESOURCES[action.gem];

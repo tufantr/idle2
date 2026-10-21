@@ -13,7 +13,7 @@ Hunting brings in game from the forest and fish from the river, for the kitchen.
 
 ## How it works
 
-The tab has two rows, the **Forest** and the **River**, opening side by side as your level grows. Pick an animal or a spot and your hero hunts or fishes on and on, while you are away too; neither runs out. Each catch brings one, and now and then two: a [[Tools|bow]] (made in [[/skills/crafting|Crafting]]) serves the whole skill, and the spot's [[Mastery|mastery]], the [[/capes|Hunting cape]] and a burning bonfire ([[/skills/firemaking|Firemaking]]) all raise the chance of a double. At a river spot the skill's stage shows the river, and its mini-game is the angler's: strike when the float dips.
+The tab has two rows, the **Forest** and the **River**, opening side by side as your level grows. Pick an animal or a spot and your hero hunts or fishes on and on, while you are away too; neither runs out. Each catch brings one, and now and then two: a [[Tools|bow]] (bought in the [[/shop|Shop]]) serves the whole skill, and the spot's [[Mastery|mastery]], the [[/capes|Hunting cape]] and a burning bonfire ([[/skills/firemaking|Firemaking]]) all raise the chance of a double. At a river spot the skill's stage shows the river, and its mini-game is the angler's: strike when the float dips.
 
 **Bait.** Each catch at a river spot uses one [[Fishing Bait|bait]] if you have any, for a {{pct(BAIT_EXTRA_CHANCE, 0)}} chance of a further fish on top; the forest's game takes none. Bait comes from:
 - monsters in the {{ZONES.filter(z => z.loot.some(l => l.id === 'fishing_bait')).map(z => link(path.zone(z.id), z.name)).join(', ').replace(/, (?=[^,]*$)/, ' and ')}};

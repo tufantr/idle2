@@ -3,7 +3,7 @@
 
 import { SKILLS, GATHERING_SKILLS, PRODUCTION_SKILLS } from '../../src/data/skills.js';
 import { RESOURCES } from '../../src/data/resources.js';
-import { CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, reinforceCost, FORGE_STEP, FORGE_BAR_GROWTH, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
+import { CRAFT_INTERVAL, SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, GEM_TIERS, JEWEL_BARS, CRAFT_SLOT_OFFSET, PLAIN_XP_SHARE, plainXp, reinforceCost, FORGE_STEP, FORGE_BAR_GROWTH, anvilMetal, anvilBarMult, ANVIL_LEVEL_PER_UPGRADE, ANVIL_BAR_GROWTH, ANVIL_REFUND } from '../../src/data/workshop.js';
 import { SMITHING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, SLOT_STATS, STAT_UNIT, MAX_UPGRADE, JEWEL_POWER, CRAFT_RARITY_LEVELS, CRAFT_MAX_RARITY, RARITIES, GEAR_TIERS } from '../../src/data/items.js';
 import { CROPS, FARMING_PLOTS } from '../../src/data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL, obstacleUpgradeGold, obstacleUpgradeLevelReq } from '../../src/data/agility.js';
@@ -100,7 +100,10 @@ function calculator(id) {
     let list = [];
     if (SKILLS[id].nodes.length) list = SKILLS[id].nodes.map(n => ({ n: n.name, xp: n.xp, ms: n.interval, lv: n.levelReq }));
     if (id === 'smithing') list = SMELTING_RECIPES.map(r => ({ n: `Smelt ${r.name}`, xp: r.xp, ms: r.interval, lv: r.levelReq }));
-    if (id === 'crafting') list = GEM_TIERS.map(g => ({ n: `${RESOURCES[g.gem].name} ring`, xp: g.xp, ms: CRAFT_INTERVAL, lv: g.levelReq + CRAFT_SLOT_OFFSET.Ring }));
+    if (id === 'crafting') {   // and a plain silver ring at each gem's level, where its XP steps up (data/workshop.js plainXp)
+        list = GEM_TIERS.map(g => ({ n: `${RESOURCES[g.gem].name} ring`, xp: g.xp, ms: CRAFT_INTERVAL, lv: g.levelReq + CRAFT_SLOT_OFFSET.Ring }));
+        for (const g of GEM_TIERS.filter(t => t.gem !== 'voidstone')) list.push({ n: `Plain silver ring (from level ${g.levelReq})`, xp: plainXp(g.levelReq, JEWEL_BARS[0]), ms: CRAFT_INTERVAL, lv: g.levelReq });
+    }
     if (!list.length) return '';
     list.sort((a, b) => a.lv - b.lv);
     return section('Level calculator', `<div class="calc" data-actions="${esc(JSON.stringify(list))}">
@@ -139,11 +142,14 @@ function craftingSections() {
         return [`<span id="${actionAnchor(`jewel_${g.gem}`)}" class="act">${res(g.gem)}</span>`, ...pieces.map(t => Math.min(99, g.levelReq + CRAFT_SLOT_OFFSET[t])), fmt(g.xp), gem.tier, fmt(Math.round(STAT_UNIT * gem.power * JEWEL_POWER * SLOT_STATS.Neck.atk))];
     });
     const jewels = table(['Gem', 'Ring #', 'Earring #', 'Amulet #', 'XP #', 'Tier #', 'Amulet attack #'], rows);
+    // plain pieces: their XP follows the best gem the jeweller can set
+    const plain = table(['From Crafting level', ...JEWEL_BARS.map(b => `${b.name} setting XP #`)], GEM_TIERS.filter(g => g.gem !== 'voidstone').map(g => [g.levelReq, ...JEWEL_BARS.map(b => (g.levelReq >= b.levelReq ? fmt(plainXp(g.levelReq, b)) : '–'))]), { sort: false });
     const best = [[1, CRAFT_MAX_RARITY], ...[...CRAFT_RARITY_LEVELS].reverse()].map(([lv, r]) => `<li>From level ${lv}: up to <strong>${esc(RARITIES.find(x => x.id === r).name)}</strong></li>`).join('');
     const pouches = GOLD_SHOP.filter(e => e.craft).map(e => `<li>${link('/shop', esc(e.name))}: ${resList(e.gives)}, while Crafting is ${e.craft[0]}–${e.craft[1]}</li>`).join('');
     return [
         section('Jewellery', `<p>A ring, earring or amulet is a precious bar set with a gem: ${JEWEL_BARS.map(b => `${res(b.bar)} from level ${b.levelReq}${b.powerMult > 1 ? ` (+${pct(b.powerMult - 1, 0)} power)` : ''}`).join(', ')}. The gem sets the piece's tier and power; rings come first, amulets last. A Voidstone piece is cut to the deepest depth of the Abyss you have reached: past depth ${BALANCE.abyss.dropScalingFrom}, every depth makes it ${BALANCE.abyss.dropGrowth} times as strong, like the gear that drops there.</p>${jewels}
             <p>The best quality a piece can roll rises with your level:</p><ul>${best}</ul>`, { id: 'jewellery' }),
+        section('Plain pieces', `<p>With no gem, a ring, earring or amulet is the setting alone: one bar, at the setting's level (rings first, earrings ${CRAFT_SLOT_OFFSET.Ear} levels later, amulets ${CRAFT_SLOT_OFFSET.Neck}). It is as weak as an amethyst piece, and teaches ${pct(PLAIN_XP_SHARE, 0)} of what a piece of the best gem you can set teaches, a gold setting ${pct(JEWEL_BARS[1].powerMult - 1, 0)} more; the Voidstone sets no pace for it.</p>${plain}`, { id: 'plain' }),
         section('Gem pouches', `<p>So that Crafting can be trained at any point, the Shop sells the low gems for gold, one pouch at a time as your level climbs:</p><ul>${pouches}</ul>`)
     ].join('\n');
 }

@@ -24,7 +24,7 @@ Mastery levels follow the skills' [[XP table]], divided by {{MASTERY_XP_DIVISOR}
 Every level above 1 adds to that one action:
 - **Speed:** +{{pct(MASTERY_PER_LEVEL.speed, 1)}} a level, for every action (+{{pct(MASTERY_PER_LEVEL.speed * (MASTERY_MAX_LEVEL - 1), 1)}} at {{MASTERY_MAX_LEVEL}}).
 - **Doubles:** +{{pct(MASTERY_PER_LEVEL.double, 2)}} a level chance that the action makes twice as much, for actions that make a resource: gathering, cooking, alchemy and smelting. In Firemaking it is the chance that a log burns twice, for twice the XP and bonfire time.
-- **Ingredients kept:** +{{pct(MASTERY_PER_LEVEL.preserve, 1)}} a level chance to use up nothing, for actions with ingredients: a dish's raw food and its log, a potion's herb and second ingredient, ore for smelting, logs for burning, and the bars and gems of forged and crafted pieces. At the anvil, a metal's mastery takes that share of the bars off the price instead.
+- **Ingredients kept:** +{{pct(MASTERY_PER_LEVEL.preserve, 1)}} a level chance to use up nothing, for actions with ingredients: a dish's raw food and its log, a potion's herb and second ingredient, ore for smelting, logs for burning, and the bars and gems of crafted pieces. At the anvil, a metal's mastery takes that share of the bars off the price instead.
 
 These add to the speed and double chance your skill already has from [[Tools|tools]], [[Perks|perks]], medals, [[/capes|capes]] and the rest. Jewellery makes a piece of gear, so it gets speed and kept ingredients but no doubles.
 

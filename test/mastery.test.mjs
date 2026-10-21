@@ -153,7 +153,8 @@ test('every mastery action is real and every key is unique within its skill', ()
         total += keys.length;
     }
     assert.ok(total >= 70, `${total} actions with a mastery`);
-    for (const a of masteryActions('crafting')) assert.ok(RESOURCES[a.key.replace('jewel_', '')], a.key);
+    // a gem's jewellery, or the plain pieces (the setting alone, data/workshop.js PLAIN)
+    for (const a of masteryActions('crafting')) assert.ok(RESOURCES[a.key.replace('jewel_', '')] || a.key === 'jewel_plain', a.key);
 });
 
 test('checkpoints: at 10, 25, 50 and 95% of a skill\'s whole mastery its actions get faster, for good', () => {

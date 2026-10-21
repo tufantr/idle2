@@ -61,7 +61,7 @@ A boss's first fall in a run that leaves no upgrade marks one on a gold ring rou
 
 ## The codex
 
-The gear codex in the Hall keeps a page for every kind of gear at every tier: {{CODEX_TYPES.length}} kinds × {{GEAR_TIERS.length}} tiers, {{CODEX_SIZE}} pages. A page fills the first time a piece of its kind and tier reaches you, found, forged or crafted, even if it is salvaged as it lands. The {{achievementById('armourer').name}} medal comes at {{achievementById('armourer').req.value}} pages (see [[Medals]]).
+The gear codex in the Hall keeps a page for every kind of gear at every tier: {{CODEX_TYPES.length}} kinds × {{GEAR_TIERS.length}} tiers, {{CODEX_SIZE}} pages. A page fills the first time a piece of its kind and tier reaches you, found or crafted, even if it is salvaged as it lands. The {{achievementById('armourer').name}} medal comes at {{achievementById('armourer').req.value}} pages (see [[Medals]]).
 
 ## The bag
 
@@ -105,7 +105,7 @@ Salvage a piece you don't need from its detail, or with **Salvage commons**:
 - A dropped piece gives [[Monster Essence]]: more for a higher tier and a rarer piece, from {{salvageEssence({ tier: 1, rarity: 'common' })}} for a common {{GEAR_TIERS[0].name}} piece to {{salvageEssence({ tier: MAX_GEAR_TIER, rarity: 'legendary' })}} for a legendary {{GEAR_TIERS.at(-1).name}} one and {{salvageEssence({ tier: MAX_GEAR_TIER, rarity: 'primal' })}} for a Primal. The forge needs it.
 - A dropped weapon or piece of armour also gives bars of its metal: from {{salvageBars({ type: 'Weapon', tier: 1, rarity: 'common', source: 'drop' }).qty}} for a common piece to {{salvageBars({ type: 'Weapon', tier: 1, rarity: 'legendary', source: 'drop' }).qty}} for a legendary one, {{anvilBarMult(6)}} and {{anvilBarMult(7)}} times that for {{GEAR_TIERS[5].name}} and {{GEAR_TIERS[6].name}}.
 - A piece of jewellery gives back half the essence its upgrades took. The anvil's work stays with the slot, so a weapon or piece of armour gives back only what it is made of (one still carrying its own reinforcing from before the slots gives back {{pct(ANVIL_REFUND, 0)}} of those bars).
-- A piece you forged or crafted gives back about {{pct(SALVAGE_MATERIAL_RETURN, 0)}} of its materials instead, in whole bars and gems that come out fair on average.
+- A piece you crafted gives back about {{pct(SALVAGE_MATERIAL_RETURN, 0)}} of its materials instead, in whole bars and gems that come out fair on average.
 
 ## Reforging and upgrading jewellery
 

@@ -16,7 +16,7 @@ import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
 import { POTION_MINUTES } from '../data/potions.js';
-import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP } from '../data/workshop.js';
+import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
@@ -34,7 +34,7 @@ export const FEATURES = {
         points: [`Your hero fights automatically. Click the monster (or press Space) to strike as well: ${shareInWords(BALANCE.combat.manualHitMult)} of an attack, up to ${1000 / BALANCE.combat.strikeGapMs} a second, and each strike builds a combo of up to +${pc(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack)} damage.`,
             `Every ${secs(BALANCE.chain.everyMs[0])} to ${secs(BALANCE.chain.everyMs[1])} seconds, ${BALANCE.chain.points} numbered points appear over the fight. Strike them in order within ${secs(BALANCE.chain.ms)} seconds for a little gold; within ${secs(BALANCE.chain.fastMs)} seconds, your hero rallies: +${pc(BASE.rallyAttackSpeed)} attack speed for ${secs(BALANCE.chain.rallyMs)} seconds.`,
             'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone (from its first stage, two stages back, never onto a boss), rest at the campfire, and fight on.',
-            `Weapons and armour past copper only drop, mostly of the zone's own tier and for the slots you lack. A boss that leaves no upgrade fills a mark of the gold ring round the boss's node; the ${ordinal(PITY_MARKS)} brings a sure piece for your weakest slot.`,
+            `Weapons and armour only drop, mostly of the zone's own tier and for the slots you lack. A boss that leaves no upgrade fills a mark of the gold ring round the boss's node; the ${ordinal(PITY_MARKS)} brings a sure piece for your weakest slot.`,
             `Deeper stages teach more. Past combat level ${BALANCE.rewards.xpPace.from}, each kill teaches less the higher you rise (from ${BALANCE.rewards.xpPace.to}, a ${ordinal(BALANCE.rewards.xpPace.slow)} as much), so level 99 is a long road.`] },
     mining: { name: 'Mining', art: 'caves', icon: 'res/copper_ore', blurb: SKILLS.mining.desc,
         points: ['Pick a vein and your hero keeps digging, even while you are away.', 'Ore becomes bars in Smithing. Now and then a gem turns up.'] },
@@ -57,7 +57,8 @@ export const FEATURES = {
             'A combat potion is picked on the Combat and Clan tabs, a dungeon potion on the Dungeons tab (a combat potion works there too, at half its strength), a skill potion on every skill\'s tab.',
             `A bottle lasts ${POTION_MINUTES} minutes of its work, and the next is drunk as it runs out.`] },
     crafting: { name: 'Crafting', art: 'workshop', icon: 'item/Ring/4', blurb: SKILLS.crafting.desc,
-        points: ['Jewellery is a precious bar set with a gem. It adds a little attack and defence and carries the most bonuses.', 'Gems turn up while mining and drop from monsters.', 'Bows make hunting faster, at the river too.'] },
+        points: ['Jewellery is a precious bar set with a gem. It adds a little attack and defence and carries the most bonuses.', 'Gems turn up while mining and drop from monsters.',
+            `Out of gems? A plain piece is the setting alone, a bar and no gem, for ${pc(PLAIN_XP_SHARE)} of the XP of your best gem.`] },
     farming: { name: 'Farming', art: 'farm', icon: 'farm/growing', blurb: 'Plots grow on the clock while you do something else.',
         points: ['Seeds are bought with gold when you plant.', 'Herbs go to Alchemy; potatoes, cabbages, pumpkins and starfruit to Cooking.', 'A hoe makes crops grow faster.'] },
     agility: { name: 'Agility', art: 'course', icon: 'item/Boots/3', blurb: 'Build an obstacle course, then run it to train.',

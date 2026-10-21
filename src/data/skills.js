@@ -140,7 +140,7 @@ export const SKILLS = {
     },
     crafting: {
         id: 'crafting', name: 'Crafting', icon: '💍', color: '#e879f9',
-        desc: 'Jewellery from precious bars and gems; bows from logs.',
+        desc: 'Jewellery from precious bars, set with a gem or plain.',
         nodes: []
     },
     combat: {

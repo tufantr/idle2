@@ -129,6 +129,19 @@ export const VOIDSTONE_DEPTH = 5;
 export const VOIDSTONE_CHANCE = 0.25;   // a boss's first fall
 export const CRAFT_INTERVAL = 3000;
 
+// A plain piece (the owner, October 2026: Crafting levelled far slower than any other skill, for want of gems): the
+// setting alone, one bar and no gem. As weak as the first gem's piece, it teaches PLAIN_XP_SHARE of what a piece of the
+// best gem the jeweller can set teaches (a gold setting a fifth more, as it adds a fifth to a piece's power), so
+// Crafting goes on when the gems run out, the way Melvor's and RuneScape's level on a cheap material. The Voidstone, a
+// boss's rare gift, sets no pace for it.
+export const PLAIN = 'plain';
+export const PLAIN_XP_SHARE = 0.7;
+/** A plain piece's XP for a jeweller of Crafting `level`, set in `bar` (a JEWEL_BARS entry). */
+export function plainXp(level, bar) {
+    const best = [...GEM_TIERS].reverse().find(g => g.gem !== 'voidstone' && level >= g.levelReq) || GEM_TIERS[0];
+    return Math.max(1, Math.round(best.xp * PLAIN_XP_SHARE * (bar?.powerMult || 1)));
+}
+
 // Tools. Each tier: -TOOL_SPEED_PER_TIER interval and +TOOL_DOUBLE_PER_TIER chance of a double yield.
 // Bought in the Shop (systems/tools.js; the owner, October 2026: tools are purchases, not skill work) with the bars and
 // logs they always took, each tier once the skill it serves reaches `levelReq` (they were made in Smithing, and the bow

@@ -19,7 +19,7 @@
 
 import { SKILLS } from './skills.js';
 import { levelForXp } from '../core/xp.js';
-import { SMELTING_RECIPES, METALS, GEM_TIERS } from './workshop.js';
+import { SMELTING_RECIPES, METALS, GEM_TIERS, PLAIN } from './workshop.js';
 import { RESOURCES } from './resources.js';
 
 export const MASTERY_MAX_LEVEL = 99;
@@ -43,7 +43,10 @@ export function masteryActions(skillId) {
         ];
     }
     if (skillId === 'crafting') {
-        return GEM_TIERS.map(g => ({ key: jewelKey(g.gem), name: `${RESOURCES[g.gem].name} jewellery`, icon: RESOURCES[g.gem].icon, levelReq: g.levelReq }));
+        return [
+            { key: jewelKey(PLAIN), name: 'Plain jewellery', icon: RESOURCES.silver_bar.icon, levelReq: 1 },   // the setting alone (data/workshop.js)
+            ...GEM_TIERS.map(g => ({ key: jewelKey(g.gem), name: `${RESOURCES[g.gem].name} jewellery`, icon: RESOURCES[g.gem].icon, levelReq: g.levelReq }))
+        ];
     }
     return (SKILLS[skillId]?.nodes || []).map(n => ({ key: n.id, name: n.name, icon: RESOURCES[n.produces || n.bonfireLog]?.icon || '•', levelReq: n.levelReq }));
 }

@@ -2,10 +2,10 @@
 // Pure skill pacing: hours of continuous training (best node at each level) to reach milestones.
 //   node tools/pacing.mjs
 // Gathering skills get two rows: without tools, and with the tool tier a player would have at that
-// level. The smithing "pipeline" row models a dedicated smith who mines their own ore and coal,
-// smelts it, and forges the most bar-efficient piece they can — the realistic smithing pace.
+// level. The smithing "pipeline" row models a dedicated smith who mines their own ore and coal and
+// smelts it (forging is gone since October 2026) — the realistic smithing pace.
 import { SKILLS } from '../src/data/skills.js';
-import { SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET } from '../src/data/workshop.js';
+import { SMELTING_RECIPES, METALS, TOOLS, TOOL_SPEED_PER_TIER, JEWEL_BARS, GEM_TIERS, CRAFT_INTERVAL, CRAFT_SLOT_OFFSET, plainXp } from '../src/data/workshop.js';
 import { CRAFTING_TYPES } from '../src/data/items.js';
 import { xpForLevel, levelForXp } from '../src/core/xp.js';
 import { FARMING_PLOTS, CROPS } from '../src/data/farming.js';
@@ -33,7 +33,7 @@ function pace(nodes, { toolFor = null } = {}) {
     return out;
 }
 
-// Mine → smelt → forge, one bar at a time, choosing the best metal both skills allow.
+// Mine → smelt, one bar at a time, choosing the best metal both skills allow.
 function smithingPipeline() {
     const mining = SKILLS.mining.nodes;
     const nodeFor = id => mining.find(n => n.produces === id);
@@ -113,6 +113,12 @@ rows.push(['smithing (smelting only)', pace(SMELTING_RECIPES.map(r => ({ ...r })
 // jewellery, with the bars and gems already in the bank: every piece of every gem as a node
 const jewellery = JEWEL_BARS.flatMap(b => GEM_TIERS.flatMap(g => CRAFTING_TYPES.map(t => ({ levelReq: Math.min(99, Math.max(b.levelReq, g.levelReq) + (CRAFT_SLOT_OFFSET[t] || 0)), interval: CRAFT_INTERVAL, xp: g.xp }))));
 rows.push(['crafting (jewellery, bars and gems in the bank)', pace(jewellery), null]);
+// plain pieces, the setting alone: their XP follows the best gem the jeweller can set, so a node at each gem's level
+const plainPieces = JEWEL_BARS.flatMap(b => GEM_TIERS.filter(g => g.gem !== 'voidstone').map(g => {
+    const levelReq = Math.max(b.levelReq, g.levelReq);
+    return { levelReq, interval: CRAFT_INTERVAL, xp: plainXp(levelReq, b) };
+}));
+rows.push(['crafting (plain pieces, bars in the bank)', pace(plainPieces), null]);
 rows.push(['farming (every plot, harvested on time)', farmingPace(), null]);
 rows.push(['agility (a full course at each level)', agilityPace(), null]);
 const pipeline = smithingPipeline();
@@ -124,7 +130,7 @@ for (const [id, bare, tooled] of rows) {
     console.log(`| ${id} | ${MILESTONES.map(m => f(bare[m])).join(' | ')} |`);
     if (tooled) console.log(`| ${id} + tools | ${MILESTONES.map(m => f(tooled[m])).join(' | ')} |`);
 }
-console.log(`| smithing (mine → smelt → forge) | ${MILESTONES.map(m => f(pipeline.out[m])).join(' | ')} |`);
+console.log(`| smithing (mine → smelt) | ${MILESTONES.map(m => f(pipeline.out[m])).join(' | ')} |`);
 console.log(`| … mining level at that point | ${MILESTONES.map(m => pipeline.mineLevels[m] ?? '—').join(' | ')} |`);
 console.log('\nHours of continuous training with the best available node; ignores mini-game boosts, perks and achievements.');
 console.log('Rows other than the pipeline assume inputs are already in the bank.');

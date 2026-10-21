@@ -175,6 +175,18 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   jewellery); a gold setting adds 20%. Earrings add +2 and Amulets +4 levels; gold bars need crafting
   30. Silver and gold are jewellery-only metals. (Power used to average the bar and the gem, which
   made a gold-and-amethyst ring a tier-1 item stronger than mithril.)
+- **Plain pieces** (the owner, 21 October 2026: "levelling up crafting feels too hard"): with no gem, a Ring,
+  Earring or Amulet is the setting alone, one silver or gold bar (`PLAIN` in `src/data/workshop.js`), at the
+  setting's level (+2 and +4 as above). It is as weak as an amethyst piece and teaches 70% of what a piece of the
+  best gem the jeweller can set teaches (`PLAIN_XP_SHARE`, `plainXp`; a gold setting a fifth more, as it adds a
+  fifth to power; the Voidstone sets no pace): 14 XP at level 1, 35 from 25, 55 from 55, 74 from 70 (gold 88).
+  The Gem row starts with it, picked for a player who holds none of the gems they can set; it has its own mastery
+  ("Plain jewellery"). Crafting's gems were its bottleneck: a piece takes one, from a 2% find in the mine, the
+  Shop's pouches or the deep fight's diamonds (which need level 70). By estimate, a crafter who mines and smelts
+  their own bars, with the pouches at 25–40 kills, reached 50 in 27–60 h, 75 in 270–510 h and 99 in about 2,000 h;
+  with the pouches at 4–18 kills (§3.8) 8–12 / 90–150 / 970–1,600 h; with plain pieces and the pace below
+  (§5.1) about 6 / 48 / 414 h. In the simulator (12 seeds, 150 h) the climb is unchanged (best stage 140 / 270 /
+  770 at 10 / 50 / 150 h against 140 / 275 / 770) and its player's Crafting ends at 50 instead of 46.
 - **Crafted gear rolls Common to Rare**, forged and below Crafting 75 alike. Jewellery's best rises with
   Crafting (October 2026, §5.7): Epic possible from level 75, Legendary at 99, at the roll's own odds
   (about 3% and under 1% a piece, more with the quality bonuses; `CRAFT_RARITY_LEVELS` in `src/data/items.js`).
@@ -1753,18 +1765,16 @@ Rules:
 | Mining + tools | 7m | 16m | 39m | 2.9h | 23h | 86h | 202h |
 | Woodcutting | 6m | 18m | 43m | 3.5h | 29h | 106h | 248h |
 | Woodcutting + tools | 6m | 17m | 39m | 3.1h | 25h | 87h | 200h |
-| Fishing (now Hunting's river) | 6m | 19m | 45m | 3.8h | 33h | 125h | 252h |
-| Fishing + tools | 6m | 18m | 41m | 3.3h | 27h | 98h | 195h |
-| Hunting | 6m | 20m | 47m | 3.9h | 34h | 124h | 250h |
-| Hunting + tools | 6m | 19m | 43m | 3.4h | 27h | 97h | 194h |
+| Hunting (its river too) | 6m | 19m | 45m | 3.7h | 32h | 120h | 240h |
+| Hunting + tools | 6m | 18m | 41m | 3.2h | 26h | 94h | 186h |
 | Cooking | 3m | 10m | 23m | 2.4h | 26h | 109h | 223h |
 | Firemaking | 2m | 8m | 18m | 2.0h | 21h | 80h | 191h |
 | Firemaking + tools | 2m | 7m | 17m | 1.7h | 17h | 65h | 154h |
 | Alchemy (foraging only) | 7m | 20m | 43m | 3.2h | 24h | 98h | 237h |
 | Smithing (smelting only) | 4m | 10m | 24m | 2.4h | 25h | 102h | 244h |
-| Smithing (forging, bars in the bank) | 1m | 3m | 6m | 30m | 4.4h | 17h | 39h |
-| Crafting (jewellery, bars and gems in the bank) | 3m | 8m | 19m | 2.0h | 21h | 85h | 204h |
-| Smithing (mine → smelt → forge) | 4m | 15m | 43m | 5.1h | 55h | 248h | 606h |
+| Crafting (jewellery, bars and gems in the bank) | 3m | 8m | 18m | 1.6h | 12h | 40h | 83h |
+| Crafting (plain pieces, bars in the bank) | 4m | 11m | 25m | 1.9h | 15h | 54h | 127h |
+| Smithing (mine → smelt) | 10m | 36m | 1.7h | 13h | 128h | 593h | 1459h |
 | Farming (every plot, harvested on time) | 31m | 1.4h | 2.9h | 9.4h | 39h | 125h | 286h |
 | Agility (a full course at each level) | 6m | 18m | 44m | 3.8h | 27h | 99h | 233h |
 
@@ -1773,11 +1783,15 @@ Targets from the research: Lv 20 ≤ 15 min (close: 10–20 min), Lv 50 in 2–4
 most skills. Each skill's late actions give less than their base XP: an action opening at level 20
 or below keeps it all, one opening at 75 or above gives it divided by the skill's factor in
 `PACE` (`src/data/pace.js`: mining 2.1, woodcutting 2.0, hunting 2.05 (its river too), cooking 3.2,
-firemaking 3.4, alchemy 1.1, smithing 2.3, crafting 4, agility 1.2, farming 1), and the division grows
-evenly in between. The factors are applied once as the data loads, so every card, pop, the simulator
+firemaking 3.4, alchemy 1.1, smithing 2.3, crafting 2, agility 1.2, farming 1), and the division grows
+evenly in between. Crafting was 4 until 21 October 2026 (its 99 took 161 h with everything in the bank, the
+quickest skill, but some 970–1,600 h fed by the mine and the Shop's pouches): a piece takes two other skills'
+work, a bar and a gem, where another skill's action takes one, so it is paced at half, and its plain pieces (§3.4)
+need only the bar. The factors are applied once as the data loads, so every card, pop, the simulator
 and this tool see the same XP; old saves keep their levels. Farming and Agility were already on
-target. Forging from banked bars is the quick way to smithing 99 (39 h), but the bars come from
-smelting or mining, which is the long part (the whole pipeline is ~600 h, mining 99 on the way).
+target. Since forging went (October 2026) Smithing's XP comes from smelting and the anvil: smelting what one mines
+takes ~1,460 h to 99 (mining 99 on the way), and the anvil's XP, on the gear the fight drops, comes on top (it isn't
+in the table).
 The table leaves out mastery, which makes an action up to ~10% faster the longer it is trained
 (§3.20), and the XP boosts a player earns (the simulator's player has +60% XP by 150 h from perks
 and achievements): with them, 99 comes sooner.

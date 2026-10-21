@@ -6,7 +6,7 @@ import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
-import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, forgeMult } from '../data/workshop.js';
+import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, forgeMult } from '../data/workshop.js';
 import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
@@ -1083,11 +1083,15 @@ function anvilCard(state, item, before = null) {
 
 /**
  * Picture tiles to pick a material for the anvil or the bench (a metal, a setting, a gem): each with
- * how many you hold, the picked one lit. Its small label says what is being picked.
+ * how many you hold, the picked one lit. Its small label says what is being picked. An option that is no
+ * material (the bench's plain piece) brings its own `icon` and `sub` line, and `title`.
  */
 function materialPicks(label, options, picked, handler) {
     if (!options.length) return '';
-    const tiles = options.map(o => `<button class="pick${o.id === picked ? ' on' : ''}${o.have > 0 ? '' : ' empty'}" onclick="${handler}('${o.id}')" title="${esc(o.name)}: ${fmt(o.have)}" aria-label="${esc(o.name)}: ${fmt(o.have)}" aria-pressed="${o.id === picked}">${resIcon(o.id, { scale: 1.25 })}<span class="pick-sub">${shortQty(o.have)}</span></button>`).join('');
+    const tiles = options.map(o => {
+        const title = o.title || `${o.name}: ${fmt(o.have)}`;
+        return `<button class="pick${o.id === picked ? ' on' : ''}${o.have > 0 ? '' : ' empty'}" onclick="${handler}('${o.id}')" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${o.id === picked}">${o.icon || resIcon(o.id, { scale: 1.25 })}<span class="pick-sub">${o.sub ?? shortQty(o.have)}</span></button>`;
+    }).join('');
     return `<div class="material-picks"><span class="loadout-label">${label}</span><div class="pick-row" role="group" aria-label="${label}">${tiles}</div></div>`;
 }
 
@@ -1119,20 +1123,25 @@ export function renderCrafting(game, ui) {
     const bars = JEWEL_BARS.filter(b => level >= b.levelReq);
     const gems = GEM_TIERS.filter(g => level >= g.levelReq);
     const bar = bars.find(b => b.bar === ui.craftBar) || [...bars].reverse().find(b => state.resources[b.bar] > 0) || bars[0] || JEWEL_BARS[0];
-    const gem = gems.find(g => g.gem === ui.craftGem) || [...gems].reverse().find(g => state.resources[g.gem] > 0) || gems[gems.length - 1] || GEM_TIERS[0];
-    const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gem.gem }) }));
+    // the gem picked, else the best one held; with none held, the plain piece (the setting alone, data/workshop.js PLAIN)
+    const plain = ui.craftGem === PLAIN || (!gems.some(g => g.gem === ui.craftGem) && !gems.some(g => state.resources[g.gem] > 0));
+    const gem = plain ? null : gems.find(g => g.gem === ui.craftGem) || [...gems].reverse().find(g => state.resources[g.gem] > 0) || gems[gems.length - 1] || GEM_TIERS[0];
+    const gemId = plain ? PLAIN : gem.gem;
+    const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gemId }) }));
     const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
-        title: `${res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(gem.gem).color,
+        title: `${plain ? bar.name : res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${plain ? 1 : res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(plain ? bar.bar : gem.gem).color,
         inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(recipe.xp * d.xpMult), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
-        active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gem.gem, stalled: action?.stalled,
-        onclick: `FI.craft('${type}','${bar.bar}','${gem.gem}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
+        active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gemId, stalled: action?.stalled,
+        onclick: `FI.craft('${type}','${bar.bar}','${gemId}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
+    const plainPick = { id: PLAIN, name: 'No gem', have: state.resources[bar.bar], icon: sprite('item/Ring/1', { scale: 1.25, fallback: TYPE_ICONS.Ring }), sub: 'plain',
+        title: 'No gem: a plain piece, the setting alone, for less XP' };
     return `<section class="glass-panel skill-panel ${skillPainted('crafting')}">
         ${xpHeader(game, 'crafting', skillPotionChip(game, ui))}
         <div class="forge-bar">
             ${materialPicks('Setting', bars.map(b => ({ id: b.bar, name: `${b.name} setting`, have: state.resources[b.bar] })), bar.bar, 'FI.selectCraftBar')}
-            ${materialPicks('Gem', gems.map(g => ({ id: g.gem, name: res(g.gem).name, have: state.resources[g.gem] })), gem.gem, 'FI.selectCraftGem')}
-            ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gem.gem }).mastery, `${res(gem.gem).name} jewellery`)}
+            ${materialPicks('Gem', [plainPick, ...gems.map(g => ({ id: g.gem, name: res(g.gem).name, have: state.resources[g.gem] }))], gemId, 'FI.selectCraftGem')}
+            ${masteryRow(state, 'crafting', resolveAction(state, { kind: 'craft', type: CRAFTING_TYPES[0], bar: bar.bar, gem: gemId }).mastery, plain ? 'Plain jewellery' : `${res(gem.gem).name} jewellery`)}
         </div>
         <div class="node-grid">${cards}</div>
     </section>`;
