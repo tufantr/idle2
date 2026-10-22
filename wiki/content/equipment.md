@@ -104,12 +104,12 @@ Salvage a piece you don't need from its detail, or with **Salvage commons**:
 
 - A dropped piece gives [[Monster Essence]]: more for a higher tier and a rarer piece, from {{salvageEssence({ tier: 1, rarity: 'common' })}} for a common {{GEAR_TIERS[0].name}} piece to {{salvageEssence({ tier: MAX_GEAR_TIER, rarity: 'legendary' })}} for a legendary {{GEAR_TIERS.at(-1).name}} one and {{salvageEssence({ tier: MAX_GEAR_TIER, rarity: 'primal' })}} for a Primal. The forge needs it.
 - A dropped weapon or piece of armour also gives bars of its metal: from {{salvageBars({ type: 'Weapon', tier: 1, rarity: 'common', source: 'drop' }).qty}} for a common piece to {{salvageBars({ type: 'Weapon', tier: 1, rarity: 'legendary', source: 'drop' }).qty}} for a legendary one, {{anvilBarMult(6)}} and {{anvilBarMult(7)}} times that for {{GEAR_TIERS[5].name}} and {{GEAR_TIERS[6].name}}.
-- A piece of jewellery gives back half the essence its upgrades took, and {{pct(ANVIL_REFUND, 0)}} of the gems the bench put into it. The anvil's work stays with the slot, so a weapon or piece of armour gives back only what it is made of (one still carrying its own reinforcing from before the slots gives back {{pct(ANVIL_REFUND, 0)}} of those bars).
+- The anvil's and the bench's work stays with the slot, so a weapon, piece of armour or jewellery gives back only what it is made of (one still carrying its own reinforcing from before the slots gives back {{pct(ANVIL_REFUND, 0)}} of those bars).
 - A piece you crafted gives back about {{pct(SALVAGE_MATERIAL_RETURN, 0)}} of its materials instead, in whole bars and gems that come out fair on average.
 
 ## Upgrading and rerolling jewellery
 
-Jewellery is worked at the jeweller's bench in [[/skills/crafting|Crafting]], from Crafting {{BENCH_LEVEL_PER_UPGRADE}}: upgraded (+{{pct(UPGRADE_STEP, 0)}} a level, up to +{{MAX_UPGRADE}}) and its bonuses rerolled, with gems of its tier and essence. A worn piece's detail has a **Bench** button that goes there. See [[Jewellery]].
+Jewellery is worked at the jeweller's bench in [[/skills/crafting|Crafting]], from Crafting {{BENCH_LEVEL_PER_UPGRADE}}: its slot upgraded (the levels belong to the slot, as the anvil's do, with no top: +{{pct(UPGRADE_STEP, 0)}} a level up to +{{MAX_UPGRADE}}, ×{{FORGE_STEP}} past it) and its bonuses rerolled, with gems and essence. A worn piece's detail has a **Bench** button that goes there. See [[Jewellery]].
 
 ## Selling
 

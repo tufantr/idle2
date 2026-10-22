@@ -2,11 +2,11 @@
 // anvil, systems/anvil.js; jewellery at the jeweller's bench, systems/bench.js.)
 
 import {
-    TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, TIER_WEAR_LEVEL, RARITIES, UPGRADE_STEP,
+    TYPE_SLOTS, EQUIP_SLOTS, MAX_UPGRADE, TIER_WEAR_LEVEL, RARITIES,
     BAG_SIZE, BAG_UPGRADE, salvageEssence, upgradeEssenceRefund, SALVAGE_MATERIAL_RETURN, codexKey,
     SMITHING_TYPES, AUTO_SALVAGE_OPTIONS, DROP_TYPE_WEIGHTS, DROP_EMPTY_SLOT_MULT, DROP_BEHIND_SLOT_MULT, SLOT_STATS, STAT_UNIT, GEAR_TIERS
 } from '../data/items.js';
-import { salvageBars, ANVIL_REFUND, benchGem } from '../data/workshop.js';
+import { salvageBars, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
 import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, enemyBaseStats } from '../core/formulas.js';
@@ -70,13 +70,12 @@ export function canWear(state, item) {
 }
 
 /**
- * Rough power of an item for comparisons (affixes count, and a piece of jewellery's own upgrades; a weapon's or
- * armour's forge levels belong to its slot, data/workshop.js, so any piece worn there has them).
+ * Rough power of an item for comparisons (affixes count; the anvil's and the bench's levels belong to the slots,
+ * data/workshop.js, so any piece worn there has them).
  */
 export function itemScore(item) {
     if (!item) return -1;
-    const own = SMITHING_TYPES.includes(item.type) ? 1 : 1 + UPGRADE_STEP * (item.upgrade || 0);
-    return ((item.atk || 0) + (item.def || 0)) * own + 5 * (item.affixes?.length || 0);
+    return (item.atk || 0) + (item.def || 0) + 5 * (item.affixes?.length || 0);
 }
 
 /** True if the item beats what is worn in the weakest slot it fits (empty slots count as beaten). */
@@ -216,8 +215,8 @@ export function addItem(game, item) {
 
 /**
  * What salvaging an item would give: essence for drops, part of the materials back for crafted gear,
- * for weapons and armour bars of their metal (data/workshop.js salvageBars), and for jewellery three quarters of the gems
- * the bench put into it (systems/bench.js).
+ * and for weapons and armour bars of their metal (data/workshop.js salvageBars). (The anvil's and the bench's work
+ * stays with the slots.)
  */
 export function salvagePreview(item) {
     const materials = {};
@@ -232,11 +231,6 @@ export function salvagePreview(item) {
     for (const [bar, qty] of Object.entries(item.barsCarried || {})) {
         const back = Math.floor(ANVIL_REFUND * qty);
         if (back > 0) materials[bar] = (materials[bar] || 0) + back;
-    }
-    if (item.gemsIn > 0) {
-        const gem = benchGem(item.tier || 1).gem;
-        const back = Math.floor(ANVIL_REFUND * item.gemsIn);
-        if (back > 0) materials[gem] = (materials[gem] || 0) + back;
     }
     return { essence, materials };
 }
@@ -334,11 +328,13 @@ export function equipItem(game, id, requestedSlot = null) {
     state.inventory.splice(index, 1);
     if (previous) state.inventory.push(previous);
     if (item.rarity === 'legendary') bumpStat(game, 'legendariesEquipped');
-    // the slot's forge (data/workshop.js): its price follows the best tier it has held, and its levels are the piece's now
+    // the slot's levels (the anvil's forge, the jeweller's bench: data/workshop.js): its price follows the best tier it
+    // has held, and its levels are the piece's now
     let forge = 0;
-    if (SMITHING_TYPES.includes(slot) && state.forge?.[slot]) {
-        state.forge[slot].tier = Math.max(state.forge[slot].tier || 1, item.tier || 1);
-        forge = state.forge[slot].level || 0;
+    const levels = (SMITHING_TYPES.includes(slot) ? state.forge : state.bench)?.[slot];
+    if (levels) {
+        levels.tier = Math.max(levels.tier || 1, item.tier || 1);
+        forge = levels.level || 0;
     }
     // the first time a piece takes a slot's levels, a card says how the forge works (main.js), once
     const firstForge = forge > 0 && previous && !state.seen.forge_slots;

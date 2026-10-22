@@ -374,10 +374,10 @@ function spendPoints() {
         const item = S.equipped[slot];
         for (let g = 0; item && g < 200 && anvilCost(S, item).ok; g++) game.reinforceItem(item.id);
     }
-    // Gems and essence into the worn jewellery at the bench, the amulet first (systems/bench.js).
+    // Gems and essence into the slots of the worn jewellery at the bench, the amulet first (systems/bench.js; no top either).
     for (const slot of WITHOUT.has('bench') ? [] : ['Neck', 'Ring1', 'Ring2', 'Ear1', 'Ear2']) {
         const item = S.equipped[slot];
-        for (let g = 0; item && g < 20 && benchCost(S, item).ok; g++) game.upgradeJewel(item.id);
+        for (let g = 0; item && g < 200 && benchCost(S, item).ok; g++) game.upgradeJewel(item.id);
     }
     buyCamp();
 }

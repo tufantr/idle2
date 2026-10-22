@@ -189,18 +189,25 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   770 at 10 / 50 / 150 h against 140 / 275 / 770) and its player's Crafting ends at 50 instead of 46.
 - **The jeweller's bench** (the owner, 21 October 2026: "do jewellery bench"; `src/systems/bench.js`, from
   Crafting 5): what the anvil is to weapons and armour, for the jewellery the hero wears, on the Crafting tab's
-  second step (`benchCard` in render.js; a worn piece's detail has a Bench button). Upgrading a piece (+5% of its
-  base stats a level, to +10, the piece's own) and rerolling its bonuses take gems of its tier (`benchGem`:
-  amethyst for tier 1 up to diamond for tier 6, twice the diamonds for tier 7, the Voidstone being too rare to
-  be a price) and essence, and no gold. Step n takes `ceil(gems × 1.5^(n−1))` gems (a ring or an earring 1, an
-  amulet 2: 119 and 231 to +10), `2 × n × tier` essence and Crafting `5n`; a reroll a piece's worth of gems and
-  the anvil's rising essence. The work pays half the gems' Crafting XP (`BENCH_XP_SHARE`; a piece made with
-  them pays it all, and takes a bar and its time: at the full XP the deep fight's diamonds took the simulated
-  hero to Crafting 92 in 150 hours, against 80 at half, its Smithing 77) and practice in their jewellery's
-  mastery, whose levels take gems off the price, and the gems an upgrade took come back three quarters on
-  salvage. In the simulator (12 seeds, 150 h) the climb is as before (best stage 280 / 540 / 770 at 50 / 100 /
-  150 h against 270 / 540 / 770), and a new player's first hour too (stage 70 for one who watches, 60 before;
-  78 for one who taps, 79).
+  second step (`benchCard` in render.js; a worn piece's detail has a Bench button). Upgrading and rerolling
+  bonuses take gems (`benchGem`: amethyst for tier 1 up to diamond for tier 6, twice the diamonds for tier 7, the
+  Voidstone being too rare to be a price) and essence, and no gold. **Upgrading works the slot, as the anvil does**
+  (§3.31; the owner, 22 October 2026: "anvil upgrades are for the item slot, bench upgrades are for the items, is this
+  difference intentional" — it wasn't, and the slot won): `state.bench` holds `{ level, tier }` for Neck, Ring1,
+  Ring2, Ear1 and Ear2, every ring, earring or amulet worn there has the levels, and they have no top: +5% of a
+  piece's base stats a level to +10, then ×1.05 a level (`forgeMult`). Step n takes `ceil(gems × 1.5^(n−1))` gems
+  of the best tier the slot has held (a ring or an earring 1, an amulet 2: 119 and 231 to +10), ×1.15 a level past
+  it (a tier-7 ring: 840 diamonds to +15, 2,044 to +20, 9,316 to +30), `2 × n × tier` essence and Crafting `5n`, one
+  level a step past +10 up to 99. A reroll stays the piece's: a piece's worth of gems and the anvil's rising
+  essence. The work pays half the gems' Crafting XP (`BENCH_XP_SHARE`; past +10 the +10 level's; a piece made with
+  them pays it all, and takes a bar and its time: at the full XP the deep fight's diamonds took the simulated hero
+  to Crafting 92 in 150 hours, against 80 at half, its Smithing 77) and practice in their jewellery's mastery, whose
+  levels take gems off the price. Salvage gives back nothing of it, as the work stays in the slot. Saves from the
+  bench's first day (and the Inventory's gold upgrades before it): on every load a worn piece's own levels go to its
+  slot and the bag's, best first, to the lowest slot of their kind, and all come off plain (`sanitizeBench`, copied
+  into `meta.bench` like the forge's). In the simulator (12 seeds, 150 h) the bench by the piece left the climb as
+  before (best stage 280 / 540 / 770 at 50 / 100 / 150 h against 270 / 540 / 770), and a new player's first hour too
+  (stage 70 for one who watches, 60 before; 78 for one who taps, 79).
   It is the sink the deep heroes' diamonds lacked (thousands, unusable below Crafting 70), and jewellery
   drops at every rarity with it (§3.25).
 - **Crafted gear rolls Common to Rare**, forged and below Crafting 75 alike. Jewellery's best rises with
@@ -240,10 +247,10 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   legendary copper beat runite.
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
-- **Upgrades:** +5% base stats per level, max +10. Weapons and armour are reinforced at the anvil
-  with bars and essence (§3.4), jewellery at the jeweller's bench with gems and essence (§3.4); neither
-  takes gold. (Jewellery was upgraded in the Inventory with `2 × level × tier` essence plus 4 kills' gold a
-  level until 21 October 2026; the levels it got there stay with it.)
+- **Upgrades:** +5% base stats per level to +10, then ×1.05 a level with no top (§3.31). Weapons and armour are
+  reinforced at the anvil with bars and essence (§3.4), jewellery at the jeweller's bench with gems and essence
+  (§3.4); neither takes gold, and both levels belong to the slot. (Jewellery was upgraded in the Inventory with
+  `2 × level × tier` essence plus 4 kills' gold a level until 21 October 2026; the levels it got there went to its slot.)
 - **Reroll** (reforge): an item's affixes rolled again (not its rarity or base stats) for `3 × tier × min(10,
   1 + rerolls so far)` essence and a piece's worth of its material: bars at the anvil, gems at the bench.
 - **Salvage:** dropped gear → essence (`ceil(0.8 × tier × (rarity rank + 1))`), crafted gear → ~40% of

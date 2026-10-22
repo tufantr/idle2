@@ -12,7 +12,7 @@ import { TRIALS, TRIAL_TIERS, trialById, trialTarget, trialTiersCleared } from '
 import { xpForLevel, levelForXp, MAX_LEVEL } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
-import { TOOLS, FORGE_MAX } from '../data/workshop.js';
+import { TOOLS, FORGE_MAX, BENCH_SLOTS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { MASTERY_SKILLS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, masteryActions } from '../data/mastery.js';
@@ -45,6 +45,11 @@ const OLD_QUALITY = { common: 1, uncommon: 1.08, rare: 1.16, epic: 1.25, legenda
 // `meta.forge` too: a page still running the older game deletes `forge`, which it doesn't know, but keeps
 // `meta` as it is, so they are read back from there.
 const emptyForge = () => Object.fromEntries(SMITHING_TYPES.map(type => [type, { level: 0, tier: 1 }]));
+// The jeweller's bench (data/workshop.js): its levels belong to the jewellery slots too, in `bench` ({ level, tier } a
+// slot), copied into `meta.bench` as the forge's are. A piece of jewellery from before carries its own levels (`upgrade`:
+// the bench's first day, and the Inventory's gold upgrades before it); on every load they go to the slots of its kind,
+// the piece worn in a slot to that slot and the bag's best to the slots still lower, and all come off plain.
+const emptyBench = () => Object.fromEntries(BENCH_SLOTS.map(slot => [slot, { level: 0, tier: 1 }]));
 
 export const SAVE_VERSION = 3;
 
@@ -104,6 +109,7 @@ export function createDefaultState(now = Date.now()) {
         prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0, perkReset: PERK_RESET },   // firstAt: when the first prestige was
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         forge: emptyForge(),
+        bench: emptyBench(),
         perks: {},
         achievements: {},
         codex: {},             // "<type>/<tier>" -> true: the gear codex (data/items.js), pages filled
@@ -373,8 +379,6 @@ function sanitizeItem(raw, ids, nextId) {
         if (Object.keys(carried).length) item.barsCarried = carried;
     }
     if (finite(raw.essenceIn, -1) >= 0) item.essenceIn = Math.min(Math.floor(raw.essenceIn), 1e9);
-    const gemsIn = Math.floor(finite(raw.gemsIn));   // gems the jeweller's bench put into a piece of jewellery (systems/bench.js)
-    if (gemsIn > 0) item.gemsIn = Math.min(gemsIn, 1e7);
     if (Number.isSafeInteger(raw.depth) && raw.depth > 0) item.depth = raw.depth;
     return item;
 }
@@ -480,6 +484,34 @@ function sanitizeForge(state, data, now) {
     state.meta.forge = Object.fromEntries(SMITHING_TYPES.map(type => [type, state.forge[type].level]));
 }
 
+/** The bench's slots as whole numbers in range, the levels kept in `meta.bench` read back, and pieces' own levels folded in (above). */
+function sanitizeBench(state, data, now) {
+    const saved = isPlainObject(data?.bench) ? data.bench : {};
+    const mirror = isPlainObject(data?.meta?.bench) ? data.meta.bench : {};
+    state.bench = emptyBench();
+    for (const slot of BENCH_SLOTS) {
+        const b = state.bench[slot];
+        const s = isPlainObject(saved[slot]) ? saved[slot] : {};
+        b.level = Math.max(intIn(s.level, 0, FORGE_MAX, 0), intIn(mirror[slot], 0, FORGE_MAX, 0));
+        b.tier = Math.max(intIn(s.tier, 1, MAX_GEAR_TIER, 1), state.equipped[slot]?.tier || 1);
+    }
+    let moved = 0;
+    const fold = (slot, item) => {
+        const b = state.bench[slot];
+        if (item.upgrade > b.level) { b.level = item.upgrade; b.tier = Math.max(b.tier, item.tier || 1); }
+        item.upgrade = 0;
+        moved++;
+    };
+    for (const kind of CRAFTING_TYPES) {
+        const slots = TYPE_SLOTS[kind];
+        for (const slot of slots) if (state.equipped[slot]?.upgrade > 0) fold(slot, state.equipped[slot]);
+        const bag = state.inventory.filter(i => i.type === kind && i.upgrade > 0).sort((a, b) => b.upgrade - a.upgrade);
+        for (const item of bag) fold([...slots].sort((a, b) => state.bench[a].level - state.bench[b].level)[0], item);
+    }
+    if (moved) state.log.push({ t: now, type: 'system', text: 'The bench\'s levels belong to the jewellery slots now, with no top: every ring, earring and amulet you wear has its slot\'s levels.' });
+    state.meta.bench = Object.fromEntries(BENCH_SLOTS.map(slot => [slot, state.bench[slot].level]));
+}
+
 function rescaleRarity(state, now) {
     let raised = 0;
     for (const item of [...Object.values(state.equipped), ...state.inventory]) {
@@ -555,6 +587,7 @@ function normalise(data, now) {
     state.inventory = (Array.isArray(state.inventory) ? state.inventory : []).map(i => sanitizeItem(i, ids, nextId)).filter(Boolean);
     if (data?.meta?.rarityRescale !== RARITY_RESCALE) rescaleRarity(state, now);   // (read from the save itself: the default is the new mark)
     sanitizeForge(state, data, now);
+    sanitizeBench(state, data, now);
     state.bagUpgrades = Math.max(0, Math.min(BAG_UPGRADE.max, Math.floor(finite(state.bagUpgrades))));
     for (const id of ids) if (id >= state.idCounter) state.idCounter = id + 1;
     state.log = (Array.isArray(state.log) ? state.log : [])

@@ -8,8 +8,8 @@ import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '..
 import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, forgeMult } from '../data/workshop.js';
 import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
-import { benchCost, onBench } from '../systems/bench.js';
-import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, MAX_UPGRADE, UPGRADE_STEP, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
+import { benchCost, onBench, benchLevel, benchSlotOf } from '../systems/bench.js';
+import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS, medalShown, achievementById } from '../data/achievements.js';
 import { isUnlocked, nextGoals, goalProgress } from '../data/unlocks.js';
@@ -1098,26 +1098,29 @@ function renderBench(state, ui = {}) {
     return `<div class="anvil-grid">${worn.map(item => benchCard(state, item, rolled && Number(rolled.id) === Number(item.id) ? rolled.before : null)).join('')}</div>`;
 }
 
-// A piece's upgrades are its own (data/workshop.js benchUpgradeCost): the card has the piece, its +N, what the next
-// level does, its bonuses and the jobs, priced in gems of its tier and essence.
+// The bench's levels belong to the slot (data/workshop.js), as the anvil's do: the card is the slot's, with the piece
+// worn there, its plate (+14), what the next level does ("Ring slot +14 → +15: +5% attack and defence"), its bonuses
+// and the jobs, priced in gems of the best tier the slot has held and essence.
 function benchCard(state, item, before = null) {
     const id = Number(item.id);
-    const up = item.upgrade || 0;
-    const top = up >= MAX_UPGRADE;
-    const stat = (value, level) => fmt(Math.round((value || 0) * (1 + UPGRADE_STEP * level)));
-    const line = (value, icon) => (value ? `${icon} ${stat(value, up)}${top ? '' : ` <i>→ ${stat(value, up + 1)}</i>`}` : '');
+    const slot = benchSlotOf(state, item);
+    const up = benchLevel(state, slot);
+    const stat = (value, level) => fmt(Math.round((value || 0) * forgeMult(level)));
+    const line = (value, icon) => (value ? `${icon} ${stat(value, up)} <i>→ ${stat(value, up + 1)}</i>` : '');
+    const step = pct(forgeStepGain(up), forgeStepGain(up) < 0.1 ? 1 : 0).replace('.0%', '%');
+    const slotName = TYPE_NAMES[item.type] || item.type;
     const job = (kind, art, label, tip) => {
         const cost = benchCost(state, item, kind);
         if (cost.why === 'none') return '';
-        if (cost.why === 'max') return '<span class="anvil-done">Fully upgraded</span>';
+        if (cost.why === 'max') return '<span class="anvil-done">As strong as the bench makes it</span>';
         if (cost.why === 'level') return `<span class="req">Crafting ${cost.level}</span>`;
         return `<button class="anvil-btn${cost.ok ? ' ready' : ''}" onclick="FI.${kind === 'upgrade' ? 'benchUpgrade' : 'benchReroll'}(${id})" ${cost.ok ? '' : 'aria-disabled="true"'} title="${esc(tip)}">
             <span class="anvil-job">${art}<b>${label}</b></span><span class="anvil-cost">${needChips(state, { [cost.gem]: cost.gems, essence: cost.essence })}</span></button>`;
     };
     const bonuses = item.affixes?.length ? item.affixes.map(describeAffix).join(', ') : '';
-    const rung = top ? `+${up}: as far as the bench goes` : `+${up} → +${up + 1}: +${pct(UPGRADE_STEP, 0)} of its attack and defence`;
+    const rung = `${slotName} slot +${up} → +${up + 1}: +${step} attack and defence`;
     return `<div class="anvil-card bench-card" id="bench-${id}" style="--r:${esc(item.color || '#e2e8f0')}">
-        <div class="anvil-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}${up ? `<span class="anvil-plus">+${up}</span>` : ''}</div>
+        <div class="anvil-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}${up ? `<span class="anvil-plus" title="${esc(`The ${slotName.toLowerCase()} slot's bench levels: every piece worn there has them`)}">+${up}</span>` : ''}</div>
         <div class="anvil-name">${esc(item.name)}</div>
         <div class="anvil-stats small">${[line(item.atk, ATK_ICON), line(item.def, DEF_ICON)].filter(Boolean).join(' ')}</div>
         ${bonusList(item, before)}
@@ -1226,8 +1229,8 @@ function findItem(state, id) {
 
 function itemTile(state, item, { slot = null, selected = false } = {}) {
     const id = Number(item.id);
-    // a worn weapon's or armour's plate is its slot's forge levels; one in the bag has none of its own
-    const up = onAnvil(item) ? (slot ? forgeLevel(state, slot) : 0) : item.upgrade || 0;
+    // a worn piece's plate is its slot's levels (the anvil's forge, the jeweller's bench); one in the bag has none of its own
+    const up = !slot ? 0 : onAnvil(item) ? forgeLevel(state, slot) : benchLevel(state, slot);
     const rarity = RARITIES.find(r => r.id === item.rarity);
     const wearable = canWear(state, item);
     const better = !slot && wearable && isUpgrade(state, item);
@@ -1238,10 +1241,10 @@ function itemTile(state, item, { slot = null, selected = false } = {}) {
 function dollSlot(state, slot, selectedId) {
     const item = state.equipped[slot];
     const label = SLOT_LABELS[slot] || slot;
-    const forge = forgeLevel(state, slot);   // (an empty slot keeps its forge levels for the next piece)
+    const forge = forgeLevel(state, slot) || benchLevel(state, slot);   // (an empty slot keeps its levels for the next piece)
     const tile = item
         ? itemTile(state, item, { slot, selected: item.id === selectedId })
-        : `<div class="tile empty" title="${label}: empty${forge ? `, forged +${forge} for the next piece` : ''}">${sprite(slotSpriteKey(slot.replace(/\d$/, '')), { scale: 1.5, cls: 'tile-icon', fallback: TYPE_ICONS[slot.replace(/\d$/, '')] })}${forge ? `<b class="tile-up">+${forge}</b>` : ''}</div>`;
+        : `<div class="tile empty" title="${label}: empty${forge ? `, +${forge} kept for the next piece` : ''}">${sprite(slotSpriteKey(slot.replace(/\d$/, '')), { scale: 1.5, cls: 'tile-icon', fallback: TYPE_ICONS[slot.replace(/\d$/, '')] })}${forge ? `<b class="tile-up">+${forge}</b>` : ''}</div>`;
     return `<div class="doll-slot">${tile}<span class="doll-label">${label}</span></div>`;
 }
 
@@ -1283,10 +1286,12 @@ export function renderItemDetail(game, id) {
     }
     const { item, slot } = found;
     const itemId = Number(item.id);
-    // a weapon or piece of armour has its slot's forge levels, worn or as it would be worn; jewellery its own upgrades
+    // every piece has its slot's levels (the anvil's forge, the jeweller's bench), worn or as it would be worn: in the
+    // slot of the weakest of its kind worn, where an Equip puts it
     const forged = onAnvil(item);
-    const up = forged ? forgeLevel(state, item.type) : item.upgrade || 0;
-    const mult = forged ? forgeMult(up) : 1 + UPGRADE_STEP * up;
+    const target = slot || [...(TYPE_SLOTS[item.type] || [])].sort((a, b) => itemScore(state.equipped[a]) - itemScore(state.equipped[b]))[0];
+    const up = forged ? forgeLevel(state, item.type) : benchLevel(state, target);
+    const mult = forgeMult(up);
     const rarity = RARITIES.find(r => r.id === item.rarity);
     const wearable = canWear(state, item);
     const locked = gearIsLocked(state);   // inside a dungeon run
@@ -1304,12 +1309,11 @@ export function renderItemDetail(game, id) {
     const source = item.source === 'drop' ? 'dropped' : item.source === 'unique' ? 'unique' : 'crafted';
     let compare = '';
     if (!slot) {
-        const worn = (TYPE_SLOTS[item.type] || []).map(sl => state.equipped[sl]).sort((a, b) => itemScore(a) - itemScore(b))[0];
-        const wornMult = !worn ? 0 : forged ? mult : 1 + UPGRADE_STEP * (worn.upgrade || 0);   // (the slot's forge levels go to whichever is worn)
+        const worn = state.equipped[target];
+        const wornMult = !worn ? 0 : mult;   // (the slot's levels go to whichever is worn)
         const delta = (value, icon) => value ? `<span class="${value > 0 ? 'up' : 'down'}">${icon} ${value > 0 ? '+' : '−'}${fmt(Math.abs(value))}</span>` : '';
         const deltas = delta(Math.round((item.atk || 0) * mult) - Math.round((worn?.atk || 0) * wornMult), ATK_ICON) + delta(Math.round((item.def || 0) * mult) - Math.round((worn?.def || 0) * wornMult), DEF_ICON);
-        const wornUp = !worn ? 0 : forged ? up : worn.upgrade || 0;
-        compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${wornUp ? ` +${wornUp}` : ''}` : 'That slot is empty'}${forged && up ? `, both with the slot's +${up}` : ''}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
+        compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${up ? ` +${up}` : ''}` : 'That slot is empty'}${up ? `, both with the slot's +${up}` : ''}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
         // and what it does to the hero, every bonus counted (a +900 sword is +40% attack, or +4%)
         const worth = canWear(state, item) ? equipGain(state, item) : null;
         const gain = worth ? gainMarkup(worth) : '';
@@ -1321,7 +1325,7 @@ export function renderItemDetail(game, id) {
         <div class="detail-head">
             <div class="detail-art">${sprite(itemSpriteKey(item), { scale: 2, fallback: esc(item.icon) })}</div>
             <div class="detail-title">
-                <div class="detail-name">${esc(item.name)}${up && (slot || !forged) ? ` +${up}` : ''}</div>
+                <div class="detail-name">${esc(item.name)}${up && slot ? ` +${up}` : ''}</div>
                 <div class="detail-sub">${esc(rarity?.name || item.rarity)} ${esc(TYPE_NAMES[item.type] || item.type)} · tier ${Number(item.tier)}${item.depth ? ` · depth ${Number(item.depth)}` : ''} · ${source}${slot ? ' · worn' : ''}</div>
             </div>
             <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${glyph('lock', { scale: 0.75 })}</button>

@@ -785,11 +785,12 @@ function handleEvents(events) {
                 sound.play('levelUp');
                 break;
             }
-            case 'equip':   // the first piece to take a slot's forge levels: how the forge works, said once (systems/inventory.js)
+            case 'equip':   // the first piece to take a slot's levels: how the forge (and the bench) work, said once (systems/inventory.js)
                 if (ev.firstForge) {
-                    const kind = ev.slot === 'Weapon' ? 'weapon' : 'piece of armour';
+                    const jewel = /^(Ring|Ear|Neck)/.test(ev.slot);
+                    const kind = ev.slot === 'Weapon' ? 'weapon' : jewel ? (ev.slot === 'Neck' ? 'amulet' : ev.slot.startsWith('Ring') ? 'ring' : 'earring') : 'piece of armour';
                     rewards.celebrate({ key: 'forge-slots', kind: 'legend', icon: `<span class="cel-loot">${sprite(itemSpriteKey(ev.item), { scale: 2, fallback: escapeHtml(ev.item.icon || '') })}</span>`,
-                        kicker: 'The forge', title: `+${ev.forge} kept`, lines: ['Forge levels belong to the slot.', `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
+                        kicker: jewel ? 'The bench' : 'The forge', title: `+${ev.forge} kept`, lines: [`${jewel ? 'Bench' : 'Forge'} levels belong to the slot.`, `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
                 }
                 break;
             case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;

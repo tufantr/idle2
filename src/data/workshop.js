@@ -143,14 +143,21 @@ export function plainXp(level, bar) {
 }
 
 // The jeweller's bench (Crafting; the owner, October 2026: "do jewellery bench"): what the anvil is to weapons and
-// armour, for the jewellery the hero wears. Upgrading a piece (+UPGRADE_STEP of its base stats a level, up to
-// MAX_UPGRADE, its own) and rerolling its bonuses take gems of its tier and essence, and no gold (they took gold and
-// essence in the Inventory before): amethyst for a tier-1 piece up to diamond for tier 6, and twice the diamonds for
-// tier 7 (the Voidstone, a boss's rare gift, is no price). Each step of upgrading takes half as many gems again as
-// the last and BENCH_LEVEL_PER_UPGRADE more Crafting, the essence the anvil's; the work pays BENCH_XP_SHARE of the gems'
-// Crafting XP (a piece made with them pays it all, and takes a bar and the time to make it; at the full XP the deep
-// fight's diamonds took the simulated hero to Crafting 92 in 150 hours, against 80 at half and Smithing's 77) and
-// practice in their jewellery's mastery, whose levels take gems off the price.
+// armour, for the jewellery the hero wears, and by the anvil's rules (the owner the next day: "anvil upgrades are for the
+// item slot, bench upgrades are for the items, is this difference intentional"; it wasn't, and the slot's levels won):
+// its levels belong to the jewellery slots (BENCH_SLOTS), with no top, so a better ring never throws the work away. Up
+// to +10 a level adds UPGRADE_STEP of a piece's base stats, past it each multiplies them by FORGE_STEP (forgeMult).
+// A level takes gems of the best tier the slot has held and essence, and no gold (the Inventory took gold and essence
+// once): amethyst for tier 1 up to diamond for tier 6, and twice the diamonds for tier 7 (the Voidstone, a boss's rare
+// gift, is no price). Up to +10 each takes half as many gems again as the last and BENCH_LEVEL_PER_UPGRADE more
+// Crafting, past it FORGE_BAR_GROWTH times the gems and a Crafting level a level, up to 99; the essence is the anvil's.
+// Rerolling bonuses stays the piece's. The work pays BENCH_XP_SHARE of the gems' Crafting XP (a piece made with them pays
+// it all, and takes a bar and the time to make it; at the full XP the deep fight's diamonds took the simulated hero to
+// Crafting 92 in 150 hours, against 80 at half and Smithing's 77), past +10 the +10 level's, and practice in their
+// jewellery's mastery, whose levels take gems off the price.
+export const BENCH_SLOTS = ['Neck', 'Ring1', 'Ring2', 'Ear1', 'Ear2'];
+/** The kind of piece a jewellery slot holds: 'Ring1' is a Ring's. */
+export const benchType = slot => String(slot).replace(/\d$/, '');
 export const BENCH_LEVEL_PER_UPGRADE = 5;
 export const BENCH_XP_SHARE = 0.5;
 export const BENCH_GEM_GROWTH = 1.5;
@@ -161,12 +168,19 @@ export function benchGem(tier) {
     const diamond = GEM_TIERS.findIndex(g => g.gem === 'diamond');
     return { gem: GEM_TIERS[Math.min(t - 1, diamond)].gem, mult: Math.max(1, t - diamond) };
 }
-/** Upgrading a piece of jewellery of `type` and `tier` from `level` to the next: { gem, gems, essence, level, xp }. */
+/**
+ * A jewellery slot holding a piece of `type` taken from `level` to the next, priced at `tier` (the best the slot has
+ * held): { gem, gems, essence, level, xp }. The XP is the gems' up to +10; past it the price climbs but the XP stays the
+ * +10 level's (as at the anvil, data/workshop.js reinforceCost).
+ */
 export function benchUpgradeCost(type, level = 0, tier = 1) {
     const next = Math.max(0, Math.floor(level) || 0) + 1;
     const { gem, mult } = benchGem(tier);
-    const gems = Math.ceil((BENCH_GEM_COST[type] || 1) * Math.pow(BENCH_GEM_GROWTH, next - 1)) * mult;
-    return { gem, gems, essence: Math.ceil(2 * next * tier), level: BENCH_LEVEL_PER_UPGRADE * next, xp: benchXp(gem, gems) };
+    const gemsAt = growth => Math.ceil((BENCH_GEM_COST[type] || 1) * growth) * mult;
+    const upTo10 = Math.pow(BENCH_GEM_GROWTH, Math.min(next, MAX_UPGRADE) - 1);
+    const gems = gemsAt(upTo10 * Math.pow(FORGE_BAR_GROWTH, Math.max(0, next - MAX_UPGRADE)));
+    const crafting = next <= MAX_UPGRADE ? BENCH_LEVEL_PER_UPGRADE * next : Math.min(99, BENCH_LEVEL_PER_UPGRADE * MAX_UPGRADE + next - MAX_UPGRADE);
+    return { gem, gems, essence: Math.ceil(2 * next * tier), level: crafting, xp: benchXp(gem, gemsAt(upTo10)) };
 }
 /** Rerolling a piece's bonuses: a piece's worth of gems, and essence that grows with each reroll (capped). */
 export function benchRerollCost(item) {

@@ -1349,6 +1349,10 @@ Keeping it running:
       essence, and no gold, for half the gems' Crafting XP and their mastery; the Inventory's gold upgrade and reforge for jewellery
       are gone (their levels stay). Jewellery drops at every rarity (an empty jewellery slot takes no ×4 tilt). Checked
       in a browser at both widths (DESIGN §3.4, §3.5, §3.25)
+- [x] **The bench's levels belong to the slot, like the anvil's** (the owner, 22 October 2026, on "anvil upgrades are
+      for the item slot, bench upgrades are for the items": "I like all your recommendations"): every ring, earring or
+      amulet worn in a slot has its levels, with no top (×1.05 a level past +10, gems ×1.15), so a better piece loses
+      nothing; rerolling stays the piece's. Saves fold each piece's own levels into its slot (DESIGN §3.4)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
