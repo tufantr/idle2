@@ -124,7 +124,10 @@ const params = new URLSearchParams(location.search);
 const DEV_HOST = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
 const SIGN_IN_REQUIRED = !DEV_HOST;
 const GUEST_KEY = 'fantasyIdle.guest';
-let guest = prefs.get(GUEST_KEY) === '1';   // the sign-in's "Play as guest" was chosen (until an account signs in)
+// Inside another site's frame (galaxy.click shows its games in one, and its players shy away from sign-up forms),
+// a new player is a guest at once: Begin goes straight into the fight, the account one click away (the Guest pill).
+const EMBEDDED = (() => { try { return window.top !== window.self; } catch { return true; } })();
+let guest = EMBEDDED || prefs.get(GUEST_KEY) === '1';   // framed, or the sign-in's "Play as guest" chosen (until an account signs in)
 const needsSignIn = () => SIGN_IN_REQUIRED && !cloud.loggedIn && !guest;
 function setGuest(on) {
     guest = on;

@@ -902,7 +902,10 @@ gear to wear; a place that waited opens on the return and is named there too.
   time), and a new hero with nothing done (named on the title card while the account was made). The server's
   first-upload check (`firstPeaks`) then never meets a guest's progress on a new account. A new player sees
   the title card first; its Begin asks for an account or a guest, and the first fight starts once one is
-  chosen. Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
+  chosen. Inside another site's frame (`EMBEDDED` in `src/main.js`: galaxy.click shows its games in one, and
+  its players shy away from sign-up forms) a new player is a guest at once and Begin goes straight into the
+  fight; the account is one click away (the Guest pill), and the frame's game is stored apart from the site's
+  own (browsers keep a framed page's storage per host site). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
   there next starts its own game, not a copy of the last one. A local development host (`DEV_HOST` in
   `src/main.js`: the tools, the screenshots) plays as a guest without asking.
 - **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a

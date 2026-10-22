@@ -1378,6 +1378,9 @@ Keeping it running:
       kept. Checked in a browser under a made-up hostname with a local API: a guest, an account made from a
       guest's game, a log-in from one, a session run out, a game played with the sign-in taken away, and a first
       visit straight to an account, at both widths
+- [x] **A guest at once inside another site's frame** (the owner's "you do it", 22 October 2026, ahead of a
+      galaxy.click listing): framed, Begin goes straight into the fight, the account one click away. Checked in a
+      frame with galaxy.click's own sandbox and permissions at its size (about 1500×600) and at 390 wide
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
