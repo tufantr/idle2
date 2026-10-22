@@ -2190,6 +2190,11 @@ export function renderSettings(game, ui, cloud) {
             ${signedIn ? '' : renderBackups()}
         </section>
     </div>
+    ${DISCORD_INVITE ? `<section class="glass-panel ${painted('study', 'left 70%')}">
+        <div class="panel-header"><h2>The beta</h2><span class="muted small">Tell us anything</span></div>
+        <p class="muted small">Fantasy Idle is in beta. What's fun, what's confusing, what's too slow, any bug: every word helps.</p>
+        <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a></div>
+    </section>` : ''}
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
         <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
@@ -2238,7 +2243,7 @@ export function renderClan(game, ui, cloud) {
         ? `<div class="info-strip lit">${sprite('crate', { scale: 0.5, cls: 'soft res-spr' })} ${social.rewards.length} clan reward${social.rewards.length > 1 ? 's' : ''} waiting: ${social.rewards.map(r => esc(r.text || r.kind)).join(' · ')}
             <div class="btn-row"><button class="prestige-btn" onclick="FI.claimRewards()">Claim</button></div></div>`
         : '';
-    const discord = DISCORD_INVITE ? `<a class="mini-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Clan chat on Discord</a>` : '';
+    const discord = DISCORD_INVITE ? `<a class="btn-link mini-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Clan chat on Discord</a>` : '';
     let body = '';
     // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;

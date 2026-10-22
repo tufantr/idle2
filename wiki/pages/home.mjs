@@ -6,6 +6,7 @@ import { BESTIARY_SIZE } from '../../src/data/bestiary.js';
 import { DUNGEONS } from '../../src/data/dungeons.js';
 import { ACHIEVEMENTS } from '../../src/data/achievements.js';
 import { FEATURES } from '../../src/ui/features.js';
+import { DISCORD_INVITE } from '../../src/data/social.js';
 import { SKILL_ORDER, skillIcon } from './nav.mjs';
 import { path, icon, tiles, section, esc, paintStyle, hero, sprite } from '../lib/ui.mjs';
 
@@ -13,14 +14,14 @@ function home(help) {
     const page = p => help.site.pages.get(p);
     const tile = (p, art = null, note = '') => { const pg = page(p); return { href: p, title: esc(pg.title), pic: icon(pg.icon, 2), note, art: art || (pg.art ? paintStyle(pg.art, pg.focus || 'center 60%') : '') }; };
     const guides = help.pages().filter(p => p.guide && !p.hidden).sort((a, b) => (a.order - b.order) || a.title.localeCompare(b.title));
-    const gameUrl = 'https://fantasy-idle.vercel.app';
+    const gameUrl = 'https://fantasyidle.com';
     const heroBlock = `<section class="home-hero" style="${paintStyle('meadow', 'center 70%')}">
         <div class="home-figures" aria-hidden="true">${hero(4)}${sprite('mon/Slime', { scale: 3 })}</div>
         <div class="home-text">
             <p class="home-kicker">The wiki of</p>
             <p class="home-title">Fantasy Idle</p>
             <p class="home-tag">Fight monsters, gather, forge your gear. Everything about the game, read from the game itself.</p>
-            <p class="home-actions"><a class="btn" href="/guides/getting-started">New here? Start here</a><a class="btn ghost" href="${gameUrl}" rel="noopener">Play the game</a></p>
+            <p class="home-actions"><a class="btn" href="/guides/getting-started">New here? Start here</a><a class="btn ghost" href="${gameUrl}" rel="noopener">Play the game</a>${DISCORD_INVITE ? `<a class="btn ghost" href="${esc(DISCORD_INVITE)}" rel="noopener">Join the Discord</a>` : ''}</p>
         </div>
     </section>`;
     const counts = `<p class="home-counts">${SKILL_ORDER.length + 1} skills · ${Object.keys(RESOURCES).length} items · ${BESTIARY_SIZE} monsters · ${DUNGEONS.length} dungeons · ${ACHIEVEMENTS.length} medals · ${help.site.pages.size} pages</p>`;

@@ -164,6 +164,19 @@ button:hover {
 button:active { transform: translateY(1px) scale(0.97); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55); transition-duration: 0.05s; }
 button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 [role="button"]:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
+/* a link dressed as a button (the Discord invite on the Clan tab and in Settings: render.js); the button classes
+   after it (.mini-btn, .prestige-btn) dress it as they dress a button */
+.btn-link {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+    padding: 0.8rem 1.5rem; border-radius: 10px; text-decoration: none;
+    font-weight: 600; font-size: 0.95rem; color: var(--text-main);
+    background: linear-gradient(180deg, #2a2119, #1a140f);
+    border: 1px solid rgba(214, 170, 92, 0.32);
+    box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.08), 0 2px 4px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s, border-color 0.2s, background 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.btn-link:hover { transform: translateY(-1px); color: #fff3d6; border-color: rgba(240, 198, 116, 0.7); }
+.btn-link:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
 .big { padding: 0.9rem 1.6rem; font-size: 1rem; }
 .mini-btn { padding: 0.35rem 0.6rem; font-size: 0.75rem; border-radius: 8px; }
 .mini-btn.active { color: #fff3d6; border-color: var(--accent-hover); background: linear-gradient(180deg, #4a3818, #2a1f0e); box-shadow: 0 0 10px rgba(214, 170, 92, 0.3); }

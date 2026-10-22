@@ -37,8 +37,9 @@ const ROOT = join(WIKI, '..');
 const args = process.argv.slice(2);
 const opt = name => { const i = args.indexOf(name); return i >= 0 ? (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true) : null; };
 const OUT = typeof opt('--out') === 'string' ? opt('--out') : join(WIKI, 'dist');
-const GAME_URL = process.env.WIKI_GAME_URL || 'https://fantasy-idle.vercel.app';
-const SITE_URL = process.env.WIKI_URL || 'https://fantasy-idle-wiki.vercel.app';
+// the live game and its wiki, on the owner's server since 18 October 2026 (the Vercel copies stay up, as they were)
+const GAME_URL = process.env.WIKI_GAME_URL || 'https://fantasyidle.com';
+const SITE_URL = process.env.WIKI_URL || 'https://wiki.fantasyidle.com';
 
 function gitVersion() {
     if (process.env.WIKI_VERSION) return process.env.WIKI_VERSION;
