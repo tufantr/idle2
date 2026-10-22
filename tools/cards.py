@@ -160,6 +160,18 @@ SHEETS = [
         ('alt_skill_herbs', "a bottle of bright green potion among bundled herbs, a fishing rod and a hammer on a craftsman's table"),
         ('alt_skill_workshop', 'a flask of glowing emerald potion beside wood shavings, a saw and chisels in a sunny workshop'),
     ]),
+    ('cards12', [  # the two late herbs (October 2026), Ranarr and Torstol, three tries at each and three more; the best
+                   # of each kept as 'cards12 only-<card>' copies, the rest stay alternates
+        ('ranarr_leaf', 'a clump of wild ranarr weed with serrated dark teal leaves and thin rose-pink tendrils, growing between wet stones beside a misty mountain stream'),
+        ('alt_ranarr_cliff', 'ranarr weed with deep teal leaves and curling pink tendrils sprouting from a crack in a grey cliff in cool morning mist'),
+        ('alt_ranarr_marsh', 'a patch of ranarr weed in a cold moonlit marsh, its teal leaves veined with pink and beaded with dew'),
+        ('torstol_leaf', 'a rare torstol bloom, a glowing magenta star-shaped flower with curling violet petals, on a dark mossy ledge under a starry night sky'),
+        ('alt_torstol_ruin', 'a single torstol bloom glowing violet and magenta, growing from the cracked stones of an ancient ruin at dusk'),
+        ('alt_torstol_cave', 'a torstol bloom shining magenta in a dark crystal cave, tiny violet sparkles floating around it'),
+        ('alt_ranarr_forest', 'ranarr weed with teal leaves and pink tendrils on a mossy forest floor in dappled light'),
+        ('alt_torstol_peak', 'a torstol bloom with glowing magenta petals on a snowy mountain peak at twilight'),
+        ('alt_herbs_basket', "a herbalist's wicker basket of freshly picked teal ranarr weed beside a glowing magenta torstol bloom on a mossy stone"),
+    ]),
 ]
 
 FIRST = ("New set, same hand-painted storybook style as the places in this chat: small pictures for the "

@@ -2,7 +2,7 @@
 // active tab is re-rendered on a short interval, and a few live elements (progress bars, HP)
 // are patched every frame. Nothing in here mutates game state — handlers call window.FI.
 
-import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS, CARD_STANDINS } from '../data/skills.js';
+import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
@@ -842,16 +842,9 @@ function needChips(state, consumes) {
  * the card being worked opens up with its numbers (yield, XP, luck, mastery) and the progress bar.
  * The same numbers sit in the tooltip of the others. A locked card is the next one to earn.
  */
-/**
- * An action card's own picture (tools/cards.py), an older one in new hues standing in for it (data/skills.js
- * CARD_STANDINS: { art, hue }), or its workshop's when it has none; null if none.
- */
-const cardPic = (name, fallback = null) => (CARD_ART.has(name) ? name : CARD_STANDINS[name] ? CARD_STANDINS[name] : CARD_ART.has(fallback) ? fallback : null);
-const picBand = pic => {
-    if (!pic) return '';
-    const { art, hue } = typeof pic === 'string' ? { art: pic, hue: 0 } : pic;
-    return `<div class="card-pic${hue ? ' tinted' : ''}" style="--pic:url(assets/paint/cards/${art}.webp)${hue ? `;--pic-hue:${hue}deg` : ''}" aria-hidden="true"></div>`;
-};
+/** An action card's own picture (tools/cards.py), or its workshop's when it has none; null if neither. */
+const cardPic = (name, fallback = null) => (CARD_ART.has(name) ? name : CARD_ART.has(fallback) ? fallback : null);
+const picBand = pic => (pic ? `<div class="card-pic" style="--pic:url(assets/paint/cards/${pic}.webp)" aria-hidden="true"></div>` : '');
 
 function actionCard(c) {
     const pic = picBand(c.pic);

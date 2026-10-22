@@ -7,9 +7,6 @@ import { paceList } from './pace.js';
 export const SKILL_IDS = ['mining', 'woodcutting', 'hunting', 'cooking', 'firemaking', 'alchemy', 'farming', 'agility', 'smithing', 'crafting', 'combat'];
 export const GATHERING_SKILLS = ['mining', 'woodcutting', 'hunting'];
 export const PRODUCTION_SKILLS = ['cooking', 'firemaking', 'alchemy'];
-// The herbs past the paintings (tiers V and VI, 22 October 2026: the owner chose reusing paintings over new ones): their
-// cards and plots show an older herb's picture in their own hues (src/ui/render.js cardPic).
-export const CARD_STANDINS = { ranarr_leaf: { art: 'guam_leaf', hue: 150 }, torstol_leaf: { art: 'harralander_leaf', hue: 220 } };
 export const WORKSHOP_SKILLS = ['smithing', 'crafting'];
 // Skills with a mini-game and the Forager perk: gathering and production.
 export const NON_COMBAT_SKILLS = [...GATHERING_SKILLS, ...PRODUCTION_SKILLS];

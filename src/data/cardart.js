@@ -66,6 +66,7 @@ export const CARD_ART = new Set([
     'potato',
     'pumpkin',
     'pumpkin_pie',
+    'ranarr_leaf',
     'raw_bear',
     'raw_boar',
     'raw_deer',
@@ -96,6 +97,7 @@ export const CARD_ART = new Set([
     'tool_pickaxe',
     'tool_rod',
     'tool_tinderbox',
+    'torstol_leaf',
     'willow_log',
     'yew_log',
 ]);

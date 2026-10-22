@@ -2226,9 +2226,6 @@ body:has(#modal-root .modal-overlay.active) :is(#toast-area, #celebrate, #work-f
 .plot-card .card-pic { height: 76px; margin-bottom: -30px; }
 .plot-card.growing .card-pic { filter: saturate(0.75) brightness(0.8); }  /* not ready yet */
 .node-card.locked .card-pic { filter: grayscale(0.9) brightness(0.45); }
-.card-pic.tinted { filter: hue-rotate(var(--pic-hue)); }   /* an older painting standing in, in new hues (render.js cardPic) */
-.plot-card.growing .card-pic.tinted { filter: hue-rotate(var(--pic-hue)) saturate(0.75) brightness(0.8); }
-.node-card.locked .card-pic.tinted { filter: grayscale(0.9) brightness(0.45); }
 @media (max-width: 600px) { .card-pic { height: 78px; } }
 .node-card.locked .skill-action-art .spr, .node-card.locked .skill-action-art .nav-emoji { filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.8)); }
 button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-shadow: none; cursor: pointer; }

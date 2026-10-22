@@ -317,7 +317,8 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   mastery 99 too, and 5-6 when the herbs are foraged as well. The pick, the fight's dock and a skill's potion
   chip show how long the bottles carried will last, not the dose at work. Their icons are DCSS potion tiles of
   the same colour families, deeper (`LATE_TIER_POTIONS` in `tools/atlas.py`); the two herbs are a nettle and a
-  starflower, and their cards show the Guam and Harralander paintings turned to new hues (`CARD_STANDINS`). Sized with the simulator over 20 seeds: a bot that brews reaches
+  starflower, and their cards are Gemini's (sheet `cards12`: a teal Ranarr by a mountain stream, a glowing Torstol on a
+  ledge under the stars; for a day they showed the Guam and Harralander paintings in new hues). Sized with the simulator over 20 seeds: a bot that brews reaches
   stage 100 in 3.25 h, 120 in 5.2 h and 150 in 12.7 h, against 3.7, 6.8 and 16.7 h for one that brews none
   (the game before them: 3.1, 6.2 and 15.5 h); a weaker first tier (×1.15) left the first hours 10% slower. They multiply after every other bonus. **Each place has its
   pick** (`combat.potion`, `combat.dungeonPotion`, `workPotion`; `potionPicker` in render.js): the Combat

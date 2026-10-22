@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 
 import { CARD_ART } from '../src/data/cardart.js';
-import { SKILLS, CARD_STANDINS } from '../src/data/skills.js';
+import { SKILLS } from '../src/data/skills.js';
 import { SMELTING_RECIPES, TOOLS } from '../src/data/workshop.js';
 import { SMITHING_TYPES, CRAFTING_TYPES } from '../src/data/items.js';
 import { CROPS } from '../src/data/farming.js';
@@ -23,8 +23,7 @@ const cards = [
 ];
 
 test('every action card has its picture', () => {
-    // (the late herbs show an older herb's picture in new hues: data/skills.js CARD_STANDINS)
-    const missing = [...new Set(cards.map(name => CARD_STANDINS[name]?.art || name))].filter(name => !CARD_ART.has(name));
+    const missing = [...new Set(cards)].filter(name => !CARD_ART.has(name));
     assert.deepEqual(missing, [], `no picture for: ${missing.join(', ')} (add them to SHEETS in tools/cards.py)`);
 });
 
