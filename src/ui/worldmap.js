@@ -9,7 +9,7 @@ import { ZONES, STAGES_PER_ZONE } from '../data/zones.js';
 import { RESOURCES } from '../data/resources.js';
 import { DUNGEONS, dungeonById } from '../data/dungeons.js';
 import { isUnlocked } from '../data/unlocks.js';
-import { dungeonUnlocked } from '../systems/dungeon.js';
+import { dungeonUnlocked, dungeonNow } from '../systems/dungeon.js';
 import { seen } from '../systems/disclosure.js';
 import { BESTIARY, KILL_STARS, starsFor } from '../data/bestiary.js';
 import { STRATA_FROM, stratumForStage } from '../data/strata.js';
@@ -116,7 +116,7 @@ export function renderZoneInfo(game, index) {
 /** A dungeon under the map: its boss, how a run would go, the unique's fragments, and the way in. */
 export function renderDungeonInfo(game, id) {
     const state = game.state;
-    const d = dungeonById(id);
+    const d = dungeonById(id) && dungeonNow(state, id);   // at the open tier
     if (!d) return '';
     const open = dungeonUnlocked(state, d);
     const verdict = open ? dungeonVerdict(game, d) : null;
@@ -151,7 +151,8 @@ export function renderWorldMapModal(game) {
             <span class="map-pin-name">${esc(zone.name)}</span>
         </button>`;
     });
-    const gates = mapDungeons(state).map(d => {
+    const gates = mapDungeons(state).map(base => {
+        const d = dungeonNow(state, base);   // at the open tier: its name and its gate
         const [x, y] = DUNGEON_PINS[d.id] || [50, 50];
         const open = dungeonUnlocked(state, d);
         const current = inDungeon(state, d.id);

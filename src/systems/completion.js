@@ -18,7 +18,8 @@ import { TRIALS, TRIAL_TIERS, trialTiersCleared } from '../data/trials.js';
 import { AGILITY_SLOTS } from '../data/agility.js';
 import { FESTIVAL_CLOAKS, festivalCloaksOwned } from '../data/capes.js';
 
-const held = state => new Set([...(state.inventory || []), ...Object.values(state.equipped || {})].filter(i => i?.uniqueId).map(i => i.uniqueId));
+// the eight uniques of the dungeons' first tier, each once found (kept or not: state.uniques; a deeper tier's are records too, not more to collect)
+const held = state => new Set([...Object.keys(state.uniques || {}), ...[...(state.inventory || []), ...Object.values(state.equipped || {})].filter(i => i?.uniqueId && !(i.uniqueTier > 1)).map(i => i.uniqueId)]);
 
 /** Every part: { id, name, art, have, of, share }, and the whole as a share (0 to 1). */
 export function completion(state) {

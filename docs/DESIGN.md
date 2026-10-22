@@ -135,7 +135,7 @@ consumes what:
 | Food | Cooking (meat, fish, farm dishes) | Combat auto-eat (smallest dish that fills the gap); dungeon potions (roast rabbit, fox, boar, deer) |
 | Herbs | Alchemy foraging, Farming, zone drops | Potions |
 | Fishing bait | Zone drops (Marsh, Ruins, Frozen Wastes), the Shop | Hunting's river spots: one per catch, 50% chance of a second fish |
-| Potions | Alchemy | Combat, dungeon and skill potions, four tiers each, 5 minutes of their work a bottle (§3.6) |
+| Potions | Alchemy | Combat, dungeon and skill potions, six tiers each, a minute of their work a bottle (§3.6) |
 | Essence | Combat, salvaging drops, dungeon chests, the Titan, daily crates | The anvil, jewellery upgrades and reforges |
 
 Sell prices: `base[category] × 1.6^(tier−1)` with bases ore 3, bar 8, gem 25, log 2, raw 3, food 6,
@@ -297,21 +297,32 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   that would fell the hero while the run climbs (§3.28); "Auto" picks the smallest food that fills the gap.
   The line was half: with a dish healing a share, a hero at the line ate through a stock in minutes for
   little; at a quarter only, he fell at the wall from above the line with food in the bag (§3.28).
-- **Potions** (`src/data/potions.js`, `src/systems/potions.js`): **three kinds, four tiers each** (the
-  owner, October 2026: fewer potions, each growing, simply named), the tier the herb's (Guam I,
-  Marrentill II, Tarromin III, Harralander IV) with a second ingredient from another skill: ore for a
-  **Combat Potion** (×1.8 / 2.4 / 3 / 3.6 attack, defence and max HP on the stages, against the Titan
-  and the clan boss; ×1.4-2 until the supplies, §3.28), a cooked dish for a **Dungeon Potion** (×2 / 2.75 /
-  3.5 / 4.5 in a run only, ×1.5-2.5 before, and a
-  10-40% chance of a second fragment from each chest), logs for a **Skill Potion** (×1.15-1.5 the speed of
-  every skill but Farming, +10-40% its XP). Sized with the simulator over 20 seeds: a bot that brews reaches
+- **Potions** (`src/data/potions.js`, `src/systems/potions.js`): **three kinds, six tiers each** (the
+  owner, October 2026: fewer potions, each growing, simply named; tiers V and VI on 22 October, as nothing
+  opened past Alchemy 68), the tier the herb's (Guam I, Marrentill II, Tarromin III, Harralander IV, Ranarr V
+  at 70, Torstol VI at 85) with a second ingredient from another skill: ore for a
+  **Combat Potion** (×1.8 / 2.4 / 3 / 3.6 / 4.2 / 4.8 attack, defence and max HP on the stages, against the Titan
+  and the clan boss; ×1.4-2 until the supplies, §3.28; runite ore for V, a diamond for VI), a cooked dish for a
+  **Dungeon Potion** (×2 / 2.75 / 3.5 / 4.5 / 5.25 / 6 in a run only, ×1.5-2.5 before, and a
+  10-60% chance of a second fragment from each chest; roast bear for V, drake for VI), logs for a **Skill Potion**
+  (×1.15-1.7 the speed of every skill but Farming, +10-60% its XP; yew for V, magic logs for VI). They open at
+  Alchemy 5-68, then Combat V 75, Skill V 78, Dungeon V 81, Combat VI 88, Skill VI 91, Dungeon VI 94.
+  **Making against using** (the owner, 22 October 2026: "a player makes 1k combat potion in 30 minutes and that's
+  pretty much enough for him for the entire game"): a bottle lasted five minutes, so an hour of brewing lasted
+  135-250 hours of fighting. Now a bottle lasts **a minute**, and from tier IV a brew takes **two herbs and about
+  five seconds** (3 before; the XP grew with the time). Measured with the game's code (ingredients in the bank),
+  an hour of brewing is 15-17 hours of use plain, 24-28 with the tier's skill potion, 28-32 with the bonfire and
+  mastery 99 too, and 5-6 when the herbs are foraged as well. The pick, the fight's dock and a skill's potion
+  chip show how long the bottles carried will last, not the dose at work. Their icons are DCSS potion tiles of
+  the same colour families, deeper (`LATE_TIER_POTIONS` in `tools/atlas.py`); the two herbs are a nettle and a
+  starflower, and their cards show the Guam and Harralander paintings turned to new hues (`CARD_STANDINS`). Sized with the simulator over 20 seeds: a bot that brews reaches
   stage 100 in 3.25 h, 120 in 5.2 h and 150 in 12.7 h, against 3.7, 6.8 and 16.7 h for one that brews none
   (the game before them: 3.1, 6.2 and 15.5 h); a weaker first tier (×1.15) left the first hours 10% slower. They multiply after every other bonus. **Each place has its
   pick** (`combat.potion`, `combat.dungeonPotion`, `workPotion`; `potionPicker` in render.js): the Combat
   and Clan tabs and the fight's dock take a combat potion, the Dungeons tab and a run's dock a dungeon
   potion or a combat potion at half its strength (`OUT_OF_PLACE`, the owner: "it should, just worse"),
-  every skill tab a skill potion. A bottle lasts **5 minutes of its work** (the Alchemist medal: 25%
-  longer), its clock running only while that work does, and the next is drunk at once. The clan fight
+  every skill tab a skill potion. A bottle lasts **a minute of its work** (five until 22 October 2026; the
+  Alchemist medal: 25% longer), its clock running only while that work does, and the next is drunk at once. The clan fight
   takes the combat potion, and the server's reckoning counts it (`stableState(…, { clan: true })` in
   `src/core/power.js`: a dose running or a bottle left, which the fight drinks at its start); the boards
   and the boss's sizing stay potion-free. Old saves turn their bottles into these by the tier of their herb
@@ -479,9 +490,9 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   (0.5% and 0.25% until the records came), in its own multiplicative layer, so the layer is
   `1 + 0.004 × tokens × records`. The Eternity achievement adds +10% tokens.
 - **Records** (`recordsOf` in `src/core/modifiers.js`; the owner's choice 2, from
-  `incremental-math.md` A1.3): every 25 stages of all-time best and every dungeon unique held is a
-  record, and so is each Trial tier cleared (§3.26); each multiplies what the tokens give by 1.05 (stage
-  300 with five uniques: ×2.29). Held
+  `incremental-math.md` A1.3): every 25 stages of all-time best and every dungeon unique found (held
+  until 22 October 2026; each tier's its own) is a record, a dungeon Seal two (§3.11), and so is each Trial
+  tier cleared (§3.26); each multiplies what the tokens give by 1.05 (stage 300 with five uniques: ×2.29). Held
   tokens alone make each late run add less (+0.8% a run after the hundredth); a record lifts the whole
   stock. A new 25-stage record is a card ("Your tokens are ×1.05 stronger"), and a unique's card says
   so too, once the player has tokens; the token chip's tip counts them. **Every 50 levels of the skills
@@ -636,7 +647,32 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
   painting (`maw`) is a cavern like an open maw: black stone fangs at the edges, motes of dying light
   and a ring of cold teal light around the chasm, over a ledge of cracked basalt.
 - **Clear milestones** per dungeon, permanent: 25 clears +2% ATK and DEF, 100 clears +3% gold and drop
-  chance, 250 clears +3% max HP.
+  chance, 250 clears +3% max HP; earned again at each tier (below), a sealed tier's counting in full.
+- **A unique is a record once found** (the owner, 22 October 2026: "Dungeon buffs ties to the items from dungeons
+  which causes them to occupy space in the inventory permanently"): `state.uniques` notes every unique found
+  (`goblin_crown`, `goblin_crown@2` for the second tier's), kept in `meta.uniques` too, and `recordsOf` counts
+  them, held or not; a save from before notes the ones it carries. So a unique can be salvaged or handed in.
+- **Tiers and the Seal** (the same message: "Dungeons end too early. All 8 of them 250 rounds, a player can do
+  around stage 300 while the game goes into thousands"; the owner's idea, made concrete: research in the
+  conversation of 22 October, Melvor's Strongholds, Diablo's Greater Rifts, WoW's Mythic+). When every dungeon
+  has `DUNGEON_TIER_CLEARS` (250) clears at the open tier and the hero holds that tier's eight uniques, a row at
+  the top of the Dungeons tab (`sealRow` in render.js: the tier's numeral and rule, the eight uniques lit while
+  held and ringed by their dungeon's clears, from the first dungeon at 250: disclosure `dungeon_seal`) offers
+  **Make the Seal** (`sealDungeons` in `src/systems/dungeon.js`): the eight are handed in (a spare in the bag
+  before a worn one, whose slot is left empty), the Seal takes no bag slot and is worth `SEAL_RECORDS` (2)
+  records, and the next tier opens (`state.dungeonTier`, kept in `meta.dungeonTier` too): the same eight
+  `DUNGEON_TIER_STAGES` (300) stages deeper, their gates too (`dungeonAt`), named with a numeral (Goblin Warren
+  II), their paintings turned to new hues (`dungeonTierInfo(tier).hue`, on the cards and in the fight), one rule
+  for their monsters in turn (`DUNGEON_RULES`: Swift, attacks a quarter faster; Stout, half again the health;
+  Savage, a third harder; Relentless, the boss's clock 40 s), chests of Abyssal gear at their depth, uniques of
+  their own (Abyssal, ×1.1 a tier's gear grown with the depth of their dungeon's boss, the same bonuses:
+  `makeUnique`), and clears and fragments from nothing. Fragments carried over made the next tier's eight at once,
+  each as strong as gear 200 stages past the hero: the simulated one leapt from stage 330 to 490 in two hours,
+  so they start again. A run keeps its tier (`combat.dungeon.tier`). The simulated player farms toward the Seal
+  (a dungeon is worth a visit while it owes clears or its unique; it seals when it can): over 12 seeds it seals
+  tier I at about 52 hours and reaches stage 400 at 64.8 h and 920 by 150 h, against 71.4 h and 830 with the
+  dungeons ending at 250 (from farming the milestones too: stage 150 at 9.2 h, 11.1 before), with 107 records
+  against 94.
 - **Readiness:** the Dungeons tab estimates the boss fight (time to kill vs the timer, and how long you
   last without food), coloured green / amber / red.
 

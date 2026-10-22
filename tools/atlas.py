@@ -178,6 +178,14 @@ TIERED_POTIONS = {
     'dungeon_potion_1': 'sky_blue', 'dungeon_potion_2': 'brilliant_blue', 'dungeon_potion_3': 'dark', 'dungeon_potion_4': 'magenta',
     'skill_potion_1': 'yellow', 'skill_potion_2': 'bubbly', 'skill_potion_3': 'emerald', 'skill_potion_4': 'golden',
 }
+# Their tiers V and VI and the two herbs that brew them (22 October 2026), deeper colours of the same families, and a
+# nettle and a starflower for Ranarr and Torstol. Last of all.
+LATE_TIER_POTIONS = {
+    'combat_potion_5': 'puce', 'combat_potion_6': 'black',
+    'dungeon_potion_5': 'effervescent', 'dungeon_potion_6': 'silver',
+    'skill_potion_5': 'murky', 'skill_potion_6': 'fizzy',
+}
+LATE_HERBS = { 'ranarr_leaf': 'fungi_plants/scrub_nettle', 'torstol_leaf': 'fungi_plants/starflower_1' }
 GOLD = 'gold/16'
 
 # ---------- the hero: paperdoll layers (relative to rltiles/player/), by equipment tier 1..7 ----------
@@ -274,8 +282,12 @@ def main(rltiles):
         add(key, img)
     for rid, tile in LATE_POTIONS.items():   # the work potions and the Fortune Draught, last of all
         add(f'res/{rid}', f'item/potion/{tile}')
-    for rid, tile in TIERED_POTIONS.items():   # the combat, dungeon and skill potions, last of all
+    for rid, tile in TIERED_POTIONS.items():   # the combat, dungeon and skill potions
         add(f'res/{rid}', f'item/potion/{tile}')
+    for rid, tile in LATE_TIER_POTIONS.items():   # their tiers V and VI, and their herbs, last of all
+        add(f'res/{rid}', f'item/potion/{tile}')
+    for rid, tile in LATE_HERBS.items():
+        add(f'res/{rid}', f'mon/{tile}')
 
     rows = (len(cells) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

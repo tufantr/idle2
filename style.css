@@ -839,7 +839,7 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 }
 /* the painting in a layer of its own */
 .dungeon-art::before, .dungeon-art::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
-.dungeon-art::before { z-index: -2; background: var(--art, none) var(--art-at, center) / cover no-repeat; }
+.dungeon-art::before { z-index: -2; background: var(--art, none) var(--art-at, center) / cover no-repeat; filter: hue-rotate(var(--land-hue, 0deg)); }   /* a deeper tier's hues (render.js tierHue) */
 .dungeon-art::after { z-index: -1; background: linear-gradient(180deg, rgba(12, 8, 5, 0) 25%, rgba(12, 8, 5, 0.92)); }
 .dungeon-card.locked .dungeon-art { filter: grayscale(0.75) brightness(0.65); }
 .dungeon-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding-bottom: 0.2rem; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8); }
@@ -2226,6 +2226,9 @@ body:has(#modal-root .modal-overlay.active) :is(#toast-area, #celebrate, #work-f
 .plot-card .card-pic { height: 76px; margin-bottom: -30px; }
 .plot-card.growing .card-pic { filter: saturate(0.75) brightness(0.8); }  /* not ready yet */
 .node-card.locked .card-pic { filter: grayscale(0.9) brightness(0.45); }
+.card-pic.tinted { filter: hue-rotate(var(--pic-hue)); }   /* an older painting standing in, in new hues (render.js cardPic) */
+.plot-card.growing .card-pic.tinted { filter: hue-rotate(var(--pic-hue)) saturate(0.75) brightness(0.8); }
+.node-card.locked .card-pic.tinted { filter: grayscale(0.9) brightness(0.45); }
 @media (max-width: 600px) { .card-pic { height: 78px; } }
 .node-card.locked .skill-action-art .spr, .node-card.locked .skill-action-art .nav-emoji { filter: brightness(0) drop-shadow(0 0 1px rgba(240, 198, 116, 0.8)); }
 button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-shadow: none; cursor: pointer; }
@@ -2464,6 +2467,22 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .dungeon-clears { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; }   /* a dungeon card's clears, with the chest they open */
 .dungeon-clears b { font-family: var(--font-display); font-size: 1.1rem; color: var(--heading); }
 .frag-bar i { display: block; width: var(--p, 0%); height: 100%; background: linear-gradient(90deg, #c2410c, #f97316); }
+/* the dungeons' tier and its Seal (render.js sealRow): the numeral on a plate, the tier's rule, the eight uniques
+   (lit while held at this tier, a ring that fills with the dungeon's clears), and the Seal's button once all are both */
+.seal-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem; margin-bottom: 0.8rem; padding: 0.55rem 0.7rem; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(180deg, rgba(33, 26, 19, 0.82), rgba(18, 13, 9, 0.9)); }
+.seal-tier { display: inline-grid; place-items: center; min-width: 2.2rem; height: 2.2rem; padding: 0 0.4rem; border-radius: 8px; border: 1px solid rgba(252, 211, 77, 0.55); background: radial-gradient(circle at 50% 30%, rgba(252, 211, 77, 0.22), rgba(0, 0, 0, 0.4)); font-family: var(--font-display); font-size: 1.05rem; color: var(--heading); text-shadow: 0 1px 3px #000; }
+.seal-rule { font-family: var(--font-display); font-size: 0.82rem; color: #fca5a5; letter-spacing: 0.04em; }
+.seal-slots { display: flex; flex-wrap: wrap; gap: 0.3rem; flex: 1 1 auto; }
+.seal-slot { position: relative; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: conic-gradient(#f97316 var(--p, 0%), rgba(0, 0, 0, 0.55) 0); }
+.seal-slot::before { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: #17110c; }
+.seal-slot > * { position: relative; }
+.seal-slot.cleared { background: conic-gradient(#fcd34d 100%, transparent 0); }
+.seal-slot.held.cleared { box-shadow: 0 0 10px rgba(252, 211, 77, 0.45); }
+.seal-count { white-space: nowrap; }
+.seal-btn.ready { animation: nextComing 2.4s ease-in-out infinite; }
+body.reduced-motion .seal-btn.ready { animation: none; }
+@media (prefers-reduced-motion: reduce) { .seal-btn.ready { animation: none; } }
+@media (max-width: 600px) { .seal-slot { width: 30px; height: 30px; } .seal-slots { gap: 0.2rem; } }
 
 /* ===== The guide's hand (src/ui/guide.js): a glove on the one thing to do in a new hero's first minutes ===== */
 .guide-hand { position: fixed; left: 0; top: 0; z-index: 90; width: 96px; height: 96px; pointer-events: none; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.7)); will-change: transform; }

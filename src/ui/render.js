@@ -2,7 +2,7 @@
 // active tab is re-rendered on a short interval, and a few live elements (progress bars, HP)
 // are patched every frame. Nothing in here mutates game state — handlers call window.FI.
 
-import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/skills.js';
+import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS, CARD_STANDINS } from '../data/skills.js';
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
@@ -26,8 +26,8 @@ import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
 import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
-import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, UNIQUES, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, titanBonusUnits } from '../data/dungeons.js';
-import { dungeonUnlocked, titanReady, titanCharges, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique, choosingAfterClear } from '../systems/dungeon.js';
+import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_CHOICE_MS, titanBonusUnits, dungeonAt, dungeonTierInfo, dungeonBossTime, uniqueAt, parseUniqueKey, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
+import { dungeonUnlocked, titanReady, titanCharges, titanUnlocked, titanLevel, titanEnemy, fightPreview, dungeonPreview, ownsUnique, choosingAfterClear, dungeonTier, dungeonNow, sealProgress, sealsOf, foundUnique } from '../systems/dungeon.js';
 import { PETS, PET_BASE, companionPet } from '../data/pets.js';
 import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
@@ -145,8 +145,10 @@ function readyBadge(game, id) {
             const f = fightPreview(game.derived, titanEnemy(state));
             if (f.killSeconds <= Math.min(TITAN_TIME_MS / 1000, f.surviveSeconds)) return pill('!', 'The Titan is awake, and you can beat him', 'gold');
         }
-        const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique));
-        return whole ? pill('!', `${UNIQUES[whole.unique]?.name || 'A unique'} is ready to assemble`, 'gold') : '';
+        if (sealProgress(state).ready) return pill('!', 'The Seal is ready', 'gold');
+        const tier = dungeonTier(state);
+        const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique, tier));
+        return whole ? pill('!', `${uniqueAt(whole.unique, tier)?.name || 'A unique'} is ready to assemble`, 'gold') : '';
     }
     if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
     if (id === 'shop') return toolReady(state) ? pill('▲', 'A better tool is ready to buy') : '';
@@ -242,7 +244,7 @@ export function renderHeader(game, ui, cloud) {
     const chips = [
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
-        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, every ${BASE.recordSkillLevels} skill levels, each dungeon unique${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
+        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, every ${BASE.recordSkillLevels} skill levels, each dungeon unique found${d.records.seals ? ', each dungeon Seal' : ''}${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
         seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${d.tokenMult.toFixed(2)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${starGain(d.stars).toFixed(1)}</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
     ];
@@ -309,7 +311,7 @@ export function pageTitle(game) {
 function fightingWhere(state) {
     const c = state.combat;
     if (c.mode === 'titan' || c.mode === 'clan') return c.enemy?.name || (c.mode === 'clan' ? 'the clan boss' : 'the Titan');
-    const run = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
+    const run = c.mode === 'dungeon' ? dungeonAt(c.dungeon?.id, c.dungeon?.tier) : null;
     if (run) return choosingAfterClear(state) ? `${run.name} cleared` : `${run.name} ${Math.min(c.dungeon.index + 1, run.monsters.length + 1)}/${run.monsters.length + 1}`;
     return `${zoneForStage(c.stage).name} stage ${c.stage}`;
 }
@@ -371,14 +373,16 @@ function potionPicker(game, slot, cls = '') {
     const potions = potionsForSlot(slot).filter(id => state.resources[id] > 0 || picked === id);
     const none = !potions.some(id => state.resources[id] > 0);
     const does = id => potionEffectText(id, slot);
+    // what the bottles carried will last: the dose at work and the rest, a dose each (systems/potions.js doseMs)
+    const lasts = id => (id === picked ? ms : 0) + (state.resources[id] || 0) * doseMs(game.derived);
     const row = [
         pick(picked === 'none', `${conf.set}('none')`, '<span class="pick-word">None</span>', 'No potion'),
         ...potions.map(id => pick(picked === id, `${conf.set}('${id}')`,
             `${resIcon(id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[id] || 0)}</span><span class="pick-tier">${TIERS[POTIONS[id].tier - 1]}</span>`,
-            `${res(id).name}: ${does(id)}, for ${duration(doseMs(game.derived))} of ${conf.of} (${fmt(state.resources[id] || 0)} left)`, picked === id ? '' : 'idle')),
+            `${res(id).name}: ${does(id)}, ${duration(doseMs(game.derived))} of ${conf.of} a bottle (${fmt(state.resources[id] || 0)} left: ${duration(lasts(id))})`, picked === id ? '' : 'idle')),
         none && isUnlocked(state, 'alchemy') ? `<button class="pick pick-go" onclick="FI.switchTab('alchemy')" title="No potions left: brew some" aria-label="No potions left: brew some">${tabIcon('alchemy', 1)}<span class="pick-sub">Brew</span></button>` : ''
     ].join('');
-    const note = picked !== 'none' ? (ms > 0 ? `${does(picked)} · ${duration(ms)} left` : (state.resources[picked] > 0 ? `drunk as the ${slot === 'skill' ? 'work' : 'fight'} starts` : 'none left')) : '';
+    const note = picked !== 'none' ? (lasts(picked) > 0 ? `${does(picked)} · ${duration(lasts(picked))} left` : 'none left') : '';
     return `<div class="loadout ${cls}"><div class="loadout-label">${conf.label}${note ? ` <span class="muted small">${note}</span>` : ''}</div><div class="pick-row">${row}</div></div>`;
 }
 
@@ -395,11 +399,12 @@ function skillPotionChip(game, ui) {
     const picked = POTIONS[w.id] ? w.id : null;
     const owned = potionsFor('skill').filter(id => state.resources[id] > 0);
     const open = ui.potionMenu === true;
+    const lasts = picked ? (w.ms || 0) + (state.resources[picked] || 0) * doseMs(game.derived) : 0;   // the bottles carried, the one at work too
     const label = picked
-        ? `${TIERS[POTIONS[picked].tier - 1]}${w.ms > 0 ? ` · ${duration(w.ms)}` : state.resources[picked] > 0 ? '' : ' · none left'}`
+        ? `${TIERS[POTIONS[picked].tier - 1]}${lasts > 0 ? ` · ${duration(lasts)}` : ' · none left'}`
         : 'Potion';
     const tip = picked
-        ? `${res(picked).name}: ${potionEffectText(picked)}${w.ms > 0 ? `, ${duration(w.ms)} left` : ', drunk as the work starts'}. Tap to change`
+        ? `${res(picked).name}: ${potionEffectText(picked)}${lasts > 0 ? `, ${duration(lasts)} of work left in the bottles carried` : ', none left'}. Tap to change`
         : owned.length ? 'A skill potion: tap to pick one' : 'A skill potion: none carried';
     const chip = `<button class="potion-chip${picked ? ' on' : ''}${open ? ' open' : ''}" onclick="FI.togglePotionMenu()" title="${esc(tip)}" aria-label="${esc(tip)}" aria-expanded="${open}">${resIcon(picked || owned[owned.length - 1] || 'skill_potion_1', { scale: 0.75, cls: picked ? '' : 'dim' })}<span>${label}</span></button>`;
     if (!open) return chip;
@@ -557,7 +562,7 @@ export function renderCombat(game, ui) {
 function renderRunPanel(game, cls = 'dock-group', orders = '') {
     const state = game.state;
     const c = state.combat;
-    const d = c.mode === 'dungeon' ? dungeonById(c.dungeon?.id) : null;
+    const d = c.mode === 'dungeon' ? dungeonAt(c.dungeon?.id, c.dungeon?.tier) : null;
     if (!d) return '';
     const record = state.dungeons[d.id];
     const choosing = choosingAfterClear(state);
@@ -569,11 +574,14 @@ function renderRunPanel(game, cls = 'dock-group', orders = '') {
     </div>`;
 }
 
-/** A dungeon's unique: its fragments as a bar, and Assemble once there are enough. */
+/** A dungeon's painting turned to its tier's hues (an inline style's tail: data/dungeons.js dungeonTierInfo). */
+const tierHue = tier => { const hue = dungeonTierInfo(tier).hue; return hue ? `;--land-hue:${hue}deg` : ''; };
+
+/** A dungeon's unique (of the dungeon's tier, `d.tier`): its fragments as a bar, and Assemble once there are enough. */
 function uniqueProgress(state, d) {
     const record = state.dungeons[d.id];
-    const unique = UNIQUES[d.unique];
-    const owned = ownsUnique(state, d.unique);
+    const unique = uniqueAt(d.unique, d.tier || 1);
+    const owned = ownsUnique(state, d.unique, d.tier || 1);
     return `${fragmentRow(state, d)}
         ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="prestige-btn run-assemble" onclick="FI.assembleUnique('${d.id}')">${owned ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}`;
 }
@@ -585,10 +593,10 @@ function uniqueProgress(state, d) {
  * Also the world map's (ui/worldmap.js).
  */
 export function fragmentRow(state, d, { scale = 1, tag = 'div' } = {}) {
-    const unique = UNIQUES[d.unique];
+    const unique = uniqueAt(d.unique, d.tier || 1);
     const have = state.dungeons[d.id]?.fragments || 0;
     const enough = Math.floor(have / FRAGMENTS_PER_UNIQUE);
-    const cls = [scale < 1 ? 'soft' : '', ownsUnique(state, d.unique) ? '' : 'silhouette'].filter(Boolean).join(' ');
+    const cls = [scale < 1 ? 'soft' : '', foundUnique(state, d.unique, d.tier || 1) ? '' : 'silhouette'].filter(Boolean).join(' ');
     const title = enough
         ? `${fmt(have)} fragments of the ${unique.name}: enough for ${enough === 1 ? 'one' : fmt(enough)} (${FRAGMENTS_PER_UNIQUE} make one)`
         : `${fmt(have)} of the ${FRAGMENTS_PER_UNIQUE} fragments that make the ${unique.name}: a clear's chest holds one`;
@@ -612,11 +620,11 @@ const runCountdown = c => `<div class="run-countdown" style="--p:${(c.dungeon.ch
 export function renderRunChoiceModal(game) {
     const state = game.state;
     const c = state.combat;
-    const d = choosingAfterClear(state) ? dungeonById(c.dungeon.id) : null;
+    const d = choosingAfterClear(state) ? dungeonAt(c.dungeon.id, c.dungeon.tier) : null;
     if (!d) return '';
     const record = state.dungeons[d.id];
     return `<div class="modal-content narrow about-card run-choice">
-        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}" aria-hidden="true"></div>
+        <div class="about-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon', 'center 55%')}${dungeonTierInfo(d.tier).hue ? `;filter:hue-rotate(${dungeonTierInfo(d.tier).hue}deg)` : ''}" aria-hidden="true"></div>
         <div class="run-choice-head"><span class="run-kicker">Dungeon cleared</span><div class="modal-header">${esc(d.name)}</div></div>
         <div class="run-choice-facts">
             <div class="run-clears">${sprite('crate', { scale: 1 })}<span><b>${fmt(record.clears)}</b> ${record.clears === 1 ? 'clear' : 'clears'}</span></div>
@@ -834,9 +842,16 @@ function needChips(state, consumes) {
  * the card being worked opens up with its numbers (yield, XP, luck, mastery) and the progress bar.
  * The same numbers sit in the tooltip of the others. A locked card is the next one to earn.
  */
-/** An action card's own picture (tools/cards.py), or its workshop's when it has none; null if neither. */
-const cardPic = (name, fallback = null) => (CARD_ART.has(name) ? name : CARD_ART.has(fallback) ? fallback : null);
-const picBand = pic => (pic ? `<div class="card-pic" style="--pic:url(assets/paint/cards/${pic}.webp)" aria-hidden="true"></div>` : '');
+/**
+ * An action card's own picture (tools/cards.py), an older one in new hues standing in for it (data/skills.js
+ * CARD_STANDINS: { art, hue }), or its workshop's when it has none; null if none.
+ */
+const cardPic = (name, fallback = null) => (CARD_ART.has(name) ? name : CARD_STANDINS[name] ? CARD_STANDINS[name] : CARD_ART.has(fallback) ? fallback : null);
+const picBand = pic => {
+    if (!pic) return '';
+    const { art, hue } = typeof pic === 'string' ? { art: pic, hue: 0 } : pic;
+    return `<div class="card-pic${hue ? ' tinted' : ''}" style="--pic:url(assets/paint/cards/${art}.webp)${hue ? `;--pic-hue:${hue}deg` : ''}" aria-hidden="true"></div>`;
+};
 
 function actionCard(c) {
     const pic = picBand(c.pic);
@@ -1652,7 +1667,7 @@ function renderRecords(game) {
     const s = state.stats;
     const best = Math.max(s.maxStage || 1, state.combat.bestStage || 1);
     const zone = zoneForStage(best);
-    const clears = Object.values(state.dungeons || {}).reduce((sum, d) => sum + (d.clears || 0), 0);
+    const clears = Math.max(s.dungeonClears || 0, Object.values(state.dungeons || {}).reduce((sum, d) => sum + (d.clears || 0), 0));   // (every tier's)
     const hours = (state.meta.playtimeMs || 0) / 3600000;
     const totalLevel = SKILL_IDS.reduce((sum, id) => sum + levelForXp(state.skills[id]?.xp || 0), 0);
     const capes = capesEarned(state);
@@ -1671,6 +1686,7 @@ function renderRecords(game) {
         ['res/essence', fmt(state.prestige.count || 0), seen(state, 'legacy') ? `prestiges: Legacy ×${fmt(game.derived.legacy)}` : 'prestiges'],
         ['titan/0', fmt(state.titan?.kills || 0), 'Titans felled'],
         ['crate', fmt(clears), 'dungeons cleared'],
+        ...(sealsOf(state) ? [['crown', fmt(sealsOf(state)), `dungeon Seals: ${fmt(sealsOf(state) * SEAL_RECORDS)} records`]] : []),
         ['item/Body/4', fmt(s.itemsCrafted || 0), 'pieces of gear made'],
         ['item/Head/5', `${fmt(Object.keys(state.codex || {}).length)}/${CODEX_SIZE}`, 'codex pages'],
         ...(s.mythicsFound ? [['item/Weapon/7', fmt(s.mythicsFound), 'Mythic pieces found']] : []),
@@ -1701,7 +1717,8 @@ function chronicleLine(e) {
             return z ? [`mon/${z.boss}`, `Reached ${z.name}`] : null;
         }
         case 'pet': { const p = PETS.find(x => x.id === e.id); return p ? [`pet/${p.id}`, `${p.name} joined the hero`] : null; }
-        case 'unique': { const u = UNIQUES[e.id]; return u ? [`uniq/${e.id}`, `Won the ${u.name}`] : null; }
+        case 'unique': { const k = parseUniqueKey(e.id); const u = k && uniqueAt(k.id, k.tier); return u ? [`uniq/${k.id}`, `Won the ${u.name}`] : null; }
+        case 'seal': { const t = Number(e.id) || 1; return ['crown', `The Seal of the dungeons' tier ${dungeonTierInfo(t).numeral || 'I'}: they went deeper`]; }
         case 'dungeon': { const d = dungeonById(e.id); return d ? [`mon/${d.boss.name}`, `First clear of the ${d.name}`] : null; }
         case 'titan': return ['titan/0', 'Felled the first Titan'];
         case 'prestige': return ['res/essence', 'The first prestige'];
@@ -1970,16 +1987,45 @@ function dungeonLineup(state, d) {
     return `<div class="lineup" aria-label="${d.monsters.length} elites, then the ${esc(d.boss.name)}">${d.monsters.map(m => face(m.name, false)).join('')}${face(d.boss.name, true)}</div>`;
 }
 
-/** How a run at dungeon `d` would end at its boss, in words and a colour (an estimate without food). */
+/** How a run at dungeon `d` (at the open tier) would end at its boss, in words and a colour (an estimate without food). */
 export function dungeonVerdict(game, d) {
-    const limit = DUNGEON_BOSS_TIME_MS / 1000;
-    const fight = dungeonPreview(game.derived, d).bossFight;
+    const at = dungeonNow(game.state, d);
+    const limit = dungeonBossTime(at.tier) / 1000;
+    const fight = dungeonPreview(game.derived, at).bossFight;
     const cls = readinessClass(fight.killSeconds, limit, fight.surviveSeconds);
     const text = cls === 'ready-good' ? (fight.killSeconds < 1 ? 'You are ready: the boss falls in under a second' : `You are ready: the boss falls in ~${fmtSeconds(fight.killSeconds)}`)
         : cls === 'ready-close' ? `It will be close: the boss takes ~${fmtSeconds(fight.killSeconds)} of your ${limit} s`
         : fight.surviveSeconds < limit ? `Too strong for now: you would last ~${fmtSeconds(fight.surviveSeconds)}`
         : `Too tough for now: the boss needs ~${fmtSeconds(fight.killSeconds)}, and you have ${limit} s`;
     return { cls, text };
+}
+
+/**
+ * The open tier and its Seal (systems/dungeon.js sealProgress): the tier's numeral and its monsters' rule, and the eight
+ * dungeons as their uniques, each lit while held at this tier and ringed once its clears are done; the Seal's button
+ * glows when all eight are both. Shown once a dungeon has had its tier's clears (disclosure 'dungeon_seal').
+ */
+function sealRow(state) {
+    const tier = dungeonTier(state);
+    const look = dungeonTierInfo(tier);
+    const next = dungeonTierInfo(tier + 1);
+    const progress = sealProgress(state);
+    const slots = DUNGEONS.map(d => {
+        const clears = state.dungeons[d.id]?.clears || 0;
+        const held = ownsUnique(state, d.unique, tier);
+        const unique = uniqueAt(d.unique, tier);
+        const title = `${dungeonNow(state, d).name}: ${fmt(Math.min(clears, DUNGEON_TIER_CLEARS))}/${DUNGEON_TIER_CLEARS} clears · ${unique.name}: ${held ? 'in hand' : 'not in hand'}`;
+        return `<span class="seal-slot${held ? ' held' : ''}${clears >= DUNGEON_TIER_CLEARS ? ' cleared' : ''}" style="--p:${Math.min(100, clears / DUNGEON_TIER_CLEARS * 100).toFixed(1)}%" title="${esc(title)}">${sprite(`uniq/${d.unique}`, { scale: 0.75, cls: held ? '' : 'silhouette' })}</span>`;
+    }).join('');
+    const rule = look.rule ? `<span class="seal-rule" title="${esc(look.rule.desc)}">${esc(look.rule.name)}</span>` : '';
+    const button = progress.ready
+        ? `<button class="prestige-btn seal-btn ready" onclick="FI.sealDungeons()" title="Hand in the eight uniques: the dungeons go ${DUNGEON_TIER_STAGES} stages deeper${next.rule ? `, and ${next.rule.name.toLowerCase()}` : ''}">${sprite('crown', { scale: 0.75, cls: 'res-spr' })} Make the Seal</button>`
+        : `<span class="seal-count muted small" title="Every dungeon at ${DUNGEON_TIER_CLEARS} clears, and its unique of this tier in hand">${progress.cleared}/${progress.of} cleared · ${progress.held}/${progress.of} in hand</span>`;
+    return `<div class="seal-row">
+        <span class="seal-tier" title="Tier ${look.numeral || 'I'} of the dungeons${look.rule ? `: ${esc(look.rule.desc.toLowerCase())}` : ''}">${look.numeral || 'I'}</span>${rule}
+        <span class="seal-slots">${slots}</span>
+        ${button}
+    </div>`;
 }
 
 export function renderDungeons(game) {
@@ -1999,17 +2045,19 @@ export function renderDungeons(game) {
                 : titanReady(state, game.now) ? `<button class="prestige-btn" onclick="FI.challengeTitan()">${sprite('titan/0', { scale: 0.625, cls: 'soft res-spr' })} Challenge (${TITAN_TIME_MS / 1000} s)${titanCharges(state, game.now) > 1 ? ` ×${titanCharges(state, game.now)}` : ''}</button>`
                 : `<button class="mini-btn" disabled>Rests for ${duration(state.titan.readyAt - game.now)}</button>`}
         </div>`;
+    const tier = dungeonTier(state);
     const nextDungeon = DUNGEONS.find(d => !dungeonUnlocked(state, d));
-    const cards = DUNGEONS.filter(d => dungeonUnlocked(state, d) || d === nextDungeon).map(d => {
+    const cards = DUNGEONS.filter(d => dungeonUnlocked(state, d) || d === nextDungeon).map(base => {
+        const d = dungeonNow(state, base);   // at the open tier: its name, its stages, its gate
         const record = state.dungeons[d.id];
         const open = dungeonUnlocked(state, d);
         const here = c.mode === 'dungeon' && c.dungeon?.id === d.id;
         const next = DUNGEON_MILESTONES.find(m => record.clears < m.clears);
         const done = DUNGEON_MILESTONES.filter(m => record.clears >= m.clears).map(m => m.desc);
-        const unique = UNIQUES[d.unique];
+        const unique = uniqueAt(d.unique, tier);
         const { cls: ready, text: verdict } = dungeonVerdict(game, d);
         return `<div class="dungeon-card ${open ? '' : 'locked'} ${here ? 'active' : ''}">
-            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}">
+            <div class="dungeon-art" style="${paintStyle(DUNGEON_ART[d.id] || 'dungeon')}${tierHue(tier)}">
                 <span class="dungeon-icon">${sprite(`mon/${d.boss.name}`, { scale: 2, cls: open ? '' : 'silhouette', fallback: d.icon })}</span>
                 <div class="dungeon-title"><b>${esc(d.name)}</b><span class="small" title="Like stages ${d.stage}–${d.stage + d.monsters.length}; the chest holds tier ${d.chestTier} loot">${d.monsters.length} elites, then the ${esc(d.boss.name)}</span></div>
             </div>
@@ -2019,7 +2067,7 @@ export function renderDungeons(game) {
                 ${fragmentRow(state, d)}
                 <div class="btn-row">
                     ${here ? (choosingAfterClear(state) ? '<button class="prestige-btn" onclick="FI.openRunChoice()">Cleared: keep going?</button>' : '<button class="mini-btn danger" onclick="FI.toggleCombat()">Leave dungeon</button>') : ['titan', 'clan'].includes(c.mode) ? '<span class="muted small">After the fight</span>' : `<button class="prestige-btn" onclick="FI.enterDungeon('${d.id}')">Enter</button>`}
-                    ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${ownsUnique(state, d.unique) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique) ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
+                    ${record.fragments >= FRAGMENTS_PER_UNIQUE ? `<button class="mini-btn" onclick="FI.assembleUnique('${d.id}')" ${ownsUnique(state, d.unique, tier) ? 'title="You already own one: a spare comes unlocked, to salvage for essence"' : ''}>${ownsUnique(state, d.unique, tier) ? 'Assemble a spare' : `Assemble the ${esc(unique.name)}`}</button>` : ''}
                 </div>`
                 : `<div class="req">Opens at stage ${d.unlockStage}</div>`}
             </div>
@@ -2027,6 +2075,7 @@ export function renderDungeons(game) {
     }).join('');
     return `${banner('dungeons')}
     <section class="glass-panel ${painted('dungeon', 'center 50%')}">
+        ${seen(state, 'dungeon_seal') ? sealRow(state) : ''}
         ${seen(state, 'potions') ? potionPicker(game, 'dungeon', 'dungeon-potion') : ''}
         <div class="dungeon-grid">${cards}</div>
     </section>
@@ -2051,20 +2100,24 @@ function renderCollection(game) {
         return `<button type="button" class="pet-card found${at ? ' companion' : ''}" onclick="FI.setCompanion('${p.id}')" aria-pressed="${at}" title="${at ? 'At your side in the fight' : 'Tap to take into the fight'}">${body}${at ? `<span class="pet-at">${glyph('heart')}</span>` : ''}</button>`;
     }).join('');
     // the uniques of the dungeons met, and the next dungeon's as an unnamed silhouette: a ladder shows its next rung only
+    // (the open tier's: each unique found is a record, kept or not)
+    const tier = dungeonTier(state);
     const nextDungeon = DUNGEONS.find(d => !dungeonUnlocked(state, d));
-    const uniques = DUNGEONS.map(d => {
-        const u = UNIQUES[d.unique];
-        const owned = [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === u.id);
-        const known = owned || dungeonUnlocked(state, d);
-        if (!known && d !== nextDungeon) return '';
-        return `<div class="pet-card ${owned ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${u.id}`, { scale: 1.5, cls: owned ? '' : 'silhouette', fallback: owned ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${known ? esc(u.name) : 'Unknown unique'}</b><div class="muted small">${d.name} · ${known ? `${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${owned ? ' · owned' : ''}` : `opens at stage ${d.unlockStage}`}</div></div></div>`;
+    const uniques = DUNGEONS.map(base => {
+        const d = dungeonNow(state, base);
+        const u = uniqueAt(d.unique, tier);
+        const found = foundUnique(state, d.unique, tier);
+        const known = found || dungeonUnlocked(state, d);
+        if (!known && base !== nextDungeon) return '';
+        return `<div class="pet-card ${found ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${d.unique}`, { scale: 1.5, cls: found ? '' : 'silhouette', fallback: found ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${known ? esc(u.name) : 'Unknown unique'}</b><div class="muted small">${esc(d.name)} · ${known ? `${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${found ? ' · found' : ''}` : `opens at stage ${d.unlockStage}`}</div></div></div>`;
     }).join('');
+    const foundAll = Object.keys(state.uniques || {}).length;
     return `<section class="glass-panel ${painted('forest', 'center 45%')}">
         <div class="panel-header"><h2>Pets</h2><span class="muted small">${PETS.filter(p => state.pets[p.id]).length}/${PETS.length} · rare finds while training, kept forever</span></div>
         <div class="pet-grid">${pets}</div>
     </section>
     <section class="glass-panel ${painted('vault', 'center 40%')}">
-        <div class="panel-header"><h2>Unique items</h2><span class="muted small">Assembled from dungeon fragments, or found in a chest</span></div>
+        <div class="panel-header"><h2>Unique items</h2><span class="muted small">${foundAll ? `${fmt(foundAll)} found, each a record · ` : ''}assembled from dungeon fragments, or found in a chest</span></div>
         <div class="pet-grid">${uniques}</div>
     </section>
     ${renderCodex(state)}`;

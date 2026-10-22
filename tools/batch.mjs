@@ -74,7 +74,7 @@ function summarise(runs) {
     sum.weaponTier = Object.fromEntries(Object.keys(runs[0].weaponTier).map(t => [t, spread(runs.map(r => r.weaponTier[t]))]));
     sum.firstPrestige = spread(runs.map(r => r.firstPrestige));
     sum.autoEarned = spread(runs.map(r => r.autoEarned));
-    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) sum[k] = spread(runs.map(r => r.final[k]));
+    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'seals', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) sum[k] = spread(runs.map(r => r.final[k]));
     sum.runHours = spread(runs.map(r => r.runs.medianHours));
     sum.goldSpentShare = spread(runs.map(r => (r.gold.earned > 0 ? r.gold.spent / r.gold.earned : 0)));
     sum.longestAwayFromFight = spread(runs.map(r => r.longestAwayFromFightHours));
@@ -105,7 +105,7 @@ function report(sum) {
     lines.push(`| First prestige (h) | ${cell(sum.firstPrestige)} |`);
     lines.push(`| Auto earned (h) | ${cell(sum.autoEarned)} |`);
     lines.push(`| Weapon tier 5 / 7 (h) | ${cell(sum.weaponTier[5])} / ${cell(sum.weaponTier[7])} |`);
-    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) lines.push(`| ${k} at the end | ${cell(sum[k])} |`);
+    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'seals', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) lines.push(`| ${k} at the end | ${cell(sum[k])} |`);
     lines.push(`| Median run (h) | ${cell(sum.runHours)} |`);
     lines.push(`| Gold spent / earned | ${cell(sum.goldSpentShare)} |`);
     lines.push(`| Longest away from a winnable fight (h) | ${cell(sum.longestAwayFromFight)} |`);

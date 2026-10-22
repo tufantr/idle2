@@ -1,19 +1,21 @@
 // The hero's chronicle: the firsts of a life, each with its date (shown in the Hall's Records). Noted
 // from the game's own events as they happen, also while away (the game notes them before deciding
-// whether anyone is watching): a new land, a pet, a unique, a dungeon's first clear, the first Titan,
+// whether anyone is watching): a new land, a pet, a unique, a dungeon's first clear, a Seal, the first Titan,
 // the first prestige and each rank after, a skill at 99. Each first once; the oldest go past 200.
 
 import { rankFor } from '../data/ranks.js';
+import { uniqueKey } from '../data/dungeons.js';
 
 export const CHRONICLE_MAX = 200;
-export const CHRONICLE_KINDS = new Set(['start', 'zone', 'pet', 'unique', 'dungeon', 'titan', 'prestige', 'rank', 'skill99']);
+export const CHRONICLE_KINDS = new Set(['start', 'zone', 'pet', 'unique', 'dungeon', 'titan', 'prestige', 'rank', 'skill99', 'seal']);
 
 /** The chronicle entry an event makes ({ kind, id }), or null. Reads the state as it is after the event. */
 export function chronicleEntry(state, ev) {
     switch (ev.type) {
         case 'zoneReached': return { kind: 'zone', id: ev.zone };
         case 'pet': return ev.pet?.id ? { kind: 'pet', id: ev.pet.id } : null;
-        case 'unique': return ev.item?.locked ? { kind: 'unique', id: ev.item.uniqueId } : null;   // the first copy, not a spare
+        case 'unique': return ev.fresh ? { kind: 'unique', id: uniqueKey(ev.item.uniqueId, ev.item.uniqueTier || 1) } : null;   // the first ever found, not a spare
+        case 'dungeonSeal': return { kind: 'seal', id: String(ev.tier) };
         case 'dungeonClear': return ev.clears === 1 ? { kind: 'dungeon', id: ev.dungeon } : null;
         case 'titan': return ev.won && state.titan?.kills === 1 ? { kind: 'titan', id: String(ev.level) } : null;
         case 'prestige': {

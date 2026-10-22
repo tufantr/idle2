@@ -7,7 +7,7 @@ import { SKILLS } from '../data/skills.js';
 import { BALANCE } from '../core/formulas.js';
 import { BASE } from '../core/modifiers.js';
 import { ACHIEVEMENT_GLOBAL_BONUS } from '../data/achievements.js';
-import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TITAN_LATE_FROM, TITAN_BANK, FRAGMENTS_PER_UNIQUE } from '../data/dungeons.js';
+import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TITAN_LATE_FROM, TITAN_BANK, FRAGMENTS_PER_UNIQUE, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
@@ -15,7 +15,7 @@ import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
-import { POTION_MINUTES } from '../data/potions.js';
+import { TIERS as POTION_TIERS, doseWords } from '../data/potions.js';
 import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE, BENCH_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
@@ -52,9 +52,9 @@ export const FEATURES = {
     firemaking: { name: 'Firemaking', art: 'camp', focus: 'right 70%', icon: 'mon/Magma Slime', blurb: 'Burn logs to light the bonfire.',
         points: [`While the bonfire burns, every skill earns more XP, combat included (from +${pc(BASE.bonfireXp)}, growing with your level).`, `And every skill that makes something may make two at once: a ${pc(BASE.bonfireDouble)} chance at first, up to ${pc(BASE.bonfireDoubleAt99)} at level 99.`, `Each log adds ${BASE.bonfireSecondsPerLogTier} seconds times its tier, up to ${hours(BASE.bonfireMaxMs)}.`] },
     alchemy: { name: 'Alchemy', art: 'lab', icon: 'res/combat_potion_3', blurb: SKILLS.alchemy.desc,
-        points: ['Three potions, each in four tiers: the better the herb, the stronger the potion.',
+        points: [`Three potions, each in ${POTION_TIERS.length} tiers: the better the herb, the stronger the potion. From tier ${POTION_TIERS[3]} a brew takes two herbs.`,
             'A combat potion is picked on the Combat and Clan tabs, a dungeon potion on the Dungeons tab (a combat potion works there too, at half its strength), a skill potion on every skill\'s tab.',
-            `A bottle lasts ${POTION_MINUTES} minutes of its work, and the next is drunk as it runs out.`] },
+            `A bottle lasts ${doseWords()} of its work, and the next is drunk as it runs out. The pick shows how long the bottles you carry will last.`] },
     crafting: { name: 'Crafting', art: 'workshop', icon: 'item/Ring/4', blurb: SKILLS.crafting.desc,
         points: ['Jewellery is a precious bar set with a gem. It adds a little attack and defence and carries the most bonuses.', 'Gems turn up while mining and drop from monsters.',
             `Out of gems? A plain piece is the setting alone, a bar and no gem, for ${pc(PLAIN_XP_SHARE)} of the XP of your best gem.`,
@@ -87,7 +87,8 @@ export const FEATURES = {
     achievements: { name: 'Achievements', art: 'hall', icon: 'uniq/goblin_crown', blurb: 'A trophy for every deed, with a reward that lasts forever.',
         points: [`Every medal has its own reward, and each one also adds +${pc(ACHIEVEMENT_GLOBAL_BONUS)} attack, defence and skill speed.`, 'The bestiary counts every kind of monster you defeat, with a star at 10, 100 and 1,000.', 'Pets, unique items and every kind of gear you find are kept here too. Some medals stay secret until earned.'] },
     dungeons: { name: 'Dungeons', art: 'dungeon', icon: 'mon/Skeleton', blurb: 'Elite monsters, a chest at the end and pieces of unique gear.',
-        points: [`A row of elites, then a boss with a ${secs(DUNGEON_BOSS_TIME_MS)} second timer, fought with the gear you walk in with.`, 'Dying, leaving or running out of time loses the run.', `Every clear opens a chest with a fragment: ${FRAGMENTS_PER_UNIQUE} fragments make the dungeon's unique item.`, `After the first clear you choose: keep going (it runs again and again until you leave) or end the dungeon. With no answer in ${secs(DUNGEON_CHOICE_MS)} seconds, it keeps going.`, 'Clear counts unlock permanent bonuses.'] },
+        points: [`A row of elites, then a boss with a ${secs(DUNGEON_BOSS_TIME_MS)} second timer, fought with the gear you walk in with.`, 'Dying, leaving or running out of time loses the run.', `Every clear opens a chest with a fragment: ${FRAGMENTS_PER_UNIQUE} fragments make the dungeon's unique item. Each unique is a record the moment it is found: it makes your tokens stronger for good, kept or not.`, `After the first clear you choose: keep going (it runs again and again until you leave) or end the dungeon. With no answer in ${secs(DUNGEON_CHOICE_MS)} seconds, it keeps going.`, 'Clear counts unlock permanent bonuses.',
+            `With ${DUNGEON_TIER_CLEARS} clears in every dungeon and their eight uniques in hand, hand the uniques in for a Seal, worth ${SEAL_RECORDS} records: the dungeons go ${DUNGEON_TIER_STAGES} stages deeper, with a rule for their monsters, new uniques, and their clears, fragments and bonuses to earn again.`] },
     titan: { name: 'The Titan', art: 'titan', icon: 'titan/0', blurb: `Once an hour: a ${secs(TITAN_TIME_MS)} second damage race.`,
         points: ['Deal as much damage as you can before the time runs out. Clicking helps.', `Each Titan you bring down is gone for good and leaves +${pc(TITAN_BONUS.atkMult)} attack and health. From the ${TITAN_LATE_FROM + 1}st, they stand closer together and leave half as much.`,
             `One attempt an hour; unused ones wait for you, up to ${TITAN_BANK}.`, 'When the fight is over, your hero goes back to what he was doing.'] },

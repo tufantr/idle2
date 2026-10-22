@@ -10,6 +10,9 @@
 // skipping tiers. `stage` is the first monster's stage-equivalent; `chestTier` is the gear tier of
 // the chest (the zone's gearTier there); essence and gems follow the zone's richness tier.
 
+import { MAX_GEAR_TIER, GEAR_TIERS } from './items.js';
+import { roman } from './strata.js';
+
 export const DUNGEON_BOSS_TIME_MS = 60000;
 // After the first clear of a visit the hero waits at the chest while the player chooses to keep going
 // (the run repeats until the hero leaves) or to end the dungeon. With no answer in this time (or with
@@ -170,6 +173,71 @@ export const UNIQUES = {
 
 export function dungeonById(id) {
     return DUNGEONS.find(d => d.id === id) || null;
+}
+
+// ---------- tiers ----------
+// The owner, 22 October 2026: "Dungeons end too early. All 8 of them 250 rounds, a player can do around stage 300 while
+// the game goes into thousands." When each of the eight has DUNGEON_TIER_CLEARS clears at the open tier (its last
+// milestone) and the hero holds that tier's eight uniques, they are handed in for a Seal (systems/dungeon.js
+// sealDungeons): it takes no bag slot and is worth SEAL_RECORDS records (core/modifiers.js recordsOf). The next tier
+// opens: the same eight DUNGEON_TIER_STAGES stages deeper, their gates too, with a numeral (Goblin Warren II), the
+// painting in new hues, one rule for its monsters (DUNGEON_RULES, in turn), a chest of the deepest gear, uniques of
+// its own at its depth, and the milestones to earn again (a sealed tier's count in full). Every unique is a record
+// once found, kept or not (state.uniquesFound), so none has to sit in the bag.
+export const DUNGEON_TIER_STAGES = 300;
+export const DUNGEON_TIER_CLEARS = 250;
+export const SEAL_RECORDS = 2;
+export const UNIQUE_POWER_OVER_TIER = 1.1;   // a unique past the first tier: Abyssal, a tenth above the tier's gear, at its depth
+export const DUNGEON_RULES = [
+    { id: 'swift', name: 'Swift', desc: 'Its monsters attack a quarter faster', interval: 0.8 },
+    { id: 'stout', name: 'Stout', desc: 'Its monsters have half again the health', hp: 1.5 },
+    { id: 'savage', name: 'Savage', desc: 'Its monsters hit a third harder', atk: 4 / 3 },
+    { id: 'relentless', name: 'Relentless', desc: 'Its bosses must fall in 40 seconds', bossTime: 40000 }
+];
+
+/** Tier `tier`'s look and rule: { tier, numeral ('' for the first), hue (degrees its paintings turn), rule (null for the first) }. */
+export function dungeonTierInfo(tier) {
+    const t = Math.max(1, Math.floor(Number(tier)) || 1);
+    return { tier: t, numeral: t > 1 ? roman(t) : '', hue: t > 1 ? ((t - 1) * 83) % 360 : 0, rule: t > 1 ? DUNGEON_RULES[(t - 2) % DUNGEON_RULES.length] : null };
+}
+
+/** Dungeon `d` (or its id) at `tier`: its stages, its gate and its name moved down, its chest of the deepest gear past the first. */
+export function dungeonAt(d, tier = 1) {
+    const base = dungeonById(typeof d === 'string' ? d : d?.id);
+    if (!base) return null;
+    const { tier: t, numeral } = dungeonTierInfo(tier);
+    if (t === 1) return { ...base, tier: 1 };
+    const deeper = (t - 1) * DUNGEON_TIER_STAGES;
+    return { ...base, tier: t, name: `${base.name} ${numeral}`, stage: base.stage + deeper, unlockStage: base.unlockStage + deeper, chestTier: MAX_GEAR_TIER };
+}
+
+/** How long a dungeon boss of `tier` stands before the run is lost (the Relentless rule shortens it). */
+export const dungeonBossTime = tier => dungeonTierInfo(tier).rule?.bossTime || DUNGEON_BOSS_TIME_MS;
+
+/** The stage of dungeon `d`'s boss at `tier` (where its unique is cut). */
+export const dungeonBossStage = (d, tier = 1) => { const at = dungeonAt(d, tier); return at.stage + at.monsters.length; };
+
+/** A unique's key among those found: its id, with the tier past the first ('goblin_crown@2'). */
+export const uniqueKey = (id, tier = 1) => (tier > 1 ? `${id}@${tier}` : id);
+/** The id and tier a key names, or null. */
+export function parseUniqueKey(key) {
+    const m = /^([a-z_]+)(?:@(\d{1,4}))?$/.exec(String(key || ''));
+    if (!m || !UNIQUES[m[1]]) return null;
+    const tier = m[2] ? Number(m[2]) : 1;
+    return tier >= 1 && (tier > 1 || !m[2]) ? { id: m[1], tier } : null;
+}
+
+/**
+ * Unique `id` of `tier`, without its depth's strength: the first tier's as authored; past it its name takes the tier's
+ * numeral and it is Abyssal, UNIQUE_POWER_OVER_TIER above the tier's gear (systems/dungeon.js grows it with the depth of
+ * its dungeon's boss, like the gear dropped there), its bonuses its own.
+ */
+export function uniqueAt(id, tier = 1) {
+    const u = UNIQUES[id];
+    if (!u) return null;
+    const { tier: t, numeral } = dungeonTierInfo(tier);
+    if (t === 1) return { ...u, dungeonTier: 1 };
+    return { ...u, dungeonTier: t, name: `${u.name} ${numeral}`, tier: MAX_GEAR_TIER, power: GEAR_TIERS[MAX_GEAR_TIER - 1].power * UNIQUE_POWER_OVER_TIER };
 }
 
 // ---------- the Titan ----------

@@ -2,7 +2,7 @@
 // (lib/xref.mjs), and the Food and Potions pages.
 
 import { RESOURCES, sellValue, foodsByHealing } from '../../src/data/resources.js';
-import { POTIONS, POTION_KINDS, POTION_MINUTES, potionEffectText, potionLevel } from '../../src/data/potions.js';
+import { POTIONS, POTION_KINDS, POTION_MINUTES, TIERS, doseWords, potionEffectText, potionLevel } from '../../src/data/potions.js';
 import { SKILLS } from '../../src/data/skills.js';
 import { GEM_TIERS, METALS, JEWEL_BARS, TOOLS, ANVIL_LEVEL_PER_UPGRADE } from '../../src/data/workshop.js';
 import { GEAR_TIERS } from '../../src/data/items.js';
@@ -23,7 +23,7 @@ export const CATEGORIES = [
     ['food', 'Food', 'Cooked in Cooking. Your hero eats it in a fight.'],
     ['crop', 'Crops', 'Grown on the farm. Cooked into dishes.'],
     ['herb', 'Herbs', 'Foraged in Alchemy, grown on the farm, dropped in the fight. Brewed into potions.'],
-    ['potion', 'Potions', 'Brewed in Alchemy: combat, dungeon and skill potions, four tiers of each.'],
+    ['potion', 'Potions', `Brewed in Alchemy: combat, dungeon and skill potions, ${TIERS.length} tiers of each.`],
     ['material', 'Combat materials', 'Dropped in the fight: essence for upgrades, bait for the river.']
 ];
 const catName = id => CATEGORIES.find(c => c[0] === id)?.[1] || id;
@@ -185,7 +185,7 @@ function potionsPage(help) {
     });
     return {
         body: `${help.prose('/potions')}\n${section('Every potion', table(['Potion', 'Kind', 'Effect', 'Alchemy level #', 'Brewed from', 'XP #'], rows))}`,
-        infobox: infobox({ title: 'Potions', image: resIcon('combat_potion_3', { scale: 3 }), rows: [['A bottle lasts', `${POTION_MINUTES} minutes of its work`], ['Brewed in', skillLink('alchemy')]] })
+        infobox: infobox({ title: 'Potions', image: resIcon('combat_potion_3', { scale: 3 }), rows: [['A bottle lasts', `${doseWords()} of its work`], ['Brewed in', skillLink('alchemy')]] })
     };
 }
 

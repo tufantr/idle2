@@ -4,11 +4,12 @@
 import {
     DUNGEONS, dungeonById, UNIQUES, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, DIRECT_UNIQUE_CHANCE,
     CHEST_GEAR_CHANCE, CHEST_ESSENCE_PER_TIER, CHEST_MATERIAL_ROLLS, CHEST_GEM_CHANCE,
-    ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS,
+    ELITE_HP_MULT, ELITE_ATK_MULT, DUNGEON_BOSS_HP_MULT, DUNGEON_CHOICE_MS,
+    DUNGEON_TIER_CLEARS, dungeonAt, dungeonTierInfo, dungeonBossTime, dungeonBossStage, uniqueAt, uniqueKey,
     TITAN_COOLDOWN_MS, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_HP_MULT, TITAN_ATK_MULT, TITAN_NAMES, titanStage, TITAN_BANK, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
-import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, supplyMult, BALANCE } from '../core/formulas.js';
+import { enemyBaseStats, enemyDamage, generateDrop, generateEquipment, goldForKill, goldPerKillAtStage, enemyForStage, supplyMult, abyssDropMult, BALANCE } from '../core/formulas.js';
 import { zoneForStage, GEM_DROP_TABLE } from '../data/zones.js';
-import { RARITIES } from '../data/items.js';
+import { RARITIES, TYPE_SLOTS } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
 import { rng } from '../core/rng.js';
 import { potionFragmentChance } from '../data/potions.js';
@@ -17,29 +18,41 @@ import { spawnEnemy, enterCombat } from './combat.js';
 import { doingNow, resumeDoing } from './resume.js';
 import { log, bumpStat } from './progress.js';
 
+// ---------- tiers ----------
+
+/** The dungeons' open tier (data/dungeons.js: each Seal opens the next). */
+export const dungeonTier = state => Math.max(1, Math.floor(Number(state?.dungeonTier)) || 1);
+/** Seals made: one for each tier sealed. */
+export const sealsOf = state => dungeonTier(state) - 1;
+/** Dungeon `d` (or its id) as it stands at the open tier. */
+export const dungeonNow = (state, d) => dungeonAt(d, dungeonTier(state));
+
 // ---------- enemies ----------
 
+/** The monster in room `run.index` of a run (the boss after the last elite), at the run's tier and by its rule. */
 export function dungeonEnemy(run) {
-    const d = dungeonById(run.id);
+    const d = dungeonAt(run.id, run.tier || 1);
+    const rule = dungeonTierInfo(d.tier).rule || {};
     const e = BALANCE.enemy;
+    const swift = rule.interval || 1;
     if (run.index < d.monsters.length) {
         const m = d.monsters[run.index];
         const stage = d.stage + run.index;
         const base = enemyBaseStats(stage);
         const supply = supplyMult(stage);   // (tougher with the supplies, as on the stages)
-        const hp = Math.floor(base.hp * ELITE_HP_MULT * supply);
+        const hp = Math.floor(base.hp * ELITE_HP_MULT * supply * (rule.hp || 1));
         return {
             name: m.name, baseName: m.name, icon: m.icon, zoneName: d.name, zoneTier: d.chestTier, stage, boss: false, elite: true,
-            hp, maxHp: hp, worth: Math.floor(base.hp * ELITE_HP_MULT), atk: Math.floor(base.atk * ELITE_ATK_MULT * supply), interval: base.interval
+            hp, maxHp: hp, worth: Math.floor(base.hp * ELITE_HP_MULT), atk: Math.floor(base.atk * ELITE_ATK_MULT * supply * (rule.atk || 1)), interval: Math.round(base.interval * swift)
         };
     }
     const stage = d.stage + d.monsters.length;
     const base = enemyBaseStats(stage);
     const supply = supplyMult(stage);
-    const hp = Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT * supply);
+    const hp = Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT * supply * (rule.hp || 1));
     return {
         name: `${d.boss.name} (Boss)`, baseName: d.boss.name, icon: d.boss.icon, zoneName: d.name, zoneTier: d.chestTier, stage, boss: true,
-        hp, maxHp: hp, worth: Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT), atk: Math.floor(base.atk * e.bossAtkMult * supply), interval: base.interval, timeLimit: DUNGEON_BOSS_TIME_MS
+        hp, maxHp: hp, worth: Math.floor(base.hp * e.bossHpMult * DUNGEON_BOSS_HP_MULT), atk: Math.floor(base.atk * e.bossAtkMult * supply * (rule.atk || 1)), interval: Math.round(base.interval * swift), timeLimit: dungeonBossTime(d.tier)
     };
 }
 
@@ -76,22 +89,23 @@ export function fightPreview(derived, enemy) {
     };
 }
 
-/** Preview of a dungeon's hardest elite and its boss. */
+/** Preview of a dungeon's hardest elite and its boss, at `dungeon.tier` (dungeonNow gives the open tier's). */
 export function dungeonPreview(derived, dungeon) {
-    const elite = dungeonEnemy({ id: dungeon.id, index: dungeon.monsters.length - 1 });
-    const boss = dungeonEnemy({ id: dungeon.id, index: dungeon.monsters.length });
+    const elite = dungeonEnemy({ id: dungeon.id, index: dungeon.monsters.length - 1, tier: dungeon.tier || 1 });
+    const boss = dungeonEnemy({ id: dungeon.id, index: dungeon.monsters.length, tier: dungeon.tier || 1 });
     return { elite, boss, eliteFight: fightPreview(derived, elite), bossFight: fightPreview(derived, boss) };
 }
 
 // ---------- dungeons ----------
 
+/** True if dungeon `dungeon`'s gate is open at the open tier (its stage reached). */
 export function dungeonUnlocked(state, dungeon) {
-    return state.combat.bestStage >= dungeon.unlockStage || !!state.settings.devUnlockAll;
+    return state.combat.bestStage >= dungeonNow(state, dungeon).unlockStage || !!state.settings.devUnlockAll;
 }
 
 export function enterDungeon(game, id) {
     const state = game.state;
-    const d = dungeonById(id);
+    const d = dungeonById(id) && dungeonNow(state, id);
     if (!d) return false;
     if (!dungeonUnlocked(state, d)) { game.emit({ type: 'error', text: `Reach stage ${d.unlockStage} to open ${d.name}.` }); return false; }
     const c = state.combat;
@@ -101,7 +115,7 @@ export function enterDungeon(game, id) {
         failDungeon(game, `you left for ${d.name}`);
     }
     c.mode = 'dungeon';
-    c.dungeon = { id, index: 0, repeat: false, choiceLeft: 0 };   // the first clear asks whether to keep going
+    c.dungeon = { id, index: 0, repeat: false, choiceLeft: 0, tier: d.tier };   // the first clear asks whether to keep going
     c.regroupLeft = 0;
     spawnEnemy(game);
     enterCombat(game);
@@ -158,7 +172,7 @@ export function keepGoing(game) {
 export function endDungeon(game) {
     const state = game.state;
     if (!choosingAfterClear(state)) return false;
-    const d = dungeonById(state.combat.dungeon.id);
+    const d = dungeonAt(state.combat.dungeon.id, state.combat.dungeon.tier);
     log(game, `${d.icon} Left ${d.name}, cleared (${state.dungeons[d.id].clears} clear${state.dungeons[d.id].clears === 1 ? '' : 's'} in all).`, 'combat');
     returnToStages(game);
     game.emit({ type: 'dungeonChosen', keep: false });
@@ -175,28 +189,53 @@ export function tickDungeonChoice(game, dt) {
     game.emit({ type: 'dungeonChosen', keep: true, auto: true });
 }
 
-/** True if a copy of this unique is worn or in the bag. */
-export function ownsUnique(state, uniqueId) {
-    return [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === uniqueId);
+/** The dungeon tier a unique piece was cut at (1 for the first's). */
+export const uniqueTierOf = item => Math.max(1, Math.floor(Number(item?.uniqueTier)) || 1);
+/** True if a copy of this unique (of `tier`) is worn or in the bag. */
+export function ownsUnique(state, uniqueId, tier = 1) {
+    return [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === uniqueId && uniqueTierOf(i) === tier);
 }
+/** True if this unique (of `tier`) was ever found, kept or not: a record (core/modifiers.js recordsOf). */
+export const foundUnique = (state, uniqueId, tier = 1) => !!state.uniques?.[uniqueKey(uniqueId, tier)];
 
-function grantUnique(game, uniqueId) {
-    const state = game.state;
-    const u = UNIQUES[uniqueId];
+/** Unique `uniqueId` of dungeon tier `tier`, as a piece of gear: past the first tier as strong as its dungeon's boss's depth drops. */
+export function makeUnique(state, uniqueId, tier = 1) {
+    const u = uniqueAt(uniqueId, tier);
+    const d = DUNGEONS.find(x => x.unique === uniqueId);
+    const depth = tier > 1 && d ? zoneForStage(dungeonBossStage(d, tier)).depth : 0;
+    const mult = abyssDropMult(depth);
     const legendary = RARITIES.find(r => r.id === 'legendary');
-    const item = generateEquipment({ type: u.type, tier: u.tier, power: u.power, materialName: u.name, rarity: legendary, source: 'unique' }, state.idCounter++);
+    const item = generateEquipment({ type: u.type, tier: u.tier, power: u.power * mult, materialName: u.name, rarity: legendary, source: 'unique' }, state.idCounter++);
     item.name = u.name;
     item.uniqueId = u.id;
+    if (tier > 1) item.uniqueTier = tier;
+    if (mult > 1) item.depth = depth;
     item.color = '#f97316';
     item.affixes = u.affixes.map(a => ({ id: a.stat, name: a.name, stat: a.stat, value: a.value, format: 'pct' }));
+    return item;
+}
+
+/** Note a unique as found: a record from now on, whatever becomes of the piece (kept in `meta` too, as the forge's levels). */
+export function noteUnique(state, uniqueId, tier = 1) {
+    const key = uniqueKey(uniqueId, tier);
+    if (state.uniques?.[key]) return false;
+    (state.uniques ||= {})[key] = true;
+    state.meta.uniques = Object.keys(state.uniques);
+    return true;
+}
+
+function grantUnique(game, uniqueId, tier = 1) {
+    const state = game.state;
+    const item = makeUnique(state, uniqueId, tier);
     // The first copy starts protected. A spare stays unlocked, so a full bag can salvage it for essence
     // instead of filling up with locked duplicates.
-    const spare = ownsUnique(state, u.id);
+    const spare = ownsUnique(state, uniqueId, tier);
     item.locked = !spare;
+    const fresh = noteUnique(state, uniqueId, tier);   // the first ever: a record
     addItem(game, item);
     bumpStat(game, 'uniquesFound');
-    log(game, spare ? `🌟 Another ${u.name} — a spare, unlocked so it can be salvaged for essence.` : `🌟 Unique item: ${u.name}!`, 'loot');
-    game.emit({ type: 'unique', item });
+    log(game, spare ? `🌟 Another ${item.name} — a spare, unlocked so it can be salvaged for essence.` : `🌟 Unique item: ${item.name}!`, 'loot');
+    game.emit({ type: 'unique', item, fresh });
     return item;
 }
 
@@ -204,7 +243,7 @@ function grantUnique(game, uniqueId) {
 export function onDungeonKill(game) {
     const state = game.state;
     const c = state.combat;
-    const d = dungeonById(c.dungeon.id);
+    const d = dungeonAt(c.dungeon.id, c.dungeon.tier);
     c.dungeon.index += 1;
     if (c.dungeon.index > d.monsters.length) {
         completeDungeon(game, d);
@@ -228,7 +267,7 @@ function completeDungeon(game, d) {
 
     const parts = [];
     let kept = null;
-    const zone = zoneForStage(d.stage);
+    const zone = zoneForStage(d.stage);   // (the run's tier's: dungeonAt)
     if (rng.chance(CHEST_GEAR_CHANCE * dropMult)) {
         // of the chest's own tier (not a tier either side, as a monster's drop), as strong as the dungeon's
         // depth in the Abyss, like its monsters' drops
@@ -263,16 +302,16 @@ function completeDungeon(game, d) {
         state.resources[id] += qty;
         parts.push(`${qty}× ${RESOURCES[id].name}`);
     }
-    if (rng.chance(DIRECT_UNIQUE_CHANCE)) grantUnique(game, d.unique);
+    if (rng.chance(DIRECT_UNIQUE_CHANCE)) grantUnique(game, d.unique, d.tier);
 
     log(game, `🎁 ${d.name} cleared (${record.clears}): ${parts.join(', ')}.`, 'loot');
     for (const m of DUNGEON_MILESTONES) {
         if (record.clears !== m.clears) continue;
         log(game, `🏅 ${d.name}: ${m.clears} clears — ${m.desc} (permanent).`, 'achievement');
-        game.emit({ type: 'dungeonMilestone', dungeon: d.id, clears: m.clears, desc: m.desc });
+        game.emit({ type: 'dungeonMilestone', dungeon: d.id, clears: m.clears, desc: m.desc, tier: d.tier });
     }
     // what the chest held, for the scene to show (the gear kept, if any, is `item`)
-    game.emit({ type: 'dungeonClear', dungeon: d.id, clears: record.clears, item: kept, loot: { fragments, essence, materials } });
+    game.emit({ type: 'dungeonClear', dungeon: d.id, tier: d.tier, clears: record.clears, item: kept, loot: { fragments, essence, materials } });
     game.markDirty();
 }
 
@@ -286,9 +325,56 @@ export function assembleUnique(game, dungeonId) {
     }
     record.fragments -= FRAGMENTS_PER_UNIQUE;
     bumpStat(game, 'uniquesAssembled');
-    const item = grantUnique(game, d.unique);
+    const item = grantUnique(game, d.unique, dungeonTier(state));   // the open tier's
     game.markDirty();
     return item;
+}
+
+// ---------- the Seal ----------
+
+/**
+ * How near the open tier's Seal is: { tier, cleared (dungeons with the tier's clears), held (its uniques in hand),
+ * ready } (data/dungeons.js DUNGEON_TIER_CLEARS).
+ */
+export function sealProgress(state) {
+    const tier = dungeonTier(state);
+    const cleared = DUNGEONS.filter(d => (state.dungeons[d.id]?.clears || 0) >= DUNGEON_TIER_CLEARS).length;
+    const held = DUNGEONS.filter(d => ownsUnique(state, d.unique, tier)).length;
+    return { tier, cleared, held, of: DUNGEONS.length, ready: cleared === DUNGEONS.length && held === DUNGEONS.length };
+}
+
+/**
+ * Hand in the open tier's eight uniques for its Seal (a spare in the bag before a worn one, whose slot is left empty)
+ * and open the next tier: the dungeons go deeper, their clears and fragments start again, and the found uniques stay
+ * records. (Fragments carried over made the next tier's eight at once, each as strong as gear 200 stages past the
+ * hero: the simulated one leapt from stage 330 to 490 in two hours.) Not during a run.
+ */
+export function sealDungeons(game) {
+    const state = game.state;
+    const progress = sealProgress(state);
+    if (!progress.ready) {
+        game.emit({ type: 'error', text: progress.cleared < progress.of ? `Every dungeon needs ${DUNGEON_TIER_CLEARS} clears first.` : 'The Seal takes one of each of the eight uniques.' });
+        return false;
+    }
+    if (state.combat.mode === 'dungeon' && !choosingAfterClear(state)) { game.emit({ type: 'error', text: 'Finish the run first.' }); return false; }
+    if (choosingAfterClear(state)) endDungeon(game);
+    const tier = progress.tier;
+    for (const d of DUNGEONS) {
+        const match = i => i && i.uniqueId === d.unique && uniqueTierOf(i) === tier;
+        noteUnique(state, d.unique, tier);   // (found already: a record it stays)
+        const spare = state.inventory.findIndex(match);
+        if (spare >= 0) { state.inventory.splice(spare, 1); continue; }
+        const slot = (TYPE_SLOTS[UNIQUES[d.unique].type] || []).find(s => match(state.equipped[s]));
+        if (slot) state.equipped[slot] = null;
+    }
+    state.dungeonTier = tier + 1;
+    state.meta.dungeonTier = state.dungeonTier;   // (kept in `meta` too: core/state.js)
+    for (const d of DUNGEONS) state.dungeons[d.id] = { clears: 0, fragments: 0 };
+    const next = dungeonTierInfo(tier + 1);
+    log(game, `🔱 The Seal of tier ${dungeonTierInfo(tier).numeral || 'I'}: the dungeons go ${next.rule ? `deeper, and ${next.rule.name.toLowerCase()}` : 'deeper'}.`, 'achievement');
+    game.emit({ type: 'dungeonSeal', tier, next: tier + 1 });
+    game.markDirty();
+    return true;
 }
 
 /**
@@ -301,7 +387,7 @@ export function failDungeon(game, reason, { lost = false } = {}) {
         endDungeon(game);
         return;
     }
-    const d = dungeonById(c.dungeon?.id);
+    const d = c.dungeon?.id ? dungeonAt(c.dungeon.id, c.dungeon.tier) : null;
     log(game, `${d?.icon || '🕳️'} ${d?.name || 'Dungeon'} run failed: ${reason}. Progress in the run is lost.`, 'death');
     game.emit({ type: 'dungeonFail', dungeon: d?.id, reason, lost });
     returnToStages(game);

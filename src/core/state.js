@@ -11,7 +11,7 @@ import { CAMP_UPGRADES } from '../data/camp.js';
 import { TRIALS, TRIAL_TIERS, trialById, trialTarget, trialTiersCleared } from '../data/trials.js';
 import { xpForLevel, levelForXp, MAX_LEVEL } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
-import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS } from '../data/dungeons.js';
+import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS, parseUniqueKey, uniqueKey } from '../data/dungeons.js';
 import { TOOLS, FORGE_MAX, BENCH_SLOTS } from '../data/workshop.js';
 import { FARMING_PLOTS, cropById } from '../data/farming.js';
 import { AGILITY_SLOTS, MAX_OBSTACLE_LEVEL } from '../data/agility.js';
@@ -96,7 +96,9 @@ export function createDefaultState(now = Date.now()) {
             stallMs: 0,        // time climbing the ladder since this run's last new best stage (the Auto switch waits on it)
             pack: null         // { stage, killed }: the monsters beaten of a pack on new ground (systems/combat.js packSize)
         },
-        dungeons: {},          // id -> { clears, fragments }
+        dungeons: {},          // id -> { clears, fragments }: clears at the open tier
+        dungeonTier: 1,        // the dungeons' open tier: each Seal opens the next (data/dungeons.js; kept in `meta` too)
+        uniques: {},           // "<unique>" or "<unique>@<tier>" -> true: every unique found, kept or not (a record; in `meta` too)
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
         clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }
         clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at }
@@ -322,6 +324,7 @@ export function clampTimers(state, now) {
     return state;
 }
 const UNIQUE_COLOR = '#f97316';
+const DUNGEON_TIER_CAP = 1000;   // (far past any hero's: 300 stages a tier)
 // Every stat an item's affix may name: the random affixes and the uniques' fixed ones.
 const AFFIX_STATS = new Set([...AFFIXES.map(a => a.stat), ...Object.values(UNIQUES).flatMap(u => u.affixes.map(a => a.stat))]);
 // No affix rolls above about +35% (a unique's best); +100% is far beyond any, and keeps a hand-made one sane.
@@ -370,6 +373,7 @@ function sanitizeItem(raw, ids, nextId) {
         locked: raw.locked === true, value: Math.max(0, finite(raw.value)), source, materials
     };
     if (uniqueId) item.uniqueId = uniqueId;
+    if (uniqueId && Number.isSafeInteger(raw.uniqueTier) && raw.uniqueTier > 1 && raw.uniqueTier <= DUNGEON_TIER_CAP) item.uniqueTier = raw.uniqueTier;   // cut at a deeper tier
     const barsIn = Math.floor(finite(raw.barsIn));   // bars of its own metal spent reinforcing it at the anvil (systems/anvil.js)
     if (barsIn > 0) item.barsIn = Math.min(barsIn, 1e7);
     // other metals' bars a refit brought to it, and the essence the anvil took (data/workshop.js carryAnvilWork)
@@ -512,6 +516,25 @@ function sanitizeBench(state, data, now) {
     state.meta.bench = Object.fromEntries(BENCH_SLOTS.map(slot => [slot, state.bench[slot].level]));
 }
 
+/**
+ * The dungeons' open tier and the uniques found (data/dungeons.js), each read back from `meta` too (a page still running
+ * the older game drops what it doesn't know, but keeps `meta`), and every unique carried counted as found.
+ */
+function sanitizeDungeonTiers(state, data) {
+    const tier = Math.max(intIn(data?.dungeonTier, 1, DUNGEON_TIER_CAP, 1), intIn(data?.meta?.dungeonTier, 1, DUNGEON_TIER_CAP, 1));
+    state.dungeonTier = tier;
+    const saved = isPlainObject(data?.uniques) ? Object.keys(data.uniques).filter(key => data.uniques[key] === true) : [];
+    const mirror = Array.isArray(data?.meta?.uniques) ? data.meta.uniques.slice(0, 20000) : [];
+    state.uniques = {};
+    for (const key of [...saved, ...mirror]) {
+        const u = parseUniqueKey(key);
+        if (u && u.tier <= tier) state.uniques[uniqueKey(u.id, u.tier)] = true;
+    }
+    for (const item of [...state.inventory, ...Object.values(state.equipped)]) if (item?.uniqueId) state.uniques[uniqueKey(item.uniqueId, item.uniqueTier || 1)] = true;
+    state.meta.dungeonTier = tier;
+    state.meta.uniques = Object.keys(state.uniques);
+}
+
 function rescaleRarity(state, now) {
     let raised = 0;
     for (const item of [...Object.values(state.equipped), ...state.inventory]) {
@@ -588,6 +611,7 @@ function normalise(data, now) {
     if (data?.meta?.rarityRescale !== RARITY_RESCALE) rescaleRarity(state, now);   // (read from the save itself: the default is the new mark)
     sanitizeForge(state, data, now);
     sanitizeBench(state, data, now);
+    sanitizeDungeonTiers(state, data);
     state.bagUpgrades = Math.max(0, Math.min(BAG_UPGRADE.max, Math.floor(finite(state.bagUpgrades))));
     for (const id of ids) if (id >= state.idCounter) state.idCounter = id + 1;
     state.log = (Array.isArray(state.log) ? state.log : [])
@@ -754,7 +778,7 @@ function normalise(data, now) {
         // the room reached; whether the player chose to keep going; the wait at the chest after a clear
         const choiceLeft = Math.max(0, Math.min(DUNGEON_CHOICE_MS, finite(Number(run.choiceLeft), 0)));
         const index = choiceLeft > 0 ? runDungeon.monsters.length + 1 : Math.max(0, Math.min(runDungeon.monsters.length, Math.floor(Number(run.index) || 0)));
-        state.combat.dungeon = { id: run.id, index, repeat: run.repeat === true, choiceLeft };
+        state.combat.dungeon = { id: run.id, index, repeat: run.repeat === true, choiceLeft, tier: intIn(run.tier, 1, state.dungeonTier, state.dungeonTier) };   // (a run from before the tiers: the open one)
         if (choiceLeft > 0) state.combat.enemy = null;
     }
     delete state.combat.autoRepeat;   // the old switch for every visit: now each visit asks after its first clear

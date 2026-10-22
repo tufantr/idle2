@@ -27,7 +27,7 @@ import { isUpgrade, canWear, equipGain, gainStages, findGear } from './systems/i
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
-import { dungeonById } from './data/dungeons.js';
+import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
 import { nextLook, lookForMedal } from './data/looks.js';
@@ -667,6 +667,7 @@ function soundFor(ev, onCombat) {
         case 'ascend': return ['legendary'];
         case 'pet': return ['pet'];
         case 'unique': return ['legendary'];
+        case 'dungeonSeal': return ['legendary'];
         case 'dungeonClear': return ['chest'];
         case 'titan': return [ev.won ? 'victory' : 'defeat'];
         case 'glance': return onCombat ? ['dodge'] : null;   // a strike off the clan boss's guard
@@ -861,10 +862,19 @@ function handleEvents(events) {
                     kicker: 'A new land', title: zone.name, note: ZONE_LINES[zone.id] || '', lines: [abyss ? `Stages ${ev.stage}+, without end` : `Stages ${ev.stage}–${last}`, zone.loot.map(l => resIcon(l.id)).join(' ')], ms: 5000 });
                 break;
             }
-            case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting
-                const d = dungeonById(ev.dungeon);
-                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon'), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
+            case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting (in its tier's hues)
+                const d = dungeonAt(ev.dungeon, ev.tier || 1);
+                const hue = dungeonTierInfo(ev.tier || 1).hue;
+                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.tier || 1}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon') + (hue ? `;filter:hue-rotate(${hue}deg)` : ''), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
                     kicker: `${d.name} · ${fmt(ev.clears)} clears`, title: ev.desc, lines: ['Yours for good, through every prestige'] });
+                break;
+            }
+            case 'dungeonSeal': { // the eight uniques handed in: the Seal, and the dungeons a tier deeper (systems/dungeon.js)
+                const next = dungeonTierInfo(ev.next);
+                const first = dungeonAt('goblin_warren', ev.next);
+                rewards.celebrate({ key: `seal:${ev.tier}`, kind: 'legend', art: paintStyle('dungeon') + `;filter:hue-rotate(${next.hue}deg)`, icon: sprite('crown', { scale: 2, fallback: '🔱' }),
+                    kicker: `The Seal of tier ${dungeonTierInfo(ev.tier).numeral || 'I'}`, title: `The dungeons, tier ${next.numeral}`,
+                    lines: [`${DUNGEON_TIER_STAGES} stages deeper: from stage ${fmt(first.stage)}`, next.rule ? `${next.rule.name}: ${next.rule.desc.toLowerCase()}` : '', `A Seal: your tokens are ×${(BASE_RECORD_MULT ** SEAL_RECORDS).toFixed(2)} stronger`].filter(Boolean), ms: 6000 });
                 break;
             }
             case 'titan': {
@@ -925,7 +935,7 @@ function handleEvents(events) {
                     lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
                 break;
             case 'unique':
-                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
+                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.fresh && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
                 else toast(`A spare ${ev.item.name}: salvage it for essence`, 'achievement', pic(itemSpriteKey(ev.item)));
                 break;
             case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;
@@ -1366,6 +1376,7 @@ window.FI = {
         if (ended) backToDungeons(); else render();
     },
     assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
+    sealDungeons() { game.sealDungeons(); render(); },   // the dungeonSeal event celebrates it
     challengeTitan() {
         if (!game.challengeTitan()) { render(); return; }
         ui.battleHoldUntil = 0;

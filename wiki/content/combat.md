@@ -80,7 +80,7 @@ The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} second
 
 Below {{pct(BASE.baseAutoEatThreshold, 0)}} of his health your hero eats, and just before a blow that would fell him while the run climbs. With **Auto** he picks the smallest food that fills the gap. See [[Food]].
 
-A [[Potions|potion]] picked on the Combat tab is drunk as the fight starts, and one bottle lasts {{POTION_MINUTES}} minutes of fighting; what it raises it multiplies, after every other bonus.
+A [[Potions|potion]] picked on the Combat tab is drunk as the fight starts, and one bottle lasts {{doseWords()}} of fighting; what it raises it multiplies, after every other bonus.
 
 ## What a kill pays
 

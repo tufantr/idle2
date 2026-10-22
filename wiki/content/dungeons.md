@@ -1,7 +1,7 @@
 ---
 path: /dungeons
-keywords: dungeon, dungeons, dungeon run, elite, elites, boss, boss timer, chest, fragment, fragments, unique, keep going, end the dungeon, milestone, milestones, clears, dungeon runs, dungeon milestones
-aliases: Dungeon runs, Chest, Dungeon milestones, Elites
+keywords: dungeon, dungeons, dungeon run, elite, elites, boss, boss timer, chest, fragment, fragments, unique, keep going, end the dungeon, milestone, milestones, clears, dungeon runs, dungeon milestones, tier, tiers, seal, the seal, swift, stout, savage, relentless
+aliases: Dungeon runs, Chest, Dungeon milestones, Elites, Dungeon tiers, The Seal, Seals
 ---
 A dungeon is a gauntlet: a row of elite monsters and a boss, fought in one go. Every clear opens a chest, and every chest holds a fragment of the dungeon's [[Unique items|unique item]]. Each dungeon opens for good when your best stage ever reaches its stage, the first one, the [[Goblin Warren]], at stage {{DUNGEONS[0].unlockStage}}. The list below has them all.
 
@@ -55,3 +55,19 @@ Each dungeon counts its clears, and some counts bring a bonus that lasts forever
 {{table(['Clears #', 'Bonus, for good'], DUNGEON_MILESTONES.map(m => [fmt(m.clears), m.desc]), { sort: false })}}
 
 All your clears together count toward the {{achievementById('delver').name}} medal at {{achievementById('delver').req.value}} clears (see [[Medals]]).
+
+## Tiers and the Seal
+
+When all eight dungeons have {{DUNGEON_TIER_CLEARS}} clears and you hold their eight uniques of the open tier, the row at the top of the Dungeons tab shows **Make the Seal** (it shows the tier, its rule and the eight uniques, lit while held, each ringed as its dungeon's clears fill, once a dungeon has had its {{DUNGEON_TIER_CLEARS}}). The Seal takes the eight uniques (one from the bag before one worn, whose slot is left empty), takes no room in the bag, and is worth {{SEAL_RECORDS}} records, so your prestige tokens grow ×{{fmt(BASE.recordMult ** SEAL_RECORDS)}} stronger. Then the next tier opens:
+
+- the same eight dungeons {{DUNGEON_TIER_STAGES}} stages deeper, their gates too: the {{dungeonAt('goblin_warren', 2).name}} opens at stage {{dungeonAt('goblin_warren', 2).unlockStage}};
+- their paintings in new hues, and one rule for their monsters, in turn: {{DUNGEON_RULES.map(r => `<strong>${r.name}</strong> (${r.desc.toLowerCase()})`).join(', ')}};
+- chests of {{GEAR_TIERS.at(-1).name}} gear as strong as their depth;
+- uniques of their own, the {{uniqueAt('goblin_crown', 2).name}} and the rest: {{GEAR_TIERS.at(-1).name}}, as strong as the gear their dungeon's boss's depth drops, with the same bonuses, and each a new record;
+- the clears and the fragments start again, and so do the milestones (a sealed tier's bonuses stay, in full).
+
+There is no last tier.
+
+{{table(['Tier', 'Rule', 'Stages #', 'Opens from stage #'], [1, 2, 3, 4, 5, 6].map(t => [dungeonTierInfo(t).numeral || 'I', dungeonTierInfo(t).rule?.name || '–', `${dungeonAt('goblin_warren', t).stage}–${dungeonBossStage('hellforge', t)}`, dungeonAt('goblin_warren', t).unlockStage]), { sort: false })}}
+
+(Until 22 October 2026 the dungeons ended at {{DUNGEON_TIER_CLEARS}} clears, and a unique was a record only while held, so the eight sat in the bag for good. Now each is a record from the moment it is found.)

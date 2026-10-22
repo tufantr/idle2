@@ -6,7 +6,7 @@ Alchemy makes [[Potions|potions]]. It has two kinds of action: **foraging** herb
 
 ## What it is for
 
-Potions make your hero stronger for a while. There are three kinds, each in {{TIERS.length}} tiers, and each is picked where it works: combat potions on the [[Combat]] and Clan tabs, dungeon potions on the [[Dungeons]] tab, skill potions on every skill's tab. A bottle lasts {{POTION_MINUTES}} minutes of that work, and when it runs out the next is opened at once, while you have any (see [[/potions|Potions]]).
+Potions make your hero stronger for a while. There are three kinds, each in {{TIERS.length}} tiers, and each is picked where it works: combat potions on the [[Combat]] and Clan tabs, dungeon potions on the [[Dungeons]] tab, skill potions on every skill's tab. A bottle lasts {{doseWords()}} of that work, and when it runs out the next is opened at once, while you have any (see [[/potions|Potions]]).
 
 | Potion | Gives | Tiers |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ Potions make your hero stronger for a while. There are three kinds, each in {{TI
 | {{POTION_KINDS.dungeon.name}} | {{RESOURCES.dungeon_potion_1.desc}} | {{potionsFor('dungeon').map(id => res(id)).join(', ')}} |
 | {{POTION_KINDS.skill.name}} | {{RESOURCES.skill_potion_1.desc}} | {{potionsFor('skill').map(id => res(id)).join(', ')}} |
 
-Each tier is brewed from its herb and one thing from another skill: ore from [[/skills/mining|Mining]] for a combat potion, a cooked dish from [[/skills/cooking|Cooking]] for a dungeon potion, and logs from [[/skills/woodcutting|Woodcutting]] for a skill potion.
+Each tier is brewed from its herb and one thing from another skill: ore from [[/skills/mining|Mining]] for a combat potion (a {{res('diamond')}} for the last), a cooked dish from [[/skills/cooking|Cooking]] for a dungeon potion, and logs from [[/skills/woodcutting|Woodcutting]] for a skill potion. From tier {{TIERS[3]}} a brew takes two herbs. The six herbs open at Alchemy {{SKILLS.alchemy.nodes.filter(n => !n.consumes).map(n => n.levelReq).join(', ')}}, the last potion at {{potionLevel('dungeon_potion_6')}}.
 
 ## How it works
 

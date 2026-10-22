@@ -69,10 +69,10 @@ function ledger(file) {
     if (w) add('  of which the weapon', share(T => { T.equipped.Weapon = null; }), `${w.name} ${w.rarity} T${w.tier}${w.depth ? ` d${w.depth}` : ''} +${S.forge?.Weapon?.level || 0}`);
     add('  of which the armour (6)', share(T => { for (const s of ['Shield', 'Head', 'Body', 'Legs', 'Boots', 'Gloves']) T.equipped[s] = null; }));
     add('  of which the jewellery (5)', share(T => { for (const s of ['Ring1', 'Ring2', 'Neck', 'Ear1', 'Ear2']) T.equipped[s] = null; }));
-    add('  of which upgrade levels', share(T => { for (const s of EQUIP_SLOTS) if (T.equipped[s]) T.equipped[s].upgrade = 0; for (const f of Object.values(T.forge || {})) f.level = 0; }), `the forge: ${Object.entries(S.forge || {}).map(([s, f]) => `${s} +${f.level}`).join(', ')}`);
+    add('  of which upgrade levels', share(T => { for (const s of EQUIP_SLOTS) if (T.equipped[s]) T.equipped[s].upgrade = 0; for (const f of [...Object.values(T.forge || {}), ...Object.values(T.bench || {})]) f.level = 0; }), `the forge: ${Object.entries(S.forge || {}).map(([s, f]) => `${s} +${f.level}`).join(', ')}; the bench: ${Object.entries(S.bench || {}).map(([s, f]) => `${s} +${f.level}`).join(', ')}`);
     add('tokens (with records)', share(T => { T.prestige.tokens = 0; }), `${Math.round(tokens)} tokens x records ${rec.mult.toFixed(2)}`);
     const layer = (k, m) => (1 + BASE[k] * tokens * m);
-    add('  of which records', { atk: layer('tokenAtk', rec.mult) / layer('tokenAtk', 1), def: layer('tokenDef', rec.mult) / layer('tokenDef', 1), hp: layer('tokenHp', rec.mult) / layer('tokenHp', 1) }, `${rec.count} records: ${rec.stages} stage, ${rec.skills} skill, ${rec.uniques} unique, ${rec.trials} trial, ${rec.laurels} laurel`);
+    add('  of which records', { atk: layer('tokenAtk', rec.mult) / layer('tokenAtk', 1), def: layer('tokenDef', rec.mult) / layer('tokenDef', 1), hp: layer('tokenHp', rec.mult) / layer('tokenHp', 1) }, `${rec.count} records: ${rec.stages} stage, ${rec.skills} skill, ${rec.uniques} unique, ${rec.seals} seal, ${rec.trials} trial, ${rec.laurels} laurel`);
     add('camp', share(T => { T.camp = {}; }), `${S.camp.whetstone} levels each`);
     add('Legacy', share(T => { T.prestige.count = 0; }), `${S.prestige.count} prestiges`);
     add('potion (Combat III)', share(T => { T.combat.potion = 'none'; T.combat.potionMs = 0; }));
@@ -81,7 +81,8 @@ function ledger(file) {
     add('medals', share(T => { T.achievements = {}; }), `${Object.keys(S.achievements).filter(k => S.achievements[k]).length} medals`);
     add('pets', share(T => { T.pets = {}; }));
     add('titans', share(T => { T.titan.kills = 0; }), `${S.titan.kills} titans`);
-    add('dungeon milestones', share(T => { for (const k of Object.keys(T.dungeons)) T.dungeons[k].clears = 0; }));
+    add('dungeon milestones', share(T => { for (const k of Object.keys(T.dungeons)) T.dungeons[k].clears = 0; }), `the open tier's; a sealed tier's are with the Seals`);
+    add('dungeon Seals', share(T => { T.dungeonTier = 1; }), `tier ${S.dungeonTier || 1}: their records and the sealed tiers' milestones`);
     add('agility', share(T => { T.agility.built = []; }));
     return { file, best, depth: zoneForStage(best).depth, gHp, gAtk, total: { atk: d.atk, def: d.def, hp: d.maxHp }, tokens, records: rec, stars: S.ascension?.stars || 0, hours: (raw0.meta?.playtimeMs || 0) / 3600000, parts };
 }

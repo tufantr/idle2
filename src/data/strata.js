@@ -52,7 +52,8 @@ export const STRATA = [
 // round (`weeping-2`), so each is a place of its own: a card when first reached, a line in the chronicle.
 const ROUND = STRATA.length - 1;
 const ROMAN = [['M', 1000], ['CM', 900], ['D', 500], ['CD', 400], ['C', 100], ['XC', 90], ['L', 50], ['XL', 40], ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]];
-const roman = n => ROMAN.reduce((out, [r, v]) => { while (n >= v) { out += r; n -= v; } return out; }, '');
+/** `n` in Roman numerals (a round of the strata, a tier of the dungeons: data/dungeons.js). */
+export const roman = n => ROMAN.reduce((out, [r, v]) => { while (n >= v) { out += r; n -= v; } return out; }, '');
 
 /** The `i`-th stratum below the Abyss's first (0: the Abyss itself), its rounds past Pandemonium included. */
 export function stratumAt(i) {

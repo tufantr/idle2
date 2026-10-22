@@ -18,7 +18,9 @@ export const CROPS = [
     { id: 'tarromin',    name: 'Tarromin',    icon: '🌿', levelReq: 35, growMs: 40 * 60000, yield: [4, 8],  produces: 'tarromin_leaf',    xp: 367,  seedGold: 500 },
     { id: 'pumpkin',     name: 'Pumpkins',    icon: '🎃', levelReq: 40, growMs: 45 * 60000, yield: [5, 9],  produces: 'pumpkin',          xp: 407,  seedGold: 800 },
     { id: 'harralander', name: 'Harralander', icon: '🌿', levelReq: 55, growMs: 60 * 60000, yield: [4, 8],  produces: 'harralander_leaf', xp: 1000, seedGold: 2000 },
-    { id: 'starfruit',   name: 'Starfruit',   icon: '⭐', levelReq: 65, growMs: 90 * 60000, yield: [5, 9],  produces: 'starfruit',        xp: 1714, seedGold: 4000 }
+    { id: 'starfruit',   name: 'Starfruit',   icon: '⭐', levelReq: 65, growMs: 90 * 60000, yield: [5, 9],  produces: 'starfruit',        xp: 1714, seedGold: 4000 },
+    { id: 'ranarr',      name: 'Ranarr',      icon: '🌿', levelReq: 70, growMs: 100 * 60000, yield: [4, 8], produces: 'ranarr_leaf',      xp: 2700, seedGold: 6000 },
+    { id: 'torstol',     name: 'Torstol',     icon: '🌿', levelReq: 85, growMs: 120 * 60000, yield: [4, 8], produces: 'torstol_leaf',     xp: 5200, seedGold: 12000 }
 ];
 
 paceList('farming', CROPS);   // Melvor pace (data/pace.js)

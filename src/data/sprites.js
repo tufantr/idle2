@@ -5,7 +5,7 @@
 // hero/cloaks/<rank cloak>, hero/capes/<skill>.
 // See assets/CREDITS.md.
 
-export const ATLAS = { url: 'assets/sprites.png?v=a9894d1e45', cell: 32, cols: 16, rows: 34 };
+export const ATLAS = { url: 'assets/sprites.png?v=97d19bd60f', cell: 32, cols: 16, rows: 35 };
 
 export const SPRITES = {
     "mon/Slime": [0, 0],
@@ -550,5 +550,13 @@ export const SPRITES = {
     "res/skill_potion_1": [11, 33],
     "res/skill_potion_2": [12, 33],
     "res/skill_potion_3": [13, 33],
-    "res/skill_potion_4": [14, 33]
+    "res/skill_potion_4": [14, 33],
+    "res/combat_potion_5": [15, 33],
+    "res/combat_potion_6": [0, 34],
+    "res/dungeon_potion_5": [1, 34],
+    "res/dungeon_potion_6": [2, 34],
+    "res/skill_potion_5": [3, 34],
+    "res/skill_potion_6": [4, 34],
+    "res/ranarr_leaf": [5, 34],
+    "res/torstol_leaf": [6, 34]
 };

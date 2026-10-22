@@ -6,7 +6,7 @@
 import { ZONES, zoneForStage, STAGES_PER_ZONE, isBossStage, isLordStage } from '../data/zones.js';
 import { clanBossFor } from '../data/social.js';
 import { clanGuardOpen } from '../systems/clanfight.js';
-import { dungeonById } from '../data/dungeons.js';
+import { dungeonById, dungeonAt, dungeonTierInfo } from '../data/dungeons.js';
 import { RARITIES, PITY_MARKS } from '../data/items.js';
 import { laggingSlot, PITY_LAG, isUpgrade, canWear, equipGain } from '../systems/inventory.js';
 import { RESOURCES, foodsByHealing } from '../data/resources.js';
@@ -14,7 +14,8 @@ import { companionPet } from '../data/pets.js';
 import { BALANCE, enemyForStage, goldForKill } from '../core/formulas.js';
 import { clanBannerMult } from '../core/modifiers.js';
 import { killPayout, packSize } from '../systems/combat.js';
-import { titanLevel, ownsUnique } from '../systems/dungeon.js';
+import { titanLevel, foundUnique } from '../systems/dungeon.js';
+import { doseMs } from '../systems/potions.js';
 import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, duration, escapeHtml as esc, shareInWords, gainParts } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
@@ -77,7 +78,7 @@ const MOVES = {
  * the gear kept, the unique's fragments (a silhouette until the unique is owned), essence, the rest.
  */
 function chestLoot(ev, state) {
-    const d = dungeonById(ev.dungeon);
+    const d = dungeonAt(ev.dungeon, ev.tier || 1);
     const loot = ev.loot;
     if (!d || !loot) return ev.item ? `<span>${esc(ev.item.name)}</span>` : '';
     const bits = [];
@@ -85,7 +86,7 @@ function chestLoot(ev, state) {
         const color = ev.item.color || RARITIES.find(r => r.id === ev.item.rarity)?.color || '#e2e8f0';
         bits.push({ pic: sprite(itemSpriteKey(ev.item), { scale: 1, fallback: esc(ev.item.icon || '') }), cls: 'gear', style: `;--r:${esc(color)}`, title: ev.item.name });
     }
-    bits.push({ pic: sprite(`uniq/${d.unique}`, { scale: 1, cls: ownsUnique(state, d.unique) ? '' : 'silhouette' }), count: `×${loot.fragments}`, title: 'Fragments' });
+    bits.push({ pic: sprite(`uniq/${d.unique}`, { scale: 1, cls: foundUnique(state, d.unique, d.tier) ? '' : 'silhouette' }), count: `×${loot.fragments}`, title: 'Fragments' });
     if (loot.essence) bits.push({ pic: resIcon('essence', { scale: 1 }), count: `+${fmt(loot.essence)}`, title: RESOURCES.essence?.name });
     for (const [id, qty] of Object.entries(loot.materials || {})) bits.push({ pic: resIcon(id, { scale: 1 }), count: `×${fmt(qty)}`, title: RESOURCES[id]?.name });
     return `<span class="chest-loot">${bits.map((b, i) => `<span class="cl ${b.cls || ''}" style="--i:${i}${b.style || ''}" title="${esc(b.title || '')}">${b.pic}${b.count ? `<b>${b.count}</b>` : ''}</span>`).join('')}</span>`;
@@ -494,7 +495,7 @@ export function createScene(root, actions) {
         let nodes;
         if (c.mode === 'dungeon') {
             // a run's rooms as the portraits of who waits in them: beaten ones grey, a kind never met a silhouette
-            const d = dungeonById(c.dungeon?.id);
+            const d = dungeonAt(c.dungeon?.id, c.dungeon?.tier);
             const total = d ? d.monsters.length + 1 : 1;
             const at = c.dungeon?.index || 0;
             const kills = state.stats.killsByMonster || {};
@@ -541,7 +542,7 @@ export function createScene(root, actions) {
         }).join('');
     }
 
-    function heroKit(state) {
+    function heroKit(state, derived) {
         const c = state.combat;
         const parts = [];
         if (c.autoEat !== 'none' && seen(state, 'food')) { // before food exists for the player, there is nothing to warn about
@@ -555,8 +556,9 @@ export function createScene(root, actions) {
         const [potion, potionMs] = c.mode === 'dungeon' ? [c.dungeonPotion, c.dungeonPotionMs] : [c.potion, c.potionMs];
         if (potion && potion !== 'none') {
             const p = RESOURCES[potion];
-            const left = potionMs > 0 ? duration(potionMs) : `×${fmt(state.resources[potion] || 0)}`;
-            parts.push(`<span title="${esc(p?.name || 'Potion')}">${resIcon(potion)} ${left}</span>`);
+            // what the bottles carried will last, the one at work too (a dose is a minute: data/potions.js)
+            const lasts = (potionMs || 0) + (state.resources[potion] || 0) * doseMs(derived);
+            parts.push(`<span${lasts > 0 ? '' : ' class="warn"'} title="${esc(p?.name || 'Potion')}: ${fmt(state.resources[potion] || 0)} bottles, ${duration(lasts)} of fighting">${resIcon(potion)} ${lasts > 0 ? duration(lasts) : 'none left'}</span>`);
         }
         // the clan's banner this week (data/social.js CLAN_BANNER): not in the clan boss's own fight
         const banner = c.mode === 'clan' ? 1 : clanBannerMult(state);
@@ -660,7 +662,7 @@ export function createScene(root, actions) {
             const c = state.combat;
             const d = game.derived;
             const scene = sceneFor(state);
-            const hue = c.mode === 'stages' ? landHue(zoneForStage(c.stage)) : 0;
+            const hue = c.mode === 'stages' ? landHue(zoneForStage(c.stage)) : c.mode === 'dungeon' ? dungeonTierInfo(c.dungeon?.tier).hue : 0;   // a deeper tier's dungeons (data/dungeons.js)
             if (el.battle.style.getPropertyValue('--land-hue') !== `${hue}deg`) el.battle.style.setProperty('--land-hue', `${hue}deg`);
             preloadNextLand(state);
             if (el.battle.dataset.scene !== scene) {
@@ -672,7 +674,7 @@ export function createScene(root, actions) {
             }
             sceneDrawn = true;
             if (c.mode === 'dungeon') {
-                const dg = dungeonById(c.dungeon?.id);
+                const dg = dungeonAt(c.dungeon?.id, c.dungeon?.tier);
                 setMarkup(el.zone, esc(dg ? dg.name : 'Dungeon'));
                 setText(el.stage, dg ? (c.dungeon?.choiceLeft > 0 ? 'Cleared' : `Room ${Math.min((c.dungeon?.index || 0) + 1, dg.monsters.length + 1)} of ${dg.monsters.length + 1}`) : '');
             } else if (c.mode === 'titan') {
@@ -702,7 +704,7 @@ export function createScene(root, actions) {
             // his name and level ("Combat Lv" on a wide screen, "Lv" on a phone, so a long name still fits)
             const nameHtml = `${esc(state.hero?.name || 'You')}<span class="lv-long"> · Combat Lv ${d.combatLevel}</span><span class="lv-short"> · Lv ${d.combatLevel}</span>`;
             if (el.heroName.__html !== nameHtml) { el.heroName.innerHTML = nameHtml; el.heroName.__html = nameHtml; }
-            setMarkup(el.heroMeta, heroKit(state));
+            setMarkup(el.heroMeta, heroKit(state, d));
             const enemy = currentEnemy(state);
             if (enemy === lastEnemy && !enemy.chest) setMarkup(el.foeMeta, foeMeta(state, d, enemy)); // payouts change with farm mode
             const scale = fighterScale();
@@ -896,7 +898,7 @@ export function createScene(root, actions) {
                     else if (ev.reason === 'time') banner(`<small>Time is up</small><strong>The Titan stands</strong><span>${Math.round((ev.dealt || 0) * 100)}% of its health dealt</span>`, 'defeat', 2400);
                     break;
                 case 'dungeonClear':
-                    banner(`<small>${esc(dungeonById(ev.dungeon)?.name || 'Dungeon')} cleared${ev.clears > 1 ? ` · ${fmt(ev.clears)}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest</strong>${chestLoot(ev, game.state)}`, 'victory', 2600);
+                    banner(`<small>${esc(dungeonAt(ev.dungeon, ev.tier || 1)?.name || 'Dungeon')} cleared${ev.clears > 1 ? ` · ${fmt(ev.clears)}×` : ''}</small><strong>${sprite('crate', { scale: 0.75, cls: 'soft' })} The chest</strong>${chestLoot(ev, game.state)}`, 'victory', 2600);
                     break;
                 case 'prestige':   // an Ascension's tokens were given up for Stars: no tokens banner (main.js shows its card)
                     if (!ev.ascend) banner(`<small>Prestige</small><strong>+${fmt(ev.tokens)} tokens</strong>`, 'victory', 2400);

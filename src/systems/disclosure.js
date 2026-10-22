@@ -15,6 +15,7 @@ import { BALANCE } from '../core/formulas.js';
 import { TRIALS_FROM } from '../data/trials.js';
 import { ASCEND_FROM } from '../data/ascension.js';
 import { potionsFor } from '../data/potions.js';
+import { DUNGEON_TIER_CLEARS } from '../data/dungeons.js';
 
 const SKILL_POTIONS = potionsFor('skill');
 const RIVER_CATCH = SKILLS.hunting.nodes.filter(n => n.fish).map(n => n.produces);
@@ -58,6 +59,8 @@ export const DISCLOSURES = [
     // Crafting's bench (systems/bench.js): the first upgrade a jeweller can do, or a jewellery slot with levels already
     // (pieces upgraded before the bench gave theirs to the slots, core/state.js sanitizeBench)
     { id: 'bench',        when: s => levelForXp(s.skills.crafting.xp) >= BENCH_LEVEL_PER_UPGRADE || BENCH_SLOTS.some(slot => (s.bench?.[slot]?.level || 0) > 0) },
+    // the dungeons' Seal (systems/dungeon.js sealProgress): once a dungeon has its tier's clears, or a tier is sealed
+    { id: 'dungeon_seal', when: s => (s.dungeonTier || 1) > 1 || Object.values(s.dungeons || {}).some(d => (d?.clears || 0) >= DUNGEON_TIER_CLEARS) },
     // Hunting's river spots: once the kitchen has been used (as Fishing opened, before it joined Hunting)
     { id: 'river',        when: s => (s.stats.actionsBySkill.cooking || 0) >= 5 || (s.stats.fishCaught || 0) > 0 || RIVER_CATCH.some(id => s.resources[id] > 0) },
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },

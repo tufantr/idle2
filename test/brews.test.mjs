@@ -228,7 +228,7 @@ test('a skill potion runs while the hero works, online and while away: faster, a
     back.resumeFromSave(saved.meta.savedAt + 2 * POTION_MINUTES * MIN + 3 * MIN);
     assert.equal(back.state.resources.skill_potion_4, 0);
     assert.equal(back.state.workPotion.ms, 0, 'run out while away');
-    assert.deepEqual(potionsFor('skill'), ['skill_potion_1', 'skill_potion_2', 'skill_potion_3', 'skill_potion_4']);
+    assert.deepEqual(potionsFor('skill'), ['skill_potion_1', 'skill_potion_2', 'skill_potion_3', 'skill_potion_4', 'skill_potion_5', 'skill_potion_6']);
 });
 
 test('a save from before the three kinds turns its bottles and picks into them, by their herb', () => {

@@ -44,8 +44,8 @@ import { benchCost } from '../src/systems/bench.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
 import { resolveAction } from '../src/systems/skilling.js';
-import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_BOSS_TIME_MS } from '../src/data/dungeons.js';
-import { dungeonPreview, dungeonUnlocked, fightPreview } from '../src/systems/dungeon.js';
+import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_TIER_CLEARS, dungeonBossTime } from '../src/data/dungeons.js';
+import { dungeonPreview, dungeonUnlocked, fightPreview, dungeonNow, dungeonTier, ownsUnique, sealProgress } from '../src/systems/dungeon.js';
 import { AGILITY_SLOTS } from '../src/data/agility.js';
 import { canBuild, obstacleCost, upgradeInfo } from '../src/systems/agility.js';
 import { plotUnlocked, plotReady, bestCrop, seedCost } from '../src/systems/farming.js';
@@ -66,7 +66,7 @@ const SEED = Number(args.seed || 1);
 const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
-// --without=dungeons,titan,farming,agility,anvil,bench,camp,perks,crafting,essence: the bot leaves those alone
+// --without=dungeons,titan,farming,agility,anvil,bench,camp,perks,crafting,essence,seals: the bot leaves those alone
 // (restricted play: what each system is worth, robust-and-fun/D §2.3). food, potions, or consumables (both):
 // it neither makes nor uses them, and eats nothing (what they are worth to a push, DESIGN §3.6).
 const WITHOUT = new Set(String(args.without || '').split(',').filter(Boolean));
@@ -82,8 +82,8 @@ const SPEED_PRESTIGE = !!args['speed-prestige'];
 // The bot's own thresholds. --vary=N draws a different sensible player for each N (D §2.2 P10): how
 // much a run must add before it prestiges, how long a stall lasts, how long it farms a dungeon, its
 // share of time for agility, how long it trains, and the order it buys perks in.
-// potionStock: combat and dungeon potions kept in stock (a dose is POTION_MINUTES of fighting); workStock: skill potions.
-const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60, potionStock: 12, workStock: 6, foodStock: 60,
+// potionStock: combat and dungeon potions kept in stock (a dose is POTION_MINUTES of fighting: an hour's worth); workStock: skill potions (half an hour's).
+const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60, potionStock: 60, workStock: 30, foodStock: 60,
     perkOrder: ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'] };
 if (args.vary) {
     const r = seededRandom(1_000_003 * Number(args.vary));
@@ -439,22 +439,24 @@ function buyCamp() {
     }
 }
 
-// Dungeons: when the stage push stalls, farm the deepest dungeon the hero clears comfortably
+// Dungeons: when the stage push stalls, farm the deepest dungeon of the open tier the hero clears comfortably
 // for half an hour (chests, fragments, clear milestones), then go back to the ladder.
 function dungeonTask() {
-    const limit = DUNGEON_BOSS_TIME_MS / 1000;
-    const ready = DUNGEONS.filter(d => dungeonUnlocked(S, d)).filter(d => {
+    const tier = dungeonTier(S);
+    const limit = dungeonBossTime(tier) / 1000;
+    const ready = DUNGEONS.filter(d => dungeonUnlocked(S, d)).map(d => dungeonNow(S, d)).filter(d => {
         const p = dungeonPreview(game.derived, d);
         return p.bossFight.killSeconds <= 0.7 * Math.min(limit, p.bossFight.surviveSeconds)
             && p.eliteFight.killSeconds <= 0.5 * p.eliteFight.surviveSeconds;
     });
-    const pick = ready[ready.length - 1];
+    // Only worth it while a dungeon still pays: the tier's clears for its Seal (data/dungeons.js) or its unique not yet
+    // in hand, the deepest first; otherwise its chests while they can hold gear better than the weapon we wear (a chest
+    // of the top tier would keep a hero who wears that tier farming it forever instead of pushing).
+    const owed = d => (S.dungeons[d.id].clears < DUNGEON_TIER_CLEARS) || !ownsUnique(S, d.unique, tier);
+    const pick = WITHOUT.has('seals') ? ready[ready.length - 1] : ([...ready].reverse().find(owed) || ready[ready.length - 1]);
     if (!pick) return null;
-    // Only worth it while the dungeon still pays: its unique isn't assembled yet, or its chests can
-    // still hold gear better than the weapon we wear (a chest of the top tier would otherwise keep a
-    // hero who already wears that tier farming it forever instead of pushing).
-    const hasUnique = [...S.inventory, ...Object.values(S.equipped)].some(i => i && i.uniqueId === pick.unique);
-    if (hasUnique && pick.chestTier <= (S.equipped.Weapon?.tier || 0)) return null;
+    if (!owed(pick) && pick.chestTier <= (S.equipped.Weapon?.tier || 0)) return null;
+    if (WITHOUT.has('seals') && ownsUnique(S, pick.unique, tier) && pick.chestTier <= (S.equipped.Weapon?.tier || 0)) return null;
     const end = now + POLICY.dungeonMin * 60000;
     return {
         kind: 'dungeon', id: pick.id, why: `run ${pick.name}`,
@@ -604,7 +606,9 @@ function decide() {
         const longStall = runStalled > POLICY.longStallMin * 60000 && (S.combat.maxStage >= 0.9 * S.combat.bestStage || !!S.trials.active);
         if (p.tokens >= Math.max(2, share * S.prestige.tokens) || (longStall && p.tokens >= 2)) prestigeNow();
     }
-    for (const d of DUNGEONS) if (S.dungeons[d.id].fragments >= FRAGMENTS_PER_UNIQUE && game.assembleUnique(d.id)) milestone('unique', d.unique);
+    for (const d of DUNGEONS) if (S.dungeons[d.id].fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(S, d.unique, dungeonTier(S)) && game.assembleUnique(d.id)) milestone('unique', d.unique);
+    // the eight in hand and their clears done: the Seal, and the dungeons a tier deeper (--without=seals: never)
+    if (!WITHOUT.has('seals') && S.combat.mode !== 'dungeon' && sealProgress(S).ready && game.sealDungeons()) milestone('seal', dungeonTier(S) - 1);
     drinkPotions();
     if (WITHOUT.has('food') && S.combat.autoEat !== 'none') game.setAutoEat('none');
     // (potions before food: a stock of food is eaten as the hero fights, and its task would always come first)
@@ -937,7 +941,7 @@ for (const m of milestones) (byKey[m.key] ||= []).push(`${m.value}@${fmtH(m.at)}
 for (const [key, list] of Object.entries(byKey)) console.log(`  ${key.padEnd(16)} ${list.join('  ')}`);
 console.log(`\nRuns: ${runLog.map(r => `#${r.run} ${r.hours.toFixed(1)}h→stage ${r.reached} (+${r.tokens})`).join('; ') || 'none'}`);
 console.log(`Deaths: ${deathStages.boss} on boss stages, ${deathStages.regular} on regular stages (${Math.round(100 * deathStages.regular / Math.max(1, deathStages.boss + deathStages.regular))}% of walls are not bosses)`);
-console.log(`Dungeons: ${DUNGEONS.map(d => `${d.name} ${S.dungeons[d.id].clears} clears/${S.dungeons[d.id].fragments} frags`).join('; ')}; ${dungeonFails} failed runs. Titan: ${S.titan.kills} kills in ${titanTries} tries. Pets: ${Object.keys(S.pets).join(', ') || 'none'}`);
+console.log(`Dungeons (tier ${dungeonTier(S)}): ${DUNGEONS.map(d => `${d.name} ${S.dungeons[d.id].clears} clears/${S.dungeons[d.id].fragments} frags`).join('; ')}; ${dungeonFails} failed runs. Titan: ${S.titan.kills} kills in ${titanTries} tries. Pets: ${Object.keys(S.pets).join(', ') || 'none'}`);
 const spentRatio = (e, sp) => (e > 0 ? `${Math.round(100 * sp / e)}%` : 'n/a');
 const lostToPrestige = S.stats.goldEarned - S.stats.goldSpent - S.gold;
 console.log(`Gold spent by sink: ${Object.entries(spentOn).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${spentRatio(S.stats.goldEarned, v)}`).join(', ')}; left at prestige ${spentRatio(S.stats.goldEarned, lostToPrestige)}.`);
@@ -966,7 +970,7 @@ if (JSON_OUT) {
         levels: Object.fromEntries(milestones.filter(m => m.key.endsWith(' lv')).map(m => [`${m.key.slice(0, -3)} ${m.value}`, +H(m.at).toFixed(2)])),
         final: {
             bestStage: S.combat.bestStage, prestiges: S.prestige.count, tokens: S.prestige.tokens, records: game.derived.records.count, kills: S.stats.kills, deaths: S.stats.deaths,
-            titanKills: S.titan.kills, titanTries, pityDrops: S.stats.pityDrops || 0, mythics: S.stats.mythicsFound || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
+            titanKills: S.titan.kills, seals: dungeonTier(S) - 1, titanTries, pityDrops: S.stats.pityDrops || 0, mythics: S.stats.mythicsFound || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.forge?.[t]?.level || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length,
             // Crafting: its level, what it made, and the jewellery worn at the end (crafted or dropped)

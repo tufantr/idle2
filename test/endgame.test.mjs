@@ -146,7 +146,7 @@ test('a clear tells what the chest held, and the 25th clear brings its lasting b
     for (const [id, qty] of Object.entries(clear.loot.materials)) assert.ok(qty > 0 && game.state.resources[id] >= before[id] + qty, id);
     const milestones = all.filter(e => e.type === 'dungeonMilestone');
     assert.equal(milestones.length, 1);
-    assert.deepEqual(milestones[0], { type: 'dungeonMilestone', dungeon: warren.id, clears: DUNGEON_MILESTONES[0].clears, desc: DUNGEON_MILESTONES[0].desc });
+    assert.deepEqual(milestones[0], { type: 'dungeonMilestone', dungeon: warren.id, clears: DUNGEON_MILESTONES[0].clears, desc: DUNGEON_MILESTONES[0].desc, tier: 1 });
 });
 
 test('a chest deep in the Abyss holds gear as strong as its depth; the Maw can give the Starless Band', () => {

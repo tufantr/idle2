@@ -1,6 +1,6 @@
 ---
 path: /uniques
-keywords: unique, uniques, unique item, unique items, fragment, fragments, assemble, dungeon, legendary, record, records, spare, unique fragments
+keywords: unique, uniques, unique item, unique items, fragment, fragments, assemble, dungeon, legendary, record, records, spare, unique fragments, seal, tier
 aliases: Uniques, Fragments, Unique fragments
 ---
 Every [[Dungeons|dungeon]] guards a unique item: a piece of gear with a name of its own, legendary quality and bonuses that never change. The list below has them all.
@@ -15,7 +15,8 @@ Every [[Dungeons|dungeon]] guards a unique item: a piece of gear with a name of 
 
 - **Legendary quality** (×{{RARITIES.at(-1).quality}} on base stats) and a little more base power than ordinary gear of their tier: each is the best piece of its tier, not a way to skip one.
 - **Fixed bonuses:** {{Math.min(...Object.values(UNIQUES).map(u => u.affixes.length))}} or {{Math.max(...Object.values(UNIQUES).map(u => u.affixes.length))}} strong bonuses chosen for the piece, which no reroll or reforge can change. The deepest uniques are worth their bonuses more than their power, since gear dropped deep in the Abyss grows stronger with every depth.
-- **A record each:** every unique you hold, worn or in the bag, is a record that makes all your prestige tokens ×{{BASE.recordMult}} stronger (see [[Prestige]]). A spare copy of one you hold does not count again.
+- **A record each:** every unique you have found is a record that makes all your prestige tokens ×{{BASE.recordMult}} stronger (see [[Prestige]]), for good: kept, salvaged or handed in for a Seal. A spare copy does not count again.
+- **Each tier its own:** once the dungeons are sealed and go deeper (see [[Dungeons]]), each has a unique of the new tier, the {{uniqueAt('goblin_crown', 2).name}} and the rest: {{GEAR_TIERS.at(-1).name}}, as strong as the gear its dungeon's boss's depth drops, with the same bonuses, and a record of its own.
 - **The {{achievementById('collector').name}} medal** comes with your first: {{achievementById('collector').reward}} (see [[Medals]]).
 
 Some of them, like the [[Goblin King's Crown]], show on your hero when he wears them.
@@ -23,5 +24,6 @@ Some of them, like the [[Goblin King's Crown]], show on your hero when he wears 
 ## Spares, upgrades and salvage
 
 - Your first copy of a unique arrives locked, so nothing can sell or salvage it by accident. Another copy, assembled again or found in a chest, is a spare: it arrives unlocked, and a full bag can salvage it for essence.
-- A unique weapon or piece of armour can be reinforced at the anvil, and a unique ring or amulet upgraded with essence and gold, like any gear (see [[Equipment]] and [[Jewellery]]). Only its bonuses are fixed.
+- A unique is worn in a slot like any gear, so it has the levels of the slot: the anvil's for a weapon or piece of armour, the jeweller's bench's for a ring or amulet (see [[Equipment]] and [[Jewellery]]). Only its bonuses are fixed.
+- A tier's eight are handed in for its Seal; the records stay.
 - Like all gear, uniques are kept when you prestige.

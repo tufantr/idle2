@@ -17,7 +17,7 @@ import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, t
 import { applyOffline } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
-import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, challengeTitan, giveUpTitan, titanReady, scoreTitanCutShort } from './systems/dungeon.js';
+import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, sealDungeons, challengeTitan, giveUpTitan, titanReady, scoreTitanCutShort } from './systems/dungeon.js';
 import { startClanFight, giveUpClanFight, clearClanResult, setClanBanner } from './systems/clanfight.js';
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
@@ -286,6 +286,8 @@ export class Game {
     /** After a clear: end the dungeon, back to the stages. */
     dungeonEnd() { return this._act(() => endDungeon(this)); }
     assembleUnique(id) { return this._act(() => assembleUnique(this, id)); }
+    /** Hand in the open tier's eight uniques for its Seal, and open the next tier (systems/dungeon.js). */
+    sealDungeons() { return this._act(() => sealDungeons(this)); }
     titanReady() { return titanReady(this.state, this.now); }
     challengeTitan() { return this._act(() => challengeTitan(this)); }
     /** A clan attack: a short fight against the week's clan boss ({ week, hp, maxHp }, the server's; systems/clanfight.js). */

@@ -89,19 +89,27 @@ export const RESOURCES = {
     marrentill_leaf:  R('marrentill_leaf',  'Marrentill Root',  'herb', 2, '🌿', '#10b981'),
     tarromin_leaf:    R('tarromin_leaf',    'Tarromin Spore',   'herb', 3, '🌿', '#10b981'),
     harralander_leaf: R('harralander_leaf', 'Harralander Lotus','herb', 4, '🌿', '#10b981'),
-    // Potions (data/potions.js): three kinds, four tiers each, the tier the herb's
+    ranarr_leaf:      R('ranarr_leaf',      'Ranarr Weed',      'herb', 5, '🌿', '#10b981'),
+    torstol_leaf:     R('torstol_leaf',     'Torstol Bloom',    'herb', 6, '🌿', '#10b981'),
+    // Potions (data/potions.js): three kinds, six tiers each, the tier the herb's
     combat_potion_1:  R('combat_potion_1',  'Combat Potion I',    'potion', 1, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
     combat_potion_2:  R('combat_potion_2',  'Combat Potion II',   'potion', 2, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
     combat_potion_3:  R('combat_potion_3',  'Combat Potion III',  'potion', 3, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
     combat_potion_4:  R('combat_potion_4',  'Combat Potion IV',   'potion', 4, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
+    combat_potion_5:  R('combat_potion_5',  'Combat Potion V',    'potion', 5, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
+    combat_potion_6:  R('combat_potion_6',  'Combat Potion VI',   'potion', 6, '🧪', '#f87171', { desc: 'more attack, defence and health in the fight: the stages, the Titan and the clan boss' }),
     dungeon_potion_1: R('dungeon_potion_1', 'Dungeon Potion I',   'potion', 1, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
     dungeon_potion_2: R('dungeon_potion_2', 'Dungeon Potion II',  'potion', 2, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
     dungeon_potion_3: R('dungeon_potion_3', 'Dungeon Potion III', 'potion', 3, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
     dungeon_potion_4: R('dungeon_potion_4', 'Dungeon Potion IV',  'potion', 4, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
+    dungeon_potion_5: R('dungeon_potion_5', 'Dungeon Potion V',   'potion', 5, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
+    dungeon_potion_6: R('dungeon_potion_6', 'Dungeon Potion VI',  'potion', 6, '🧪', '#a78bfa', { desc: 'more attack, defence and health in a dungeon run, and a chance of a second fragment' }),
     skill_potion_1:   R('skill_potion_1',   'Skill Potion I',     'potion', 1, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
     skill_potion_2:   R('skill_potion_2',   'Skill Potion II',    'potion', 2, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
     skill_potion_3:   R('skill_potion_3',   'Skill Potion III',   'potion', 3, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
     skill_potion_4:   R('skill_potion_4',   'Skill Potion IV',    'potion', 4, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
+    skill_potion_5:   R('skill_potion_5',   'Skill Potion V',     'potion', 5, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
+    skill_potion_6:   R('skill_potion_6',   'Skill Potion VI',    'potion', 6, '🧪', '#4ade80', { desc: 'faster work and more XP at every skill' }),
 
     // Combat-only materials. Essence fuels equipment upgrades — the one thing crafting cannot make.
     // Bait drops in the wetter zones: each catch at a river spot uses one, if you have it, for a likely second fish.

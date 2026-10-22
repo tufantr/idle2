@@ -10,7 +10,7 @@ import { isFocused, bonfireLit } from '../core/modifiers.js';
 import { RESOURCES } from '../data/resources.js';
 import { SKILLS } from '../data/skills.js';
 import { levelForXp } from '../core/xp.js';
-import { DUNGEONS } from '../data/dungeons.js';
+import { DUNGEONS, dungeonAt } from '../data/dungeons.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { RARITIES } from '../data/items.js';
 import { itemScore, isUpgrade, canWear } from './inventory.js';
@@ -79,7 +79,7 @@ function diff(before, state) {
         salvaged: (state.stats.itemsSalvaged || 0) - before.salvaged, // auto-salvages count here too
         died: state.stats.deaths > before.deaths,
         deaths: state.stats.deaths - before.deaths,
-        dungeonClears: DUNGEONS.map(d => ({ id: d.id, name: d.name, clears: state.dungeons[d.id].clears - before.dungeons[d.id].clears, fragments: state.dungeons[d.id].fragments - before.dungeons[d.id].fragments }))
+        dungeonClears: DUNGEONS.map(d => ({ id: d.id, name: dungeonAt(d, state.dungeonTier).name, clears: state.dungeons[d.id].clears - before.dungeons[d.id].clears, fragments: state.dungeons[d.id].fragments - before.dungeons[d.id].fragments }))
             .filter(d => d.clears > 0),
         pets: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => `${p.icon} ${p.name}`),
         petIds: PETS.filter(p => state.pets[p.id] && !before.pets[p.id]).map(p => p.id),

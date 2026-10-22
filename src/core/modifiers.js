@@ -15,7 +15,7 @@ import { RESOURCES } from '../data/resources.js';
 import { POTIONS, POTION_KINDS, potionPower } from '../data/potions.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
-import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits } from '../data/dungeons.js';
+import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits, SEAL_RECORDS, uniqueKey } from '../data/dungeons.js';
 import { trialBite, trialTiersCleared, laurelsOf } from '../data/trials.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
@@ -215,10 +215,11 @@ export function collectModifiers(state) {
     // Skill capes (level 99, permanent, whichever one is worn).
     for (const cape of capesEarned(state)) addMods(mods, cape.mods);
 
-    // Dungeon clear milestones and Titans defeated (permanent).
+    // Dungeon clear milestones, each tier's (a sealed tier's in full: data/dungeons.js), and Titans defeated (permanent).
+    const sealed = Math.max(0, (Math.floor(Number(state.dungeonTier)) || 1) - 1);
     for (const d of DUNGEONS) {
         const clears = state.dungeons?.[d.id]?.clears || 0;
-        for (const m of DUNGEON_MILESTONES) if (clears >= m.clears) addMods(mods, m.mods);
+        for (const m of DUNGEON_MILESTONES) if (sealed || clears >= m.clears) addMods(mods, m.mods, sealed + (clears >= m.clears ? 1 : 0));
     }
     addMods(mods, TITAN_BONUS, titanBonusUnits(state.titan?.kills || 0));
 
@@ -282,17 +283,22 @@ export function skillLevelsTotal(state) {
     return TRAINED_SKILLS.reduce((n, id) => n + skillLevel(state, id), 0);
 }
 
-/** The hero's records: { stages, uniques, skills, count, mult } — 25-stage steps of the best stage, dungeon uniques held, 50-level steps of the skills. */
+/**
+ * The hero's records: { stages, uniques, seals, trials, laurels, skills, count, mult } — 25-stage steps of the best stage,
+ * dungeon uniques found (each tier's its own; kept or not: state.uniques), SEAL_RECORDS a dungeon Seal, Trial tiers and
+ * laurels, 50-level steps of the skills.
+ */
 export function recordsOf(state) {
     const stages = Math.floor((state.combat?.bestStage || 1) / BASE.recordStages);
     const skills = Math.floor(skillLevelsTotal(state) / BASE.recordSkillLevels);
-    const held = new Set();
-    for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) held.add(item.uniqueId);
+    const found = new Set(Object.keys(state.uniques || {}));
+    for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) found.add(uniqueKey(item.uniqueId, Math.max(1, Math.floor(Number(item.uniqueTier)) || 1)));
+    const seals = SEAL_RECORDS * Math.max(0, (Math.floor(Number(state.dungeonTier)) || 1) - 1);
     const trials = trialTiersCleared(state);   // each Trial tier cleared (data/trials.js)
     const laurels = laurelsOf(state);          // and each week's Trial beaten
-    const count = stages + held.size + trials + laurels + skills;
+    const count = stages + found.size + seals + trials + laurels + skills;
     // (counted up to RECORDS_CAP for the power: far past any hero's, and short of where 1.05^count stops being a number)
-    return { stages, uniques: held.size, trials, laurels, skills, count, mult: Math.pow(BASE.recordMult, Math.min(count, RECORDS_CAP)) };
+    return { stages, uniques: found.size, seals, trials, laurels, skills, count, mult: Math.pow(BASE.recordMult, Math.min(count, RECORDS_CAP)) };
 }
 
 /** What the clan's banner multiplies attack, defence and health by this week (data/social.js CLAN_BANNER): 1 outside a clan or past its week. */

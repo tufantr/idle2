@@ -1353,6 +1353,17 @@ Keeping it running:
       for the item slot, bench upgrades are for the items": "I like all your recommendations"): every ring, earring or
       amulet worn in a slot has its levels, with no top (×1.05 a level past +10, gems ×1.15), so a better piece loses
       nothing; rerolling stays the piece's. Saves fold each piece's own levels into its slot (DESIGN §3.4)
+- [x] **Dungeon tiers and the Seal; uniques are records once found** (the owner, 22 October 2026: "Dungeons end too
+      early"; "I like all your recommendations"): with 250 clears in every dungeon and the tier's eight uniques in
+      hand, Make the Seal hands them in (no bag slot, two records) and opens the next tier: the same eight 300 stages
+      deeper, a numeral and new hues, a rule for their monsters in turn (Swift, Stout, Savage, Relentless), uniques of
+      their own at their depth, clears, fragments and milestones from nothing. Every unique found stays a record, so
+      none has to sit in the bag. Checked in a browser at both widths (DESIGN §3.11)
+- [x] **Alchemy past 68, and potions that run out** (the same day: "newer things should open and creation and usage
+      balance"): tiers V and VI of the three potions (Combat V 75 to Dungeon VI 94) from two new herbs, Ranarr (70)
+      and Torstol (85), foraged and farmed; a bottle lasts a minute instead of five, and from tier IV a brew takes two
+      herbs and about five seconds, so an hour of brewing lasts 15-17 hours of use instead of 135-250. The pick, the
+      fight's dock and the skill chip show how long the bottles carried will last (DESIGN §3.6)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`

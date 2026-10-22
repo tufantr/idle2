@@ -7,6 +7,9 @@ import { paceList } from './pace.js';
 export const SKILL_IDS = ['mining', 'woodcutting', 'hunting', 'cooking', 'firemaking', 'alchemy', 'farming', 'agility', 'smithing', 'crafting', 'combat'];
 export const GATHERING_SKILLS = ['mining', 'woodcutting', 'hunting'];
 export const PRODUCTION_SKILLS = ['cooking', 'firemaking', 'alchemy'];
+// The herbs past the paintings (tiers V and VI, 22 October 2026: the owner chose reusing paintings over new ones): their
+// cards and plots show an older herb's picture in their own hues (src/ui/render.js cardPic).
+export const CARD_STANDINS = { ranarr_leaf: { art: 'guam_leaf', hue: 150 }, torstol_leaf: { art: 'harralander_leaf', hue: 220 } };
 export const WORKSHOP_SKILLS = ['smithing', 'crafting'];
 // Skills with a mini-game and the Forager perk: gathering and production.
 export const NON_COMBAT_SKILLS = [...GATHERING_SKILLS, ...PRODUCTION_SKILLS];
@@ -103,7 +106,9 @@ export const SKILLS = {
     alchemy: {
         id: 'alchemy', name: 'Alchemy', icon: '🧪', color: '#10b981',
         desc: 'Forage herbs, then brew them into potions: combat potions for the fight, dungeon potions for dungeon runs and skill potions for work, each stronger with a better herb.',
-        // (each tier's herb with one thing from another skill: ore for the fight, a cooked dish for the dungeons, logs for work)
+        // (each tier's herb with one thing from another skill: ore for the fight, a cooked dish for the dungeons, logs for work;
+        // from tier IV two herbs and about five seconds a brew, and tiers V and VI for the late levels, the fight's VI with a
+        // diamond: data/potions.js)
         nodes: [
             { id: 'guam_leaf',        name: 'Forage Guam',        levelReq: 1,  interval: 3500, xp: 10,  produces: 'guam_leaf' },
             { id: 'combat_potion_1',  name: 'Combat Potion I',    levelReq: 5,  interval: 2500, xp: 30,  produces: 'combat_potion_1',  consumes: { guam_leaf: 1, copper_ore: 1 } },
@@ -118,9 +123,17 @@ export const SKILLS = {
             { id: 'skill_potion_3',   name: 'Skill Potion III',   levelReq: 44, interval: 2900, xp: 102, produces: 'skill_potion_3',   consumes: { tarromin_leaf: 1, willow_log: 1 } },
             { id: 'dungeon_potion_3', name: 'Dungeon Potion III', levelReq: 48, interval: 2900, xp: 110, produces: 'dungeon_potion_3', consumes: { tarromin_leaf: 1, cooked_boar: 1 } },
             { id: 'harralander_leaf', name: 'Forage Harralander', levelReq: 55, interval: 4600, xp: 75,  produces: 'harralander_leaf' },
-            { id: 'combat_potion_4',  name: 'Combat Potion IV',   levelReq: 60, interval: 3000, xp: 150, produces: 'combat_potion_4',  consumes: { harralander_leaf: 1, adamant_ore: 1 } },
-            { id: 'skill_potion_4',   name: 'Skill Potion IV',    levelReq: 64, interval: 3100, xp: 160, produces: 'skill_potion_4',   consumes: { harralander_leaf: 1, maple_log: 1 } },
-            { id: 'dungeon_potion_4', name: 'Dungeon Potion IV',  levelReq: 68, interval: 3100, xp: 172, produces: 'dungeon_potion_4', consumes: { harralander_leaf: 1, cooked_deer: 1 } }
+            { id: 'combat_potion_4',  name: 'Combat Potion IV',   levelReq: 60, interval: 5000, xp: 250, produces: 'combat_potion_4',  consumes: { harralander_leaf: 2, adamant_ore: 1 } },
+            { id: 'skill_potion_4',   name: 'Skill Potion IV',    levelReq: 64, interval: 5100, xp: 265, produces: 'skill_potion_4',   consumes: { harralander_leaf: 2, maple_log: 1 } },
+            { id: 'dungeon_potion_4', name: 'Dungeon Potion IV',  levelReq: 68, interval: 5100, xp: 285, produces: 'dungeon_potion_4', consumes: { harralander_leaf: 2, cooked_deer: 1 } },
+            { id: 'ranarr_leaf',      name: 'Forage Ranarr',      levelReq: 70, interval: 5000, xp: 125, produces: 'ranarr_leaf' },
+            { id: 'combat_potion_5',  name: 'Combat Potion V',    levelReq: 75, interval: 5200, xp: 390, produces: 'combat_potion_5',  consumes: { ranarr_leaf: 2, runite_ore: 1 } },
+            { id: 'skill_potion_5',   name: 'Skill Potion V',     levelReq: 78, interval: 5300, xp: 410, produces: 'skill_potion_5',   consumes: { ranarr_leaf: 2, yew_log: 1 } },
+            { id: 'dungeon_potion_5', name: 'Dungeon Potion V',   levelReq: 81, interval: 5300, xp: 430, produces: 'dungeon_potion_5', consumes: { ranarr_leaf: 2, cooked_bear: 1 } },
+            { id: 'torstol_leaf',     name: 'Forage Torstol',     levelReq: 85, interval: 5400, xp: 190, produces: 'torstol_leaf' },
+            { id: 'combat_potion_6',  name: 'Combat Potion VI',   levelReq: 88, interval: 5500, xp: 600, produces: 'combat_potion_6',  consumes: { torstol_leaf: 2, diamond: 1 } },
+            { id: 'skill_potion_6',   name: 'Skill Potion VI',    levelReq: 91, interval: 5600, xp: 625, produces: 'skill_potion_6',   consumes: { torstol_leaf: 2, magic_log: 1 } },
+            { id: 'dungeon_potion_6', name: 'Dungeon Potion VI',  levelReq: 94, interval: 5600, xp: 650, produces: 'dungeon_potion_6', consumes: { torstol_leaf: 2, cooked_drake: 1 } }
         ]
     },
     farming: {
