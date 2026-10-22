@@ -5,7 +5,8 @@ with pixel sprites on painted backdrops, a skill stage, sound, rewards with moti
 no build step, no framework. Static site, plus an Express API for accounts, saves, clans and leaderboards,
 live at https://fantasyidle.com (wiki: wiki.fantasyidle.com) on the owner's VPS behind Cloudflare since October
 2026: `deploy/vps/deploy.sh` ships a commit (README "The server"); the old Vercel site stays as it was. The live
-game needs an account and plays the server's save; a local host (tools/serve.py, the tools) plays as a guest.
+game plays an account's save from the server, or a guest's in the browser (an account made later starts its own,
+never the guest's); a local host (tools/serve.py, the tools) plays as a guest.
 
 Work on the branch `claude/intelligent-einstein-y5i5iq` (main holds the old game) and push there.
 

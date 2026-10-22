@@ -19,7 +19,11 @@ Yes. Whatever your hero was doing when you left, the fight or a skill, carries o
 
 ### Where is my save? Is there a cloud save?
 
-On the game's server. You play with an account, as in any online game, and any device you sign in on plays your game. The game keeps a copy in the browser as you play and uploads it every minute and when you leave the page. The time you were away is measured by the server's clock, not your device's. See [[/offline|Offline progress and saves]].
+With an account, on the game's server, as in any online game: any device you sign in on plays your game. The game keeps a copy in the browser as you play and uploads it every minute and when you leave the page. The time you were away is measured by the server's clock, not your device's. A guest's game is kept in that browser only. See [[/offline|Offline progress and saves]].
+
+### Can I play without an account?
+
+Yes: press **Play as guest** on the sign-in. Your game is then kept in that browser only, with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
 
 ### Can I play on my phone, or install it like an app?
 

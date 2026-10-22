@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -80,6 +80,61 @@ test("signed in, the server's save is the game: this device's is kept only when 
     assert.equal(syncChoice(here, server, 500, null), 'local');
     assert.equal(aheadOf(here, server), true);
     assert.equal(aheadOf(server, here), false);
+});
+
+test("signing in never takes a guest's game: the account starts over, unless the game is its own", () => {
+    const fresh = createDefaultState(1);
+    fresh.meta.playtimeMs = 5 * 60000;   // a new hero waiting on the sign-in while the account is made: nothing done
+    assert.equal(progressed(fresh), false);
+    assert.equal(startsOver(fresh), false, 'the title card\'s hero (its name and look) goes to the new account');
+    const played = createDefaultState(1);
+    played.skills.woodcutting.xp = 1;
+    assert.equal(progressed(played), true);
+    assert.equal(startsOver(played), true, 'a game with anything done in it, played without the account');
+    assert.equal(startsOver(played, { own: true }), false, 'the account\'s own game, signed in again after the session ran out');
+    assert.equal(startsOver(fresh, { guest: true }), true, 'a guest\'s game, however little was played');
+    played.skills.woodcutting.xp = 0;
+    played.stats.kills = 3;
+    assert.equal(startsOver(played), true);
+});
+
+test("the account's own game is the one this device last saw on its server, for that account", async () => {
+    const realFetch = globalThis.fetch;
+    const mine = createDefaultState(111);
+    let stored = mine;
+    globalThis.fetch = async url => new Response(JSON.stringify(url.endsWith('/load') ? { state: stored, lastSaved: 50, serverNow: 60 } : { success: true, timestamp: 70 }),
+        { status: 200, headers: { 'content-type': 'application/json' } });
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6InR1ZmFuIn0.b');   // tufan
+        assert.equal(cloud.ownsGame(mine), false, 'nothing seen of this account here yet');
+        await cloud.pull(100);
+        assert.equal(cloud.ownsGame(mine), true);
+        assert.equal(cloud.ownsGame(createDefaultState(222)), false, 'another game (a guest\'s)');
+        cloud.logout();   // the session ran out: the same account signs in again
+        cloud.setToken('a.eyJ1c2VybmFtZSI6InR1ZmFuIn0.b');
+        assert.equal(cloud.ownsGame(mine), true);
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Im90aGVyIn0.b');   // another account on this device
+        assert.equal(cloud.ownsGame(mine), false);
+        stored = null;   // an account with no save yet: none of its own until one goes up
+        await cloud.pull(100);
+        assert.equal(cloud.ownsGame(mine), false);
+        const first = createDefaultState(333);
+        await cloud.push(first);
+        assert.equal(cloud.ownsGame(first), true);
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test("a guest's game put aside at sign-in is listed among the backups and outlasts a reset", () => {
+    const game = new Game(null, 1);
+    game.state.gold = 77;
+    writeBackup(game.serialize(), 'guest', 'Before signing in', 30);
+    rotateBackup(game.serialize(), 10);
+    clearLocal();
+    assert.deepEqual(listBackups().map(b => b.slot), ['guest']);
+    assert.equal(restoreBackup('guest').gold, 77);
 });
 
 test('backups rotate through three slots and can be restored', () => {

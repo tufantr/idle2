@@ -16,7 +16,7 @@ The game opens on a title card: your hero on a sunny meadow, with a [[Slime|slim
 
 - **Name your hero**, if you like. Without a name your hero is simply "You". You can change the name any time in Settings.
 - **Pick a look** with the arrows beside your hero. {{LOOKS.filter(l => !l.medal).length}} looks are open from the start, and {{LOOKS.filter(l => l.medal).length}} more are earned with medals (see [[/looks|Hero looks]]).
-- Press **Begin your adventure** and the first fight starts. If you already play on another device, **Have an account? Sign in** brings your [[/offline|cloud save]] instead.
+- Press **Begin your adventure**, then make an account (a username, an email and a password: a code comes to the email) or press **Play as guest**, and the first fight starts. A guest's game stays in that browser, and an account made later starts a new game. If you already play on another device, **Have an account? Sign in** brings your [[/offline|cloud save]] instead.
 
 ## The first fight
 

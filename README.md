@@ -27,8 +27,8 @@ python3 tools/serve.py   # or: npx serve .   (or python3 -m http.server 8000, th
 
 Then open the printed URL. On a local host (localhost, 127.0.0.1, *.localhost, *.test) add `?dev=1` to unlock every tab and mini-game immediately, and
 `?dev=1&event=guild_fair` (or `harvest_festival`, `titans_fury`, `miners_rush`, `gold_fever`, `lucky_paws`) to run a weekend event
-now. On a local host the game also plays as a guest (the live site needs an account); without the API
-the login dialog says cloud saves aren't available on that server.
+now. On a local host the game plays as a guest without asking (the live site asks for an account or a
+guest's game); without the API the login dialog says cloud saves aren't available on that server.
 
 ## The API (cloud saves, clans, leaderboards)
 
@@ -130,7 +130,7 @@ cd /tmp/fi-deploy && npx vercel link --yes --project fantasy-idle --scope skinba
 ```
 
 Without a database and `JWT_SECRET` (above) the API answers "Database unavailable", and on the live
-site nobody can sign in, so nobody can play: the game needs an account there.
+site nobody can sign in: only guests can play there, each in their own browser.
 
 ## The wiki
 

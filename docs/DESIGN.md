@@ -884,17 +884,27 @@ gear to wear; a place that waited opens on the return and is named there too.
   here" (two tabs saved their own games over each other's, and whichever wrote last won).
 - **Backups:** three rotating automatic backups (every 10 minutes) plus one on load, one before each
   prestige the player makes (Auto's take none) and one before a hard reset, restorable from Settings by a
-  guest (a local development host: the live game needs an account). Signed in, Settings shows none:
+  guest, with the guest's game put aside when an account signed in (below). Signed in, Settings shows none:
   restoring one rolled the server's game back.
 - **No export or import** (removed in October 2026, the owner's ask: everything through the server's save,
   as in any online game). Copy-and-paste save strings let a game be rolled back or carried between
   accounts.
-- **An account is required** on the live site (October 2026, the owner's call): until there is one, a
-  sign-in stands in front of the game, with no guest button. A new player sees the title card first; its
-  Begin asks for an account, and the first fight starts once it is made. Logging out uploads the game first
-  and leaves a fresh one in the browser, so an account registered there next starts its own game, not a
-  copy of the last one. A local development host (`DEV_HOST` in `src/main.js`: the tools, the screenshots)
-  still plays as a guest.
+- **An account, or a guest's game** on the live site: a sign-in stands in front of the game until the
+  player signs in or presses **Play as guest** (an account was required from 13 October 2026, the owner's
+  call; guest play since the 22nd, after a tester played by taking the sign-in off the page, the owner:
+  "opening account should restart the process, not move it"). A guest's game stays in that browser, with its
+  backups; clans and leaderboards need an account. **An account never takes a guest's game** (`startsOver`
+  in `src/core/save.js`): signing in with a game in the page that has anything done in it (a kill, a point of
+  XP), or any guest's, puts that game aside as a backup ("Before signing in", kept through a reset or a log
+  out) and starts a fresh one before the sync, so the account plays its server's game, or a new account
+  uploads the fresh one and shows the title card. Kept: the account's own game, signed in again after its 30
+  days (the game this device last saw on that account's server, noted by its `createdAt` with the server's
+  time), and a new hero with nothing done (named on the title card while the account was made). The server's
+  first-upload check (`firstPeaks`) then never meets a guest's progress on a new account. A new player sees
+  the title card first; its Begin asks for an account or a guest, and the first fight starts once one is
+  chosen. Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
+  there next starts its own game, not a copy of the last one. A local development host (`DEV_HOST` in
+  `src/main.js`: the tools, the screenshots) plays as a guest without asking.
 - **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a
   username, an email and a password, and plays once a 6-digit code mailed there is entered in the same dialog (a code,
   not a link: on a phone a link opens in another browser than the game's). The same kind of code sets a new password

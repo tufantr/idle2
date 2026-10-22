@@ -1,6 +1,6 @@
 ---
 path: /offline
-keywords: offline, offline progress, away, idle, afk, welcome back, cap, endurance, zipline, background, background tab, phone, save, saving, autosave, backup, backups, restore, cloud, cloud save, server, server save, account, sign in, log in, register, local storage, hard reset, wipe, saves
+keywords: offline, offline progress, away, idle, afk, welcome back, cap, endurance, zipline, background, background tab, phone, save, saving, autosave, backup, backups, restore, cloud, cloud save, server, server save, account, sign in, log in, register, guest, play as guest, without an account, local storage, hard reset, wipe, saves
 aliases: Offline progress, Saves, Cloud save, Backups, Welcome back
 ---
 Fantasy Idle keeps playing while you are away. When you come back, the game works through the time you were gone with the same rules as play, and a welcome-back report tells you what happened. This page also explains how your game is saved.
@@ -40,10 +40,12 @@ Time with the page out of sight does not count toward the breaks between new pla
 
 ## Saving
 
-You play with an account, and your game lives on the game's server, as in any online game: any device you sign in on plays it. The game keeps a copy in the browser as you play, and uploads it every minute while the game is open and when you leave the page (Settings shows when it last did); **Save now** does it at once. When the game loads or you sign in, it plays the save on the server and never asks you to choose: the copy in the browser is kept only when it is that same game played further (the minutes since the last upload, say). If you played on another device in the meantime, the game carries on from there and tells you so. Time away is measured by the server's clock.
+With an account, your game lives on the game's server, as in any online game: any device you sign in on plays it. The game keeps a copy in the browser as you play, and uploads it every minute while the game is open and when you leave the page (Settings shows when it last did); **Save now** does it at once. When the game loads or you sign in, it plays the save on the server and never asks you to choose: the copy in the browser is kept only when it is that same game played further (the minutes since the last upload, say). If you played on another device in the meantime, the game carries on from there and tells you so. Time away is measured by the server's clock.
 
 The game plays in one tab at a time: open it in a second tab or window and it plays there, while the first one stops (its **Play here** button takes it back), so the two never save over each other.
 
 **Log out** (Settings) uploads your game first; the browser then keeps nothing of it, and signing in again brings it back. **Hard reset** wipes your game and starts it over, on the server too. It cannot be undone.
+
+**Play as guest** on the sign-in plays without an account: the game is kept in that browser only. Settings keeps backups of it (every 10 minutes, on load, before each prestige and before a hard reset), and **Restore** brings one back. An account made or signed into later plays its own game, a new one from the title card or the one on its server: a guest's game is never moved to it (the browser keeps it among the backups). [[/clans|Clans and leaderboards]] need an account.
 
 An account is made with a username, an email address and a password. The game sends a 6-digit code to the address, and you start playing once you enter it (it may take a minute, and can land among spam; **Send a new code** sends another). Forgot your password? **Forgot your password?** under the log-in sends a code to your account's email, and with it you set a new one. Your email is never shown to other players.

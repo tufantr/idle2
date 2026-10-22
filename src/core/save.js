@@ -1,13 +1,14 @@
 // Persistence: local saves (namespaced, versioned), backups, and the cloud API client. Signed in, the
-// server's save is the game (syncChoice); a guest's game lives in this browser, with its backups.
+// server's save is the game (syncChoice); a guest's game lives in this browser, with its backups, and never
+// goes up to an account (startsOver).
 
 import { migrateState } from './state.js';
 
 export const LOCAL_KEY = 'fantasyIdle.save.v2';
 export const LEGACY_KEY = 'fantasyIdleSaveLocal';
 export const TOKEN_KEY = 'fantasyIdle.jwt';
-// The cloud save this device last saw (its server time) and whose: an upload names it, and the server
-// refuses one made over a save it hasn't seen (another device's).
+// The cloud save this device last saw (its server time), whose, and which game (its createdAt): an upload
+// names it, and the server refuses one made over a save it hasn't seen (another device's).
 export const CLOUD_BASE_KEY = 'fantasyIdle.cloudBase';
 export const BACKUP_PREFIX = 'fantasyIdle.backup.';
 // Three rotating snapshots taken every 10 minutes, plus one taken on load and one before each prestige.
@@ -57,7 +58,8 @@ export function clearLocal() {
     backupsListed = null;
     store.removeItem(LOCAL_KEY);
     store.removeItem(LEGACY_KEY);
-    // Every backup goes except the one written just before a hard reset, so a reset can be undone.
+    // Every backup goes except the one written just before a hard reset, so a reset can be undone, and the
+    // guest's game put aside when an account signed in (startsOver).
     for (const slot of [...AUTO_BACKUP_SLOTS, 'load', 'prestige']) store.removeItem(BACKUP_PREFIX + slot);
 }
 
@@ -95,7 +97,7 @@ export function rotateBackup(json, now = Date.now()) {
 let backupsListed = null;
 /** The backups, newest first: { slot, at, label, summary } (restoreBackup reads the save itself). */
 export function listBackups() {
-    backupsListed ||= [...AUTO_BACKUP_SLOTS, 'load', 'prestige', 'reset']
+    backupsListed ||= [...AUTO_BACKUP_SLOTS, 'load', 'prestige', 'reset', 'guest']
         .map(slot => { const b = readBackup(slot); return b ? { slot, at: b.at, label: b.label, summary: b.summary } : { slot }; })
         .filter(b => b.at)
         .sort((a, b) => b.at - a.at);
@@ -119,16 +121,21 @@ export class CloudClient {
         this.base = null;      // the cloud save this page has seen (pull or push), as the server's lastSaved
     }
 
-    /** The cloud save this device saw last time, for this account ({ at, savedAt } or null). */
+    /** The cloud save this device saw last time, for this account ({ at, savedAt, game } or null). */
     knownBase() {
         try {
             const known = JSON.parse(storage()?.getItem(CLOUD_BASE_KEY) || 'null');
             return known && known.user === this.username && Number.isFinite(known.at) ? known : null;
         } catch { return null; }
     }
-    noteBase(at, savedAt = null) {
+    noteBase(at, savedAt = null, game = null) {
         this.base = at;
-        try { storage()?.setItem(CLOUD_BASE_KEY, JSON.stringify({ user: this.username, at, savedAt })); } catch { /* storage full */ }
+        try { storage()?.setItem(CLOUD_BASE_KEY, JSON.stringify({ user: this.username, at, savedAt, game })); } catch { /* storage full */ }
+    }
+    /** Is `state` this account's own game, the one this device last saw on its server (a sign-in after the session ran out)? */
+    ownsGame(state) {
+        const game = this.knownBase()?.game;
+        return game != null && game === state?.meta?.createdAt;
     }
 
     get loggedIn() { return !!this.token; }
@@ -215,7 +222,7 @@ export class CloudClient {
             state.meta.savedAt = now - away;
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
-        this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null);
+        this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null, state?.meta.createdAt ?? null);
         return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0, banner: data.banner ?? null };
     }
 
@@ -226,7 +233,7 @@ export class CloudClient {
      */
     async push(stateObject, { keepalive = false } = {}) {
         const answer = await this.request('/save', { method: 'POST', body: { state: stateObject, ...(this.base === null ? {} : { base: this.base }) }, keepalive });
-        if (Number.isFinite(answer?.timestamp)) this.noteBase(answer.timestamp, stateObject?.meta?.savedAt ?? null);
+        if (Number.isFinite(answer?.timestamp)) this.noteBase(answer.timestamp, stateObject?.meta?.savedAt ?? null, stateObject?.meta?.createdAt ?? null);
         return answer;
     }
 
@@ -258,6 +265,22 @@ function decodeUsername(token) {
 /** Has this game been played (a kill, or a minute in it)? An untouched one gives way to the server's. */
 export function played(state) {
     return !!(state?.stats?.kills || state?.meta?.playtimeMs > 60000);
+}
+
+/** Has anything been done in this game (a kill, a point of XP)? */
+export function progressed(state) {
+    return !!(state?.stats?.kills || Object.values(state?.skills || {}).some(skill => Number(skill?.xp) > 0));
+}
+
+/**
+ * Signing in with a game on the page: does the account start over instead of taking it? An account plays its own
+ * game, never one played without it (the owner's call, October 2026: a guest's progress stays in the guest's
+ * browser). Kept: the account's own game (`own`: signed in again after the session ran out) and a new hero with
+ * nothing done yet (named on the title card while the account was made). A guest's game (`guest`: the player chose
+ * to play as one) starts over however little was played.
+ */
+export function startsOver(live, { guest = false, own = false } = {}) {
+    return !own && (guest || progressed(live));
 }
 
 /** Does `live` hold everything the server's `remote` has (the same game, as far in every count), so keeping it loses nothing? */

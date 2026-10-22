@@ -1366,6 +1366,18 @@ Keeping it running:
       fight's dock and the skill chip show how long the bottles carried will last (DESIGN §3.6)
 - [x] **A custom domain** (the owner's purchase): fantasyidle.com, its DNS on Cloudflare (proxied, origin certificate,
       SSL Full strict)
+- [x] **The beta's Discord** (22 October 2026): a link in Settings ("The beta") and on the Clan tab, and on the
+      wiki's home page; the wiki points at fantasyidle.com
+- [x] **A link preview** (22 October 2026): a shared link shows the game's own fight under its title
+      (`assets/og-image.jpg`, made by `tools/preview.mjs`)
+- [x] **Guest play** (the owner's call, 22 October 2026, after a tester played by taking the sign-in off the page:
+      "opening account should restart the process, not move it"; DESIGN §3.17): the sign-in has **Play as
+      guest**, and a guest's game stays in that browser, with a Guest pill in the header. An account made or
+      signed into later plays its own game, the server's or a new one from the title card; the guest's is put
+      aside among the backups, never uploaded. The account's own game, signed in again after its 30 days, is
+      kept. Checked in a browser under a made-up hostname with a local API: a guest, an account made from a
+      guest's game, a log-in from one, a session run out, a game played with the sign-in taken away, and a first
+      visit straight to an account, at both widths
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

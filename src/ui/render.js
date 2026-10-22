@@ -274,9 +274,8 @@ export function renderHeader(game, ui, cloud) {
     } else if (!here) {
         status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }
-    const nudge = !cloud?.loggedIn && state.combat.bestStage > 10;   // past the first boss: worth keeping
     const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} ${esc(cloud.username || 'signed in')}</span>`
-        : `<button class="cloud-pill local${nudge ? ' nudge' : ''}" onclick="FI.openAuth()" aria-label="Local save only: sign in to keep it in the cloud" title="Local save only: sign in to keep it in the cloud">${ICON_CLOUD_UP}${nudge ? '<span class="cloud-word">Save to cloud</span>' : ''}</button>`;
+        : `<button class="cloud-pill local" onclick="FI.openAuth()" aria-label="Guest: sign in or make an account" title="Playing as a guest: this game is kept in this browser only">${ICON_CLOUD_UP}<span class="cloud-word">Guest</span></button>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>`;
     // While the fight fills the screen, the sidebar is out of sight. The header carries the way back,
@@ -2180,7 +2179,7 @@ export function renderSettings(game, ui, cloud) {
     return `<div class="two-col">
         <section class="glass-panel ${painted('study', 'left 45%')}">
             <div class="panel-header"><h2>Account</h2><span class="muted small">${signedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest'}</span></div>
-            <p class="muted small">${signedIn ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'Your game is kept in this browser only. Sign in to keep it on the server and play it on any device.'}</p>
+            <p class="muted small">${signedIn ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'This game is kept in this browser only. An account plays a game of its own, kept on the server for any device.'}</p>
             ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>
@@ -2546,8 +2545,8 @@ export function renderWelcomeBack(summary, game) {
     </div>`;
 }
 
-/** A new player's first screen: the title over the meadow, the hero and a slime, one button to begin. */
-export function renderIntroModal(state) {
+/** A new player's first screen: the title over the meadow, the hero and a slime, one button to begin (`signedIn`: a new account's, with no sign-in link). */
+export function renderIntroModal(state, { signedIn = false } = {}) {
     const motes = Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 53 + 7) % 100}%;--y:${(i * 31 + 11) % 70}%;--d:${(i * 0.7) % 5}s"></i>`).join('');
     return `<div class="intro" aria-labelledby="intro-title">
         <div class="intro-scene">
@@ -2562,21 +2561,19 @@ export function renderIntroModal(state) {
         <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>
         <input id="intro-name" class="text-input intro-name" maxlength="${HERO_NAME_MAX}" placeholder="Name your hero" aria-label="Your hero's name (optional; Settings can change it)" autocomplete="off" spellcheck="false" onkeydown="if (event.key === 'Enter') FI.beginAdventure()">
         <button class="modal-btn btn-confirm intro-go" data-autofocus onclick="FI.beginAdventure()">${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Begin your adventure</button>
-        <button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>
+        ${signedIn ? '' : '<button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>'}
     </div>`;
 }
 
 /**
- * Log in or register. `required`: the game waits behind it (no guest button); `register`: a new player from
- * the title card, so Register is the button Enter presses.
- */
-/**
  * The account dialog (src/main.js FI.auth and the rest): log in; make an account (a username, an email and a password;
  * a 6-digit code goes to the email, and the account plays once it is entered here); the code; a forgotten password (a
  * code to the email, then a new password). `ctx.mode` says which; `email` is the address as shown (part hidden).
+ * `required`: the game waits behind it until the player signs in or plays as a guest; `register`: a new player from
+ * the title card, so Register is the button Enter presses.
  */
 export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '' } = {}) {
-    const header = { login: required ? 'Sign in to play' : 'Cloud save', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
+    const header = { login: required ? 'Sign in to play' : 'Sign in', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
     const error = `<div class="auth-error" id="auth-error">${esc(message)}</div>`;
     const back = `<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode('login')">Back to log in</a></p>`;
     const codeField = '<input type="text" id="auth-code" placeholder="123456" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" class="text-input code-input" aria-label="The 6-digit code" data-autofocus>';
@@ -2602,7 +2599,7 @@ export function renderAuthModal(message = '', { required = false, register = fal
         const first = mode === 'register' ? 'register' : 'login';
         const other = first === 'login' ? 'register' : 'login';
         const label = { login: 'Log in', register: 'Register' };
-        body = `<p class="muted small">${required ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'Create an account to keep your game on the server and play it on any device, or keep playing as a guest in this browser.'}</p>${error}
+        body = `<p class="muted small">${required ? 'Your game is kept on the server, and any device you sign in on plays it. A guest plays in this browser only, and an account made later starts a new game.' : 'An account plays a game of its own, kept on the server for any device. A new one starts from the beginning: this guest game isn\'t moved to it.'}</p>${error}
             <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('${first}')">
                 <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input" value="${esc(username)}">
                 ${first === 'register' ? '<input type="email" id="auth-email" placeholder="Email (for your code)" autocomplete="email" class="text-input">' : ''}
@@ -2614,7 +2611,8 @@ export function renderAuthModal(message = '', { required = false, register = fal
     return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
         <div class="modal-header">${header}</div>
         <div class="modal-body">${body}</div>
-        ${required ? '' : '<div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Play as guest</button></div>'}
+        ${!required ? '<div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Keep playing as guest</button></div>'
+            : mode === 'login' || mode === 'register' ? '<div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.playAsGuest()">Play as guest</button></div>' : ''}
     </div>`;
 }
 
