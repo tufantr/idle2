@@ -195,8 +195,10 @@ export const uniqueTierOf = item => Math.max(1, Math.floor(Number(item?.uniqueTi
 export function ownsUnique(state, uniqueId, tier = 1) {
     return [...state.inventory, ...Object.values(state.equipped)].some(i => i && i.uniqueId === uniqueId && uniqueTierOf(i) === tier);
 }
-/** True if this unique (of `tier`) was ever found, kept or not: a record (core/modifiers.js recordsOf). */
+/** True if this unique (of `tier`) was ever found, kept or not (core/modifiers.js recordsOf counts each of the eight once). */
 export const foundUnique = (state, uniqueId, tier = 1) => !!state.uniques?.[uniqueKey(uniqueId, tier)];
+/** True if this unique was ever found at any tier: then it is a record already. */
+const foundAtAnyTier = (state, uniqueId) => Object.keys(state.uniques || {}).some(key => key === uniqueId || key.startsWith(`${uniqueId}@`));
 
 /** Unique `uniqueId` of dungeon tier `tier`, as a piece of gear: past the first tier as strong as its dungeon's boss's depth drops. */
 export function makeUnique(state, uniqueId, tier = 1) {
@@ -231,11 +233,12 @@ function grantUnique(game, uniqueId, tier = 1) {
     // instead of filling up with locked duplicates.
     const spare = ownsUnique(state, uniqueId, tier);
     item.locked = !spare;
-    const fresh = noteUnique(state, uniqueId, tier);   // the first ever: a record
+    const record = !foundAtAnyTier(state, uniqueId);   // the first of this unique at any tier: a record
+    const fresh = noteUnique(state, uniqueId, tier);   // the first of this tier's: a line in the chronicle
     addItem(game, item);
     bumpStat(game, 'uniquesFound');
     log(game, spare ? `🌟 Another ${item.name} — a spare, unlocked so it can be salvaged for essence.` : `🌟 Unique item: ${item.name}!`, 'loot');
-    game.emit({ type: 'unique', item, fresh });
+    game.emit({ type: 'unique', item, fresh, record });
     return item;
 }
 

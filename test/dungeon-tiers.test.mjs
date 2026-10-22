@@ -81,7 +81,7 @@ test('a tier\'s monsters stand at its stages, by its rule', () => {
     assert.equal(dungeonEnemy({ id: warren.id, index: 0 }).stage, warren.stage);
 });
 
-test('a unique is a record once found, kept or not; each tier\'s is its own', () => {
+test('a unique is a record once found, kept or not, once whatever its tier', () => {
     const game = newGame({ bestStage: 30 });
     const s = game.state;
     s.dungeons.goblin_warren.fragments = FRAGMENTS_PER_UNIQUE * 2;
@@ -90,19 +90,25 @@ test('a unique is a record once found, kept or not; each tier\'s is its own', ()
     assert.equal(recordsOf(s).uniques, 1);
     assert.ok(foundUnique(s, 'goblin_crown'));
     let ev = game.drainEvents().find(e => e.type === 'unique');
-    assert.equal(ev.fresh, true, 'the first find is a record');
+    assert.deepEqual([ev.fresh, ev.record], [true, true], 'the first find is a record');
     // a spare is no new record
     game.assembleUnique('goblin_warren');
     ev = game.drainEvents().find(e => e.type === 'unique');
-    assert.equal(ev.fresh, false);
+    assert.deepEqual([ev.fresh, ev.record], [false, false]);
     assert.equal(recordsOf(s).uniques, 1);
     // salvaged, both copies: still a record, and the bag is free
     for (const item of s.inventory.filter(i => i.uniqueId)) { item.locked = false; salvageItem(game, item.id); }
     assert.equal(s.inventory.filter(i => i.uniqueId).length, 0);
     assert.equal(recordsOf(s).uniques, 1, 'found once, a record for good');
-    // the same unique of the second tier is another record
+    // the same unique of the second tier is found too, but no second record: each of the eight counts once
     s.dungeonTier = 2;
-    s.inventory.push(makeUnique(s, 'goblin_crown', 2));
+    s.dungeons.goblin_warren.fragments = FRAGMENTS_PER_UNIQUE;
+    game.assembleUnique('goblin_warren');
+    ev = game.drainEvents().find(e => e.type === 'unique');
+    assert.deepEqual([ev.fresh, ev.record], [true, false]);
+    assert.ok(foundUnique(s, 'goblin_crown', 2));
+    assert.equal(recordsOf(s).uniques, 1);
+    s.uniques.crystal_heart = true;
     assert.equal(recordsOf(s).uniques, 2);
     assert.deepEqual(parseUniqueKey(uniqueKey('goblin_crown', 2)), { id: 'goblin_crown', tier: 2 });
     assert.equal(parseUniqueKey('goblin_crown@1'), null);

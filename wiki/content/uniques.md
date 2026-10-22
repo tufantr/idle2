@@ -15,8 +15,8 @@ Every [[Dungeons|dungeon]] guards a unique item: a piece of gear with a name of 
 
 - **Legendary quality** (×{{RARITIES.at(-1).quality}} on base stats) and a little more base power than ordinary gear of their tier: each is the best piece of its tier, not a way to skip one.
 - **Fixed bonuses:** {{Math.min(...Object.values(UNIQUES).map(u => u.affixes.length))}} or {{Math.max(...Object.values(UNIQUES).map(u => u.affixes.length))}} strong bonuses chosen for the piece, which no reroll or reforge can change. The deepest uniques are worth their bonuses more than their power, since gear dropped deep in the Abyss grows stronger with every depth.
-- **A record each:** every unique you have found is a record that makes all your prestige tokens ×{{BASE.recordMult}} stronger (see [[Prestige]]), for good: kept, salvaged or handed in for a Seal. A spare copy does not count again.
-- **Each tier its own:** once the dungeons are sealed and go deeper (see [[Dungeons]]), each has a unique of the new tier, the {{uniqueAt('goblin_crown', 2).name}} and the rest: {{GEAR_TIERS.at(-1).name}}, as strong as the gear its dungeon's boss's depth drops, with the same bonuses, and a record of its own.
+- **A record each:** each of the eight uniques, once found, is a record that makes all your prestige tokens ×{{BASE.recordMult}} stronger (see [[Prestige]]), for good: kept, salvaged or handed in for a Seal. A spare copy does not count again, nor does the same unique of a deeper tier.
+- **Each tier its own:** once the dungeons are sealed and go deeper (see [[Dungeons]]), each has a unique of the new tier, the {{uniqueAt('goblin_crown', 2).name}} and the rest: {{GEAR_TIERS.at(-1).name}}, as strong as the gear its dungeon's boss's depth drops, with the same bonuses. The eight of a tier are the price of its Seal.
 - **The {{achievementById('collector').name}} medal** comes with your first: {{achievementById('collector').reward}} (see [[Medals]]).
 
 Some of them, like the [[Goblin King's Crown]], show on your hero when he wears them.

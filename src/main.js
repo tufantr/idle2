@@ -935,7 +935,7 @@ function handleEvents(events) {
                     lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
                 break;
             case 'unique':
-                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.fresh && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
+                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.record && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
                 else toast(`A spare ${ev.item.name}: salvage it for essence`, 'achievement', pic(itemSpriteKey(ev.item)));
                 break;
             case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;

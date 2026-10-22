@@ -207,7 +207,9 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   slot and the bag's, best first, to the lowest slot of their kind, and all come off plain (`sanitizeBench`, copied
   into `meta.bench` like the forge's). In the simulator (12 seeds, 150 h) the bench by the piece left the climb as
   before (best stage 280 / 540 / 770 at 50 / 100 / 150 h against 270 / 540 / 770), and a new player's first hour too
-  (stage 70 for one who watches, 60 before; 78 for one who taps, 79).
+  (stage 70 for one who watches, 60 before; 78 for one who taps, 79); by the slot, 291 / 590 / 830 against 283 / 550 /
+  790 with the same seeds, a little quicker late as a better piece no longer starts from +0 (its Crafting ends lower:
+  the bot no longer pays for the same levels twice).
   It is the sink the deep heroes' diamonds lacked (thousands, unusable below Crafting 70), and jewellery
   drops at every rarity with it (§3.25).
 - **Crafted gear rolls Common to Rare**, forged and below Crafting 75 alike. Jewellery's best rises with
@@ -490,8 +492,8 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   (0.5% and 0.25% until the records came), in its own multiplicative layer, so the layer is
   `1 + 0.004 × tokens × records`. The Eternity achievement adds +10% tokens.
 - **Records** (`recordsOf` in `src/core/modifiers.js`; the owner's choice 2, from
-  `incremental-math.md` A1.3): every 25 stages of all-time best and every dungeon unique found (held
-  until 22 October 2026; each tier's its own) is a record, a dungeon Seal two (§3.11), and so is each Trial
+  `incremental-math.md` A1.3): every 25 stages of all-time best and each of the eight dungeon uniques found
+  (once, whatever its tier; held until 22 October 2026) is a record, a dungeon Seal two (§3.11), and so is each Trial
   tier cleared (§3.26); each multiplies what the tokens give by 1.05 (stage 300 with five uniques: ×2.29). Held
   tokens alone make each late run add less (+0.8% a run after the hundredth); a record lifts the whole
   stock. A new 25-stage record is a card ("Your tokens are ×1.05 stronger"), and a unique's card says
@@ -651,7 +653,8 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 - **A unique is a record once found** (the owner, 22 October 2026: "Dungeon buffs ties to the items from dungeons
   which causes them to occupy space in the inventory permanently"): `state.uniques` notes every unique found
   (`goblin_crown`, `goblin_crown@2` for the second tier's), kept in `meta.uniques` too, and `recordsOf` counts
-  them, held or not; a save from before notes the ones it carries. So a unique can be salvaged or handed in.
+  them, held or not, each of the eight once whatever its tier; a save from before notes the ones it carries. So a
+  unique can be salvaged or handed in.
 - **Tiers and the Seal** (the same message: "Dungeons end too early. All 8 of them 250 rounds, a player can do
   around stage 300 while the game goes into thousands"; the owner's idea, made concrete: research in the
   conversation of 22 October, Melvor's Strongholds, Diablo's Greater Rifts, WoW's Mythic+). When every dungeon
@@ -666,13 +669,17 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
   for their monsters in turn (`DUNGEON_RULES`: Swift, attacks a quarter faster; Stout, half again the health;
   Savage, a third harder; Relentless, the boss's clock 40 s), chests of Abyssal gear at their depth, uniques of
   their own (Abyssal, ×1.1 a tier's gear grown with the depth of their dungeon's boss, the same bonuses:
-  `makeUnique`), and clears and fragments from nothing. Fragments carried over made the next tier's eight at once,
+  `makeUnique`; gear and the next Seal's price, not second records), and clears and fragments from nothing.
+  Fragments carried over made the next tier's eight at once,
   each as strong as gear 200 stages past the hero: the simulated one leapt from stage 330 to 490 in two hours,
   so they start again. A run keeps its tier (`combat.dungeon.tier`). The simulated player farms toward the Seal
-  (a dungeon is worth a visit while it owes clears or its unique; it seals when it can): over 12 seeds it seals
-  tier I at about 52 hours and reaches stage 400 at 64.8 h and 920 by 150 h, against 71.4 h and 830 with the
-  dungeons ending at 250 (from farming the milestones too: stage 150 at 9.2 h, 11.1 before), with 107 records
-  against 94.
+  (a dungeon is worth a visit while it owes clears or its unique; it seals when it can) and seals tier I at about
+  52 hours. Over 12 seeds, with the bench by the slot and Alchemy's minute-long doses (§3.6), its best stage is 309 /
+  460 / 640 / 820 / 890 at 50 / 75 / 100 / 125 / 150 hours, against 291 / 420 / 590 / 720 / 830 with the bench alone
+  and 283 / 404 / 550 / 690 / 790 for the game before: dungeons that never end are worth farming all the way (stage
+  150 at 9.2 h against 11.1, the milestones and the chests), and each Seal is two records. With each tier's eight
+  counting as eight more records it was 940 at 150 hours; with four records a Seal, 920. A new player's first hour
+  is unchanged (stage 70 for one who watches, 78 for one who taps).
 - **Readiness:** the Dungeons tab estimates the boss fight (time to kill vs the timer, and how long you
   last without food), coloured green / amber / red.
 

@@ -182,8 +182,10 @@ export function dungeonById(id) {
 // sealDungeons): it takes no bag slot and is worth SEAL_RECORDS records (core/modifiers.js recordsOf). The next tier
 // opens: the same eight DUNGEON_TIER_STAGES stages deeper, their gates too, with a numeral (Goblin Warren II), the
 // painting in new hues, one rule for its monsters (DUNGEON_RULES, in turn), a chest of the deepest gear, uniques of
-// its own at its depth, and the milestones to earn again (a sealed tier's count in full). Every unique is a record
-// once found, kept or not (state.uniquesFound), so none has to sit in the bag.
+// its own at its depth, and the milestones to earn again (a sealed tier's count in full). Each of the eight uniques is
+// a record once found, at any tier, kept or not (state.uniques), so none has to sit in the bag; a deeper tier's are
+// gear and the next Seal's price, not more records (as more records they made the simulated climb 6% faster again).
+// Sized with the simulator (12 seeds, 150 h): 2 records a Seal (4 measured the same within noise).
 export const DUNGEON_TIER_STAGES = 300;
 export const DUNGEON_TIER_CLEARS = 250;
 export const SEAL_RECORDS = 2;

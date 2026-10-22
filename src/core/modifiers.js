@@ -15,7 +15,7 @@ import { RESOURCES } from '../data/resources.js';
 import { POTIONS, POTION_KINDS, potionPower } from '../data/potions.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
-import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits, SEAL_RECORDS, uniqueKey } from '../data/dungeons.js';
+import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits, SEAL_RECORDS, parseUniqueKey } from '../data/dungeons.js';
 import { trialBite, trialTiersCleared, laurelsOf } from '../data/trials.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
@@ -285,14 +285,15 @@ export function skillLevelsTotal(state) {
 
 /**
  * The hero's records: { stages, uniques, seals, trials, laurels, skills, count, mult } — 25-stage steps of the best stage,
- * dungeon uniques found (each tier's its own; kept or not: state.uniques), SEAL_RECORDS a dungeon Seal, Trial tiers and
- * laurels, 50-level steps of the skills.
+ * the dungeons' uniques found (each of the eight once, whatever its tier; kept or not: state.uniques), SEAL_RECORDS a
+ * dungeon Seal, Trial tiers and laurels, 50-level steps of the skills. (Each tier's eight counting again made the
+ * simulated climb some 6% faster again at 150 hours: data/dungeons.js.)
  */
 export function recordsOf(state) {
     const stages = Math.floor((state.combat?.bestStage || 1) / BASE.recordStages);
     const skills = Math.floor(skillLevelsTotal(state) / BASE.recordSkillLevels);
-    const found = new Set(Object.keys(state.uniques || {}));
-    for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) found.add(uniqueKey(item.uniqueId, Math.max(1, Math.floor(Number(item.uniqueTier)) || 1)));
+    const found = new Set(Object.keys(state.uniques || {}).map(key => parseUniqueKey(key)?.id).filter(Boolean));
+    for (const item of [...(state.inventory || []), ...Object.values(state.equipped || {})]) if (item?.uniqueId) found.add(item.uniqueId);
     const seals = SEAL_RECORDS * Math.max(0, (Math.floor(Number(state.dungeonTier)) || 1) - 1);
     const trials = trialTiersCleared(state);   // each Trial tier cleared (data/trials.js)
     const laurels = laurelsOf(state);          // and each week's Trial beaten

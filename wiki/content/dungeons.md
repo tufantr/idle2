@@ -63,7 +63,7 @@ When all eight dungeons have {{DUNGEON_TIER_CLEARS}} clears and you hold their e
 - the same eight dungeons {{DUNGEON_TIER_STAGES}} stages deeper, their gates too: the {{dungeonAt('goblin_warren', 2).name}} opens at stage {{dungeonAt('goblin_warren', 2).unlockStage}};
 - their paintings in new hues, and one rule for their monsters, in turn: {{DUNGEON_RULES.map(r => `<strong>${r.name}</strong> (${r.desc.toLowerCase()})`).join(', ')}};
 - chests of {{GEAR_TIERS.at(-1).name}} gear as strong as their depth;
-- uniques of their own, the {{uniqueAt('goblin_crown', 2).name}} and the rest: {{GEAR_TIERS.at(-1).name}}, as strong as the gear their dungeon's boss's depth drops, with the same bonuses, and each a new record;
+- uniques of their own, the {{uniqueAt('goblin_crown', 2).name}} and the rest: {{GEAR_TIERS.at(-1).name}}, as strong as the gear their dungeon's boss's depth drops, with the same bonuses (no second record: each of the eight counts once, whatever its tier), and the next Seal's price;
 - the clears and the fragments start again, and so do the milestones (a sealed tier's bonuses stay, in full).
 
 There is no last tier.

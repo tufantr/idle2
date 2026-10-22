@@ -2111,13 +2111,13 @@ function renderCollection(game) {
         if (!known && base !== nextDungeon) return '';
         return `<div class="pet-card ${found ? 'found' : ''}"><span class="pet-icon">${sprite(`uniq/${d.unique}`, { scale: 1.5, cls: found ? '' : 'silhouette', fallback: found ? '🌟' : '❔' })}</span><div><b style="color:#f97316">${known ? esc(u.name) : 'Unknown unique'}</b><div class="muted small">${esc(d.name)} · ${known ? `${state.dungeons[d.id].fragments}/${FRAGMENTS_PER_UNIQUE} fragments${found ? ' · found' : ''}` : `opens at stage ${d.unlockStage}`}</div></div></div>`;
     }).join('');
-    const foundAll = Object.keys(state.uniques || {}).length;
+
     return `<section class="glass-panel ${painted('forest', 'center 45%')}">
         <div class="panel-header"><h2>Pets</h2><span class="muted small">${PETS.filter(p => state.pets[p.id]).length}/${PETS.length} · rare finds while training, kept forever</span></div>
         <div class="pet-grid">${pets}</div>
     </section>
     <section class="glass-panel ${painted('vault', 'center 40%')}">
-        <div class="panel-header"><h2>Unique items</h2><span class="muted small">${foundAll ? `${fmt(foundAll)} found, each a record · ` : ''}assembled from dungeon fragments, or found in a chest</span></div>
+        <div class="panel-header"><h2>Unique items</h2><span class="muted small">Assembled from dungeon fragments, or found in a chest; each is a record once found</span></div>
         <div class="pet-grid">${uniques}</div>
     </section>
     ${renderCodex(state)}`;
