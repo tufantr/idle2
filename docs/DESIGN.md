@@ -2267,13 +2267,14 @@ src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, the
                       cloud client, which save is played) · power (server-side numbers) · text (articles for names)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
-                      · dungeons (dungeons, uniques, the Titan) · pets · farming (plots, crops) · agility
+                      · dungeons (dungeons, their tiers and rules, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
                       · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
                       · capes (skill capes at 99) · trials (the Trials: rules, first tiers)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
-src/systems/          skilling · combat · dungeon (runs, chests, Titan) · inventory (bag, salvage, reforge)
-                      · anvil (reinforcing and rerolling worn gear with bars) · farming · agility · prestige · camp · minigame · offline · daily
+src/systems/          skilling · combat · dungeon (runs, chests, uniques found, the Seal, Titan) · inventory (bag, salvage, reforge)
+                      · anvil (reinforcing and rerolling worn gear with bars) · bench (the jeweller's bench: jewellery slots with gems)
+                      · potions (doses on the clock) · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
                       · disclosure (which pieces of the screens have opened for the player)
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
