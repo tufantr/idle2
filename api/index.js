@@ -148,11 +148,14 @@ const AUTH_WINDOW_MS = 15 * 60 * 1000;
 const MAX_NAME_FAILURES = 10;    // per name, from one address
 const MAX_NAME_TOTAL = 100;      // per name, from every address
 const MAX_IP_FAILURES = 50;
-const REGISTER_WINDOW_MS = 60 * 60 * 1000;
-const MAX_REGISTRATIONS = 10;
+// one address makes at most three accounts a day (ten an hour until the game opened to strangers, October 2026): each
+// one is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried or a board is filled
+const REGISTER_WINDOW_MS = DAY;
+const MAX_REGISTRATIONS = 3;
 const DUMMY_HASH = '$2b$10$ZMk5iy8eHTrQrJ0rEb/AOeTQMn3zrYOomc0x/UMLwi242hMY5Ytoe';
 const clientIp = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
 const TOO_MANY = { error: 'Too many attempts. Try again in a few minutes.' };
+const TOO_MANY_ACCOUNTS = { error: 'This address has made enough accounts for today: try again tomorrow.' };
 
 // ---------- sign-up by email ----------
 // An account is made with an email address and plays once a 6-digit code sent there is entered (the owner,
@@ -214,7 +217,7 @@ app.post('/api/register', async (req, res) => {
 
     try {
         // every registration counts, before any work is done
-        if (await store.takeAttempt(`register:${ip}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY);
+        if (await store.takeAttempt(`register:${ip}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY_ACCOUNTS);
         const hash = await bcrypt.hash(password, 10);
         const id = await store.createUser(username, hash, email);
         const pending = { pending: true, username, email: maskEmail(email) };
@@ -335,7 +338,8 @@ const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 // the numbers the boards show; a raw field can't be dressed up): how fast each can honestly grow per
 // hour of real time (plus a flat allowance; the best stage by its depth, `honestClimb` in
 // src/core/power.js), and a ceiling no save reaches at all, checked on every upload including the first. Growth is measured from each number's highest value so far and when it
-// was reached, so restoring a backup and coming forward again is never flagged.
+// was reached, so restoring a backup and coming forward again is never flagged, and from where the day's window began
+// (plausibilityFlags); an account's first upload from when it began to play (firstPeaks).
 const RANKED = [
     // (perHour, flat: only without honestClimb; the ceiling far past any hero's: 2,000 after 1,200 simulated hours of the endless climb)
     { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 6000, byDepth: true },
@@ -347,7 +351,13 @@ const RANKED = [
     { key: 'stars', label: 'Stars', perHour: 3, flat: 40, ceiling: 2000 }
 ];
 
-/** Reasons a save's numbers look impossible next to their highest so far, and the new highs. */
+/**
+ * Reasons a save's numbers look impossible next to their highest so far, and the new highs. Each number may grow from
+ * its highest value (`v`, reached `at`) by what play allows in the time since, and also from where the day's window
+ * began (`day`): measured from the last upload alone, a burst allowed at each could be chained a minute apart (a
+ * made-up save reached stage 6,000 in 22 minutes, never flagged), but over a day it counts once. A window begins again
+ * a day after the last one, from the highest value then. Highs from before the windows begin one at their next upload.
+ */
 function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestClimb = null) {
     const flags = [];
     const next = {};
@@ -355,15 +365,20 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
         const value = num(metrics[r.key]);
         const peak = peaks && peaks[r.key];
         if (value > r.ceiling) { flags.push(`${r.label} beyond any possible save`); if (peak) next[r.key] = peak; continue; }
+        const day = peak && peak.day && Number.isFinite(peak.day.v) ? peak.day : null;
         if (peak && Number.isFinite(peak.v)) {
-            const hours = (Math.max(0, now - num(peak.at)) + SLACK_MS) / HOUR;
             // Tokens: at most one prestige every 10 minutes, each paying for the best stage reached, times
             // what the save's Stars and medals make a prestige pay (tokenGain, at least 1).
             const perHour = r.perHour ?? 6 * 2 * tokensPerRun(Math.max(10, num(metrics.bestStage))) * Math.max(1, num(metrics.tokenGain));
-            const allowed = r.byDepth && honestClimb ? honestClimb(peak.v, hours) : r.flat + perHour * hours;
-            if (value - peak.v > allowed) flags.push(`${r.label} grew faster than any play could`);
+            const allowed = (from, at) => {
+                const hours = (Math.max(0, now - num(at)) + SLACK_MS) / HOUR;
+                return r.byDepth && honestClimb ? honestClimb(from, hours) : r.flat + perHour * hours;
+            };
+            if (value - peak.v > allowed(peak.v, peak.at) || (day && value - day.v > allowed(day.v, day.at))) flags.push(`${r.label} grew faster than any play could`);
         }
-        next[r.key] = peak && peak.v >= value ? peak : { v: value, at: now };
+        const high = peak && peak.v >= value ? { v: peak.v, at: peak.at } : { v: value, at: now };
+        high.day = day && now - num(day.at) < DAY ? day : { v: high.v, at: now };
+        next[r.key] = high;
     }
     if (num(metrics.attackDamage) > plausibleAttackDamage(metrics.bestStage)) flags.push('attack beyond what its best stage allows');
     if (num(metrics.trialTiersBeyondBest) > 0) flags.push('Trial tiers beyond its best stage');
@@ -371,6 +386,13 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
     if (num(metrics.weeklyTrial) > num(metrics.bestStage)) flags.push("the week's Trial past the best stage");
     return { flags, peaks: next };
 }
+
+/**
+ * The highs an account's first upload is measured from: nothing, since it began to play (`startedAt`, when its address
+ * was confirmed). A new hero starts from nothing, so a first save that arrives far along was not played here; before,
+ * it was checked against the ceilings only, and a made-up save could start at the top of the boards.
+ */
+const firstPeaks = startedAt => Object.fromEntries(RANKED.map(r => [r.key, { v: 0, at: startedAt, day: { v: 0, at: startedAt } }]));
 
 function recentlyFlagged(flagsJson, now) {
     try { return JSON.parse(flagsJson || '[]').some(f => now - f.at < FLAG_MEMORY_MS); } catch { return false; }
@@ -396,7 +418,10 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     try { metrics = eng.powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
     let newFlags = [];
     if (metrics) {
-        const checked = plausibilityFlags(previous?.peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
+        // (an account's first upload, from when it began to play; one from before the addresses were confirmed, as before)
+        const startedAt = num(current && current.verifiedAt);
+        const peaks = previous ? previous.peaks : startedAt > 0 ? firstPeaks(startedAt) : null;
+        const checked = plausibilityFlags(peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
         newFlags = checked.flags;
         metrics.peaks = checked.peaks;
     } else if (previous) {

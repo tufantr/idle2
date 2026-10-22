@@ -47,7 +47,7 @@ function createMemoryStore() {
         },
         async getSave(userId) {
             const u = db.users.find(x => x.id === userId);
-            return u ? { state: u.game_state, lastSaved: u.last_saved, flags: u.flags, optIn: u.optIn, metrics: u.metrics } : null;
+            return u ? { state: u.game_state, lastSaved: u.last_saved, flags: u.flags, optIn: u.optIn, metrics: u.metrics, verifiedAt: u.email_verified_at || 0 } : null;
         },
         async putSave(userId, stateJson, savedAt, flagsJson, metricsJson, base = null) {
             const u = db.users.find(x => x.id === userId);

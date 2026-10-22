@@ -241,10 +241,10 @@ async function userNameOf(userId) {
 }
 
 async function getSave(userId) {
-    const { rows } = await sql`SELECT game_state, last_saved, flags, leaderboard_opt_in, metrics FROM users WHERE id = ${userId}`;
+    const { rows } = await sql`SELECT game_state, last_saved, flags, leaderboard_opt_in, metrics, email_verified_at FROM users WHERE id = ${userId}`;
     const row = rows[0];
     if (!row) return null;
-    return { state: row.game_state || null, lastSaved: int(row.last_saved), flags: row.flags || '[]', optIn: !!row.leaderboard_opt_in, metrics: row.metrics || null };
+    return { state: row.game_state || null, lastSaved: int(row.last_saved), flags: row.flags || '[]', optIn: !!row.leaderboard_opt_in, metrics: row.metrics || null, verifiedAt: int(row.email_verified_at) };
 }
 
 /**

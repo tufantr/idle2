@@ -955,11 +955,18 @@ gear to wear; a place that waited opens on the return and is named there too.
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
   belongs to the player), but flagged accounts are left out of leaderboards and of clan boss sizing
-  for 30 days. A determined cheat can still fake a save that grows plausibly, or a first upload just
-  under the ceilings; that is the limit of a client-side game, until the online side decides fights
-  and rewards itself.
+  for 30 days. **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
+  each upload was measured only from the one before, so the burst allowed at each could be chained a minute apart
+  (a made-up save reached stage 6,000 in 22 minutes, never flagged), and an account's first upload was checked
+  against the ceilings alone. Now each number is also measured from where the day's window began (`peaks.day`,
+  begun again a day later from the highest value then), so a burst counts once a day, and a first upload from
+  nothing at the moment the account began to play (its address confirmed: `firstPeaks`). Replayed through it, 54
+  simulated honest runs of 150 to 1,000 hours, the faster variants of the dungeon tiers among them, upload by the
+  hour without a single flag. A determined cheat can still fake a save that grows plausibly; that is the limit of a
+  client-side game, until the online side decides fights and rewards itself.
 - **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
-  address) in 15 minutes and logins wait; an address makes at most ten accounts an hour. Each try is
+  address) in 15 minutes and logins wait; an address makes at most three accounts a day (ten an hour until the
+  beta: each is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried). Each try is
   counted before the password is checked, in one statement, so a burst of parallel tries can't slip past,
   and wrong guesses from elsewhere don't lock a player out at home. A name is one account whatever its
   case. A name with no account still costs a bcrypt check, so the time a guess takes doesn't tell

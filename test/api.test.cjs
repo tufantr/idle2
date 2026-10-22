@@ -57,6 +57,11 @@ const peek = {
         if (memory) { memory.db.users.find(u => u.username === username).metrics = JSON.stringify(metrics); return; }
         await pool.query('UPDATE users SET metrics = $1 WHERE username = $2', [JSON.stringify(metrics), username]);
     },
+    /** When an account began to play (its address confirmed): the tests' players began a month before their first save. */
+    async verifiedAt(username, at) {
+        if (memory) { memory.db.users.find(u => u.username === username).email_verified_at = at; return; }
+        await pool.query('UPDATE users SET email_verified_at = $1 WHERE username = $2', [at, username]);
+    },
     async metrics(username) {
         if (memory) return JSON.parse(memory.db.users.find(u => u.username === username).metrics);
         const { rows } = await pool.query('SELECT metrics FROM users WHERE username = $1', [username]);
@@ -95,15 +100,18 @@ const post = (p, body, token, headers = {}) => fetch(base + p, { method: 'POST',
 const get = (p, token) => fetch(base + p, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
 
 // Each test player registers from an address of their own, as real players do (one address may only
-// make a few accounts an hour), with an email of their own, and enters the code mailed there.
+// make a few accounts a day), with an email of their own, and enters the code mailed there. Their saves arrive
+// part-way through a game, so they began to play a month ago (an account's first upload is measured from then),
+// unless `fresh`: a player who has only just made the account.
 let addresses = 0;
 const emailOf = username => `${username.toLowerCase()}@example.test`;
-async function register(username) {
+async function register(username, { fresh = false } = {}) {
     const from = { 'X-Forwarded-For': `10.0.${Math.floor(++addresses / 250)}.${addresses % 250}` };
     const res = await post('/register', { username, password: 'correct horse', email: emailOf(username) }, null, from);
     assert.equal(res.status, 200, `register ${username}`);
     const confirmed = await post('/verify', { username, code: codeFor(emailOf(username)) }, null, from);
     assert.equal(confirmed.status, 200, `confirm ${username}'s email`);
+    if (!fresh) await peek.verifiedAt(username, clock - 30 * 24 * 3600 * 1000);
     return (await confirmed.json()).token;
 }
 
@@ -213,6 +221,47 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.equal(climbed(600, 750, 1), false, 'a hundred and fifty in an hour past 600, a run fresh from a prestige in the dense deep');
     assert.equal(climbed(600, 1500, 24), true, 'nine hundred in a day past 600');
     assert.equal(climbed(2000, 2400, 24), true, 'four hundred in a day past 2,000');
+});
+
+test('a made-up climb is caught: bursts chained a minute apart, and a new account whose first save arrives far along', async () => {
+    const { plausibilityFlags } = app;
+    const { plausibleAttackDamage, honestClimb } = await import('../src/core/power.js');
+    const minute = 60 * 1000;
+    const t0 = clock;
+    const m = (o = {}) => ({ bestStage: 1, titanKills: 0, dungeonClears: 0, totalXp: 0, tokens: 0, attackDamage: 0, ...o });
+    const run = (peaks, metrics, at) => plausibilityFlags(peaks, metrics, at, plausibleAttackDamage, honestClimb);
+    // each upload as far as the one before allows: from stage 300 the second is caught, the day's window counting the burst once
+    let { peaks } = run(null, m({ bestStage: 300 }), t0);
+    let stage = 300, caught = 0;
+    for (let i = 1; i <= 30 && !caught; i++) {
+        stage += Math.floor(honestClimb(stage, (minute + 30 * minute) / (60 * minute))) - 1;
+        const r = run(peaks, m({ bestStage: stage }), t0 + i * minute);
+        if (r.flags.includes('best stage grew faster than any play could')) caught = i;
+        peaks = r.peaks;
+    }
+    assert.ok(caught > 0 && caught <= 3, `caught at upload ${caught}`);
+    // an honest day is never caught: from stage 300, a hundred stages over a day's uploads, an hour apart
+    ({ peaks } = run(null, m({ bestStage: 300 }), t0));
+    for (let h = 1; h <= 48; h++) {
+        const r = run(peaks, m({ bestStage: 300 + Math.round(100 * Math.min(1, h / 24)) }), t0 + h * 60 * minute);
+        assert.deepEqual(r.flags, [], `hour ${h}`);
+        peaks = r.peaks;
+    }
+    // highs kept before the windows: no flag, and a window begins
+    const old = { bestStage: { v: 300, at: t0 } };
+    const begun = run(old, m({ bestStage: 310 }), t0 + 60 * minute);
+    assert.deepEqual(begun.flags, []);
+    assert.equal(begun.peaks.bestStage.day.v, 310);
+
+    // A new account's first save is measured from when it began to play: one that arrives far along is flagged.
+    const forger = await register('fresh_forger', { fresh: true });
+    const forged = await (await post('/save', { state: heroSave({ bestStage: 2000, tokens: 1e6 }) }, forger)).json();
+    assert.equal(forged.flagged, true);
+    assert.ok((await peek.flags('fresh_forger')).some(f => f.reason === 'best stage grew faster than any play could'));
+    const newcomer = await register('fresh_newcomer', { fresh: true });
+    assert.equal((await (await post('/save', { state: heroSave({ bestStage: 3, playtimeMs: 60000 }) }, newcomer)).json()).flagged, false, 'a real first minute');
+    clock += 2 * 60 * 60 * 1000;
+    assert.equal((await (await post('/save', { state: heroSave({ bestStage: 60, playtimeMs: 2 * 3600000 }) }, newcomer)).json()).flagged, false, 'and a good first two hours');
 });
 
 test('a save cannot reach the server\'s own objects', async () => {
@@ -459,7 +508,7 @@ test('leaderboards ignore inherited metric names', async () => {
     assert.equal(res.metric, 'bestStage');
 });
 
-test('password guessing stops after ten tries per name, and one address makes only a few accounts an hour', async () => {
+test('password guessing stops after ten tries per name, and one address makes only three accounts a day', async () => {
     await register('guarded_hero');
     const from = { 'X-Forwarded-For': '203.0.113.7' };
     for (let i = 0; i < 10; i++) assert.equal((await post('/login', { username: 'guarded_hero', password: `wrong ${i}` }, null, from)).status, 400);
@@ -467,8 +516,12 @@ test('password guessing stops after ten tries per name, and one address makes on
     clock += 16 * 60 * 1000;
     assert.equal((await post('/login', { username: 'guarded_hero', password: 'correct horse' }, null, from)).status, 200, 'after the window it works again');
     const farm = { 'X-Forwarded-For': '198.51.100.9' };
-    for (let i = 0; i < 10; i++) assert.equal((await post('/register', { username: `farm_${i}`, password: 'correct horse', email: `farm_${i}@example.test` }, null, farm)).status, 200);
-    assert.equal((await post('/register', { username: 'farm_10', password: 'correct horse', email: 'farm_10@example.test' }, null, farm)).status, 429);
+    for (let i = 0; i < 3; i++) assert.equal((await post('/register', { username: `farm_${i}`, password: 'correct horse', email: `farm_${i}@example.test` }, null, farm)).status, 200);
+    const fourth = await post('/register', { username: 'farm_3', password: 'correct horse', email: 'farm_3@example.test' }, null, farm);
+    assert.equal(fourth.status, 429);
+    assert.match((await fourth.json()).error, /enough accounts for today/);
+    clock += 25 * 60 * 60 * 1000;
+    assert.equal((await post('/register', { username: 'farm_4', password: 'correct horse', email: 'farm_4@example.test' }, null, farm)).status, 200, 'the next day, another');
 });
 
 test("a member who leaves changes the clan's average, not the boss's health in attacks", async () => {
@@ -750,8 +803,8 @@ test('password guesses sent all at once are counted before they are checked: ten
     // and accounts made all at once from one address are counted the same way
     const farm = { 'X-Forwarded-For': '203.0.113.99' };
     const made = await Promise.all(Array.from({ length: 25 }, (_, i) => post('/register', { username: `rush_farm_${i}`, password: 'correct horse', email: `rush_farm_${i}@example.test` }, null, farm)));
-    assert.ok(made.filter(r => r.status === 200).length <= 10, `${made.filter(r => r.status === 200).length} accounts`);
-    clock += 61 * 60 * 1000;
+    assert.ok(made.filter(r => r.status === 200).length <= 3, `${made.filter(r => r.status === 200).length} accounts`);
+    clock += 25 * 60 * 60 * 1000;
 });
 
 test("leaving and coming back leaves the week's boss as it was; a strong stranger's hits count, and leaving takes nothing back", async () => {
