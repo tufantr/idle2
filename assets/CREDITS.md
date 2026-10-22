@@ -58,4 +58,7 @@ other potions' paintings recoloured by `tools/cards.py --recolour`.) The two lat
 are DCSS plant tiles (the scrub nettle and a starflower, CC0); their cards were painted the same way on 22 October
 2026, on a twelfth sheet of three tries at each and three more (`cards12`, the best of each kept).
 
+`og-image.jpg`, the picture beside a link to the game, is the game's own fight (the Ember Volcano's Gemini
+painting and the DCSS sprites above) with its title, rendered by `tools/preview.mjs`.
+
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.
