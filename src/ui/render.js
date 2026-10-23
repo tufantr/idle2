@@ -255,7 +255,7 @@ export function renderHeader(game, ui, cloud) {
         : '';
     const fireLevel = skillLevel(state, 'firemaking');
     const bonfirePill = bonfireLit(state, game.now)
-        ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(fireLevel) * 100)}% XP in every skill, and a ${Math.round(bonfireDouble(fireLevel) * 100)}% chance of a double in every one that makes something, for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} +${Math.round(bonfireBonus(fireLevel) * 100)}%<span class="pill-long"> XP · ${Math.round(bonfireDouble(fireLevel) * 100)}% doubles · ${duration(state.bonfire.until - game.now)}</span></span>`
+        ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(fireLevel) * 100)}% XP in every skill, and a ${Math.round(bonfireDouble(fireLevel) * 100)}% chance of a double in every one that makes something, for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} <span class="pill-long">+${Math.round(bonfireBonus(fireLevel) * 100)}% XP · ${Math.round(bonfireDouble(fireLevel) * 100)}% doubles · </span>${duration(state.bonfire.until - game.now)}</span>`   // on a phone, the time it has left (as the event's pill), the bonus in its title
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')

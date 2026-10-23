@@ -1383,6 +1383,8 @@ Keeping it running:
       frame with galaxy.click's own sandbox and permissions at its size (about 1500×600) and at 390 wide
 - [x] **Listed on galaxy.click and itch.io** (the owner's asks, 22-23 October 2026; README "Listings"): both show the
       live game in a frame; itch.io's page plays `deploy/itch/index.html`, with a 630×500 cover and six screenshots
+- [x] **The bonfire's time on a phone** (a tester's ask, 24 October 2026): the header's bonfire pill shows the time it
+      has left there too, as the event's pill does, instead of only its bonus (still in its title, and on wider screens)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
