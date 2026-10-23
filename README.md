@@ -155,9 +155,10 @@ site's own (browsers keep a framed page's storage per host site); an account pla
 
 - **galaxy.click** (an incremental-games portal): its page links https://fantasyidle.com/ itself. Its form asks for
   a disclosure of generative AI in the developer's own words; tags, thumbnail and links are added after submitting.
-- **itch.io** (https://impotentrage.itch.io/fantasy-idle, the owner's account): an HTML project whose uploaded file is
-  `deploy/itch/index.html`, zipped alone, framing the live site at 1200×720 with fullscreen. Nothing needs uploading
-  again when the game changes. The cover is 630×500; the AI disclosure there is graphics, text and code.
+- **itch.io** (https://impotentrage.itch.io/fantasy-idle, the owner's account, public since 24 October 2026): an HTML
+  project whose uploaded file is `deploy/itch/index.html`, zipped alone, framing the live site at 1200×720 with
+  fullscreen. Nothing needs uploading again when the game changes. The cover is 630×500; the AI disclosure there is
+  graphics, text and code.
 
 Both pages are the owner's: what they say and when they go public is theirs to approve.
 
