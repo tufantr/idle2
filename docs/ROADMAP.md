@@ -1381,6 +1381,8 @@ Keeping it running:
 - [x] **A guest at once inside another site's frame** (the owner's "you do it", 22 October 2026, ahead of a
       galaxy.click listing): framed, Begin goes straight into the fight, the account one click away. Checked in a
       frame with galaxy.click's own sandbox and permissions at its size (about 1500×600) and at 390 wide
+- [x] **Listed on galaxy.click and itch.io** (the owner's asks, 22-23 October 2026; README "Listings"): both show the
+      live game in a frame; itch.io's page plays `deploy/itch/index.html`, with a 630×500 cover and six screenshots
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

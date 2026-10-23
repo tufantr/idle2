@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- The game's page on itch.io (README "Listings"): itch shows an uploaded HTML file in its player, and this one shows
+     the live game in a frame inside it, so the itch page always plays what fantasyidle.com plays, accounts and all.
+     Framed, a new player is a guest at once (EMBEDDED in src/main.js). Zip this file alone and upload it as the
+     project's HTML file: cd deploy/itch && zip ../../fantasy-idle-itch.zip index.html -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasy Idle</title>
+<style>html, body { margin: 0; height: 100%; overflow: hidden; background: #0d0a07; } iframe { display: block; width: 100%; height: 100%; border: 0; }</style>
+</head>
+<body>
+<iframe src="https://fantasyidle.com/" title="Fantasy Idle" allow="autoplay; fullscreen; gamepad; clipboard-write"></iframe>
+</body>
+</html>

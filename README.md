@@ -147,6 +147,20 @@ cd /tmp/fi-wiki/site && npx vercel link --yes --project fantasy-idle-wiki --scop
 
 `node wiki/build.mjs --serve` previews it at http://localhost:8010.
 
+## Listings
+
+The game is listed on other sites that show it in a frame, so each always plays what fantasyidle.com plays. Framed,
+a new player is a guest at once (`EMBEDDED` in `src/main.js`), and a game played there is saved apart from the
+site's own (browsers keep a framed page's storage per host site); an account plays the same game everywhere.
+
+- **galaxy.click** (an incremental-games portal): its page links https://fantasyidle.com/ itself. Its form asks for
+  a disclosure of generative AI in the developer's own words; tags, thumbnail and links are added after submitting.
+- **itch.io** (https://impotentrage.itch.io/fantasy-idle, the owner's account): an HTML project whose uploaded file is
+  `deploy/itch/index.html`, zipped alone, framing the live site at 1200×720 with fullscreen. Nothing needs uploading
+  again when the game changes. The cover is 630×500; the AI disclosure there is graphics, text and code.
+
+Both pages are the owner's: what they say and when they go public is theirs to approve.
+
 ## Tests and balance tools
 
 Node 22+, no install needed (the API tests use the packages in `api/node_modules`):
