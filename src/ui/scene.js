@@ -54,7 +54,8 @@ const CTA_ICON = sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' });
 
 // One-shot motions, played with the Web Animations API so they layer over the idle loops in
 // style.css (which run on an inner element) instead of replacing them. A higher `rank` isn't
-// interrupted by a lower one: a monster's entrance isn't cut short by the first hit on it.
+// interrupted by a lower one: a monster's entrance isn't cut short by the first hit on it. A monster's
+// drop-in (`spawn`) is as long as the game's own (BALANCE.combat.dropInMs): no strike reaches it meanwhile.
 const MOVES = {
     lunge:     { ms: 260, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(26px) rotate(7deg)', offset: 0.35 }, { transform: 'none' }] },
     lungeLeft: { ms: 260, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(-26px) rotate(-7deg)', offset: 0.35 }, { transform: 'none' }] },
@@ -64,7 +65,7 @@ const MOVES = {
     heroHurt:  { ms: 280, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(-9px)', filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.95)) brightness(1.3)', offset: 0.2 }, { transform: 'none', filter: 'none' }] },
     dodge:     { ms: 340, rank: 1, frames: [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-22px) skewX(-8deg)', opacity: 0.5, offset: 0.4 }, { transform: 'none', opacity: 1 }] },
     cheer:     { ms: 700, rank: 2, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateY(-14px) scale(1.06)', filter: 'drop-shadow(0 0 14px rgba(125, 255, 178, 0.9))', offset: 0.35 }, { transform: 'none', filter: 'none' }] },
-    spawn:     { ms: 420, rank: 2, easing: 'cubic-bezier(.3,1.4,.6,1)', frames: [{ transform: 'translateY(-28px) scale(0.5)', opacity: 0 }, { transform: 'translateY(3px) scale(1.06)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }] },
+    spawn:     { ms: BALANCE.combat.dropInMs, rank: 2, easing: 'cubic-bezier(.3,1.4,.6,1)', frames: [{ transform: 'translateY(-28px) scale(0.5)', opacity: 0 }, { transform: 'translateY(3px) scale(1.06)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }] },
     bossSpawn: { ms: 900, rank: 2, frames: [{ transform: 'scale(0.2)', opacity: 0, filter: 'brightness(4)' }, { transform: 'scale(1.2)', opacity: 1, filter: 'brightness(1.6)', offset: 0.55 }, { transform: 'none', opacity: 1, filter: 'none' }] },
     // Falls back onto the ground: lifted by the half of the body that would otherwise swing below the feet.
     fallen:    { ms: 1800, rank: 3, frames: [{ transform: 'none' }, { transform: 'translate(-6px, -40%) rotate(-80deg)', offset: 0.18 }, { transform: 'translate(-6px, -40%) rotate(-80deg)', offset: 0.72 }, { transform: 'none' }] },

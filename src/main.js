@@ -7,6 +7,7 @@ import {
 } from './core/save.js';
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
+import { droppingIn } from './systems/combat.js';
 import { achievementById } from './data/achievements.js';
 import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle, fightTab } from './ui/features.js';
 import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
@@ -179,11 +180,12 @@ window.addEventListener('storage', event => { if (event.key === OWNER_KEY && eve
 
 // The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
 const scene = createScene(document.getElementById('scene'), {
-    // On the real clock, not the last tick's. A click inside the strike's quarter second does nothing, so it costs
-    // nothing either: no tick of the game for it (an auto-clicker's thousands a second each ran one; the owner's froze).
+    // On the real clock, not the last tick's. A click inside the strike's quarter second, or at a monster still dropping
+    // in, does nothing, so it costs nothing either: no tick of the game for it (an auto-clicker's thousands a second each
+    // ran one; the owner's froze).
     strike: () => {
         const now = Date.now();
-        if (now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs) return false;
+        if (now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs || droppingIn(game.state, now)) return false;
         advance(now);
         return game.clickAttack();
     },

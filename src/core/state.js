@@ -74,6 +74,7 @@ export function createDefaultState(now = Date.now()) {
             bestStage: 1,      // best stage ever (drives start stage after prestige)
             hp: 100,
             enemy: null,
+            enemyAt: 0,        // when the monster in front of him came: it drops in first (BALANCE.combat.dropInMs)
             playerTimer: 0,
             enemyTimer: 0,
             autoEat: 'auto',
@@ -306,6 +307,7 @@ export function clampTimers(state, now) {
     if (isPlainObject(state.combat)) {
         state.combat.lastClickAt = upTo(state.combat.lastClickAt, now);
         state.combat.lastComboAt = upTo(state.combat.lastComboAt, now);
+        state.combat.enemyAt = upTo(state.combat.enemyAt, now);
     }
     const mgMax = BALANCE.minigame;
     for (const mg of Object.values(state.minigame || {})) {
@@ -677,6 +679,7 @@ function normalise(data, now) {
     // the fight's clocks within what they can be: a boss's time, the minute of regrouping, the swings
     state.combat.bossTimeLeft = Math.max(0, Math.min(BALANCE.combat.bossTimeMs, finite(state.combat.bossTimeLeft)));
     state.combat.regroupLeft = Math.max(0, Math.min(BALANCE.combat.regroupMs, finite(state.combat.regroupLeft)));
+    state.combat.enemyAt = Math.max(0, finite(state.combat.enemyAt));
     state.combat.playerTimer = Math.max(0, finite(state.combat.playerTimer));
     state.combat.enemyTimer = Math.max(0, finite(state.combat.enemyTimer));
     state.combat.potionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.potionMs)));

@@ -31,7 +31,7 @@ const hours = ms => (ms === 3600000 ? 'an hour' : `${ms / 3600000} hours`);
 // or an emoji for small places, `blurb` one line, `points` the rules in a few short lines.
 export const FEATURES = {
     combat: { name: 'Combat', art: 'meadow', icon: 'item/Weapon/3', blurb: SKILLS.combat.desc,
-        points: [`Your hero fights automatically. Click the monster (or press Space) to strike as well: ${shareInWords(BALANCE.combat.manualHitMult)} of an attack, up to ${1000 / BALANCE.combat.strikeGapMs} a second, and each strike builds a combo of up to +${pc(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack)} damage.`,
+        points: [`Your hero fights automatically. Click the monster (or press Space) to strike as well: ${shareInWords(BALANCE.combat.manualHitMult)} of an attack, up to ${1000 / BALANCE.combat.strikeGapMs} a second, and each strike builds a combo of up to +${pc(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack)} damage. A new monster can't be struck until it has landed.`,
             'Every tenth stage is a boss on a timer. Beat it to reach the next zone.', 'If you fall, you go back to the start of the zone (from its first stage, two stages back, never onto a boss), rest at the campfire, and fight on.',
             `Weapons and armour only drop, mostly of the zone's own tier and for the slots you lack. A boss that leaves no upgrade fills a mark of the gold ring round the boss's node; the ${ordinal(PITY_MARKS)} brings a sure piece for your weakest slot.`,
             `Deeper stages teach more. Past combat level ${BALANCE.rewards.xpPace.from}, each kill teaches less the higher you rise (from ${BALANCE.rewards.xpPace.to}, a ${ordinal(BALANCE.rewards.xpPace.slow)} as much), so level 99 is a long road.`] },

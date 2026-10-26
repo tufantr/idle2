@@ -72,6 +72,8 @@ The totals are capped (critical damage is not):
 
 Tap the monster (or press Space) to strike: a hit for {{pct(BALANCE.combat.manualHitMult, 0)}} of your hero's attack, on top of his own attacks. Strikes count at most {{fmt(1000 / BALANCE.combat.strikeGapMs)}} times a second: clicking faster adds nothing.
 
+A new monster drops in first: for {{fmt(BALANCE.combat.dropInMs / 1000)}} of a second after it appears your strikes can't reach it, while your hero's own attacks never wait for it. So on a stage so easy that a strike fells a monster, the fastest striking fells two to three times as many as your hero alone, and two clicks a second do about as well as a machine clicking for you.
+
 Each strike builds the combo, up to {{BALANCE.combat.comboMax}}; each one adds a little less as it grows. Every point of combo makes all your hero's hits, his own and your strikes, deal {{pct(BALANCE.combat.comboDmgPerStack, 0)}} more: +{{pct(BALANCE.combat.comboMax * BALANCE.combat.comboDmgPerStack, 0)}} at full combo. Strikes matter most against a boss on its timer and in the Titan's race.
 
 The combo starts to fall {{fmt(BALANCE.combat.comboDecayAfterMs / 1000)}} seconds after your last strike, faster the higher it is, and it is gone when your hero leaves the fight or falls.

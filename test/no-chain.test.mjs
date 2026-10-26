@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { migrateState } from '../src/core/state.js';
+import { droppingIn } from '../src/systems/combat.js';
 
 const T0 = 1_760_000_000_000;
 
@@ -17,7 +18,9 @@ test('a save with a chain, its clock and a rally in it loads without them, and t
     for (const key of ['chain', 'chainAt', 'rallyUntil']) assert.equal(key in state.combat, false, key);
     const again = new Game(state, T0 + 1000);
     const kills = again.state.stats.kills;
-    for (let t = 1000; t <= 60000; t += 250) again.tick(T0 + t);
+    let t = T0;
+    for (let ms = 1000; ms <= 60000; ms += 250) again.tick(t = T0 + ms);
     assert.ok(again.state.stats.kills > kills, 'still fighting');
+    while (droppingIn(again.state, t)) again.tick(t += 50);   // (a monster that has only just come can't be struck yet)
     assert.equal(again.clickAttack(), true, 'a strike lands');
 });

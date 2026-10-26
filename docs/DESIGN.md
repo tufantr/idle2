@@ -349,6 +349,19 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   ×6.7 at best before, ×1.54 now (×1.5 for anything faster than four a second, ×1.2 at two a second,
   ×1.08 at one), and no healing. A player who taps through the first hour stands at stage 70 (110
   before) against 50 for one who only watches (`node tools/opening.mjs 60 3`).
+  **A new monster drops in** (October 2026, the owner's question whether an auto-clicker's farming was fair;
+  `BALANCE.combat.dropInMs`, `droppingIn` in `src/systems/combat.js`): for 0.42 s after it comes, the length of its
+  entrance on screen, no strike reaches it (the click does nothing and spends no quarter second); the hero's own swings,
+  750 ms apart at the quickest, never wait for it, so idle play, the offline replay, the Titan and the clan boss are
+  as they were. The damage cap above held in real fights, but where a strike fells a monster the next stood ready at
+  once, so the clicks set the pace: on an easy stage or dungeon an auto-clicker felled 3.7–4.8 times an idle hero's
+  monsters (dungeon clears 3.9–4.4 times, so fragments), a hand at two clicks a second half that. The genre waits
+  between monsters (Melvor Idle three seconds after a kill, upgrades taking it to a quarter; Clicker Heroes about half
+  one). Measured on simulated heroes at best stages 60–500, farming and in two dungeons each, five rules: the drop-in
+  leaves an auto-clicker 1.9–2.4 times an idle hero there (a new hero's slower swing, 2.9), the same as a hand at two
+  clicks a second; real fights, gold, pushing and the first hour unchanged. A whole swing's wait after a strike's kill
+  (1.5–1.6 times) and longer drop-ins (0.6 s and up) left hands behind the macro, and in a hard dungeon a hand at two
+  clicks a second below an idle hero (6.5 clears against 9); 0.42 s is the longest a hand at two a second keeps up with.
 - **The chain** (21 October 2026, gone the same day): five numbered points over the fight every 20–30 s, struck in
   order within 4 s for two kills' gold and, within 2 s, a 15-s rally of +20% attack speed, the owner's answer to
   macros clicking the monster. It got in the strikes' way (its points covered the monster) and was moved off it;

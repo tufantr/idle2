@@ -131,6 +131,16 @@ export const BALANCE = {
         comboDmgPerStack: 0.01,
         comboMax: 10,
         comboDecayAfterMs: 1500,
+        // A new monster drops in (its entrance on screen, src/ui/scene.js 'spawn') and no strike reaches it until it has
+        // landed (the owner, October 2026: an auto-clicker farmed easy stages and dungeons four to five times as fast as
+        // an idle hero, for a strike felled a monster there and the next stood ready at once, so the clicks, not the
+        // hero, set the pace). The genre's fights wait between monsters (Melvor Idle three seconds, Clicker Heroes about
+        // half one); here only strikes wait, as his own swings come 750 ms apart at the quickest. Measured on simulated
+        // heroes at stages 60-500 and in dungeons: an auto-clicker on an easy stage or dungeon now 1.9-2.4 times an idle
+        // hero (3.7-4.8 before), the same as a hand at two clicks a second (it had half); real fights, gold, pushing and
+        // idle play as they were. A longer wait (0.6 s and up, or a whole swing after a strike's kill) left hands behind
+        // the macro and, in a hard dungeon, below an idle hero.
+        dropInMs: 420,
         deathHpFraction: 0.5,
         // Auto-eat eats for a blow that would fell the hero only while the run climbs: on the ladder, within this
         // long of its last new best stage (combat.stallMs; dungeons and the Titan always). Held at a wall, he

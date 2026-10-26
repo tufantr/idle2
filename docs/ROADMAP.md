@@ -1398,6 +1398,10 @@ Keeping it running:
       as fast. Level 1 is 20 attacks (was 30), so active clans keep the pace they had. Each member sees the boss in their
       own hits; the week's board shows shares, and the members' table drops the damage per attack. The rule is behind
       the Clan's "?"; `tools/clanpower.mjs` checks it
+- [x] **A new monster drops in** (the owner's question on auto-clickers, 27 October 2026; DESIGN "Clicks and combo"): for
+      0.42 s, its entrance on screen, no strike reaches it, so on easy stages and in easy dungeons an auto-clicker fells
+      about twice an idle hero's monsters instead of four to five times, the same as a hand at two clicks a second; the
+      hero's own swings never wait, and real fights, idle play, the Titan and the clan boss are as they were
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

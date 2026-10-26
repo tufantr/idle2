@@ -65,6 +65,18 @@ export function spawnEnemy(game) {
     c.playerTimer = 0;
     c.enemyTimer = 0;
     c.bossTimeLeft = c.enemy.boss ? (c.enemy.timeLimit || BALANCE.combat.bossTimeMs) : 0;
+    c.enemyAt = game.now;   // it drops in first (droppingIn)
+}
+
+/**
+ * Is the monster in front of him still dropping in (BALANCE.combat.dropInMs, its entrance on screen)? No strike reaches it
+ * until it has landed; his own swings, 750 ms apart at the quickest, never wait for it. On the stages and in a dungeon
+ * only: the Titan and the clan's boss are one fight each. A time before it came (the clock turned back) has it landed.
+ */
+export function droppingIn(state, now) {
+    const c = state.combat;
+    const since = now - (c.enemyAt || 0);
+    return (c.mode === 'stages' || c.mode === 'dungeon') && !!c.enemy && since >= 0 && since < BALANCE.combat.dropInMs;
 }
 
 export function enterCombat(game) {
@@ -555,6 +567,7 @@ export function clickAttack(game) {
     const c = state.combat;
     if (!c.active || !c.enemy || choosingAfterClear(state)) return false;
     if (game.now - (c.lastClickAt || 0) < BALANCE.combat.strikeGapMs) return false;   // faster clicking (or an auto-clicker) adds nothing
+    if (droppingIn(state, game.now)) return false;   // still dropping in: out of reach, and the quarter second isn't spent
     c.lastClickAt = game.now;
     bumpStat(game, 'strikes');   // the player's own strikes (the guide's hand leaves the monster after three)
     if (c.mode === 'clan') {   // the clan boss: every strike's time is kept; one lands only while its guard is down
