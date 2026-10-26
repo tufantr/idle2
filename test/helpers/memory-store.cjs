@@ -172,16 +172,11 @@ function createMemoryStore() {
             db.auth.set(key, r && now - r.since < windowMs ? { count: r.count + 1, since: r.since } : { count: 1, since: now });
         },
         async clearAuthFailures(key) { db.auth.delete(key); },
-        async setBossUnit(clanId, week, unit, day = 0) {
-            const b = db.bosses.find(x => x.clanId === clanId && x.week === week);
-            if (!b) return;
-            if (b.unit > 0) for (const a of db.attacks.filter(x => x.clanId === clanId && x.week === week && (x.dealt === null || x.dealt === undefined))) a.dealt = a.damage / 1000 * b.unit;
-            Object.assign(b, { unit, unitDay: day });
-        },
-        async convertBoss(clanId, week, unit, maxHp, hp, factor) {
-            const b = db.bosses.find(x => x.clanId === clanId && x.week === week && !(x.unit > 0));
+        async rescaleBoss(clanId, week, fromMaxHp, maxHp) {
+            const b = db.bosses.find(x => x.clanId === clanId && x.week === week && x.maxHp === fromMaxHp);
             if (!b) return false;
-            Object.assign(b, { unit, maxHp, hp });
+            const factor = maxHp / Math.max(1, fromMaxHp);
+            Object.assign(b, { maxHp, hp: b.hp > 0 ? Math.max(1, Math.round(b.hp * factor)) : 0 });
             for (const a of db.attacks.filter(x => x.clanId === clanId && x.week === week)) a.damage = Math.max(1, Math.round(a.damage * factor));
             return true;
         },

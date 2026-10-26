@@ -47,11 +47,6 @@ const peek = {
         if (memory) { memory.db.bosses.forEach(boss => { if (boss.hp > 0) boss.hp = 1; }); return; }
         await pool.query('UPDATE clan_bosses SET hp = 1 WHERE hp > 0');
     },
-    /** Every attack as an older server kept it: in the clan's attacks only, not as dealt. */
-    async forgetDealt() {
-        if (memory) { memory.db.attacks.forEach(a => { a.dealt = null; }); return; }
-        await pool.query('UPDATE clan_attacks SET dealt = NULL');
-    },
     /** A player's stored numbers, as an older server left them. */
     async setMetrics(username, metrics) {
         if (memory) { memory.db.users.find(u => u.username === username).metrics = JSON.stringify(metrics); return; }
@@ -67,15 +62,19 @@ const peek = {
         const { rows } = await pool.query('SELECT metrics FROM users WHERE username = $1', [username]);
         return JSON.parse(rows[0].metrics);
     },
-    /** A clan's boss this week as one from before the clan's attacks counted it: health in damage, no unit. */
-    async oldBoss(username, maxHp, hp) {
+    /** A clan's boss and attacks this week as if the boss had been made `factor` times its size (before CLAN_BOSS changed). */
+    async bossBigger(username, factor) {
         if (memory) {
             const user = memory.db.users.find(u => u.username === username);
             const clanId = memory.db.members.find(m => m.userId === user.id).clanId;
-            Object.assign(memory.db.bosses.find(b => b.clanId === clanId), { maxHp, hp, unit: 0 });
+            const boss = memory.db.bosses.find(b => b.clanId === clanId);
+            Object.assign(boss, { maxHp: Math.round(boss.maxHp * factor), hp: Math.round(boss.hp * factor) });
+            memory.db.attacks.filter(a => a.clanId === clanId).forEach(a => { a.damage = Math.round(a.damage * factor); });
             return;
         }
-        await pool.query("UPDATE clan_bosses SET max_hp = $1, hp = $2, unit = 0 WHERE clan_id = (SELECT clan_id FROM clan_members WHERE user_id = (SELECT id FROM users WHERE username = $3))", [maxHp, hp, username]);
+        const clan = '(SELECT clan_id FROM clan_members WHERE user_id = (SELECT id FROM users WHERE username = $2))';
+        await pool.query(`UPDATE clan_bosses SET max_hp = ROUND(max_hp * $1::double precision), hp = ROUND(hp * $1::double precision) WHERE clan_id = ${clan}`, [factor, username]);
+        await pool.query(`UPDATE clan_attacks SET damage = ROUND(damage * $1::double precision) WHERE clan_id = ${clan}`, [factor, username]);
     }
 };
 /** Two figures alike to a part in a thousand (the boss is kept in thousandths of an attack). */
@@ -311,22 +310,55 @@ test('clans: create, list, join, the member cap, leaving hands the clan on', asy
     assert.equal((await post('/clans/join', { clanId: bigId }, await register('one_too_many'))).status, 400, 'full at 20');
 });
 
-test('the boss is the clan\'s, counted in its attacks: level 1 is 30 plain attacks at the members\' average strength', async () => {
-    const { CLAN_BOSS } = await import('../src/core/power.js');
+test("the boss is the clan's, counted in its attacks: level 1 is CLAN_BOSS.first attacks of an average member, each seeing it in their own hits", async () => {
+    const { CLAN_BOSS, clanPowerOf } = await import('../src/core/power.js');
     const solo = await register('lone_wolf');
     const { clanId } = await (await post('/clans', { name: 'Lone Wolves', tag: 'LONE' }, solo)).json();
     assert.ok(clanId);
     await post('/save', { state: heroSave({ tokens: 3000, bestStage: 200, playtimeMs: 200 * 3600 * 1000 }) }, solo);
     const view = await (await get('/clan', solo)).json();
-    near(view.boss.maxHp, CLAN_BOSS.first * view.members[0].attackDamage, 'alone: thirty of their own attacks');
-    // a second member: the same thirty attacks for the clan, at the average of the two (not thirty more)
+    near(view.boss.maxHp, CLAN_BOSS.first * view.members[0].attackDamage, 'alone: that many of their own attacks');
+    // a second member: the same attacks for the clan (not twice as many), each member seeing them in their own hits,
+    // fewer of the deeper one's (their clan power is above one) and more of the other's
     const pal = await register('wolf_pal');
     await post('/save', { state: heroSave({ tokens: 300, bestStage: 120 }) }, pal);
     await post('/clans/join', { clanId }, pal);
-    const two = await (await get('/clan', solo)).json();
-    const average = (two.members[0].attackDamage + two.members[1].attackDamage) / 2;
-    near(two.boss.maxHp, CLAN_BOSS.first * average, 'two: thirty attacks of their average');
-    assert.deepEqual([two.boss.kills, two.boss.levels, two.banner.kills], [0, CLAN_BOSS.levels, 0]);
+    assert.deepEqual([await peek.flags('lone_wolf'), await peek.flags('wolf_pal')], [[], []]);
+    const mine = await (await get('/clan', solo)).json();
+    const theirs = await (await get('/clan', pal)).json();
+    const attackOf = (v, name) => v.members.find(m => m.username === name).attackDamage;
+    const stages = [200, 120];
+    assert.ok(clanPowerOf(200, stages) > 1 && clanPowerOf(120, stages) < 1);
+    near(mine.boss.maxHp, CLAN_BOSS.first * attackOf(mine, 'lone_wolf') / clanPowerOf(200, stages));
+    near(theirs.boss.maxHp, CLAN_BOSS.first * attackOf(theirs, 'wolf_pal') / clanPowerOf(120, stages));
+    assert.deepEqual([mine.boss.kills, mine.boss.levels, mine.banner.kills], [0, CLAN_BOSS.levels, 0]);
+});
+
+test('two members far apart share the boss by how deep they are, not by their damage, and fell it as fast together', async () => {
+    // the owner's report (October 2026): heroes a million times apart, and only the strongest member's attacks moved it
+    const { CLAN_BOSS, clanPowerOf } = await import('../src/core/power.js');
+    const deep = await register('deep_one');
+    const shallow = await register('shallow_one');
+    await post('/save', { state: heroSave({ tokens: 1e6, bestStage: 480, playtimeMs: 400 * 3600 * 1000 }) }, deep);
+    await post('/save', { state: heroSave({ tokens: 20, bestStage: 30 }) }, shallow);
+    assert.deepEqual([await peek.flags('deep_one'), await peek.flags('shallow_one')], [[], []]);
+    const { clanId } = await (await post('/clans', { name: 'Far Apart', tag: 'FAR' }, deep)).json();
+    await post('/clans/join', { clanId }, shallow);
+    const view = await (await get('/clan', deep)).json();
+    const attackOf = name => view.members.find(m => m.username === name).attackDamage;
+    assert.ok(attackOf('deep_one') > 1000 * attackOf('shallow_one'), 'their damage is thousands of times apart');
+    const a = await (await post('/clan/attack', { strikes: [], ms: 30000 }, deep)).json();
+    const b = await (await post('/clan/attack', { strikes: [], ms: 30000 }, shallow)).json();
+    const [strong, weak] = [clanPowerOf(480, [480, 30]), clanPowerOf(30, [480, 30])];
+    near(strong / weak, 4, 'sixteen times as deep: four times as much');
+    near(1 - a.hp / a.maxHp, strong / CLAN_BOSS.first, 'the deeper one: their power\'s share of one attack');
+    near(1 - b.hp / b.maxHp, (strong + weak) / CLAN_BOSS.first, 'together, two attacks: as fast as two average members');
+    near(a.damage, attackOf('deep_one'), 'each sees their own damage');
+    near(b.damage, attackOf('shallow_one'));
+    const board = (await (await get('/clan', shallow)).json()).board;
+    assert.deepEqual(board.map(r => r.username), ['deep_one', 'shallow_one']);
+    near(board[0].share, 0.8);
+    near(board[1].share, 0.2);
 });
 
 test('the clan boss: damage comes from the stored save, three attacks a day, and a kill raises the banner of every member, fought or not', async () => {
@@ -345,7 +377,8 @@ test('the clan boss: damage comes from the stored save, three attacks a day, and
     const strong = view.members.find(m => m.username === 'striker_a').attackDamage;
     const weak = view.members.find(m => m.username === 'striker_b').attackDamage;
     assert.ok(strong > weak, 'tokens show up in the server-computed damage');
-    near(view.boss.maxHp, 30 * (strong + weak) / 2);
+    const { CLAN_BOSS, clanPowerOf } = await import('../src/core/power.js');
+    near(view.boss.maxHp, CLAN_BOSS.first * strong / clanPowerOf(60, [60, 1]), 'in the striker\'s own hits');
 
     const hit = await (await post('/clan/attack', { damage: 1e15 }, a)).json();
     near(hit.damage, strong, 'a damage number sent by the client is ignored');
@@ -448,8 +481,10 @@ test('an absurd save cannot break its clan', async () => {
     assert.ok(Number.isFinite(data.boss.maxHp) && data.boss.maxHp > 0, `boss HP ${data.boss.maxHp}`);
     const hit = await post('/clan/attack', {}, giant);
     assert.equal(hit.status, 200);
-    const dealt = (await hit.json()).damage;
-    assert.ok(Number.isFinite(dealt) && dealt <= data.boss.maxHp * 0.011, 'flagged: a sliver of the boss');
+    const answer = await hit.json();
+    assert.ok(Number.isFinite(answer.damage) && answer.damage <= answer.maxHp * 0.011, 'flagged: a sliver of the boss');
+    const seen = (await (await get('/clan', owner)).json()).boss;
+    assert.ok(data.boss.hp - seen.hp <= data.boss.maxHp * 0.011, 'and the owner sees no more of it gone');
     // The owner can remove them.
     assert.equal((await post('/clan/kick', { username: 'giant_owner' }, giant)).status, 409, 'only the owner removes members (409: a 403 would log the player out)');
     assert.equal((await post('/clan/kick', { username: 'giant' }, owner)).status, 200);
@@ -524,19 +559,21 @@ test('password guessing stops after ten tries per name, and one address makes on
     assert.equal((await post('/register', { username: 'farm_4', password: 'correct horse', email: 'farm_4@example.test' }, null, farm)).status, 200, 'the next day, another');
 });
 
-test("a member who leaves changes the clan's average, not the boss's health in attacks", async () => {
+test("a member who leaves changes the clan's power, not the boss's health in attacks", async () => {
+    const { CLAN_BOSS } = await import('../src/core/power.js');
     const owner = await register('honest_owner');
     const strong = await register('drive_by');
     await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, owner);
     await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, strong);
     const { clanId } = await (await post('/clans', { name: 'Honest Folk', tag: 'HF' }, owner)).json();
     await post('/clans/join', { clanId }, strong);
-    const sized = (await (await get('/clan', owner)).json()).boss.maxHp;
+    const sized = (await (await get('/clan', owner)).json()).boss;
     await post('/clans/leave', {}, strong);
     const after = (await (await get('/clan', owner)).json());
     const own = after.members.find(m => m.username === 'honest_owner').attackDamage;
-    assert.ok(after.boss.maxHp < sized, `${after.boss.maxHp} < ${sized}`);
-    near(after.boss.maxHp, 30 * own, 'thirty attacks of the one who stayed');
+    assert.ok(after.boss.maxHp < sized.maxHp, `alone, the owner counts as an average member again: ${after.boss.maxHp} < ${sized.maxHp}`);
+    near(after.boss.maxHp, CLAN_BOSS.first * own, 'that many attacks of the one who stayed');
+    near(after.boss.hp / after.boss.maxHp, sized.hp / sized.maxHp);
 });
 
 test('a deleted clan does not hand out fresh attacks, and a huge item id cannot freeze the server', async () => {
@@ -697,7 +734,7 @@ test('honest attacks deal their full damage; an account flagged for impossible n
     const { maxHp } = (await (await get('/clan', host)).json()).boss;
     for (let i = 0; i < 3; i++) {
         const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, forger)).json();
-        near(hit.damage, maxHp * 0.01, `attack ${i + 1}: 1% of ${maxHp}`);
+        near(hit.damage, hit.maxHp * 0.01, `attack ${i + 1}: 1% of ${hit.maxHp}`);
         assert.equal(hit.capped, true);
     }
     // the host's perfect fight: its full damage, whatever share of the boss that is
@@ -719,7 +756,8 @@ test('a felled boss comes back the next day a level stronger (x1.2), one kill a 
     const first = (await (await get('/clan', host)).json());
     const hostAttack = first.members.find(m => m.username === 'level_host').attackDamage;
     assert.equal(first.boss.level, 1);
-    near(first.boss.maxHp, 30 * hostAttack, 'Monday\'s boss: thirty attacks of the members who played this week');
+    const { CLAN_BOSS } = await import('../src/core/power.js');
+    near(first.boss.maxHp, CLAN_BOSS.first * hostAttack, 'Monday\'s boss: the host is the clan\'s average, the only one who played this week');
 
     // felled on Monday: down until midnight UTC
     await peek.bossHpToOne();
@@ -826,14 +864,14 @@ test("leaving and coming back leaves the week's boss as it was; a strong strange
     await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, stranger);
     const wary = (await (await post('/clans', { name: 'Wary Folk', tag: 'WARY' }, host)).json()).clanId;
     await post('/clans/join', { clanId: wary }, stranger);
-    const before = (await (await get('/clan', host)).json()).boss;
     const hit = await (await post('/clan/attack', { strikes: [], ms: 0 }, stranger)).json();   // given up at once: the least damage
     await post('/clans/leave', {}, stranger);
     const after = (await (await get('/clan', host)).json());
     const own = after.members.find(m => m.username === 'wary_host').attackDamage;
-    // in the clan's attacks the boss is as it was, less the stranger's hit: thirty of the host's own now
-    near(after.boss.maxHp, 30 * own);
-    near(after.boss.hp / after.boss.maxHp, (before.maxHp - hit.damage) / before.maxHp, 'the hit stays dealt');
+    // in the clan's attacks the boss is as it was, less the stranger's hit, in the host's own hits now
+    const { CLAN_BOSS } = await import('../src/core/power.js');
+    near(after.boss.maxHp, CLAN_BOSS.first * own);
+    near(after.boss.hp / after.boss.maxHp, hit.hp / hit.maxHp, 'the hit stays dealt');
 });
 
 test('a clan fight sent twice (its answer lost) is one attack: answered again, one attack spent', async () => {
@@ -876,16 +914,17 @@ test('a member left in a clan deleted under them is let out of it', async () => 
     assert.equal((await post('/clans', { name: 'Found Again', tag: 'FND' }, t)).status, 200, 'free to start another');
 });
 
-test("a boss from before the clan's attacks counted it moves to them once, with the share of its health it had left", async () => {
+test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {
+    const { CLAN_BOSS } = await import('../src/core/power.js');
     const t = await register('patient_slayer');
     await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
     await post('/clans', { name: 'Patient Ones', tag: 'PAT' }, t);
-    await get('/clan', t);
-    await peek.oldBoss('patient_slayer', 1_000_000, 400_000);   // 40% left, in damage
-    const moved = (await (await get('/clan', t)).json());
-    const attack = moved.members[0].attackDamage;
-    near(moved.boss.maxHp, 30 * attack);
-    near(moved.boss.hp, 0.4 * moved.boss.maxHp);
+    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, t)).json();
+    await peek.bossBigger('patient_slayer', 1.5);   // as a level 1 of thirty attacks was, before 26 October 2026
+    const moved = await (await get('/clan', t)).json();
+    near(moved.boss.maxHp, CLAN_BOSS.first * moved.members[0].attackDamage, 'its size now');
+    near(moved.boss.hp / moved.boss.maxHp, hit.hp / hit.maxHp, 'as far down as it was');
+    near(moved.board[0].damage, hit.damage, 'the attack scaled with it');
     const again = (await (await get('/clan', t)).json()).boss;
     near(again.hp, moved.boss.hp, 'once');
 });
@@ -926,7 +965,7 @@ test("this week's board counts from where the player stood when the week began, 
     assert.equal(board.me.value, 5, 'five stages this week, not 204');
 });
 
-test("the boss is sized from each member's attack at its best this week (a weak save just before Monday doesn't shrink it)", async () => {
+test("the boss is shown in the member's attack at its best this week (a weak save just before Monday doesn't shrink it)", async () => {
     const t = await register('sly_sizer');
     await post('/save', { state: heroSave({ tokens: 900, bestStage: 120 }) }, t);
     const { plainAttack } = await import('../src/core/power.js');
@@ -935,7 +974,8 @@ test("the boss is sized from each member's attack at its best this week (a weak 
     await post('/clans', { name: 'Sly Ones', tag: 'SLY' }, t);
     const view = await (await get('/clan', t)).json();
     near(view.members[0].attackDamage, strong, 'the member\'s attack is their best of the week');
-    near(view.boss.maxHp, 30 * strong);
+    const { CLAN_BOSS } = await import('../src/core/power.js');
+    near(view.boss.maxHp, CLAN_BOSS.first * strong);
 });
 
 test("a clan attack is the hero's best of the past week, wherever in a run it is made (the owner's report: a run's end hit 7x harder)", async () => {
@@ -964,48 +1004,32 @@ test("a clan attack is the hero's best of the past week, wherever in a run it is
     assert.equal(later.attackScale, 1);
 });
 
-test("each day the boss is sized again from the members' best attacks; what was dealt stays dealt, on the board too", async () => {
+test("an attack counts the fight, not how far the hero grew that day: the boss follows the hero's figures, the board keeps shares", async () => {
+    // until 26 October 2026 the boss was sized at the day's first look, and a hero who grew through the day felled a level in one attack
     toMonday(3);
+    const { CLAN_BOSS } = await import('../src/core/power.js');
     const grower = await register('fast_grower');
     await post('/clans', { name: 'Fast Growers', tag: 'GROW' }, grower);
     await post('/save', { state: heroSave({ tokens: 200, bestStage: 100 }) }, grower);
     const monday = await (await get('/clan', grower)).json();
     const weak = monday.members[0].attackDamage;
-    near(monday.boss.maxHp, 30 * weak);
+    near(monday.boss.maxHp, CLAN_BOSS.first * weak);
     const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, grower)).json();
     near(hit.damage, weak);
-    // stronger the same day: the boss stays as it was until the day is over
+    near(hit.hp / hit.maxHp, 1 - 1 / CLAN_BOSS.first, 'a whole fight without a strike or a potion: one of its attacks');
+    // stronger the same day (a run's end): the boss is as far down, in the bigger figures of the hero he is now
     await post('/save', { state: heroSave({ tokens: 200, bestStage: 100, camp: { whetstone: 30 } }) }, grower);
     const evening = await (await get('/clan', grower)).json();
-    near(evening.boss.maxHp, 30 * weak, 'sized once a day');
     const strong = evening.members[0].attackDamage;
     assert.ok(strong > 3 * weak, `${strong} vs ${weak}`);
-    // the next day: thirty of the attacks the clan has now, as far down as it was, and Monday's attack as it was dealt
-    clock += DAY_MS;
-    const tuesday = await (await get('/clan', grower)).json();
-    near(tuesday.boss.maxHp, 30 * strong);
-    near(tuesday.boss.hp / tuesday.boss.maxHp, hit.hp / hit.maxHp, 'what was dealt stays dealt');
-    near(tuesday.board[0].damage, hit.damage, 'the board keeps the damage as it was dealt');
+    near(evening.boss.maxHp, CLAN_BOSS.first * strong);
+    near(evening.boss.hp / evening.boss.maxHp, hit.hp / hit.maxHp, 'what was dealt stays dealt');
     const second = await (await post('/clan/attack', { strikes: [], ms: 30000 }, grower)).json();
-    near(second.damage, strong);
-    const board = (await (await get('/clan', grower)).json()).board;
-    near(board[0].damage, hit.damage + second.damage);
-    assert.equal(board[0].attacks, 2);
-});
-
-test('attacks from before the board kept them as dealt still show as they did when the boss is sized again', async () => {
-    toMonday(5);
-    const vet = await register('board_vet');
-    await post('/clans', { name: 'Board Vets', tag: 'VET' }, vet);
-    await post('/save', { state: heroSave({ tokens: 150, bestStage: 90 }) }, vet);
-    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, vet)).json();
-    await peek.forgetDealt();
-    near((await (await get('/clan', vet)).json()).board[0].damage, hit.damage, 'shown in the unit, as before');
-    await post('/save', { state: heroSave({ tokens: 150, bestStage: 90, camp: { whetstone: 30 } }) }, vet);
+    near(second.damage, strong, 'it hits as the stronger hero');
+    near(second.hp / second.maxHp, 1 - 2 / CLAN_BOSS.first, 'and counts one attack, as the first did');
     clock += DAY_MS;
-    const view = await (await get('/clan', vet)).json();
-    assert.ok(view.members[0].attackDamage > 3 * hit.damage, 'the boss is sized from a stronger hero now');
-    near(view.board[0].damage, hit.damage, 'and the old attack still shows what it dealt');
+    const board = (await (await get('/clan', grower)).json()).board;
+    assert.deepEqual([board[0].share, board[0].attacks], [1, 2]);
 });
 
 test("a save flagged for impossible numbers adds nothing to the hero's best of the week", async () => {

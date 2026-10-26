@@ -1391,6 +1391,13 @@ Keeping it running:
       from Saturday 00:00 UTC to the Monday reset: two fights for each member who was in the clan when the week began,
       the deepest counting as depth, a clan's best 15 together. Crowns for last week's top three, and the clan's best
       week. Checked in a browser with the server's clock moved: asleep, awake and fought, and the crowns the next Monday
+- [x] **Clan power** (the owner's report, 26 October 2026: only the strongest member's attacks moved the clan boss;
+      DESIGN §3.18): an attack counts how it was fought times the member's clan power, from their best stage against
+      the clan's (the square root, between half and double, the members averaging one), so a stage-1,000 hero beside a
+      stage-200 one deals about 69% of the damage instead of all of it, and a clan that fights together fells the boss
+      as fast. Level 1 is 20 attacks (was 30), so active clans keep the pace they had. Each member sees the boss in their
+      own hits; the week's board shows shares, and the members' table drops the damage per attack. The rule is behind
+      the Clan's "?"; `tools/clanpower.mjs` checks it
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

@@ -999,27 +999,37 @@ with the game's own stat code; the client never submits damage or scores.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
-  Its unit is the clan's average plain attack (the 30-s fight without a strike or a potion) of the members who
-  aren't flagged and have played (uploaded) in the past week, each at its best of the week and never more than their
-  best stage allows; level 1 takes `CLAN_BOSS.first` (30) of them, kept in thousandths of the unit
-  (`clanBossHealth`, `src/data/social.js`), and an attack counts its damage over the unit, so a stronger member's
-  counts for more. Members joining, leaving or removed move the unit (`resizeBoss`), never the boss's health in
-  attacks, so the more members fight the sooner it falls, and a player alone gets little past level 1. The unit is
-  measured again at each UTC day's first look (`unit_day`, `currentBoss`; October 2026, after a boss sized on
-  Monday morning fell to one attack that evening): what was dealt stays dealt, in attacks, while the boss keeps up
-  with a clan that grows through the week. The answers give health and damage back as damage, in the unit, for the
-  screen; the week's board shows each attack as it was dealt (`dealt`), so a boss sized again leaves it alone
-  (attacks from before were kept at the unit they were shown in). A boss of the week it went live (counted in
-  damage, unit 0) moves once to the same share of its health, its attacks scaled with it. The ten lands' rulers take
-  turns as the boss, one an ISO week (`clanBossFor`, `src/data/social.js`).
+  Level 1 takes `CLAN_BOSS.first` (20) attacks of an average member, kept in thousandths of an attack
+  (`clanBossHealth`, `src/data/social.js`). **An attack counts how it was fought times the member's clan power**
+  (26 October 2026, the owner's report that only the strongest member's attacks moved it; the owner asked that a
+  member's depth still count): the fight's damage over the hero's own plain attack at his best (the same 30-s fight
+  without a strike or a potion, so 1 for a plain fight, more with strikes and the potion, less for one given up),
+  times `clanPowerOf` (`CLAN_POWER`): the square root of the member's best stage over the clan's geometric mean, held
+  between ½ and 2, scaled so the members who count (not flagged, played (uploaded) this past week) average exactly 1.
+  Four times as deep counts twice as much, and nobody more than four times another; the best stage is the measure
+  because it never falls at a prestige and the plausibility checks watch it, where damage is 10¹³ apart between
+  stages 200 and 1,000. Mean 1 makes a clan whose members all fight fell the boss as fast whoever is strong
+  (`tools/clanpower.mjs` checks it on 20,000 random clans); a clan carried by one member slows down, which is the
+  point. Before, an attack counted its damage over the members' average plain attack, sized at each UTC day's first
+  look: heroes 10⁶ apart left one member all the damage (weak members, lowering the average, made it worse), and a
+  hero who grew through the day counted that growth too, so the week before, most levels fell to one attack. Members
+  joining or leaving change the powers, never the boss's health in attacks. Each member sees the boss in their own
+  figures: its thousandths times their best attack over their power, so their hits take as much of its bar as they
+  count (`asDamage`); the board shows each member's share of the week's attacks. A boss made at another size for its
+  level (level 1 was 30) moves to its size once, the same share of it left and its week's attacks scaled with it
+  (`rescaleBoss`). The ten lands' rulers take turns as the boss, one an ISO week (`clanBossFor`, `src/data/social.js`).
 - **Levels: one kill a day** (October 2026, the owner's design, after a boss sized on Monday morning fell
   that evening: heroes grew 5 to 80 times in that day). A felled boss stays down until the next UTC
   midnight, then comes back as the next level with a fifth more health (`CLAN_BOSS.growth`, ×1.2; it was ×2, and
   level 7 had 64 times level 1's health, beyond any clan: the owner asked that twenty members who use all their
   attacks fell all seven), full; at most seven a week. One not felled stays as it is, damage and all; Monday brings
-  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack,
-  with Combat Potion I ×2.4, IV ×4.8; with every member's three attacks a day and the unused kept, 20 members fell
-  all seven even watching, 10 five (seven with a potion), 5 three, 2 one, and one alone none without a potion.
+  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack, and
+  with strikes Combat Potion I ×2.4, IV ×4.8, VI ×6.4. With every member's three attacks a day and the unused kept
+  (`tools/clanpower.mjs`): just watching, 20 members fell all seven, 10 six, 5 three, 2 one, one alone one; striking,
+  10 seven, 5 four, 2 two; with Potion IV, 3 seven, 2 five, alone three; with VI, 2 six, alone four. Level 1 was 30
+  until 26 October 2026: counted by the fight alone, an attack no longer carries the hero's growth through the day,
+  and the owner asked that the boss still fall about as fast (the two active clans had felled six levels each the week
+  before; at 20, two members who strike with Potion V or VI and use their attacks fell six).
 - **The clan banner** (the owner: clearing the clan's bosses should make its members stronger, every member, fought
   or not, so a clan sees to its fighters; no crate). Each level felled raises it, `CLAN_BANNER` ×1.5, 1.75 … 3 at
   seven, on attack, defence and health, until the week ends; Monday starts it again. Every save, load, clan look and
@@ -1031,7 +1041,7 @@ with the game's own stat code; the client never submits damage or scores.
 - **The week's ranking** (October 2026, the owner's eighth boss, with the divisions it was refined into; `ENDLESS`,
   `CLAN_DIVISIONS` in `src/data/social.js`, `computeRanking` and `endlessAttack` in `api/index.js`). Clans are put
   in divisions by the levels of the week's boss they felled (Champion at 7, Gold 5–6, Silver 3–4, Bronze below), so
-  clans of a like size and activity meet (the boss is sized to each clan's own average, so kills mostly count who
+  clans of a like size and activity meet (the boss is counted in each clan's own attacks, so kills mostly count who
   shows up), and ranked inside each by **the Endless Hydra**: an eighth boss whose heads grow back, so it never falls,
   awake for every clan from Saturday 00:00 UTC to the Monday reset (a 48-hour window, every time zone gets a go; the
   owner's first idea, after the seventh kill, would have opened on Sunday at the earliest, one kill a day). Each member
@@ -1068,8 +1078,7 @@ with the game's own stat code; the client never submits damage or scores.
   best over his plain attack now (`clanAttackScale`, never below 1). The camp is packed up at every prestige and
   grows through a run, so the same hero hit seven times harder at a run's end than just after a prestige: the owner
   saw another member deal 24 times their damage (October 2026) and asked that the time of an attack not matter. The fight on
-  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`), and the members' table shows each
-  one's best. Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
+  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`). Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real

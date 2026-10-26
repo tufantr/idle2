@@ -441,26 +441,16 @@ async function resizeBoss(clanId, week, maxHp) {
 }
 
 /**
- * The unit the week's boss is counted in: the members' average best attack, as the clan is now (on `day`, UTC days
- * since 1970). Attacks the board shows in the unit (from before it kept them as dealt) are kept as they were shown first.
+ * The week's boss at a new size for its level (`maxHp`, from `fromMaxHp`: src/data/social.js CLAN_BOSS changed): the
+ * same share of its health left, a felled one still felled, and its attacks this week scaled with it, so the board's
+ * shares and the bar agree. Once: true for the caller who moves it.
  */
-async function setBossUnit(clanId, week, unit, day = 0) {
-    await sql`
-        UPDATE clan_attacks a SET dealt = a.damage / 1000.0 * b.unit
-        FROM clan_bosses b
-        WHERE b.clan_id = ${clanId} AND b.week = ${week} AND b.unit > 0 AND a.clan_id = b.clan_id AND a.week = b.week AND a.dealt IS NULL
-    `;
-    await sql`UPDATE clan_bosses SET unit = ${unit}::double precision, unit_day = ${day}::int WHERE clan_id = ${clanId} AND week = ${week}`;
-}
-
-/**
- * A boss from before the clan's attacks counted it (unit 0) moved to them: its health as the same share of the
- * new figures, its attacks this week scaled with it (`factor`). Once: true for the caller who moves it.
- */
-async function convertBoss(clanId, week, unit, maxHp, hp, factor) {
+async function rescaleBoss(clanId, week, fromMaxHp, maxHp) {
+    const factor = maxHp / Math.max(1, fromMaxHp);
     const { rows } = await sql`
-        UPDATE clan_bosses SET unit = ${unit}, max_hp = ${maxHp}::bigint, hp = ${hp}::bigint
-        WHERE clan_id = ${clanId} AND week = ${week} AND (unit IS NULL OR unit = 0)
+        UPDATE clan_bosses SET max_hp = ${maxHp}::bigint,
+            hp = CASE WHEN hp > 0 THEN GREATEST(1, ROUND(hp * ${factor}::double precision))::bigint ELSE 0 END
+        WHERE clan_id = ${clanId} AND week = ${week} AND max_hp = ${fromMaxHp}::bigint
         RETURNING clan_id
     `;
     if (!rows.length) return false;
@@ -785,7 +775,7 @@ module.exports = {
     userNameOf, getSave, putSave, setOptIn, leaderboardRows,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
-    getBoss, createBoss, bossShares, resizeBoss, setBossUnit, convertBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
+    getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
     chargesNow, spendCharge, refundCharge,

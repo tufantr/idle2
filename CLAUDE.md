@@ -25,7 +25,8 @@ you can also open the local game and play it. `?dev=1&event=guild_fair` runs a w
 Balance: `node tools/simulate.mjs --hours=150 --seed=1` and `node tools/pacing.mjs`; many seeds at once with
 medians and percentiles: `node tools/batch.mjs --seeds=30 --hours=150` (add `--auto`, `--player=checkin3`,
 `--set=BALANCE.abyss.dropGrowth:1.5`; results in `runs/`, git-ignored); a new player's first minutes:
-`node tools/opening.mjs 60 3` (docs/research_notes/first-session.md, docs/research_notes/robust-and-fun/);
+`node tools/opening.mjs 60 3` (docs/research_notes/first-session.md, docs/research_notes/robust-and-fun/); the clan boss's
+balance (clan power on random clans, levels felled a week by clan size and potion): `node tools/clanpower.mjs` (DESIGN §3.18);
 food and potions in one fresh run of a saved hero (bare, food, potion, both, and why he falls):
 `node tools/supplies.mjs <save.json>` (DESIGN §3.28); what each piece of gear is worth to a saved hero (a rarity
 for another, a slot emptied): `node tools/gearbench.mjs <save.json>` (DESIGN §3.29); what every source of power is

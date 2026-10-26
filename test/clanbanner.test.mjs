@@ -17,8 +17,8 @@ const require = createRequire(import.meta.url);
 test('the banner: ×1.5 at the first kill, a quarter more each level after, three at seven', () => {
     assert.deepEqual(CLAN_BANNER, [1, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]);
     assert.equal(CLAN_BANNER.length - 1, CLAN_BOSS.levels);
-    // the boss: thirty plain attacks at level 1, a fifth more each level (thousandths of an attack, as the server keeps it)
-    assert.deepEqual([1, 2, 7].map(clanBossHealth), [30000, 36000, 89580]);
+    // the boss: twenty attacks of an average member at level 1, a fifth more each level (thousandths of an attack, as the server keeps it)
+    assert.deepEqual([1, 2, 7].map(clanBossHealth), [20000, 24000, 59720]);
 });
 
 test('the week is the server\'s: the game and the API count it alike', () => {

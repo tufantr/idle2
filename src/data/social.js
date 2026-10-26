@@ -26,13 +26,33 @@ export const CLAN_GUARD = { first: 4000, every: 6000, open: 2000, mult: 2.5 };
 // multiplies attack, defence and health (core/modifiers.js); the boards and the clan boss leave it out.
 export const CLAN_BANNER = [1, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3];
 
-// The boss counted in the clan's attacks (api/index.js): level 1 takes `first` plain attacks of the clan's
-// average strength (the 30-s fight without a strike or a potion that sizes it), each level `growth` times the
-// last, `levels` a week at most (one a day). Striking and a combat potion make an attack worth up to five
-// plain ones, so twenty members who use every attack fell all seven even if they only watch, and a player
-// alone one at most, with a strong potion (DESIGN §3.18). It was each member's own twelve attacks, twice as
-// many each level: a clan of one kept pace with a full one, and level 7 was out of everyone's reach.
-export const CLAN_BOSS = { first: 30, growth: 1.2, levels: 7 };
+// The boss counted in the clan's attacks (api/index.js): level 1 takes `first` attacks of an average member (a
+// whole 30-s fight without a strike or a potion, at clan power 1: CLAN_POWER), each level `growth` times the last,
+// `levels` a week at most (one a day). Striking and a combat potion make an attack worth up to six plain ones, so
+// twenty members who use every attack fell all seven even if they only watch, two who strike with a strong potion
+// five or six, and a player alone one to four (DESIGN §3.18). It was each member's own twelve attacks, twice as many
+// each level: a clan of one kept pace with a full one, and level 7 was out of everyone's reach. Level 1 was 30 until
+// 26 October 2026, while an attack also counted how much the hero had grown since the day began (its damage over the
+// members' average, sized at the day's first look): the active clans felled six levels a week, and 20 keeps that pace.
+export const CLAN_BOSS = { first: 20, growth: 1.2, levels: 7 };
+// A member's clan power (the owner, October 2026: heroes orders of magnitude apart, and only the strongest member's
+// attacks moved the boss): an attack counts by how far the hero has climbed, not by its raw damage. It is the square
+// root of the hero's best stage over the clan's (their geometric mean), held between CLAN_POWER.min and .max, and
+// scaled so the members average exactly one: an average member's attack is one of the boss's attacks, so a clan whose
+// members all fight fells it as fast whoever is strong (tools/clanpower.mjs checks it on random clans). A hero four times as deep counts twice
+// as much, sixteen times as deep (or more) four times; the shallowest still counts a quarter of the deepest. How the
+// fight went (strikes in the openings, the potion) multiplies it as it always did (api/index.js).
+export const CLAN_POWER = { min: 0.5, max: 2 };
+const rawPower = (stage, reference) => Math.max(CLAN_POWER.min, Math.min(CLAN_POWER.max, Math.sqrt(Math.max(1, stage) / reference)));
+/** The clan power of a hero at best stage `stage` among members at `stages` (those who count): 1 for an average member. */
+export function clanPowerOf(stage, stages) {
+    const list = (stages || []).map(Number).filter(x => Number.isFinite(x) && x >= 1);
+    if (!list.length) return 1;
+    const reference = Math.exp(list.reduce((sum, x) => sum + Math.log(x), 0) / list.length);
+    const mean = list.reduce((sum, x) => sum + rawPower(x, reference), 0) / list.length;
+    return rawPower(Number(stage) || 1, reference) / mean;
+}
+
 /** A level's health in thousandths of the clan's average plain attack (the server keeps it so, a whole number). */
 export const clanBossHealth = level => Math.round(1000 * CLAN_BOSS.first * Math.pow(CLAN_BOSS.growth, Math.max(1, level) - 1));
 
