@@ -1386,6 +1386,11 @@ Keeping it running:
       and is public since 24 October (https://impotentrage.itch.io/fantasy-idle)
 - [x] **The bonfire's time on a phone** (a tester's ask, 24 October 2026): the header's bonfire pill shows the time it
       has left there too, as the event's pill does, instead of only its bonus (still in its title, and on wider screens)
+- [x] **The week's clan ranking** (the owner's eighth boss, 25-26 October 2026; DESIGN §3.18): divisions by the levels
+      felled (Champion, Gold, Silver, Bronze), ranked inside each by the Endless Hydra, a boss that never falls, awake
+      from Saturday 00:00 UTC to the Monday reset: two fights for each member who was in the clan when the week began,
+      the deepest counting as depth, a clan's best 15 together. Crowns for last week's top three, and the clan's best
+      week. Checked in a browser with the server's clock moved: asleep, awake and fought, and the crowns the next Monday
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

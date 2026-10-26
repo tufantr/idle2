@@ -78,7 +78,8 @@ save. It needs Node 20.19+ or 22+.
 | `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not) |
 | `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected; both say the clan's banner |
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
-| `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss, board and banner; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6); the owner removes a member |
+| `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss, board and banner, its place in the week's ranking and your fights at the Endless Hydra; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6; with `endless: true` one of the 2 a week at the Hydra, at the weekend); the owner removes a member |
+| `GET /api/clans/ranking` | the week's clan ranking: every clan in its division by the levels felled, by the Hydra's depth, and last week's crowns |
 | `GET /api/rewards`, `POST /api/rewards/claim` | clan rewards paid before October 2026 (the clan banner took their place), claimed once |
 | `POST /api/gifts/claim` | the owner's gifts to a player (below), claimed by the game when a save or load says some wait |
 | `POST /api/leaderboard/consent`, `GET /api/leaderboard` | opt in or out; boards by best stage, total level, Titans or dungeon clears |

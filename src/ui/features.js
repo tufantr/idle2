@@ -11,7 +11,7 @@ import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TI
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS } from '../data/social.js';
+import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
@@ -98,7 +98,9 @@ export const FEATURES = {
         points: [`Each week the clan fights one shared boss, a land's ruler. Its first level takes about ${CLAN_BOSS.first} attacks of your members' average strength, measured again each day; each time it falls it comes back the next day (midnight UTC) a level stronger (×${CLAN_BOSS.growth}), ${CLAN_BOSS.levels} levels at most. Monday brings a new one.`,
             `An attack is a ${CLAN_ATTACK_SECONDS} second fight against it, by your hero at his best of the past seven days, so it doesn't matter where in a run you attack. Strike when its guard drops: only then do strikes land, ${CLAN_GUARD.mult} times as hard. Your combat potion counts.`,
             `${CLAN_ATTACKS_PER_DAY} attacks a day; those not used wait, up to ${CLAN_ATTACK_BANK}. The server works out the damage from your saved hero.`,
-            `Each level felled raises the clan banner for every member, fought or not, until the week ends: ×${CLAN_BANNER[1]} attack, defence and health at the first, ×${CLAN_BANNER[CLAN_BANNER.length - 1]} at the last. The more members fight, the further it goes.`] },
+            `Each level felled raises the clan banner for every member, fought or not, until the week ends: ×${CLAN_BANNER[1]} attack, defence and health at the first, ×${CLAN_BANNER[CLAN_BANNER.length - 1]} at the last. The more members fight, the further it goes.`,
+            `Every week the clans are ranked. The levels felled put a clan in its division (${CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below'}`).join(', ')}), and ${ENDLESS.name.replace(/^The /, 'the ')} decides inside it: awake from Saturday 00:00 UTC to the Monday reset, its heads grow back, so it never falls.`,
+            `Each member who was in the clan when the week began has ${ENDLESS.attacks} fights at it, and the deepest counts: how many of its levels the hit breaks through, each a fifth tougher than the last, so a far stronger hero goes only somewhat deeper. A clan's depth is its best ${ENDLESS.counted} members' together, and the top three of each division wear a crown through the next week.`] },
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
     camp: { name: 'Camp', art: 'camp', icon: 'mon/Magma Slime', blurb: 'Upgrades for this run, bought with gold.',
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.',

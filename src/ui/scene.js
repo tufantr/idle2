@@ -4,7 +4,7 @@
 // the `actions` callbacks.
 
 import { ZONES, zoneForStage, STAGES_PER_ZONE, isBossStage, isLordStage } from '../data/zones.js';
-import { clanBossFor } from '../data/social.js';
+import { clanBossFor, ENDLESS, endlessDepth, endlessDamageAt } from '../data/social.js';
 import { clanGuardOpen } from '../systems/clanfight.js';
 import { dungeonById, dungeonAt, dungeonTierInfo } from '../data/dungeons.js';
 import { RARITIES, PITY_MARKS } from '../data/items.js';
@@ -477,7 +477,7 @@ export function createScene(root, actions) {
     function sceneFor(state) {
         const c = state.combat;
         if (c.mode === 'titan') return 'titan';
-        if (c.mode === 'clan') return landScene(ZONES.find(z => z.id === clanBossFor(state.clanFight?.week).zone) || ZONES[0]);   // the week's boss on its own land
+        if (c.mode === 'clan') return landScene(ZONES.find(z => z.id === (state.clanFight?.endless ? ENDLESS.zone : clanBossFor(state.clanFight?.week).zone)) || ZONES[0]);   // the week's boss on its own land (the Endless Hydra in the Abyss)
         if (c.mode === 'dungeon') return DUNGEON_ART[c.dungeon?.id] || 'dungeon';
         return landScene(zoneForStage(c.stage));
     }
@@ -607,7 +607,7 @@ export function createScene(root, actions) {
             actions.sound?.('rare');
         }
         if (enemy.boss && c.active) {
-            const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : enemy.lord ? `A Lord · stage ${c.stage}` : `Boss · stage ${c.stage}`;
+            const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.endless ? 'The week\'s ranking' : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : enemy.lord ? `A Lord · stage ${c.stage}` : `Boss · stage ${c.stage}`;
             const due = enemy.lord && c.mode === 'stages' && enemy.stage > (c.lordsBeaten || 0) ? '<span>Its first fall leaves a sure piece of top gear</span>' : '';
             banner(`<small>${label}</small><strong>${esc(bossName(enemy.name))}</strong>${due}`, 'boss', due ? 2800 : 2200);
             move(el.battle, 'shake');
@@ -682,7 +682,7 @@ export function createScene(root, actions) {
                 setText(el.stage, `Level ${titanLevel(state)}`);
             } else if (c.mode === 'clan') {
                 const clan = ui?.social?.clan;
-                setMarkup(el.zone, `${sprite('item/Shield/4', { scale: 0.75, cls: 'soft res-spr' })} Clan boss`);
+                setMarkup(el.zone, state.clanFight?.endless ? `${sprite(`mon/${ENDLESS.look}`, { scale: 0.75, cls: 'soft res-spr' })} ${esc(ENDLESS.name)}` : `${sprite('item/Shield/4', { scale: 0.75, cls: 'soft res-spr' })} Clan boss`);
                 setText(el.stage, clan ? `${clan.name} [${clan.tag}]` : 'This week');
             } else {
                 setMarkup(el.zone, esc(zoneForStage(c.stage).name));   // a stratum's name in the Abyss (data/strata.js)
@@ -761,10 +761,14 @@ export function createScene(root, actions) {
             lastGuard = guard;
             el.heroAtk.style.width = c.active ? `${Math.min(100, c.playerTimer / d.attackInterval * 100)}%` : '0%';
 
-            const foePct = Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));
+            // the Endless Hydra never falls: its bar is the level the hits are breaking through, full again at each new one
+            const depth = enemy.endless ? endlessDepth(state.clanFight?.dealt || 0) : 0;
+            const level = Math.floor(depth);
+            const foePct = enemy.endless ? Math.max(0, Math.min(100, (1 - ((state.clanFight?.dealt || 0) - endlessDamageAt(level)) / Math.max(1, endlessDamageAt(level + 1) - endlessDamageAt(level))) * 100))
+                : Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));
             el.foeBar.style.width = `${foePct}%`;
             el.foeTrail.style.width = `${trailFor(trails.foe, foePct, now, dt)}%`;
-            setText(el.foeText, `${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}`);
+            setText(el.foeText, enemy.endless ? `Depth ${depth.toFixed(1)}` : `${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}`);
             el.foeAtk.style.width = c.active && enemy === c.enemy ? `${Math.min(100, c.enemyTimer / enemy.interval * 100)}%` : '0%';
 
             const timed = enemy.boss && c.active && enemy === c.enemy;
@@ -853,7 +857,8 @@ export function createScene(root, actions) {
                     break;
                 }
                 case 'clanFight':   // over: the server reckons the attack, and its card follows
-                    banner(`<small>Clan boss</small><strong>${ev.reason === 'felled' ? 'It staggers!' : ev.reason === 'left' ? 'You step back' : 'Time is up'}</strong><span>To the clan…</span>`, ev.reason === 'felled' ? 'victory' : 'boss', 2400);
+                    if (ev.endless) banner(`<small>${esc(ENDLESS.name)}</small><strong>Depth ${endlessDepth(ev.dealt).toFixed(1)}</strong><span>To the clan…</span>`, 'boss', 2400);
+                    else banner(`<small>Clan boss</small><strong>${ev.reason === 'felled' ? 'It staggers!' : ev.reason === 'left' ? 'You step back' : 'Time is up'}</strong><span>To the clan…</span>`, ev.reason === 'felled' ? 'victory' : 'boss', 2400);
                     break;
                 case 'kill': {
                     const { foe } = anchor();

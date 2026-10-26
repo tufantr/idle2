@@ -939,6 +939,23 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .clan-pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(251, 191, 36, 0.55); background: rgba(0, 0, 0, 0.35); }
 .clan-pip.on { background: radial-gradient(circle at 40% 35%, #fde68a, #d97706); box-shadow: 0 0 6px rgba(251, 191, 36, 0.7); }
 .status-pill.clan-next { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--heading); }   /* a felled boss: when the next comes */
+/* the week's ranking (data/social.js ENDLESS, CLAN_DIVISIONS): the Endless Hydra's card, the divisions, the crowns */
+.clan-boss.endless { border-color: rgba(167, 139, 250, 0.45); }
+.clan-boss.endless .clan-boss-face { background: radial-gradient(circle at 50% 60%, rgba(139, 92, 246, 0.3), rgba(0, 0, 0, 0.35) 70%); border-color: rgba(167, 139, 250, 0.5); }
+.clan-standing { color: var(--text-muted); }
+.clan-standing b { color: var(--heading); }
+.clan-division { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; border: 1px solid; }
+.clan-division.div-champion { color: #e9d5ff; border-color: rgba(192, 132, 252, 0.7); background: rgba(147, 51, 234, 0.18); }
+.clan-division.div-gold { color: #fde68a; border-color: rgba(251, 191, 36, 0.65); background: rgba(217, 119, 6, 0.16); }
+.clan-division.div-silver { color: #e5e7eb; border-color: rgba(203, 213, 225, 0.6); background: rgba(148, 163, 184, 0.14); }
+.clan-division.div-bronze { color: #fed7aa; border-color: rgba(234, 140, 80, 0.6); background: rgba(180, 83, 9, 0.16); }
+.clan-ranking .division-row td { padding-top: 0.7rem; border-bottom: none; }
+.clan-ranking td.clan-name { width: 100%; white-space: normal; overflow-wrap: anywhere; }   /* the name takes what is left, so the numbers fit a phone */
+.clan-crown { display: inline-flex; vertical-align: middle; margin-right: 0.2rem; }
+.clan-crown.rank-2 .spr { filter: grayscale(0.85) brightness(1.15); }   /* silver */
+.clan-crown.rank-3 .spr { filter: sepia(0.8) hue-rotate(-25deg) saturate(1.4) brightness(0.85); }   /* bronze */
+.last-week { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; margin-top: 0.5rem; }
+.last-crowns { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .clan-refill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-muted); }   /* when the next attacks come */
 .clan-level { display: inline-block; margin-left: 0.3rem; padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid rgba(251, 191, 36, 0.5); color: var(--heading); font-size: 0.72rem; vertical-align: middle; }
 /* the clan's banner (data/social.js CLAN_BANNER): on the boss's panel, and beside the food under the hero */

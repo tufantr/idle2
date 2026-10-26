@@ -34,7 +34,7 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE, clanBossFor, CLAN_BANNER } from '../data/social.js';
+import { DISCORD_INVITE, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
@@ -2247,7 +2247,7 @@ export function renderClan(game, ui, cloud) {
     // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
-        const rows = (social.clans || []).map(c => `<tr><td class="wrap"><b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
@@ -2271,10 +2271,12 @@ export function renderClan(game, ui, cloud) {
         const canKick = !!c.isOwner;
         const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${fmt(Number(m.attackDamage) || 0)}</td></tr>`).join('');
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
-            <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
+            <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span>${crownMark(c.crown)}</h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? clanBossPanel(game, social, boss, pct) : ''}
+            ${boss ? endlessPanel(game, social) : ''}
             ${boss && seen(game.state, 'potions') ? potionPicker(game, 'combat', 'clan-potion') : ''}
+            ${clanStandings(social)}
             <div class="two-col">
                 <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table clan-board"><thead><tr><th>#</th><th>Member</th><th>Damage</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
                 <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table clan-members"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th>Per attack</th></tr></thead><tbody>${members}</tbody></table></div></div>
@@ -2339,6 +2341,63 @@ function clanBossPanel(game, social, boss, pct) {
                 <span class="clan-attacks" title="${waiting} attack${waiting === 1 ? '' : 's'} waiting: ${perDay} more come each day, up to ${bank}">${pips}</span>${refill}</div>
         </div>
     </div>`;
+}
+
+/** A crown for a clan in last week's top three of its division (data/social.js CLAN_DIVISIONS), or nothing. */
+function crownMark(crown) {
+    if (!crown) return '';
+    const division = CLAN_DIVISIONS.find(d => d.id === crown.division);
+    const place = ['', '1st', '2nd', '3rd'][crown.rank] || `#${crown.rank}`;
+    return `<span class="clan-crown rank-${Number(crown.rank) || 0}" title="${esc(`${place} in the ${division?.name || crown.division} division last week`)}">${sprite('crown', { scale: 0.5, cls: 'soft res-spr' })}</span>`;
+}
+
+/**
+ * The Endless Hydra (data/social.js ENDLESS), the week's ranking: awake at the weekend, two fights for each member who
+ * was in the clan when the week began, the deepest counting; asleep, when it wakes. Beside it, the clan's place in its
+ * division (the levels of the week's boss it felled) and its best week. The rules are behind the Clan's "?".
+ */
+function endlessPanel(game, social) {
+    const e = social.endless;
+    const standing = social.standing;
+    if (!e || !standing) return '';
+    const since = Math.max(0, Date.now() - (Number(social.bossAt) || Date.now()));
+    const opensMs = Math.max(0, (Number(e.opensInMs) || 0) - since);
+    const open = !!e.open || (Number(e.opensInMs) > 0 && opensMs === 0);
+    const endsMs = Math.max(0, (Number(e.endsInMs) || 0) - since);
+    const left = Math.max(0, Number(e.attacksLeft) || 0);
+    const fighting = game.state.combat.mode === 'clan';
+    const pending = !!game.state.clanResult;
+    const ready = open && e.eligible && left > 0 && !social.attacking && !fighting && !pending && game.state.combat.mode !== 'titan';
+    const pips = Array.from({ length: Number(e.attacks) || 2 }, (_, i) => `<i class="clan-pip${i < left ? ' on' : ''}"></i>`).join('');
+    const action = !open ? `<span class="status-pill clan-next">${glyph('time')} Wakes in ${duration(opensMs)}</span>`
+        : !e.eligible ? '<span class="muted small">Counts members who were in the clan when the week began: next week, you are</span>'
+        : fighting ? '<span class="status-pill fighting">Fighting now</span>'
+        : `<button class="prestige-btn" onclick="FI.clanFight(true)" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : left > 0 ? 'Fight the Hydra' : 'Both fights made'}</button>${open && e.eligible ? `<span class="clan-attacks" title="${left} fight${left === 1 ? '' : 's'} left this week: the deepest counts">${pips}</span>` : ''}`;
+    const division = CLAN_DIVISIONS.find(d => d.id === standing.division) || CLAN_DIVISIONS[CLAN_DIVISIONS.length - 1];
+    const place = standing.rank ? `<b>#${standing.rank}</b> of ${standing.of}` : 'not ranked yet';
+    const record = standing.record > standing.score ? ` · best week ${fmt(standing.record)}` : '';
+    return `<div class="clan-boss endless${ready ? ' ready' : ''}">
+        <span class="clan-boss-face">${sprite(`mon/${ENDLESS.look}`, { scale: 2, cls: 'soft', fallback: '🐉' })}</span>
+        <div class="clan-boss-text">
+            <div><b>${esc(ENDLESS.name)}</b> <span class="muted small">${open ? `the week's ranking · until the reset in ${duration(endsMs)}` : "the week's ranking · awake at the weekend"}</span></div>
+            <div class="clan-standing small"><span class="clan-division div-${esc(division.id)}">${esc(division.name)}</span> ${place}${standing.score > 0 ? ` · depth <b>${fmt(standing.score)}</b> (${standing.counted} counted)` : ''}${record}${e.best > 0 ? ` · your deepest ${Number(e.best).toFixed(1)}` : ''}</div>
+            <div class="btn-row">${action}</div>
+        </div>
+    </div>`;
+}
+
+/** The week's standings (the server's): each division's clans by the Hydra's depth, the player's clan marked; last week's crowns. */
+function clanStandings(social) {
+    const ranking = social.ranking;
+    if (!ranking) return '';
+    const medal = rank => (rank <= 3 ? `<span class="clan-crown rank-${rank}">${sprite('crown', { scale: 0.5, cls: 'soft res-spr' })}</span>` : '');
+    const divisions = (ranking.divisions || []).filter(d => d.clans.length);
+    const rows = divisions.map(d => `<tr class="division-row"><td colspan="4"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span></td></tr>`
+        + d.clans.map(c => `<tr class="${c.you ? 'you-row' : ''}"><td>${medal(c.rank)}${c.rank}</td><td class="clan-name">${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></td><td>${Number(c.kills) || 0}</td><td>${fmt(Number(c.score) || 0)}</td></tr>`).join('')).join('');
+    const last = (ranking.last?.divisions || []).map(d => `<span class="last-crowns"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span> ${d.clans.map(c => `${medal(c.rank)}<span class="${c.you ? 'up' : ''}">${esc(c.name)}</span>`).join(' ')}</span>`).join('');
+    return `<h3 class="section-title">This week's ranking</h3>
+        ${rows ? `<div class="table-wrap"><table class="data-table clan-ranking"><thead><tr><th>#</th><th>Clan</th><th>Bosses</th><th>Depth</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted small">No clan has felled a boss yet this week.</p>'}
+        ${last ? `<div class="small muted last-week">Last week: ${last}</div>` : ''}`;
 }
 
 const BOARD_METRICS = { bestStage: 'Best stage', totalLevel: 'Total level', titanKills: 'Titans', dungeonClears: 'Dungeon clears', weeklyTrial: "Week's Trial" };

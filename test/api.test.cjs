@@ -89,7 +89,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -1146,4 +1146,95 @@ test("no answer another player sees carries anyone's email", async () => {
         const text = await answer.text();
         assert.ok(!/@example\.test/.test(text), `an address in ${answer.url}`);
     }
+});
+
+test("the week's ranking: divisions by the levels felled, the Endless Hydra at the weekend, two fights and the deepest counting, crowns the next week", async () => {
+    toMonday();
+    const a1 = await register('rank_a1');
+    const a2 = await register('rank_a2');
+    const b1 = await register('rank_b1');
+    const flag = await register('rank_flag');
+    const { clanId: clanA } = await (await post('/clans', { name: 'Deep Divers', tag: 'DEEP' }, a1)).json();
+    const { clanId: clanB } = await (await post('/clans', { name: 'Hydra Hunters', tag: 'HYD' }, b1)).json();
+    await post('/clans/join', { clanId: clanA }, a2);
+    await post('/clans/join', { clanId: clanB }, flag);
+    const saves = [[a1, { tokens: 400, bestStage: 60 }], [a2, { tokens: 50, bestStage: 30 }], [b1, { tokens: 400, bestStage: 60 }], [flag, { tokens: 1e19, bestStage: 400 }]];
+    toMonday();   // a new week: all four were in their clans when it began
+    for (const [token, hero] of saves) await post('/save', { state: heroSave(hero) }, token);
+
+    // before the weekend the Hydra sleeps
+    const asleep = (await (await get('/clan', a1)).json()).endless;
+    assert.deepEqual([asleep.open, asleep.eligible, asleep.attacksLeft, asleep.attacks], [false, true, 2, 2]);
+    assert.ok(asleep.opensInMs > 4 * DAY_MS && asleep.opensInMs <= 5 * DAY_MS, `wakes in ${asleep.opensInMs} ms`);
+    const early = await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, a1);
+    assert.equal(early.status, 400);
+    assert.match((await early.json()).error, /Saturday/);
+
+    // the week's boss: clan B fells three levels (Monday to Wednesday), clan A one
+    await get('/clan', b1);
+    await peek.bossHpToOne();
+    assert.equal((await (await post('/clan/attack', {}, a1)).json()).killed, true);
+    assert.equal((await (await post('/clan/attack', {}, b1)).json()).killed, true);
+    for (let day = 2; day <= 3; day++) {
+        clock += DAY_MS;
+        await get('/clan', b1);
+        await peek.bossHpToOne();
+        assert.equal((await (await post('/clan/attack', {}, b1)).json()).killed, true, `clan B's level ${day}`);
+    }
+
+    // Saturday: awake. One who joined this week isn't counted
+    clock += 3 * DAY_MS;
+    const awake = (await (await get('/clan', a1)).json()).endless;
+    assert.deepEqual([awake.open, awake.attacksLeft], [true, 2]);
+    const late = await register('rank_late');
+    await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, late);
+    await post('/clans/join', { clanId: clanA }, late);
+    assert.equal((await (await get('/clan', late)).json()).endless.eligible, false);
+    const refused = await post('/clan/attack', { endless: true }, late);
+    assert.equal(refused.status, 400);
+    assert.match((await refused.json()).error, /when the week began/);
+
+    // two fights each, and the deepest counts; the same fight sent again is the same attack
+    const quarters = Array.from({ length: 121 }, (_, i) => i * 250);
+    const deep = await (await post('/clan/attack', { endless: true, strikes: quarters, ms: 30000, fightAt: clock }, a1)).json();
+    assert.equal(deep.endless, true);
+    assert.ok(deep.depth > 1, `depth ${deep.depth}`);
+    assert.equal(deep.attacksLeft, 1);
+    const again = await (await post('/clan/attack', { endless: true, strikes: quarters, ms: 30000, fightAt: clock }, a1)).json();
+    assert.deepEqual([again.again, again.depth, again.attacksLeft], [true, deep.depth, 1]);
+    clock += 1000;
+    const shallow = await (await post('/clan/attack', { endless: true, strikes: [], ms: 5000 }, a1)).json();
+    assert.ok(shallow.depth < deep.depth, `${shallow.depth} < ${deep.depth}`);
+    assert.deepEqual([shallow.best, shallow.attacksLeft], [deep.depth, 0], 'the deepest counts');
+    const third = await post('/clan/attack', { endless: true }, a1);
+    assert.equal(third.status, 400);
+    assert.match((await third.json()).error, /2 attacks/);
+    const a2hit = await (await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, a2)).json();
+    const b1hit = await (await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, b1)).json();
+    const flagged = await (await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, flag)).json();
+    assert.equal(flagged.counted, false, 'an account flagged for impossible numbers is left out');
+
+    // the standings: B in Silver (three levels), A in Bronze (one), each clan's depth its members' deepest together
+    const ranking = await (await get('/clans/ranking', a1)).json();
+    const division = id => ranking.divisions.find(d => d.id === id).clans;
+    assert.deepEqual(division('silver').map(c => [c.name, c.kills, c.rank, c.you]), [['Hydra Hunters', 3, 1, false]]);
+    assert.deepEqual(division('bronze').map(c => [c.name, c.kills, c.rank, c.you]), [['Deep Divers', 1, 1, true]]);
+    assert.equal(division('bronze')[0].score, Math.round((deep.depth + a2hit.depth) * 10) / 10);
+    assert.equal(division('silver')[0].score, Math.round(b1hit.depth * 10) / 10, 'the flagged member left out');
+    assert.deepEqual([division('silver')[0].counted, division('gold').length, division('champion').length], [1, 0, 0]);
+    const standing = (await (await get('/clan', a1)).json()).standing;
+    assert.deepEqual([standing.division, standing.rank, standing.of], ['bronze', 1, 1]);
+
+    // the next week: last week's top three of each division wear a crown, its best week is the clan's record, and the
+    // Hydra sleeps again
+    toMonday();
+    const listed = (await (await get('/clans?search=', a1)).json()).clans;
+    const crownOf = name => { const c = listed.find(x => x.name === name).crown; return c && [c.division, c.rank]; };
+    assert.deepEqual([crownOf('Deep Divers'), crownOf('Hydra Hunters')], [['bronze', 1], ['silver', 1]]);
+    const next = await (await get('/clan', a1)).json();
+    assert.deepEqual([next.clan.crown.division, next.clan.crown.rank], ['bronze', 1]);
+    assert.equal(next.standing.record, division('bronze')[0].score, "its best week kept");
+    assert.equal(next.endless.open, false);
+    const last = (await (await get('/clans/ranking', a1)).json()).last;
+    assert.deepEqual(last.divisions.map(d => [d.id, d.clans.map(c => c.name)]), [['silver', ['Hydra Hunters']], ['bronze', ['Deep Divers']]]);
 });

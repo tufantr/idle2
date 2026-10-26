@@ -36,6 +36,37 @@ export const CLAN_BOSS = { first: 30, growth: 1.2, levels: 7 };
 /** A level's health in thousandths of the clan's average plain attack (the server keeps it so, a whole number). */
 export const clanBossHealth = level => Math.round(1000 * CLAN_BOSS.first * Math.pow(CLAN_BOSS.growth, Math.max(1, level) - 1));
 
+// The week's clan ranking (the owner, October 2026; DESIGN §3.18). Clans are put in divisions by the levels of the
+// week's boss they felled, and ranked inside each by the Endless Hydra: an eighth boss whose heads grow back, so its
+// health never ends, awake for every clan at the weekend (Saturday 00:00 UTC, `opensOnDay` days into the ISO week,
+// to the Monday reset). Each member who was in the clan when the week began has `attacks` fights at it and the best
+// counts, as depth: how many levels deep the hit reaches into a stack of levels each a fifth tougher than the last
+// (`growth`), the first as tough as a new hero's whole fight (`base`). So a hero a thousand times stronger goes about
+// 38 levels deeper, not a thousand times as far, and the whole clan counts: its score is its best `counted` members'
+// depths together. The top three of each division wear a crown through the next week.
+export const ENDLESS = { name: 'The Endless Hydra', look: 'Abyssal Hydra', zone: 'abyss', base: 100, growth: 1.2, attacks: 2, counted: 15, opensOnDay: 5 };
+export const CLAN_DIVISIONS = [
+    { id: 'champion', name: 'Champion', min: 7 },
+    { id: 'gold', name: 'Gold', min: 5 },
+    { id: 'silver', name: 'Silver', min: 3 },
+    { id: 'bronze', name: 'Bronze', min: 0 }
+];
+/** The division of a clan that felled `kills` levels of the week's boss. */
+export const divisionOf = kills => CLAN_DIVISIONS.find(d => (Number(kills) || 0) >= d.min) || CLAN_DIVISIONS[CLAN_DIVISIONS.length - 1];
+/** The damage it takes to reach `depth` into the Endless Hydra: its first `depth` levels together. */
+export const endlessDamageAt = depth => ENDLESS.base * (Math.pow(ENDLESS.growth, Math.max(0, depth)) - 1) / (ENDLESS.growth - 1);
+/** A clan's depth from its members' deepest fights: the best ENDLESS.counted of them together (to a tenth), and how many counted. */
+export function clanDepthScore(depths) {
+    const counted = (depths || []).filter(d => Number.isFinite(d) && d > 0).sort((a, b) => b - a).slice(0, ENDLESS.counted);
+    return { score: Math.round(counted.reduce((sum, d) => sum + d, 0) * 10) / 10, counted: counted.length };
+}
+/** How deep a hit of `damage` reaches into the Endless Hydra: its whole levels and the share of the next (1 = its first level). */
+export function endlessDepth(damage) {
+    const d = Number(damage);
+    if (!(d > 0) || !Number.isFinite(d)) return 0;
+    return Math.log(1 + d * (ENDLESS.growth - 1) / ENDLESS.base) / Math.log(ENDLESS.growth);
+}
+
 /** The ISO-8601 week of a moment in UTC ('2026-W42'), as the server counts the clan's weeks. */
 export function isoWeek(ms) {
     const d = new Date(ms);

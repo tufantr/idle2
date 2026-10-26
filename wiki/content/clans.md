@@ -47,6 +47,17 @@ The clan's reward for its boss is its banner. Each level the clan fells raises i
 - It shows beside your food and potion under your hero, and on the boss's panel on the Clan tab, with what the next level would bring. A card says when it rises.
 - There are no other clan rewards: no essence or diamonds (rewards from before, still waiting, can be claimed on the Clan tab).
 
+## The week's ranking
+
+Every week the clans are ranked, and the top three of each division wear a crown through the next week, on the clan list and beside the clan's name.
+
+- **Divisions.** The levels of the week's boss a clan fells put it in its division: {{CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below that'}`).join(', ')}}. So clans of a like size and activity meet.
+- **The Endless Hydra** decides inside each division. It wakes for every clan on Saturday at 00:00 UTC and stays until the Monday reset. Its heads grow back, so it never falls.
+- **{{ENDLESS.attacks}} fights each, the deepest counts.** Every member who was in the clan when the week began gets {{ENDLESS.attacks}} fights at it, besides the {{CLAN_ATTACKS_PER_DAY}} a day at the week's boss. A fight is the same {{CLAN_ATTACK_SECONDS}}-second fight as any clan attack, strikes and potion included.
+- **Depth.** A fight counts by how many of the Hydra's levels it breaks through. Each level is a fifth tougher than the last, and the first is about a new hero's whole fight, so a hero a thousand times stronger goes about 38 levels deeper, not a thousand times as far.
+- **The clan's depth** is its best {{ENDLESS.counted}} members' together. Accounts whose saves showed impossible numbers are left out.
+- The Clan tab shows the Hydra under the week's boss, your division, place and depth, the week's table by division, last week's crowns and your clan's best week.
+
 ## Leaderboards
 
 The leaderboards are opt-in: you are only listed if you join them (on the Clan tab), and you can leave at any time. They show your username beside numbers the server works out from your cloud save:

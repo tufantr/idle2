@@ -1028,6 +1028,28 @@ with the game's own stat code; the client never submits damage or scores.
   boss's panel. The boards and the clan boss's own fight leave it out (`stableState`). Simulated (7 players with Auto,
   600 h): a clan felling one level a week climbs to 1,870 against 1,800 alone, five a week 1,900. No essence or
   diamonds for kills, last hits, taking part or the top three any more; rewards from before still claim.
+- **The week's ranking** (October 2026, the owner's eighth boss, with the divisions it was refined into; `ENDLESS`,
+  `CLAN_DIVISIONS` in `src/data/social.js`, `computeRanking` and `endlessAttack` in `api/index.js`). Clans are put
+  in divisions by the levels of the week's boss they felled (Champion at 7, Gold 5–6, Silver 3–4, Bronze below), so
+  clans of a like size and activity meet (the boss is sized to each clan's own average, so kills mostly count who
+  shows up), and ranked inside each by **the Endless Hydra**: an eighth boss whose heads grow back, so it never falls,
+  awake for every clan from Saturday 00:00 UTC to the Monday reset (a 48-hour window, every time zone gets a go; the
+  owner's first idea, after the seventh kill, would have opened on Sunday at the earliest, one kill a day). Each member
+  who was in the clan when the week began (`joined_at` before Monday 00:00 UTC: no joining a strong clan for its
+  weekend) has two fights at it, apart from the three a day, and the deepest counts. A fight is any clan attack, reckoned
+  the same way from the stored hero (`clanAttackFromSave`, capped at twice what the best stage allows), and counted as
+  **depth** (`endlessDepth`): how many levels of a stack each ×1.2 tougher than the last the damage breaks through, the
+  first as tough as a new hero's whole fight (100), so a hero 1,000 times stronger goes about 38 levels deeper, not 1,000
+  times as far (a deep hero reaches about 220). A clan's score is its best 15 members' depths together
+  (`clanDepthScore`); accounts flagged for impossible numbers are left out. The standings are worked out on request
+  (at most once a minute, cleared by an Endless attack or a kill); a finished week's are kept once (`clan_rankings`,
+  with the clan's name and tag) by the first look after it ends, and give its top three of each division a crown for
+  the next week, on the clan list and the clan's header, and the clan its best week (its record). On screen
+  (`endlessPanel`, `clanStandings` in `src/ui/render.js`): the Hydra's card under the week's boss (asleep, when it
+  wakes; awake, the fight and two pips), the clan's division, place and depth, the week's table by division and last
+  week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
+  the level being broken through and its label the depth (`src/ui/scene.js`), in the Abyss. Rewards are for show only:
+  the banner already pays for the kills, and power for a rank would make forging a save worth it.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
   (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen on the Clan tab like the Titan's on the Dungeons tab (`state.combat.mode` =

@@ -25,7 +25,7 @@ import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.
 import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, equipGain, gainStages, findGear } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
-import { CLAN_POLL_MS, clanBossFor } from './data/social.js';
+import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
@@ -1159,10 +1159,11 @@ async function sendClanResult(now = false) {
     sendingClan = true;
     try {
         // the fight's own mark goes with it: sent again after a lost answer, the server counts it once
-        const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms, at: result.at });
+        const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms, at: result.at, endless: !!result.endless });
         game.clearClanResult();
         if (answer.banner) game.setClanBanner(answer.banner);
         save(Date.now());
+        if (answer.endless) { endlessAnswered(answer); return; }
         if (ui.social.boss) Object.assign(ui.social.boss, { hp: answer.hp, maxHp: answer.maxHp, killed: !!answer.killed }, Number.isFinite(answer.kills) ? { kills: answer.kills } : {});
         ui.social.attacksLeft = answer.attacksLeft;
         ui.social.fetchedAt = 0;   // the Clan tab brings its board up to date when it is next shown
@@ -1182,6 +1183,22 @@ async function sendClanResult(now = false) {
     }
 }
 
+/** An attack at the Endless Hydra came back: how deep it went, the player's best of the week and the clan's place. */
+function endlessAnswered(answer) {
+    const e = ui.social.endless;
+    if (e) Object.assign(e, { attacksLeft: answer.attacksLeft, best: answer.best });
+    if (ui.social.standing && answer.rank) Object.assign(ui.social.standing, { rank: answer.rank, of: answer.of, score: answer.score, division: answer.division, divisionName: answer.divisionName });
+    ui.social.fetchedAt = 0;   // the Clan tab brings the ranking up to date when it is next shown
+    const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
+        answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
+        answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
+        answer.counted === false ? 'Not counted: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+    rewards.celebrate({ key: `endless:${answer.week}:${answer.depth}:${answer.attacksLeft}`, kind: 'unlock', art: paintStyle(ENDLESS.zone), icon: sprite(`mon/${ENDLESS.look}`, { scale: 2, fallback: '🐉' }),
+        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: 4200 });
+    sound.play('chest');
+    render();
+}
+
 async function refreshSocial() {
     if (!cloud.loggedIn) return;
     const social = ui.social;
@@ -1190,10 +1207,11 @@ async function refreshSocial() {
     social.loading = true;
     social.fetchedAt = Date.now();
     try {
-        const [mine, rewards, board] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period)]);
+        const [mine, rewards, board, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
         if (!current()) return;
         social.clan = mine.clan;
-        Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20 });
+        Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20,
+            standing: mine.standing || null, endless: mine.endless || null, ranking });
         game.setClanBanner(mine.clan ? mine.banner : null);
         social.rewards = rewards.rewards || [];
         social.leaderboard = board;
@@ -1321,9 +1339,9 @@ window.FI = {
     /**
      * A clan attack: the hero fights the week's clan boss on screen (systems/clanfight.js), and when it
      * is over the game sends what the player did (sendClanResult). The server fights with the stored
-     * hero, so he goes up first.
+     * hero, so he goes up first. `endless`: a fight at the Endless Hydra, the week's ranking (at the weekend).
      */
-    async clanFight() {
+    async clanFight(endless = false) {
         if (!cloud.loggedIn || ui.social.attacking || game.state.combat.mode === 'clan') return;
         if (!cloudReady) { toast('Checking the cloud save first…', 'info'); return; }   // the server fights with the stored hero
         ui.social.attacking = true;
@@ -1334,9 +1352,20 @@ window.FI = {
             await cloudSave(false);
             const mine = await cloud.myClan();
             Object.assign(ui.social, { clan: mine.clan, members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0,
-                attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6 });
+                attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, standing: mine.standing || null, endless: mine.endless || null });
             const boss = mine.boss;
             if (!mine.clan || !boss) { toast('Join a clan first.', 'info'); return; }
+            if (endless) {
+                const e = mine.endless;
+                if (!e?.open) { toast(`${ENDLESS.name} wakes on Saturday at 00:00 UTC.`, 'info'); return; }
+                if (!e.eligible) { toast(`${ENDLESS.name} counts members who were in the clan when the week began: next week, you are.`, 'info'); return; }
+                if (!(e.attacksLeft > 0)) { toast(`You have made your ${e.attacks} attacks at ${ENDLESS.name.replace(/^The /, 'the ')} this week.`, 'info'); return; }
+                if (!game.startClanFight({ week: boss.week, endless: true, scale: mine.attackScale })) return;
+                ui.battleHoldUntil = 0;
+                setBattleFull(true);
+                window.FI.switchTab('clan');
+                return;
+            }
             if (boss.killed) { toast("This week's boss is already defeated.", 'info'); return; }
             if (!(mine.attacksLeft > 0)) { toast(`No attacks waiting: ${ui.social.attacksPerDay} more come each day.`, 'info'); return; }
             if (!game.startClanFight({ week: boss.week, hp: boss.hp, maxHp: boss.maxHp, scale: mine.attackScale })) return;

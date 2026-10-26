@@ -225,8 +225,10 @@ export function playerAttack(game, { manual = false } = {}) {
     const isCrit = rng.chance(critChance);
     let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult * (clan ? CLAN_GUARD.mult : 1) : 1) * (clan ? state.clanFight?.scale || 1 : 1);
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
-    const dealt = Math.min(dmg, Math.max(0, enemy.hp));   // what the monster really lost (a killing blow's excess heals nothing)
-    enemy.hp -= dmg;
+    const endless = clan && enemy.endless;   // the Endless Hydra never falls: what it took adds up instead (systems/clanfight.js)
+    const dealt = endless ? dmg : Math.min(dmg, Math.max(0, enemy.hp));   // what the monster really lost (a killing blow's excess heals nothing)
+    if (endless) state.clanFight.dealt = (state.clanFight.dealt || 0) + dmg;
+    else enemy.hp -= dmg;
 
     // lifesteal: a share of the damage dealt, out of the ceiling's room (BASE.lifestealPerSecond, refilled by
     // the second in tickCombat); none in Fasting

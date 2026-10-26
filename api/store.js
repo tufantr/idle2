@@ -160,6 +160,38 @@ async function ensureSchema() {
         )
     `;
     await sql`CREATE INDEX IF NOT EXISTS email_codes_user ON email_codes (user_id, purpose)`;
+    // The week's clan ranking (October 2026, api/index.js): attacks at the Endless Hydra, ENDLESS.attacks a member a week
+    // (`slot`), each with its damage and how deep it reached; and each finished week's standings, kept once so the
+    // crowns they give stay as they were (the clan's name and tag with them, should it be renamed or closed).
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_endless (
+            user_id INTEGER NOT NULL,
+            week VARCHAR(10) NOT NULL,
+            slot SMALLINT NOT NULL,
+            clan_id INTEGER NOT NULL,
+            damage DOUBLE PRECISION NOT NULL,
+            depth DOUBLE PRECISION NOT NULL,
+            at BIGINT NOT NULL,
+            fight_at BIGINT,
+            PRIMARY KEY (user_id, week, slot)
+        )
+    `;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS clan_endless_fight ON clan_endless (user_id, fight_at)`;
+    await sql`CREATE INDEX IF NOT EXISTS clan_endless_week ON clan_endless (week, clan_id)`;
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_rankings (
+            week VARCHAR(10) NOT NULL,
+            clan_id INTEGER NOT NULL,
+            name VARCHAR(32) NOT NULL,
+            tag VARCHAR(5) NOT NULL,
+            division VARCHAR(10) NOT NULL,
+            rank SMALLINT NOT NULL,
+            kills SMALLINT NOT NULL,
+            score DOUBLE PRECISION NOT NULL,
+            counted SMALLINT NOT NULL,
+            PRIMARY KEY (week, clan_id)
+        )
+    `;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -577,6 +609,89 @@ async function weeklyDamage(clanId, week) {
     return rows.map(r => ({ userId: r.user_id, username: r.username, damage: int(r.damage), attacks: int(r.attacks), dealt: Number(r.dealt) || 0, undealt: int(r.undealt) }));
 }
 
+// ---------- the week's clan ranking ----------
+
+/**
+ * Record an attack at the Endless Hydra in the player's next of `max` places this week; null when all are taken. A
+ * parallel attack that took the same place means a try at the next. With `fightAt` (the fight's own mark), the same
+ * fight recorded already throws a unique violation on clan_endless_fight.
+ */
+async function recordEndless({ userId, week, clanId, damage, depth, now, fightAt = null, max }) {
+    for (let tries = 0; ; tries++) {
+        try {
+            const { rows } = await sql`
+                INSERT INTO clan_endless (user_id, week, slot, clan_id, damage, depth, at, fight_at)
+                SELECT ${userId}::int, ${week}::varchar, COALESCE(MAX(slot), 0) + 1, ${clanId}::int, ${damage}::double precision, ${depth}::double precision, ${now}::bigint, ${fightAt}::bigint
+                FROM clan_endless WHERE user_id = ${userId}::int AND week = ${week}::varchar
+                HAVING COUNT(*) < ${max}::int
+                RETURNING slot
+            `;
+            return rows[0] ? int(rows[0].slot) : null;
+        } catch (err) {
+            if (err.code !== '23505' || err.constraint === 'clan_endless_fight' || tries >= 3) throw err;
+        }
+    }
+}
+
+/** The attack at the Endless Hydra recorded for a fight (its mark), or null: { clanId, week, damage, depth, at }. */
+async function endlessByFight(userId, fightAt) {
+    const { rows } = await sql`SELECT clan_id, week, damage, depth, at FROM clan_endless WHERE user_id = ${userId} AND fight_at = ${fightAt}::bigint`;
+    const r = rows[0];
+    return r ? { clanId: r.clan_id, week: r.week, damage: Number(r.damage) || 0, depth: Number(r.depth) || 0, at: int(r.at) } : null;
+}
+
+/** A player's attacks at the Endless Hydra in a week: how many, and the deepest. */
+async function endlessOf(userId, week) {
+    const { rows } = await sql`SELECT COUNT(*) AS used, COALESCE(MAX(depth), 0) AS best FROM clan_endless WHERE user_id = ${userId} AND week = ${week}`;
+    return { used: int(rows[0] && rows[0].used), best: Number(rows[0] && rows[0].best) || 0 };
+}
+
+/** Each player's deepest attack of a week at the Endless Hydra, for each clan they made one for, with their flags. */
+async function endlessWeek(week) {
+    const { rows } = await sql`
+        SELECT e.clan_id, e.user_id, MAX(e.depth) AS depth, u.flags
+        FROM clan_endless e JOIN users u ON u.id = e.user_id
+        WHERE e.week = ${week}
+        GROUP BY e.clan_id, e.user_id, u.flags
+    `;
+    return rows.map(r => ({ clanId: r.clan_id, userId: r.user_id, depth: Number(r.depth) || 0, flags: r.flags || '[]' }));
+}
+
+/** Every clan's boss of a week (the levels it felled make its division). */
+async function weekBosses(week) {
+    const { rows } = await sql`SELECT clan_id, week, level, max_hp, hp, killed_at, last_hit_user, settled, kill_paid, unit, unit_day FROM clan_bosses WHERE week = ${week}`;
+    return rows.map(bossRow);
+}
+
+/** Every clan's name and tag. */
+async function allClans() {
+    const { rows } = await sql`SELECT id, name, tag FROM clans`;
+    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag }));
+}
+
+/** A finished week's ranking as it was kept: [{ clanId, name, tag, division, rank, kills, score, counted }]. */
+async function getRanking(week) {
+    const { rows } = await sql`SELECT clan_id, name, tag, division, rank, kills, score, counted FROM clan_rankings WHERE week = ${week} ORDER BY division, rank`;
+    return rows.map(r => ({ clanId: r.clan_id, name: r.name, tag: r.tag, division: r.division, rank: int(r.rank), kills: int(r.kills), score: Number(r.score) || 0, counted: int(r.counted) }));
+}
+
+/** Keep a finished week's ranking (once: rows kept already stay as they are). */
+async function putRanking(week, rows) {
+    for (const r of rows) {
+        await sql`
+            INSERT INTO clan_rankings (week, clan_id, name, tag, division, rank, kills, score, counted)
+            VALUES (${week}, ${r.clanId}::int, ${r.name}, ${r.tag}, ${r.division}, ${r.rank}::smallint, ${r.kills}::smallint, ${r.score}::double precision, ${r.counted}::smallint)
+            ON CONFLICT (week, clan_id) DO NOTHING
+        `;
+    }
+}
+
+/** A clan's best score in a finished week (its record), 0 if none. */
+async function clanBestScore(clanId) {
+    const { rows } = await sql`SELECT COALESCE(MAX(score), 0) AS best FROM clan_rankings WHERE clan_id = ${clanId}`;
+    return Number(rows[0] && rows[0].best) || 0;
+}
+
 // ---------- rate limiting ----------
 
 /**
@@ -672,6 +787,7 @@ module.exports = {
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, setBossUnit, convertBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
+    recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts

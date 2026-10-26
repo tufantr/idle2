@@ -6,7 +6,7 @@
 // so the page never says how much was dealt. The hero hits as hard on screen (`scale`, the server's).
 
 import { clanGuardDown } from '../core/power.js';
-import { clanBossFor, CLAN_FIGHT_MS, CLAN_BANNER } from '../data/social.js';
+import { clanBossFor, CLAN_FIGHT_MS, CLAN_BANNER, ENDLESS } from '../data/social.js';
 import { spawnEnemy, enterCombat } from './combat.js';
 import { failDungeon, returnToStages } from './dungeon.js';
 import { doingNow, resumeDoing } from './resume.js';
@@ -26,9 +26,18 @@ export function clanGuardOpen(state) {
     return state.combat.mode === 'clan' && clanGuardDown(clanFightElapsed(state));
 }
 
-/** The week's clan boss as a monster: its look from the week, its health the clan's shared boss's. */
+/**
+ * The week's clan boss as a monster: its look from the week, its health the clan's shared boss's. The Endless Hydra
+ * (ENDLESS, the week's ranking) never falls: what the hero deals adds up in the fight (`dealt`), and its depth is shown.
+ */
 export function clanBossEnemy(state) {
     const fight = state.clanFight;
+    if (fight?.endless) {
+        return {
+            name: ENDLESS.name, baseName: ENDLESS.look, icon: '🐉', zoneName: 'The week\'s ranking', zoneTier: 7, stage: Math.max(1, state.combat.bestStage),
+            boss: true, clan: true, endless: true, hp: 1, maxHp: 1, atk: 0, interval: CLAN_FIGHT_MS * 1000, timeLimit: CLAN_FIGHT_MS
+        };
+    }
     const look = clanBossFor(fight?.week);
     const hp = Math.max(1, Math.floor(Number(fight?.hp) || 1));
     const maxHp = Math.max(hp, Math.floor(Number(fight?.maxHp) || hp));
@@ -40,9 +49,9 @@ export function clanBossEnemy(state) {
 
 /**
  * Begin a clan attack against `boss` ({ week, hp, maxHp, scale }, the server's; `scale` how much harder than he is now
- * the hero's attack counts, his best of the week): the hero leaves what he is doing (a dungeon run is given up) and
- * goes back to it when the fight ends. Refused while another special fight is on, or while the last attack's result
- * waits to be sent.
+ * the hero's attack counts, his best of the week), or against the Endless Hydra ({ week, endless: true, scale }): the
+ * hero leaves what he is doing (a dungeon run is given up) and goes back to it when the fight ends. Refused while
+ * another special fight is on, or while the last attack's result waits to be sent.
  */
 export function startClanFight(game, boss) {
     const state = game.state;
@@ -50,12 +59,13 @@ export function startClanFight(game, boss) {
     if (c.mode === 'clan') return false;
     if (c.mode === 'titan') { game.emit({ type: 'error', text: 'Finish the Titan fight first.' }); return false; }
     if (state.clanResult) { game.emit({ type: 'error', text: 'Your last attack is still on its way to the clan.' }); return false; }
-    if (!boss || !(Number(boss.hp) > 0)) { game.emit({ type: 'error', text: "This week's boss is already defeated." }); return false; }
+    const endless = !!boss?.endless;
+    if (!boss || (!endless && !(Number(boss.hp) > 0))) { game.emit({ type: 'error', text: "This week's boss is already defeated." }); return false; }
     const before = doingNow(state);
     if (c.mode === 'dungeon') failDungeon(game, 'you left for the clan boss');
     const scale = Number(boss.scale);
-    state.clanFight = { week: String(boss.week || ''), hp: Math.floor(Number(boss.hp)), maxHp: Math.floor(Number(boss.maxHp) || Number(boss.hp)), strikes: [], before,
-        scale: Number.isFinite(scale) && scale > 1 ? Math.min(scale, 1e6) : 1 };
+    state.clanFight = { week: String(boss.week || ''), hp: endless ? 1 : Math.floor(Number(boss.hp)), maxHp: endless ? 1 : Math.floor(Number(boss.maxHp) || Number(boss.hp)), strikes: [], before,
+        scale: Number.isFinite(scale) && scale > 1 ? Math.min(scale, 1e6) : 1, ...(endless ? { endless: true, dealt: 0 } : {}) };
     c.mode = 'clan';
     c.dungeon = null;
     c.regroupLeft = 0;
@@ -63,7 +73,8 @@ export function startClanFight(game, boss) {
     enterCombat(game);
     c.hp = game.derived.maxHp;
     c.combo = 0;
-    log(game, `🛡️ The clan boss, ${c.enemy.name}: ${CLAN_FIGHT_MS / 1000} seconds. Strike when its guard drops.`, 'combat');
+    log(game, endless ? `🐉 ${ENDLESS.name}: ${CLAN_FIGHT_MS / 1000} seconds. Its heads grow back: go as deep as you can, and strike when its guard drops.`
+        : `🛡️ The clan boss, ${c.enemy.name}: ${CLAN_FIGHT_MS / 1000} seconds. Strike when its guard drops.`, 'combat');
     game.markDirty();
     return true;
 }
@@ -89,12 +100,12 @@ export function endClanFight(game, reason = 'time') {
     const c = state.combat;
     const fight = state.clanFight;
     const ms = reason === 'left' ? clanFightElapsed(state) : CLAN_FIGHT_MS;
-    const dealt = fight && c.enemy?.clan ? Math.max(0, fight.hp - Math.max(0, c.enemy.hp)) : 0;
-    if (fight) state.clanResult = { week: fight.week, strikes: fight.strikes.slice(0, MAX_STRIKES), ms: Math.round(ms), at: game.now };
+    const dealt = fight?.endless ? fight.dealt || 0 : fight && c.enemy?.clan ? Math.max(0, fight.hp - Math.max(0, c.enemy.hp)) : 0;
+    if (fight) state.clanResult = { week: fight.week, strikes: fight.strikes.slice(0, MAX_STRIKES), ms: Math.round(ms), at: game.now, ...(fight.endless ? { endless: true } : {}) };
     state.clanFight = null;
     returnToStages(game);
     const fightsOn = resumeDoing(game, fight?.before);
-    game.emit({ type: 'clanFight', reason, dealt, strikes: fight?.strikes.length || 0 });
+    game.emit({ type: 'clanFight', reason, dealt, strikes: fight?.strikes.length || 0, endless: !!fight?.endless });
     game.markDirty();
     return fightsOn;
 }

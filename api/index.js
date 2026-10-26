@@ -611,9 +611,103 @@ async function bannerOf(userId, now) {
     return { week, kills: killsOf(await store.getBoss(mine.clan.id, week), CLAN_BOSS.levels) };
 }
 
+// ---------- the week's clan ranking ----------
+// Clans are put in divisions by the levels of the week's boss they felled (src/data/social.js CLAN_DIVISIONS) and ranked
+// inside each by the Endless Hydra (ENDLESS), an eighth boss with no end to its health, awake for every clan from
+// Saturday 00:00 UTC to the Monday reset (the owner, October 2026). Each member who was in the clan when the week began
+// has ENDLESS.attacks fights at it, reckoned here from the stored hero like any clan attack (clanAttackFromSave), and
+// their deepest counts (endlessDepth: how many levels deep the hit reaches). A clan's score is its best ENDLESS.counted
+// members' depths together; accounts flagged for impossible numbers are left out. A finished week's standings are kept
+// once (clan_rankings), and its top three of each division wear a crown through the next week.
+
+const RANKING_CACHE_MS = 60 * 1000;
+let rankingCache = null;   // this week's standings, worked out at most once a minute (an Endless attack or a kill clears it)
+const crownCache = new Map();   // a finished week's crowns: { clanId → { division, rank } }
+
+/** Monday 00:00 UTC of the week holding `ms`. */
+const weekStartOf = ms => ms + msToWeekEnd(ms) - 7 * DAY;
+/** Is the Endless Hydra awake (from `opensOnDay` days into the ISO week, Saturday, to the Monday reset)? */
+const endlessOpen = (ms, opensOnDay) => ms >= weekStartOf(ms) + opensOnDay * DAY;
+/** Time until it wakes this week (0 while it is awake). */
+const msToEndlessOpen = (ms, opensOnDay) => Math.max(0, weekStartOf(ms) + opensOnDay * DAY - ms);
+
+/** A week's standings: every clan that felled a level or fought the Endless Hydra, division by division, best score first. */
+async function computeRanking(week, now) {
+    const { CLAN_BOSS, CLAN_DIVISIONS, divisionOf, clanDepthScore } = await engine();
+    const [bosses, hits, clans] = await Promise.all([store.weekBosses(week), store.endlessWeek(week), store.allClans()]);
+    const names = new Map(clans.map(c => [c.id, c]));
+    const byClan = new Map();
+    const entry = clanId => { if (!byClan.has(clanId)) byClan.set(clanId, { clanId, kills: 0, depths: [] }); return byClan.get(clanId); };
+    for (const boss of bosses) { const kills = killsOf(boss, CLAN_BOSS.levels); if (kills > 0) entry(boss.clanId).kills = kills; }
+    for (const hit of hits) if (hit.depth > 0 && !recentlyFlagged(hit.flags, now)) entry(hit.clanId).depths.push(hit.depth);
+    const rows = [...byClan.values()].filter(e => names.has(e.clanId)).map(e => {
+        const { name, tag } = names.get(e.clanId);
+        return { clanId: e.clanId, name, tag, kills: e.kills, division: divisionOf(e.kills).id, ...clanDepthScore(e.depths) };
+    });
+    const order = (a, b) => b.score - a.score || b.kills - a.kills || a.name.localeCompare(b.name);
+    return { week, divisions: CLAN_DIVISIONS.map(d => ({ id: d.id, name: d.name, clans: rows.filter(r => r.division === d.id).sort(order).map((r, i) => ({ ...r, rank: i + 1 })) })) };
+}
+
+/** This week's standings, as of at most a minute ago. */
+async function liveRanking(week, now) {
+    if (rankingCache && rankingCache.week === week && now - rankingCache.at < RANKING_CACHE_MS && now >= rankingCache.at) return rankingCache.value;
+    const value = await computeRanking(week, now);
+    rankingCache = { week, at: now, value };
+    return value;
+}
+
+/** A finished week's standings, as they were kept (worked out and kept by the first to ask after it ended). */
+async function settledRanking(week, now) {
+    let rows = await store.getRanking(week);
+    if (!rows.length && week < isoWeek(now)) {
+        const done = await computeRanking(week, now);
+        const all = done.divisions.flatMap(d => d.clans);
+        if (all.length) { await store.putRanking(week, all); rows = await store.getRanking(week); }
+    }
+    return rows;
+}
+
+/** Last week's crowns: the top three of each division, by clan. */
+async function crownsFor(now) {
+    const week = isoWeek(now - 7 * DAY);
+    if (crownCache.has(week)) return crownCache.get(week);
+    const crowns = new Map((await settledRanking(week, now)).filter(r => r.rank <= 3).map(r => [r.clanId, { division: r.division, rank: r.rank, week }]));
+    if (crowns.size) crownCache.set(week, crowns);   // (kept: a finished week's standings never move)
+    return crowns;
+}
+
+/** A clan's place this week: its division, rank among how many, score and the members counted in it. */
+async function standingOf(ranking, clanId, kills) {
+    const { divisionOf } = await engine();
+    for (const d of ranking.divisions) {
+        const row = d.clans.find(c => c.clanId === clanId);
+        if (row) return { division: d.id, divisionName: d.name, rank: row.rank, of: d.clans.length, score: row.score, counted: row.counted, kills: row.kills };
+    }
+    const d = divisionOf(kills);
+    return { division: d.id, divisionName: d.name, rank: 0, of: ranking.divisions.find(x => x.id === d.id)?.clans.length || 0, score: 0, counted: 0, kills };
+}
+
 app.get('/api/clans', authenticateToken, route('clans', async (req, res) => {
     const search = cleanText(req.query.search, 32);
-    res.json({ clans: await store.listClans(search, 50), maxMembers: MAX_MEMBERS });
+    const crowns = await crownsFor(Date.now());
+    res.json({ clans: (await store.listClans(search, 50)).map(c => ({ ...c, crown: crowns.get(c.id) || null })), maxMembers: MAX_MEMBERS });
+}));
+
+app.get('/api/clans/ranking', authenticateToken, route('clan ranking', async (req, res) => {
+    const now = Date.now();
+    const week = isoWeek(now);
+    const { ENDLESS, CLAN_DIVISIONS } = await engine();
+    const mine = await clanOf(req.user.id);
+    const clanId = mine ? mine.clan.id : 0;
+    const live = await liveRanking(week, now);
+    const lastWeek = isoWeek(now - 7 * DAY);
+    const last = await settledRanking(lastWeek, now);
+    res.json({
+        week, endsInMs: msToWeekEnd(now),
+        endless: { open: endlessOpen(now, ENDLESS.opensOnDay), opensInMs: msToEndlessOpen(now, ENDLESS.opensOnDay) },
+        divisions: live.divisions.map(d => ({ id: d.id, name: d.name, clans: d.clans.slice(0, 50).map(c => ({ rank: c.rank, name: c.name, tag: c.tag, kills: c.kills, score: c.score, counted: c.counted, you: c.clanId === clanId })) })),
+        last: { week: lastWeek, divisions: CLAN_DIVISIONS.map(d => ({ id: d.id, name: d.name, clans: last.filter(r => r.division === d.id && r.rank <= 3).sort((a, b) => a.rank - b.rank).map(r => ({ rank: r.rank, name: r.name, tag: r.tag, kills: r.kills, score: r.score, you: r.clanId === clanId })) })).filter(d => d.clans.length) }
+    });
 }));
 
 app.post('/api/clans', authenticateToken, route('create clan', async (req, res) => {
@@ -692,18 +786,23 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     const now = Date.now();
     const mine = await clanOf(req.user.id);
     if (!mine) return res.json({ clan: null });
-    const { clan } = mine;
+    const { clan, membership } = mine;
     const clanId = clan.id;
     const [rawMembers, boss] = await Promise.all([store.clanMembers(clanId), currentBoss(clanId, now)]);
     const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = boardOf(await store.weeklyDamage(clanId, boss.week), boss.unit);
-    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds, CLAN_BOSS, clanAttackScale } = await engine();
+    const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds, CLAN_BOSS, ENDLESS, clanAttackScale } = await engine();
     const me = members.find(m => m.userId === req.user.id);
     const kills = killsOf(boss, CLAN_BOSS.levels);
     const attacksLeft = await store.chargesNow(req.user.id, dayNumber(now), perDay, bank);
     const lastHit = boss.lastHitUser ? members.find(m => m.userId === boss.lastHitUser) : null;
+    // the week's ranking: last week's crown (its standings kept first, so the clan's best week counts it), the clan's place
+    // and best week, and the player's fights at the Endless Hydra
+    const crowns = await crownsFor(now);
+    const [standing, record, endlessMine] = await Promise.all([
+        liveRanking(boss.week, now).then(r => standingOf(r, clanId, kills)), store.clanBestScore(clanId), store.endlessOf(req.user.id, boss.week)]);
     res.json({
-        clan: { ...clan, isOwner: clan.ownerId === req.user.id },
+        clan: { ...clan, isOwner: clan.ownerId === req.user.id, crown: crowns.get(clanId) || null },
         // a member's attack: their best of the past week (what an attack deals before its strikes and potion)
         members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: bestAttack(m.power, now) })),
         // health and damage as damage (the screen's figures); the server keeps them in the clan's attacks
@@ -716,7 +815,14 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
         attacksPerDay: perDay,
         attackBank: bank,
         fightSeconds: seconds,
-        maxMembers: MAX_MEMBERS
+        maxMembers: MAX_MEMBERS,
+        standing: { ...standing, record: Math.max(record, standing.score) },
+        endless: {
+            open: endlessOpen(now, ENDLESS.opensOnDay), opensInMs: msToEndlessOpen(now, ENDLESS.opensOnDay), endsInMs: msToWeekEnd(now),
+            attacks: ENDLESS.attacks, attacksLeft: Math.max(0, ENDLESS.attacks - endlessMine.used), best: endlessMine.best,
+            // counted only for a member since the week began (Monday 00:00 UTC): no joining a strong clan for its weekend
+            eligible: membership.joinedAt < weekStartOf(now)
+        }
     });
 }));
 
@@ -742,6 +848,7 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
             rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: earlier.week, again: true
         });
     };
+    if (body.endless === true) return endlessAttack(req, res, { now, eng, mine, body, fightAt });
     if (fightAt) { const earlier = await store.attackByFight(req.user.id, fightAt); if (earlier) return answerAgain(earlier); }
     const save = await store.getSave(req.user.id);
     if (!save || !save.state) return res.status(400).json({ error: 'Save to the cloud first: the attack uses your stored hero.' });
@@ -779,6 +886,7 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
     const after = await store.damageBoss(clanId, boss.week, damage);
     if (!after) { await store.deleteAttack(req.user.id, day, slot); await store.refundCharge(req.user.id, bank); return defeated(); } // it fell to a parallel hit
     const killed = after.hp <= 0 && await store.markBossKilled(clanId, boss.week, req.user.id, now);
+    if (killed) rankingCache = null;   // a level felled moves the clan's division
     const board = boardOf(await store.weeklyDamage(clanId, boss.week), unit);
     const levels = eng.CLAN_BOSS.levels;
     res.json({
@@ -787,6 +895,47 @@ app.post('/api/clan/attack', authenticateToken, route('clan attack', async (req,
         rank: board.findIndex(r => r.userId === req.user.id) + 1, of: board.length, week: boss.week
     });
 }));
+
+/**
+ * An attack at the Endless Hydra (ENDLESS): the same fight as any clan attack, reckoned the same way from the stored hero
+ * and its strikes, counted as the depth it reaches. ENDLESS.attacks a week, at the weekend only, and only for a member
+ * who was in the clan when the week began. The fight's mark makes a resend the same attack.
+ */
+async function endlessAttack(req, res, { now, eng, mine, body, fightAt }) {
+    const { ENDLESS, endlessDepth } = eng;
+    const week = isoWeek(now);
+    const answer = async (row, extra = {}) => {
+        const [used, ranking] = await Promise.all([store.endlessOf(req.user.id, row.week), liveRanking(row.week, now)]);
+        const boss = await store.getBoss(row.clanId, row.week);
+        const standing = await standingOf(ranking, row.clanId, killsOf(boss, eng.CLAN_BOSS.levels));
+        return res.json({ endless: true, damage: row.damage, depth: row.depth, best: used.best, attacksLeft: Math.max(0, ENDLESS.attacks - used.used), week: row.week,
+            division: standing.division, divisionName: standing.divisionName, rank: standing.rank, of: standing.of, score: standing.score, ...extra });
+    };
+    if (fightAt) { const earlier = await store.endlessByFight(req.user.id, fightAt); if (earlier) return answer(earlier, { again: true }); }
+    if (!endlessOpen(now, ENDLESS.opensOnDay)) return res.status(400).json({ error: `${ENDLESS.name} wakes on Saturday at 00:00 UTC.` });
+    if (!(mine.membership.joinedAt < weekStartOf(now))) return res.status(400).json({ error: `${ENDLESS.name} counts members who were in the clan when the week began: next week, you are.` });
+    const save = await store.getSave(req.user.id);
+    if (!save || !save.state) return res.status(400).json({ error: 'Save to the cloud first: the attack uses your stored hero.' });
+    const metrics = parseMetrics(save.metrics);
+    let fight = null;
+    try { fight = eng.clanAttackFromSave(JSON.parse(save.state), body.strikes, body.ms, now, bestAttack(metrics, now)); } catch (err) { console.error('endless fight failed', err); }
+    const cap = safeDamage(eng.plausibleAttackDamage(metrics?.bestStage) * 2) || Infinity;   // no save deals more than twice what its best stage allows
+    const damage = Math.min(safeDamage(fight?.damage), cap);
+    const depth = Math.round(endlessDepth(damage) * 100) / 100;
+    let slot;
+    try {
+        slot = await store.recordEndless({ userId: req.user.id, week, clanId: mine.clan.id, damage, depth, now, fightAt, max: ENDLESS.attacks });
+    } catch (err) {
+        if (err.code === '23505' && err.constraint === 'clan_endless_fight') {   // the same fight, sent twice at once
+            const earlier = await store.endlessByFight(req.user.id, fightAt);
+            if (earlier) return answer(earlier, { again: true });
+        }
+        throw err;
+    }
+    if (slot === null) return res.status(400).json({ error: `You have made your ${ENDLESS.attacks} attacks at ${ENDLESS.name.replace(/^The /, 'the ')} this week.` });
+    rankingCache = null;
+    return answer({ week, clanId: mine.clan.id, damage, depth }, { strikes: fight?.guarded || 0, counted: !recentlyFlagged(save.flags, now) });
+}
 
 // ---------- rewards ----------
 

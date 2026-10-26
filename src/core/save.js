@@ -248,7 +248,9 @@ export class CloudClient {
     kickMember(username) { return this.request('/clan/kick', { method: 'POST', body: { username } }); }
     myClan() { return this.request('/clan'); }
     /** A clan attack as it was fought: when the player struck (ms into the fight) and how long it lasted. */
-    clanAttack({ strikes = [], ms, at } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms, fightAt: at } }); }   // `at`: the fight's own mark, so a resend is never a second attack
+    clanAttack({ strikes = [], ms, at, endless = false } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms, fightAt: at, ...(endless ? { endless: true } : {}) } }); }   // `at`: the fight's own mark, so a resend is never a second attack; `endless`: at the Endless Hydra
+    /** The week's clan ranking: every clan in its division, and last week's crowns. */
+    clanRanking() { return this.request('/clans/ranking'); }
     rewards() { return this.request('/rewards'); }
     claimRewards(ids) { return this.request('/rewards/claim', { method: 'POST', body: { ids } }); }
     leaderboard(metric, period) { return this.request(`/leaderboard?metric=${encodeURIComponent(metric)}&period=${encodeURIComponent(period)}`); }

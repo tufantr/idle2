@@ -3,7 +3,7 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [] };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [] };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
@@ -252,6 +252,46 @@ function createMemoryStore() {
                 byUser.set(a.userId, row);
             }
             return [...byUser.values()].sort((a, b) => b.damage - a.damage);
+        },
+
+        async recordEndless({ userId, week, clanId, damage, depth, now, fightAt = null, max }) {
+            if (fightAt !== null && db.endless.some(e => e.userId === userId && e.fightAt === fightAt)) throw unique('clan_endless_fight');
+            const mine = db.endless.filter(e => e.userId === userId && e.week === week);
+            if (mine.length >= max) return null;
+            const slot = Math.max(0, ...mine.map(e => e.slot)) + 1;
+            db.endless.push({ userId, week, slot, clanId, damage, depth, at: now, fightAt });
+            return slot;
+        },
+        async endlessByFight(userId, fightAt) {
+            const e = db.endless.find(x => x.userId === userId && x.fightAt === fightAt);
+            return e ? { clanId: e.clanId, week: e.week, damage: e.damage, depth: e.depth, at: e.at } : null;
+        },
+        async endlessOf(userId, week) {
+            const mine = db.endless.filter(e => e.userId === userId && e.week === week);
+            return { used: mine.length, best: Math.max(0, ...mine.map(e => e.depth)) };
+        },
+        async endlessWeek(week) {
+            const best = new Map();
+            for (const e of db.endless.filter(x => x.week === week)) {
+                const key = `${e.clanId}:${e.userId}`;
+                if (!best.has(key) || e.depth > best.get(key).depth) best.set(key, { clanId: e.clanId, userId: e.userId, depth: e.depth });
+            }
+            return [...best.values()].map(r => ({ ...r, flags: db.users.find(u => u.id === r.userId)?.flags || '[]' }));
+        },
+        async weekBosses(week) {
+            return db.bosses.filter(b => b.week === week).map(b => ({ ...b }));
+        },
+        async allClans() {
+            return db.clans.map(c => ({ id: c.id, name: c.name, tag: c.tag }));
+        },
+        async getRanking(week) {
+            return db.rankings.filter(r => r.week === week).map(r => ({ clanId: r.clanId, name: r.name, tag: r.tag, division: r.division, rank: r.rank, kills: r.kills, score: r.score, counted: r.counted }));
+        },
+        async putRanking(week, rows) {
+            for (const r of rows) if (!db.rankings.some(x => x.week === week && x.clanId === r.clanId)) db.rankings.push({ week, clanId: r.clanId, name: r.name, tag: r.tag, division: r.division, rank: r.rank, kills: r.kills, score: r.score, counted: r.counted });
+        },
+        async clanBestScore(clanId) {
+            return Math.max(0, ...db.rankings.filter(r => r.clanId === clanId).map(r => r.score));
         },
 
         async addReward(userId, kind, payloadJson, now, dedupe = null) {

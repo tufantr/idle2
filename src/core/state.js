@@ -100,8 +100,8 @@ export function createDefaultState(now = Date.now()) {
         dungeonTier: 1,        // the dungeons' open tier: each Seal opens the next (data/dungeons.js; kept in `meta` too)
         uniques: {},           // "<unique>" or "<unique>@<tier>" -> true: every unique found, kept or not (a record; in `meta` too)
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
-        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }
-        clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at }
+        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }, and { endless, dealt } at the Endless Hydra
+        clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at, endless? }
         clanBanner: { week: '', kills: 0 },   // the clan's banner, as the server last said it: levels felled in that ISO week (data/social.js CLAN_BANNER)
         pets: {},
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
@@ -764,7 +764,7 @@ function normalise(data, now) {
     // a clan attack fought and not yet sent waits to be sent (the server cleans its strikes again)
     const sent = state.clanResult;
     state.clanResult = isPlainObject(sent) && typeof sent.week === 'string' && Array.isArray(sent.strikes)
-        ? { week: sent.week.slice(0, 10), strikes: sent.strikes.slice(0, 200).map(Number).filter(Number.isFinite), ms: Math.max(0, Math.min(CLAN_FIGHT_MS, finite(sent.ms))), at: finite(sent.at) }
+        ? { week: sent.week.slice(0, 10), strikes: sent.strikes.slice(0, 200).map(Number).filter(Number.isFinite), ms: Math.max(0, Math.min(CLAN_FIGHT_MS, finite(sent.ms))), at: finite(sent.at), ...(sent.endless === true ? { endless: true } : {}) }
         : null;
     // the clan's banner: a week the server named, and the levels felled in it
     const banner = isPlainObject(state.clanBanner) ? state.clanBanner : {};
