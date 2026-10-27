@@ -4,7 +4,7 @@ import { SKILLS } from '../data/skills.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { evaluateUnlocks, openWaitingPlace } from '../data/unlocks.js';
 import { evaluateDisclosures } from './disclosure.js';
-import { levelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL } from '../core/xp.js';
+import { levelForXp, combatLevelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL, COMBAT_XP_CAP } from '../core/xp.js';
 import { petToFind, petChance } from '../data/pets.js';
 import { capeFor } from '../data/capes.js';
 import { trialBite } from '../data/trials.js';
@@ -25,8 +25,19 @@ export function grantXp(game, skillId, amount) {
     const skill = game.state.skills[skillId];
     if (!skill || !(amount > 0)) return 0;
     const before = levelForXp(skill.xp);
-    skill.xp = Math.min(XP_FOR_MAX_LEVEL * 2, skill.xp + amount);
+    // Combat's XP goes on past 99 for the War Tree (data/talents.js); every other skill's stops at twice level 99's
+    const combat = skillId === 'combat';
+    const warBefore = combat ? combatLevelForXp(skill.xp) : 0;
+    skill.xp = Math.min(combat ? COMBAT_XP_CAP : XP_FOR_MAX_LEVEL * 2, skill.xp + amount);
     const after = levelForXp(skill.xp);
+    if (combat) {
+        const warAfter = combatLevelForXp(skill.xp);
+        if (warAfter > warBefore && warAfter > MAX_LEVEL) {   // a level past 99: a talent point (systems/talents.js)
+            log(game, `${SKILLS.combat.icon} Combat level ${warAfter}: a talent point.`, 'level');
+            game.emit({ type: 'talentPoint', level: warAfter, points: warAfter - Math.max(MAX_LEVEL, warBefore) });
+            game.markDirty();
+        }
+    }
     if (after > before) {
         game.emit({ type: 'levelUp', skill: skillId, level: after, from: before });
         // A combat level-up restores the hero's health (each level adds to it): the first levels, which

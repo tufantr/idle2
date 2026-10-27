@@ -21,6 +21,7 @@ import { fmt, seconds, duration, escapeHtml as esc, shareInWords, gainParts } fr
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART, fightTab } from './features.js';
 import { activeTrials, nextTrialTarget } from '../systems/trials.js';
+import { combatLevelForXp } from '../core/xp.js';
 
 const STRIKE_SHARE = shareInWords(BALANCE.combat.manualHitMult);   // a strike's share of an attack, in words
 
@@ -708,7 +709,8 @@ export function createScene(root, actions) {
             el.zone.title = mapped ? 'Open the world map' : '';
             renderPath(state);
             // his name and level ("Combat Lv" on a wide screen, "Lv" on a phone, so a long name still fits)
-            const nameHtml = `${esc(state.hero?.name || 'You')}<span class="lv-long"> · Combat Lv ${d.combatLevel}</span><span class="lv-short"> · Lv ${d.combatLevel}</span>`;
+            const lv = combatLevelForXp(state.skills.combat.xp);   // past 99 too: the War Tree's levels (data/talents.js)
+            const nameHtml = `${esc(state.hero?.name || 'You')}<span class="lv-long"> · Combat Lv ${lv}</span><span class="lv-short"> · Lv ${lv}</span>`;
             if (el.heroName.__html !== nameHtml) { el.heroName.innerHTML = nameHtml; el.heroName.__html = nameHtml; }
             setMarkup(el.heroMeta, heroKit(state, d));
             const enemy = currentEnemy(state);
@@ -821,10 +823,19 @@ export function createScene(root, actions) {
                         spawnFx('dmg manual', fmt(ev.dmg), foe.x + jitter(30), foe.top + 6 + Math.random() * 16, 800);
                         break;
                     }
-                    move(el.heroSprite, 'lunge');
-                    move(el.foeSprite, ev.crit ? 'crit' : 'hurt');
-                    spawnFx(`dmg${ev.crit ? ' crit' : ''}`, ev.crit ? `${fmt(ev.dmg)}!` : fmt(ev.dmg), foe.x + jitter(22), foe.top + Math.random() * 12, ev.crit ? 1100 : 900);
+                    // the War Tree's big swings (data/talents.js): a word over the number, small, and the crit's bounce
+                    const talent = ev.executed ? 'Execute' : ev.deathblow ? 'Deathblow' : ev.opening ? 'Opening blow' : ev.riposte ? 'Riposte' : '';
+                    const big = ev.crit || !!talent && !ev.riposte;
+                    move(el.heroSprite, ev.riposte ? 'jab' : 'lunge');
+                    move(el.foeSprite, big ? 'crit' : 'hurt');
+                    spawnFx(`dmg${big ? ' crit' : ''}`, big ? `${fmt(ev.dmg)}!` : fmt(ev.dmg), foe.x + jitter(22), foe.top + Math.random() * 12, big ? 1100 : 900);
+                    if (talent) spawnFx('dmg talent', talent, foe.x + jitter(8), foe.top - 16, 1100);
                     spawnFx('slash', '', foe.x, foe.mid + 6, 320);
+                    break;
+                }
+                case 'secondWind': {   // Bulwark's Second Wind: a felling blow, and he stands
+                    const { hero } = anchor();
+                    spawnFx('dmg heal', 'Second wind', hero.x, hero.top - 4, 1300);
                     break;
                 }
                 case 'enemyHit': {

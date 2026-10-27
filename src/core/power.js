@@ -4,7 +4,7 @@
 
 import { migrateState, MAX_STAGE } from './state.js';
 import { deriveStats, BASE } from './modifiers.js';
-import { levelForXp } from './xp.js';
+import { levelForXp, combatLevelForXp, XP_FOR_MAX_LEVEL, MAX_LEVEL } from './xp.js';
 import { enemyBaseStats, BALANCE, supplyMult } from './formulas.js';
 import { TRIALS, WEEK_MS, PACT_MAX, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
 import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf } from '../data/social.js';
@@ -127,7 +127,9 @@ export function powerSummary(rawState, now = Date.now()) {
         attackDamage: clanFightDamage(derived, []).damage,   // a clan fight without a strike (sizes the boss)
         bestStage: state.combat.bestStage,
         totalLevel,
-        totalXp: Object.values(state.skills).reduce((sum, s) => sum + (s.xp || 0), 0),
+        // (Combat's XP past twice level 99's is the War Tree's, counted by its levels below: data/talents.js)
+        totalXp: Object.entries(state.skills).reduce((sum, [id, s]) => sum + Math.min(s.xp || 0, id === 'combat' ? 2 * XP_FOR_MAX_LEVEL : Infinity), 0),
+        warLevel: Math.max(0, combatLevelForXp(state.skills.combat?.xp || 0) - MAX_LEVEL),   // Combat's levels past 99: the War Tree's points
         tokens: state.prestige.tokens,
         combatLevel: derived.combatLevel,
         titanKills: state.titan.kills,

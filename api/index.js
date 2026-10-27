@@ -347,6 +347,9 @@ const RANKED = [
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
     { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
     { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e12 },   // (a few hundred million after 1,200 simulated hours)
+    // Combat's levels past 99, the War Tree's points (src/data/talents.js): a hero at the old cap had 7 at once, and each later
+    // level takes longer than the last (hours at the start, weeks by 150); 134 fill the tree
+    { key: 'warLevel', label: 'combat levels past 99', perHour: 0.5, flat: 8, ceiling: 200 },
     // Stars come only with an Ascension (data/ascension.js): ten for each tenfold of tokens, at most a few a day
     { key: 'stars', label: 'Stars', perHour: 3, flat: 40, ceiling: 2000 }
 ];

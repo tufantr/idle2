@@ -205,6 +205,10 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.ok(run(null, m({ stars: 5000 }), t0).flags.includes('Stars beyond any possible save'));
     assert.deepEqual(run(highs(m({ stars: 20 })), m({ stars: 50 }), t0 + 24 * hour).flags, [], 'an Ascension a day');
     assert.ok(run(highs(m({ stars: 20 })), m({ stars: 400 }), t0 + hour).flags.includes('Stars grew faster than any play could'));
+    // Combat's levels past 99 (the War Tree's points): seven at once for a hero at the old cap, then a few a day at most
+    assert.deepEqual(run(highs(m()), m({ warLevel: 7 }), t0 + 60 * 1000).flags, [], 'the old cap brings seven at once');
+    assert.ok(run(highs(m({ warLevel: 7 })), m({ warLevel: 40 }), t0 + hour).flags.includes('combat levels past 99 grew faster than any play could'));
+    assert.deepEqual(run(highs(m({ warLevel: 7 })), m({ warLevel: 21 }), t0 + 5 * 24 * hour).flags, [], 'level 120 in five days');
     // A prestige pays more with Stars, so the tokens may grow as much faster.
     const tokensIn = (gain, tokens) => run(highs(m({ bestStage: 300, tokens: 0 })), m({ bestStage: 300, tokens, tokenGain: gain }), t0 + hour).flags.includes('prestige tokens grew faster than any play could');
     assert.equal(tokensIn(1, 30_000), true);

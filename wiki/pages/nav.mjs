@@ -17,7 +17,7 @@ export function NAV(site) {
         { title: 'Combat', links: ['/combat', '/zones', '/monsters', '/dungeons', '/titan', '/camp'].map(page) },
         { title: 'Skills', links: [page('/skills'), ...SKILL_ORDER.map(id => page(`/skills/${id}`))] },
         { title: 'Items', links: ['/items', '/equipment', '/equipment/jewellery', '/uniques', '/tools', '/food', '/potions'].map(page) },
-        { title: 'Progression', links: ['/prestige', '/perks', '/ranks', '/trials', '/ascension', '/mastery', '/medals', '/pets', '/capes', '/looks'].map(page) },
+        { title: 'Progression', links: ['/prestige', '/perks', '/talents', '/ranks', '/trials', '/ascension', '/mastery', '/medals', '/pets', '/capes', '/looks'].map(page) },
         { title: 'The world', links: ['/places', '/daily-crate', '/shop', '/events', '/clans', '/offline', '/mini-games'].map(page) },
         { title: 'Reference', links: ['/formulas', '/xp-table', '/credits'].map(page) }
     ];

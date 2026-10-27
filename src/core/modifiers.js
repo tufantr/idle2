@@ -17,6 +17,7 @@ import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { PETS } from '../data/pets.js';
 import { DUNGEONS, DUNGEON_MILESTONES, TITAN_BONUS, titanBonusUnits, SEAL_RECORDS, parseUniqueKey } from '../data/dungeons.js';
 import { trialBite, trialTiersCleared, laurelsOf } from '../data/trials.js';
+import { TALENTS, talentRank, talentFx } from '../data/talents.js';
 import { obstacleById } from '../data/agility.js';
 import { capesEarned } from '../data/capes.js';
 import { MASTERY_SKILLS, masteryShare, checkpointsAt } from '../data/mastery.js';
@@ -98,10 +99,10 @@ export function bonfireLit(state, now = state.meta.lastActiveAt || Date.now()) {
     return (state.bonfire?.until || 0) > now;
 }
 
-/** True once the player has left the game alone for `focusAfterMs`. */
+/** True once the player has left the game alone for `focusAfterMs` (less with Veteran's Focus: data/talents.js). */
 export function isFocused(state, now = state.meta.lastActiveAt || Date.now()) {
     const lastInput = state.meta.lastInputAt ?? now;
-    return now - lastInput >= BASE.focusAfterMs;
+    return now - lastInput >= BASE.focusAfterMs - (talentFx(state).focusCut || 0);
 }
 
 
@@ -195,6 +196,15 @@ export function collectModifiers(state) {
         const level = state.perks[perk.id] || 0;
         addMods(mods, perk.mods, level);
         for (const [stat, m] of Object.entries(perk.mult || {})) mods[`${stat}Log`] += level * Math.log(m);
+    }
+
+    // The War Tree's talents (data/talents.js): their stats as a perk's (mods) or Knight's (mult) are, a rank at a time.
+    // Their rules are read in the fight (deriveStats `talents`).
+    for (const t of TALENTS) {
+        const rank = Math.min(t.max, talentRank(state, t.id));
+        if (!rank) continue;
+        addMods(mods, t.mods, rank);
+        for (const [stat, m] of Object.entries(t.mult || {})) mods[`${stat}Log`] += rank * Math.log(m);
     }
 
     // Achievements: their own reward plus the small global bonus each.
@@ -374,6 +384,8 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         clanBanner: banner,
         campMult: camp,
         focused: !!mods.focused,
+        // the War Tree's rules (data/talents.js talentFx), read in the fight; not in the clan boss's, which the server reckons
+        talents: state.combat.mode === 'clan' ? {} : talentFx(state),
         bonfire: bonfireLit(state),
         event: mods.event || null
     };

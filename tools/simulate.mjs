@@ -58,6 +58,8 @@ import { rankFor } from '../src/data/ranks.js';
 import { FESTIVAL_CLOAK_COST } from '../src/data/events.js';
 import { TRIALS } from '../src/data/trials.js';
 import { trialsOpen, nextTrialTarget, weeklyGoal, pactSize } from '../src/systems/trials.js';
+import { talentPoints, warLevel } from '../src/systems/talents.js';
+import { talentById } from '../src/data/talents.js';
 import { firstPrestigeDue } from '../src/systems/guide.js';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -68,7 +70,7 @@ const SEED = Number(args.seed || 1);
 const STEP = Number(args.step || 500);
 const SNAPSHOT_HOURS = Number(args.snapshot || 10);
 const VERBOSE = !!args.verbose;
-// --without=dungeons,titan,farming,agility,anvil,bench,camp,perks,crafting,essence,seals: the bot leaves those alone
+// --without=dungeons,titan,farming,agility,anvil,bench,camp,perks,talents,crafting,essence,seals: the bot leaves those alone
 // (restricted play: what each system is worth, robust-and-fun/D §2.3). food, potions, or consumables (both):
 // it neither makes nor uses them, and eats nothing (what they are worth to a push, DESIGN §3.6).
 const WITHOUT = new Set(String(args.without || '').split(',').filter(Boolean));
@@ -360,12 +362,30 @@ function nextPerk() {
     if (deeper.length) return deeper.reduce((a, b) => (perkLevelCost(S.perks[b.id] + 1, b) < perkLevelCost(S.perks[a.id] + 1, a) ? b : a));
     return order.find(p => S.perks[p.id] < p.max) || null;
 }
+// The War Tree (data/talents.js): the bot learns its talent points as they come, along TALENT_ORDER: the Hunt's clock first
+// (the deep wall), then the Blade to its capstone, the Hunt's to Relentless, the rest of the Blade and Hunt, Bulwark last.
+const rk = (id, n) => Array(n).fill(id);
+const TALENT_ORDER = [...rk('patient_hunter', 5), ...rk('sharpened_edge', 5), ...rk('keen_eye', 5), ...rk('opening_blow', 3), ...rk('precision', 5),
+    ...rk('execute', 3), ...rk('weak_spot', 3), 'giant_slayer', ...rk('savage_blows', 5), 'deathblow',
+    ...rk('scavenger', 5), ...rk('treasure_sense', 5), ...rk('second_chance', 2), ...rk('essence_drinker', 3), ...rk('long_draught', 3), ...rk('lords_due', 3), ...rk('bounty', 5), 'relentless',
+    ...rk('giant_slayer', 4), ...rk('flurry', 3), ...rk('cleave', 3), ...rk('berserker', 2), ...rk('swift_kill', 2),
+    ...rk('gilded_eye', 3), ...rk('veterans_focus', 3), ...rk('tracker', 5),
+    ...rk('thick_skin', 5), ...rk('iron_hide', 5), ...rk('brace', 3), ...rk('light_feet', 5), 'second_wind', ...rk('lifeblood', 2), ...rk('hamstring', 3), ...rk('riposte', 3),
+    ...rk('stalwart', 5), ...rk('rally', 3), ...rk('hearty_meals', 3), ...rk('fortress', 5), ...rk('vengeance', 2), 'unbreakable'];
+function learnTalents() {
+    for (let guard = 0; !WITHOUT.has('talents') && talentPoints(S) > 0 && guard < 200; guard++) {
+        const want = {};
+        const next = TALENT_ORDER.find(id => (want[id] = (want[id] || 0) + 1) > (S.talents.ranks[id] || 0));
+        if (!next || !game.learnTalent(next)) break;
+    }
+}
 function spendPoints() {
     let guard = 0;
     while (!WITHOUT.has('perks') && S.prestige.skillPoints > 0 && guard++ < 100) {
         const perk = nextPerk();
         if (!perk || !game.buyPerk(perk.id)) break;
     }
+    learnTalents();
     // Spare gold buys essence (after the camp, and never the gold saved for the next obstacle).
     const reserve = nextSlot() >= 0 ? obstacleCost(S, nextSlot()).gold : 0;
     for (let guard = 0; !WITHOUT.has('essence') && guard < 50 && S.resources.essence < 3000; guard++) {
@@ -767,6 +787,8 @@ function noteEvent(ev) {
         case 'ascend': moment('major', `ascension ${ev.count} +${ev.stars} stars`); break;
         case 'masteryCheckpoint': moment('medium', `mastery ${ev.skill} ${Math.round(ev.at * 100)}%`); milestone('mastery checkpoints', S.stats.masteryCheckpoints || 0); break;
         case 'trialTier': moment(ev.last ? 'major' : 'medium', `trial ${ev.id} ${ev.tier}`); milestone('trial tiers', Object.values(S.trials.cleared).reduce((a, b) => a + b, 0)); break;
+        case 'talentPoint': moment('medium', `combat ${ev.level}`); milestone('war level', warLevel(S)); break;   // the War Tree (data/talents.js)
+        case 'talent': if (ev.rank === ev.max && talentById(ev.id)?.row === 7) moment('major', `capstone ${ev.id}`); break;
     }
 }
 const BANDS = [[0, 1], [1, 10], [10, 50], [50, 150], [150, 300], [300, 500], [500, 1000], [1000, 2000]];
@@ -995,6 +1017,8 @@ if (JSON_OUT) {
         ascension: { count: S.ascension.count, stars: S.ascension.stars, at: Object.fromEntries([1, 2, 3, 4, 5, 6, 8, 10].map(n => [n, at('ascension', n)])) },
         masteryCheckpoints: { count: S.stats.masteryCheckpoints || 0, at: Object.fromEntries([1, 3, 5, 10, 15, 20].map(n => [n, at('mastery checkpoints', n)])) },
         trials: { runs: trialRuns, laurels: S.trials.laurels || 0, firstLaurelAt: at('laurels', 1), tiers: { ...S.trials.cleared }, firstTierAt: at('trial tiers', 1), reached: runLog.filter(r => r.trial).map(r => [r.trial, r.reached]) },
+        // the War Tree: combat's levels past 99 (its points) and when each came, and the talents learned at the end
+        talents: { warLevel: warLevel(S), at: Object.fromEntries(milestones.filter(m => m.key === 'war level').map(m => [m.value, +H(m.at).toFixed(2)])), ranks: { ...S.talents.ranks } },
         runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },
         deaths: deathStages,
         gold: { earned: S.stats.goldEarned, spent: S.stats.goldSpent, bySink: spentOn, lostToPrestige },

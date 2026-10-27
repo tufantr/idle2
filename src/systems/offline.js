@@ -9,7 +9,7 @@ import { masteryLevel } from './mastery.js';
 import { isFocused, bonfireLit } from '../core/modifiers.js';
 import { RESOURCES } from '../data/resources.js';
 import { SKILLS } from '../data/skills.js';
-import { levelForXp } from '../core/xp.js';
+import { levelForXp, combatLevelForXp } from '../core/xp.js';
 import { DUNGEONS, dungeonAt } from '../data/dungeons.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { RARITIES } from '../data/items.js';
@@ -67,7 +67,8 @@ function diff(before, state) {
     const skills = {};
     for (const [id, xp] of Object.entries(before.skills)) {
         const delta = state.skills[id].xp - xp;
-        if (delta > 0) skills[id] = { xp: Math.round(delta), from: levelForXp(xp), to: levelForXp(state.skills[id].xp) };
+        const level = id === 'combat' ? combatLevelForXp : levelForXp;   // (Combat past 99 too: the War Tree's levels)
+        if (delta > 0) skills[id] = { xp: Math.round(delta), from: level(xp), to: level(state.skills[id].xp) };
     }
     return {
         resources, skills,

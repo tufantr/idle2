@@ -15,6 +15,7 @@ import { VOIDSTONE_DEPTH, VOIDSTONE_CHANCE } from '../data/workshop.js';
 import { eventProgress } from './events.js';
 import { BESTIARY_NAMES, starsFor } from '../data/bestiary.js';
 import { trialBite } from '../data/trials.js';
+import { SECOND_WIND_MS, RELENTLESS } from '../data/talents.js';
 import { stratumStartingAt } from '../data/strata.js';
 import { checkTrial } from './trials.js';
 import { clanBossEnemy, endClanFight, noteClanStrike, clanGuardOpen } from './clanfight.js';
@@ -53,7 +54,13 @@ export function spawnEnemy(game) {
             const hp = Math.floor(c.enemy.maxHp * (bite.enemyHp || 1));
             c.enemy = { ...c.enemy, worth: c.enemy.worth || c.enemy.maxHp, atk: c.enemy.atk * (bite.enemyAtk || 1), hp, maxHp: hp };
         }
-        if (bite.bossTime && c.enemy.boss) c.enemy = { ...c.enemy, timeLimit: (c.enemy.timeLimit || BALANCE.combat.bossTimeMs) * bite.bossTime };
+        // a boss's clock: the War Tree's Patient Hunter, and Relentless for each time this boss held out (data/talents.js),
+        // then a Trial's share of it
+        const fx = game.derived?.talents || {};
+        const relentless = fx.relentless && c.relentless?.stage === c.stage ? Math.min(RELENTLESS.maxMs, c.relentless.ms) : 0;
+        if (c.enemy.boss && (bite.bossTime || fx.patientMs || relentless)) {
+            c.enemy = { ...c.enemy, timeLimit: ((c.enemy.timeLimit || BALANCE.combat.bossTimeMs) + (fx.patientMs || 0) + relentless) * (bite.bossTime || 1) };
+        }
         // Now and then a regular monster comes gilded: the same fight, a far better payout. A new hero
         // meets his first at stage 7 (one in 150 is too rare for the first minutes).
         const firstGilded = c.stage === FIRST_GILDED_STAGE && c.stage === c.maxStage && !c.farmMode && !state.stats.gildedKills && !state.prestige.count;
@@ -62,6 +69,12 @@ export function spawnEnemy(game) {
             game.emit({ type: 'gilded', enemy: c.enemy });
         }
     }
+    const fx = game.derived?.talents || {};
+    // Hamstring (data/talents.js): a boss swings slower (the clan's doesn't swing)
+    if (fx.hamstring && c.enemy.boss && c.mode !== 'clan') c.enemy = { ...c.enemy, interval: Math.round(c.enemy.interval * (1 + fx.hamstring)) };
+    // Cleave: the last killing blow's spare damage lands on the next monster of the stages or a dungeon (never felling it)
+    if (c.cleaveCarry > 0 && (c.mode === 'stages' || c.mode === 'dungeon')) c.enemy = { ...c.enemy, hp: Math.max(1, c.enemy.hp - c.cleaveCarry) };
+    c.cleaveCarry = 0;
     c.playerTimer = 0;
     c.enemyTimer = 0;
     c.bossTimeLeft = c.enemy.boss ? (c.enemy.timeLimit || BALANCE.combat.bossTimeMs) : 0;
@@ -237,7 +250,24 @@ export function playerAttack(game, { manual = false } = {}) {
     const critChance = Math.min(BASE.caps.critChance, d.critChance);
     const isCrit = rng.chance(critChance);
     let dmg = d.atk * (isCrit ? d.critDmg : 1) * comboMultiplier(combo) * (manual ? BALANCE.combat.manualHitMult * (clan ? CLAN_GUARD.mult : 1) : 1) * (clan ? state.clanFight?.scale || 1 : 1);
+    // the War Tree (data/talents.js; nothing in the clan's fight: deriveStats leaves its rules out there)
+    const fx = d.talents || {};
+    let deathblow = false;
+    let opening = false;
+    if (!manual && fx.deathblow) {   // every tenth swing
+        c.swings = ((c.swings || 0) + 1) % 10;
+        if (!c.swings) { dmg *= fx.deathblow; deathblow = true; }
+    }
+    if (enemy.boss) {
+        if (!manual && !enemy.opened && fx.openingBlow) { dmg *= fx.openingBlow; opening = true; }
+        if (fx.giantSlayer) dmg *= 1 + fx.giantSlayer;
+        if (isCrit && fx.weakSpot) dmg *= 1 + fx.weakSpot;
+    }
+    if (!manual) enemy.opened = true;
+    if (fx.berserker && c.hp < d.maxHp / 2) dmg *= 1 + fx.berserker;
+    if (!manual && c.vengeance) { dmg *= 1 + (fx.vengeance || 0); c.vengeance = false; }   // after a dodge
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
+    const hpBefore = enemy.hp;
     const endless = clan && enemy.endless;   // the Endless Hydra never falls: what it took adds up instead (systems/clanfight.js)
     const dealt = endless ? dmg : Math.min(dmg, Math.max(0, enemy.hp));   // what the monster really lost (a killing blow's excess heals nothing)
     if (endless) state.clanFight.dealt = (state.clanFight.dealt || 0) + dmg;
@@ -252,9 +282,27 @@ export function playerAttack(game, { manual = false } = {}) {
         c.lifestealRoom = (c.lifestealRoom || 0) - heal;
     }
 
-    game.emit({ type: 'hit', dmg, crit: isCrit, manual });
+    // Execute: a boss of the stages or a dungeon left below its line falls (never the Titan, whose fight is its damage)
+    let executed = false;
+    if (fx.execute && enemy.boss && !enemy.titan && !endless && enemy.hp > 0 && enemy.hp <= enemy.maxHp * fx.execute) { enemy.hp = 0; executed = true; }
+    // Cleave: a killing blow's spare damage, for the next monster (spawnEnemy)
+    if (fx.cleave && enemy.hp <= 0 && dmg > hpBefore && !enemy.titan) c.cleaveCarry = Math.floor((dmg - Math.max(0, hpBefore)) * fx.cleave);
+    // Flurry: after a critical swing the next comes sooner
+    if (fx.flurry && isCrit && !manual) c.playerTimer = (c.playerTimer || 0) + fx.flurry * d.attackInterval;
+    game.emit({ type: 'hit', dmg, crit: isCrit, manual, ...(deathblow ? { deathblow } : {}), ...(opening ? { opening } : {}), ...(executed ? { executed } : {}) });
     if (enemy.hp <= 0) onEnemyDeath(game);
     return dmg;
+}
+
+/** Riposte (data/talents.js): a dodge strikes back with a share of a swing (no critical hit, no combo). */
+function strikeBack(game, share) {
+    const c = game.state.combat;
+    const enemy = c.enemy;
+    if (!enemy || enemy.hp <= 0 || c.mode === 'clan') return;
+    const dmg = Math.max(1, Math.round(game.derived.atk * share * rng.float(0.9, 1.1)));
+    enemy.hp -= dmg;
+    game.emit({ type: 'hit', dmg, crit: false, manual: false, riposte: true });
+    if (enemy.hp <= 0) onEnemyDeath(game);
 }
 
 export function enemyAttack(game) {
@@ -263,14 +311,35 @@ export function enemyAttack(game) {
     const d = game.derived;
     const enemy = c.enemy;
     if (!enemy || enemy.hp <= 0) return 0;
-    if (rng.chance(d.dodge)) { game.emit({ type: 'dodge' }); return 0; }
+    const fx = d.talents || {};
+    if (rng.chance(d.dodge)) {
+        game.emit({ type: 'dodge' });
+        // the War Tree (data/talents.js): Vengeance readies his next swing, Riposte strikes back at once
+        if (fx.vengeance) c.vengeance = true;
+        if (fx.riposte) strikeBack(game, fx.riposte);
+        return 0;
+    }
     // a Trial's rules (data/trials.js): Glass Hero's blow fells him, Brutes' staggers him (his next swing comes later)
     const bite = c.mode === 'clan' ? {} : trialBite(state);
-    const dmg = bite.oneBlow ? Math.max(1, c.hp) : enemyDamage(enemy.atk, d.def);
+    let dmg = bite.oneBlow ? Math.max(1, c.hp) : enemyDamage(enemy.atk, d.def);
+    if (!bite.oneBlow) {
+        // the War Tree: Fortress takes a share off every blow, Brace off a big one, Unbreakable caps it at a third of his
+        // health, and once a minute Second Wind keeps a felling blow from felling him (he eats at once)
+        if (fx.fortress) dmg *= 1 - fx.fortress;
+        if (fx.brace && dmg > d.maxHp * 0.3) dmg *= 1 - fx.brace;
+        if (fx.unbreakable) dmg = Math.min(dmg, d.maxHp * fx.unbreakable);
+        dmg = Math.max(1, Math.round(dmg));
+        if (fx.secondWind && dmg >= c.hp && game.now - (c.secondWindAt ?? -Infinity) >= SECOND_WIND_MS) {
+            dmg = Math.max(0, c.hp - 1);
+            c.secondWindAt = game.now;
+            game.emit({ type: 'secondWind' });
+        }
+    }
     c.hp -= dmg;
     if (bite.stagger) c.playerTimer = Math.max(-2 * d.attackInterval, (c.playerTimer || 0) - bite.stagger);
     game.emit({ type: 'enemyHit', dmg });
     if (c.hp <= 0) onPlayerDeath(game);
+    else if (c.secondWindAt === game.now && c.hp <= 1) tryEat(game);   // Second Wind: he eats at once
     return dmg;
 }
 
@@ -317,6 +386,7 @@ function rollLoot(game, enemy, payout) {
         let essence = 0;
         if (boss) essence = rng.int(r.bossEssence[0], r.bossEssence[1]) * Math.max(1, Math.round(zone.tier / 2));
         else if (rng.chance(r.essenceDropChance * d.dropMult)) essence = rng.int(1, 2);
+        if (essence && d.talents?.essence) essence = Math.round(essence * (1 + d.talents.essence));   // the War Tree's Essence Drinker
         if (essence) { add('essence', essence); bumpStat(game, 'essenceFound', essence); }
 
         // Gear: rare from regular monsters, a coin flip from a boss's first fall; tier follows the zone,
@@ -399,6 +469,18 @@ function lordsDue(game, enemy, drops) {
     drops.push({ item, kept: result.kept });
     log(game, `${item.icon} ${enemy.name.replace(' (Lord)', '')}, Lord of ${zone.name.replace(/^The /, 'the ')}, leaves its due: ${RARITIES.find(r => r.id === item.rarity).name} ${item.name}.`, 'loot');
     if (result.kept) game.emit({ type: 'itemDropped', item, lord: true });
+    // the War Tree's Lord's Due (data/talents.js): now and then a second piece, for the next slot that lags
+    const second = game.derived?.talents?.lordsDue;
+    if (second && rng.chance(second)) {
+        const next = laggingSlot(state, zone, [lag.type]) || lag;
+        const extra = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: next.type, weight: 1 }], { rarity: top === 'primal' ? 'mythic' : top, tier: zone.gearTier });
+        const kept = addItem(game, extra).kept;
+        bumpStat(game, 'itemsDropped');
+        if (extra.rarity === 'mythic' || extra.rarity === 'primal') bumpStat(game, 'mythicsFound');
+        drops.push({ item: extra, kept });
+        log(game, `${extra.icon} Lord's Due: a second piece, ${RARITIES.find(r => r.id === extra.rarity).name} ${extra.name}.`, 'loot');
+        if (kept) game.emit({ type: 'itemDropped', item: extra, lord: true });
+    }
 }
 
 /**
@@ -458,8 +540,12 @@ export function onEnemyDeath(game) {
     const payout = killPayout(state, enemy);
     const paidAs = payout.full ? enemy : { ...enemy, boss: false };
     const r = BALANCE.rewards;
-    const gold = goldForKill(paidAs, d.goldMult) * (enemy.gilded ? r.gildedGoldMult : 1);
-    const xp = combatXpForKill(paidAs, d.combatXpMult, skillLevel(state, 'combat')) * payout.rolls * (enemy.gilded ? r.gildedXpMult : 1);
+    const fx = d.talents || {};
+    const bounty = payout.full && enemy.boss && fx.bounty ? 1 + fx.bounty : 1;   // the War Tree's Bounty: a boss's first fall pays more
+    const gold = goldForKill(paidAs, d.goldMult) * (enemy.gilded ? r.gildedGoldMult : 1) * bounty;
+    const xp = combatXpForKill(paidAs, d.combatXpMult, skillLevel(state, 'combat')) * payout.rolls * (enemy.gilded ? r.gildedXpMult : 1) * bounty;
+    // Rally: a kill heals him (not in Fasting, where no health comes back while he fights)
+    if (fx.rally && c.hp > 0 && !trialBite(state).noRegen) c.hp = Math.min(d.maxHp, c.hp + d.maxHp * fx.rally);
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
     bumpStat(game, 'kills');
@@ -481,8 +567,9 @@ export function onEnemyDeath(game) {
 
     if (c.mode === 'dungeon') { onDungeonKill(game); game.markDirty(); return; }
     if (c.mode === 'titan') { endTitan(game, true); game.markDirty(); return; }
-    // Beating the boss ends a regroup: you move on (otherwise it could be farmed at its first-fall payout).
-    if (enemy.boss) c.regroupLeft = 0;
+    // Beating the boss ends a regroup: you move on (otherwise it could be farmed at its first-fall payout). Relentless's
+    // extra time was for this boss.
+    if (enemy.boss) { c.regroupLeft = 0; if (c.relentless?.stage === enemy.stage) c.relentless = null; }
     if (!c.farmMode && !(c.regroupLeft > 0)) {
         // a pack on new ground (packSize): its next monster steps up, and the stage holds
         const killed = (c.pack?.stage === c.stage ? c.pack.killed : 0) + 1;
@@ -559,8 +646,11 @@ export function onBossTimeout(game) {
     const back = Math.max(1, c.stage - 1);
     log(game, `⏳ ${c.enemy.name} held out for ${(c.enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
     game.emit({ type: 'bossTimeout', stage: c.stage });
+    // the War Tree (data/talents.js): Second Chance cuts the regroup, Relentless gives this boss's next try more time
+    const fx = game.derived?.talents || {};
+    if (fx.relentless) c.relentless = { stage: c.stage, ms: Math.min(RELENTLESS.maxMs, (c.relentless?.stage === c.stage ? c.relentless.ms : 0) + RELENTLESS.stepMs) };
     c.stage = back;
-    c.regroupLeft = BALANCE.combat.regroupMs;
+    c.regroupLeft = Math.max(0, BALANCE.combat.regroupMs - (fx.regroupCut || 0));
     spawnEnemy(game);
     game.markDirty();
 }
@@ -605,7 +695,7 @@ export function tickCombat(game, dt) {
     // lifesteal's room fills at its ceiling's pace while he fights, and never holds more than a swing's worth
     // (a second at least, or this step's in a long one), so a pause can't bank a big heal
     if (c.active) {
-        const pace = d.maxHp * BASE.lifestealPerSecond / 1000;
+        const pace = d.maxHp * (BASE.lifestealPerSecond + (d.talents?.lifestealCeiling || 0)) / 1000;   // (Lifeblood: data/talents.js)
         c.lifestealRoom = Math.min(pace * Math.max(1000, d.attackInterval, dt), (c.lifestealRoom || 0) + pace * dt);
     }
     if (!c.active) {
@@ -662,17 +752,26 @@ export function tickCombat(game, dt) {
             const leftover = c.playerTimer;
             playerAttack(game);
             if (choosingAfterClear(state)) break;   // the run is won: no monster now, the hero waits at the chest
-            // A kill spawns the next enemy with fresh timers; it has been there for the rest of this step.
-            if (c.active && c.enemy !== target) {
-                c.playerTimer = leftover;
+            // A kill spawns the next enemy with fresh timers; it has been there for the rest of this step. (Swift Kill,
+            // data/talents.js: his next swing is that much readier.)
+            if (c.active && c.enemy !== target && c.enemy) {
+                c.playerTimer = leftover + (d.talents?.swiftKill || 0) * d.attackInterval;
                 c.enemyTimer = leftover;
                 if (c.enemy.boss) c.bossTimeLeft -= leftover;
             }
         } else {
             c.enemyTimer -= c.enemy.interval;
             tryEat(game, { blow: true });
+            const target = c.enemy;
+            const leftover = c.enemyTimer;
             enemyAttack(game);
             if (c.active && c.hp > 0) tryEat(game);   // below the line: at once, not at the next swing
+            // a dodge's Riposte may fell it (data/talents.js): the next one has been there for the rest of the step
+            if (c.active && c.enemy && c.enemy !== target && !choosingAfterClear(state)) {
+                c.playerTimer = leftover;
+                c.enemyTimer = leftover;
+                if (c.enemy.boss) c.bossTimeLeft -= leftover;
+            }
         }
         // the fight's own rules changed the regroup at this moment: a boss beaten ends it, a new one starts it
         if (regroupBefore > 0 && !(c.regroupLeft > 0)) regroupEnd = 0;

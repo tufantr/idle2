@@ -57,6 +57,9 @@ import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
 import { TRIAL_TIERS, trialBite } from '../data/trials.js';
+import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice } from '../data/talents.js';
+import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
+import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
 
 // The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
 // the bag (the owner's order), in a group of their own above the headings; the rest follow by group.
@@ -246,7 +249,9 @@ export function renderHeader(game, ui, cloud) {
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
         seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, every ${BASE.recordSkillLevels} skill levels, each dungeon unique found${d.records.seals ? ', each dungeon Seal' : ''}${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
         seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${d.tokenMult.toFixed(2)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${starGain(d.stars).toFixed(1)}</i></div>` : '',
-        seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : ''
+        seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : '',
+        // the War Tree's points (data/talents.js): one for each combat level past 99
+        seen(state, 'talents') ? `<button class="chip tp" onclick="FI.openTalents()" title="Talent points: one for each combat level past 99; tap for the War Tree" aria-label="${talentPoints(state)} talent point${talentPoints(state) === 1 ? '' : 's'}: open the War Tree"><span>Talents</span><b>${talentPoints(state)}</b></button>` : ''
     ];
     const banked = state.daily.banked;
     const greatNext = cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1;   // the crate waiting is a great one
@@ -663,7 +668,9 @@ function renderLoopActions(game) {
     }
     if (seen(state, 'skill_points')) {
         const sp = state.prestige.skillPoints;
-        parts.push(`<button class="shop-btn dock-perks${sp > 0 ? ' ready' : ''}" onclick="FI.openPerks()" title="Spend skill points on perks that last forever"><b>Perks</b><span>${sp > 0 ? `${sp} SP to spend` : 'no SP now'}</span></button>`);
+        const tp = seen(state, 'talents') ? talentPoints(state) : 0;   // and the War Tree's points (data/talents.js), on the same card
+        const words = [sp > 0 ? `${sp} SP` : '', tp > 0 ? `${tp} talent point${tp === 1 ? '' : 's'}` : ''].filter(Boolean);
+        parts.push(`<button class="shop-btn dock-perks${sp > 0 || tp > 0 ? ' ready' : ''}" onclick="FI.openPerks('${tp > 0 && !sp ? 'talents' : 'perks'}')" title="Spend skill points on perks that last forever${seen(state, 'talents') ? ', and talent points on the War Tree' : ''}"><b>Perks</b><span>${words.length ? `${words.join(' · ')} to spend` : 'no SP now'}</span></button>`);
     }
     const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
     if (upgrade) {
@@ -1379,7 +1386,7 @@ export function renderInventory(game, ui) {
     const stat = (icon, value, label, title) => `<span title="${title}">${icon} <b>${value}</b> ${label}</span>`;
     return `<div class="armory${hasGear ? '' : ' bare'}">
         <section class="glass-panel doll-panel ${painted('armory', 'center 62%')}">
-            <div class="panel-header"><h2>${esc(state.hero?.name || 'Your hero')}</h2>${rankBadge(state)}<span class="muted small">Combat level ${d.combatLevel}</span></div>
+            <div class="panel-header"><h2>${esc(state.hero?.name || 'Your hero')}</h2>${rankBadge(state)}<span class="muted small">Combat level ${MAX_LEVEL_SHOWN(state)}</span></div>
             <div class="doll">
                 <div class="doll-col">${doll.left.map(sl => dollSlot(state, sl, selectedId)).join('')}</div>
                 <div class="doll-figure">${heroSprite(state, { scale: 6 })}</div>
@@ -1473,16 +1480,87 @@ function perkPurse(state) {
         : 'No skill points now. A prestige whose run reached half your best brings one; perks last forever.';
 }
 
-/** Perks in a window, opened from the SP chip on any screen, the prestige strip or the fight's dock. */
-export function renderPerksModal(game) {
+/**
+ * Perks in a window, opened from the SP chip on any screen, the prestige strip or the fight's dock; once Combat has passed
+ * 99, the War Tree beside them (`view` 'talents': data/talents.js), with the talent `pick`ed and, on a phone, the `tree` shown.
+ */
+export function renderPerksModal(game, { view = 'perks', pick = null, tree = null } = {}) {
     const state = game.state;
-    return `<div class="modal-content perks-modal ${painted('library', 'center 40%')}">
-        <div class="modal-header">Perks</div>
-        <p class="about-blurb">${perkPurse(state)}</p>
-        <div class="shop-list">${perkList(state)}</div>
+    const war = view === 'talents' && seen(state, 'talents');
+    const tabs = seen(state, 'talents') ? segments([['perks', 'Perks', sprite('perk/knight', { scale: 0.5 })], ['talents', 'War Tree', sprite(FEATURES.talents.icon, { scale: 0.5 })]], war ? 'talents' : 'perks', 'FI.perksView', 'Perks or the War Tree') : '';
+    return `<div class="modal-content perks-modal${war ? ' war-modal' : ''} ${painted(war ? 'wartable' : 'library', 'center 40%')}">
+        <div class="modal-header">${war ? `War Tree ${aboutButton('talents')}` : 'Perks'}</div>
+        ${tabs}
+        ${war ? renderWarTree(game, pick, tree) : `<p class="about-blurb">${perkPurse(state)}</p><div class="shop-list">${perkList(state)}</div>`}
         <div class="modal-footer"><button class="modal-btn btn-confirm" data-autofocus onclick="FI.closeModal()">Done</button></div>
     </div>`;
 }
+
+/** What blocks a talent, in words for its detail line (systems/talents.js learnBlock). */
+function talentBlockWords(t, block) {
+    if (block === 'row') return `Opens with ${rowOpensAt(t.row)} points in ${treeById(t.tree).name}`;
+    if (block === 'needs') return `Needs ${talentById(t.needs).name} full first`;
+    if (block === 'points') return 'No talent points now: each combat level past 99 brings one';
+    return '';
+}
+
+/**
+ * The War Tree (data/talents.js): three trees of seven rows, as in WoW Classic. Each talent a picture with its rank; a lit
+ * frame when a point can go there, a full one gold, a row not yet open dim; arrows from a talent to the one it opens. A
+ * tap picks a talent: the line under the trees says what it does now and at its next rank, and Learn spends a point. On a
+ * phone one tree shows at a time.
+ */
+function renderWarTree(game, pick, shown) {
+    const state = game.state;
+    const points = talentPoints(state);
+    const level = MAX_LEVEL_SHOWN(state);
+    const next = combatProgress(state.skills.combat.xp);
+    const spent = talentPointsSpent(state);
+    const picked = talentById(pick);
+    const open = shown && treeById(shown) ? shown : (picked ? picked.tree : TREES[0].id);
+    const trees = TREES.map(tree => {
+        const inTree = talentPointsSpent(state, tree.id);
+        const cells = TALENTS.filter(t => t.tree === tree.id).map(t => {
+            const rank = talentRank(state, t.id);
+            const block = learnBlock(state, t.id);
+            const rowShut = inTree < rowOpensAt(t.row);
+            const cls = rank >= t.max ? 'full' : !block ? 'ready' : rowShut || block === 'needs' ? 'shut' : rank ? 'part' : 'open';
+            return `<button class="talent ${cls}${pick === t.id ? ' picked' : ''}${t.row === ROWS ? ' capstone' : ''}" style="grid-row:${t.row};grid-column:${t.col}" onclick="FI.pickTalent('${t.id}')"
+                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b></button>`;
+        }).join('');
+        // the arrows: from a talent down its column to the one it opens (data/talents.js `needs`)
+        const arrows = TALENTS.filter(t => t.tree === tree.id && t.needs).map(t => {
+            const from = talentById(t.needs);
+            const lit = talentRank(state, from.id) >= from.max;
+            return `<i class="talent-arrow${lit ? ' lit' : ''}" style="grid-column:${t.col};grid-row:${from.row} / ${t.row + 1}" aria-hidden="true"></i>`;
+        }).join('');
+        return `<section class="war-col${open === tree.id ? ' shown' : ''}" data-tree="${tree.id}">
+            <div class="war-head">${sprite(tree.icon, { scale: 1 })}<b>${esc(tree.name)}</b><span class="war-spent">${inTree}</span></div>
+            <div class="war-grid">${arrows}${cells}</div>
+        </section>`;
+    }).join('');
+    const detail = picked ? (() => {
+        const rank = talentRank(state, picked.id);
+        const block = learnBlock(state, picked.id);
+        const now = rank ? `Now: ${esc(picked.text(rank))}.` : '';
+        const then = rank < picked.max ? `${rank ? 'Next' : 'Rank 1'}: ${esc(picked.text(rank + 1))}.` : 'Full.';
+        const why = block && block !== 'full' ? `<span class="muted">${esc(talentBlockWords(picked, block))}.</span>` : '';
+        return `<div class="talent-detail">${sprite(picked.icon, { scale: 1 })}<div><b>${esc(picked.name)}</b> <span class="muted small">${rank}/${picked.max}</span><p class="small">${now} ${then} ${why}</p></div>
+            <button class="prestige-btn talent-learn" onclick="FI.learnTalent('${picked.id}')" ${block ? 'disabled' : ''}>Learn</button></div>`;
+    })() : '<div class="talent-detail empty"><p class="small muted">Tap a talent to see what it does.</p></div>';
+    const price = respecPrice(state);
+    const phoneTabs = segments(TREES.map(t => [t.id, `${t.name} ${talentPointsSpent(state, t.id)}`, sprite(t.icon, { scale: 0.5 })]), open, 'FI.talentTree', 'Which tree');
+    return `<div class="war-tree">
+        <p class="about-blurb war-purse">Combat level <b>${level}</b>${next.xpNeeded ? ` <span class="war-next" title="${fmt(next.xpInto)} of ${fmt(next.xpNeeded)} XP to the next level"><i style="width:${(next.fraction * 100).toFixed(1)}%"></i></span>` : ''} · <b class="tp-text">${points} talent point${points === 1 ? '' : 's'}</b>
+            ${spent ? `<button class="mini-btn war-unlearn" onclick="FI.unlearnTalents()" title="Every point back, for essence (more each time)">Unlearn all · ${resIcon('essence')} ${fmt(price)}</button>` : ''}</p>
+        ${detail}
+        <div class="war-tabs">${phoneTabs}</div>
+        <div class="war-cols">${trees}</div>
+    </div>`;
+}
+
+/** Combat's level, past 99 too (core/xp.js combatProgress): the War Tree's points are the levels above 99. */
+const MAX_LEVEL_SHOWN = state => Math.min(MAX_COMBAT_LEVEL, combatProgress(state.skills.combat.xp).level);
 
 export function renderShop(game, ui) {
     const state = game.state;
@@ -1516,7 +1594,7 @@ export function renderShop(game, ui) {
         </section>`;
     const perksPanel = !perksOpen ? '' : `
         <section class="glass-panel ${painted('library', 'center 40%')}">
-            <div class="panel-header"><h2>Perks</h2></div>
+            <div class="panel-header"><h2>Perks</h2>${seen(state, 'talents') ? `<button class="mini-btn${talentPoints(state) > 0 ? ' ready' : ''}" onclick="FI.openTalents()">${sprite(FEATURES.talents.icon, { scale: 0.5, cls: 'soft' })} War Tree${talentPoints(state) > 0 ? ` · ${talentPoints(state)}` : ''}</button>` : ''}</div>
             <p class="small perk-purse" title="+1 skill point for a prestige whose run reached half your best stage, +1 per ${BALANCE.prestige.spStageStep} stages of your record">${perkPurse(state)}</p>
             <div class="shop-list">${perks}</div>
         </section>`;
@@ -2559,7 +2637,7 @@ export function renderWelcomeBack(summary, game) {
     let i = 0;
     const next = () => i++;
     const skills = Object.entries(summary.skills).map(([id, s]) => {
-        const lp = levelProgress(state.skills[id]?.xp || 0);
+        const lp = (id === 'combat' ? combatProgress : levelProgress)(state.skills[id]?.xp || 0);   // (Combat past 99 too)
         const up = s.to > s.from;
         return `<div class="wb-skill${up ? ' up' : ''}" style="--i:${next()};--c:${SKILLS[id]?.color || '#d6aa5c'}">
             <span class="wb-skill-icon" aria-hidden="true">${tabIcon(id, 0.75)}</span>
@@ -2599,6 +2677,7 @@ export function renderWelcomeBack(summary, game) {
     if (state.daily?.banked > 0) ready.push(['FI.claimDaily()', sprite('crate', { scale: 0.75 }), `${state.daily.banked > 1 ? `${state.daily.banked} crates` : 'A crate'} to open`]);
     if (isUnlocked(state, 'dungeons') && !special && game.titanReady()) ready.push(['FI.challengeTitan()', sprite('titan/0', { scale: 0.75 }), 'The Titan is awake']);
     if (state.prestige.skillPoints > 0) ready.push(['FI.openPerks()', sprite('perk/knight', { scale: 0.75 }), `${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'} to spend`]);
+    if (seen(state, 'talents') && talentPoints(state) > 0) ready.push(['FI.openTalents()', sprite(FEATURES.talents.icon, { scale: 0.75 }), `${talentPoints(state)} talent point${talentPoints(state) === 1 ? '' : 's'} to spend`]);
     const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
     if (upgrade) ready.push([`FI.equip(${Number(upgrade.item.id)})`, sprite(itemSpriteKey(upgrade.item), { scale: 0.75, fallback: esc(upgrade.item.icon) }), `Wear the ${esc(upgrade.item.name)}`]);
     const readyRow = ready.length ? `<div class="wb-ready">${ready.map(([act, art, text]) => `<button class="wb-ready-btn" onclick="FI.collectOffline(); ${act}">${art}<span>${text}</span></button>`).join('')}</div>` : '';

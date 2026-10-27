@@ -394,6 +394,8 @@ button.chip:active { transform: scale(0.97); }
 .chip.tokens b { color: #d8c4ff; }
 .chip.sp { --coin: #7dd3fc; --coin-dark: #0c4a6e; }
 .chip.sp b { color: #bae6fd; }
+.chip.tp { --coin: #fca5a5; --coin-dark: #7f1d1d; }   /* the War Tree's talent points (data/talents.js) */
+.chip.tp b { color: #fecaca; }
 .chip.essence { --coin: #f0abfc; --coin-dark: #701a75; }
 .chip.essence b { color: #f5c2fc; }
 .status-pill, .cloud-pill, .focus-pill, .bonfire-pill, .event-pill {
@@ -1444,6 +1446,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .fx-layer > div { position: absolute; transform: translate(-50%, -50%); pointer-events: none; will-change: transform, opacity; }
 .dmg { font-weight: 900; font-size: 1.15rem; line-height: 1; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 #000, 0 0 6px rgba(0, 0, 0, 0.9); animation: dmgFloat 0.9s ease-out forwards; }
 .dmg.crit { font-size: 1.8rem; color: #fcd34d; text-shadow: 0 2px 0 #7c2d12, 0 0 14px rgba(245, 158, 11, 0.9); animation: dmgCrit 1.1s ease-out forwards; }
+.dmg.talent { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #fca5a5; }   /* the War Tree's big swings: Execute, Deathblow (data/talents.js) */
 .dmg.manual { font-size: 1.15rem; color: #e0f2fe; text-shadow: 0 2px 0 #0c4a6e, 0 0 10px rgba(125, 211, 252, 0.9); }
 .dmg.taken { color: #fca5a5; }
 .dmg.dodge { font-size: 1rem; font-style: italic; color: #e2e8f0; }
@@ -2645,9 +2648,60 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .perks-modal { max-width: 780px; }
 .perks-modal .shop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 0.5rem; }
 .perks-modal .shop-item { padding: 0.6rem 0.7rem; }
-.perks-modal .modal-footer { position: sticky; bottom: -2rem; margin: 1rem -2rem -2rem; padding: 0.8rem 2rem 1.2rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 35%); }
+.perks-modal .modal-footer { position: sticky; z-index: 3; bottom: -2rem; margin: 1rem -2rem -2rem; padding: 0.8rem 2rem 1.2rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 35%); }
 .perks-modal .modal-header { margin-bottom: 0.7rem; padding-bottom: 0.6rem; }
 .perks-modal .about-blurb { margin-bottom: 0.9rem; }
+.perks-modal .seg { margin-bottom: 0.8rem; }
+.panel-header .mini-btn.ready, .war-tree .mini-btn.ready { border-color: #fca5a5; box-shadow: 0 0 12px rgba(248, 113, 113, 0.35); }
+
+/* ---------- the War Tree (data/talents.js): three trees of seven rows, in the perks dialog ---------- */
+.perks-modal.war-modal { max-width: 920px; }
+.war-tree { display: flex; flex-direction: column; gap: 0.7rem; }
+.war-purse { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.55rem; margin: 0; }
+.war-next { display: inline-block; width: 64px; height: 6px; border-radius: 3px; overflow: hidden; vertical-align: middle; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--line); }
+.war-next i { display: block; height: 100%; background: linear-gradient(90deg, #b91c1c, #fca5a5); }
+.tp-text { color: #fecaca; }
+.war-unlearn { margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; }
+.war-tabs { display: none; }
+.war-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.war-col { padding: 0.5rem 0.4rem 0.6rem; border: 1px solid var(--line); border-radius: 12px; background: rgba(10, 7, 4, 0.74); }
+.war-head { display: flex; align-items: center; gap: 0.45rem; margin: 0 0.2rem 0.35rem; font-family: var(--font-display); color: var(--heading); }
+.war-spent { margin-left: auto; font-weight: 800; color: #fecaca; }
+.war-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(7, 56px); justify-items: center; align-items: center; }
+.talent { position: relative; z-index: 1; overflow: visible; width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 10px; border: 2px solid #3d2e1d; background: radial-gradient(circle at 50% 35%, #2d2217, #110c07); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.talent:hover { transform: translateY(-2px); }
+.talent-rank { position: absolute; right: -7px; bottom: -7px; padding: 0 4px; border-radius: 6px; font-size: 0.6rem; font-weight: 800; line-height: 1.35; color: #e7d9c0; background: rgba(12, 8, 4, 0.92); border: 1px solid #4a3a26; }
+.talent.ready { border-color: #4ade80; box-shadow: 0 0 10px rgba(74, 222, 128, 0.45); }
+.talent.ready .talent-rank { color: #bbf7d0; border-color: #166534; }
+.talent.part { border-color: #b08a45; }
+.talent.full { border-color: #fcd34d; box-shadow: 0 0 10px rgba(252, 211, 77, 0.4); }
+.talent.full .talent-rank { color: #fde68a; border-color: #a16207; }
+.talent.shut > .spr { filter: grayscale(1) brightness(0.5); }
+.talent.shut { border-color: #2a2015; }
+.talent.picked { outline: 2px solid #fff3d6; outline-offset: 3px; }
+.talent.capstone { width: 54px; height: 54px; border-radius: 50%; }
+/* an arrow from a talent down its column to the one it opens: a line behind the two, its head just over the lower one */
+.talent-arrow { position: relative; z-index: 0; align-self: stretch; width: 4px; border-radius: 2px; background: #3d2e1d; }
+.talent-arrow::after { content: ""; position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); border: 6px solid transparent; border-bottom: 0; border-top-color: #3d2e1d; }
+.talent-arrow.lit { background: #d4a73c; }
+.talent-arrow.lit::after { border-top-color: #d4a73c; }
+.talent-detail { display: flex; align-items: center; gap: 0.7rem; min-height: 66px; padding: 0.55rem 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 7, 4, 0.8); }
+.talent-detail p { margin: 0.15rem 0 0; }
+.talent-detail.empty { justify-content: center; }
+.talent-learn { margin-left: auto; flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) { .talent { transition: none; } .talent:hover { transform: none; } }
+body.reduced-motion .talent { transition: none; }
+body.reduced-motion .talent:hover { transform: none; }
+@media (max-width: 600px) {
+    .war-tabs { display: block; }
+    .war-tabs .seg { display: flex; }
+    .war-tabs .seg-btn { flex: 1 1 0; justify-content: center; padding: 0.45rem 0.4rem; font-size: 0.8rem; }
+    .war-cols { grid-template-columns: 1fr; }
+    .war-col:not(.shown) { display: none; }
+    .war-head { display: none; }
+    .war-grid { grid-template-rows: repeat(7, 62px); }
+    .talent-arrow::after { bottom: 55px; }
+}
 
 @media (max-width: 900px) {
     body.battle-full #header { top: auto; }

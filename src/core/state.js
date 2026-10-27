@@ -9,7 +9,8 @@ import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
 import { TRIALS, TRIAL_MAX_TIER, PACT_MAX, trialById, trialIds, trialTarget, trialTiersCleared } from '../data/trials.js';
-import { xpForLevel, levelForXp, MAX_LEVEL } from './xp.js';
+import { xpForLevel, levelForXp, combatLevelForXp, MAX_LEVEL, COMBAT_XP_CAP } from './xp.js';
+import { TALENTS, RELENTLESS, talentsValid } from '../data/talents.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS, parseUniqueKey, uniqueKey } from '../data/dungeons.js';
 import { TOOLS, FORGE_MAX, BENCH_SLOTS } from '../data/workshop.js';
@@ -146,6 +147,7 @@ export function createDefaultState(now = Date.now()) {
         playtest: [],          // the playtest log, when the player turns it on (systems/playtest.js)
         trials: { active: null, cleared: {}, best: {}, laurels: 0, weekly: null },   // the run's Trial, tiers cleared, best stage in each, the week's laurel (data/trials.js)
         ascension: { count: 0, stars: 0, firstAt: 0, lastAt: 0 },   // Ascensions made, the Stars they paid, the first and the last (data/ascension.js)
+        talents: { ranks: {}, respecs: 0 },   // the War Tree: each talent's rank, and the times it was unlearned (data/talents.js)
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -575,7 +577,7 @@ function normalise(data, now) {
     }
     for (const id of SKILL_IDS) {
         if (!state.skills[id] || !Number.isFinite(Number(state.skills[id].xp))) state.skills[id] = { xp: 0 };
-        state.skills[id].xp = Math.max(0, Number(state.skills[id].xp));
+        state.skills[id].xp = Math.max(0, Math.min(id === 'combat' ? COMBAT_XP_CAP : Infinity, Number(state.skills[id].xp)));
     }
     // Mastery: keep known actions only, and make the mastery stats match it.
     const savedMastery = state.mastery && typeof state.mastery === 'object' ? state.mastery : {};
@@ -685,6 +687,14 @@ function normalise(data, now) {
     state.combat.potionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.potionMs)));
     state.combat.dungeonPotionMs = Math.max(0, Math.min(POTION_MINUTES * 60000 * 2, finite(state.combat.dungeonPotionMs)));
     state.combat.lifestealRoom = Math.max(0, finite(state.combat.lifestealRoom));   // (a second's worth at most; refilled as he fights)
+    // the War Tree's fight (data/talents.js): the swings counted to Deathblow, a dodge's Vengeance, Cleave's carry (for a
+    // monster, never kept), Second Wind's last time (not in the future) and Relentless's extra time for a boss that held out
+    state.combat.swings = intIn(state.combat.swings, 0, 9, 0);
+    state.combat.vengeance = state.combat.vengeance === true;
+    state.combat.cleaveCarry = 0;
+    state.combat.secondWindAt = Number.isFinite(Number(state.combat.secondWindAt)) && state.combat.secondWindAt !== null ? Math.min(now, Number(state.combat.secondWindAt)) : null;
+    const relentless = state.combat.relentless;
+    state.combat.relentless = isPlainObject(relentless) ? { stage: intIn(relentless.stage, 1, MAX_STAGE, 1), ms: Math.max(0, Math.min(RELENTLESS.maxMs, finite(relentless.ms))) } : null;
     delete state.combat.potionCharges;
     // work and a fight are never both under way (a save with both ran them at once): the fight goes on
     if (state.action && state.combat.active) state.action = null;
@@ -730,6 +740,17 @@ function normalise(data, now) {
         const won = w.won === true ? 1 : Math.max(0, Math.min(PACT_MAX, Math.floor(Number(w.won) || 0)));
         state.trials.weekly = { start: Number(w.start), id: w.id, bar: stage(w.bar), won, best: stage(w.best) };
     }
+    // The War Tree: known talents at whole ranks within their most, a tree a hero could have learned in order (data/talents.js
+    // talentsValid) and no more points than Combat's levels past 99 have brought; anything else is unlearned, its points back
+    const tal = isPlainObject(data?.talents) ? data.talents : {};
+    const ranks = {};
+    for (const t of TALENTS) {
+        const n = Math.min(t.max, Math.floor(Number(tal.ranks?.[t.id]) || 0));
+        if (n > 0) ranks[t.id] = n;
+    }
+    const earned = Math.max(0, combatLevelForXp(state.skills.combat.xp) - MAX_LEVEL);
+    const spent = Object.values(ranks).reduce((a, b) => a + b, 0);
+    state.talents = { ranks: talentsValid(ranks) && spent <= earned ? ranks : {}, respecs: Math.min(1000, Math.max(0, Math.floor(Number(tal.respecs) || 0))) };
     // The counts the medals read, at least what the save holds (Trial Master's and Ascendant's were
     // dropped on every load before they had defaults); skills at 99 counted again for the same reason.
     state.stats.trialTiers = Math.max(state.stats.trialTiers, trialTiersCleared(state));

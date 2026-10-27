@@ -29,6 +29,7 @@ import { capeEarned } from './data/capes.js';
 import { noteChronicle } from './systems/chronicle.js';
 import { playtestEvent, notePlaytest } from './systems/playtest.js';
 import { startTrial, syncWeekly } from './systems/trials.js';
+import { learnTalent, unlearnTalents } from './systems/talents.js';
 import { doAscend, ascendPreview } from './systems/ascension.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
@@ -314,6 +315,8 @@ export class Game {
     setAutoPrestige(on) { return this._act(() => setAutoPrestige(this, on)); }
     /** Prestige into a Trial (data/trials.js): the next run plays under its rule. */
     startTrial(id) { return this._act(() => startTrial(this, id)); }
+    learnTalent(id) { return this._act(() => learnTalent(this, id)); }
+    unlearnTalents() { return this._act(() => unlearnTalents(this)); }
     /** Ascend (data/ascension.js): a prestige that gives the tokens up for Stars. */
     ascend() { return this._act(() => doAscend(this)); }
     ascendPreview() { return ascendPreview(this); }

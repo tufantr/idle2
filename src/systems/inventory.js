@@ -52,10 +52,11 @@ export function dropTypesFor(state, zoneTier) {
  * boss whose drops could not beat anything worn (a re-climb through shallower depths) marks nothing.
  */
 export const PITY_LAG = 0.95;
-export function laggingSlot(state, zone) {
+export function laggingSlot(state, zone, skip = []) {
     const power = GEAR_TIERS[Math.max(1, Math.min(GEAR_TIERS.length, zone.gearTier)) - 1].power * abyssDropMult(zone.depth || 0);
     let worst = null;
     for (const type of SMITHING_TYPES) {
+        if (skip.includes(type)) continue;
         const slot = SLOT_STATS[type];
         const place = STAT_UNIT * power * (slot.atk + slot.def);
         const ratio = state.equipped[type] ? itemScore(state.equipped[type]) / place : 0;

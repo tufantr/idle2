@@ -40,6 +40,13 @@ const STEPS = {
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
+    // a hero past 99 back in the fight: the purse's talent points, the dock's Perks card and his level past 99
+    warfight: async () => {
+        const { xpForCombatLevel } = await import('/src/core/xp.js');
+        const g = FI.game(); const s = g.state;
+        s.skills.combat.xp = xpForCombatLevel(112) + 1000; s.seen.talents = true; g.recompute();
+        FI.switchTab('combat'); if (!s.combat.active) FI.toggleCombat();
+    },
     trialfight: () => { const g = FI.game(); g.state.trials.active = ['no_camp', 'brutes']; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); },
     banner: async () => {   // three levels of this week's clan boss felled: the chip under the hero says ×2
         const { isoWeek } = await import('/src/data/social.js');
@@ -74,6 +81,14 @@ const DIALOGS = {
         const pick = document.querySelector('.prestige-modal input[value="swift_bosses"]');
         if (pick) { pick.checked = true; FI.pickTrial(pick); }
         document.querySelector('.pg-trials')?.scrollIntoView({ block: 'start' });   // the Trials, and the buttons over them
+    },
+    // the War Tree (data/talents.js): a hero at combat level 131, a Hunt capstone build under way, Execute picked
+    talents: async () => {
+        const { xpForCombatLevel } = await import('/src/core/xp.js');
+        const g = FI.game(); const s = g.state;
+        s.skills.combat.xp = xpForCombatLevel(131) + 1000;
+        s.talents.ranks = { patient_hunter: 5, scavenger: 5, treasure_sense: 5, essence_drinker: 3, second_chance: 2, gilded_eye: 1, long_draught: 3, lords_due: 2, sharpened_edge: 3 };
+        g.recompute(); FI.openTalents(); FI.pickTalent('execute');
     },
     pact: () => {
         const g = FI.game(); const s = g.state;

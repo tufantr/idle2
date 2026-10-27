@@ -10,7 +10,7 @@ import { NON_COMBAT_SKILLS, SKILLS } from '../data/skills.js';
 import { STAGES_PER_ZONE } from '../data/zones.js';
 import { ANVIL_LEVEL_PER_UPGRADE, BENCH_LEVEL_PER_UPGRADE, BENCH_SLOTS } from '../data/workshop.js';
 import { SMITHING_TYPES } from '../data/items.js';
-import { levelForXp } from '../core/xp.js';
+import { levelForXp, combatLevelForXp, MAX_LEVEL } from '../core/xp.js';
 import { BALANCE } from '../core/formulas.js';
 import { TRIALS_FROM } from '../data/trials.js';
 import { ASCEND_FROM } from '../data/ascension.js';
@@ -40,6 +40,7 @@ export const DISCLOSURES = [
     { id: 'trials',       when: s => s.combat.bestStage >= TRIALS_FROM || !!s.trials?.active || Object.keys(s.trials?.cleared || {}).length > 0 },   // the prestige dialog's Trials
     { id: 'legacy',       when: s => s.prestige.count >= 1 },   // Legacy (core/modifiers.js legacyMult): from the second prestige, in its dialog
     { id: 'skill_points', when: s => s.prestige.skillPoints > 0 || s.prestige.count > 0 || Object.values(s.perks).some(level => level > 0) },
+    { id: 'talents',      when: s => combatLevelForXp(s.skills.combat.xp) > MAX_LEVEL },   // the War Tree (data/talents.js): Combat past 99
     // the combat tab
     { id: 'camp',         when: s => s.gold >= CHEAPEST_CAMP || Object.values(s.camp).some(level => level > 0) || s.prestige.count > 0 },
     { id: 'stage_nav',    when: s => s.stats.deaths > 0 || s.stats.bossEscapes > 0 || s.combat.bestStage > STAGES_PER_ZONE },  // "Stay on this stage": staying means something after a setback

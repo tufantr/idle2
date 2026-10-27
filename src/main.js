@@ -38,6 +38,8 @@ import { RESOURCES } from './data/resources.js';
 import { RARITIES, MYTHIC, PRIMAL } from './data/items.js';
 import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
+import { talentById, respecPrice } from './data/talents.js';
+import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
@@ -91,6 +93,7 @@ const ui = {
     renderedRevision: -1,
     modalOpen: false,
     modalQueue: [],
+    perks: { view: 'perks', pick: null, tree: null },   // the perks dialog: Perks or the War Tree, its talent picked, the tree on a phone
     // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
     social: freshSocial()
 };
@@ -574,11 +577,11 @@ function revealNavTab() {
     nav.scrollBy({ left: tab.left - strip.left - (strip.width - tab.width) / 2, behavior: still ? 'auto' : 'smooth' });
 }
 
-/** The perks dialog stays current while it is open (a perk bought, a skill point spent). */
+/** The perks dialog stays current while it is open (a perk bought, a skill point spent, a talent learned). */
 function refreshPerks() {
     if (ui.modalOpen !== 'perks') return;
     const overlay = document.querySelector('#modal-root .modal-overlay');
-    const html = renderPerksModal(game);
+    const html = renderPerksModal(game, ui.perks);
     if (!overlay || overlay.__html === html) return;
     const scroll = overlay.querySelector('.modal-content')?.scrollTop || 0;
     setHtml(overlay, html);
@@ -590,7 +593,8 @@ function refreshPerks() {
 const ARRIVALS = {
     essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
-    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars'
+    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars',
+    talents: '.chip.tp'
 };
 const arrivals = new Set();
 
@@ -659,7 +663,9 @@ function findWords(find) {
 
 function soundFor(ev, onCombat) {
     switch (ev.type) {
-        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit ? 'crit' : 'hit'];
+        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit || ev.deathblow || ev.opening || ev.executed ? 'crit' : 'hit'];
+        case 'secondWind': return onCombat ? ['unlock'] : null;
+        case 'talentPoint': return ['levelUp'];
         case 'enemyHit': return onCombat ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;
@@ -758,6 +764,15 @@ function handleEvents(events) {
             case 'reveal':
                 arrivals.add(ev.id);
                 if (REVEAL_TOASTS[ev.id]) toast(REVEAL_TOASTS[ev.id], 'level', pic(FEATURES[ev.id]?.icon || 'res/diamond'));
+                if (ev.id === 'talents') {   // Combat past 99: the War Tree (data/talents.js), with a point for each level past it
+                    const points = talentPoints(game.state);
+                    rewards.celebrate({ key: 'talents', kind: 'legend', icon: sprite(FEATURES.talents.icon, { scale: 2 }), kicker: 'Combat past 99', title: 'The War Tree',
+                        lines: [`${points} talent point${points === 1 ? '' : 's'}: one for each combat level past 99`, 'Blade, Bulwark and Hunt: three trees of talents'] });
+                }
+                break;
+            case 'talentPoint':   // a combat level past 99 (systems/progress.js), and the War Tree's point with it
+                toast(`Combat level ${ev.level}: ${ev.points > 1 ? `${ev.points} talent points` : 'a talent point'}`, 'level', pic(FEATURES.talents.icon));
+                refreshPerks();
                 break;
             case 'actionComplete': actionFx.actionComplete(ev, ui.tab, stage.anchor()); break;
             case 'levelUp': {
@@ -1424,12 +1439,34 @@ window.FI = {
     stayAtCamp() { game.leaveCombat(); render(); },
     /** Fold the full-screen fight back into the page (it goes on), or let it fill the screen again. */
     battleFull(on) { setBattleFull(on); render(); },
-    /** Perks in a dialog over the fight: skill points are spent without leaving it. */
-    openPerks() {
-        const html = renderPerksModal(game);
+    /** Perks in a dialog over the fight: skill points are spent without leaving it (and talent points, on its War Tree). */
+    openPerks(view = 'perks') {
+        ui.perks.view = view;
+        const html = renderPerksModal(game, ui.perks);
         openModal(html, 'perks');
         const overlay = document.querySelector('#modal-root .modal-overlay');
         if (overlay && ui.modalOpen === 'perks') overlay.__html = html;
+    },
+    /** The War Tree (data/talents.js), in the perks dialog. */
+    openTalents() { window.FI.openPerks('talents'); },
+    perksView(view) { ui.perks.view = view === 'talents' ? 'talents' : 'perks'; sound.play('click'); refreshPerks(); },
+    /** A talent tapped: its line under the trees says what it does, and Learn takes a rank. */
+    pickTalent(id) { ui.perks.pick = id; ui.perks.tree = talentById(id)?.tree || ui.perks.tree; sound.play('click'); refreshPerks(); },
+    /** On a phone, the tree in view. */
+    talentTree(id) { ui.perks.tree = id; sound.play('click'); refreshPerks(); },
+    learnTalent(id) {
+        if (game.learnTalent(id)) sound.play('buy');
+        refreshPerks();
+        flourish(`.talent.picked`);
+        render();
+    },
+    unlearnTalents() {
+        const price = respecPrice(game.state);
+        askConfirm('Unlearn the War Tree?', `Every talent point comes back to spend again, for ${fmt(price)} essence. It costs more each time.`, 'Unlearn', () => {
+            if (game.unlearnTalents()) sound.play('buy');
+            ui.perks.view = 'talents';
+            window.FI.openPerks('talents');
+        });
     },
     setAutoEat(rule) { game.setAutoEat(rule); render(); },
     setPotion(id) { game.setPotion(id); render(); },

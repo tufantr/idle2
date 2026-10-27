@@ -9,7 +9,7 @@
 //   BASE, MAX_MITIGATION                                      core/modifiers.js, core/formulas.js
 //   xpForLevel(level), MAX_LEVEL                              core/xp.js
 //   SKILLS, RESOURCES, ZONES, STRATA, DUNGEONS, UNIQUES, PERKS, GOLD_SHOP, PETS, ACHIEVEMENTS, CAPES, RANKS,
-//   TRIALS, EVENTS, EVENT_MILESTONES, EVENT_SHOP, CROPS, FARMING_PLOTS, AGILITY_SLOTS, CAMP_UPGRADES, LOOKS,
+//   TRIALS, TALENTS, TREES, EVENTS, EVENT_MILESTONES, EVENT_SHOP, CROPS, FARMING_PLOTS, AGILITY_SLOTS, CAMP_UPGRADES, LOOKS,
 //   METALS, SMELTING_RECIPES, TOOLS, GEM_TIERS, JEWEL_BARS, GEAR_TIERS, RARITIES, AFFIXES, TIER_WEAR_LEVEL,
 //   PLACE_GAPS_MS, UNLOCKS, GEM_FIND_CHANCE, BAIT_EXTRA_CHANCE, and every other constant those files export
 //   fmt(n), pct(x, digits), time(ms), res(id, { qty }), icon(key, scale), link(href, text, iconKey),
@@ -31,6 +31,7 @@ import * as achievements from '../../src/data/achievements.js';
 import * as capes from '../../src/data/capes.js';
 import * as ranks from '../../src/data/ranks.js';
 import * as trials from '../../src/data/trials.js';
+import * as talents from '../../src/data/talents.js';
 import * as ascension from '../../src/data/ascension.js';
 import * as events from '../../src/data/events.js';
 import * as farming from '../../src/data/farming.js';
@@ -51,7 +52,7 @@ import * as ui from './ui.mjs';
 // later modules win a clash of names, so the data files' own names come last
 export const scope = Object.freeze({
     ...ui, ...xp, ...formulas, ...modifiers, ...pace, ...resources, ...skills, ...workshop, ...items, ...zones, ...strata,
-    ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...ascension, ...events,
+    ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...talents, ...ascension, ...events,
     ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...minigame, ...skilling, ...social, ...potions,
     // two names clash (bestiary's and ascension's starsFor): both kept, by what they count
     bestiaryStarsFor: bestiary.starsFor, ascensionStarsFor: ascension.starsFor, starsFor: undefined
