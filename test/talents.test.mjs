@@ -387,3 +387,16 @@ test('the War Tree data hangs together: three trees of seven rows, every row rea
     assert.equal(TALENT_POINTS_MAX, TALENTS.reduce((n, t) => n + t.max, 0));
     assert.equal(MAX_COMBAT_LEVEL, 99 + TALENT_POINTS_MAX);
 });
+
+test("the sidebar's Combat badge counts the levels past 99, with the bar to the next (the owner's report: 106 showed as 99)", async () => {
+    const { renderNav } = await import('../src/ui/render.js');
+    const game = hero(106);
+    game.state.skills.combat.xp = (xpForCombatLevel(106) + xpForCombatLevel(107)) / 2;
+    const badge = renderNav(game, { tab: 'combat', fresh: new Set() }).match(/id="nav-combat"[^]*?<\/button>/)[0];
+    assert.match(badge, /<span class="nav-level" title="[^"]+ XP">106<\/span>/);
+    assert.match(badge, /class="nav-xp" style="--p:5\d\.\d%"/, 'its bar half way to 107');
+    const mining = renderNav(game, { tab: 'combat', fresh: new Set() }).match(/id="nav-mining"[^]*?<\/button>/)?.[0] || '';
+    if (mining) assert.doesNotMatch(mining, />1\d\d</, "the other skills stop at 99");
+    game.state.skills.combat.xp = xpForCombatLevel(MAX_COMBAT_LEVEL);
+    assert.match(renderNav(game, { tab: 'combat', fresh: new Set() }), new RegExp(`class="nav-level max" title="Max level">${MAX_COMBAT_LEVEL}<`));
+});

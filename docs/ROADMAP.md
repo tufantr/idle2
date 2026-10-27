@@ -1421,7 +1421,7 @@ Keeping it running:
       (Deathblow, Unbreakable, Relentless). A tab in the perks dialog with the points in the purse and the dock; unlearning
       costs essence, more each time. Paced as shown to the owner: level 120 five days after the old cap, the first
       capstone about two weeks; a capstone build adds 10 to 20 stages to a run, and the tree about 3.5% to the best
-      stage at hour 600
+      stage at hour 600. The sidebar's Combat badge counts the levels past 99 too (the owner's report: 106 showed as 99)
 - [x] **Charms** (the owner's go, 27 October 2026; DESIGN §3.34): kits with charges for essence in a Charms panel of the
       Shop, on its own Gemini painting (the Charm Maker's Bench): Gem Gloves (a gem with every rock), Furnace Bellows
       (bars without coal), Chef's Gloves (every dish two), the Compost Sack (harvests half again), each opening as its

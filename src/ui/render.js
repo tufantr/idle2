@@ -184,9 +184,12 @@ export function renderNav(game, ui) {
             let xpBar = '';
             const levelled = tab.skill || (tab.id === 'combat' ? 'combat' : null);
             if (levelled) {
-                const lp = levelProgress(state.skills[levelled].xp);
-                badge = `<span class="nav-level${lp.level >= MAX_LEVEL ? ' max' : ''}" title="${lp.level >= MAX_LEVEL ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
-                xpBar = lp.level >= MAX_LEVEL ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
+                // Combat's levels go on past 99 (the War Tree's points, data/talents.js): its badge counts them too
+                const combat = levelled === 'combat';
+                const lp = combat ? combatProgress(state.skills.combat.xp) : levelProgress(state.skills[levelled].xp);
+                const top = combat ? MAX_COMBAT_LEVEL : MAX_LEVEL;
+                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
+                xpBar = lp.level >= top ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
             const color = levelled ? SKILLS[levelled]?.color : null;   // the medallion's ring and the XP bar wear the skill's colour
