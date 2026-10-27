@@ -1420,6 +1420,16 @@ The long game (the research's last items):
 - [ ] **Early Ascensions that each open something new** (M)
 - [ ] **A cape for 100% completion** (S)
 
+Parked ideas (the owner: logged, not now):
+
+- [ ] **The Quartermaster** (S; parked by the owner, 27 October 2026: "it would make prestiging even stronger"): a
+      one-time hire in the Shop, about 100 kills of gold at the best stage once Auto prestige is earned, who keeps the
+      camp bought, its cheapest level first, while the hero fights, while the player is away and after an Auto
+      prestige (never in No Camp; a switch on the camp turns him off). Today nothing buys the camp while the player is
+      away, so a player who checks in three times a day spends 7% of the gold earned. Measured with a test buyer in
+      the offline replay (12 seeds, three visits a day, Auto, 300 h): best stage 530 -> 850, gold spent 7% -> 96%; a
+      player who stays online buys his camp already and doesn't change
+
 **Exit:** a month of real players with no lost save, the free database within its month, and a big
 moment at least every 48 hours of play past stage 500.
 
