@@ -1429,6 +1429,12 @@ Parked ideas (the owner: logged, not now):
       away, so a player who checks in three times a day spends 7% of the gold earned. Measured with a test buyer in
       the offline replay (12 seeds, three visits a day, Auto, 300 h): best stage 530 -> 850, gold spent 7% -> 96%; a
       player who stays online buys his camp already and doesn't change
+- [ ] **The clan rulers' habits** (S-M; parked by the owner, 27 October 2026, who wants a better clan idea and a
+      research loop for clans later): each of the ten rulers who take turns as the week's clan boss would fight in its
+      own rhythm (Goblin Chieftain short openings often, Abyss Warlord three openings worth x4.2, Elder Treant weaker
+      swings outside the openings and stronger inside, Thunder Roc openings at uneven times), each tuned so a fight
+      fought perfectly is worth what it is today and a hero who only watches counts the same (the clan's balance holds),
+      every opening glowing half a second ahead; and the weekend's Endless Hydra two of six heads with their own twist
 
 **Exit:** a month of real players with no lost save, the free database within its month, and a big
 moment at least every 48 hours of play past stage 500.
