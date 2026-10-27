@@ -1402,6 +1402,10 @@ Keeping it running:
       0.42 s, its entrance on screen, no strike reaches it, so on easy stages and in easy dungeons an auto-clicker fells
       about twice an idle hero's monsters instead of four to five times, the same as a hand at two clicks a second; the
       hero's own swings never wait, and real fights, idle play, the Titan and the clan boss are as they were
+- [x] **The bag's room for essence too** (the owner's go, 27 October 2026; DESIGN "Bag and lock"): each +5 slots can be
+      bought with gold as before or with essence (2,000, half as much again each time), since from the fourth on the
+      gold came to more than a late run's whole gold; and three "?" texts brought up to date (supplies priced by the
+      run's furthest stage, perks' rising prices, jewellery at the bench)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

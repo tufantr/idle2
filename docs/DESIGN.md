@@ -260,9 +260,11 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   item comes back. A dropped weapon or piece of armour also gives bars of its metal (1 common … 5
   legendary, ×2 / ×3 past runite), and any of them three quarters of the bars reinforcing it took; a piece
   of jewellery three quarters of the gems the bench put into it (`gemsIn`).
-- **Bag and lock:** 40 rolled items, and 5 more for each bag upgrade bought with gold (up to 12, a bag
-  of 100), priced like the gold shop at 150 kills' worth of gold at the best stage, ×1.5 each time
-  (`BAG_UPGRADE`; October 2026, the owner's ask: the bag sat at 40/40, and gold piles up). Overflow
+- **Bag and lock:** 40 rolled items, and 5 more for each bag upgrade (up to 12, a bag of 100), bought with gold,
+  priced like the gold shop at 150 kills' worth of gold at the best stage, ×1.5 each time (`BAG_UPGRADE`; October
+  2026, the owner's ask: the bag sat at 40/40, and gold piles up), or with essence, 2,000 ×1.5 each time
+  (`bagUpgradeEssence`; the owner's go, 27 October 2026: from the fourth on the gold came to more than a late run's
+  whole gold, which goes at prestige, while essence piles up deep). Overflow
   auto-salvages the weakest unlocked item, but never the
   best upgrade for a slot — if nothing else can go, the bag overflows instead (a bag full of locked
   items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /

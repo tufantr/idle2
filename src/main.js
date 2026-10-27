@@ -1510,7 +1510,7 @@ window.FI = {
     },
     salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
     salvageWeaker() { const r = game.salvageWeaker(); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} weaker than what you wear (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
-    buyBagUpgrade() { if (game.buyBagUpgrade()) { sound.play('buy'); toast('Five more slots in the bag', 'info'); } render(); },
+    buyBagUpgrade(currency = 'gold') { if (game.buyBagUpgrade(currency === 'essence' ? 'essence' : 'gold')) { sound.play('buy'); toast('Five more slots in the bag', 'info'); } render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
     sellRes(id, amount) { game.sellResource(id, amount); render(); },

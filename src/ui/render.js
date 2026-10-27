@@ -23,7 +23,7 @@ import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
-import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_CHOICE_MS, titanBonusUnits, dungeonAt, dungeonTierInfo, dungeonBossTime, uniqueAt, parseUniqueKey, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
@@ -1358,6 +1358,7 @@ export function renderInventory(game, ui) {
     const items = [...state.inventory].sort((a, b) => itemScore(b) - itemScore(a));
     const size = bagSize(state);
     const roomPrice = bagUpgradePrice(game);   // null once the bag is as big as it gets
+    const roomEssence = bagUpgradeEssence(state);   // or for essence (data/items.js BAG_UPGRADE)
     const hasGear = items.length > 0 || EQUIP_SLOTS.some(slot => state.equipped[slot]);
     // A new bag shows a row or two of cells; the whole grid comes once the bag is in use.
     const cells = seen(state, 'bag_tools') ? size : Math.min(size, Math.max(8, Math.ceil((items.length + 1) / 8) * 8));
@@ -1403,7 +1404,8 @@ export function renderInventory(game, ui) {
                     <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>${resIcon('essence')} Salvage commons</button>
                     <button class="mini-btn" onclick="FI.salvageWeaker()" ${hasWeaker ? '' : 'disabled'} title="Salvage everything in the bag that wouldn't improve what you wear (never a locked item or a dungeon's unique)">${resIcon('essence')} Salvage weaker</button>
                     <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell commons</button>
-                    ${roomPrice !== null ? `<button class="gold-btn bag-room" onclick="FI.buyBagUpgrade()" ${state.gold >= roomPrice ? '' : 'disabled'} title="Five more slots in the bag (it holds ${size} now)">+5 slots ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(roomPrice)}</button>` : ''}
+                    ${roomPrice !== null ? `<button class="gold-btn bag-room" onclick="FI.buyBagUpgrade('gold')" ${state.gold >= roomPrice ? '' : 'disabled'} title="Five more slots in the bag (it holds ${size} now), for gold">+5 slots ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(roomPrice)}</button>
+                    <button class="mini-btn bag-room" onclick="FI.buyBagUpgrade('essence')" ${(state.resources.essence || 0) >= roomEssence ? '' : 'disabled'} title="Five more slots in the bag (it holds ${size} now), for essence">+5 slots ${resIcon('essence')} ${fmt(roomEssence)}</button>` : ''}
                 </div>` : ''}
             </div>
             <div class="bag-grid">${bag}</div>

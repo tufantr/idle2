@@ -156,13 +156,26 @@ export function bagUpgradePrice(game) {
     return Math.ceil(BAG_UPGRADE.kills * Math.pow(BAG_UPGRADE.growth, bought) * goldPerKillAtStage(game.state.combat.bestStage));
 }
 
-export function buyBagUpgrade(game) {
+/** Essence for the next bag upgrade instead (BAG_UPGRADE.essence, rising each time as the gold does), or null at the most. */
+export function bagUpgradeEssence(state) {
+    const bought = state.bagUpgrades || 0;
+    return bought >= BAG_UPGRADE.max ? null : Math.ceil(BAG_UPGRADE.essence * Math.pow(BAG_UPGRADE.growth, bought));
+}
+
+/** The next bag upgrade, for gold (`currency` 'gold') or for essence ('essence'). */
+export function buyBagUpgrade(game, currency = 'gold') {
     const state = game.state;
-    const price = bagUpgradePrice(game);
+    const essence = currency === 'essence';
+    const price = essence ? bagUpgradeEssence(state) : bagUpgradePrice(game);
     if (price === null) { game.emit({ type: 'error', text: 'The bag is as big as it gets.' }); return false; }
-    if (state.gold < price) { game.emit({ type: 'error', text: 'Not enough gold.' }); return false; }
-    state.gold -= price;
-    bumpStat(game, 'goldSpent', price);
+    if (essence) {
+        if ((state.resources.essence || 0) < price) { game.emit({ type: 'error', text: 'Not enough essence.' }); return false; }
+        state.resources.essence -= price;
+    } else {
+        if (state.gold < price) { game.emit({ type: 'error', text: 'Not enough gold.' }); return false; }
+        state.gold -= price;
+        bumpStat(game, 'goldSpent', price);
+    }
     state.bagUpgrades = (state.bagUpgrades || 0) + 1;
     log(game, `🎒 The bag holds ${bagSize(state)} now.`, 'info');
     game.markDirty();

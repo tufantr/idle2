@@ -154,8 +154,11 @@ export const DROP_HIGH_RARITY_PER_TIER = 0.15; // epic/legendary weight x(1 + 0.
 export const BAG_SIZE = 40;
 // More room for gold (the owner's ask, October 2026; gold piles up, and this is a sink for it): each
 // purchase adds `slots`, up to `max` purchases (a bag of 100), priced like the gold shop in kills' worth of
-// gold at the best stage, each `growth` times the last (systems/inventory.js bagUpgradePrice).
-export const BAG_UPGRADE = { slots: 5, max: 12, kills: 150, growth: 1.5 };
+// gold at the best stage, each `growth` times the last (systems/inventory.js bagUpgradePrice). Or for `essence`,
+// as many times that (the owner's go, 27 October 2026): from the fourth on, the gold came to more than a late run's
+// whole gold (506 kills against about 400 a run, and gold goes at prestige), while essence piles up deep (378,000
+// held at stage 1,000 in the simulator). 2,000 for the first, 173,000 for the twelfth, about 520,000 for all.
+export const BAG_UPGRADE = { slots: 5, max: 12, kills: 150, growth: 1.5, essence: 2000 };
 // 'weaker': any drop that wouldn't be an upgrade for what is worn, whatever its rarity (never a unique).
 export const AUTO_SALVAGE_OPTIONS = ['off', 'common', 'uncommon', 'rare', 'weaker'];
 

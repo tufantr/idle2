@@ -13,7 +13,7 @@ import { POTION_KINDS, POTION_MINUTES, OUT_OF_PLACE, potionsFor, potionPower, po
 import { clanAttackFromSave } from '../src/core/power.js';
 import { perkLevelCost, perkCost, PERKS } from '../src/data/perks.js';
 import { BAG_SIZE, BAG_UPGRADE, RARITIES, GEAR_TIERS } from '../src/data/items.js';
-import { bagSize, bagUpgradePrice } from '../src/systems/inventory.js';
+import { bagSize, bagUpgradePrice, bagUpgradeEssence } from '../src/systems/inventory.js';
 import { actionInterval } from '../src/core/modifiers.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { migrateState, PERK_RESET } from '../src/core/state.js';
@@ -325,6 +325,26 @@ test('the bag grows five slots a purchase, for gold that rises each time', () =>
     assert.equal(bagUpgradePrice(g), null);
     assert.equal(g.buyBagUpgrade(), false, 'as big as it gets');
     assert.equal(bagSize(g.state), BAG_SIZE + BAG_UPGRADE.slots * BAG_UPGRADE.max);
+});
+
+test('or for essence: 2,000 for the first, half as much again each time, the gold left alone (a deep run\'s gold goes to the camp)', () => {
+    const g = hero({ bestStage: 1000 });
+    assert.equal(bagUpgradeEssence(g.state), BAG_UPGRADE.essence);
+    g.state.resources.essence = BAG_UPGRADE.essence - 1;
+    g.state.gold = 0;
+    assert.equal(g.buyBagUpgrade('essence'), false, 'not enough essence');
+    g.state.resources.essence = 10 * BAG_UPGRADE.essence;
+    assert.ok(g.buyBagUpgrade('essence'));
+    assert.equal(g.state.resources.essence, 9 * BAG_UPGRADE.essence);
+    assert.equal(g.state.gold, 0, 'no gold taken');
+    assert.equal(bagSize(g.state), BAG_SIZE + BAG_UPGRADE.slots);
+    assert.equal(bagUpgradeEssence(g.state), Math.ceil(BAG_UPGRADE.essence * BAG_UPGRADE.growth));
+    // all twelve come to about half a million: a stage-1,000 hero in the simulator holds 378,000 and gains ~4,400 an hour
+    const all = Array.from({ length: BAG_UPGRADE.max }, (_, i) => Math.ceil(BAG_UPGRADE.essence * BAG_UPGRADE.growth ** i)).reduce((a, b) => a + b, 0);
+    assert.ok(all > 400000 && all < 600000, `${all}`);
+    g.state.bagUpgrades = BAG_UPGRADE.max;
+    assert.equal(bagUpgradeEssence(g.state), null);
+    assert.equal(g.buyBagUpgrade('essence'), false, 'as big as it gets');
 });
 
 test('"weaker" salvages any drop that would not improve what is worn, never an upgrade or a unique', () => {

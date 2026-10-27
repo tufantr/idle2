@@ -14,7 +14,7 @@ import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
 import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
-import { MAX_UPGRADE, PITY_MARKS } from '../data/items.js';
+import { MAX_UPGRADE, PITY_MARKS, BAG_SIZE, BAG_UPGRADE } from '../data/items.js';
 import { TIERS as POTION_TIERS, doseWords } from '../data/potions.js';
 import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE, BENCH_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
@@ -63,11 +63,11 @@ export const FEATURES = {
         points: ['Seeds are bought with gold when you plant.', 'Herbs go to Alchemy; potatoes, cabbages, pumpkins and starfruit to Cooking.', 'A hoe makes crops grow faster.'] },
     agility: { name: 'Agility', art: 'course', icon: 'item/Boots/3', blurb: 'Build an obstacle course, then run it to train.',
         points: ['Every obstacle is a permanent bonus that survives prestige.', `Each can be upgraded to level ${MAX_OBSTACLE_LEVEL}; its bonus counts once per level.`, 'Replacing one tears the old one down without a refund.'] },
-    inventory: { name: 'Inventory', art: 'workshop', icon: 'item/Body/3', blurb: 'Your hero, the gear and everything you carry.', points: ['Tap a piece of gear to see it, wear it, salvage it or sell it.', 'A green arrow marks gear that beats what you wear.', 'Weapons and armour are reinforced at the anvil in Smithing; jewellery is upgraded here, with essence and gold.'] },
+    inventory: { name: 'Inventory', art: 'workshop', icon: 'item/Body/3', blurb: 'Your hero, the gear and everything you carry.', points: ['Tap a piece of gear to see it, wear it, salvage it or sell it.', 'A green arrow marks gear that beats what you wear.', 'Weapons and armour are reinforced at the anvil in Smithing; jewellery at the jeweller\'s bench in Crafting, with gems and essence.', `The bag holds ${BAG_SIZE}, and ${BAG_UPGRADE.slots} more for each upgrade, bought with gold or with essence.`] },
     shop: { name: 'Shop', art: 'market', icon: 'gold', blurb: 'Supplies for gold, tools for bars and logs, perks for skill points.',
-        points: ['Supplies are priced by your best stage, so gathering always stays worth it.',
+        points: ['Supplies are priced in gold by the furthest stage this run has reached: a pack costs about as long in the fight as it takes to gather.',
             'Tools cost bars and logs. Each tier waits for a level of the skill it serves, and makes that skill faster with more doubles.',
-            'Perks cost one skill point each and last forever.'] },
+            'Perks are bought with skill points and last forever. A perk\'s levels cost more as it climbs: a point each for the first five, then two, and so on.'] },
     prestige: { name: 'Prestige', art: 'shrine', icon: 'res/essence', blurb: 'Trade a run for permanent power.',
         points: [`Your best stage this run becomes tokens. Each token is +${pc(BASE.tokenAtk, 1)} attack and defence and +${pc(BASE.tokenHp, 1)} health, forever.`,
             `Records make every token stronger: each ${BASE.recordStages} stages of your best ever, each ${BASE.recordSkillLevels} levels of your skills together, each dungeon unique you hold and each Trial tier you clear multiply what tokens give by ${BASE.recordMult}.`,

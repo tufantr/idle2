@@ -254,7 +254,7 @@ export class Game {
     salvageItem(id) { return this._act(() => salvageItem(this, id)); }
     salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
     salvageWeaker() { return this._act(() => salvageWeaker(this)); }
-    buyBagUpgrade() { return this._act(() => buyBagUpgrade(this)); }
+    buyBagUpgrade(currency = 'gold') { return this._act(() => buyBagUpgrade(this, currency)); }
     reinforceItem(id) { return this._act(() => reinforceItem(this, id)); }
     rerollItem(id) { return this._act(() => rerollItem(this, id)); }
     /** The jeweller's bench (systems/bench.js): a worn piece of jewellery upgraded one level, or its bonuses rerolled. */
