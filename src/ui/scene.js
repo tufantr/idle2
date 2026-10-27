@@ -20,7 +20,7 @@ import { seen } from '../systems/disclosure.js';
 import { fmt, seconds, duration, escapeHtml as esc, shareInWords, gainParts } from './format.js';
 import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIcon, glyph } from './sprites.js';
 import { DUNGEON_ART, fightTab } from './features.js';
-import { activeTrial, nextTrialTarget } from '../systems/trials.js';
+import { activeTrials, nextTrialTarget } from '../systems/trials.js';
 
 const STRIKE_SHARE = shareInWords(BALANCE.combat.manualHitMult);   // a strike's share of an attack, in words
 
@@ -690,12 +690,17 @@ export function createScene(root, actions) {
                 setText(el.stage, `Stage ${c.stage}${c.maxStage > c.stage ? ` · best ${c.maxStage}` : ''}`);
             }
             // a run in a Trial wears it beside the stage: its icon, its name, and the stage the next tier asks for
-            const trial = c.mode === 'stages' ? activeTrial(state) : null;
+            // the run's Trial, or a Pact's several (systems/trials.js): their icons, a name, and the nearest stage to reach
+            const trials = c.mode === 'stages' ? activeTrials(state) : [];
+            const trial = trials[0];
             el.trial.hidden = !trial;
             if (trial) {
-                const target = nextTrialTarget(state, trial);
-                setMarkup(el.trial, `${sprite(trial.icon, { scale: 0.5, cls: 'res-spr' })} ${esc(trial.name)}${target ? ` · to ${target}` : ''}`);
-                if (el.trial.title !== trial.rule) el.trial.title = trial.rule;
+                const targets = trials.map(t => nextTrialTarget(state, t)).filter(x => x !== null);
+                const target = targets.length ? Math.min(...targets) : null;
+                const name = trials.length > 1 ? `Pact of ${trials.length}` : trial.name;
+                setMarkup(el.trial, `${trials.map(t => sprite(t.icon, { scale: 0.5, cls: 'res-spr' })).join('')} ${esc(name)}${target ? ` · to ${fmt(target)}` : ''}`);
+                const rule = trials.map(t => `${t.name}: ${t.rule}`).join(' ');
+                if (el.trial.title !== rule) el.trial.title = rule;
             }
             // The zone's name opens the world map, once there is a second zone to travel to.
             const mapped = c.mode !== 'titan' && c.mode !== 'clan' && seen(state, 'world_map');   // in a dungeon too: its gate is on the map

@@ -813,17 +813,21 @@ function handleEvents(events) {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
                 const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
-                const trial = trialById(ev.trial);   // prestiged into a Trial (systems/trials.js)
+                // prestiged into a Trial, or a Pact of several (systems/trials.js)
+                const trials = (Array.isArray(ev.trial) ? ev.trial : ev.trial ? [ev.trial] : []).map(trialById).filter(Boolean);
+                const trial = trials[0];
                 if (ev.ascend && rank === rankFor(count - 1)) { save(Date.now()); break; }   // an Ascension: its own card below ('ascend')
                 if (ev.auto && rank === rankFor(count - 1)) {   // the switch's own: a note, and the fight goes on
                     toast(`Auto-prestige: ${paid}`, 'prestige', pic(FEATURES.prestige.icon));
                 } else if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
                     rewards.celebrate({ kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: '' } }, { scale: 3 }), kicker: 'A new rank', title: rank.name,   // the new cloak, even over a cape
                         lines: [`A ${rank.cloak} cloak, for ${count} prestige${count === 1 ? '' : 's'}`, paid] });
-                    if (trial) toast(`Trial: ${trial.name}. ${trial.rule}`, 'prestige', pic(trial.icon));
+                    if (trial) toast(`${trials.length > 1 ? 'A Pact' : 'Trial'}: ${trials.map(t => t.name).join(', ')}.`, 'prestige', pic(trial.icon));
                 } else if (trial) {
-                    rewards.celebrate({ key: `trial:${trial.id}`, kind: 'prestige', icon: sprite(trial.icon, { scale: 2 }), kicker: 'A Trial begins', title: trial.name,
-                        lines: [trial.rule, nextTrialTarget(game.state, trial) !== null ? `Stage ${nextTrialTarget(game.state, trial)} for a record` : `Stage ${weeklyGoal(game.state, Date.now()).target} for this week's laurel`, paid] });
+                    const aims = trials.map(t => nextTrialTarget(game.state, t)).filter(x => x !== null);
+                    rewards.celebrate({ key: `trial:${trials.map(t => t.id).join('+')}`, kind: 'prestige', icon: sprite(trial.icon, { scale: 2 }), kicker: trials.length > 1 ? `A Pact of ${trials.length} begins` : 'A Trial begins',
+                        title: trials.length > 1 ? trials.map(t => t.name).join(' · ') : trial.name,
+                        lines: [...trials.map(t => t.rule), aims.length ? `Stage ${fmt(Math.min(...aims))} for a record` : `Stage ${fmt(weeklyGoal(game.state, Date.now()).target)} for this week's laurel`, paid] });
                 } else {
                     rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
                         lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
@@ -923,16 +927,19 @@ function handleEvents(events) {
             case 'laurel': {   // the week's Trial beaten (systems/trials.js): a record
                 const trial = trialById(ev.id);
                 if (!trial) break;
-                rewards.celebrate({ key: `laurel:${ev.laurels}`, kind: 'legend', icon: sprite(trial.icon, { scale: 2 }), kicker: "This week's Trial", title: 'A laurel',
-                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
+                const n = Math.max(1, ev.count || 1);   // a Pact with the week's Trial in it: one for each Trial it holds
+                rewards.celebrate({ key: `laurel:${ev.laurels}`, kind: 'legend', icon: sprite(trial.icon, { scale: 2 }), kicker: "This week's Trial", title: n > 1 ? `${n} laurels` : 'A laurel',
+                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, n > 1 ? `${n} records: your tokens are ×${(BASE_RECORD_MULT ** n).toFixed(2)} stronger` : `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
                 break;
             }
             case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
                 const trial = trialById(ev.id);
                 if (!trial) break;
                 const target = nextTrialTarget(game.state, trial);
-                rewards.celebrate({ key: `trial:${ev.id}:${ev.tier}`, kind: ev.last ? 'legend' : 'medal', icon: sprite(trial.icon, { scale: 2 }), kicker: ev.last ? 'Trial cleared to the top' : `Trial · tier ${ev.tier} of ${TRIAL_TIERS}`, title: trial.name,
-                    lines: [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`, ...(target ? [`Next: stage ${target}`] : [])] });
+                // the five tiers, then the ladder's rungs past them (data/trials.js TRIAL_LADDER)
+                const kicker = ev.tier < TRIAL_TIERS ? `Trial · tier ${ev.tier} of ${TRIAL_TIERS}` : ev.tier === TRIAL_TIERS ? 'Trial · all five tiers' : `Trial · rung ${ev.tier - TRIAL_TIERS}`;
+                rewards.celebrate({ key: `trial:${ev.id}:${ev.tier}`, kind: ev.last ? 'legend' : 'medal', icon: sprite(trial.icon, { scale: 2 }), kicker, title: trial.name,
+                    lines: [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`, ...(target ? [`${ev.tier >= TRIAL_TIERS ? 'Its ladder goes on: ' : 'Next: '}stage ${fmt(target)}`] : [])] });
                 break;
             }
             case 'record': {   // every 25 stages of all-time best: the tokens grow stronger (once there are tokens to strengthen)
@@ -1530,12 +1537,13 @@ window.FI = {
     buyShop(id) { if (game.buyGoldShopItem(id) !== false) sound.play('buy'); render(); },
     buyPerk(id) { if (game.buyPerk(id) !== false) sound.play('buy'); render(); },
 
-    openPrestige() { if (isUnlocked(game.state, 'prestige') && game.canPrestige()) openModal(renderPrestigeModal(game), 'prestige'); },
+    openPrestige() { if (isUnlocked(game.state, 'prestige') && game.canPrestige()) { ui.trialPicks = []; openModal(renderPrestigeModal(game), 'prestige'); } },
     confirmPrestige() {
-        const trial = document.querySelector('.prestige-modal input[name="trial"]:checked')?.value;   // a Trial picked in the dialog
+        // the Trials picked in the dialog: one, or a Pact's several (systems/trials.js)
+        const trials = [...document.querySelectorAll('.prestige-modal input[name="trial"]:checked')].map(input => input.value);
         writeBackup(game.serialize(Date.now()), 'prestige', `Before prestige ${game.state.prestige.count + 1}`);
         closeModal();
-        if (trial) game.startTrial(trial);
+        if (trials.length) game.startTrial(trials);
         else game.prestige({ resume: true }); // a hero who was fighting walks into the new run's first fight
         render();
     },
@@ -1550,19 +1558,39 @@ window.FI = {
             render();
         });
     },
-    /** A Trial card in the prestige dialog, ticked or unticked: one at most, and the button says which. */
+    /**
+     * A Trial card in the prestige dialog, ticked or unticked: one at most, or up to a Pact's size once Pacts are open
+     * (the oldest pick lets go of its tick for a new one past it), and the button and the line say what the run plays for.
+     */
     pickTrial(input) {
         const modal = input.closest('.prestige-modal');
         if (!modal) return;
-        for (const other of modal.querySelectorAll('input[name="trial"]')) if (other !== input) other.checked = false;
-        const t = input.checked ? input.dataset : null;
+        const most = Math.max(1, Number(modal.querySelector('.pg-trials')?.dataset.most) || 1);
+        const order = (ui.trialPicks || []).filter(id => id !== input.value);
+        if (input.checked) order.push(input.value);
+        while (order.length > most) order.shift();
+        ui.trialPicks = order;
+        for (const other of modal.querySelectorAll('input[name="trial"]')) other.checked = order.includes(other.value);
+        const picked = order.map(id => modal.querySelector(`input[name="trial"][value="${id}"]`)?.dataset).filter(Boolean);
         const button = modal.querySelector('.btn-confirm');
-        if (button) button.textContent = t ? `Prestige into ${t.name}` : 'Prestige now';
+        if (button) button.textContent = !picked.length ? 'Prestige now' : picked.length === 1 ? `Prestige into ${picked[0].name}` : `Prestige into a Pact of ${picked.length}`;
         const line = modal.querySelector('.trial-pick-line');
-        if (line) line.textContent = !t ? ''
-            : t.target ? `Reach stage ${t.target} in this run for a record${t.laurel ? `, and stage ${t.laurel} for this week's laurel` : ''}: your tokens ×${BASE_RECORD_MULT} stronger each, for good.`
-            : `Reach stage ${t.laurel} in this run for this week's laurel: a record, your tokens ×${BASE_RECORD_MULT} stronger, for good.`;
-        sound.play(t ? 'equip' : 'click');
+        const aims = picked.filter(t => Number(t.target) > 0);
+        // the week's laurels this run can still win: one for each Trial it holds, less those the week has given
+        const week = picked.find(t => t.laurel);
+        const owed = week ? Math.min(picked.length, most) - (Number(week.won) || 0) : 0;
+        const heat = picked.reduce((sum, t) => sum + (Number(t.heat) || 0), 0);
+        // the stages the ladders ask for, each with its Trials ("750 (Thick Hides) and 1,000 (Brutes, Rusted Gear)")
+        const stages = new Map();
+        for (const t of aims) stages.set(Number(t.target), [...(stages.get(Number(t.target)) || []), t.name]);
+        const at = [...stages].sort((a, b) => a[0] - b[0]).map(([stage, names]) => `${fmt(stage)}${stages.size > 1 ? ` (${names.join(', ')})` : ''}`);
+        const each = picked.length > 1 && stages.size === 1 ? (aims.length === picked.length ? ' on each ladder' : ` (${[...stages.values()][0].join(', ')})`) : '';
+        const parts = [at.length ? `A record${each} at stage ${at.length > 1 ? `${at.slice(0, -1).join(', ')} and ${at.at(-1)}` : at[0]}` : '',
+            owed > 0 ? `${owed > 1 ? `${owed} of this week's laurels` : "this week's laurel"} at stage ${fmt(Number(week.laurel))}` : ''].filter(Boolean);
+        const records = aims.length + Math.max(0, owed);
+        if (line) line.textContent = !picked.length ? ''
+            : (parts.length ? `${parts.join('; ')}: ${records > 1 ? 'each makes your tokens' : 'your tokens'} ×${BASE_RECORD_MULT} stronger, for good.` : '') + (picked.length > 1 ? ` Heat ${heat}.` : '');
+        sound.play(picked.length ? 'equip' : 'click');
     },
     closeModal() { closeModal(); },
 

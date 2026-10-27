@@ -192,7 +192,8 @@ export function tryEat(game, { blow = false } = {}) {
     const state = game.state;
     const c = state.combat;
     const d = game.derived;
-    if (trialBite(state).noFood) return 0;   // the Fasting Trial: nothing is eaten
+    const bite = trialBite(state);
+    if (bite.noFood || bite.oneBlow) return 0;   // Fasting: nothing is eaten; Glass Hero: a blow that lands fells him whatever his health
     const e = c.enemy;
     const coming = blow && e && e.hp > 0 ? enemyDamage(e.atk, d.def) : 0;
     const climbing = c.mode !== 'stages' || (!c.farmMode && (c.stallMs || 0) < BALANCE.combat.foodPushMs);
@@ -263,8 +264,11 @@ export function enemyAttack(game) {
     const enemy = c.enemy;
     if (!enemy || enemy.hp <= 0) return 0;
     if (rng.chance(d.dodge)) { game.emit({ type: 'dodge' }); return 0; }
-    const dmg = enemyDamage(enemy.atk, d.def);
+    // a Trial's rules (data/trials.js): Glass Hero's blow fells him, Brutes' staggers him (his next swing comes later)
+    const bite = c.mode === 'clan' ? {} : trialBite(state);
+    const dmg = bite.oneBlow ? Math.max(1, c.hp) : enemyDamage(enemy.atk, d.def);
     c.hp -= dmg;
+    if (bite.stagger) c.playerTimer = Math.max(-2 * d.attackInterval, (c.playerTimer || 0) - bite.stagger);
     game.emit({ type: 'enemyHit', dmg });
     if (c.hp <= 0) onPlayerDeath(game);
     return dmg;

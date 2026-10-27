@@ -7,6 +7,7 @@
 // game is marked dirty.
 
 import { POTIONS, POTION_MINUTES, potionsForSlot } from '../data/potions.js';
+import { trialBite } from '../data/trials.js';
 
 /** A dose's length for this hero, in ms (the Alchemist medal makes it longer). */
 export function doseMs(derived) {
@@ -37,6 +38,7 @@ function spend(game, id, getMs, setMs, ms) {
 /** `ms` of fighting: the dungeon potion in a run, the combat potion everywhere else (the clan boss too). */
 export function spendFightPotion(game, ms) {
     const c = game.state.combat;
+    if (c.mode !== 'clan' && trialBite(game.state).noPotion) return;   // Fasting: no potion is drunk in the Trial's run
     if (c.mode === 'dungeon') spend(game, c.dungeonPotion, () => c.dungeonPotionMs || 0, v => { c.dungeonPotionMs = v; }, ms);
     else spend(game, c.potion, () => c.potionMs || 0, v => { c.potionMs = v; }, ms);
 }

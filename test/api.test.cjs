@@ -214,7 +214,7 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.equal(climbed(1, 120, 2), false, 'a new player\'s first hours');
     assert.equal(climbed(250, 300, 24), false, 'a good day late in the game');
     assert.equal(climbed(300, 400, 168), false, 'a week late in the game');
-    assert.equal(climbed(250, 700, 24), true, 'four hundred and fifty stages in a day, late');
+    assert.equal(climbed(250, 900, 24), true, 'six hundred and fifty stages in a day, late');
     assert.equal(climbed(300, 450, 1), true, 'a hundred and fifty stages in an hour, late');
     assert.equal(climbed(400, 450, 24), false, 'fifty in a day past 400, where the monsters grow more slowly');
     assert.equal(climbed(600, 750, 1), false, 'a hundred and fifty in an hour past 600, a run fresh from a prestige in the dense deep');
@@ -530,8 +530,20 @@ test("the week's Trial has a board of this week's runs only, and a stage past th
     assert.equal(board.metric, 'weeklyTrial');
     assert.equal(board.period, 'all', "the week's Trial is a weekly number already");
     assert.equal(board.me.value, 240);
+    near(board.me.share, 240 / 260, 'shown as a share of the hero\'s own best stage');
     assert.ok(!board.entries.some(e => e.username === 'last_week'), "last week's run is not on this week's board");
     assert.equal(trialWeekStart(clock), week.start);
+    // ranked by that share (the owner's go, 27 October 2026): a newer hero's good run tops a deeper hero's
+    const deep = await register('deep_trialist');
+    const fresh = await register('fresh_trialist');
+    await post('/save', { state: trialSave(1260, { ...now, best: 1150 }) }, deep);
+    await post('/save', { state: trialSave(400, { ...now, best: 390 }) }, fresh);
+    await post('/leaderboard/consent', { optIn: true }, deep);
+    await post('/leaderboard/consent', { optIn: true }, fresh);
+    clock += 61 * 1000;
+    const ranked = (await (await get('/leaderboard?metric=weeklyTrial', deep)).json()).entries.map(e => e.username);
+    // 390 of 400 (98%), then 240 of 260 (92%), then 1,150 of 1,260 (91%)
+    assert.deepEqual(['fresh_trialist', 'keen_trialist', 'deep_trialist'].map(n => ranked.indexOf(n)).sort((a, b) => a - b), ['fresh_trialist', 'keen_trialist', 'deep_trialist'].map(n => ranked.indexOf(n)), ranked.join(','));
     // a run in the week's Trial past the hero's best stage is impossible
     const forger = await register('trial_forger');
     assert.equal((await (await post('/save', { state: trialSave(100, { ...now, best: 400 }) }, forger)).json()).flagged, true);

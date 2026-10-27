@@ -4,7 +4,7 @@
 //
 //   node tools/simulate.mjs --hours=100 --seed=1 [--step=500] [--verbose] [--snapshot=10]
 //   [--auto] [--player=checkin3] [--set=BALANCE.abyss.dropGrowth:1.5;BASE.tokenAtk:0.004] [--json=out.json]
-//   [--trials=5] [--ascend=1] [--save-at=200,260,320 --save=runs/hero]
+//   [--trials=5] [--pacts] [--ascend=1] [--save-at=200,260,320 --save=runs/hero]
 //
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
@@ -17,7 +17,9 @@
 // prestige's tokens by half and a day has passed since the last.
 // --trials=N: once the Trials open (data/trials.js), every Nth prestige the bot makes goes into a Trial:
 // the week's while its laurel is to win (three tries a week at most), else the one with the fewest tiers
-// cleared, then the lowest next target (a player trying each in turn); 0 never; 5 by default. --save-at writes the
+// cleared, then the lowest next target (a player trying each in turn); 0 never; 5 by default. --pacts: once Pacts
+// open, that run takes up to PACT_MAX Trials: the week's while its laurels are to win, then the fewest tiers cleared,
+// the gentlest rule first (Faithless only alone). --save-at writes the
 // game's save as the best stage first reaches each mark (to <--save>-<stage>.json), and the run ends at
 // the last: heroes for tools/trials.mjs.
 //
@@ -55,7 +57,7 @@ import { GEAR_DROP_CHANCE } from '../src/data/items.js';
 import { rankFor } from '../src/data/ranks.js';
 import { FESTIVAL_CLOAK_COST } from '../src/data/events.js';
 import { TRIALS } from '../src/data/trials.js';
-import { trialsOpen, nextTrialTarget, weeklyGoal } from '../src/systems/trials.js';
+import { trialsOpen, nextTrialTarget, weeklyGoal, pactSize } from '../src/systems/trials.js';
 import { firstPrestigeDue } from '../src/systems/guide.js';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -104,6 +106,7 @@ if (args.vary) {
 const AUTO = !!args.auto;
 const PLAYER = String(args.player || 'online');
 const TRIAL_EVERY = args.trials === undefined ? 5 : Number(args.trials);
+const PACTS = !!args.pacts;
 const ASCEND = args.ascend === undefined ? true : Number(args.ascend) !== 0;
 const SAVE_AT = String(args['save-at'] || '').split(',').map(Number).filter(n => n > 0).sort((a, b) => a - b);
 const SAVE_PREFIX = String(args.save || 'hero');
@@ -417,8 +420,11 @@ function prestigeNow() {
         : !week.won && tries < 3 ? week.trial
         : TRIALS.map(t => ({ t, target: nextTrialTarget(S, t), tiers: S.trials.cleared[t.id] || 0 })).filter(x => x.target !== null).sort((a, b) => a.tiers - b.tiers || a.target - b.target)[0]?.t || null;
     if (pick && pick.id === week.trial.id && !week.won) weeklyTries.set(week.start, tries + 1);
-    const ended = { run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens, trial: S.trials.active || undefined };
-    if (!(pick ? game.startTrial(pick.id) : game.prestige())) return false;
+    // --pacts: the pick and the next with the fewest tiers, gentlest rule first, up to a Pact's size (Faithless alone)
+    const pact = pick && PACTS && pick.id !== 'faithless' ? [pick, ...TRIALS.filter(t => t.id !== pick.id && t.id !== 'faithless' && nextTrialTarget(S, t) !== null)
+        .sort((a, b) => (S.trials.cleared[a.id] || 0) - (S.trials.cleared[b.id] || 0) || a.heat - b.heat)].slice(0, pactSize(S)) : pick ? [pick] : [];
+    const ended = { run: S.prestige.count + 1, hours: H(now - runStartedAt), reached: S.combat.maxStage, tokens: p.tokens, trial: S.trials.active?.join('+') || undefined };
+    if (!(pact.length ? game.startTrial(pact.map(t => t.id)) : game.prestige())) return false;
     runLog.push(ended);
     if (pick) { lastTrialPrestige = S.prestige.count; trialRuns++; }
     runStartedAt = now; milestone('prestige', S.prestige.count);
@@ -593,6 +599,14 @@ function decide() {
     // the first prestige teaches the loop: a player follows the guide's hand to it as Prestige opens (systems/guide.js)
     if (firstPrestigeDue(S, now)) prestigeNow();
     maybeAscend();
+    // With Auto on, every TRIAL_EVERY-th prestige still goes into a Trial, by hand, once the run is back near its best and
+    // there is one to play (the week's laurel, three tries a week, or a tier or rung to clear): left to Auto the bot played
+    // 16 Trial runs in 777 prestiges, and every balance run since the endless climb counted the Trials short.
+    if (S.settings.autoPrestige && TRIAL_EVERY > 0 && trialsOpen(S) && game.canPrestige() && !S.trials.active
+        && S.prestige.count + 1 - lastTrialPrestige >= TRIAL_EVERY && S.combat.maxStage >= 0.9 * S.combat.bestStage) {
+        const wk = weeklyGoal(S, now);
+        if ((!wk.won && (weeklyTries.get(wk.start) || 0) < 3) || TRIALS.some(t => nextTrialTarget(S, t) !== null)) prestigeNow();
+    }
     // Prestige when the run's tokens are a meaningful addition.
     const runStalled = now - lastRunRiseAt;
     if (game.canPrestige() && (now - lastStageGainAt > POLICY.stallMin * 60000 || runStalled > POLICY.longStallMin * 60000)) {

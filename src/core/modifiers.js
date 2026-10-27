@@ -152,7 +152,8 @@ export function potionEffects(state) {
     const c = state.combat || {};
     const inRun = c.mode === 'dungeon';
     const id = inRun ? c.dungeonPotion : c.potion;
-    const running = (inRun ? c.dungeonPotionMs : c.potionMs) > 0 || (c.mode === 'clan' && state.resources?.[id] > 0);
+    const fasting = c.mode !== 'clan' && trialBite(state).noPotion;   // Fasting (data/trials.js): no potion works in the run
+    const running = !fasting && ((inRun ? c.dungeonPotionMs : c.potionMs) > 0 || (c.mode === 'clan' && state.resources?.[id] > 0));
     const power = running ? potionPower(id, inRun ? 'dungeon' : 'combat') : 0;
     if (power > 0) e.atk = e.def = e.hp = 1 + power;
     const work = state.workPotion?.id;

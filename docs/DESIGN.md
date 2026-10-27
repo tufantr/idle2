@@ -978,7 +978,11 @@ gear to wear; a place that waited opens on the return and is named there too.
   to 28 runs of 600 to 1,200 hours with Auto, 21 on varied plans: past 400 a run fresh from a prestige gains up
   to 150 stages in an hour and 240 in a day, so rows now reach 1,500 (`CLIMB`), none lower than before; the
   worst honest climb in any window of 1 to 48 hours, measured from the hour before, comes to 43% of the
-  allowance. The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). Trial tiers
+  allowance. With the Trials' endless ladders and Pacts (§3.26) and a bot that enters a Trial every fifth
+  prestige as a player would, the climb came to 76% of it from stage 300 over 43 hours (430 stages) and 72%
+  from 1,200 (28 runs of 400 hours, every window of 1 to 48 hours from the best at its start); the rates an hour
+  went up from 150 to 1,500 (the bursts stayed: a day's climb was what came close), and the worst is now 49%.
+  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). Trial tiers
   a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
@@ -1546,62 +1550,95 @@ several at once if the run is past them, with a card; a run in a Trial wears it 
 fight. Five tiers each, 25 stages apart; **each tier cleared is a record** (§3.9): the tokens grow ×1.05
 stronger, as for 25 stages of best stage or a unique. The run earns its tokens as any run does, from the
 stage it reaches under the rule, so a Trial costs a little of a run (about 15% fewer tokens): a choice.
-`src/data/trials.js`, `src/systems/trials.js`; saved as `trials: { active, cleared }`.
+`src/data/trials.js`, `src/systems/trials.js`; saved as `trials: { active, cleared, best, laurels, weekly }`
+(`active` a list of ids since the Pacts; a save's single id is read as a list of one).
 
-| Trial | Rule (`bite`) | First tier | Stages the rule cost a run at best 200 / 260 / 320 |
-|---|---|---|---|
-| Brutes | Monsters hit four times as hard (`enemyAtk` 4) | 175 | 20 / 14–20 / 20 |
-| Thick Hides | Monsters have ten times the health (`enemyHp` 10; they pay as before) | 175 | 10–20 / 20 / 20–30 |
-| Glass Hero | A tenth of the hero's health (`heroHp` 0.1) | 175 | 19–20 / 20–25 / 29–30 |
-| Rusted Gear | Gear gives a quarter of everything (`gear` 0.25: stats and affixes) | 175 | 20 / 20 / 20 |
-| Swift Bosses | A stage boss gives a tenth of the time (`bossTime` 0.1: 3 s) | 180 | 10 / 10–20 / 20 |
-| No Camp | The camp stays packed (`noCamp`: no levels, none bought) | 180 | 10–11 / 11–20 / 11–12 |
-| Fasting | No food, and no health back while fighting (`noFood`, `noRegen`: no regeneration, no lifesteal; resting heals) | 185 | 10 / 10–12 / 12–20 |
-| Faithless | Tokens give nothing (`noTokens`) | 125 | 70 / 90 / 110 |
+| Trial | Rule (`bite`) | First tier | Stages the rule cost a run at best 200 / 260 / 320 | At 1,000 | Heat |
+|---|---|---|---|---|---|
+| Brutes | Monsters hit four times as hard, and a blow that lands staggers the hero (`enemyAtk` 4, `stagger` 1,000 ms) | 175 | 10 / 10 / 8–20 | 30 | 1 |
+| Thick Hides | Monsters have ten times the health (`enemyHp` 10; they pay as before) | 175 | 10–20 / 20 / 20–30 | 80–90 | 2 |
+| Glass Hero | The hero falls to the first blow that lands (`oneBlow`) | 170 | 20–29 / 10–20 / 8–30 | 60–80 | 2 |
+| Rusted Gear | Gear gives a quarter of everything (`gear` 0.25: stats and affixes) | 175 | 20 / 20 / 20 | 50–60 | 1 |
+| Swift Bosses | A stage boss gives a tenth of the time (`bossTime` 0.1: 3 s) | 180 | 10 / 10–20 / 20 | 60 | 1 |
+| No Camp | The camp stays packed (`noCamp`: no levels, none bought) | 180 | 10–11 / 11–20 / 11–12 | 180 | 4 |
+| Fasting | No food, no potions, no health back while fighting (`noFood`, `noPotion`, `noRegen`: no regeneration, no lifesteal; resting heals) | 170 | 20 / 10–20 / 18–20 | 50–60 | 1 |
+| Faithless | Tokens give nothing (`noTokens`) | 125 | 70 / 90 / 110 | 460 | 10 |
 
 How the rules were sized (`tools/trials.mjs`, heroes the simulator saved at best 200, 260 and 320 with
-`--save-at`, three seeds each): a rule costs a run about the same number of stages at any depth, since
-power grows by a steady factor a stage, and the cost comes in steps of ten (each tenth stage is a boss,
-and the bosses are the walls). The first rules, a weaker set (monsters ×2 attack, half health, half the
-boss's time, half the gear, no food), cost 0–10 stages: food heals a fixed amount, nothing to a late
-hero; a boss falls long before its clock runs out; and the tokens' layer is most of a late hero's power,
-so gear barely mattered. Past a point, stronger rules cost no more: a boss that kills the hero in one
-blow stops him at the same place however hard it hits, so Brutes at ×10 or ×25 and Glass Hero at a
-twentieth or a fiftieth cost what ×4 and a tenth do. Faithless costs more the deeper the hero, since the
-tokens are an ever larger share of his power, and the records the other Trials bring don't help it. Each
-first tier is about what a hero at the door reaches under its rule, so one falls soon after the Trials
-open, and the fifth asks for about a hundred stages more: a hero at 320 clears all five of the seven in a
-run each, and four of Faithless. The simulator's bot goes into the Trial with the lowest next target every fifth prestige
-once they are open (`--trials`).
+`--save-at`, three seeds each, and at 600 and 1,000): a rule costs a run about the same number of stages at
+any depth, since power grows by a steady factor a stage, and the cost comes in steps of ten (each tenth
+stage is a boss, and the bosses are the walls). The first rules, a weaker set (monsters ×2 attack, half
+health, half the boss's time, half the gear, no food), cost 0–10 stages: food heals a fixed amount, nothing
+to a late hero; a boss falls long before its clock runs out; and the tokens' layer is most of a late hero's
+power, so gear barely mattered. Past a point, stronger rules cost no more: a boss that kills the hero in one
+blow stops him at the same place however hard it hits, so Brutes at ×10 or ×25 cost what ×4 does. Faithless
+costs more the deeper the hero, since the tokens are an ever larger share of his power, and the records the
+other Trials bring don't help it. Each first tier is about what a hero at the door reaches under its rule,
+so one falls soon after the Trials open, and the fifth asks for about a hundred stages more: a hero at 320
+clears all five of the seven in a run each, and four of Faithless.
 
-What they do to the pace (`tools/simulate.mjs --hours=400`, seeds 1–3, the bot going into a Trial every
-fifth prestige, against `--trials=0`): the first tier falls at 57–61 hours, just after the Trials open;
-stage 300 at 135–150 hours (183–315 without); best stage 370–380 at 400 hours (320–329); all forty tiers
-by 213–296 hours, in 44–56 Trial runs. Between hours 150 and 300 a big moment came every 11–15 hours,
-the longest wait 29–87 hours (one every 30–50, waits of 97–112, without): the long-term targets (one a
-day, no wait past three days) are met for the rate, and for the wait in two seeds of three, where the
-game had failed both. Forty records multiply the
-tokens by about seven, so the Trials are a large part of late power: a player who never tries one
-climbs as before, one who does climbs well past him. Past 300 hours, with every tier cleared, the
-moments thin out again (one every 25–33 hours); that is for the next late-game work.
+**Sharper rules** (27 October 2026, with the ladders below): deep, three rules had stopped biting. At stage
+1,250 a hero's defence keeps every blow at the armour's 10% floor, so a tenth of his health (Glass Hero) or
+monsters four times as hard (Brutes) cost nothing, and lifesteal and the potion carried him through Fasting.
+Now a blow that lands fells a Glass Hero whatever his health (a dodge still saves him, and no food is eaten
+for it: `oneBlow` in `systems/combat.js`), a Brute's blow puts the hero's next swing back a second (two
+swings' worth at most: `stagger`), and Fasting takes the potion too (`noPotion`: none works or runs down in
+the run; the clan boss's fight, outside any Trial, keeps it). At stage 1,000 they cost 60–80, 30 and 50–60
+stages; at the door about what the old rules did, and Glass Hero's and Fasting's first tiers came down to
+170 so a hero at 200 clears them (they reach 170–180). A rule's `heat`, shown on its card once Pacts open,
+is about its cost at stage 1,000 in fifties.
+
+**Ladders without end** (the owner's go, 27 October 2026): by the endless climb (§3.30) all forty tiers
+fell by about hour 65, at best stage ~500, and a deep hero had only the week's laurel left. Past the fifth
+tier each Trial's ladder goes on: a rung at stage 500 (`TRIAL_LADDER`), then one every 250, to stage 10,000
+(39 rungs; `TRIAL_MAX_TIER` 44), each a record as a tier is, at the same stages for every Trial. A run clears
+every rung it reaches; the card shows the rungs past its pips ("+2") and the next rung's stage, the tier's
+card says "rung N", and a Trial is closed only at the stages' end. Saves keep `cleared` up to 44 (it was
+capped at 5).
+
+**Pacts** (the owner's go, 27 October 2026, after Hades' Pact of Punishment): from best stage 500
+(`PACTS_FROM`, the first rung's) a run may take up to three Trials at once (`PACT_MAX`). The dialog's cards
+become a multi-pick (a fourth tick lets go of the oldest), its header says "or a Pact of up to 3", each card
+wears its heat on its icon, and the line under them names the stages to reach, the week's laurels on offer
+and the Pact's heat; the button reads "Prestige into a Pact of 2". The run plays under all their rules
+(`trialBite` merges them: factors multiply, the longest stagger, any flag), the stage it reaches counts on
+every ladder in it, and the fight's tag shows their icons ("Pact of 2 · to 1,000"). The costs add up
+(measured at 600 / 1,000 / 1,250: Thick Hides with Swift Bosses −110 / −150 / −140, with Rusted Gear too
+−150 / −220 / −210, No Camp with Thick Hides −140 / −250 / −270, Faithless with Thick Hides −280 / −510 /
+−620), so a single Trial still climbs its own ladder furthest.
+
+What they do to the pace (`tools/batch.mjs --seeds=7 --hours=400 --auto`; with Auto on, the bot still goes
+into a Trial every fifth prestige once its run is back near its best: left to Auto it had played 16 Trial runs
+in 777 prestiges, so earlier measures counted the Trials short): the Trials open at hour 19–23 and the first
+tier falls at once (hour 18.7–24.1). By hour 400 the hero holds 72–84 tiers and rungs and best stage 1,960
+(1,950–1,980), against 1,740 (1,720–1,770) without the ladders: the rungs speed a deep climb by about 13%.
+Big moments between hours 150 and 300 come 0.38 an hour (the P90 wait 6.5 h, the longest 13 h) against 0.27
+(9.4 h, 15 h) without them, and 0.17 an hour past 300 (0.14). A bot taking Pacts of three (`--pacts`: the
+week's Trial first while its laurels last, then the fewest tiers, gentlest rule first, Faithless alone)
+reaches 1,980 (1,970–2,040) with 4–7 laurels instead of 3: Pacts change the pace by about 1%. They made
+the server's climb allowance tight (§3.17), so its rates went up.
 
 **The week's Trial** (October 2026, the long-term research's calendar drips, §5.6): each week, Monday to
 Monday UTC, one Trial is the week's, in turn through all eight (`weeklyTrialAt`, with eras like the
 weekend events' so a new Trial never changes a week already played). Its card comes first in the
-dialog with a "This week" ribbon, and it can be played even when its tiers are all cleared. Beating
+dialog with a "This week" ribbon, and it can be played even when its ladder is cleared. Beating
 your best stage in it from before the week began (or its first tier's stage, if higher) wins a
-**laurel**: a record, one a week at most. The best in each Trial is kept (`trials.best`; on loading an
-older save, at least the stage its cleared tiers asked), and the week's first tick notes it as the
-week's bar (`trials.weekly`), so the goal scales with the hero and a Trial cleared at hour 300 is still
-worth a run every eighth week. The simulator's bot tries for the laurel first when a Trial is due,
-three times a week at most. The server flags more laurels than weeks since the save began. The week
-has a **board** too: the save keeps the week's best stage in its Trial (`trials.weekly.best`), the server
-reads it with the week it belongs to (`weeklyTrial`, `weeklyTrialWeek` in `powerSummary`), and the
-leaderboards' "Week's Trial" tab lists this week's runs only (a weekly number already, it has no "this
-week" toggle); a run in it past the hero's best stage is flagged.
+**laurel**: a record. Alone, one a week; once Pacts are open, **the week's stake**: a Pact holding the
+week's Trial wins a laurel for each Trial in it, up to three a week (`trials.weekly.won` counts them; a
+save's `true` is one), for beating the same bar under all their rules. The best in each Trial is kept
+(`trials.best`; on loading an older save, at least the stage its cleared tiers and rungs asked), and the
+week's first tick notes it as the week's bar (`trials.weekly`), so the goal scales with the hero and a
+Trial cleared long ago is still worth a run every eighth week. The simulator's bot tries for the laurels
+first when a Trial is due, three times a week at most. The server flags more laurels than three for each
+week since the save began (`laurelsBeyondWeeks`). The week has a **board** too: the save keeps the week's
+best stage in its Trial (`trials.weekly.best`), the server reads it with the week it belongs to
+(`weeklyTrial`, `weeklyTrialWeek` in `powerSummary`), and the leaderboards' "Week's Trial" tab lists this
+week's runs only. Since 27 October 2026 it ranks a run by its **share of the player's own best stage**
+(the owner's go: the deepest hero topped the raw stage every week), the stage shown with the share; a run
+in it past the hero's best stage is flagged.
 
-The server keeps a Trial out of what the boards compare (`powerSummary` drops the run's rule) and flags a
-save with tiers its best stage could not have cleared (`trialTiersBeyondBest`).
+The server keeps a Trial out of what the boards compare (`powerSummary` drops the run's rules) and flags a
+save with tiers or rungs its best stage could not have cleared (`trialTiersBeyondBest`).
 
 ### 3.27 Ascension
 

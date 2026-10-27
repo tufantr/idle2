@@ -6,7 +6,7 @@ import { BASE } from '../../src/core/modifiers.js';
 import { xpForLevel, XP_FOR_MAX_LEVEL } from '../../src/core/xp.js';
 import { PERKS, PERK_COST_MAX, perkCost } from '../../src/data/perks.js';
 import { RANKS } from '../../src/data/ranks.js';
-import { TRIALS, TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, trialTarget } from '../../src/data/trials.js';
+import { TRIALS, TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, TRIAL_LADDER, TRIAL_MAX_TIER, PACT_MAX, PACTS_FROM, trialTarget } from '../../src/data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS, starsFor, starGain } from '../../src/data/ascension.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, MASTERY_SKILLS, masteryActions } from '../../src/data/mastery.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GLOBAL_BONUS } from '../../src/data/achievements.js';
@@ -62,10 +62,13 @@ function ranksPage(help) {
 }
 
 function trialsPage(help) {
-    const rows = TRIALS.map(t => [`<span id="${t.id.replace(/_/g, '-')}" class="act">${icon(t.icon, 1)} ${esc(t.name)}</span>`, esc(t.rule), ...Array.from({ length: TRIAL_TIERS }, (_, i) => trialTarget(t, i + 1))]);
+    const rows = TRIALS.map(t => [`<span id="${t.id.replace(/_/g, '-')}" class="act">${icon(t.icon, 1)} ${esc(t.name)}</span>`, esc(t.rule), ...Array.from({ length: TRIAL_TIERS }, (_, i) => trialTarget(t, i + 1)), t.heat]);
+    const rungs = TRIAL_MAX_TIER - TRIAL_TIERS;
     return {
-        infobox: infobox({ title: 'Trials', image: icon('mon/Mountain Troll', 3), rows: [['Open from', `best stage ${TRIALS_FROM}`], ['Tiers', `${TRIAL_TIERS}, ${TRIAL_STEP} stages apart`], ['A tier cleared', `a record (tokens ×${BASE.recordMult})`]] }),
-        body: `${help.prose('/trials')}\n${section('Every Trial', `<p>The stage each tier asks you to reach in a run under the Trial's rule:</p>${table(['Trial', 'Rule', ...Array.from({ length: TRIAL_TIERS }, (_, i) => `Tier ${i + 1} #`)], rows)}`)}`,
+        infobox: infobox({ title: 'Trials', image: icon('mon/Mountain Troll', 3), rows: [['Open from', `best stage ${TRIALS_FROM}`], ['Tiers', `${TRIAL_TIERS}, ${TRIAL_STEP} stages apart`],
+            ['The ladder', `${rungs} rungs, stage ${fmt(TRIAL_LADDER.from)} to ${fmt(trialTarget(TRIALS[0], TRIAL_MAX_TIER))}, ${TRIAL_LADDER.step} apart`], ['A tier or rung', `a record (tokens ×${BASE.recordMult})`],
+            ['Pacts', `up to ${PACT_MAX} Trials at once, from best stage ${fmt(PACTS_FROM)}`]] }),
+        body: `${help.prose('/trials')}\n${section('Every Trial', `<p>The stage each tier asks you to reach in a run under the Trial's rule, and the rule's heat. Past the fifth tier every Trial's rungs are at the same stages: ${fmt(TRIAL_LADDER.from)}, ${fmt(TRIAL_LADDER.from + TRIAL_LADDER.step)}, ${fmt(TRIAL_LADDER.from + 2 * TRIAL_LADDER.step)} and on to ${fmt(trialTarget(TRIALS[0], TRIAL_MAX_TIER))}.</p>${table(['Trial', 'Rule', ...Array.from({ length: TRIAL_TIERS }, (_, i) => `Tier ${i + 1} #`), 'Heat #'], rows)}`)}`,
         navbox: navAll()
     };
 }

@@ -17,7 +17,7 @@ import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS, BAG_SIZE, BAG_UPGRADE } from '../data/items.js';
 import { TIERS as POTION_TIERS, doseWords } from '../data/potions.js';
 import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE, BENCH_LEVEL_PER_UPGRADE } from '../data/workshop.js';
-import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP } from '../data/trials.js';
+import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, TRIAL_LADDER, PACTS_FROM, PACT_MAX } from '../data/trials.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
 import { escapeHtml as esc, shareInWords } from './format.js';
@@ -82,8 +82,10 @@ export const FEATURES = {
     trials: { name: 'Trials', art: 'citadel', icon: 'mon/Mountain Troll', blurb: 'A run under one hard rule, for records that last forever.',
         points: [`From stage ${TRIALS_FROM}, the prestige dialog offers Trials: pick one, and the next run plays under its rule.`,
             `Each Trial has ${TRIAL_TIERS} tiers, ${TRIAL_STEP} stages apart. Reach a tier's stage in the Trial and it is cleared for good: a record, so your tokens grow ×${BASE.recordMult} stronger.`,
+            `Past the ${TRIAL_TIERS} tiers each Trial's ladder goes on: a rung at stage ${TRIAL_LADDER.from}, then one every ${TRIAL_LADDER.step} stages, each a record.`,
+            `From stage ${PACTS_FROM} a run may take up to ${PACT_MAX} Trials at once, a Pact: all their rules together, and the stage it reaches counts on each one's ladder. A card's heat says how hard its rule is.`,
             'The run earns its tokens as any run does, from the stage it reaches. The next prestige ends the Trial.',
-            "Each week one Trial is the week's: open even when its tiers are cleared, and beating your best in it wins a laurel, a record too."] },
+            `Each week one Trial is the week's: open even when its tiers are cleared, and beating your best in it wins a laurel, a record too; in a Pact, a laurel for each Trial it holds, up to ${PACT_MAX} a week.`] },
     achievements: { name: 'Achievements', art: 'hall', icon: 'uniq/goblin_crown', blurb: 'A trophy for every deed, with a reward that lasts forever.',
         points: [`Every medal has its own reward, and each one also adds +${pc(ACHIEVEMENT_GLOBAL_BONUS)} attack, defence and skill speed.`, 'The bestiary counts every kind of monster you defeat, with a star at 10, 100 and 1,000.', 'Pets, unique items and every kind of gear you find are kept here too. Some medals stay secret until earned.'] },
     dungeons: { name: 'Dungeons', art: 'dungeon', icon: 'mon/Skeleton', blurb: 'Elite monsters, a chest at the end and pieces of unique gear.',

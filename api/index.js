@@ -976,17 +976,21 @@ app.get('/api/leaderboard', authenticateToken, route('leaderboard', async (req, 
                 if (!snap) continue;
                 value -= num(snap[metric]);
             }
-            entries.push({ userId: r.userId, username: r.username, value });
+            // the week's Trial ranks a run by its share of the player's own best stage (the owner's go, 27 October 2026):
+            // a good Trial run, not the deepest hero, tops it
+            const share = metric === 'weeklyTrial' ? Math.min(1, value / Math.max(1, num(metrics?.bestStage))) : null;
+            entries.push({ userId: r.userId, username: r.username, value, ...(share !== null ? { share } : {}) });
         }
-        entries.sort((a, b) => b.value - a.value || a.username.localeCompare(b.username));
+        const rank = e => (e.share ?? e.value);
+        entries.sort((a, b) => rank(b) - rank(a) || b.value - a.value || a.username.localeCompare(b.username));
         rows = { at: now, entries };
         boardCache.set(key, rows);
     }
     const mine = rows.entries.findIndex(e => e.userId === req.user.id);
     res.json({
         metric, label: METRICS[metric], period, week, optIn: !!(await store.getSave(req.user.id))?.optIn,
-        entries: rows.entries.slice(0, 50).map((e, i) => ({ rank: i + 1, username: e.username, value: e.value, you: e.userId === req.user.id })),
-        me: mine >= 0 ? { rank: mine + 1, value: rows.entries[mine].value } : null
+        entries: rows.entries.slice(0, 50).map((e, i) => ({ rank: i + 1, username: e.username, value: e.value, ...(e.share !== undefined ? { share: e.share } : {}), you: e.userId === req.user.id })),
+        me: mine >= 0 ? { rank: mine + 1, value: rows.entries[mine].value, ...(rows.entries[mine].share !== undefined ? { share: rows.entries[mine].share } : {}) } : null
     });
 }));
 

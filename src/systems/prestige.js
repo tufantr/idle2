@@ -77,7 +77,8 @@ export function doPrestige(game, { auto = false, trial = null, ascend = false } 
     state.combat.farmMode = false;   // "stay on this stage" was for the old run: the new one climbs
     state.combat.stallMs = 0;
     state.combat.frontierDrop = false;   // a new run, a new piece from the frontier to find (systems/combat.js)
-    if (state.trials) state.trials.active = trial;   // a prestige ends a Trial, or begins one (systems/trials.js startTrial)
+    // a prestige ends a Trial, or begins one or a Pact of several (systems/trials.js startTrial)
+    if (state.trials) state.trials.active = Array.isArray(trial) ? (trial.length ? [...trial] : null) : trial ? [trial] : null;
     state.gold = 0;          // combat gold is run-scoped, like the camp it buys
     resetCamp(state);
     game.recompute();

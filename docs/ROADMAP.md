@@ -1406,6 +1406,15 @@ Keeping it running:
       bought with gold as before or with essence (2,000, half as much again each time), since from the fourth on the
       gold came to more than a late run's whole gold; and three "?" texts brought up to date (supplies priced by the
       run's furthest stage, perks' rising prices, jewellery at the bench)
+- [x] **Trials without end** (the owner's go, 27 October 2026; DESIGN §3.26): past the five tiers each Trial's ladder
+      goes on, a rung at stage 500 and one every 250 to 10,000, each a record (all forty tiers had fallen by hour 65);
+      from best stage 500 a run may take up to three Trials at once, a **Pact**: their rules together, the stage counting
+      on each ladder, each card's heat on its icon; the week's Trial in a Pact wins a laurel for each Trial in it, up to
+      three a week; the week's board ranks a run by its share of the player's own best stage. Glass Hero now falls to
+      the first blow that lands, a Brute's blow staggers, and Fasting takes the potion too (deep, the three had cost
+      nothing); Glass Hero's and Fasting's first tiers came down to 170. The simulator's bot enters Trials with Auto on
+      (`--pacts` for Pacts): the rungs speed a deep climb by about 13% and fill the late waits, Pacts by 1% more; the
+      server's climb allowance was refitted (the honest climb had come to 76% of it)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

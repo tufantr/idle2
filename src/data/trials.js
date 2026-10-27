@@ -14,41 +14,85 @@
 // `bite` is what the rule changes, read where it applies: enemyAtk, enemyHp (multipliers on the stage
 // monsters) and bossTime (on a stage boss's timer) in systems/combat.js spawnEnemy; heroHp (on max
 // health), gear (on everything equipment gives), noTokens and noCamp in core/modifiers.js; noCamp also in
-// systems/camp.js; noFood in systems/combat.js tryEat, noRegen in its health regained while fighting.
+// systems/camp.js; noFood in systems/combat.js tryEat, noRegen in its health regained while fighting; oneBlow (a blow
+// that lands fells the hero) and stagger (ms a landed blow puts his next swing back) in systems/combat.js enemyAttack;
+// noPotion in core/modifiers.js potionEffects and systems/potions.js.
+//
+// Ladders without end (the owner's go, 27 October 2026): past the five tiers, a rung at stage TRIAL_LADDER.from and one
+// every TRIAL_LADDER.step after, each a record like a tier. All forty tiers fell by about hour 65 in the simulator, at
+// best stage ~500, and a deep hero had only the week's laurel left (docs/DESIGN.md §3.26). Three rules were sharpened
+// with them, as deep they cost nothing: Glass Hero's tenth of his health (his defence kept every blow at armour's floor),
+// Brutes' four times as hard and Fasting's no food (lifesteal and the potion carried him). A run may take up to
+// PACT_MAX Trials at once (a Pact): their rules together, and the stage it reaches counts on each one's ladder. `heat`
+// is a rule's weight on its card (about the stages it costs a deep run, in fifties).
 
 export const TRIALS_FROM = 200;
 export const TRIAL_TIERS = 5;
 export const TRIAL_STEP = 25;
+export const TRIAL_LADDER = { from: 500, step: 250 };
+/** The last tier there is: the rungs reach the stages' end (MAX_STAGE in core/state.js, 10,000). */
+export const TRIAL_MAX_TIER = TRIAL_TIERS + 1 + Math.floor((10000 - TRIAL_LADDER.from) / TRIAL_LADDER.step);
+/** Trials one run may take at once (a Pact), and the best stage from which it may (the first rung's). */
+export const PACT_MAX = 3;
+export const PACTS_FROM = TRIAL_LADDER.from;
 
 export const TRIALS = [
-    { id: 'brutes', name: 'Brutes', art: 'highland', icon: 'mon/Mountain Troll', rule: 'Monsters hit four times as hard.', bite: { enemyAtk: 4 }, first: 175 },
-    { id: 'thick_hides', name: 'Thick Hides', art: 'frost', icon: 'mon/Mammoth', rule: 'Monsters have ten times the health.', bite: { enemyHp: 10 }, first: 175 },
-    { id: 'glass', name: 'Glass Hero', art: 'depths', icon: 'item/Body/1', rule: 'Your hero has a tenth of his health.', bite: { heroHp: 0.1 }, first: 175 },
-    { id: 'rusted', name: 'Rusted Gear', art: 'ruins', icon: 'item/Shield/2', rule: 'Your gear gives a quarter of its strength.', bite: { gear: 0.25 }, first: 175 },
-    { id: 'swift_bosses', name: 'Swift Bosses', art: 'skyreach', icon: 'mon/Thunder Roc', rule: 'Bosses give you a tenth of the time.', bite: { bossTime: 0.1 }, first: 180 },
-    { id: 'no_camp', name: 'No Camp', art: 'camp', icon: 'campfire', rule: 'The camp stays packed.', bite: { noCamp: true }, first: 180 },
-    { id: 'fasting', name: 'Fasting', art: 'marsh', icon: 'res/cooked_rabbit', rule: 'No food, and no health comes back while you fight.', bite: { noFood: true, noRegen: true }, first: 185 },
-    { id: 'faithless', name: 'Faithless', art: 'shrine', icon: 'res/essence', rule: 'Your tokens give nothing.', bite: { noTokens: true }, first: 125 }
+    { id: 'brutes', name: 'Brutes', art: 'highland', icon: 'mon/Mountain Troll', rule: 'Monsters hit four times as hard, and every blow that lands staggers your hero for a second.', bite: { enemyAtk: 4, stagger: 1000 }, first: 175, heat: 1 },
+    { id: 'thick_hides', name: 'Thick Hides', art: 'frost', icon: 'mon/Mammoth', rule: 'Monsters have ten times the health.', bite: { enemyHp: 10 }, first: 175, heat: 2 },
+    { id: 'glass', name: 'Glass Hero', art: 'depths', icon: 'item/Body/1', rule: 'Your hero falls to the first blow that lands.', bite: { oneBlow: true }, first: 170, heat: 2 },
+    { id: 'rusted', name: 'Rusted Gear', art: 'ruins', icon: 'item/Shield/2', rule: 'Your gear gives a quarter of its strength.', bite: { gear: 0.25 }, first: 175, heat: 1 },
+    { id: 'swift_bosses', name: 'Swift Bosses', art: 'skyreach', icon: 'mon/Thunder Roc', rule: 'Bosses give you a tenth of the time.', bite: { bossTime: 0.1 }, first: 180, heat: 1 },
+    { id: 'no_camp', name: 'No Camp', art: 'camp', icon: 'campfire', rule: 'The camp stays packed.', bite: { noCamp: true }, first: 180, heat: 4 },
+    { id: 'fasting', name: 'Fasting', art: 'marsh', icon: 'res/cooked_rabbit', rule: 'No food, no potions, and no health comes back while you fight.', bite: { noFood: true, noRegen: true, noPotion: true }, first: 170, heat: 1 },
+    { id: 'faithless', name: 'Faithless', art: 'shrine', icon: 'res/essence', rule: 'Your tokens give nothing.', bite: { noTokens: true }, first: 125, heat: 10 }
 ];
 
 const NO_BITE = Object.freeze({});
 
 export const trialById = id => TRIALS.find(t => t.id === id) || null;
 
-/** The rule this run plays under ('' when none). */
-export const trialRule = state => (trialById(state.trials?.active) ? state.trials.active : '');
+/** The Trials this run plays under, as ids (a save from before Pacts held one id, or none). */
+export function trialIds(state) {
+    const a = state?.trials?.active;
+    const list = Array.isArray(a) ? a : a ? [a] : [];
+    return list.filter((id, i) => trialById(id) && list.indexOf(id) === i).slice(0, PACT_MAX);
+}
 
-/** What the run's rule changes (data above; an empty object outside a Trial). */
-export const trialBite = state => trialById(state.trials?.active)?.bite || NO_BITE;
+/** The rules this run plays under ('' when none; a Pact's ids joined by +). */
+export const trialRule = state => trialIds(state).join('+');
 
-/** Tiers of a Trial cleared (0 to TRIAL_TIERS). */
+// What several rules change together: their factors multiplied, a landed blow's stagger the longest, the rest any.
+const FACTORS = ['enemyAtk', 'enemyHp', 'heroHp', 'gear', 'bossTime'];
+const pactBites = new Map();
+function mergeBites(ids) {
+    const bite = {};
+    for (const id of ids) for (const [k, v] of Object.entries(trialById(id).bite)) {
+        if (FACTORS.includes(k)) bite[k] = (bite[k] ?? 1) * v;
+        else if (k === 'stagger') bite[k] = Math.max(bite[k] || 0, v);
+        else bite[k] = bite[k] || v;
+    }
+    return Object.freeze(bite);
+}
+
+/** What the run's rules change (data above; an empty object outside a Trial; a Pact's rules together). */
+export function trialBite(state) {
+    const ids = trialIds(state);
+    if (!ids.length) return NO_BITE;
+    if (ids.length === 1) return trialById(ids[0]).bite;
+    const key = ids.join('+');
+    let bite = pactBites.get(key);
+    if (!bite) pactBites.set(key, bite = mergeBites(ids));
+    return bite;
+}
+
+/** Tiers of a Trial cleared (0 to TRIAL_MAX_TIER: the five, then the ladder's rungs). */
 export const trialTier = (state, id) => state.trials?.cleared?.[id] || 0;
 
-/** Tiers cleared over all the Trials: each is a record (core/modifiers.js recordsOf). */
-export const trialTiersCleared = state => TRIALS.reduce((n, t) => n + Math.min(TRIAL_TIERS, Math.max(0, Math.floor(trialTier(state, t.id)) || 0)), 0);
+/** Tiers cleared over all the Trials, rungs included: each is a record (core/modifiers.js recordsOf). */
+export const trialTiersCleared = state => TRIALS.reduce((n, t) => n + Math.min(TRIAL_MAX_TIER, Math.max(0, Math.floor(trialTier(state, t.id)) || 0)), 0);
 
-/** The stage a Trial's tier (1-based) asks for. */
-export const trialTarget = (trial, tier) => trial.first + TRIAL_STEP * (tier - 1);
+/** The stage a Trial's tier (1-based) asks for: the five 25 stages apart from its first, then the ladder's rungs. */
+export const trialTarget = (trial, tier) => (tier <= TRIAL_TIERS ? trial.first + TRIAL_STEP * (tier - 1) : TRIAL_LADDER.from + TRIAL_LADDER.step * (tier - TRIAL_TIERS - 1));
 
 // The week's Trial (robust-and-fun/B_longterm_motivation.md §8.2 item 10: late players need moments on
 // the calendar, since late progress crawls). Each week, Monday 00:00 UTC to the next, one Trial is the

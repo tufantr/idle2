@@ -6,7 +6,7 @@ import { migrateState, MAX_STAGE } from './state.js';
 import { deriveStats, BASE } from './modifiers.js';
 import { levelForXp } from './xp.js';
 import { enemyBaseStats, BALANCE, supplyMult } from './formulas.js';
-import { TRIALS, WEEK_MS, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
+import { TRIALS, WEEK_MS, PACT_MAX, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
 import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf } from '../data/social.js';
 
 export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf };   // the server reads them here
@@ -140,8 +140,9 @@ export function powerSummary(rawState, now = Date.now()) {
         // the best stage this week in the week's Trial, and the week it belongs to (the week's board)
         weeklyTrial: state.trials.weekly?.start === weeklyTrialAt(now).start ? state.trials.weekly.best || 0 : 0,
         weeklyTrialWeek: weeklyTrialAt(now).start,
-        // laurels past one a week since the save began (the week's Trial: data/trials.js)
-        laurelsBeyondWeeks: Math.max(0, laurelsOf(state) - (Math.floor(Math.max(0, now - (Number(state.meta.createdAt) || 0)) / WEEK_MS) + 1))
+        // laurels past what the weeks since the save began allow (the week's Trial: data/trials.js; a Pact with it stakes
+        // up to PACT_MAX a week)
+        laurelsBeyondWeeks: Math.max(0, laurelsOf(state) - PACT_MAX * (Math.floor(Math.max(0, now - (Number(state.meta.createdAt) || 0)) / WEEK_MS) + 1))
     };
 }
 
@@ -155,9 +156,13 @@ export function powerSummary(rawState, now = Date.now()) {
 // on varied plans: the camp past 25 and the Legacy from the start, and the dense deep Abyss, where a run fresh
 // from a prestige can gain 150 stages in an hour around stage 700 and 240 in a day. No row came down. With the
 // forge without a top and Mythic gear, 90 in an hour past 1,500 (worst honest climb 50% of the allowance, then 1,500's
-// row raised).
-const CLIMB = [[0, 95, 10], [50, 55, 6], [100, 25, 4.5], [150, 25, 4.5], [200, 35, 3.6], [300, 40, 3.5], [350, 60, 3], [400, 60, 6.6],
-    [450, 80, 6], [500, 130, 4], [600, 160, 4], [700, 170, 4], [800, 150, 4], [1000, 125, 2], [1200, 90, 1.5], [1500, 90, 1.5]];
+// row raised). Raised again with the Trials' endless ladders and Pacts (27 October 2026, DESIGN §3.26) on 28 runs of 400
+// hours with Auto, the bot going into a Trial every fifth prestige as a player would: the 40 tiers fall between stages
+// 300 and 500 and the rungs keep coming past them, so from 300 a hero gained 430 stages in 43 hours (76% of the
+// allowance) and from 1,200 340 in 48 (72%). The rates an hour went up from 150 to 1,500 (a day's climb, not an hour's
+// burst, was what came close); now the worst is 49%, and no row came down.
+const CLIMB = [[0, 95, 10], [50, 55, 6], [100, 25, 4.5], [150, 25, 6.5], [200, 35, 6], [300, 40, 6.5], [350, 60, 6.5], [400, 60, 6.6],
+    [450, 80, 7.2], [500, 130, 5.2], [600, 160, 4.5], [700, 170, 4.5], [800, 150, 5], [1000, 125, 4.2], [1200, 90, 3.8], [1500, 90, 1.5]];
 export const CLIMB_MARGIN = 3;   // what the server allows over it: players who tap, and better plans than the bot's
 
 /** The most a best stage of `fromStage` can honestly grow in `hours`, times CLIMB_MARGIN. */

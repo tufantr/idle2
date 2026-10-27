@@ -8,7 +8,7 @@ import { EQUIP_SLOTS, TYPE_SLOTS, TYPE_ICONS, RARITIES, AFFIXES, MAX_UPGRADE, MA
 import { generateEquipment, BALANCE } from './formulas.js';
 import { PERKS } from '../data/perks.js';
 import { CAMP_UPGRADES } from '../data/camp.js';
-import { TRIALS, TRIAL_TIERS, trialById, trialTarget, trialTiersCleared } from '../data/trials.js';
+import { TRIALS, TRIAL_MAX_TIER, PACT_MAX, trialById, trialIds, trialTarget, trialTiersCleared } from '../data/trials.js';
 import { xpForLevel, levelForXp, MAX_LEVEL } from './xp.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS, parseUniqueKey, uniqueKey } from '../data/dungeons.js';
@@ -710,21 +710,25 @@ function normalise(data, now) {
         firstAt: Math.max(0, Number(asc.firstAt) || 0),
         lastAt: Math.max(0, Number(asc.lastAt) || 0)
     };
-    // Trials: a known one active, and whole tiers in range for each
+    // Trials: the known ones active (one, or a Pact's several: a save from before Pacts held one id), and whole tiers in
+    // range for each (the five, then the ladder's rungs to the stages' end)
     const trials = isPlainObject(data?.trials) ? data.trials : {};
-    // (a laurel comes once a week: 5,000 is a century of them, and keeps the records' power a number)
-    state.trials = { active: trialById(trials.active) ? trials.active : null, cleared: {}, best: {}, laurels: Math.min(5000, Math.max(0, Math.floor(Number(trials.laurels) || 0))), weekly: null };
+    const active = trialIds({ trials });
+    // (a laurel comes once a week, three with a Pact: 5,000 is decades of them, and keeps the records' power a number)
+    state.trials = { active: active.length ? active : null, cleared: {}, best: {}, laurels: Math.min(5000, Math.max(0, Math.floor(Number(trials.laurels) || 0))), weekly: null };
     for (const t of TRIALS) {
-        const n = Math.floor(Number(trials.cleared?.[t.id]) || 0);
-        if (n > 0) state.trials.cleared[t.id] = Math.min(TRIAL_TIERS, n);
+        const n = Math.min(TRIAL_MAX_TIER, Math.floor(Number(trials.cleared?.[t.id]) || 0));
+        if (n > 0) state.trials.cleared[t.id] = n;
         // the best stage reached in it: at least what its tiers cleared ask (saves from before the weekly Trial)
-        const best = Math.max(Math.floor(Number(trials.best?.[t.id]) || 0), n > 0 ? trialTarget(t, Math.min(TRIAL_TIERS, n)) : 0);
+        const best = Math.max(Math.floor(Number(trials.best?.[t.id]) || 0), n > 0 ? trialTarget(t, n) : 0);
         if (best > 0) state.trials.best[t.id] = Math.min(1e6, best);
     }
     const w = trials.weekly;
     if (isPlainObject(w) && trialById(w.id) && Number.isFinite(Number(w.start))) {
         const stage = v => Math.min(1e6, Math.max(0, Math.floor(Number(v) || 0)));
-        state.trials.weekly = { start: Number(w.start), id: w.id, bar: stage(w.bar), won: w.won === true, best: stage(w.best) };
+        // laurels won this week: a count since Pacts (one for each Trial a run with the week's holds), true was one
+        const won = w.won === true ? 1 : Math.max(0, Math.min(PACT_MAX, Math.floor(Number(w.won) || 0)));
+        state.trials.weekly = { start: Number(w.start), id: w.id, bar: stage(w.bar), won, best: stage(w.best) };
     }
     // The counts the medals read, at least what the save holds (Trial Master's and Ascendant's were
     // dropped on every load before they had defaults); skills at 99 counted again for the same reason.

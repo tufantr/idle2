@@ -52,7 +52,7 @@ import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, next
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle, fightTab } from './features.js';
 import { seen } from '../systems/disclosure.js';
 import { campOnOffer } from '../systems/guide.js';
-import { trialBoard, trialsOpen, activeTrial } from '../systems/trials.js';
+import { trialBoard, trialsOpen, activeTrials, pactSize } from '../systems/trials.js';
 import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
@@ -381,7 +381,9 @@ function potionPicker(game, slot, cls = '') {
             `${res(id).name}: ${does(id)}, ${duration(doseMs(game.derived))} of ${conf.of} a bottle (${fmt(state.resources[id] || 0)} left: ${duration(lasts(id))})`, picked === id ? '' : 'idle')),
         none && isUnlocked(state, 'alchemy') ? `<button class="pick pick-go" onclick="FI.switchTab('alchemy')" title="No potions left: brew some" aria-label="No potions left: brew some">${tabIcon('alchemy', 1)}<span class="pick-sub">Brew</span></button>` : ''
     ].join('');
-    const note = picked !== 'none' ? (lasts(picked) > 0 ? `${does(picked)} · ${duration(lasts(picked))} left` : 'none left') : '';
+    // (the Fasting Trial: no potion works in its run, data/trials.js; the clan's fight leaves the Trial out)
+    const fasting = slot !== 'skill' && cls !== 'clan-potion' && !!trialBite(state).noPotion;
+    const note = fasting ? 'none works in this Trial' : picked !== 'none' ? (lasts(picked) > 0 ? `${does(picked)} · ${duration(lasts(picked))} left` : 'none left') : '';
     return `<div class="loadout ${cls}"><div class="loadout-label">${conf.label}${note ? ` <span class="muted small">${note}</span>` : ''}</div><div class="pick-row">${row}</div></div>`;
 }
 
@@ -2411,13 +2413,16 @@ function renderLeaderboard(social) {
     const consent = social.optIn
         ? `<p class="small">You are listed by your username with numbers the server works out from your cloud save. <button class="mini-btn" onclick="FI.setLeaderboardConsent(false)">Leave the leaderboards</button></p>`
         : `<p class="small">Leaderboards are opt-in. Joining lists your <b>username</b> with your best stage, total level, Titans and dungeon clears — worked out on the server from your cloud save, never from numbers the game sends. You can leave at any time. <button class="prestige-btn" onclick="FI.setLeaderboardConsent(true)">Join the leaderboards</button></p>`;
-    const rows = board ? board.entries.map(e => `<tr class="${e.you ? 'you-row' : ''}"><td>${e.rank}</td><td>${esc(e.username)}</td><td>${fmt(e.value)}</td></tr>`).join('') : '';
+    // the week's Trial ranks a run by its share of the player's own best stage (api/index.js): the share, then the stage
+    const value = e => (Number.isFinite(e.share) ? `${Math.round(e.share * 100)}% <small class="muted">stage ${fmt(e.value)}</small>` : fmt(e.value));
+    const shared = board?.entries?.some(e => Number.isFinite(e.share));
+    const rows = board ? board.entries.map(e => `<tr class="${e.you ? 'you-row' : ''}"><td>${e.rank}</td><td>${esc(e.username)}</td><td>${value(e)}</td></tr>`).join('') : '';
     return `<section class="glass-panel ${painted('hall', 'center 60%')}">
         <div class="panel-header"><h2>Leaderboards</h2>
             <div class="btn-row">${Object.entries(BOARD_METRICS).map(([id, label]) => `<button class="mini-btn ${social.metric === id ? 'active' : ''}" onclick="FI.boardMetric('${id}')">${esc(label)}</button>`).join('')}
             ${social.metric === 'weeklyTrial' ? '' : `<button class="mini-btn ${social.period === 'week' ? 'active' : ''}" onclick="FI.boardPeriod('${social.period === 'week' ? 'all' : 'week'}')">${social.period === 'week' ? 'This week' : 'All time'}</button>`}</div></div>
         ${consent}
-        ${board ? (rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Player</th><th>${esc(board.label)}${board.period === 'week' ? ' (this week)' : ''}</th></tr></thead><tbody>${rows}</tbody></table></div>${board.me && board.me.rank > 50 ? `<p class="small">You: #${board.me.rank} (${fmt(board.me.value)})</p>` : ''}` : '<p class="muted small">Nobody on this board yet.</p>') : ''}
+        ${board ? (rows ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Player</th><th>${shared ? 'Share of best stage' : `${esc(board.label)}${board.period === 'week' ? ' (this week)' : ''}`}</th></tr></thead><tbody>${rows}</tbody></table></div>${board.me && board.me.rank > 50 ? `<p class="small">You: #${board.me.rank} (${value(board.me)})</p>` : ''}` : '<p class="muted small">Nobody on this board yet.</p>') : ''}
     </section>`;
 }
 
@@ -2445,7 +2450,7 @@ export function renderPrestigeModal(game) {
         has('farming') ? [sprite('farm/growing', { scale: 1 }), 'The farm'] : null
     ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
     const nextSp = Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage);
-    const trial = activeTrial(state);
+    const trials = activeTrials(state);
     return `<div class="modal-content about-card prestige-modal">
         <div class="about-art" style="${artStyle('prestige')}" aria-hidden="true"></div>
         <div class="modal-header">Prestige</div>
@@ -2461,7 +2466,7 @@ export function renderPrestigeModal(game) {
                 <span class="pg-item"><span class="pg-pip">${p.startStage}</span> back to stage ${p.startStage}</span>
                 <span class="pg-item">${coinIcon(1)} ${fmt(state.gold)} gold</span>
                 ${campLevels ? `<span class="pg-item">${sprite('campfire', { scale: 1 })} the camp (${campLevels} level${campLevels === 1 ? '' : 's'})</span>` : ''}
-                ${trial ? `<span class="pg-item">${sprite(trial.icon, { scale: 1 })} the Trial: ${esc(trial.name)}</span>` : ''}
+                ${trials.length ? `<span class="pg-item">${trials.map(t => sprite(t.icon, { scale: 1 })).join('')} ${trials.length > 1 ? 'the Pact' : 'the Trial'}: ${esc(trials.map(t => t.name).join(', '))}</span>` : ''}
             </div>
             <div class="pg-row"><h4>Everything else stays</h4><span class="pg-keep">${keep}</span></div>
             ${seen(state, 'ascension') && ascensionOpen(state) ? renderAscendRow(game) : ''}
@@ -2485,26 +2490,34 @@ function renderAscendRow(game) {
 
 /**
  * The Trials in the prestige dialog (systems/trials.js): each its place's painting, its icon, name and
- * rule, the tiers cleared as pips and the stage the next one asks for. Picking one (main.js pickTrial)
- * turns the dialog's button into "Prestige into ..." and says what the next tier gives.
+ * rule, the tiers cleared as pips (and the ladder's rungs past them) and the stage the next one asks for.
+ * Picking one (main.js pickTrial) turns the dialog's button into "Prestige into ..." and says what the next tier
+ * gives; once Pacts are open (from the ladder's first rung) up to PACT_MAX may be picked, each card showing its heat.
  */
 function renderTrialPicks(game) {
-    const board = trialBoard(game.state, game.now);
+    const state = game.state;
+    const board = trialBoard(state, game.now);
+    const most = pactSize(state);
     // the week's Trial first (data/trials.js weeklyTrialAt): open even when cleared, its laurel a stage to beat
     const cards = [...board.filter(r => r.weekly), ...board.filter(r => !r.weekly)].map(({ trial: t, tier, target, weekly }) => {
         const laurel = weekly && !weekly.won ? weekly.target : null;
         const done = target === null && laurel === null;
         const pips = Array.from({ length: TRIAL_TIERS }, (_, i) => `<i${i < tier ? ' class="on"' : ''}></i>`).join('');
-        const foot = target !== null ? `Stage ${target}${laurel !== null ? ` ${ICON_LAUREL}` : ''}` : laurel !== null ? `${ICON_LAUREL} Stage ${laurel}` : weekly ? `${ICON_LAUREL} Won` : 'Cleared';
+        const rungs = tier > TRIAL_TIERS ? `<b class="trial-rungs">+${tier - TRIAL_TIERS}</b>` : '';
+        const foot = target !== null ? `Stage ${fmt(target)}${laurel !== null ? ` ${ICON_LAUREL}` : ''}` : laurel !== null ? `${ICON_LAUREL} Stage ${fmt(laurel)}` : weekly ? `${ICON_LAUREL} Won` : 'Cleared';
+        // (once Pacts are open the week has up to PACT_MAX laurels: one for each Trial a run holding it takes)
+        const left = laurel !== null && most > 1 ? ` title="${most - weekly.laurels} of this week's ${most} laurels left: a Pact holding it wins one for each Trial in it"` : '';
+        const heat = most > 1 ? `<span class="trial-heat" title="Heat ${t.heat}: how hard its rule is deep in the climb">${glyph('flame')}${t.heat}</span>` : '';
         return `<label class="trial-card${done ? ' done' : ''}${weekly ? ' weekly' : ''}" style="${paintStyle(t.art, 'center 60%')}">
-            ${weekly ? `<span class="trial-week" title="This week's Trial, until ${esc(new Date(weekly.end).toUTCString().slice(0, 11))}: beat your best in it for a laurel, a record">This week</span>` : ''}
-            <input type="checkbox" name="trial" value="${t.id}" data-name="${esc(t.name)}" data-target="${target ?? ''}" data-laurel="${laurel ?? ''}" onchange="FI.pickTrial(this)"${done ? ' disabled' : ''}>
-            <span class="trial-icon">${sprite(t.icon, { scale: 1 })}</span><b class="trial-name">${esc(t.name)}</b>
+            ${weekly ? `<span class="trial-week" title="This week's Trial, until ${esc(new Date(weekly.end).toUTCString().slice(0, 11))}: beat your best in it for a laurel, a record${most > 1 ? `; in a Pact, a laurel for each Trial it holds` : ''}">This week</span>` : ''}
+            <input type="checkbox" name="trial" value="${t.id}" data-name="${esc(t.name)}" data-target="${target ?? ''}" data-laurel="${laurel ?? ''}" data-won="${weekly ? weekly.laurels : ''}" data-heat="${t.heat}" onchange="FI.pickTrial(this)"${done ? ' disabled' : ''}>
+            <span class="trial-icon">${sprite(t.icon, { scale: 1 })}${heat}</span><b class="trial-name">${esc(t.name)}</b>
             <small class="trial-rule">${esc(t.rule)}</small>
-            <span class="trial-foot"><span class="trial-pips" role="img" aria-label="${tier} of ${TRIAL_TIERS} tiers cleared">${pips}</span><small>${foot}</small></span>
+            <span class="trial-foot"><span class="trial-pips" role="img" aria-label="${tier} tiers cleared${tier > TRIAL_TIERS ? `: the five and ${tier - TRIAL_TIERS} more` : ` of ${TRIAL_TIERS}`}">${pips}${rungs}</span><small${left}>${foot}</small></span>
         </label>`;
     }).join('');
-    return `<div class="pg-row pg-trials"><h4>Or prestige into a Trial ${aboutButton('trials')}</h4><div class="trial-grid">${cards}</div><p class="trial-pick-line" aria-live="polite"></p></div>`;
+    const head = most > 1 ? `Or prestige into a Trial, or a Pact of up to ${most}` : 'Or prestige into a Trial';
+    return `<div class="pg-row pg-trials" data-most="${most}"><h4>${head} ${aboutButton('trials')}</h4><div class="trial-grid">${cards}</div><p class="trial-pick-line" aria-live="polite"></p></div>`;
 }
 
 // A laurel (the week's Trial beaten): two sprigs of leaves.

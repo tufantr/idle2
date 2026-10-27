@@ -93,7 +93,7 @@ When a run stops climbing and the quick fixes (better gear, the camp, food) do n
 
 - **Tokens** come from prestige, more for a deeper run. They are never spent: each gives +{{pct(BASE.tokenAtk, 1)}} attack and defence and +{{pct(BASE.tokenHp, 1)}} health, for good.
 - **Skill points** buy [[/perks|perks]] that last forever. You get one for each prestige of a run that reached at least {{pct(BALANCE.prestige.fullRunFraction, 0)}} of your best stage, and one for every {{BALANCE.prestige.spStageStep}} stages of your best ever.
-- **Records** make every token stronger: each one multiplies what tokens give by {{BASE.recordMult}}. Every {{BASE.recordStages}} stages of your best ever is a record, and so is every dungeon unique you hold and, later, each Trial tier you clear.
+- **Records** make every token stronger: each one multiplies what tokens give by {{BASE.recordMult}}. Every {{BASE.recordStages}} stages of your best ever is a record, and so is every dungeon unique you hold and, later, each Trial tier or rung you clear.
 
 ### How does Auto prestige unlock?
 
@@ -105,7 +105,7 @@ They show your rank, earned by prestiging: {{RANKS.slice(0, 5).map(r => `${r.nam
 
 ### What are Trials and Ascension?
 
-Late-game choices in the prestige dialog. From best stage {{TRIALS_FROM}}, [[/trials|Trials]] let you play the next run under one hard rule; each of their tiers you clear is a record. From best stage {{ASCEND_FROM}}, [[/ascension|Ascension]] gives up all your tokens for Stars, and each Star makes every later prestige pay {{pct(STAR_TOKEN_GAIN, 0)}} more tokens.
+Late-game choices in the prestige dialog. From best stage {{TRIALS_FROM}}, [[/trials|Trials]] let you play the next run under one hard rule (later, up to {{PACT_MAX}} at once); each of their tiers and rungs you clear is a record. From best stage {{ASCEND_FROM}}, [[/ascension|Ascension]] gives up all your tokens for Stars, and each Star makes every later prestige pay {{pct(STAR_TOKEN_GAIN, 0)}} more tokens.
 
 ## Gear
 

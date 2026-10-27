@@ -8,8 +8,10 @@
 //                                                 # 'battle' is the fight filling the screen; 'map' and
 //                                                 # 'prestige' are those dialogs over the game; 'anvil'
 //                                                 # is Smithing's anvil step; 'trials' is the prestige
-//                                                 # dialog with Trials cleared and one picked, and
-//                                                 # 'trialfight' a fight in a Trial; 'ascend' the
+//                                                 # dialog with Trials cleared and one picked, 'pact'
+//                                                 # the same deep, rungs cleared and a Pact of two
+//                                                 # with the week's picked, and 'trialfight' a fight
+//                                                 # in a Pact; 'ascend' the
 //                                                 # dialog's Ascend row; 'refit' a new piece in the
 //                                                 # bag compared with the reinforced one it would replace;
 //                                                 # 'banner' the fight under a clan banner of ×2)
@@ -38,7 +40,7 @@ const STEPS = {
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
-    trialfight: () => { const g = FI.game(); g.state.trials.active = 'no_camp'; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); },
+    trialfight: () => { const g = FI.game(); g.state.trials.active = ['no_camp', 'brutes']; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); },
     banner: async () => {   // three levels of this week's clan boss felled: the chip under the hero says ×2
         const { isoWeek } = await import('/src/data/social.js');
         const g = FI.game();
@@ -66,11 +68,23 @@ const DIALOGS = {
     },
     trials: () => {
         const g = FI.game(); const s = g.state;
-        s.prestige.runStartedAt = 0; s.trials.cleared = { brutes: 2, faithless: 5, glass: 1 }; s.trials.active = 'fasting'; s.combat.bestStage = Math.max(s.combat.bestStage, 236);
-        g.recompute(); FI.openPrestige();
+        s.prestige.runStartedAt = 0; s.trials.cleared = { brutes: 2, faithless: 5, glass: 1 }; s.trials.active = ['fasting']; s.combat.bestStage = 236;
+        s.settings.devUnlockAll = false; s.unlocks.prestige = true; s.seen.trials = true;   // (as a player at 236 sees it: no Pacts yet)
+        g.recompute(); FI.openPrestige(); s.settings.devUnlockAll = true;
         const pick = document.querySelector('.prestige-modal input[value="swift_bosses"]');
         if (pick) { pick.checked = true; FI.pickTrial(pick); }
         document.querySelector('.pg-trials')?.scrollIntoView({ block: 'start' });   // the Trials, and the buttons over them
+    },
+    pact: () => {
+        const g = FI.game(); const s = g.state;
+        s.prestige.runStartedAt = 0; s.combat.bestStage = Math.max(s.combat.bestStage, 820);
+        s.trials.cleared = { brutes: 7, thick_hides: 6, glass: 6, rusted: 7, swift_bosses: 6, no_camp: 5, fasting: 6, faithless: 5 }; s.trials.active = ['glass', 'fasting'];
+        s.trials.best = { brutes: 790, thick_hides: 640, glass: 610, rusted: 805, swift_bosses: 700, no_camp: 560, fasting: 655, faithless: 420 }; s.trials.weekly = null;
+        g.recompute(); FI.openPrestige();
+        const week = document.querySelector('.prestige-modal .trial-card.weekly input');
+        const other = [...document.querySelectorAll('.prestige-modal input[name="trial"]')].find(i => i !== week && i.value !== 'faithless');
+        for (const pick of [week, other]) if (pick) { pick.checked = true; FI.pickTrial(pick); }
+        document.querySelector('.pg-trials')?.scrollIntoView({ block: 'start' });
     }
 };
 

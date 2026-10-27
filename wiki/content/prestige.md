@@ -47,7 +47,7 @@ Records make every token stronger. Each record multiplies what all your tokens g
 - every {{BASE.recordStages}} stages of your best stage ever;
 - every {{BASE.recordSkillLevels}} levels of your skills together (every skill but Combat: [[Skills]]);
 - each different [[Unique items|unique item]] you hold, in your bag or worn;
-- each [[Trials|Trial]] tier you clear;
+- each [[Trials|Trial]] tier or rung you clear;
 - each laurel from the week's Trial.
 
 Records multiply together: ten of them make your tokens ×{{(BASE.recordMult ** 10).toFixed(2)}} as strong. Reaching a new {{BASE.recordStages}}-stage record gets a card of its own, and so does each new {{BASE.recordSkillLevels}} skill levels; the token chip's tip in the purse counts your records, and the Hall's Records shows how far the next skill record is. Late in the game, when one more prestige adds little to a big stock of tokens, a new record lifts the whole stock at once.

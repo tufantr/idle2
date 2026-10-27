@@ -241,13 +241,13 @@ test('the week\'s laurel asks for one stage past the best from before the week, 
     const { start, trial } = weeklyTrialAt(now);
     const game = new Game(null, now);
     const s = game.state;
-    s.trials.active = trial.id;
+    s.trials.active = [trial.id];
     s.trials.best[trial.id] = 240;
-    s.trials.weekly = { start: start - WEEK_MS, id: trial.id, bar: 200, won: true, best: 240 };
+    s.trials.weekly = { start: start - WEEK_MS, id: trial.id, bar: 200, won: 1, best: 240 };
     s.combat.maxStage = 241;
     checkTrial(game);
     assert.equal(s.trials.weekly.bar, 240, 'the bar is the best before this week');
-    assert.equal(s.trials.weekly.won, true, 'and stage 241 wins its laurel');
+    assert.equal(s.trials.weekly.won, 1, 'and stage 241 wins its laurel');
 });
 
 test('the clock turned back in play: the run\'s ten minutes count from the new time, not a day away', () => {

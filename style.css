@@ -2723,15 +2723,18 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .trial-card:has(input:focus-visible) { outline: 2px solid #fcd34d; outline-offset: 2px; }
 .trial-card:has(input:checked) { border-color: #fcd34d; box-shadow: 0 0 0 1px #fcd34d, 0 0 18px rgba(252, 211, 77, 0.4); transform: translateY(-2px); }
 .trial-card.done { cursor: default; filter: saturate(0.55); }
-.trial-icon { grid-area: icon; display: grid; place-items: center; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)); }
+.trial-icon { grid-area: icon; position: relative; display: grid; place-items: center; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)); }
 .trial-name { grid-area: name; font-family: var(--font-display); font-size: 0.9rem; line-height: 1.15; color: var(--heading); text-shadow: 0 1px 4px #000; }
 .trial-rule { grid-area: rule; align-self: start; font-size: 0.72rem; line-height: 1.25; color: var(--text-main); text-shadow: 0 1px 3px #000; }
-.trial-foot { grid-area: foot; align-self: end; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
-.trial-foot small { font-size: 0.7rem; font-weight: 700; color: #fde68a; text-shadow: 0 1px 3px #000; }
+.trial-foot { grid-area: foot; align-self: end; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.15rem 0.4rem; }
+.trial-foot small { margin-left: auto; font-size: 0.7rem; font-weight: 700; color: #fde68a; text-shadow: 0 1px 3px #000; white-space: nowrap; }
 .trial-card.done .trial-foot small { color: var(--text-muted); }
-.trial-pips { display: inline-flex; gap: 3px; }
+.trial-pips { display: inline-flex; align-items: center; gap: 2px; }
 .trial-pips i { width: 8px; height: 8px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(214, 170, 92, 0.5); }
 .trial-pips i.on { background: radial-gradient(circle at 35% 30%, #fde68a, #c08a2a); border-color: #fde68a; }
+/* the ladder's rungs past the five tiers, and a rule's heat on its icon's corner once Pacts are open (data/trials.js) */
+.trial-rungs { margin-left: 2px; font-size: 0.66rem; font-weight: 800; color: #fde68a; text-shadow: 0 1px 3px #000; }
+.trial-heat { position: absolute; right: -9px; bottom: -6px; display: inline-flex; align-items: center; padding: 0 3px 0 1px; border-radius: 8px; background: rgba(12, 8, 4, 0.78); font-size: 0.62rem; font-weight: 800; line-height: 1.2; color: #fdba74; }
 .trial-pick-line { flex: 1 1 100%; margin: 0; min-height: 1em; font-size: 0.78rem; color: #fde68a; }
 .trial-pick-line:empty { display: none; }
 .battle-trial { display: inline-flex; align-items: center; gap: 0.3rem; color: #fca5a5; font-weight: 700; }
