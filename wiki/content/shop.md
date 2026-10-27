@@ -1,9 +1,9 @@
 ---
 path: /shop
-keywords: shop, supplies, gold shop, buy, prices, coal wagon, firewood bundle, herb pouch, hunter's cache, bait tin, essence cache, gem pouch, amethyst pouch, topaz pouch, sapphire pouch, sell, selling, gem pouches
-aliases: Supplies, Gold shop, Gem pouches
+keywords: shop, supplies, gold shop, buy, prices, coal wagon, firewood bundle, herb pouch, hunter's cache, bait tin, essence cache, gem pouch, amethyst pouch, topaz pouch, sapphire pouch, sell, selling, gem pouches, charms, charm, gem gloves, furnace bellows, chef's gloves, compost sack, charges
+aliases: Supplies, Gold shop, Gem pouches, Charms, Gem Gloves, Furnace Bellows, Chef's Gloves, Compost Sack
 ---
-The Shop sells supplies for gold: coal, logs, herbs, meat, bait, essence and, for [[Crafting]], gems. It opens early, after the first boss falls. Once [[Prestige|prestige]] has opened it also holds your prestige panel, and after your first prestige the [[Perks]] you buy with skill points. The table below lists every supply.
+The Shop sells supplies for gold: coal, logs, herbs, meat, bait, essence and, for [[Crafting]], gems. It opens early, after the first boss falls. Once [[Prestige|prestige]] has opened it also holds your prestige panel, and after your first prestige the [[Perks]] you buy with skill points. Later it sells **charms** for essence (below). The table below lists every supply.
 
 ## Prices follow your run
 
@@ -14,6 +14,17 @@ So prices rise and fall with what your kills pay now: just after a prestige they
 ## Gem pouches
 
 Once Crafting is open the Shop also sells gems for it: a pouch of the first gems, one kind at a time as your Crafting level climbs (the table below says which, when). They keep Crafting's first levels open at any point of the game, however deep the fight's own gems have gone. The higher gems are never sold for gold.
+
+## Charms
+
+Charms are kits with charges, bought with [[Monster Essence|essence]]. Each makes one skill's work go further while its charges last, and opens here once that skill meets what it eases:
+
+- **{{CHARMS[0].name}}** ({{fmt(CHARMS[0].essence)}} essence, {{CHARMS[0].charges}} charges): {{CHARMS[0].does.toLowerCase()}} It opens at [[/skills/mining|Mining]] 30 once [[Crafting]] is open.
+- **{{CHARMS[1].name}}** ({{fmt(CHARMS[1].essence)}} essence, {{CHARMS[1].charges}} charges): {{CHARMS[1].does.toLowerCase()}} It opens once a weapon or armour slot is reinforced past +10 ([[Smithing]]), where the forge's bars start to eat coal.
+- **{{CHARMS[2].name}}** ({{fmt(CHARMS[2].essence)}} essence, {{CHARMS[2].charges}} charges): {{CHARMS[2].does.toLowerCase()}} It opens at [[/skills/cooking|Cooking]] 50.
+- **{{CHARMS[3].name}}** ({{fmt(CHARMS[3].essence)}} essence, {{CHARMS[3].charges}} charges): {{CHARMS[3].does.toLowerCase()}} It opens at [[Farming]] 50.
+
+Each piece of a charm's work uses one charge: a rock, a bar that would have taken coal, a dish, a harvest. A purchase adds its charges to any left (a hundred purchases' worth at most), they stay through every [[Prestige|prestige]], and the skill's header shows how many are left while there are any. None of them is needed: a player who mines his own coal never wants the bellows. During a [[/events|weekend event]] its shop also sells every charm you have opened, for {{CHARM_TOKEN_COST}} Festival Tokens a purchase.
 
 ## No buying low and selling high
 

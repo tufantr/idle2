@@ -1929,6 +1929,37 @@ the forge is: a page running the older game drops a field it doesn't know).
   the tree. The server counts total XP to the old cap and checks the levels past 99 on their own (`warLevel` in
   `RANKED`: eight at once, half a level an hour after).
 
+### 3.34 Charms: kits with charges for essence
+
+The Shop research (27 October 2026) found essence piling up late (about 41,700 at stage 300 and 378,200 at 1,000 in the
+simulator) while the late forge runs short of coal (a body slot's +20 to +21 takes 2,685 runite bars and 8,055 coal; the
+simulated stage-1,000 hero held 76,062 runite ore and 35 coal). Melvor sells charged gloves and compost for the same
+gaps. The owner approved four charms. `src/data/charms.js`, `src/systems/charms.js`; saved as `charms` (charges by id),
+mirrored in `meta.charms` as the forge is, since the essence was paid.
+
+| Charm | While it has charges | Charges | Essence | Opens |
+|---|---|---|---|---|
+| Gem Gloves | every rock mined also brings a gem (`rollGem`, as the 2% chance does) | 500 rocks | 1,000 | Mining 30 with Crafting open |
+| Furnace Bellows | a bar smelts with no coal (`consumesOf` in `src/systems/skilling.js`) | 500 bars that took coal | 1,500 | a forge slot past +10 |
+| Chef's Gloves | every dish comes out as two | 500 dishes | 1,000 | Cooking 50 |
+| Compost Sack | a harvest yields ×1.5 | 6 harvests | 750 | Farming 50 |
+
+- A purchase adds its charges to any left (a hundred purchases' worth at most, `chargesMax`); they stay through every
+  prestige. A charge goes each time a charm bites (a bar whose coal mastery kept takes none), and the last says so.
+- **Where.** A Charms panel in the Shop once the first opens (the disclosure `charms`), on its own painting (the Charm
+  Maker's Bench, `assets/paint/charms.webp`, Gemini, prompt in `docs/art/gemini.md`); each charm a picture of its thing with
+  what it does in the corner (sprites already in the atlas: the gloves with a ruby or a fish, a runite bar with a flame,
+  a growing crop with an arrow), its line, its charges and its essence price. While a charm has charges its skill's header
+  shows them beside the tool.
+- **Balance.** What charms make is permanent progress (gems for the bench, bars for the forge, food, crops) at about its
+  worth in time: 1,500 essence, some 20 minutes of late essence, spares 1,500 coal, some 30 minutes of mining at 99.
+  None is needed: a player who mines his own coal never wants the bellows. The research feared the bellows would let the
+  late forge run on ore alone (three times the bars, some +11 stages); a bot that buys them from spare essence
+  (`tools/simulate.mjs --charms`) reached the same best stage at hour 400 as one that doesn't (2,020 against 2,030, 7 seeds)
+  with the same forge levels: its forge is bound by essence and its own mining, not coal. They save time, not power.
+- **Festival Tokens** buy them too: a weekend event's shop sells each charm opened for 40 tokens a purchase
+  (`CHARM_TOKEN_COST`, `buyEventCharm` in `src/systems/events.js`), a late use for tokens once the cloaks are bought.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat

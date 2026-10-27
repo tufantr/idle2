@@ -18,6 +18,7 @@ import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { leaveCombat } from './combat.js';
 import { addItem } from './inventory.js';
 import { noteBoostGain, rollGem } from './minigame.js';
+import { charmCharges, useCharm } from './charms.js';
 
 export const GEM_FIND_CHANCE = 0.02;   // a gem now and then while mining (exported for the wiki)
 export const BAIT_EXTRA_CHANCE = 0.5;   // each catch uses one bait, if you have any, for this chance of a second fish
@@ -80,10 +81,19 @@ function resolveBase(state, action) {
     }
 }
 
+/** What an action takes: its recipe's list, less the coal while the Furnace Bellows have charges (data/charms.js). */
+export function consumesOf(state, def) {
+    if (def.kind === 'smelt' && def.consumes?.coal && charmCharges(state, 'furnace_bellows') > 0) {
+        const { coal, ...rest } = def.consumes;
+        return rest;
+    }
+    return def.consumes || {};
+}
+
 /** Returns { ok, missing } for the consumption list of an action definition. */
 export function canComplete(state, def) {
     const missing = [];
-    for (const [id, qty] of Object.entries(def.consumes || {})) {
+    for (const [id, qty] of Object.entries(consumesOf(state, def))) {
         if ((state.resources[id] || 0) < qty) missing.push({ id, need: qty, have: state.resources[id] || 0 });
     }
     return { ok: missing.length === 0, missing };
@@ -182,12 +192,15 @@ export function completeAction(game, def, { offline = false } = {}) {
     const check = canComplete(state, def);
     if (!check.ok) { if (state.action) state.action.stalled = true; return false; }
 
-    // Mastery can keep the ingredients (a dish's log among them) for this action.
+    // Mastery can keep the ingredients (a dish's log among them) for this action. The Furnace Bellows' charge goes on a
+    // bar whose coal they spared (data/charms.js).
     const mastery = def.mastery;
     if (mastery?.preserve > 0 && rng.chance(mastery.preserve)) {
         bumpStat(game, 'ingredientsSaved');
     } else {
-        for (const [id, qty] of Object.entries(def.consumes || {})) state.resources[id] -= qty;
+        const takes = consumesOf(state, def);
+        if (def.consumes?.coal && !takes.coal) useCharm(game, 'furnace_bellows');
+        for (const [id, qty] of Object.entries(takes)) state.resources[id] -= qty;
     }
 
     const derived = game.derived;
@@ -215,6 +228,7 @@ export function completeAction(game, def, { offline = false } = {}) {
     } else if (def.kind === 'node' || def.kind === 'smelt') {
         let amount = 1;
         if (rng.chance(doubleChance)) amount = 2;
+        if (skill === 'cooking' && useCharm(game, 'chef_gloves')) amount *= 2;   // Chef's Gloves (data/charms.js): every dish two
         if (def.fish && state.resources.fishing_bait > 0) {   // a river spot (Hunting): bait
             state.resources.fishing_bait -= 1;
             bumpStat(game, 'baitUsed');
@@ -224,7 +238,8 @@ export function completeAction(game, def, { offline = false } = {}) {
         made = { id: def.output, qty: amount };
         if (def.fish) bumpStat(game, 'fishCaught', amount);
         if (def.kind === 'smelt') bumpStat(game, 'barsSmelted', amount);
-        if (skill === 'mining' && rng.chance(GEM_FIND_CHANCE)) {
+        // a gem now and then while mining; every rock while the Gem Gloves have charges (data/charms.js)
+        if (skill === 'mining' && (useCharm(game, 'gem_gloves') || rng.chance(GEM_FIND_CHANCE))) {
             const gem = rollGem(RESOURCES[def.output].tier);
             state.resources[gem] += 1;
             made.gem = gem;

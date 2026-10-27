@@ -32,6 +32,7 @@ import * as capes from '../../src/data/capes.js';
 import * as ranks from '../../src/data/ranks.js';
 import * as trials from '../../src/data/trials.js';
 import * as talents from '../../src/data/talents.js';
+import * as charms from '../../src/data/charms.js';
 import * as ascension from '../../src/data/ascension.js';
 import * as events from '../../src/data/events.js';
 import * as farming from '../../src/data/farming.js';
@@ -52,7 +53,7 @@ import * as ui from './ui.mjs';
 // later modules win a clash of names, so the data files' own names come last
 export const scope = Object.freeze({
     ...ui, ...xp, ...formulas, ...modifiers, ...pace, ...resources, ...skills, ...workshop, ...items, ...zones, ...strata,
-    ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...talents, ...ascension, ...events,
+    ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...talents, ...charms, ...ascension, ...events,
     ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...minigame, ...skilling, ...social, ...potions,
     // two names clash (bestiary's and ascension's starsFor): both kept, by what they count
     bestiaryStarsFor: bestiary.starsFor, ascensionStarsFor: ascension.starsFor, starsFor: undefined

@@ -11,6 +11,7 @@ import { CAMP_UPGRADES } from '../data/camp.js';
 import { TRIALS, TRIAL_MAX_TIER, PACT_MAX, trialById, trialIds, trialTarget, trialTiersCleared } from '../data/trials.js';
 import { xpForLevel, levelForXp, combatLevelForXp, MAX_LEVEL, COMBAT_XP_CAP } from './xp.js';
 import { TALENTS, RELENTLESS, talentsValid } from '../data/talents.js';
+import { CHARMS, chargesMax } from '../data/charms.js';
 import { DAILY_INTERVAL_MS, DAILY_MAX_BANKED } from '../systems/daily.js';
 import { DUNGEONS, UNIQUES, DUNGEON_CHOICE_MS, TITAN_COOLDOWN_MS, parseUniqueKey, uniqueKey } from '../data/dungeons.js';
 import { TOOLS, FORGE_MAX, BENCH_SLOTS } from '../data/workshop.js';
@@ -148,6 +149,7 @@ export function createDefaultState(now = Date.now()) {
         trials: { active: null, cleared: {}, best: {}, laurels: 0, weekly: null },   // the run's Trial, tiers cleared, best stage in each, the week's laurel (data/trials.js)
         ascension: { count: 0, stars: 0, firstAt: 0, lastAt: 0 },   // Ascensions made, the Stars they paid, the first and the last (data/ascension.js)
         talents: { ranks: {}, respecs: 0 },   // the War Tree: each talent's rank, and the times it was unlearned (data/talents.js)
+        charms: {},            // each charm's charges left (data/charms.js)
         idCounter: 1
     };
     for (const id of Object.keys(RESOURCES)) state.resources[id] = 0;
@@ -742,7 +744,8 @@ function normalise(data, now) {
     }
     // The War Tree: known talents at whole ranks within their most, a tree a hero could have learned in order (data/talents.js
     // talentsValid) and no more points than Combat's levels past 99 have brought; anything else is unlearned, its points back
-    const tal = isPlainObject(data?.talents) ? data.talents : {};
+    // (mirrored into `meta.talents`, as the forge is: a page running the older game drops `talents`)
+    const tal = isPlainObject(data?.talents) ? data.talents : isPlainObject(data?.meta?.talents) ? data.meta.talents : {};
     const ranks = {};
     for (const t of TALENTS) {
         const n = Math.min(t.max, Math.floor(Number(tal.ranks?.[t.id]) || 0));
@@ -751,6 +754,16 @@ function normalise(data, now) {
     const earned = Math.max(0, combatLevelForXp(state.skills.combat.xp) - MAX_LEVEL);
     const spent = Object.values(ranks).reduce((a, b) => a + b, 0);
     state.talents = { ranks: talentsValid(ranks) && spent <= earned ? ranks : {}, respecs: Math.min(1000, Math.max(0, Math.floor(Number(tal.respecs) || 0))) };
+    state.meta.talents = { ranks: { ...state.talents.ranks }, respecs: state.talents.respecs };
+    // Charms (data/charms.js): whole charges within a hundred purchases' worth each; from `meta.charms` when an older page
+    // dropped `charms` (the essence was paid)
+    const charms = isPlainObject(data?.charms) ? data.charms : isPlainObject(data?.meta?.charms) ? data.meta.charms : {};
+    state.charms = {};
+    for (const c of CHARMS) {
+        const n = Math.min(chargesMax(c), Math.max(0, Math.floor(Number(charms[c.id]) || 0)));
+        if (n > 0) state.charms[c.id] = n;
+    }
+    state.meta.charms = { ...state.charms };
     // The counts the medals read, at least what the save holds (Trial Master's and Ascendant's were
     // dropped on every load before they had defaults); skills at 99 counted again for the same reason.
     state.stats.trialTiers = Math.max(state.stats.trialTiers, trialTiersCleared(state));
@@ -856,7 +869,8 @@ function normalise(data, now) {
     for (const perk of PERKS) state.perks[perk.id] = Math.min(perk.max, Math.max(0, Math.floor(Number(state.perks[perk.id]) || 0)));
     if (data?.prestige?.perkReset !== PERK_RESET) resetPerks(state, now);   // (read from the save itself: the default is the new mark)
     // camp levels as whole numbers in range: a negative one multiplied the hero's health to nothing
-    for (const u of CAMP_UPGRADES) state.camp[u.id] = Math.min(u.max, Math.max(0, Math.floor(Number(state.camp[u.id]) || 0)));
+    // (the camp has no top, but the most gold a number holds buys about 2,300 levels: a save's 1e300 made attack Infinity)
+    for (const u of CAMP_UPGRADES) state.camp[u.id] = Math.min(u.max, 2500, Math.max(0, Math.floor(Number(state.camp[u.id]) || 0)));
     // Mini-game challenges never survive a reload: one left open counts as missed (it ends the streak, and
     // the next chance comes in the usual minutes; a reload used to give a fresh chance at once).
     const mgRules = BALANCE.minigame;

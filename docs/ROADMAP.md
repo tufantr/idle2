@@ -1422,6 +1422,12 @@ Keeping it running:
       costs essence, more each time. Paced as shown to the owner: level 120 five days after the old cap, the first
       capstone about two weeks; a capstone build adds 10 to 20 stages to a run, and the tree about 3.5% to the best
       stage at hour 600
+- [x] **Charms** (the owner's go, 27 October 2026; DESIGN §3.34): kits with charges for essence in a Charms panel of the
+      Shop, on its own Gemini painting (the Charm Maker's Bench): Gem Gloves (a gem with every rock), Furnace Bellows
+      (bars without coal), Chef's Gloves (every dish two), the Compost Sack (harvests half again), each opening as its
+      skill meets what it eases, kept through prestige, its charges shown in its skill's header; a weekend event's shop
+      sells them for 40 Festival Tokens too. Also: a save's camp levels are capped where gold could ever reach (a forged
+      1e300 made attack Infinity), and the War Tree's ranks and the charms are mirrored in `meta` against older pages
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

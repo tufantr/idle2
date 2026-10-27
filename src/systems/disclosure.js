@@ -16,6 +16,7 @@ import { TRIALS_FROM } from '../data/trials.js';
 import { ASCEND_FROM } from '../data/ascension.js';
 import { potionsFor } from '../data/potions.js';
 import { DUNGEON_TIER_CLEARS } from '../data/dungeons.js';
+import { CHARMS } from '../data/charms.js';
 
 const SKILL_POTIONS = potionsFor('skill');
 const RIVER_CATCH = SKILLS.hunting.nodes.filter(n => n.fish).map(n => n.produces);
@@ -41,6 +42,7 @@ export const DISCLOSURES = [
     { id: 'legacy',       when: s => s.prestige.count >= 1 },   // Legacy (core/modifiers.js legacyMult): from the second prestige, in its dialog
     { id: 'skill_points', when: s => s.prestige.skillPoints > 0 || s.prestige.count > 0 || Object.values(s.perks).some(level => level > 0) },
     { id: 'talents',      when: s => combatLevelForXp(s.skills.combat.xp) > MAX_LEVEL },   // the War Tree (data/talents.js): Combat past 99
+    { id: 'charms',       when: s => CHARMS.some(c => c.opens(s, id => levelForXp(s.skills[id]?.xp || 0)) || (s.charms?.[c.id] || 0) > 0) },   // the Shop's Charms (data/charms.js)
     // the combat tab
     { id: 'camp',         when: s => s.gold >= CHEAPEST_CAMP || Object.values(s.camp).some(level => level > 0) || s.prestige.count > 0 },
     { id: 'stage_nav',    when: s => s.stats.deaths > 0 || s.stats.bossEscapes > 0 || s.combat.bestStage > STAGES_PER_ZONE },  // "Stay on this stage": staying means something after a setback

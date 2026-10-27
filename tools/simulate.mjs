@@ -4,7 +4,7 @@
 //
 //   node tools/simulate.mjs --hours=100 --seed=1 [--step=500] [--verbose] [--snapshot=10]
 //   [--auto] [--player=checkin3] [--set=BALANCE.abyss.dropGrowth:1.5;BASE.tokenAtk:0.004] [--json=out.json]
-//   [--trials=5] [--pacts] [--ascend=1] [--save-at=200,260,320 --save=runs/hero]
+//   [--trials=5] [--pacts] [--charms] [--ascend=1] [--save-at=200,260,320 --save=runs/hero]
 //
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
@@ -19,7 +19,8 @@
 // the week's while its laurel is to win (three tries a week at most), else the one with the fewest tiers
 // cleared, then the lowest next target (a player trying each in turn); 0 never; 5 by default. --pacts: once Pacts
 // open, that run takes up to PACT_MAX Trials: the week's while its laurels are to win, then the fewest tiers cleared,
-// the gentlest rule first (Faithless only alone). --save-at writes the
+// the gentlest rule first (Faithless only alone). --charms: the bot buys the Furnace Bellows from spare essence once they
+// open (data/charms.js). --save-at writes the
 // game's save as the best stage first reaches each mark (to <--save>-<stage>.json), and the run ends at
 // the last: heroes for tools/trials.mjs.
 //
@@ -45,7 +46,7 @@ import { itemScore, goldShopPrice, goldShopOpen } from '../src/systems/inventory
 import { benchCost } from '../src/systems/bench.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
-import { resolveAction } from '../src/systems/skilling.js';
+import { resolveAction, consumesOf } from '../src/systems/skilling.js';
 import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_TIER_CLEARS, dungeonBossTime } from '../src/data/dungeons.js';
 import { dungeonPreview, dungeonUnlocked, fightPreview, dungeonNow, dungeonTier, ownsUnique, sealProgress } from '../src/systems/dungeon.js';
 import { AGILITY_SLOTS } from '../src/data/agility.js';
@@ -60,6 +61,8 @@ import { TRIALS } from '../src/data/trials.js';
 import { trialsOpen, nextTrialTarget, weeklyGoal, pactSize } from '../src/systems/trials.js';
 import { talentPoints, warLevel } from '../src/systems/talents.js';
 import { talentById } from '../src/data/talents.js';
+import { charmById } from '../src/data/charms.js';
+import { charmOpen, charmCharges } from '../src/systems/charms.js';
 import { firstPrestigeDue } from '../src/systems/guide.js';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -109,6 +112,7 @@ const AUTO = !!args.auto;
 const PLAYER = String(args.player || 'online');
 const TRIAL_EVERY = args.trials === undefined ? 5 : Number(args.trials);
 const PACTS = !!args.pacts;
+const CHARMS_ON = !!args.charms;
 const ASCEND = args.ascend === undefined ? true : Number(args.ascend) !== 0;
 const SAVE_AT = String(args['save-at'] || '').split(',').map(Number).filter(n => n > 0).sort((a, b) => a - b);
 const SAVE_PREFIX = String(args.save || 'hero');
@@ -204,7 +208,7 @@ function obtain(id, qty) {
         const recipe = SMELTING_RECIPES.find(r => r.produces === id);
         if (lvl('smithing') < recipe.levelReq) return train('smithing');
         const need = qty - (S.resources[id] || 0);
-        for (const [inId, inQty] of Object.entries(recipe.consumes)) {
+        for (const [inId, inQty] of Object.entries(consumesOf(S, { kind: 'smelt', consumes: recipe.consumes }))) {   // (no coal with the Bellows)
             const t = obtain(inId, inQty * need);
             if (t) return t;
         }
@@ -386,6 +390,12 @@ function spendPoints() {
         if (!perk || !game.buyPerk(perk.id)) break;
     }
     learnTalents();
+    // --charms: the Furnace Bellows (data/charms.js) while the late forge runs on coal-taking bars, from essence to spare
+    // (four times its price kept back), as a player who mines his ore and not his coal would
+    if (CHARMS_ON) {
+        const bellows = charmById('furnace_bellows');
+        if (charmOpen(S, bellows) && charmCharges(S, bellows.id) < 100 && S.resources.essence >= 4 * bellows.essence) game.buyCharm(bellows.id);
+    }
     // Spare gold buys essence (after the camp, and never the gold saved for the next obstacle).
     const reserve = nextSlot() >= 0 ? obstacleCost(S, nextSlot()).gold : 0;
     for (let guard = 0; !WITHOUT.has('essence') && guard < 50 && S.resources.essence < 3000; guard++) {

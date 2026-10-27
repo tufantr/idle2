@@ -1,6 +1,8 @@
 // Weekend events: which one is running, Festival Tokens from play, milestones and the event shop.
 // Everything is derived from the UTC calendar, so events work offline and need no server.
 
+import { charmById, CHARM_TOKEN_COST } from '../data/charms.js';
+import { charmOpen, charmRoom, addCharges } from './charms.js';
 import { EVENTS, EVENT_START_DAY, EVENT_LENGTH_HOURS, EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST, eventById } from '../data/events.js';
 import { RESOURCES } from '../data/resources.js';
 import { log } from './progress.js';
@@ -100,6 +102,19 @@ export function buyFestivalCloak(game) {
     log(game, `🎉 The ${e.name} cloak is yours: wear it from Settings.`, 'achievement');
     game.emit({ type: 'festivalCloak', event: e.id, cape: `fest_${e.id}` });
     game.markDirty();
+    return true;
+}
+
+/** A charm's charges for Festival Tokens (data/charms.js CHARM_TOKEN_COST), once the charm has opened. True if bought. */
+export function buyEventCharm(game, id) {
+    const state = game.state;
+    const charm = charmById(id);
+    if (!charm || !charmOpen(state, charm)) return false;
+    if (!eventStatus(state, game.now).active) { game.emit({ type: 'error', text: 'The event shop opens when the next event starts.' }); return false; }
+    if (state.events.tokens < CHARM_TOKEN_COST) { game.emit({ type: 'error', text: `${charm.name} costs ${CHARM_TOKEN_COST} Festival Tokens.` }); return false; }
+    if (!charmRoom(game, charm)) return false;
+    state.events.tokens -= CHARM_TOKEN_COST;
+    addCharges(game, charm, `${CHARM_TOKEN_COST} Festival Tokens`);
     return true;
 }
 

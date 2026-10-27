@@ -59,6 +59,8 @@ import { completion } from '../systems/completion.js';
 import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
+import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
+import { charmsOnOffer, charmCharges } from '../systems/charms.js';
 import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
 
 // The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
@@ -787,6 +789,18 @@ function toolEffect(toolId, tier) {
 }
 
 /** The tool in hand, once there is one (the Shop sells the next: systems/tools.js). */
+/** A charm's picture (data/charms.js): its thing, with what it does in the corner. */
+function charmIcon(charm, scale = 1) {
+    return `<span class="charm-icon">${sprite(charm.icon, { scale })}<i class="charm-mark">${sprite(charm.badge, { scale: scale / 2 })}</i></span>`;
+}
+
+/** The skill's charm in its header while it has charges (data/charms.js): its picture and the charges left. */
+function charmBadge(game, skillId) {
+    const charm = charmForSkill(skillId);
+    const left = charm ? charmCharges(game.state, charm.id) : 0;
+    return left ? `<span class="tool-badge charm-badge" title="${esc(`${charm.name}: ${charm.does} ${fmt(left)} charge${left === 1 ? '' : 's'} left`)}">${charmIcon(charm, 0.5)} ${fmt(left)}</span>` : '';
+}
+
 function toolBadge(game, skillId) {
     const skill = SKILLS[skillId];
     if (!skill.tool) return '';
@@ -929,7 +943,7 @@ export function renderSkill(game, ui, skillId) {
     }
     const bait = skillId === 'hunting' && seen(state, 'river') && state.resources.fishing_bait > 0 ? `<span class="tool-badge" title="Each catch at a river spot uses one bait for a ${Math.round(BAIT_EXTRA_CHANCE * 100)}% chance of a second fish">${resIcon('fishing_bait')} ${fmt(state.resources.fishing_bait)} bait</span>` : '';
     return `<section class="glass-panel skill-panel ${skillPainted(skillId)}">
-        ${xpHeader(game, skillId, bait + toolBadge(game, skillId) + (skillId !== 'farming' ? skillPotionChip(game, ui) : ''))}
+        ${xpHeader(game, skillId, bait + toolBadge(game, skillId) + charmBadge(game, skillId) + (skillId !== 'farming' ? skillPotionChip(game, ui) : ''))}
         ${skillExtras(game, skillId)}
         ${NON_COMBAT_SKILLS.includes(skillId) ? renderMinigame(game, skillId) : ''}
         <div class="node-grid${state.minigame[skillId]?.boostUntil > game.now ? ' boosted' : ''}">${cards}</div>
@@ -1036,7 +1050,7 @@ export function renderSmithing(game, ui) {
         body = renderAnvil(state, ui);
     }
     return `<section class="glass-panel skill-panel ${skillPainted('smithing')}">
-        ${xpHeader(game, 'smithing', skillPotionChip(game, ui))}
+        ${xpHeader(game, 'smithing', charmBadge(game, 'smithing') + skillPotionChip(game, ui))}
         ${anvil ? segments([['smelt', 'Smelt'], ['anvil', 'Anvil']], view, 'FI.smithView', 'Smithing steps') : ''}
         ${body}
     </section>`;
@@ -1179,6 +1193,18 @@ function toolShopItem(game, toolId) {
         <div class="shop-art">${icon}</div>
         <div class="shop-item-info"><span class="shop-item-name">${esc(buy.next.name)}</span><span class="shop-item-desc">${toolEffect(toolId, buy.next.tier)}</span>${waits}</div>
         <button class="gold-btn tool-price" onclick="FI.buyTool('${toolId}')" ${buy.ok ? '' : 'disabled'} aria-label="${esc(`Buy ${buy.next.name}`)}">${price}</button>
+    </div>`;
+}
+
+/** A charm in the Shop (data/charms.js): what it does, its charges, the ones held, and its essence price. */
+function charmShopItem(game, charm) {
+    const state = game.state;
+    const held = charmCharges(state, charm.id);
+    const can = (state.resources.essence || 0) >= charm.essence;
+    return `<div class="shop-item charm-item${can ? ' ready' : ''}" title="${esc(`${charm.name}: ${charm.does} ${charm.charges} charges a purchase; they stack, and stay through every prestige`)}">
+        <div class="shop-art">${charmIcon(charm, 1.5)}</div>
+        <div class="shop-item-info"><span class="shop-item-name">${esc(charm.name)}${held ? ` <span class="muted small">${fmt(held)} left</span>` : ''}</span><span class="shop-item-desc">${esc(charm.does)} ${tabIcon(charm.skill, 0.5)} +${fmt(charm.charges)} charges</span></div>
+        <button class="gold-btn" onclick="FI.buyCharm('${charm.id}')" ${can ? '' : 'disabled'} aria-label="${esc(`Buy ${charm.name} for ${charm.essence} essence`)}">${resIcon('essence')} ${fmt(charm.essence)}</button>
     </div>`;
 }
 
@@ -1600,6 +1626,8 @@ export function renderShop(game, ui) {
         </section>`;
     // the tools (systems/tools.js): each whose skill has opened, its next tier for the bars and logs it takes
     const tools = toolsOnOffer(state).map(id => toolShopItem(game, id)).join('');
+    // the charms (data/charms.js), each once its skill has met what it eases
+    const charms = charmsOnOffer(state).map(c => charmShopItem(game, c)).join('');
     return `${banner('shop')}
     <section class="glass-panel ${painted('market', 'center 55%')}">
         <div class="panel-header"><h2>Supplies</h2></div>
@@ -1608,6 +1636,10 @@ export function renderShop(game, ui) {
     ${tools ? `<section class="glass-panel ${painted('workshop', 'center 45%')}">
         <div class="panel-header"><h2>Tools</h2></div>
         <div class="shop-grid">${tools}</div>
+    </section>` : ''}
+    ${charms ? `<section class="glass-panel charms-panel ${painted('charms', 'center 50%')}">
+        <div class="panel-header"><h2>Charms ${aboutButton('charms')}</h2></div>
+        <div class="shop-grid">${charms}</div>
     </section>` : ''}
     ${prestigePanel || perksPanel ? `<div class="two-col">${prestigePanel}${perksPanel}</div>` : ''}`;
 }
@@ -1876,6 +1908,7 @@ export function renderEvents(game) {
             <div class="shop-item-info"><span class="shop-item-name">${esc(e.name)} cloak</span><span class="shop-item-desc">${owned ? 'Yours: wear it from Settings' : 'A look to keep; it comes back with its event'}</span></div>
             ${owned ? `<span class="owned-mark">${ICON_CHECK}</span>` : `<button class="gold-btn token-btn" onclick="FI.buyFestivalCloak()" ${status.active && ev.tokens >= FESTIVAL_CLOAK_COST ? '' : 'disabled'} aria-label="Buy the ${esc(e.name)} cloak for ${FESTIVAL_CLOAK_COST} tokens">${token(0.75)} ${FESTIVAL_CLOAK_COST}</button>`}
         </div>` : '';
+    // the event's goods, then the charms the hero has opened (data/charms.js), for tokens too
     const shop = cloak + EVENT_SHOP.map(item => {
         const [resId] = Object.keys(item.gives);
         return `<div class="shop-item">
@@ -1883,7 +1916,11 @@ export function renderEvents(game) {
             <div class="shop-item-info"><span class="shop-item-name">${esc(item.name)}</span><span class="shop-item-desc">${esc(item.desc)}</span></div>
             <button class="gold-btn token-btn" onclick="FI.buyEventItem('${item.id}')" ${status.active && ev.tokens >= item.cost ? '' : 'disabled'} aria-label="Buy ${esc(item.name)} for ${item.cost} tokens">${token(0.75)} ${item.cost}</button>
         </div>`;
-    }).join('');
+    }).join('') + charmsOnOffer(state).map(c => `<div class="shop-item">
+            <div class="shop-art">${charmIcon(c, 1.5)}</div>
+            <div class="shop-item-info"><span class="shop-item-name">${esc(c.name)}</span><span class="shop-item-desc">${esc(c.does)} +${fmt(c.charges)} charges</span></div>
+            <button class="gold-btn token-btn" onclick="FI.buyEventCharm('${c.id}')" ${status.active && ev.tokens >= CHARM_TOKEN_COST ? '' : 'disabled'} aria-label="Buy ${esc(c.name)} for ${CHARM_TOKEN_COST} tokens">${token(0.75)} ${CHARM_TOKEN_COST}</button>
+        </div>`).join('');
     const rotation = EVENTS.map(x => `<span class="${x.id === e.id ? 'b' : 'muted'}">${eventIcon(x)} ${esc(x.name)}</span>`).join(' → ');
     return `${banner('events', { title: `${eventIcon(e, 1)} ${esc(e.name)}`, sub: status.active ? `Running now: ends in ${duration(status.endsAt - game.now)}` : `The next event: starts in ${duration(status.startsAt - game.now)}`,
         extra: `<div class="chip festival" title="Festival tokens${status.active ? `: ${today} of ${EVENT_DAILY_CAP} earned today` : ''}">${token(0.75)}<span>Tokens</span><b>${fmt(ev.tokens)}</b></div>` })}
@@ -1961,7 +1998,7 @@ export function renderFarming(game, ui) {
         empty > 1 && seed ? `<button class="prestige-btn" onclick="FI.plantAll('${seed.id}')" ${affordable ? '' : 'disabled'}>Plant ${empty} plots</button>` : ''
     ].join('');
     return `<section class="glass-panel skill-panel ${skillPainted('farming')}">
-        ${xpHeader(game, 'farming', toolBadge(game, 'farming'))}
+        ${xpHeader(game, 'farming', toolBadge(game, 'farming') + charmBadge(game, 'farming'))}
         <div class="seed-bag">
             <div class="loadout-label">Seeds</div>
             <div class="pick-row">${seeds}</div>

@@ -22,7 +22,7 @@ import { startClanFight, giveUpClanFight, clearClanResult, setClanBanner } from 
 import { plant, plantAll, harvest, harvestAll } from './systems/farming.js';
 import { buildObstacle, upgradeObstacle } from './systems/agility.js';
 import { applyReward } from './systems/social.js';
-import { eventStatus, buyEventItem, buyFestivalCloak } from './systems/events.js';
+import { eventStatus, buyEventItem, buyEventCharm, buyFestivalCloak } from './systems/events.js';
 import { heroName } from './core/text.js';
 import { lookById, lookOpen } from './data/looks.js';
 import { capeEarned } from './data/capes.js';
@@ -30,6 +30,7 @@ import { noteChronicle } from './systems/chronicle.js';
 import { playtestEvent, notePlaytest } from './systems/playtest.js';
 import { startTrial, syncWeekly } from './systems/trials.js';
 import { learnTalent, unlearnTalents } from './systems/talents.js';
+import { buyCharm } from './systems/charms.js';
 import { doAscend, ascendPreview } from './systems/ascension.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
@@ -276,6 +277,7 @@ export class Game {
     eventId(now = this.now) { const s = eventStatus(this.state, now); return s.active ? s.event.id : null; }
     eventStatus() { return eventStatus(this.state, this.now); }
     buyEventItem(id) { return this._act(() => buyEventItem(this, id)); }
+    buyEventCharm(id) { return this._act(() => buyEventCharm(this, id)); }
     /** Buy the running event's festival cloak (data/capes.js), a look to keep. */
     buyFestivalCloak() { return this._act(() => buyFestivalCloak(this)); }
 
@@ -317,6 +319,7 @@ export class Game {
     startTrial(id) { return this._act(() => startTrial(this, id)); }
     learnTalent(id) { return this._act(() => learnTalent(this, id)); }
     unlearnTalents() { return this._act(() => unlearnTalents(this)); }
+    buyCharm(id) { return this._act(() => buyCharm(this, id)); }
     /** Ascend (data/ascension.js): a prestige that gives the tokens up for Stars. */
     ascend() { return this._act(() => doAscend(this)); }
     ascendPreview() { return ascendPreview(this); }

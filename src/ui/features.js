@@ -19,6 +19,7 @@ import { TIERS as POTION_TIERS, doseWords } from '../data/potions.js';
 import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE, BENCH_LEVEL_PER_UPGRADE } from '../data/workshop.js';
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, TRIAL_LADDER, PACTS_FROM, PACT_MAX } from '../data/trials.js';
 import { ROW_POINTS, ROWS, RESPEC } from '../data/talents.js';
+import { CHARMS } from '../data/charms.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
 import { escapeHtml as esc, shareInWords } from './format.js';
@@ -93,6 +94,11 @@ export const FEATURES = {
             'A talent an arrow points to opens once the talent above it is full.',
             `Unlearning the whole tree gives every point back, for ${RESPEC.essence.toLocaleString('en-US')} essence the first time and more each time after.`,
             "The talents' rules stay out of the clan boss's fight."] },
+    charms: { name: 'Charms', art: 'charms', icon: 'item/Gloves/3', blurb: 'Kits with charges that make one skill go further.',
+        points: ['Each charm opens in the Shop once its skill meets what it eases, and is bought with essence.',
+            `A purchase brings its charges (${CHARMS.map(c => `${c.name} ${c.charges}`).join(', ')}); more stack on what is left, and they stay through every prestige.`,
+            "Each piece of the charm's work uses a charge: a rock, a bar, a dish, a harvest. Its skill's header shows how many are left.",
+            'A weekend event\'s shop sells the charms you have opened for Festival Tokens too.'] },
     achievements: { name: 'Achievements', art: 'hall', icon: 'uniq/goblin_crown', blurb: 'A trophy for every deed, with a reward that lasts forever.',
         points: [`Every medal has its own reward, and each one also adds +${pc(ACHIEVEMENT_GLOBAL_BONUS)} attack, defence and skill speed.`, 'The bestiary counts every kind of monster you defeat, with a star at 10, 100 and 1,000.', 'Pets, unique items and every kind of gear you find are kept here too. Some medals stay secret until earned.'] },
     dungeons: { name: 'Dungeons', art: 'dungeon', icon: 'mon/Skeleton', blurb: 'Elite monsters, a chest at the end and pieces of unique gear.',

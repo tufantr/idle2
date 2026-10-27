@@ -5,6 +5,8 @@ import { FARMING_PLOTS, CROPS, cropById } from '../data/farming.js';
 import { RESOURCES } from '../data/resources.js';
 import { skillLevel } from '../core/modifiers.js';
 import { rng } from '../core/rng.js';
+import { useCharm } from './charms.js';
+import { COMPOST_YIELD } from '../data/charms.js';
 import { grantXp, log, bumpStat, rollPet } from './progress.js';
 import { eventProgress } from './events.js';
 
@@ -53,6 +55,7 @@ export function harvest(game, index) {
     const d = game.derived;
     let amount = Math.round(rng.int(crop.yield[0], crop.yield[1]) * d.farmYield);
     if (rng.chance(d.doubleChance.farming || 0)) amount *= 2;
+    if (useCharm(game, 'compost_sack')) amount = Math.round(amount * COMPOST_YIELD);   // the Compost Sack (data/charms.js)
     state.resources[crop.produces] += amount;
     bumpStat(game, 'cropsHarvested', amount);
     plot.crop = null;

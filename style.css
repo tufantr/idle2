@@ -396,6 +396,10 @@ button.chip:active { transform: scale(0.97); }
 .chip.sp b { color: #bae6fd; }
 .chip.tp { --coin: #fca5a5; --coin-dark: #7f1d1d; }   /* the War Tree's talent points (data/talents.js) */
 .chip.tp b { color: #fecaca; }
+/* a charm's picture (data/charms.js): its thing, and what it does small in the corner */
+.charm-icon { position: relative; display: inline-grid; place-items: center; }
+.charm-mark { position: absolute; right: -3px; bottom: -3px; line-height: 0; filter: drop-shadow(0 1px 2px #000); }
+.charm-badge .charm-icon { margin-right: 0.1rem; }
 .chip.essence { --coin: #f0abfc; --coin-dark: #701a75; }
 .chip.essence b { color: #f5c2fc; }
 .status-pill, .cloud-pill, .focus-pill, .bonfire-pill, .event-pill {

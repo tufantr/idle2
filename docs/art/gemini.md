@@ -355,8 +355,8 @@ One last picture, of a different kind but in the same hand-painted storybook sty
 
 The panels of the menus stand in a place too (`painted()` in `src/ui/render.js`): a skill's panel
 continues its stage's painting, and the shop, the trophy hall, the festival and the clan hall reuse
-their cards. These nine are for everything else, and `tools/paint.py` lists them in `ROOMS`. The
-guild hall stands behind the whole page. They were painted in the same chat after the dungeons;
+their cards. These ten are for everything else, and `tools/paint.py` lists them in `ROOMS`. The
+guild hall stands behind the whole page (the Charms' bench came later). They were painted in the same chat after the dungeons;
 this set's first message carries its own rules, because cards and words are laid over them:
 
 `guildhall.png` (behind the page)
@@ -405,6 +405,11 @@ Same style and rules, filling the picture to the edges. Next, Supply Table: a st
 `wartable.png` (the fight's orders: retreat, the map)
 ```text
 Same style and rules, filling the picture to the edges. Next, War Table: a commander's war table inside a dark tent by candlelight, seen a little from above, an old parchment map of hills and rivers spread across the table with no writing on it, small carved wooden figurines and tiny flags standing at the left and right edges of the map, a dagger, a brass compass and a candle at the corners, a glowing brazier at the far left and dark hanging banners at the right, the middle of the map calm and empty.
+```
+
+`charms.png` (the Shop's Charms; painted 27 October 2026, after a sheet of cards, so it restates the rooms' rules)
+```text
+Back to the rooms behind the menus: same hand-painted storybook style and the same rules as the Guild Hall, Armory and War Table rooms in this chat (one single wide 16:9 painting, not a grid; dim cozy light and fairly low contrast so text laid on top stays readable; the details at the left and right edges and along the top, a calm, fairly plain middle because cards will be laid over it; no people, no creatures, no animals, no text, no letters, no logos, no frame; fill the picture right to the edges). Next, Charm Maker's Bench: a tinker's workbench in a cozy wooden workshop at night by lamplight, at the left edge a pair of leather work gloves hanging on pegs above a small brass-and-wood fireside bellows, at the right edge a burlap sack of dark compost beside a shelf of little glass vials, charms and leather pouches, coils of twine, small pliers and a magnifying glass at the corners of the bench, the middle of the bench clear and a plain wood-panelled wall behind it.
 ```
 
 Import them like the rest; a separate folder keeps the earlier pictures from being encoded again:

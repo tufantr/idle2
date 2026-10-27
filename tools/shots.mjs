@@ -47,6 +47,16 @@ const STEPS = {
         s.skills.combat.xp = xpForCombatLevel(112) + 1000; s.seen.talents = true; g.recompute();
         FI.switchTab('combat'); if (!s.combat.active) FI.toggleCombat();
     },
+    // the Shop's Charms (data/charms.js), some held, and Mining's header with its gloves' charges
+    charms: () => {
+        const g = FI.game(); const s = g.state;
+        s.charms = { gem_gloves: 432, compost_sack: 4 }; s.resources.essence = Math.max(s.resources.essence, 2500); g.recompute();
+        FI.switchTab('shop');
+        document.querySelector('.charms-panel')?.scrollIntoView({ block: 'center' });
+    },
+    // the event shop during an event: the charms opened, for tokens
+    eventcharms: () => { const g = FI.game(); g.state.settings.forceEvent = 'guild_fair'; g.state.events.tokens = 60; g.recompute(); FI.switchTab('events'); document.querySelector('.token-btn[onclick*="buyEventCharm"]')?.scrollIntoView({ block: 'center' }); },
+    gemgloves: () => { const g = FI.game(); g.state.charms = { gem_gloves: 432 }; g.recompute(); FI.switchTab('mining'); },
     trialfight: () => { const g = FI.game(); g.state.trials.active = ['no_camp', 'brutes']; g.recompute(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat(); },
     banner: async () => {   // three levels of this week's clan boss felled: the chip under the hero says ×2
         const { isoWeek } = await import('/src/data/social.js');

@@ -39,6 +39,7 @@ import { RARITIES, MYTHIC, PRIMAL } from './data/items.js';
 import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { talentById, respecPrice } from './data/talents.js';
+import { charmById } from './data/charms.js';
 import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
@@ -594,7 +595,7 @@ const ARRIVALS = {
     essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
     auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars',
-    talents: '.chip.tp'
+    talents: '.chip.tp', charms: '.charms-panel'
 };
 const arrivals = new Set();
 
@@ -770,6 +771,11 @@ function handleEvents(events) {
                         lines: [`${points} talent point${points === 1 ? '' : 's'}: one for each combat level past 99`, 'Blade, Bulwark and Hunt: three trees of talents'] });
                 }
                 break;
+            case 'charmEmpty': {   // a charm's last charge (systems/charms.js)
+                const charm = charmById(ev.id);
+                if (charm) toast(`${charm.name}: the last charge used`, 'info', pic(charm.icon));
+                break;
+            }
             case 'talentPoint':   // a combat level past 99 (systems/progress.js), and the War Tree's point with it
                 toast(`Combat level ${ev.level}: ${ev.points > 1 ? `${ev.points} talent points` : 'a talent point'}`, 'level', pic(FEATURES.talents.icon));
                 refreshPerks();
@@ -1460,6 +1466,7 @@ window.FI = {
         flourish(`.talent.picked`);
         render();
     },
+    buyCharm(id) { if (game.buyCharm(id)) sound.play('buy'); render(); },
     unlearnTalents() {
         const price = respecPrice(game.state);
         askConfirm('Unlearn the War Tree?', `Every talent point comes back to spend again, for ${fmt(price)} essence. It costs more each time.`, 'Unlearn', () => {
@@ -1499,6 +1506,7 @@ window.FI = {
     pickSeed(crop) { ui.lastCrop = crop; render(); },
     plantAll(crop) { ui.lastCrop = crop; if (game.plantAll(crop) > 0) sound.play('drop'); render(); },
     buyEventItem(id) { if (game.buyEventItem(id)) toast('Bought!', 'info'); render(); },
+    buyEventCharm(id) { if (game.buyEventCharm(id)) sound.play('buy'); render(); },
     buyFestivalCloak() { game.buyFestivalCloak(); render(); },
     harvest(plot) { game.harvest(plot); render(); },
     harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info', tabIcon('farming', 0.625)); render(); },

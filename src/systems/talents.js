@@ -8,6 +8,9 @@ import { log } from './progress.js';
 
 export { talentRank, talentPointsSpent, respecPrice };
 
+// (kept in `meta.talents` too, as the forge's levels are: core/state.js; a page running the older game drops `talents`)
+const mirror = state => { state.meta.talents = { ranks: { ...state.talents.ranks }, respecs: state.talents.respecs || 0 }; };
+
 /** Combat's levels past 99: the talent points earned (0 below 100). */
 export const warLevel = state => Math.max(0, Math.min(TALENT_POINTS_MAX, combatLevelForXp(state.skills?.combat?.xp || 0) - MAX_LEVEL));
 
@@ -38,6 +41,7 @@ export function learnTalent(game, id) {
     const block = talentBlock(state, t, talentPoints(state));
     if (block) { game.emit({ type: 'error', text: BLOCKED[block] }); return false; }
     state.talents.ranks[id] = talentRank(state, id) + 1;
+    mirror(state);
     const rank = state.talents.ranks[id];
     game.recompute();
     game.emit({ type: 'talent', id, rank, max: t.max });
@@ -55,6 +59,7 @@ export function unlearnTalents(game) {
     state.resources.essence -= price;
     state.talents.ranks = {};
     state.talents.respecs = (state.talents.respecs || 0) + 1;
+    mirror(state);
     game.recompute();
     log(game, `⚔️ The War Tree unlearned for ${price.toLocaleString('en-US')} essence: every point back.`, 'info');
     game.emit({ type: 'talentsReset', price });
