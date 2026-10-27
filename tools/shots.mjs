@@ -14,7 +14,11 @@
 //                                                 # in a Pact; 'ascend' the
 //                                                 # dialog's Ascend row; 'refit' a new piece in the
 //                                                 # bag compared with the reinforced one it would replace;
-//                                                 # 'banner' the fight under a clan banner of ×2)
+//                                                 # 'banner' the fight under a clan banner of ×2;
+//                                                 # 'clanhall' the Clan tab signed in, its hall at the
+//                                                 # Longhouse, 'hallgive' a gift to its Forge picked
+//                                                 # and 'bannerpick' its banner picker: the API is
+//                                                 # answered by the tool, CLAN_API below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -113,6 +117,80 @@ const DIALOGS = {
     }
 };
 
+// The Clan tab needs an account and the API: those shots sign in with a made-up token, and the tool answers the API with a
+// clan of four whose hall stands at the Longhouse (api/index.js's answers, in their shape). A gift and a new banner change
+// the hall as the server would.
+const CLAN_SHOTS = {
+    clanhall: null,
+    clanmembers: () => document.querySelector('.clan-members')?.scrollIntoView({ block: 'center' }),
+    hallgive: () => { FI.openHallGive('forge'); FI.hallGivePick('runite_bar'); },
+    bannerpick: () => { FI.openBannerPicker(); FI.bannerPick('colour', 'gold'); },
+    // the hall at the Great Hall and the clan's cloak earned: the hero wears it, azure, in Settings' cloaks and in the fight
+    clancloak: () => {
+        FI.game().setClanHall({ clan: 7, rooms: { forge: 82800, stores: 82800, kitchen: 28800, apothecary: 28800, garden: 7200, library: 82800 }, stage: 2, colour: 'azure', emblem: 'griffin', cloak: true });
+        FI.switchTab('settings');
+        document.querySelector('.cape-picks')?.scrollIntoView({ block: 'center' });
+    },
+    clanfight: () => {
+        FI.game().setClanHall({ clan: 7, rooms: { forge: 82800 }, stage: 2, colour: 'azure', emblem: 'griffin', cloak: true });
+        FI.switchTab('combat'); if (!FI.game().state.combat.active) FI.toggleCombat();
+    },
+    // the Forge given 100 runite bars (the tool's server takes them): the bank holds 100 fewer, the Forge's bar has grown
+    hallgiven: async () => {
+        const before = FI.game().state.resources.runite_bar;
+        FI.openHallGive('forge'); FI.hallGivePick('runite_bar'); FI.hallGiveQty(100, 15.8);
+        document.getElementById('give-qty').value = 100;
+        FI.hallGive();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' });
+        if (FI.game().state.resources.runite_bar !== before - 100) throw new Error(`the gift left ${FI.game().state.resources.runite_bar} runite bars of ${before}`);
+    }
+};
+const FAKE_TOKEN = `x.${Buffer.from(JSON.stringify({ id: 1, username: 'Tufan' })).toString('base64url')}.x`;
+function clanApi() {
+    const week = '2026-W44';
+    const hall = { clan: 7, rooms: { forge: 30500, stores: 12000, kitchen: 7400, apothecary: 2100, garden: 0, library: 41000 }, stage: 1, colour: 'forest', emblem: 'troll',
+        given: { week: 4200, total: 26000 }, weekly: 10800, endsInMs: 3 * 864e5, cloak: false };
+    let seq = 0;
+    const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
+    const answer = () => ({
+        clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
+        members: members.map(([username, owner, bestStage, totalLevel, total, w]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, built: { total, week: w } })),
+        hall: { ...hall, builders: { forge: [{ username: 'Yarraksalih', work: 18000 }, { username: 'Tufan', work: 12500 }], library: [{ username: 'Tufan', work: 41000 }] },
+            feed: [{ username: 'Yarraksalih', room: 'forge', resource: 'runite_bar', qty: 240, at: Date.now() - 36e5 }, { username: 'Tufan', room: 'library', resource: 'essence', qty: 4200, at: Date.now() - 72e5 },
+                { username: 'Shadeofnight', room: 'kitchen', resource: 'cooked_shark', qty: 180, at: Date.now() - 864e5 }] },
+        boss: { week, level: 2, maxHp: 9.6e8, hp: 4.1e8, killed: false, lastHit: null, endsInMs: 3 * 864e5, nextInMs: 5e7, kills: 1, levels: 7 },
+        banner: { week, kills: 1 }, board: [{ username: 'Yarraksalih', share: 0.46, damage: 4.4e8, attacks: 5, you: false }, { username: 'Tufan', share: 0.38, damage: 3.6e8, attacks: 4, you: true }],
+        attackScale: 1, attacksLeft: 2, attacksPerDay: 3, attackBank: 6, fightSeconds: 30, maxMembers: 20,
+        standing: { division: 'bronze', divisionName: 'Bronze', rank: 3, of: 9, score: 0, counted: 0, kills: 1, record: 14.2 },
+        endless: { open: false, opensInMs: 2 * 864e5, endsInMs: 3 * 864e5, attacks: 2, attacksLeft: 2, best: 0, eligible: true }
+    });
+    return async route => {
+        const request = route.request();
+        const path = new URL(request.url()).pathname.replace(/^\/api/, '');
+        const json = body => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        const news = () => ({ banner: { week, kills: 1 }, hall: { ...hall }, hallGifts: [] });
+        if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, ...news() });
+        if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, gifts: 0, ...news() });
+        if (path === '/clan') return json(answer());
+        if (path === '/rewards') return json({ rewards: [] });
+        if (path === '/leaderboard') return json({ entries: [], optIn: false, label: 'Best stage', period: 'all' });
+        if (path === '/clans/ranking') return json({ week, divisions: [], last: { week, divisions: [] } });
+        if (path === '/clan/hall/give') {
+            const { room, resource, qty } = JSON.parse(request.postData() || '{}');
+            const { giftWorth } = await import('../src/data/clanhall.js');
+            const work = qty * giftWorth(resource);
+            hall.rooms[room] = (hall.rooms[room] || 0) + work;
+            hall.given = { week: hall.given.week + work, total: hall.given.total + work };
+            const { hallLevels, hallStage } = await import('../src/data/clanhall.js');
+            hall.stage = hallStage(hallLevels(hall.rooms));
+            return json({ gift: { seq: ++seq, room, resource, qty, work }, hall: { ...hall }, hallGifts: [{ seq, resource, qty }] });
+        }
+        if (path === '/clan/banner') { Object.assign(hall, JSON.parse(request.postData() || '{}')); return json({ hall: { ...hall } }); }
+        return route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"not answered by the shots"}' });
+    };
+}
+
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
     console.error('Playwright is missing. Once: npm i --no-save playwright && npx playwright install chromium');
@@ -142,8 +220,12 @@ const errors = [];
 const problems = [];
 
 /** A page that records errors; requests the static server can't answer (the API, web fonts offline) don't count. */
-async function open(viewport, url) {
+async function open(viewport, url, { clan = false } = {}) {
     const ctx = await browser.newContext({ viewport });
+    if (clan) {   // signed in, the API answered here (CLAN_SHOTS)
+        await ctx.addInitScript(token => localStorage.setItem('fantasyIdle.jwt', token), FAKE_TOKEN);
+        await ctx.route('**/api/**', clanApi());
+    }
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push(`${viewport.width}px: ${e.message}`));
     page.on('console', m => {
@@ -218,11 +300,29 @@ for (const viewport of VIEWPORTS) {
         await page.context().close();
         continue;
     }
+    const clanTabs = tabs.filter(t => t in CLAN_SHOTS);
+    if (clanTabs.length) {   // a page of its own, signed in
+        const page = await open(viewport, `${base}?dev=1`, { clan: true });
+        await lateGame(page);
+        await quiet(page);
+        await page.waitForTimeout(1600);
+        for (const tab of clanTabs) {
+            await page.evaluate(() => { FI.closeModal(); FI.switchTab('clan'); });
+            await page.waitForTimeout(900);
+            if (CLAN_SHOTS[tab]) { await page.evaluate(CLAN_SHOTS[tab]); await page.waitForTimeout(700); }
+            else await page.evaluate(() => { document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' }); if (innerWidth < 900) window.scrollBy(0, -(document.querySelector('#sidebar')?.offsetHeight || 0) - 8); });
+            if (!['clancloak', 'clanfight'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            await shoot(page, tab, viewport.width);
+        }
+        await page.context().close();
+    }
+    if (!tabs.some(t => !(t in CLAN_SHOTS))) continue;
     const page = await open(viewport, `${base}?dev=1`);
     await lateGame(page);
     await quiet(page);
     await page.waitForTimeout(1600); // everything this save has earned opens at once and glows: let that pass
     for (const tab of tabs) {
+        if (tab in CLAN_SHOTS) continue;
         if (DIALOGS[tab]) {
             await page.evaluate(DIALOGS[tab]);
             await page.waitForTimeout(700);

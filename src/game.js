@@ -31,6 +31,7 @@ import { playtestEvent, notePlaytest } from './systems/playtest.js';
 import { startTrial, syncWeekly } from './systems/trials.js';
 import { learnTalent, unlearnTalents } from './systems/talents.js';
 import { buyCharm } from './systems/charms.js';
+import { setClanHall, applyHallGifts } from './systems/clanhall.js';
 import { doAscend, ascendPreview } from './systems/ascension.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
@@ -298,6 +299,10 @@ export class Game {
     /** The server has the last clan attack: forget it. */
     clearClanResult() { return this._act(() => clearClanResult(this)); }
     setClanBanner(banner) { return this._act(() => setClanBanner(this, banner)); }
+    /** The server's word on the clan's hall (null outside a clan): its rooms' bonuses, its banner, the clan's cloak. */
+    setClanHall(hall) { return this._act(() => setClanHall(this, hall)); }
+    /** The hall's gifts the server says were given, taken out of the bank once each (systems/clanhall.js). */
+    applyHallGifts(gifts) { return this._act(() => applyHallGifts(this, gifts)); }
 
     canPrestige() { return canPrestige(this.state, this.now); }
     /** The dock's Prestige glows: the first as soon as it may be made, a later one at its wall (systems/prestige.js). */

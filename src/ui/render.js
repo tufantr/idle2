@@ -41,12 +41,13 @@ import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../syste
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
 import { fmt, pct, seconds, duration, escapeHtml as esc, gainWords, gainMarkup, stagesWords } from './format.js';
-import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey, glyph, coinIcon } from './sprites.js';
+import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey, glyph, coinIcon, clanCloakKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
 import { rankFor, nextRank, RANKS } from '../data/ranks.js';
 import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
-import { CAPES, capeFor, capeEarned, capesEarned, capeWorn, festivalCloaksOwned } from '../data/capes.js';
+import { CAPES, capeFor, capeEarned, capesEarned, capeWorn, festivalCloaksOwned, CLAN_CLOAK } from '../data/capes.js';
+import { HALL, HALL_ROOMS, HALL_STAGES, HALL_LEVELS, LEVEL_AT, ROOM_SECONDS, WEEKLY_SECONDS, CLOAK_STAGE, BANNER_COLOURS, BANNER_EMBLEMS, bannerColour, bannerEmblem, roomLevel, hallLevels, hallRoom, giftWorth, roomTakes } from '../data/clanhall.js';
 import { HERO_NAME_MAX } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle, fightTab } from './features.js';
@@ -2264,13 +2265,15 @@ function renderCodex(state) {
  * one lit, and the next cape (the skill nearest 99) as a silhouette.
  */
 function capePicks(state) {
-    const earned = [...capesEarned(state), ...festivalCloaksOwned(state)];   // skill capes, and festival cloaks bought
+    // skill capes, festival cloaks bought, and the clan's cloak (data/clanhall.js)
+    const earned = [...capesEarned(state), ...festivalCloaksOwned(state), ...(capeEarned(state, CLAN_CLOAK.skill) ? [CLAN_CLOAK] : [])];
     if (!earned.length) return '';
     const worn = capeWorn(state)?.skill || '';
     const rank = rankFor(state.prestige?.count || 0);
     const pick = (skill, key, name, tip) => `<button class="cape-pick${worn === skill ? ' on' : ''}" onclick="FI.setHeroCape('${skill}')" aria-label="${esc(name)}" aria-pressed="${worn === skill}" title="${esc(tip)}">${sprite(key, { scale: 2 })}</button>`;
     const picks = [pick('', `hero/cloaks/${rank.cloak}`, `${rank.name}'s cloak`, `The ${rank.cloak} cloak of a ${rank.name}`)];
-    for (const c of earned) picks.push(c.event ? pick(c.skill, `hero/capes/${c.skill}`, c.name, `${c.name}, from its weekend event`)
+    for (const c of earned) picks.push(c === CLAN_CLOAK ? pick(c.skill, clanCloakKey(state.clanHall?.colour), c.name, "Your clan's cloak, in its banner's colour")
+        : c.event ? pick(c.skill, `hero/capes/${c.skill}`, c.name, `${c.name}, from its weekend event`)
         : pick(c.skill, `hero/capes/${c.skill}`, `${SKILLS[c.skill].name} cape`, `${SKILLS[c.skill].name} cape: ${c.perk}`));
     const next = CAPES.filter(c => !capeEarned(state, c.skill)).sort((a, b) => state.skills[b.skill].xp - state.skills[a.skill].xp)[0];
     if (next) picks.push(`<span class="cape-pick locked" title="${esc(`${SKILLS[next.skill].name} cape, at level 99 in ${SKILLS[next.skill].name}: ${next.perk}`)}">${sprite(`hero/capes/${next.skill}`, { scale: 2, cls: 'silhouette' })}</span>`);
@@ -2366,7 +2369,7 @@ export function renderClan(game, ui, cloud) {
     // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
-        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
@@ -2390,7 +2393,9 @@ export function renderClan(game, ui, cloud) {
         const share = r => (Number.isFinite(r.share) ? (r.share > 0 && r.share < 0.01 ? '<1%' : `${Math.round(r.share * 100)}%`) : fmt(Number(r.damage) || 0));
         const board = (social.board || []).map((r, i) => `<tr class="${r.you ? 'you-row' : ''}"><td>${i + 1}</td><td>${esc(r.username)}</td><td>${share(r)}</td><td>${Number(r.attacks) || 0}</td></tr>`).join('');
         const canKick = !!c.isOwner;
-        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td></tr>`).join('');
+        // (and what each gave the hall: in all, and this week on hover)
+        const built = m => { const b = m.built || {}; return Number(b.total) > 0 ? `<span title="${esc(`${workTime(Number(b.week) || 0)} this week`)}">${workTime(Number(b.total))}</span>` : '<span class="muted">·</span>'; };
+        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${built(m)}</td></tr>`).join('');
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
             <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span>${crownMark(c.crown)}</h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
@@ -2400,14 +2405,148 @@ export function renderClan(game, ui, cloud) {
             ${clanStandings(social)}
             <div class="two-col">
                 <div><h3 class="section-title">This week's damage</h3>${board ? `<div class="table-wrap"><table class="data-table clan-board"><thead><tr><th>#</th><th>Member</th><th>Share</th><th>Attacks</th></tr></thead><tbody>${board}</tbody></table></div>` : '<p class="muted small">No attacks yet this week.</p>'}</div>
-                <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table clan-members"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th></tr></thead><tbody>${members}</tbody></table></div></div>
+                <div><h3 class="section-title">Members (${(social.members || []).length}/${social.maxMembers || 20})</h3><div class="table-wrap"><table class="data-table clan-members"><thead><tr><th>Member</th><th>Best stage</th><th>Total level</th><th title="Work given to the hall">Hall</th></tr></thead><tbody>${members}</tbody></table></div></div>
             </div>
-        </section>`;
+        </section>
+        ${hallPanel(game, social)}`;
     }
     return `${banner('clan', { extra: `<button class="mini-btn" onclick="FI.refreshSocial()">↻ Refresh</button>` })}
         ${status || rewards ? `<section class="glass-panel ${painted('clanhall', 'center 70%')}">${status}${rewards}</section>` : ''}
         ${body}
         ${renderLeaderboard(social)}`;
+}
+
+// ---------- the clan hall (data/clanhall.js) ----------
+
+/** Seconds of work in words: seconds, minutes below an hour, then hours (to a tenth below ten). */
+export const workTime = s => (s < 60 ? `${Math.max(0, Math.round(s))} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${s < 36000 ? Math.round(s / 360) / 10 : Math.round(s / 3600)} h`);
+
+/** The clan's banner: a pennant in its colour bearing its emblem. */
+function clanFlag(colourId, emblemId, scale = 1.5) {
+    return `<span class="clan-flag" style="--flag:${bannerColour(colourId).hex};--fk:${scale}" aria-hidden="true">${sprite(bannerEmblem(emblemId).icon, { scale, fallback: '⚔️' })}</span>`;
+}
+
+/** What the bank holds that `room` takes, the most work first. */
+const hallGoods = (state, room) => Object.keys(RESOURCES).filter(id => (state.resources[id] || 0) >= 1 && roomTakes(room, id)).sort((a, b) => giftWorth(b) - giftWorth(a));
+
+/** The work this week still holds for the player to give, in seconds. */
+const hallWeekLeft = hall => Math.max(0, (Number(hall.weekly) || WEEKLY_SECONDS) - (Number(hall.given?.week) || 0));
+/** Time until the week's work comes again (Monday 00:00 UTC), counted down from when the server said it (`at`). */
+const hallWeekEnds = hall => Math.max(0, (Number(hall.endsInMs) || 0) - (Date.now() - (Number(hall.at) || Date.now())));
+
+/**
+ * The clan's hall: its stage painted (the same clearing, the hall grown on it), the banner (its owner changes it), the six
+ * rooms, the week's work left to give, the clan's cloak and the latest gifts. The rules are behind its "?".
+ */
+function hallPanel(game, social) {
+    const hall = social.hall;
+    if (!hall) return '';
+    const stage = HALL_STAGES[hall.stage] || HALL_STAGES[0];
+    const next = HALL_STAGES[(hall.stage || 0) + 1];
+    const levels = hallLevels(hall.rooms);
+    const flag = social.clan?.isOwner
+        ? `<button class="flag-btn" onclick="FI.openBannerPicker()" aria-label="Change the clan's banner" title="Change the banner">${clanFlag(hall.colour, hall.emblem, 2)}</button>`
+        : `<span class="flag-btn" title="The clan's banner">${clanFlag(hall.colour, hall.emblem, 2)}</span>`;
+    const weekLeft = hallWeekLeft(hall);
+    return `<section class="glass-panel hall-panel">
+        <div class="hall-scene" style="${paintStyle(stage.art, 'center 58%')}">
+            <div class="hall-title">${flag}<div><h2>The ${esc(stage.name)} ${aboutButton('clanhall')}</h2><span class="small">${levels} room level${levels === 1 ? '' : 's'}${next ? ` · the ${esc(next.name)} at ${next.levels}` : ''}</span></div></div>
+            <div class="hall-week" title="${esc(`Each member gives up to ${HALL.weeklyHours} hours of work a week`)}">${glyph('time')} ${weekLeft > 0
+                ? `<b>${workTime(weekLeft)}</b> <span class="small">to give this week</span>`
+                : `<span class="small">All given this week · more in</span> <b>${duration(hallWeekEnds(hall))}</b>`}</div>
+        </div>
+        <div class="hall-rooms">${HALL_ROOMS.map(room => hallRoomCard(game.state, hall, room, weekLeft)).join('')}</div>
+        ${hallFoot(game.state, hall)}
+    </section>`;
+}
+
+/** A room: its painting and goods, its level as pips, the work to the next level, its bonus, and Give (lit when the bank has some). */
+function hallRoomCard(state, hall, room, weekLeft) {
+    const work = Number(hall.rooms?.[room.id]) || 0;
+    const level = roomLevel(work);
+    const done = level >= HALL_LEVELS;
+    const from = level ? LEVEL_AT[level - 1] : 0;
+    const to = LEVEL_AT[Math.min(level, HALL_LEVELS - 1)];
+    const share = done ? 1 : Math.max(0, Math.min(1, (work - from) / (to - from)));
+    const pips = Array.from({ length: HALL_LEVELS }, (_, i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('');
+    const goods = hallGoods(state, room);
+    const ready = !done && goods.length > 0 && weekLeft >= giftWorth(goods[goods.length - 1]);
+    // its builders: who gave it most (on hover)
+    const builders = (hall.builders?.[room.id] || []).map(b => `${b.username} ${workTime(Number(b.work) || 0)}`).join(', ');
+    return `<div class="hall-room${done ? ' done' : ''}"${builders ? ` title="${esc(`Built most by ${builders}`)}"` : ''}>
+        <div class="hall-room-art" style="${paintStyle(room.art, 'center 55%')}">${sprite(room.icon, { scale: 2 })}<span class="hall-pips" title="Level ${level} of ${HALL_LEVELS}">${pips}</span></div>
+        <div class="hall-room-body">
+            <div class="hall-room-name"><b>${esc(room.name)}</b><span class="muted small">${done ? 'built' : `${work > from ? workTime(work - from) : '0'} / ${workTime(to - from)}`}</span></div>
+            <div class="hall-bar"><div class="hall-fill" style="width:${(share * 100).toFixed(1)}%"></div></div>
+            <div class="hall-room-foot"><span class="small hall-bonus${level ? '' : ' muted'}">${esc(room.text(Math.max(1, level)))}</span>
+                ${done ? '' : `<button class="mini-btn${ready ? ' ready' : ''}" onclick="FI.openHallGive('${room.id}')">Give</button>`}</div>
+        </div>
+    </div>`;
+}
+
+/** The clan's cloak (worn, or how far toward it) and the latest gifts. */
+function hallFoot(state, hall) {
+    const given = Number(hall.given?.total) || 0;
+    const need = HALL.cloakHours * 3600;
+    const worn = capeWorn(state)?.skill === CLAN_CLOAK.skill;
+    const art = sprite(clanCloakKey(hall.colour), { scale: 1.5, cls: hall.cloak ? '' : 'dim' });
+    const cloak = hall.cloak
+        ? `<div class="hall-cloak on">${art}<div><b>Clan cloak</b><span class="muted small">${worn ? 'worn' : 'yours'}</span></div>${worn ? '' : `<button class="mini-btn" onclick="FI.setHeroCape('${CLAN_CLOAK.skill}')">Wear it</button>`}</div>`
+        : `<div class="hall-cloak">${art}<div><b>Clan cloak</b><span class="muted small">${workTime(Math.min(given, need))} / ${HALL.cloakHours} h given${hall.stage >= CLOAK_STAGE ? '' : ` · the ${esc(HALL_STAGES[CLOAK_STAGE].name)}`}</span></div></div>`;
+    const feed = (hall.feed || []).slice(0, 5).filter(g => RESOURCES[g.resource]).map(g => `<li>${resIcon(g.resource)} <b>${fmt(Number(g.qty) || 0)}</b> <span class="muted">${esc(res(g.resource).name)} · ${esc(g.username || '')} · ${esc(hallRoom(g.room)?.name || '')}</span></li>`).join('');
+    return `<div class="hall-foot">${cloak}${feed ? `<ul class="hall-feed" aria-label="The latest gifts">${feed}</ul>` : ''}</div>`;
+}
+
+/**
+ * Giving to a room (FI.openHallGive): what the bank holds that it takes, each with the work it counts, one picked, how
+ * many (no more than the bank, the week's work left and the room's last level take), and what that comes to.
+ */
+export function renderHallGive(game, ui) {
+    const state = game.state;
+    const hall = ui.social?.hall;
+    const room = hallRoom(ui.hallGive?.room);
+    if (!room || !hall) return '';
+    const goods = hallGoods(state, room);
+    const pick = goods.includes(ui.hallGive.resource) ? ui.hallGive.resource : goods[0] || null;
+    const weekLeft = hallWeekLeft(hall);
+    const roomLeft = Math.max(0, ROOM_SECONDS - (Number(hall.rooms?.[room.id]) || 0));
+    const worth = pick ? giftWorth(pick) : 0;
+    const max = pick ? Math.max(0, Math.min(Math.floor(state.resources[pick] || 0), Math.floor(weekLeft / worth + 1e-9), Math.ceil(roomLeft / worth))) : 0;
+    const qty = Math.max(Math.min(1, max), Math.min(max, Math.floor(Number(ui.hallGive.qty)) || max));
+    const tiles = goods.map(id => `<button class="give-item${id === pick ? ' on' : ''}" onclick="FI.hallGivePick('${id}')" aria-pressed="${id === pick}" title="${esc(`${res(id).name}: ${workTime(giftWorth(id))} of work each`)}">${resIcon(id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[id] || 0)}</span></button>`).join('');
+    const amount = pick ? `<div class="give-amount">
+            <div class="give-what">${resIcon(pick)} <b>${esc(res(pick).name)}</b> <span class="muted small">${workTime(worth)} of work each</span></div>
+            <input type="range" id="give-qty" data-res="${pick}" data-worth="${worth}" min="${Math.min(1, max)}" max="${max}" value="${qty}" oninput="FI.hallGiveQty(this.value, this.dataset.worth)" aria-label="How many to give" ${max > 1 ? '' : 'disabled'}>
+            ${max > 0 ? `<div class="give-sum"><b id="give-count">${fmt(qty, { short: false })}</b> · <span id="give-work">${workTime(qty * worth)}</span> of work <span class="muted small">· ${workTime(weekLeft)} left this week</span></div>`
+                : `<p class="muted small">${weekLeft <= 0 ? `This week's ${HALL.weeklyHours} hours are given: more in ${duration(hallWeekEnds(hall))}.` : `Too little of this week's work is left for one of these: ${workTime(weekLeft)}.`}</p>`}
+        </div>` : `<p class="muted">Nothing in your bank for the ${esc(room.name)} yet: it takes ${esc(room.takesText)}.</p>`;
+    return `<div class="modal-content narrow about-card hall-give">
+        <div class="about-art" style="${paintStyle(room.art, 'center 55%')}" aria-hidden="true">${sprite(room.icon, { scale: 2 })}</div>
+        <div class="modal-header">The ${esc(room.name)}</div>
+        ${goods.length ? `<div class="give-items" role="group" aria-label="What to give">${tiles}</div>` : ''}
+        ${amount}
+        <div class="modal-footer"><button class="modal-btn" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.hallGive()" ${qty > 0 ? '' : 'disabled'}>Give</button></div>
+    </div>`;
+}
+
+/** The banner picker, for the clan's owner (FI.openBannerPicker): the colours and emblems its hall's stage has. */
+export function renderBannerPicker(game, ui) {
+    const hall = ui.social?.hall;
+    if (!hall) return '';
+    const colour = ui.bannerPick?.colour || bannerColour(hall.colour).id;
+    const emblem = ui.bannerPick?.emblem || bannerEmblem(hall.emblem).id;
+    const open = list => list.filter(x => x.stage <= (hall.stage || 0));
+    const next = HALL_STAGES[(hall.stage || 0) + 1];
+    const swatches = open(BANNER_COLOURS).map(c => `<button class="swatch${c.id === colour ? ' on' : ''}" style="--swatch:${c.hex}" onclick="FI.bannerPick('colour', '${c.id}')" aria-label="${esc(c.id)}" aria-pressed="${c.id === colour}" title="${esc(c.id)}"></button>`).join('');
+    const emblems = open(BANNER_EMBLEMS).map(e => `<button class="emblem-pick${e.id === emblem ? ' on' : ''}" onclick="FI.bannerPick('emblem', '${e.id}')" aria-label="${esc(e.id)}" aria-pressed="${e.id === emblem}" title="${esc(e.id)}">${sprite(e.icon, { scale: 1.5 })}</button>`).join('');
+    return `<div class="modal-content narrow about-card banner-picker">
+        <div class="modal-header">The clan's banner</div>
+        <div class="banner-preview">${clanFlag(colour, emblem, 3)}</div>
+        <div class="swatches" role="group" aria-label="Colour">${swatches}</div>
+        <div class="emblem-picks" role="group" aria-label="Emblem">${emblems}</div>
+        ${next ? `<p class="muted small">More at the ${esc(next.name)}.</p>` : ''}
+        <div class="modal-footer"><button class="modal-btn" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.saveBanner()">Raise it</button></div>
+    </div>`;
 }
 
 /**

@@ -192,6 +192,35 @@ async function ensureSchema() {
             PRIMARY KEY (week, clan_id)
         )
     `;
+    // The Clan Hall (October 2026, src/data/clanhall.js): the work each room has had, in tenths of a second, and every gift
+    // a member made, numbered for each player (`seq`, unique: two gifts sent at once can't both pass the week's allowance;
+    // a save says how many of them its bank has given: api/index.js). The banner's colour and emblem are the clan's.
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_hall (
+            clan_id INTEGER NOT NULL,
+            room VARCHAR(16) NOT NULL,
+            given BIGINT NOT NULL DEFAULT 0,
+            PRIMARY KEY (clan_id, room)
+        )
+    `;
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_gifts (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            seq INTEGER NOT NULL,
+            clan_id INTEGER NOT NULL,
+            week VARCHAR(10) NOT NULL,
+            room VARCHAR(16) NOT NULL,
+            resource VARCHAR(40) NOT NULL,
+            qty BIGINT NOT NULL,
+            work BIGINT NOT NULL,
+            at BIGINT NOT NULL
+        )
+    `;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS clan_gifts_seq ON clan_gifts (user_id, seq)`;
+    await sql`CREATE INDEX IF NOT EXISTS clan_gifts_clan ON clan_gifts (clan_id, id)`;
+    await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_colour VARCHAR(16)`;
+    await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_emblem VARCHAR(16)`;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -323,16 +352,21 @@ async function putSnapshotIfMissing(userId, week, metricsJson) {
 
 // ---------- clans ----------
 
+/** Clans by name or tag, the biggest first, each with its hall's rooms ({ room → work }: the stage its list shows). */
 async function listClans(search, limit) {
     const pattern = `%${String(search || '').replace(/[\\%_]/g, '\\$&')}%`;   // a % or _ typed is a letter, not a wildcard
     const { rows } = await sql`
-        SELECT c.id, c.name, c.tag, c.description, c.looking_for, COUNT(m.user_id) AS members
+        SELECT c.id, c.name, c.tag, c.description, c.looking_for, COUNT(m.user_id) AS members,
+            (SELECT json_object_agg(h.room, h.given) FROM clan_hall h WHERE h.clan_id = c.id) AS hall
         FROM clans c LEFT JOIN clan_members m ON m.clan_id = c.id
         WHERE c.name ILIKE ${pattern} OR c.tag ILIKE ${pattern}
         GROUP BY c.id ORDER BY COUNT(m.user_id) DESC, c.id ASC LIMIT ${limit}
     `;
-    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, members: int(r.members) }));
+    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, members: int(r.members), hall: workOf(r.hall) }));
 }
+
+/** A hall's rooms as stored ({ room → work }), as plain numbers. */
+const workOf = rooms => Object.fromEntries(Object.entries(rooms && typeof rooms === 'object' ? rooms : {}).map(([room, work]) => [room, int(work)]));
 
 async function createClan({ name, tag, description, lookingFor, ownerId, now }) {
     const { rows } = await sql`
@@ -343,9 +377,9 @@ async function createClan({ name, tag, description, lookingFor, ownerId, now }) 
 }
 
 async function getClan(clanId) {
-    const { rows } = await sql`SELECT id, name, tag, description, looking_for, owner_id, created_at FROM clans WHERE id = ${clanId}`;
+    const { rows } = await sql`SELECT id, name, tag, description, looking_for, owner_id, created_at, banner_colour, banner_emblem FROM clans WHERE id = ${clanId}`;
     const r = rows[0];
-    return r ? { id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, ownerId: r.owner_id, createdAt: int(r.created_at) } : null;
+    return r ? { id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, ownerId: r.owner_id, createdAt: int(r.created_at), colour: r.banner_colour || null, emblem: r.banner_emblem || null } : null;
 }
 
 async function setClanOwner(clanId, ownerId) {
@@ -355,6 +389,7 @@ async function setClanOwner(clanId, ownerId) {
 async function deleteClan(clanId) {
     await sql`DELETE FROM clan_bosses WHERE clan_id = ${clanId}`;
     await sql`DELETE FROM clan_boss_shares WHERE clan_id = ${clanId}`;
+    await sql`DELETE FROM clan_hall WHERE clan_id = ${clanId}`;   // its gifts stay: they count each giver's week
     // The attacks stay: they are what counts a player's three a day (deleting them gave fresh ones).
     await sql`DELETE FROM clans WHERE id = ${clanId}`;
 }
@@ -682,6 +717,73 @@ async function clanBestScore(clanId) {
     return Number(rows[0] && rows[0].best) || 0;
 }
 
+// ---------- the clan hall ----------
+
+/** The work (tenths of a second) each room of a clan's hall has had: { room → work }. */
+async function hallRooms(clanId) {
+    const { rows } = await sql`SELECT room, given FROM clan_hall WHERE clan_id = ${clanId}`;
+    return Object.fromEntries(rows.map(r => [r.room, int(r.given)]));
+}
+
+/**
+ * Record a gift as the player's gift number `seq` (their last plus one) and add its work to the room, at most `cap` there,
+ * in one statement. A parallel gift that took the same number throws a unique violation (clan_gifts_seq): the caller
+ * looks again and retries. Returns the room's work after it.
+ */
+async function addGift({ userId, seq, clanId, week, room, resource, qty, work, now, cap }) {
+    const { rows } = await sql`
+        WITH g AS (
+            INSERT INTO clan_gifts (user_id, seq, clan_id, week, room, resource, qty, work, at)
+            VALUES (${userId}::int, ${seq}::int, ${clanId}::int, ${week}, ${room}, ${resource}, ${qty}::bigint, ${work}::bigint, ${now}::bigint)
+            RETURNING clan_id, room, work
+        )
+        INSERT INTO clan_hall (clan_id, room, given) SELECT clan_id, room, LEAST(work, ${cap}::bigint) FROM g
+        ON CONFLICT (clan_id, room) DO UPDATE SET given = LEAST(clan_hall.given + EXCLUDED.given, ${cap}::bigint)
+        RETURNING given
+    `;
+    return int(rows[0] && rows[0].given);
+}
+
+/** A player's gifts: the number of their last, the work they gave this week (to any clan), and to this clan in all. */
+async function giftTotals(userId, clanId, week) {
+    const { rows } = await sql`
+        SELECT COALESCE(MAX(seq), 0) AS last,
+            COALESCE(SUM(work) FILTER (WHERE week = ${week}), 0) AS week,
+            COALESCE(SUM(work) FILTER (WHERE clan_id = ${clanId}::int), 0) AS clan
+        FROM clan_gifts WHERE user_id = ${userId}
+    `;
+    const r = rows[0] || {};
+    return { last: int(r.last), week: int(r.week), clan: int(r.clan) };
+}
+
+/** A player's gifts after their number `after` (those a save that has given up to `after` has yet to take from its bank). */
+async function giftsAfter(userId, after) {
+    const { rows } = await sql`SELECT seq, resource, qty FROM clan_gifts WHERE user_id = ${userId} AND seq > ${after}::int ORDER BY seq LIMIT 500`;
+    return rows.map(r => ({ seq: int(r.seq), resource: r.resource, qty: int(r.qty) }));
+}
+
+/** What each giver gave a clan's hall, by room: [{ userId, room, total, week }] (work, this week's of it too). */
+async function hallBuilders(clanId, week) {
+    const { rows } = await sql`
+        SELECT user_id, room, SUM(work) AS total, COALESCE(SUM(work) FILTER (WHERE week = ${week}), 0) AS week
+        FROM clan_gifts WHERE clan_id = ${clanId} GROUP BY user_id, room
+    `;
+    return rows.map(r => ({ userId: r.user_id, room: r.room, total: int(r.total), week: int(r.week) }));
+}
+
+/** A clan's latest gifts, newest first, with their givers' names. */
+async function recentGifts(clanId, limit) {
+    const { rows } = await sql`
+        SELECT u.username, g.room, g.resource, g.qty, g.at FROM clan_gifts g JOIN users u ON u.id = g.user_id
+        WHERE g.clan_id = ${clanId} ORDER BY g.id DESC LIMIT ${limit}
+    `;
+    return rows.map(r => ({ username: r.username, room: r.room, resource: r.resource, qty: int(r.qty), at: int(r.at) }));
+}
+
+async function setClanBanner(clanId, colour, emblem) {
+    await sql`UPDATE clans SET banner_colour = ${colour}, banner_emblem = ${emblem} WHERE id = ${clanId}`;
+}
+
 // ---------- rate limiting ----------
 
 /**
@@ -778,6 +880,7 @@ module.exports = {
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
+    hallRooms, addGift, giftTotals, giftsAfter, hallBuilders, recentGifts, setClanBanner,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts

@@ -20,6 +20,7 @@ import { ANVIL_LEVEL_PER_UPGRADE, FORGE_STEP, PLAIN_XP_SHARE, BENCH_LEVEL_PER_UP
 import { TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, TRIAL_LADDER, PACTS_FROM, PACT_MAX } from '../data/trials.js';
 import { ROW_POINTS, ROWS, RESPEC } from '../data/talents.js';
 import { CHARMS } from '../data/charms.js';
+import { HALL, HALL_ROOMS, HALL_STAGES, HALL_LEVELS, CLOAK_STAGE, giftWorth } from '../data/clanhall.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
 import { escapeHtml as esc, shareInWords } from './format.js';
@@ -99,6 +100,13 @@ export const FEATURES = {
             `A purchase brings its charges (${CHARMS.map(c => `${c.name} ${c.charges}`).join(', ')}); more stack on what is left, and they stay through every prestige.`,
             "Each piece of the charm's work uses a charge: a rock, a bar, a dish, a harvest. Its skill's header shows how many are left.",
             'A weekend event\'s shop sells the charms you have opened for Festival Tokens too.'] },
+    clanhall: { name: 'Clan Hall', art: 'clangreathall', icon: 'res/runite_bar', blurb: 'The clan builds a hall together, from what its members make.',
+        points: [`Each of its six rooms takes some of what members make: ${HALL_ROOMS.map(r => `the ${r.name} ${r.takesText}`).join('; ')}.`,
+            `A gift counts in work, the time its things take to make (a copper bar ${giftWorth('copper_bar')} seconds, a runite bar ${Math.round(giftWorth('runite_bar'))}), so everyone's hour of work counts the same. Each member gives up to ${HALL.weeklyHours} hours of work a week.`,
+            `Each room has ${HALL_LEVELS} levels, taking ${HALL.levelHours.slice(0, -1).join(', ')} and ${HALL.levelHours.at(-1)} hours of work in turn, and every level gives every member a bonus while they stay in the clan. A level of ${HALL_ROOMS.map(r => `the ${r.name}: ${r.text(1)}`).join('; ')}.`,
+            `As its rooms are built the hall grows: ${HALL_STAGES.slice(1).map((st, i) => `the ${st.name} at ${st.levels}${i ? '' : ' room levels'}`).join(', ')} (every room built). Each stage brings more colours and emblems for the clan's banner, which its leader picks.`,
+            `From the ${HALL_STAGES[CLOAK_STAGE].name}, a member who has given ${HALL.cloakHours} hours of work wears the clan's cloak, in its colour, if they like.`,
+            'Nothing decays, and gifts stay with the clan: a member who leaves leaves theirs behind.'] },
     achievements: { name: 'Achievements', art: 'hall', icon: 'uniq/goblin_crown', blurb: 'A trophy for every deed, with a reward that lasts forever.',
         points: [`Every medal has its own reward, and each one also adds +${pc(ACHIEVEMENT_GLOBAL_BONUS)} attack, defence and skill speed.`, 'The bestiary counts every kind of monster you defeat, with a star at 10, 100 and 1,000.', 'Pets, unique items and every kind of gear you find are kept here too. Some medals stay secret until earned.'] },
     dungeons: { name: 'Dungeons', art: 'dungeon', icon: 'mon/Skeleton', blurb: 'Elite monsters, a chest at the end and pieces of unique gear.',

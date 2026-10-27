@@ -5,7 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, startsOver, progressed,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, renderHallGive, renderBannerPicker, workTime, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { droppingIn } from './systems/combat.js';
 import { achievementById } from './data/achievements.js';
@@ -19,7 +19,7 @@ import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
-import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph } from './ui/sprites.js';
+import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
@@ -40,6 +40,7 @@ import { playtestExport } from './systems/playtest.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { talentById, respecPrice } from './data/talents.js';
 import { charmById } from './data/charms.js';
+import { HALL, HALL_STAGES, hallRoom } from './data/clanhall.js';
 import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
@@ -113,7 +114,7 @@ function markFresh(id, on) {
 
 function freshSocial() {
     return {
-        clan: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false,
+        clan: null, hall: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false,
         fetchedAt: 0, loading: false, loaded: false, error: '', seq: 0,
         form: { name: '', tag: '', description: '', lookingFor: '', search: '' } // typed values survive re-renders and errors
     };
@@ -216,6 +217,7 @@ const sound = createSound(() => game.state.settings.sound !== false, () => game.
 document.documentElement.style.setProperty('--atlas', `url(${ATLAS.url})`); // versioned, so a new layout never meets an old cached sheet
 document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
 document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.rows}px`);
+document.body.insertAdjacentHTML('beforeend', tintDefs());   // the banner colours' filters (the clan's cloak: src/ui/sprites.js)
 
 // The skill stage above each skill tab: the hero at work (src/ui/stage.js).
 const stage = createStage(document.getElementById('stage'), { sound: name => sound.play(name), pat: () => game.patPet() });
@@ -820,6 +822,23 @@ function handleEvents(events) {
                 sound.play('levelUp');
                 break;
             }
+            case 'hallRoom': {   // a room of the clan's hall rose a level (systems/clanhall.js): its bonus, for every member
+                const room = hallRoom(ev.room);
+                if (room) rewards.celebrate({ key: `hall:${ev.room}:${ev.level}`, kind: 'unlock', art: paintStyle(room.art), icon: sprite(room.icon, { scale: 2 }),
+                    kicker: 'The clan hall', title: `${room.name}: level ${ev.level}`, lines: [escapeHtml(`${room.text(ev.level)}, for everyone in the clan`)], ms: 4200 });
+                break;
+            }
+            case 'hallStage': {   // the hall grew (data/clanhall.js HALL_STAGES): its painting, and more for the banner
+                const stage = HALL_STAGES[ev.stage];
+                if (stage) rewards.celebrate({ key: `hallstage:${ev.stage}`, kind: 'legend', art: paintStyle(stage.art, 'center 58%'), icon: tabIcon('clan', 2),
+                    kicker: 'Your clan built', title: `The ${stage.name}`, lines: ['New colours and emblems for the clan\'s banner'], ms: 5200 });
+                sound.play('levelUp');
+                break;
+            }
+            case 'hallCloak':   // the clan's cloak, put on (systems/clanhall.js)
+                rewards.celebrate({ key: 'hallcloak', kind: 'legend', icon: `<span class="cel-hero">${heroSprite(game.state, { scale: 2 })}</span>`,
+                    kicker: 'The clan hall', title: 'The clan\'s cloak', lines: [`For ${HALL.cloakHours} hours of work given to the hall, in the banner's colour`], ms: 5200 });
+                break;
             case 'equip':   // the first piece to take a slot's levels: how the forge (and the bench) work, said once (systems/inventory.js)
                 if (ev.firstForge) {
                     const jewel = /^(Ring|Ear|Neck)/.test(ev.slot);
@@ -1132,6 +1151,7 @@ async function cloudSave(announce = true, { keepalive = false, sync = false } = 
         giftsWaiting = answer?.gifts > 0;
         if (giftsWaiting) claimGifts();
         if (answer && 'banner' in answer) game.setClanBanner(answer.banner);   // a kill by a clanmate shows up within an upload
+        hallNews(answer);
     } catch (err) {
         if (err.status === 409) {   // another device saved meanwhile: look at the server again before anything goes up
             cloudReady = false;
@@ -1243,6 +1263,8 @@ async function refreshSocial() {
         Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20,
             standing: mine.standing || null, endless: mine.endless || null, ranking });
         game.setClanBanner(mine.clan ? mine.banner : null);
+        social.hall = mine.clan && mine.hall ? { ...mine.hall, at: Date.now() } : null;   // (`at`: its week's end counts down from then)
+        game.setClanHall(social.hall);
         social.rewards = rewards.rewards || [];
         social.leaderboard = board;
         social.optIn = !!board.optIn;
@@ -1275,6 +1297,46 @@ async function socialAction(fn, success) {
     }
 }
 
+/**
+ * What an answer says of the clan's hall (a save's, a load's, a gift's): its rooms, stage, banner and cloak for the game
+ * (the Clan tab's copy too, keeping its builders and gifts), and the gifts the bank has yet to give, taken out of it.
+ */
+function hallNews(answer) {
+    if (!answer) return;
+    if (Array.isArray(answer.hallGifts) && answer.hallGifts.length) game.applyHallGifts(answer.hallGifts);
+    if (!('hall' in answer)) return;
+    game.setClanHall(answer.hall);
+    const shown = ui.social?.hall;
+    if (shown && answer.hall && answer.hall.clan === shown.clan) Object.assign(shown, answer.hall, { at: Date.now() });
+}
+
+/**
+ * A gift to the clan's hall. The server gives from the bank of the save it keeps, so the game uploads first (after any
+ * upload under way); the answer's gifts leave the bank here, and the next upload carries that.
+ */
+let givingToHall = false;
+async function giveToHall(room, resource, qty) {
+    if (givingToHall || !cloud.loggedIn) return;
+    givingToHall = true;
+    try {
+        for (let i = 0; pushing && i < 50; i++) await new Promise(resolve => setTimeout(resolve, 100));
+        await cloudSave(false);
+        const answer = await cloud.hallGive(room, resource, qty);
+        hallNews(answer);
+        const gift = answer.gift;
+        sound.play('chest');
+        toast(`${fmt(gift.qty)} ${RESOURCES[gift.resource]?.name || gift.resource} to the ${hallRoom(gift.room)?.name || 'hall'}: ${workTime(gift.work)} of work`, 'craft', resIcon(gift.resource));
+        save(Date.now());
+        cloudSave(false);
+        refreshSocial();   // the members' work and the latest gifts
+    } catch (err) {
+        toast(err.message, 'error');
+    } finally {
+        givingToHall = false;
+        render();
+    }
+}
+
 /** The boot's welcome-back, held while the sync chose: this game is the one played, so it shows now. */
 function showHeldReport() {
     const report = heldReport;
@@ -1295,15 +1357,17 @@ async function syncFromCloud() {
     const known = cloud.base ?? cloud.knownBase()?.at ?? null;
     cloudReady = false;
     try {
-        const { state: remote, lastSaved, gifts, banner } = await cloud.pull(Date.now());
+        const { state: remote, lastSaved, gifts, banner, hall, hallGifts } = await cloud.pull(Date.now());
         if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
             heldReport = null;
             cloudReady = true;
             adoptState(remote);
             if (before) toast('Your game was played on another device: carrying on from there', 'info');
             game.setClanBanner(banner);   // the clan's banner this week, as the server says it
+            hallNews({ hall, hallGifts });
         } else {
             game.setClanBanner(banner);
+            hallNews({ hall, hallGifts });
             showHeldReport();
             cloudReady = true;
             await cloudSave(false, { sync: true });
@@ -1655,6 +1719,58 @@ window.FI = {
     },
     /** The "?" on a panel: what this place is, with its picture. */
     about(id) { openModal(renderAboutCard(id), 'about'); },
+    // the clan's hall (data/clanhall.js): giving to a room, and the banner its owner picks
+    openHallGive(room) {
+        if (!hallRoom(room) || !ui.social?.hall) return;
+        ui.hallGive = { room, resource: null, qty: null };
+        openModal(renderHallGive(game, ui), 'hallGive');
+    },
+    hallGivePick(resource) {
+        if (!ui.hallGive || ui.modalOpen !== 'hallGive') return;
+        ui.hallGive = { ...ui.hallGive, resource, qty: null };
+        showModal(renderHallGive(game, ui), 'hallGive');
+    },
+    /** The slider moved: its count and work in words, the dialog left as it is (the slider keeps its grip). */
+    hallGiveQty(value, worth) {
+        if (!ui.hallGive) return;
+        const qty = Math.max(0, Math.floor(Number(value) || 0));
+        ui.hallGive.qty = qty;
+        const count = document.getElementById('give-count');
+        const work = document.getElementById('give-work');
+        if (count) count.textContent = fmt(qty, { short: false });
+        if (work) work.textContent = workTime(qty * (Number(worth) || 0));
+    },
+    hallGive() {
+        const input = document.getElementById('give-qty');
+        const give = ui.hallGive;
+        const qty = Math.floor(Number(input?.value) || 0);
+        closeModal();
+        if (give && input?.dataset.res && qty > 0) giveToHall(give.room, input.dataset.res, qty);
+    },
+    openBannerPicker() {
+        if (!ui.social?.clan?.isOwner || !ui.social.hall) return;
+        ui.bannerPick = null;
+        openModal(renderBannerPicker(game, ui), 'bannerPicker');
+    },
+    bannerPick(kind, id) {
+        if (ui.modalOpen !== 'bannerPicker' || !ui.social?.hall) return;
+        const hall = ui.social.hall;
+        ui.bannerPick = { colour: ui.bannerPick?.colour || hall.colour, emblem: ui.bannerPick?.emblem || hall.emblem, [kind]: id };
+        showModal(renderBannerPicker(game, ui), 'bannerPicker');
+    },
+    async saveBanner() {
+        const hall = ui.social?.hall;
+        const pick = { colour: ui.bannerPick?.colour || hall?.colour, emblem: ui.bannerPick?.emblem || hall?.emblem };
+        closeModal();
+        if (!hall) return;
+        try {
+            hallNews(await cloud.setClanBanner(pick.colour, pick.emblem));
+            sound.play('chest');
+        } catch (err) {
+            toast(err.message, 'error');
+        }
+        render();
+    },
     /** A drawer was opened or closed; remember it, so a re-render keeps it that way. */
     setOpen(key, open) { ui.open[key] = !!open; },
     openMap() { openModal(renderWorldMapModal(game), 'map'); },

@@ -2985,3 +2985,93 @@ body.reduced-motion .anvil-bonuses li.new { animation: none; }
     .anvil-card { grid-template-areas: "art name" "art stats" "art next" "bonuses bonuses" "jobs jobs"; }
     .anvil-bonuses { grid-area: bonuses; justify-content: flex-start; }
 }
+
+/* ---------- the clan hall (render.js hallPanel, data/clanhall.js) ---------- */
+/* its stage painted across the top (the same clearing, the hall grown on it), the banner and the week's work over it */
+.hall-panel { padding: 0; overflow: hidden; }
+.hall-scene {
+    position: relative; min-height: 200px; padding: 1rem 1.2rem; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.6rem 1rem;
+    background: linear-gradient(180deg, rgba(12, 8, 5, 0) 38%, rgba(12, 8, 5, 0.88)), var(--art, none) var(--art-at, center 58%) / cover no-repeat, var(--panel-2);
+    border-bottom: 1px solid rgba(214, 170, 92, 0.3);
+}
+.hall-title { display: flex; align-items: flex-end; gap: 0.8rem; min-width: 0; }
+.hall-title h2 { font-size: 1.3rem; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95); }
+.hall-title .small, .hall-week .small { color: #e7dcc6; text-shadow: 0 1px 3px #000; }
+.hall-week { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 999px; background: rgba(12, 9, 6, 0.75); border: 1px solid var(--line); }
+.hall-week b { color: var(--heading); font-variant-numeric: tabular-nums; }
+/* the clan's banner: a pennant in its colour bearing its emblem, on a pole */
+.flag-btn { position: relative; flex: none; padding: 6px 0 0; border: 0; background: none; line-height: 0; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7)); }
+.flag-btn::before { content: ""; position: absolute; left: -6px; right: -6px; top: 0; height: 6px; border-radius: 3px; background: linear-gradient(180deg, #e8c27a, #7a5520); }
+button.flag-btn { cursor: pointer; }
+button.flag-btn:hover { transform: translateY(-2px); }
+.clan-flag {
+    display: inline-grid; place-items: start center; width: calc(34px * var(--fk, 1.5)); height: calc(44px * var(--fk, 1.5)); padding-top: calc(3px * var(--fk, 1.5));
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.28), rgba(255, 255, 255, 0.1) 45%, rgba(0, 0, 0, 0.22)), var(--flag);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+}
+.clan-flag .spr { filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.6)); }
+/* the rooms: each a painting with its goods and level pips, the work to its next level, its bonus, and Give */
+.hall-rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; padding: 0.9rem 1rem 0.5rem; }
+.hall-room { display: flex; flex-direction: column; min-width: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(33, 26, 19, 0.92), rgba(18, 13, 9, 0.95)); }
+.hall-room.done { border-color: rgba(252, 211, 77, 0.55); box-shadow: 0 0 14px rgba(252, 211, 77, 0.14); }
+.hall-room-art { position: relative; height: 76px; display: grid; place-items: center; background: linear-gradient(180deg, rgba(12, 8, 5, 0.05), rgba(12, 8, 5, 0.6)), var(--art, none) var(--art-at, center 55%) / cover no-repeat; }
+.hall-room-art .spr { filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.8)); }
+.hall-pips { position: absolute; right: 8px; bottom: 6px; display: inline-flex; gap: 3px; }
+.hall-pips i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(251, 191, 36, 0.6); background: rgba(0, 0, 0, 0.55); }
+.hall-pips i.on { background: radial-gradient(circle at 40% 35%, #fde68a, #d97706); box-shadow: 0 0 6px rgba(251, 191, 36, 0.7); }
+.hall-room-body { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.55rem 0.7rem 0.65rem; }
+.hall-room-name { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.hall-room-name b { font-family: var(--font-display); color: var(--heading); }
+.hall-room-name .small { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hall-bar { height: 7px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(214, 170, 92, 0.25); }
+.hall-fill { height: 100%; background: linear-gradient(90deg, #b8862e, #fcd34d); transition: width 0.5s ease; }
+.hall-room.done .hall-fill { background: linear-gradient(90deg, #d4a640, #fde68a); }
+.hall-room-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 0.5rem; }
+.hall-bonus { min-width: 0; color: var(--text-main); }
+.hall-room .mini-btn.ready { border-color: var(--accent-hover); color: var(--heading); box-shadow: 0 0 12px rgba(252, 211, 77, 0.35); animation: nextComing 2.4s ease-in-out infinite; }
+/* the clan's cloak and the latest gifts */
+.hall-foot { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.7rem 1.2rem; padding: 0.4rem 1rem 1rem; }
+.hall-cloak { display: flex; align-items: center; gap: 0.55rem; padding: 0.35rem 0.8rem 0.35rem 0.35rem; border-radius: 12px; border: 1px solid var(--line); background: rgba(12, 9, 6, 0.6); }
+.hall-cloak > div { display: flex; flex-direction: column; }
+.hall-cloak b { font-family: var(--font-display); color: var(--heading); font-size: 0.9rem; }
+.hall-cloak.on { border-color: rgba(252, 211, 77, 0.5); }
+.hall-cloak .spr.dim { opacity: 0.55; }
+.hall-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; font-size: 0.8rem; }
+.hall-feed li { min-width: 0; overflow-wrap: anywhere; }
+.hall-chip { display: inline-block; padding: 0.02rem 0.45rem; border-radius: 999px; vertical-align: middle; font-size: 0.68rem; color: var(--heading); border: 1px solid rgba(214, 170, 92, 0.45); background: rgba(214, 170, 92, 0.1); }
+/* giving (render.js renderHallGive): what the bank holds for the room, then how many */
+.hall-give .about-art { height: 130px; display: grid; place-items: center; }
+.hall-give .about-art .spr { filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.8)); }
+.give-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 0.9rem; }
+.give-item { position: relative; width: 54px; height: 54px; padding: 0; display: grid; place-items: center; border-radius: 10px; color: var(--text-main); border: 1px solid rgba(214, 170, 92, 0.25); background: radial-gradient(circle at 50% 40%, #2a2016, #0e0a07 75%); }
+.give-item:hover { border-color: rgba(240, 198, 116, 0.7); }
+.give-item.on { border-color: #f0c674; background: radial-gradient(circle at 50% 40%, #4a3818, #140e07 75%); box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.3), 0 0 14px rgba(240, 198, 116, 0.3); }
+.give-amount { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.4rem; }
+.give-amount input[type="range"] { width: 100%; accent-color: #f0c674; }
+.give-sum { font-variant-numeric: tabular-nums; }
+.give-sum b { color: var(--heading); }
+/* the banner picker: a preview, the colours, the emblems */
+.banner-preview { display: grid; place-items: center; padding: 0.4rem 0 1rem; }
+.swatches, .emblem-picks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.emblem-picks { margin: 0.8rem 0 0.4rem; }
+.swatch { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--swatch); border: 2px solid rgba(0, 0, 0, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); cursor: pointer; }
+.swatch.on { outline: 2px solid #f0c674; outline-offset: 2px; }
+.emblem-pick { width: 58px; height: 58px; padding: 0; display: grid; place-items: center; border-radius: 10px; border: 1px solid rgba(214, 170, 92, 0.25); background: radial-gradient(circle at 50% 40%, #2a2016, #0e0a07 75%); cursor: pointer; }
+.emblem-pick.on { border-color: #f0c674; box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.3), 0 0 14px rgba(240, 198, 116, 0.3); }
+.banner-picker > p { text-align: center; }
+/* the clan's cloak: the white cloak through its colour's filter (src/ui/sprites.js tintDefs) */
+.tint-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.spr.tinted, .hero-doll .spr.tinted { filter: var(--tint); }
+.medal-look .hero-doll.silhouette .spr.tinted { filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.8)); }
+body.reduced-motion .hall-room .mini-btn.ready { animation: none; }
+@media (prefers-reduced-motion: reduce) { .hall-room .mini-btn.ready { animation: none; } }
+@media (max-width: 900px) { .hall-rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+    .hall-scene { min-height: 150px; padding: 0.8rem 0.9rem; }
+    .hall-title h2 { font-size: 1.1rem; }
+    .hall-rooms { gap: 0.5rem; padding: 0.7rem 0.7rem 0.4rem; }
+    .hall-room-art { height: 60px; }
+    .hall-room-body { padding: 0.45rem 0.55rem 0.55rem; }
+    .hall-room-name { flex-direction: column; gap: 0; }
+    .hall-foot { padding: 0.3rem 0.7rem 0.8rem; }
+}

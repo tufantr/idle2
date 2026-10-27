@@ -412,6 +412,25 @@ Same style and rules, filling the picture to the edges. Next, War Table: a comma
 Back to the rooms behind the menus: same hand-painted storybook style and the same rules as the Guild Hall, Armory and War Table rooms in this chat (one single wide 16:9 painting, not a grid; dim cozy light and fairly low contrast so text laid on top stays readable; the details at the left and right edges and along the top, a calm, fairly plain middle because cards will be laid over it; no people, no creatures, no animals, no text, no letters, no logos, no frame; fill the picture right to the edges). Next, Charm Maker's Bench: a tinker's workbench in a cozy wooden workshop at night by lamplight, at the left edge a pair of leather work gloves hanging on pegs above a small brass-and-wood fireside bellows, at the right edge a burlap sack of dark compost beside a shelf of little glass vials, charms and leather pouches, coils of twine, small pliers and a magnifying glass at the corners of the bench, the middle of the bench clear and a plain wood-panelled wall behind it.
 ```
 
+The Clan Hall's five stages (`clancamp.png` to `clancitadel.png`, the hall's panel on the Clan tab: src/data/clanhall.js;
+painted 27 October 2026 in the same chat, one at a time: a 3 by 2 sheet of all six was refused). The same clearing each
+time, so the hall seems to grow on it:
+```text
+Same style and rules as the places in this chat (one wide 16:9 painting, no people, no creatures, no text). Next, Clan Camp: a small clearing on a green hillside with a campfire, three canvas tents and a bare wooden banner pole, a wooded valley behind.
+```
+```text
+Same style and rules. Next, Clan Longhouse: the same clearing and wooded valley as the Clan Camp, months later: a modest timber longhouse with a turf roof and smoke rising from it, a woodpile, a wattle fence and the banner pole now flying a plain cloth banner.
+```
+```text
+Same style and rules. Next, Clan Great Hall: the same clearing and valley, a year later: a bigger hall of timber and grey stone with a tall roof, a forge chimney glowing beside it, a little walled herb garden, a stable and two plain cloth banners by the door.
+```
+```text
+Same style and rules. Next, Clan Keep: the same hill and valley, later still: a stone keep with a gatehouse, two round towers and a curtain wall, long plain cloth banners hanging from the walls, the garden and the forge chimney inside the walls.
+```
+```text
+Same style and rules. Next, Clan Citadel: the same hill and valley at dusk, the keep grown into a grand citadel crowning the hill, tall towers, many long plain banners, warmly lit windows, a stone bridge to the gate.
+```
+
 Import them like the rest; a separate folder keeps the earlier pictures from being encoded again:
 `python3 tools/paint.py art/rooms --trim 0`.
 

@@ -23,6 +23,7 @@ import { capesEarned } from '../data/capes.js';
 import { MASTERY_SKILLS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { starGain } from '../data/ascension.js';
 import { CLAN_BANNER, isoWeek } from '../data/social.js';
+import { HALL_ROOMS } from '../data/clanhall.js';
 import { eventStatus } from '../systems/events.js';
 import { levelForXp } from './xp.js';
 
@@ -121,6 +122,7 @@ function emptyMods() {
         critChance: 0, critDmg: 0, attackSpeed: 0, dodge: 0, lifesteal: 0,
         goldMult: 0, dropMult: 0, combatXpMult: 0, xpMult: 0,
         skillSpeed, doubleChance,
+        skillXp: 0,   // more XP in every skill but Combat (the clan hall's Library)
         foodMult: 0, autoEatThreshold: 0, potionDuration: 0, offlineHours: 0,
         boostDuration: 0, craftQuality: 0, tokenMult: 0, farmYield: 0, gildedChance: 0, petChance: 0
     };
@@ -225,6 +227,10 @@ export function collectModifiers(state) {
 
     // Skill capes (level 99, permanent, whichever one is worn).
     for (const cape of capesEarned(state)) addMods(mods, cape.mods);
+
+    // The clan's hall (data/clanhall.js): each room's bonus for every level of it built, while the hero is in the clan (the
+    // server's word: state.clanHall).
+    for (const room of HALL_ROOMS) addMods(mods, room.mods, state.clanHall?.rooms?.[room.id] || 0);
 
     // Dungeon clear milestones, each tier's (a sealed tier's in full: data/dungeons.js), and Titans defeated (permanent).
     const sealed = Math.max(0, (Math.floor(Number(state.dungeonTier)) || 1) - 1);
@@ -363,7 +369,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         dropMult: 1 + mods.dropMult,
         skillXpMult: brew.xp,   // a skill potion's: skill XP only (systems/skilling.js)
         combatXpMult: 1 + mods.combatXpMult + mods.xpMult,
-        xpMult: 1 + mods.xpMult,
+        xpMult: 1 + mods.xpMult + mods.skillXp,   // the skills' (Combat's is combatXpMult)
         foodMult: 1 + mods.foodMult,
         autoEatThreshold: Math.min(0.9, BASE.baseAutoEatThreshold + mods.autoEatThreshold),
         potionDuration: 1 + mods.potionDuration,   // how long a dose lasts, as a share of POTION_MINUTES (the Alchemist medal: longer)

@@ -450,16 +450,18 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     // "This week" leaderboards count from where the player stood when the week began: the numbers stored
     // before this upload (the first upload of the week, an empty one say, made the whole week's gain).
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(previous || metrics));
-    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id), banner: await bannerOf(req.user.id, savedAt) });
+    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id), ...await clanNews(req.user.id, savedAt, state) });
 }));
 
 app.get('/api/load', authenticateToken, route('load', async (req, res) => {
     const current = await store.getSave(req.user.id);
     const gifts = await store.unclaimedGiftCount(req.user.id);   // waiting gifts: the game claims them next
+    const state = current && current.state ? JSON.parse(current.state) : null;
+    // the clan's banner this week (src/data/social.js CLAN_BANNER), its hall, and the hall's gifts the save has yet to give
+    const news = await clanNews(req.user.id, Date.now(), state);
     // serverNow lets the client measure time away on the server's clock, not its own.
-    const banner = await bannerOf(req.user.id, Date.now());   // the clan's banner this week (src/data/social.js CLAN_BANNER)
-    if (!current || !current.state) return res.json({ state: null, serverNow: Date.now(), gifts, banner });
-    res.json({ state: JSON.parse(current.state), lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, banner });
+    if (!state) return res.json({ state: null, serverNow: Date.now(), gifts, ...news });
+    res.json({ state, lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, ...news });
 }));
 
 // ---------- clans ----------
@@ -585,14 +587,130 @@ async function currentBoss(clanId, now) {
     return boss;
 }
 
-/** The player's clan banner this week ({ week, kills }), or null outside a clan: every save and load says it. */
-async function bannerOf(userId, now) {
+/**
+ * What every save and load says of the player's clan: its banner this week ({ week, kills }) and its hall (hallOf), both
+ * null outside a clan, and the hall's gifts the save `state` has yet to take from its bank (`hallGifts`: the game takes them).
+ */
+async function clanNews(userId, now, state) {
     const mine = await clanOf(userId);
-    if (!mine) return null;
+    const hallGifts = await store.giftsAfter(userId, giftsTaken(state));
+    if (!mine) return { banner: null, hall: null, hallGifts };
     const week = isoWeek(now);
     const { CLAN_BOSS } = await engine();
-    return { week, kills: killsOf(await store.getBoss(mine.clan.id, week), CLAN_BOSS.levels) };
+    return { banner: { week, kills: killsOf(await store.getBoss(mine.clan.id, week), CLAN_BOSS.levels) }, hall: await hallOf(mine.clan, userId, now), hallGifts };
 }
+
+// ---------- the clan hall ----------
+// The clan builds a hall together from what its members make (the owner, 27 October 2026; src/data/clanhall.js): six rooms
+// of five levels, each level a small bonus to skilling or supplies for every member while they stay. A gift counts in work
+// (the seconds its things take to make), at most HALL.weeklyHours of it a member a week, whatever the clan. The things come
+// out of the bank of the save stored here (the game uploads before it gives). Each player's gifts are numbered (`seq`), and a
+// save says how many of them its bank has given (state.clanHall.lastGift): the others are taken from that bank here, so a
+// thing is never given twice, and every save, load and gift answer hands them to the game to take from its own (`hallGifts`).
+// Nothing decays; a member who leaves leaves their gifts behind.
+
+const TENTHS = 10;   // work is kept in tenths of a second (a runite bar is 15.8 s)
+
+/** How many of the player's hall gifts a save's bank has given (state.clanHall.lastGift, or its copy in `meta` an older page keeps). */
+const giftsTaken = state => {
+    const n = Math.max(...[state?.clanHall?.lastGift, state?.meta?.hallGift].map(v => (Number.isSafeInteger(Number(v)) && Number(v) > 0 ? Number(v) : 0)));
+    return Math.min(n, 2 ** 31 - 1);
+};
+
+/** The clan's banner as its owner set it, if the hall's stage has it (the first colour and emblem otherwise). */
+function heraldry(eng, clan, stage) {
+    const pick = (list, id) => (list.find(x => x.id === id && x.stage <= stage) || list[0]).id;
+    return { colour: pick(eng.BANNER_COLOURS, clan.colour), emblem: pick(eng.BANNER_EMBLEMS, clan.emblem) };
+}
+
+/**
+ * A clan's hall as the player sees it: each room's work (seconds), its stage, its banner, what the player gave (this week to
+ * any clan, and to this one in all) and the week's allowance, and whether they wear its cloak.
+ */
+async function hallOf(clan, userId, now) {
+    const eng = await engine();
+    const [work, mine] = await Promise.all([store.hallRooms(clan.id), store.giftTotals(userId, clan.id, isoWeek(now))]);
+    const rooms = Object.fromEntries(eng.HALL_ROOMS.map(r => [r.id, (work[r.id] || 0) / TENTHS]));
+    const stage = eng.hallStage(eng.hallLevels(rooms));
+    return {
+        clan: clan.id, rooms, stage, ...heraldry(eng, clan, stage),
+        given: { week: mine.week / TENTHS, total: mine.clan / TENTHS }, weekly: eng.WEEKLY_SECONDS, endsInMs: msToWeekEnd(now),
+        cloak: stage >= eng.CLOAK_STAGE && mine.clan >= eng.HALL.cloakHours * 3600 * TENTHS
+    };
+}
+
+/** What the members gave the hall (`members` from store.clanMembers): each one's work this week and in all, each room's builders. */
+async function hallBuildersOf(clanId, members, now) {
+    const rows = await store.hallBuilders(clanId, isoWeek(now));
+    const name = id => members.find(m => m.userId === id)?.username || null;
+    const byMember = new Map();
+    for (const r of rows) {
+        const m = byMember.get(r.userId) || { week: 0, total: 0 };
+        byMember.set(r.userId, { week: m.week + r.week / TENTHS, total: m.total + r.total / TENTHS });
+    }
+    const { HALL_ROOMS } = await engine();
+    // each room's three who gave it most, members and those who have left alike (by name while they are members)
+    const builders = Object.fromEntries(HALL_ROOMS.map(room => [room.id, rows.filter(r => r.room === room.id && name(r.userId)).sort((a, b) => b.total - a.total).slice(0, 3)
+        .map(r => ({ username: name(r.userId), work: r.total / TENTHS }))]));
+    return { byMember, builders };
+}
+
+// A gift: { room, resource, qty }. The quantity is cut to what the stored bank holds (less the gifts it has yet to give), to
+// the week's work left, and to what the room still takes; its answer is the gift, the hall, and the gifts to take.
+app.post('/api/clan/hall/give', authenticateToken, route('hall gift', async (req, res) => {
+    const now = Date.now();
+    const eng = await engine();
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
+    const body = req.body || {};
+    const room = eng.hallRoom(String(body.room || ''));
+    const resource = String(body.resource || '');
+    if (!room) return res.status(400).json({ error: 'No such room.' });
+    if (!eng.roomTakes(room, resource)) return res.status(400).json({ error: `The ${room.name} doesn't take that.` });
+    const wanted = Number(body.qty);
+    if (!Number.isSafeInteger(wanted) || wanted < 1) return res.status(400).json({ error: 'Give one or more.' });
+    const worth = Math.round(eng.giftWorth(resource) * TENTHS);
+    const week = isoWeek(now);
+    const cap = eng.ROOM_SECONDS * TENTHS;
+    for (let tries = 0; ; tries++) {
+        const [save, totals, work] = await Promise.all([store.getSave(req.user.id), store.giftTotals(req.user.id, mine.clan.id, week), store.hallRooms(mine.clan.id)]);
+        let state = null;
+        try { state = save && save.state ? JSON.parse(save.state) : null; } catch { state = null; }
+        const owed = (await store.giftsAfter(req.user.id, giftsTaken(state))).filter(g => g.resource === resource).reduce((t, g) => t + g.qty, 0);
+        const held = Math.max(0, Math.floor(num(state?.resources?.[resource])) - owed);
+        const roomLeft = cap - (work[room.id] || 0);
+        const weekLeft = eng.WEEKLY_SECONDS * TENTHS - totals.week;
+        if (roomLeft <= 0) return res.status(400).json({ error: `The ${room.name} is finished.` });
+        if (held < 1) return res.status(400).json({ error: 'Your saved bank has none of that.' });
+        if (weekLeft < worth) return res.status(400).json({ error: weekLeft <= 0 ? `This week's ${eng.HALL.weeklyHours} hours of work are given: more on Monday.` : 'Too little of this week\'s work is left for one of those.' });
+        const qty = Math.min(wanted, held, Math.floor(weekLeft / worth), Math.ceil(roomLeft / worth));
+        const seq = totals.last + 1;
+        try {
+            await store.addGift({ userId: req.user.id, seq, clanId: mine.clan.id, week, room: room.id, resource, qty, work: qty * worth, now, cap });
+        } catch (err) {
+            if (err.code === '23505' && err.constraint === 'clan_gifts_seq' && tries < 5) continue;   // a gift sent at the same time took its number: look again
+            throw err;
+        }
+        return res.json({ gift: { seq, room: room.id, resource, qty, work: qty * worth / TENTHS }, hall: await hallOf(mine.clan, req.user.id, now), hallGifts: await store.giftsAfter(req.user.id, giftsTaken(state)) });
+    }
+}));
+
+// The clan's owner picks its banner's colour and emblem, from those its hall's stage has.
+app.post('/api/clan/banner', authenticateToken, route('clan banner', async (req, res) => {
+    const now = Date.now();
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
+    if (mine.clan.ownerId !== req.user.id) return res.status(409).json({ error: 'Only the clan owner can change the banner.' });   // 409: see the kick
+    const eng = await engine();
+    const body = req.body || {};
+    const colour = eng.BANNER_COLOURS.find(c => c.id === body.colour);
+    const emblem = eng.BANNER_EMBLEMS.find(e => e.id === body.emblem);
+    if (!colour || !emblem) return res.status(400).json({ error: 'No such colour or emblem.' });
+    const { stage } = await hallOf(mine.clan, req.user.id, now);
+    if (colour.stage > stage || emblem.stage > stage) return res.status(400).json({ error: `That one comes with the ${eng.HALL_STAGES[Math.max(colour.stage, emblem.stage)].name}.` });
+    await store.setClanBanner(mine.clan.id, colour.id, emblem.id);
+    res.json({ hall: await hallOf({ ...mine.clan, colour: colour.id, emblem: emblem.id }, req.user.id, now) });
+}));
 
 // ---------- the week's clan ranking ----------
 // Clans are put in divisions by the levels of the week's boss they felled (src/data/social.js CLAN_DIVISIONS) and ranked
@@ -673,7 +791,8 @@ async function standingOf(ranking, clanId, kills) {
 app.get('/api/clans', authenticateToken, route('clans', async (req, res) => {
     const search = cleanText(req.query.search, 32);
     const crowns = await crownsFor(Date.now());
-    res.json({ clans: (await store.listClans(search, 50)).map(c => ({ ...c, crown: crowns.get(c.id) || null })), maxMembers: MAX_MEMBERS });
+    const { hallStage, hallLevels } = await engine();
+    res.json({ clans: (await store.listClans(search, 50)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id) || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
 }));
 
 app.get('/api/clans/ranking', authenticateToken, route('clan ranking', async (req, res) => {
@@ -779,12 +898,16 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     // the week's ranking: last week's crown (its standings kept first, so the clan's best week counts it), the clan's place
     // and best week, and the player's fights at the Endless Hydra
     const crowns = await crownsFor(now);
-    const [standing, record, endlessMine] = await Promise.all([
-        liveRanking(boss.week, now).then(r => standingOf(r, clanId, kills)), store.clanBestScore(clanId), store.endlessOf(req.user.id, boss.week)]);
+    const [standing, record, endlessMine, hall, built, feed] = await Promise.all([
+        liveRanking(boss.week, now).then(r => standingOf(r, clanId, kills)), store.clanBestScore(clanId), store.endlessOf(req.user.id, boss.week),
+        hallOf(clan, req.user.id, now), hallBuildersOf(clanId, rawMembers, now), store.recentGifts(clanId, 8)]);
     res.json({
         clan: { ...clan, isOwner: clan.ownerId === req.user.id, crown: crowns.get(clanId) || null },
         // a member's attack: their best of the past week (what an attack deals before its strikes and potion)
-        members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: bestAttack(m.power, now) })),
+        members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: bestAttack(m.power, now),
+            built: built.byMember.get(m.userId) || { week: 0, total: 0 } })),
+        // the hall: its rooms, stage and banner, each room's builders, and its latest gifts
+        hall: { ...hall, builders: built.builders, feed },
         // health as damage in the player's figures (the screen's); the server keeps it in the clan's attacks
         boss: { week: boss.week, level: boss.level, maxHp: asDamage(boss.maxHp, unit), hp: asDamage(boss.hp, unit), killed: boss.killedAt > 0, lastHit: lastHit ? lastHit.username : null, endsInMs: msToWeekEnd(now), nextInMs: msToDayEnd(now), kills, levels: CLAN_BOSS.levels },
         banner: { week: boss.week, kills },

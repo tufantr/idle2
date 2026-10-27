@@ -17,3 +17,7 @@ Once you have a cape, Settings shows your choices: the cloak of your [[Ranks|ran
 ## Cloaks from the festivals
 
 Each [[Weekend events|weekend event]] has a cloak of its own, sold in the event's shop for {{FESTIVAL_CLOAK_COST}} Festival Tokens while the event runs. It is dyed in the event's colour, with a silver hem where a skill cape's is gold. A festival cloak gives no bonus, but it is yours for good: wear it from Settings like a cape. If you miss one, it comes back with its event.
+
+## The clan's cloak
+
+A [[Clans and leaderboards|clan]] whose hall has reached the {{HALL_STAGES[CLOAK_STAGE].name}} gives every member who has given {{HALL.cloakHours}} hours of work to it a cloak in the clan's banner colour. Your hero puts it on when it is earned; wear it, a cape or your rank's cloak from Settings. It gives no bonus, and it goes if you leave the clan.

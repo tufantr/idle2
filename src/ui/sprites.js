@@ -7,28 +7,45 @@ import { RESOURCES } from '../data/resources.js';
 import { TOOLS } from '../data/workshop.js';
 import { rankFor } from '../data/ranks.js';
 import { lookById } from '../data/looks.js';
-import { capeWorn } from '../data/capes.js';
+import { capeWorn, CLAN_CLOAK } from '../data/capes.js';
+import { BANNER_COLOURS, bannerColour } from '../data/clanhall.js';
 import { escapeHtml as esc } from './format.js';
 
 const TIERS = 7;
 const clampTier = tier => Math.max(1, Math.min(TIERS, Math.round(Number(tier) || 1)));
 
+// A key 'tint/<colour>/<key>' is sprite <key> in a banner colour (data/clanhall.js): the clan's cloak is the white cloak in
+// its clan's colour, through an SVG filter that multiplies its shading by the colour (tintDefs, put in the page once).
+const TINTED = /^tint\/([a-z]+)\/(.+)$/;
+const untinted = key => TINTED.exec(key)?.[2] ?? key;
+const tintClass = key => (TINTED.test(key) ? ' tinted' : '');
+/** The white cloak in the clan's colour, as a sprite key (the hero's layer when he wears the clan's cloak). */
+export const clanCloakKey = colour => `tint/${bannerColour(colour).id}/hero/cloaks/white`;
+
 export function hasSprite(key) {
-    return Object.hasOwn(SPRITES, key);
+    return Object.hasOwn(SPRITES, untinted(key));
 }
 
 /** The inline style that shows cell `key`; null when the atlas has no such sprite. */
 export function spriteStyle(key) {
-    const cell = SPRITES[key];
+    const cell = SPRITES[untinted(key)];
     if (!cell) return null;
-    return `--sx:${cell[0]};--sy:${cell[1]}`;
+    const colour = TINTED.exec(key)?.[1];
+    return `--sx:${cell[0]};--sy:${cell[1]}${colour ? `;--tint:url(#tint-${colour})` : ''}`;
 }
 
 /** An element showing sprite `key` at `scale` (integer, crisp), or `fallback` HTML (an emoji) when unknown. */
 export function sprite(key, { scale = 2, cls = '', fallback = '', title = '' } = {}) {
     const style = spriteStyle(key);
     if (!style) return fallback ? `<span class="sp-fallback ${cls}" style="--k:${scale}" ${title ? `title="${esc(title)}"` : ''}>${fallback}</span>` : '';
-    return `<i class="spr ${cls}" style="${style};--k:${scale}" ${title ? `title="${esc(title)}"` : ''} aria-hidden="true"></i>`;
+    return `<i class="spr ${cls}${tintClass(key)}" style="${style};--k:${scale}" ${title ? `title="${esc(title)}"` : ''} aria-hidden="true"></i>`;
+}
+
+/** The banner colours as SVG filters, for the page once (src/main.js): `filter: url(#tint-<colour>)` multiplies by the colour. */
+export function tintDefs() {
+    const part = (hex, i) => (parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16) / 255).toFixed(3);
+    const filter = c => `<filter id="tint-${c.id}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${part(c.hex, 0)} 0 0 0 0 0 ${part(c.hex, 1)} 0 0 0 0 0 ${part(c.hex, 2)} 0 0 0 0 0 1 0"/></filter>`;
+    return `<svg class="tint-defs" aria-hidden="true" focusable="false">${BANNER_COLOURS.map(filter).join('')}</svg>`;
 }
 
 /**
@@ -89,8 +106,9 @@ export function slotSpriteKey(type) {
 export function heroLayers(state, { tool = null, bare = false } = {}) {
     const eq = state.equipped || {};
     const tierOf = slot => (eq[slot] ? clampTier(eq[slot].tier) : 0);
-    const cape = capeWorn(state);   // a skill's cape (data/capes.js), or the rank's cloak
-    const cloak = cape && hasSprite(`hero/capes/${cape.skill}`) ? `hero/capes/${cape.skill}` : `hero/cloaks/${rankFor(state.prestige?.count || 0).cloak}`;
+    const cape = capeWorn(state);   // a skill's cape (data/capes.js), the clan's cloak, or the rank's cloak
+    const cloak = cape?.skill === CLAN_CLOAK.skill ? clanCloakKey(state.clanHall?.colour)
+        : cape && hasSprite(`hero/capes/${cape.skill}`) ? `hero/capes/${cape.skill}` : `hero/cloaks/${rankFor(state.prestige?.count || 0).cloak}`;
     const look = lookById(state.hero?.look);   // the body and hair the player picked (data/looks.js)
     const base = `hero/look/${look.id}/base`;
     const layers = [hasSprite(cloak) ? cloak : 'hero/cloak', hasSprite(base) ? base : 'hero/base'];
@@ -116,7 +134,7 @@ export function heroLayers(state, { tool = null, bare = false } = {}) {
 
 /** The hero drawn from his layers, at `scale`. */
 export function heroSprite(state, { scale = 3, tool = null, bare = false, cls = '' } = {}) {
-    return `<span class="hero-doll ${cls}" style="--k:${scale}" aria-hidden="true">${heroLayers(state, { tool, bare }).map(key => `<i class="spr" style="${spriteStyle(key)}"></i>`).join('')}</span>`;
+    return `<span class="hero-doll ${cls}" style="--k:${scale}" aria-hidden="true">${heroLayers(state, { tool, bare }).map(key => `<i class="spr${tintClass(key)}" style="${spriteStyle(key)}"></i>`).join('')}</span>`;
 }
 
 export { ATLAS };

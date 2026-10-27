@@ -32,10 +32,16 @@ export const festivalCloak = key => FESTIVAL_CLOAKS.find(c => c.skill === key) |
 /** Festival cloaks this hero owns. */
 export const festivalCloaksOwned = state => FESTIVAL_CLOAKS.filter(c => !!state?.events?.cloaks?.[c.event]);
 
-export const capeFor = skill => CAPES.find(c => c.skill === skill) || festivalCloak(skill);
+// The clan's cloak (data/clanhall.js): the white cloak in the clan's banner colour (src/ui/sprites.js), worn like a cape by a
+// member who has given HALL.cloakHours of work to the clan's hall once it stands at the Great Hall. The server says so
+// (state.clanHall.cloak): leaving the clan takes it off.
+export const CLAN_CLOAK = { skill: 'clan', name: 'Clan cloak', perk: '' };
 
-/** Has this hero earned the cape of `skill` (level 99 in it), or bought the festival cloak `skill`? */
+export const capeFor = skill => CAPES.find(c => c.skill === skill) || festivalCloak(skill) || (skill === CLAN_CLOAK.skill ? CLAN_CLOAK : null);
+
+/** Has this hero earned the cape of `skill` (level 99 in it), bought the festival cloak `skill`, or the clan's cloak? */
 export const capeEarned = (state, skill) => {
+    if (skill === CLAN_CLOAK.skill) return state?.clanHall?.cloak === true;
     const fest = festivalCloak(skill);
     if (fest) return !!state?.events?.cloaks?.[fest.event];
     return !!CAPES.find(c => c.skill === skill) && levelForXp(state?.skills?.[skill]?.xp || 0) >= MAX_LEVEL;

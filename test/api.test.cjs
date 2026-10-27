@@ -77,6 +77,18 @@ const peek = {
         await pool.query(`UPDATE clan_attacks SET damage = ROUND(damage * $1::double precision) WHERE clan_id = ${clan}`, [factor, username]);
     }
 };
+peek.hallWork = async (username, rooms) => {   // a clan's hall with each room at this much work (seconds), as if built so far
+    if (memory) {
+        const user = memory.db.users.find(u => u.username === username);
+        const clanId = memory.db.members.find(m => m.userId === user.id).clanId;
+        memory.db.hall = memory.db.hall.filter(h => h.clanId !== clanId);
+        for (const [room, secs] of Object.entries(rooms)) memory.db.hall.push({ clanId, room, given: secs * 10 });
+        return;
+    }
+    const clan = '(SELECT clan_id FROM clan_members WHERE user_id = (SELECT id FROM users WHERE username = $1))';
+    await pool.query(`DELETE FROM clan_hall WHERE clan_id = ${clan}`, [username]);
+    for (const [room, secs] of Object.entries(rooms)) await pool.query(`INSERT INTO clan_hall (clan_id, room, given) VALUES (${clan}, $2, $3)`, [username, room, secs * 10]);
+};
 /** Two figures alike to a part in a thousand (the boss is kept in thousandths of an attack). */
 const near = (a, b, why = '') => assert.ok(Math.abs(a - b) <= 1e-3 * Math.max(Math.abs(a), Math.abs(b), 1), `${a} vs ${b} ${why}`);
 
@@ -88,7 +100,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -1277,4 +1289,109 @@ test("the week's ranking: divisions by the levels felled, the Endless Hydra at t
     assert.equal(next.endless.open, false);
     const last = (await (await get('/clans/ranking', a1)).json()).last;
     assert.deepEqual(last.divisions.map(d => [d.id, d.clans.map(c => c.name)]), [['silver', ['Hydra Hunters']], ['bronze', ['Deep Divers']]]);
+});
+
+test('the clan hall: gifts come from the stored bank, count in work, three hours a member a week; rooms level, the hall grows, ten hours give the cloak', async () => {
+    const { giftWorth, HALL, LEVEL_AT, ROOM_SECONDS, HALL_ROOMS } = await import('../src/data/clanhall.js');
+    toMonday();
+    const a = await register('hall_a');
+    const b = await register('hall_b');
+    const { clanId } = await (await post('/clans', { name: 'Hall Builders', tag: 'HALL' }, a)).json();
+    await post('/clans/join', { clanId }, b);
+    const bank = { copper_bar: 10000, runite_bar: 40, cooked_shark: 5, potato: 0 };
+    await post('/save', { state: { ...heroSave(), resources: bank } }, a);
+    const week = HALL.weeklyHours * 3600;
+
+    const fresh = (await (await get('/clan', a)).json()).hall;
+    assert.deepEqual([fresh.stage, fresh.colour, fresh.emblem, fresh.cloak, fresh.weekly], [0, 'crimson', 'sword', false, week]);
+    assert.deepEqual(Object.values(fresh.rooms), [0, 0, 0, 0, 0, 0]);
+
+    // a hundred copper bars to the Forge: 5 s of work each (the ore's mining and the smelting)
+    const give = (token, room, resource, qty) => post('/clan/hall/give', { room, resource, qty }, token);
+    assert.equal(giftWorth('copper_bar'), 5);
+    const first = await (await give(a, 'forge', 'copper_bar', 100)).json();
+    assert.deepEqual([first.gift.seq, first.gift.qty, first.gift.work, first.hall.rooms.forge, first.hall.given.week], [1, 100, 500, 500, 500]);
+    assert.deepEqual(first.hallGifts, [{ seq: 1, resource: 'copper_bar', qty: 100 }], 'the stored save has yet to give them');
+
+    // what a room takes, and what the bank holds
+    assert.match((await (await give(a, 'forge', 'cooked_shark', 1)).json()).error, /doesn't take/);
+    assert.match((await (await give(a, 'garden', 'potato', 1)).json()).error, /none of that/);
+    assert.equal((await give(a, 'cellar', 'potato', 1)).status, 400, 'no such room');
+    assert.equal((await give(a, 'forge', 'copper_bar', 0)).status, 400);
+    assert.equal((await give(b, 'forge', 'copper_bar', 1)).status, 400, "another member's bank is their own");
+
+    // the stored bank less what it has yet to give, and the week's three hours: no more than either
+    const rest = await (await give(a, 'forge', 'copper_bar', 1e9)).json();
+    assert.equal(rest.gift.qty, (week - 500) / 5);
+    assert.equal(rest.hall.given.week, week);
+    assert.deepEqual(rest.hallGifts.map(g => g.seq), [1, 2]);
+    const spent = await give(a, 'kitchen', 'cooked_shark', 1);
+    assert.equal(spent.status, 400);
+    assert.match((await spent.json()).error, /more on Monday/);
+
+    // the game takes them from its bank and says so in its next save: nothing waits any more; three hours are a level
+    const left = bank.copper_bar - 100 - rest.gift.qty;
+    const saved = await (await post('/save', { state: { ...heroSave(), resources: { ...bank, copper_bar: left }, clanHall: { lastGift: 2 } } }, a)).json();
+    assert.deepEqual([saved.hallGifts, saved.hall.rooms.forge, saved.hall.stage], [[], week, 0]);
+    assert.ok(week >= LEVEL_AT[0] && week < LEVEL_AT[1], 'the Forge at level 1');
+    const loaded = await (await get('/load', a)).json();
+    assert.deepEqual([loaded.hallGifts, loaded.hall.rooms.forge, loaded.banner.kills], [[], week, 0]);
+    // a page running the older game drops `clanHall` but keeps `meta`: its copy of the number counts
+    const older = await (await post('/save', { state: { ...heroSave(), meta: { playtimeMs: 0, savedAt: clock, hallGift: 2 }, resources: { ...bank, copper_bar: left } } }, a)).json();
+    assert.deepEqual(older.hallGifts, []);
+    assert.equal((await (await get('/load', b)).json()).hall.given.week, 0, 'the allowance is each member\'s');
+
+    // a new week: three hours more. Each member's work shows in the list, each room's builders, the latest gifts
+    toMonday();
+    const runite = await (await give(a, 'forge', 'runite_bar', 1000)).json();
+    assert.deepEqual([runite.gift.seq, runite.gift.qty, runite.gift.work], [3, 40, 40 * giftWorth('runite_bar')]);
+    const view = await (await get('/clan', b)).json();
+    const total = week + runite.gift.work;
+    assert.deepEqual(view.members.map(m => [m.username, m.built.total, m.built.week]), [['hall_a', total, runite.gift.work], ['hall_b', 0, 0]]);
+    assert.deepEqual(view.hall.builders.forge, [{ username: 'hall_a', work: total }]);
+    assert.deepEqual(view.hall.feed.map(g => [g.username, g.resource, g.qty]), [['hall_a', 'runite_bar', 40], ['hall_a', 'copper_bar', rest.gift.qty], ['hall_a', 'copper_bar', 100]]);
+    assert.deepEqual([view.hall.given.total, view.hall.cloak], [0, false], "b's own");
+
+    // the owner picks the banner, from what the hall's stage has
+    assert.equal((await post('/clan/banner', { colour: 'azure', emblem: 'shield' }, b)).status, 409, 'only the owner');
+    assert.match((await (await post('/clan/banner', { colour: 'forest', emblem: 'sword' }, a)).json()).error, /Longhouse/);
+    assert.equal((await post('/clan/banner', { colour: 'plaid', emblem: 'sword' }, a)).status, 400);
+    const picked = await (await post('/clan/banner', { colour: 'azure', emblem: 'shield' }, a)).json();
+    assert.deepEqual([picked.hall.colour, picked.hall.emblem], ['azure', 'shield']);
+
+    // three more weeks of copper (the stored bank still less what the save has yet to give), then the hall at the Great
+    // Hall: ten hours given wear the cloak, nothing given doesn't
+    for (let w = 0; w < 3; w++) { toMonday(); assert.equal((await give(a, 'forge', 'copper_bar', 1e9)).status, 200); }
+    const out = await give(a, 'forge', 'copper_bar', 1);
+    assert.match((await out.json()).error, /more on Monday/, "the week's three hours given");
+    await peek.hallWork('hall_a', Object.fromEntries(HALL_ROOMS.map(r => [r.id, LEVEL_AT[2]])));
+    const great = (await (await get('/clan', a)).json()).hall;
+    assert.equal(great.stage, 2, 'eighteen room levels: the Great Hall');
+    assert.ok(great.given.total >= HALL.cloakHours * 3600, `${great.given.total} s given`);
+    assert.equal(great.cloak, true);
+    assert.equal((await (await get('/clan', b)).json()).hall.cloak, false);
+    assert.equal((await (await get('/clans?search=Builders', b)).json()).clans[0].stage, 2, "the list shows the hall's stage");
+    assert.equal((await (await post('/clan/banner', { colour: 'violet', emblem: 'griffin' }, a)).json()).hall.colour, 'violet');
+
+    // a finished room takes nothing more; leaving leaves the gifts behind
+    await peek.hallWork('hall_a', { forge: ROOM_SECONDS });   // (the same week: a finished room says so before the week's work does)
+    assert.match((await (await give(a, 'forge', 'copper_bar', 1)).json()).error, /finished/);
+    assert.equal((await post('/clans/leave', {}, a)).status, 200);
+    assert.equal((await (await get('/clan', b)).json()).hall.rooms.forge, ROOM_SECONDS);
+    const outside = await (await get('/load', a)).json();
+    assert.deepEqual([outside.hall, outside.banner], [null, null]);
+    assert.ok(outside.hallGifts.length > 0, 'the gifts its save has yet to give still wait for the game');
+});
+
+test('gifts sent at once each take their own number: the bank gives each thing once', async () => {
+    toMonday();
+    const p = await register('hall_rush');
+    await post('/clans', { name: 'Rushers', tag: 'RUSH' }, p);
+    await post('/save', { state: { ...heroSave(), resources: { runite_bar: 10 } } }, p);
+    const answers = await Promise.all(Array.from({ length: 4 }, () => post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 3 }, p)));
+    const given = [];
+    for (const r of answers) if (r.status === 200) given.push((await r.json()).gift);
+    assert.equal(given.reduce((t, g) => t + g.qty, 0), 10, 'ten bars, no more');
+    assert.deepEqual(given.map(g => g.seq).sort((x, y) => x - y), given.map((_, i) => i + 1));
+    assert.ok(answers.every(r => r.status === 200 || r.status === 400));
 });

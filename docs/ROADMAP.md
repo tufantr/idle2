@@ -1428,6 +1428,12 @@ Keeping it running:
       skill meets what it eases, kept through prestige, its charges shown in its skill's header; a weekend event's shop
       sells them for 40 Festival Tokens too. Also: a save's camp levels are capped where gold could ever reach (a forged
       1e300 made attack Infinity), and the War Tree's ranks and the charms are mirrored in `meta` against older pages
+- [x] **The Clan Hall** (the owner's go, 27 October 2026; DESIGN §3.35): members give bars, ores, logs, raw meat and fish,
+      food, herbs, potions, crops, gems and essence to six rooms, counted in the work they take to make, three hours of
+      work a member a week; each room's five levels give every member a small bonus to skilling or supplies; the hall
+      grows from a Camp to a Citadel on five Gemini paintings of one clearing, opening colours and emblems for the banner
+      its owner picks; from the Great Hall, ten hours given wear the clan's cloak, the rank cloak in the banner's colour.
+      A Hall column in the members table, the stage on the clan list, a card for each room's level, stage and the cloak
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

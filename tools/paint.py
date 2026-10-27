@@ -51,7 +51,9 @@ CARDS = ['market', 'shrine', 'hall', 'festival', 'clanhall', 'farm', 'course', '
 # The menus' rooms: what stands behind the page (the guild hall) and behind panels that have no
 # place of their own (src/ui/render.js painted()): the inventory's armory, chest, storeroom and
 # vault, the perks' library, the settings' study, and the fight's supply table and war table.
-ROOMS = ['guildhall', 'armory', 'chest', 'storeroom', 'vault', 'library', 'study', 'supplies', 'wartable', 'charms']
+ROOMS = ['guildhall', 'armory', 'chest', 'storeroom', 'vault', 'library', 'study', 'supplies', 'wartable', 'charms',
+         # the Clan Hall's stages (src/data/clanhall.js HALL_STAGES), the same clearing as the hall grows on it
+         'clancamp', 'clanlonghouse', 'clangreathall', 'clankeep', 'clancitadel']
 PLACES = BATTLE + ['river', 'camp', 'workshop', 'forge', 'lab'] + CARDS + ROOMS
 LIGHTNING = {'highland', 'titan', 'storm'}  # their sky keeps the lightning flicker under the slow drift
 # How far down the painting the visible band sits (CSS background-position y). The ground the

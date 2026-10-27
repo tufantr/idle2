@@ -223,7 +223,8 @@ export class CloudClient {
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
         this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null, state?.meta.createdAt ?? null);
-        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0, banner: data.banner ?? null };
+        return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0, banner: data.banner ?? null,
+            hall: data.hall ?? null, hallGifts: Array.isArray(data.hallGifts) ? data.hallGifts : [] };   // the clan's hall, and its gifts the save has yet to give
     }
 
     /**
@@ -247,6 +248,10 @@ export class CloudClient {
     leaveClan() { return this.request('/clans/leave', { method: 'POST', body: {} }); }
     kickMember(username) { return this.request('/clan/kick', { method: 'POST', body: { username } }); }
     myClan() { return this.request('/clan'); }
+    /** A gift to room `room` of the clan's hall: `qty` of `resource`, from the bank of the save the server keeps. */
+    hallGive(room, resource, qty) { return this.request('/clan/hall/give', { method: 'POST', body: { room, resource, qty } }); }
+    /** The clan's banner, its owner's to pick: a colour and an emblem its hall's stage has. */
+    setClanBanner(colour, emblem) { return this.request('/clan/banner', { method: 'POST', body: { colour, emblem } }); }
     /** A clan attack as it was fought: when the player struck (ms into the fight) and how long it lasted. */
     clanAttack({ strikes = [], ms, at, endless = false } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms, fightAt: at, ...(endless ? { endless: true } : {}) } }); }   // `at`: the fight's own mark, so a resend is never a second attack; `endless`: at the Endless Hydra
     /** The week's clan ranking: every clan in its division, and last week's crowns. */

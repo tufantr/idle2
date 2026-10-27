@@ -3,9 +3,11 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [] };
-    let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0 };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [] };
+    let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
+
+    const hallOf = clanId => Object.fromEntries(db.hall.filter(h => h.clanId === clanId).map(h => [h.room, h.given]));
 
     const store = {
         db,
@@ -77,13 +79,13 @@ function createMemoryStore() {
             const q = (search || '').toLowerCase();
             return db.clans
                 .filter(c => c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q))
-                .map(c => ({ id: c.id, name: c.name, tag: c.tag, description: c.description, lookingFor: c.lookingFor, members: db.members.filter(m => m.clanId === c.id).length }))
+                .map(c => ({ id: c.id, name: c.name, tag: c.tag, description: c.description, lookingFor: c.lookingFor, members: db.members.filter(m => m.clanId === c.id).length, hall: hallOf(c.id) }))
                 .sort((a, b) => b.members - a.members || a.id - b.id)
                 .slice(0, limit);
         },
         async createClan({ name, tag, description, lookingFor, ownerId, now }) {
             if (db.clans.some(c => c.name === name)) throw unique();
-            const clan = { id: ++seq.clans, name, tag, description, lookingFor, ownerId, createdAt: now };
+            const clan = { id: ++seq.clans, name, tag, description, lookingFor, ownerId, createdAt: now, colour: null, emblem: null };
             db.clans.push(clan);
             return clan.id;
         },
@@ -98,6 +100,7 @@ function createMemoryStore() {
         async deleteClan(clanId) {
             db.bosses = db.bosses.filter(b => b.clanId !== clanId);
             db.shares = db.shares.filter(s => s.clanId !== clanId);
+            db.hall = db.hall.filter(h => h.clanId !== clanId);   // its gifts stay: they count each giver's week
             db.clans = db.clans.filter(c => c.id !== clanId);   // the attacks stay: they count a player's three a day
         },
         async membershipOf(userId) {
@@ -287,6 +290,45 @@ function createMemoryStore() {
         },
         async clanBestScore(clanId) {
             return Math.max(0, ...db.rankings.filter(r => r.clanId === clanId).map(r => r.score));
+        },
+
+        async hallRooms(clanId) {
+            return hallOf(clanId);
+        },
+        async addGift({ userId, seq: n, clanId, week, room, resource, qty, work, now, cap }) {
+            if (db.gifts.some(g => g.userId === userId && g.seq === n)) throw unique('clan_gifts_seq');
+            db.gifts.push({ id: ++seq.gifts, userId, seq: n, clanId, week, room, resource, qty, work, at: now });
+            let row = db.hall.find(h => h.clanId === clanId && h.room === room);
+            if (!row) db.hall.push(row = { clanId, room, given: 0 });
+            row.given = Math.min(row.given + work, cap);
+            return row.given;
+        },
+        async giftTotals(userId, clanId, week) {
+            const mine = db.gifts.filter(g => g.userId === userId);
+            const sum = list => list.reduce((t, g) => t + g.work, 0);
+            return { last: Math.max(0, ...mine.map(g => g.seq)), week: sum(mine.filter(g => g.week === week)), clan: sum(mine.filter(g => g.clanId === clanId)) };
+        },
+        async giftsAfter(userId, after) {
+            return db.gifts.filter(g => g.userId === userId && g.seq > after).sort((a, b) => a.seq - b.seq).slice(0, 500).map(g => ({ seq: g.seq, resource: g.resource, qty: g.qty }));
+        },
+        async hallBuilders(clanId, week) {
+            const rows = new Map();
+            for (const g of db.gifts.filter(x => x.clanId === clanId)) {
+                const key = `${g.userId}:${g.room}`;
+                if (!rows.has(key)) rows.set(key, { userId: g.userId, room: g.room, total: 0, week: 0 });
+                const r = rows.get(key);
+                r.total += g.work;
+                if (g.week === week) r.week += g.work;
+            }
+            return [...rows.values()];
+        },
+        async recentGifts(clanId, limit) {
+            return db.gifts.filter(g => g.clanId === clanId).sort((a, b) => b.id - a.id).slice(0, limit)
+                .map(g => ({ username: db.users.find(u => u.id === g.userId)?.username, room: g.room, resource: g.resource, qty: g.qty, at: g.at }));
+        },
+        async setClanBanner(clanId, colour, emblem) {
+            const c = db.clans.find(x => x.id === clanId);
+            if (c) Object.assign(c, { colour, emblem });
         },
 
         async addReward(userId, kind, payloadJson, now, dedupe = null) {

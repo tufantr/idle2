@@ -25,6 +25,8 @@ import { capeEarned, festivalCloak, FESTIVAL_CLOAKS } from '../data/capes.js';
 import { PLAYTEST_KINDS, PLAYTEST_MAX } from '../systems/playtest.js';
 import { CHRONICLE_KINDS, CHRONICLE_MAX } from '../systems/chronicle.js';
 import { CLAN_FIGHT_MS, CLAN_BANNER } from '../data/social.js';
+import { HALL_ROOMS, HALL_LEVELS, HALL_STAGES, BANNER_COLOURS, BANNER_EMBLEMS } from '../data/clanhall.js';
+import { emptyHall } from '../systems/clanhall.js';
 import { LORDS } from '../data/zones.js';
 
 // The perk reset (the owner, 15 October 2026, after the perks deepened and their prices rose): every save from
@@ -106,6 +108,9 @@ export function createDefaultState(now = Date.now()) {
         clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }, and { endless, dealt } at the Endless Hydra
         clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at, endless? }
         clanBanner: { week: '', kills: 0 },   // the clan's banner, as the server last said it: levels felled in that ISO week (data/social.js CLAN_BANNER)
+        // the clan's hall, as the server last said it (systems/clanhall.js): each room's level, the stage, the banner's colour and
+        // emblem, whether the hero wears the clan's cloak; and the number of the hero's last gift to it the bank has given
+        clanHall: emptyHall(),
         pets: {},
         bonfire: { until: 0 },             // wall-clock time the bonfire burns out
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
@@ -810,6 +815,21 @@ function normalise(data, now) {
     // the clan's banner: a week the server named, and the levels felled in it
     const banner = isPlainObject(state.clanBanner) ? state.clanBanner : {};
     state.clanBanner = /^\d{4}-W\d{2}$/.test(String(banner.week)) ? { week: banner.week, kills: intIn(banner.kills, 0, CLAN_BANNER.length - 1, 0) } : { week: '', kills: 0 };
+    // the clan's hall: rooms of known ids at their levels, a known colour and emblem, and the last gift taken from the bank
+    // (mirrored into `meta.hallGift`, as the forge is: a page running the older game drops `clanHall`, and a gift's things
+    // would be taken from the bank again)
+    const hall = isPlainObject(state.clanHall) ? state.clanHall : {};
+    const rooms = isPlainObject(hall.rooms) ? hall.rooms : {};
+    state.clanHall = {
+        clan: intIn(hall.clan, 0, 2 ** 31 - 1, 0),
+        rooms: Object.fromEntries(HALL_ROOMS.map(r => [r.id, intIn(rooms[r.id], 0, HALL_LEVELS, 0)])),
+        stage: intIn(hall.stage, 0, HALL_STAGES.length - 1, 0),
+        colour: BANNER_COLOURS.some(c => c.id === hall.colour) ? hall.colour : '',
+        emblem: BANNER_EMBLEMS.some(e => e.id === hall.emblem) ? hall.emblem : '',
+        cloak: hall.cloak === true,
+        lastGift: Math.max(intIn(hall.lastGift, 0, 2 ** 31 - 1, 0), intIn(state.meta.hallGift, 0, 2 ** 31 - 1, 0))
+    };
+    state.meta.hallGift = state.clanHall.lastGift;
     const run = state.combat.dungeon;
     const runDungeon = run ? DUNGEONS.find(d => d.id === run.id) : null;
     if (state.combat.mode !== 'dungeon' || !runDungeon) {

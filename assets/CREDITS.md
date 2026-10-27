@@ -45,8 +45,9 @@ figure on its horizon painted out by hand), the fifteen strata of the Abyss (wee
 frozen, writhing, shadow, storm, starless, iron, hollow, choir, glass, rot, rift, pandemonium; painted
 in October 2026), the pictures for cards and banners (market, shrine, hall, festival, clanhall,
 farm, course; the farm and the course are also the Farming and Agility stages), the world map, and
-the nine rooms behind the menus' panels (guild hall, armory, chest, storeroom, vault, library,
-study, supply table, war table).
+the ten rooms behind the menus' panels (guild hall, armory, chest, storeroom, vault, library,
+study, supply table, war table, and the Charm Maker's bench, painted in October 2026), and the five
+stages of the Clan Hall (camp, longhouse, great hall, keep, citadel: one clearing, painted in October 2026).
 
 `paint/cards/*.webp`, the ninety pictures on the action cards, are AI-generated with Google Gemini
 too, nine to a sheet from the prompts in `tools/cards.py`, and cut out and scaled by that script.

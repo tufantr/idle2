@@ -1,6 +1,6 @@
 ---
 path: /clans
-keywords: clans, clan, clan boss, weekly boss, clan banner, banner, leaderboards, leaderboard, account, cloud save, sign in, log in, register, attack, rewards, opt in, ranking
+keywords: clans, clan, clan boss, weekly boss, clan banner, banner, leaderboards, leaderboard, account, cloud save, sign in, log in, register, attack, rewards, opt in, ranking, clan hall, hall, gifts, give, donate, rooms, forge, library, citadel, clan cloak
 ---
 Clans are the game's online side. Join one, and every week the whole clan fights one shared boss together: each level of it the clan fells raises the **clan banner**, which makes every member stronger until the week ends. Beside the clans are the leaderboards, where you can see how far other heroes have come.
 
@@ -59,6 +59,23 @@ Every week the clans are ranked, and the top three of each division wear a crown
 - **Depth.** A fight counts by how many of the Hydra's levels it breaks through. Each level is a fifth tougher than the last, and the first is about a new hero's whole fight, so a hero a thousand times stronger goes about 38 levels deeper, not a thousand times as far.
 - **The clan's depth** is its best {{ENDLESS.counted}} members' together. Accounts whose saves showed impossible numbers are left out.
 - The Clan tab shows the Hydra under the week's boss, your division, place and depth, the week's table by division, last week's crowns and your clan's best week.
+
+## The clan hall
+
+Members build their clan a hall from what they make. The Clan tab shows it under the week's boss: its painting, which grows with it, the clan's banner, and six rooms.
+
+- **Six rooms**, each taking one kind of goods from your bank: {{HALL_ROOMS.map(r => `the ${r.name} ${r.takesText}`).join('; ')}}. Tap a room's Give, then pick what to give and how much; Give glows when your bank has something for it.
+- **Gifts count in work:** the time the thing takes to make, with what went into it: a copper bar {{giftWorth('copper_bar')}} seconds (its ore mined, then smelted), a runite bar {{Math.round(giftWorth('runite_bar'))}}, a crop its plot's growing time over its harvest, a gem {{giftWorth('amethyst')}} seconds a tier, essence a second each. So an hour of a new member's work counts as much as an hour of a veteran's.
+- **{{HALL.weeklyHours}} hours of work a week each**, whatever your clan, from Monday 00:00 UTC. A gift is cut to what's left of your week, to what your saved bank holds and to what the room still takes. The game saves your hero to the cloud first: gifts come out of the bank of your saved game.
+- **Levels:** each room has {{HALL_LEVELS}} levels, taking {{HALL.levelHours.slice(0, -1).join(', ')}} and {{HALL.levelHours.at(-1)}} hours of work in turn ({{LEVEL_AT.at(-1) / 3600}} hours a room). Every level gives **every member** a bonus while they stay in the clan, whoever gave the work (the table below).
+- None of it adds attack, defence or health: the boss, the ranking and the leaderboards stay as they were. Nothing decays, and a member who leaves leaves their gifts behind.
+- The members table shows the work each member has given the hall (this week's on hover), and each room who built it most. The latest gifts are listed under the rooms.
+
+{{table(['Room', 'Takes', 'A level gives', 'At level 5'], HALL_ROOMS.map(r => [r.name, r.takesText, r.text(1), r.text(5)]), { sort: false })}}
+
+As its rooms are built, the hall grows, and its painting with it: {{HALL_STAGES.map(st => `the ${st.name}${st.levels ? ` at ${st.levels} room levels` : ''}`).join(', ')}}. Each stage brings more colours and emblems for the clan's **banner**, which the clan's owner picks by tapping it; the clan list shows every clan's stage.
+
+**The clan's cloak:** from the {{HALL_STAGES[CLOAK_STAGE].name}}, a member who has given {{HALL.cloakHours}} hours of work to the clan's hall wears its cloak, in the banner's colour, and can change it in Settings like a [[/capes|cape]]. It is a look only, and it goes if you leave the clan.
 
 ## Leaderboards
 

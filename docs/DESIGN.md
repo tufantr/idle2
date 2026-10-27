@@ -1960,10 +1960,59 @@ mirrored in `meta.charms` as the forge is, since the essence was paid.
 - **Festival Tokens** buy them too: a weekend event's shop sells each charm opened for 40 tokens a purchase
   (`CHARM_TOKEN_COST`, `buyEventCharm` in `src/systems/events.js`), a late use for tokens once the cloaks are bought.
 
+### 3.35 The Clan Hall: a hall the clan builds from what its members make
+
+The owner's favourite of the clan ideas (27 October 2026): members give what they already make, and the clan's hall grows
+with it, as RuneScape's Clan Citadels and Clash of Clans' Clan Capital do. Approved as proposed: bonuses to skilling and
+supplies only, three hours of work a member a week, anyone gives to any room, and the clan's cloak from the Great Hall.
+`src/data/clanhall.js` (the rooms, stages, colours and what a gift is worth), `src/systems/clanhall.js` (the game's copy),
+the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/store.js`.
+
+| Room | Takes | A level gives every member |
+|---|---|---|
+| Forge | bars | +2% Smithing and Crafting speed |
+| Stores | ores, logs, raw meat and fish | +2% Mining, Woodcutting and Hunting speed |
+| Kitchen | cooked food | food heals 4% more |
+| Apothecary | herbs and potions | potion doses last 5% longer |
+| Garden | crops | harvests 3% bigger |
+| Library | gems and essence | +2% XP in every skill but Combat (`skillXp`, into `xpMult` and not `combatXpMult`) |
+
+- **Work, not count.** A gift counts the seconds its things take to make at base speed, their inputs' too (`giftWorth`:
+  a copper bar 5, a runite bar 15.8, a cooked shark 12.6, a crop its plot's growing time over its average harvest and six
+  plots, a gem 10 a tier, voidstone 120, essence 1), so an hour of a new member's work counts as much as a veteran's.
+- **Levels.** Five a room at 2, 6, 15, 30 and 60 hours of work (`HALL.levelHours`): 113 hours a room, 678 the hall. The
+  bonuses are modifier pieces (`HALL_ROOMS[].mods`, times the level, in `collectModifiers`), for as long as the hero is in
+  the clan; nothing touches attack, defence or health, so the boss, the ranking and the boards stay as they were.
+- **The week.** Each member gives at most `HALL.weeklyHours` (3) hours of work a week (the ISO week, whatever the clan):
+  a deep bank holds hundreds of hours (the simulated stage-1,000 hero 1,800, mostly gems), and the allowance makes every
+  member count alike and a stockpile build nothing in a day. A clan of five fills the Great Hall in about three weeks and
+  the Citadel in some 45; twenty members in 11. Nothing decays (RuneScape cut its citadels' upkeep by four fifths in 2017
+  after clans found it a chore); gifts stay with the clan when a member leaves.
+- **Stages.** Camp, Longhouse (6 room levels), Great Hall (12), Keep (20), Citadel (30), each a Gemini painting of the same
+  clearing with the hall grown on it (`assets/paint/clan<stage>.webp`), shown across the top of the hall on the Clan tab.
+  Each opens more colours and emblems for the clan's banner, which its owner picks (`POST /api/clan/banner`); the clan list
+  shows each clan's stage.
+- **The cloak.** From the Great Hall a member who has given the clan `HALL.cloakHours` (10) hours of work wears its cloak
+  if they like, put on the first time like a new skill cape: the white rank cloak in the banner's colour, through an SVG
+  filter that multiplies its shading by the colour (`tintDefs` in `src/ui/sprites.js`; a key `tint/<colour>/<sprite>`),
+  since the atlas could not take new cells.
+- **The bank.** The server gives from the bank of the save it keeps, and the game uploads before it gives. Each player's
+  gifts are numbered (`seq`, unique per player: two gifts sent at once can't both pass the week's check; the second looks
+  again). A save says how many of them its bank has given (`state.clanHall.lastGift`); the server takes the rest from the
+  stored bank before it checks a gift, and every save, load and gift answer hands them to the game (`hallGifts`), which
+  takes each from its bank once (`applyHallGifts`). A crash before the next upload, or another device, still loses them.
+- **On screen.** The hall's panel on the Clan tab: the stage painted with the banner on its pole, the week's work left, six
+  room cards (a painting with the goods and five pips, the work to the next level, the bonus, Give, glowing when the bank
+  has something for it; who built it most on hover), the cloak and the latest gifts. Give opens a dialog of what the bank
+  holds for the room, the work each counts, and a slider (no more than the bank, the week and the room take). The members
+  table gains a Hall column (in all; this week's on hover). A room's level, a new stage and the cloak each have a card.
+  The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
+  signed in, the tool answering the API.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
-level, perks, achievements, pets, skill capes, dungeon milestones, Titans defeated, agility obstacles
+level, perks, achievements, pets, skill capes, the clan hall's rooms, dungeon milestones, Titans defeated, agility obstacles
 (× their level), potions, tools, mini-game boosts, the bonfire, a running weekend event and Focus — into one
 object; `deriveStats` turns it into the numbers combat and skilling use. Mastery is the one bonus
 that belongs to a single action rather than a skill: `resolveAction` attaches it to the action, and
@@ -2448,6 +2497,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
                       · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
                       · capes (skill capes at 99) · trials (the Trials: rules, first tiers)
+                      · clanhall (the Clan Hall's rooms, stages, banner colours, what a gift is worth)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, uniques found, the Seal, Titan) · inventory (bag, salvage, reforge)
                       · anvil (reinforcing and rerolling worn gear with bars) · bench (the jeweller's bench: jewellery slots with gems)
@@ -2455,6 +2505,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
                       · disclosure (which pieces of the screens have opened for the player)
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
+                      · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
