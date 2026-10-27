@@ -656,7 +656,8 @@ async function hallBuildersOf(clanId, members, now) {
 }
 
 // A gift: { room, resource, qty }. The quantity is cut to what the stored bank holds (less the gifts it has yet to give), to
-// the week's work left, and to what the room still takes; its answer is the gift, the hall, and the gifts to take.
+// the week's work left and to what the room still takes (each by its last thing, which may go a little over); its answer is
+// the gift, the hall, and the gifts to take.
 app.post('/api/clan/hall/give', authenticateToken, route('hall gift', async (req, res) => {
     const now = Date.now();
     const eng = await engine();
@@ -682,8 +683,10 @@ app.post('/api/clan/hall/give', authenticateToken, route('hall gift', async (req
         const weekLeft = eng.WEEKLY_SECONDS * TENTHS - totals.week;
         if (roomLeft <= 0) return res.status(400).json({ error: `The ${room.name} is finished.` });
         if (held < 1) return res.status(400).json({ error: 'Your saved bank has none of that.' });
-        if (weekLeft < worth) return res.status(400).json({ error: weekLeft <= 0 ? `This week's ${eng.HALL.weeklyHours} hours of work are given: more on Monday.` : 'Too little of this week\'s work is left for one of those.' });
-        const qty = Math.min(wanted, held, Math.floor(weekLeft / worth), Math.ceil(roomLeft / worth));
+        if (weekLeft <= 0) return res.status(400).json({ error: `This week's ${eng.HALL.weeklyHours} hours of work are given: more on Monday.` });
+        // the week's last gift may run past its hours by less than one of its things, as a room's last level does: no
+        // scraps of a week are left that nothing fits (the owner's first gift left 9 seconds, and every slider grey)
+        const qty = Math.min(wanted, held, Math.ceil(weekLeft / worth), Math.ceil(roomLeft / worth));
         const seq = totals.last + 1;
         try {
             await store.addGift({ userId: req.user.id, seq, clanId: mine.clan.id, week, room: room.id, resource, qty, work: qty * worth, now, cap });

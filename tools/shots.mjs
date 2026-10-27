@@ -135,6 +135,17 @@ const CLAN_SHOTS = {
         FI.game().setClanHall({ clan: 7, rooms: { forge: 82800 }, stage: 2, colour: 'azure', emblem: 'griffin', cloak: true });
         FI.switchTab('combat'); if (!FI.game().state.combat.active) FI.toggleCombat();
     },
+    // the week's whole work given to the Forge at once, then Give again: the dialog says the week is given, and when more comes
+    hallweek: async () => {
+        for (const [room, resource] of [['forge', 'runite_bar'], ['library', 'essence']]) {
+            FI.openHallGive(room); FI.hallGivePick(resource);
+            const slider = document.getElementById('give-qty');
+            slider.value = slider.max; FI.hallGiveQty(slider.max, slider.dataset.worth);
+            FI.hallGive();
+            await new Promise(resolve => setTimeout(resolve, 900));
+        }
+        FI.openHallGive('stores');
+    },
     // the Forge given 100 runite bars (the tool's server takes them): the bank holds 100 fewer, the Forge's bar has grown
     hallgiven: async () => {
         const before = FI.game().state.resources.runite_bar;

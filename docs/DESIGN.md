@@ -1985,7 +1985,10 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   the clan; nothing touches attack, defence or health, so the boss, the ranking and the boards stay as they were.
 - **The week.** Each member gives at most `HALL.weeklyHours` (3) hours of work a week (the ISO week, whatever the clan):
   a deep bank holds hundreds of hours (the simulated stage-1,000 hero 1,800, mostly gems), and the allowance makes every
-  member count alike and a stockpile build nothing in a day. A clan of five fills the Great Hall in about three weeks and
+  member count alike and a stockpile build nothing in a day. The week's last gift may run over by less than one of its
+  things, so no scraps of a week are left that nothing fits (the owner's first gift, 683 runite bars at the slider's
+  old default of all it allowed, left 9 seconds and every slider grey). The dialog's slider starts at one, its Give button
+  says what goes, and a week given says when more comes. A clan of five fills the Great Hall in about three weeks and
   the Citadel in some 45; twenty members in 11. Nothing decays (RuneScape cut its citadels' upkeep by four fifths in 2017
   after clans found it a chore); gifts stay with the clan when a member leaves.
 - **Stages.** Camp, Longhouse (6 room levels), Great Hall (12), Keep (20), Citadel (30), each a Gemini painting of the same

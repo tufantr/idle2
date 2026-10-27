@@ -1433,7 +1433,9 @@ Keeping it running:
       work a member a week; each room's five levels give every member a small bonus to skilling or supplies; the hall
       grows from a Camp to a Citadel on five Gemini paintings of one clearing, opening colours and emblems for the banner
       its owner picks; from the Great Hall, ten hours given wear the clan's cloak, the rank cloak in the banner's colour.
-      A Hall column in the members table, the stage on the clan list, a card for each room's level, stage and the cloak
+      A Hall column in the members table, the stage on the clan list, a card for each room's level, stage and the cloak.
+      After the owner's first gift (the slider began at the most allowed, a whole week in one tap): it begins at one, Give
+      says what goes, the week's last gift may run a little over, and a week given says when more comes
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

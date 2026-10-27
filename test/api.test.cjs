@@ -1395,3 +1395,18 @@ test('gifts sent at once each take their own number: the bank gives each thing o
     assert.deepEqual(given.map(g => g.seq).sort((x, y) => x - y), given.map((_, i) => i + 1));
     assert.ok(answers.every(r => r.status === 200 || r.status === 400));
 });
+
+test("the week's last gift may run a little past its hours: no scraps of a week left that nothing fits (the owner's first gift)", async () => {
+    const { HALL, giftWorth } = await import('../src/data/clanhall.js');
+    toMonday();
+    const p = await register('hall_scraps');
+    await post('/clans', { name: 'Scrap Makers', tag: 'SCRAP' }, p);
+    await post('/save', { state: { ...heroSave(), resources: { runite_bar: 1000, essence: 50 } } }, p);
+    const all = await (await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 1e9 }, p)).json();
+    const week = HALL.weeklyHours * 3600;
+    assert.equal(all.gift.qty, Math.ceil(week / giftWorth('runite_bar')), '684 bars, not 683 and 9 seconds over');
+    assert.ok(all.hall.given.week >= week && all.hall.given.week < week + giftWorth('runite_bar'));
+    const more = await post('/clan/hall/give', { room: 'library', resource: 'essence', qty: 1 }, p);
+    assert.equal(more.status, 400);
+    assert.match((await more.json()).error, /more on Monday/);
+});

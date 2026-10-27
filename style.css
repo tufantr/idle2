@@ -3050,6 +3050,7 @@ button.flag-btn:hover { transform: translateY(-2px); }
 .give-amount input[type="range"] { width: 100%; accent-color: #f0c674; }
 .give-sum { font-variant-numeric: tabular-nums; }
 .give-sum b { color: var(--heading); }
+.give-done { margin: 0.2rem 0 0.6rem; padding: 0.6rem 0.8rem; border-radius: 10px; text-align: center; color: var(--heading); border: 1px solid var(--line); background: rgba(12, 9, 6, 0.6); }
 /* the banner picker: a preview, the colours, the emblems */
 .banner-preview { display: grid; place-items: center; padding: 0.4rem 0 1rem; }
 .swatches, .emblem-picks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }

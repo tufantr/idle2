@@ -2502,7 +2502,8 @@ function hallFoot(state, hall) {
 
 /**
  * Giving to a room (FI.openHallGive): what the bank holds that it takes, each with the work it counts, one picked, how
- * many (no more than the bank, the week's work left and the room's last level take), and what that comes to.
+ * many (one to begin with; no more than the bank, the week's work left and the room's last level take: the last of either
+ * may go a little over, as the server allows), and what that comes to, on the Give button too. A week given says so.
  */
 export function renderHallGive(game, ui) {
     const state = game.state;
@@ -2514,21 +2515,22 @@ export function renderHallGive(game, ui) {
     const weekLeft = hallWeekLeft(hall);
     const roomLeft = Math.max(0, ROOM_SECONDS - (Number(hall.rooms?.[room.id]) || 0));
     const worth = pick ? giftWorth(pick) : 0;
-    const max = pick ? Math.max(0, Math.min(Math.floor(state.resources[pick] || 0), Math.floor(weekLeft / worth + 1e-9), Math.ceil(roomLeft / worth))) : 0;
-    const qty = Math.max(Math.min(1, max), Math.min(max, Math.floor(Number(ui.hallGive.qty)) || max));
+    const max = pick ? Math.max(0, Math.min(Math.floor(state.resources[pick] || 0), Math.ceil(weekLeft / worth - 1e-9), Math.ceil(roomLeft / worth))) : 0;
+    const qty = Math.max(Math.min(1, max), Math.min(max, Math.floor(Number(ui.hallGive.qty)) || 1));
     const tiles = goods.map(id => `<button class="give-item${id === pick ? ' on' : ''}" onclick="FI.hallGivePick('${id}')" aria-pressed="${id === pick}" title="${esc(`${res(id).name}: ${workTime(giftWorth(id))} of work each`)}">${resIcon(id, { scale: 1.25 })}<span class="pick-qty">${shortQty(state.resources[id] || 0)}</span></button>`).join('');
-    const amount = pick ? `<div class="give-amount">
+    const field = `id="give-qty" data-res="${pick}" data-worth="${worth}"`;
+    const amount = weekLeft <= 0 ? `<p class="give-done">${glyph('time')} This week's ${HALL.weeklyHours} hours of work are given. More on Monday, in ${duration(hallWeekEnds(hall))}.</p>`
+        : pick ? `<div class="give-amount">
             <div class="give-what">${resIcon(pick)} <b>${esc(res(pick).name)}</b> <span class="muted small">${workTime(worth)} of work each</span></div>
-            <input type="range" id="give-qty" data-res="${pick}" data-worth="${worth}" min="${Math.min(1, max)}" max="${max}" value="${qty}" oninput="FI.hallGiveQty(this.value, this.dataset.worth)" aria-label="How many to give" ${max > 1 ? '' : 'disabled'}>
-            ${max > 0 ? `<div class="give-sum"><b id="give-count">${fmt(qty, { short: false })}</b> · <span id="give-work">${workTime(qty * worth)}</span> of work <span class="muted small">· ${workTime(weekLeft)} left this week</span></div>`
-                : `<p class="muted small">${weekLeft <= 0 ? `This week's ${HALL.weeklyHours} hours are given: more in ${duration(hallWeekEnds(hall))}.` : `Too little of this week's work is left for one of these: ${workTime(weekLeft)}.`}</p>`}
+            ${max > 1 ? `<input type="range" ${field} min="1" max="${max}" value="${qty}" oninput="FI.hallGiveQty(this.value, this.dataset.worth)" aria-label="How many to give">` : `<input type="hidden" ${field} value="${qty}">`}
+            <div class="give-sum"><b id="give-count">${fmt(qty, { short: false })}</b> · <span id="give-work">${workTime(qty * worth)}</span> of work <span class="muted small">· ${workTime(weekLeft)} left this week</span></div>
         </div>` : `<p class="muted">Nothing in your bank for the ${esc(room.name)} yet: it takes ${esc(room.takesText)}.</p>`;
     return `<div class="modal-content narrow about-card hall-give">
         <div class="about-art" style="${paintStyle(room.art, 'center 55%')}" aria-hidden="true">${sprite(room.icon, { scale: 2 })}</div>
         <div class="modal-header">The ${esc(room.name)}</div>
         ${goods.length ? `<div class="give-items" role="group" aria-label="What to give">${tiles}</div>` : ''}
         ${amount}
-        <div class="modal-footer"><button class="modal-btn" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.hallGive()" ${qty > 0 ? '' : 'disabled'}>Give</button></div>
+        <div class="modal-footer"><button class="modal-btn" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.hallGive()" ${qty > 0 && weekLeft > 0 ? '' : 'disabled'}>Give<span id="give-label">${qty > 0 && weekLeft > 0 ? ` ${fmt(qty, { short: false })} · ${workTime(qty * worth)}` : ''}</span></button></div>
     </div>`;
 }
 

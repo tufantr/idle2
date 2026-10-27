@@ -163,3 +163,25 @@ test("the clan's cloak is the white cloak in the banner's colour, through a filt
     assert.equal(heroLayers(s)[0].startsWith('hero/cloaks/'), true, "not earned: the rank's cloak");
     assert.equal(HALL.cloakHours, 10);
 });
+
+test('the give dialog starts at one and says on its button what goes; a week given says so instead of a grey slider', async () => {
+    const { renderHallGive } = await import('../src/ui/render.js');
+    const game = new Game(null, T0);
+    game.state.resources.runite_bar = 900;
+    const hall = { clan: 7, rooms: {}, stage: 0, given: { week: 0, total: 0 }, weekly: HALL.weeklyHours * 3600, endsInMs: 5 * 864e5, at: Date.now() };
+    const ui = { social: { hall }, hallGive: { room: 'forge', resource: 'runite_bar', qty: null } };
+    let html = renderHallGive(game, ui);
+    assert.match(html, /id="give-qty"[^>]*min="1" max="684" value="1"/, 'the whole week at most (its last bar a little over), one to begin with');
+    assert.match(html, /Give<span id="give-label"> 1 · 16 s<\/span>/);
+    // nine seconds left (the owner's first gift): one more bar, no slider for one
+    hall.given.week = HALL.weeklyHours * 3600 - 9;
+    html = renderHallGive(game, ui);
+    assert.match(html, /<input type="hidden" id="give-qty"[^>]*value="1">/);
+    assert.match(html, /Give<span id="give-label"> 1 · 16 s/);
+    // the week given: said plainly, nothing to slide, Give off
+    hall.given.week = HALL.weeklyHours * 3600;
+    html = renderHallGive(game, ui);
+    assert.doesNotMatch(html, /id="give-qty"/);
+    assert.match(html, /This week's 3 hours of work are given\. More on Monday, in \d+d \d+h\./);
+    assert.match(html, /btn-confirm" onclick="FI\.hallGive\(\)" disabled>/);
+});

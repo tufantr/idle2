@@ -1737,8 +1737,10 @@ window.FI = {
         ui.hallGive.qty = qty;
         const count = document.getElementById('give-count');
         const work = document.getElementById('give-work');
+        const label = document.getElementById('give-label');   // the Give button says what goes
         if (count) count.textContent = fmt(qty, { short: false });
         if (work) work.textContent = workTime(qty * (Number(worth) || 0));
+        if (label) label.textContent = ` ${fmt(qty, { short: false })} · ${workTime(qty * (Number(worth) || 0))}`;
     },
     hallGive() {
         const input = document.getElementById('give-qty');
