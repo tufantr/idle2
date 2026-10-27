@@ -1415,6 +1415,13 @@ Keeping it running:
       nothing); Glass Hero's and Fasting's first tiers came down to 170. The simulator's bot enters Trials with Auto on
       (`--pacts` for Pacts): the rungs speed a deep climb by about 13% and fill the late waits, Pacts by 1% more; the
       server's climb allowance was refitted (the honest climb had come to 76% of it)
+- [x] **The War Tree** (the owner's go, 27 October 2026; DESIGN §3.33): Combat's levels go on past 99, each a talent point
+      (a hero at the old cap has seven), in three trees of seven rows like WoW Classic's: Blade, Bulwark and Hunt, a row
+      opening with five more points in its tree, arrows to the talents that wait for another, a capstone at 31 points
+      (Deathblow, Unbreakable, Relentless). A tab in the perks dialog with the points in the purse and the dock; unlearning
+      costs essence, more each time. Paced as shown to the owner: level 120 five days after the old cap, the first
+      capstone about two weeks; a capstone build adds 10 to 20 stages to a run, and the tree about 3.5% to the best
+      stage at hour 600
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

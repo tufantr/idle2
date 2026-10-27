@@ -8,6 +8,7 @@ import { levelForXp, combatLevelForXp, MAX_LEVEL, XP_FOR_MAX_LEVEL, COMBAT_XP_CA
 import { petToFind, petChance } from '../data/pets.js';
 import { capeFor } from '../data/capes.js';
 import { trialBite } from '../data/trials.js';
+import { WAR_XP_SHARE } from '../data/talents.js';
 import { rng } from '../core/rng.js';
 import { BASE, skillLevelsTotal } from '../core/modifiers.js';
 
@@ -28,7 +29,9 @@ export function grantXp(game, skillId, amount) {
     // Combat's XP goes on past 99 for the War Tree (data/talents.js); every other skill's stops at twice level 99's
     const combat = skillId === 'combat';
     const warBefore = combat ? combatLevelForXp(skill.xp) : 0;
-    skill.xp = Math.min(combat ? COMBAT_XP_CAP : XP_FOR_MAX_LEVEL * 2, skill.xp + amount);
+    // (past level 99 a share of it counts: data/talents.js WAR_XP_SHARE)
+    const below = combat ? Math.max(0, Math.min(amount, XP_FOR_MAX_LEVEL - skill.xp)) : amount;
+    skill.xp = Math.min(combat ? COMBAT_XP_CAP : XP_FOR_MAX_LEVEL * 2, skill.xp + below + (amount - below) * (combat ? WAR_XP_SHARE : 1));
     const after = levelForXp(skill.xp);
     if (combat) {
         const warAfter = combatLevelForXp(skill.xp);

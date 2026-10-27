@@ -11,7 +11,7 @@ import { migrateState } from '../src/core/state.js';
 import { BALANCE, enemyDamage, enemyForStage, goldForKill } from '../src/core/formulas.js';
 import { BASE, isFocused } from '../src/core/modifiers.js';
 import { levelForXp, combatLevelForXp, xpForCombatLevel, COMBAT_XP_CAP, XP_FOR_MAX_LEVEL, MAX_COMBAT_LEVEL } from '../src/core/xp.js';
-import { TREES, TALENTS, ROWS, ROW_POINTS, RESPEC, RELENTLESS, SECOND_WIND_MS, TALENT_POINTS_MAX, talentById, rowOpensAt, talentFx, respecPrice } from '../src/data/talents.js';
+import { TREES, TALENTS, ROWS, ROW_POINTS, RESPEC, RELENTLESS, SECOND_WIND_MS, TALENT_POINTS_MAX, WAR_XP_SHARE, talentById, rowOpensAt, talentFx, respecPrice } from '../src/data/talents.js';
 import { warLevel, talentPoints, talentsOpen } from '../src/systems/talents.js';
 import { grantXp } from '../src/systems/progress.js';
 import { spawnEnemy, playerAttack, enemyAttack, onEnemyDeath, onBossTimeout, tickCombat } from '../src/systems/combat.js';
@@ -49,7 +49,11 @@ test('Combat goes on past 99 on the same table, a talent point each level; the o
     assert.equal(warLevel(s), 0);
     assert.equal(talentsOpen(s), false);
     game.drainEvents();
-    grantXp(game, 'combat', xpForCombatLevel(101) - s.skills.combat.xp + 5);
+    // past 99 a share of the XP counts (WAR_XP_SHARE): the same table, at the pace the owner was shown
+    const from = s.skills.combat.xp;
+    grantXp(game, 'combat', 1000);
+    assert.equal(s.skills.combat.xp, from + 1000 * WAR_XP_SHARE);
+    grantXp(game, 'combat', (xpForCombatLevel(101) - s.skills.combat.xp) / WAR_XP_SHARE + 5);
     const points = game.drainEvents().filter(e => e.type === 'talentPoint');
     assert.deepEqual(points.map(e => [e.level, e.points]), [[101, 2]]);
     assert.equal(warLevel(s), 2);

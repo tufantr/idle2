@@ -1887,6 +1887,48 @@ Numbers (median of 7 seeds, with Auto; the forge's part → with this): the best
 the game before the endless climb: 690 at hour 1,200, where it had stopped. The worst honest climb came to 53% of the
 leaderboard's allowance (§3.17).
 
+### 3.33 The War Tree: talents for the combat levels past 99
+
+The late-game research (27 October 2026) found the deep climb a loop of the same fight with nothing left to choose, and
+Combat's XP thrown away from about stage 1,200, where it hit its cap (twice level 99's). The owner asked for a perk tree
+"like WoW's talent tree or LoL's classic masteries" giving "very slow additional progress" (a first design that filled in
+165 hours was "too little for an infinitely farming game"), and approved this one.
+`src/data/talents.js`, `src/systems/talents.js`; saved as `talents: { ranks, respecs }` (mirrored in `meta.talents`, as
+the forge is: a page running the older game drops a field it doesn't know).
+- **Points.** Combat's levels go on past 99 along the same table (`combatLevelForXp`, `MAX_COMBAT_LEVEL` in
+  `src/core/xp.js`), to the level that fills the tree, and each level past 99 is a talent point (`warLevel`). Every formula
+  still sees 99 (`levelForXp`): the levels past it give nothing but points. A hero at the old cap (level 106) has seven
+  at once. Past 99 a share of the XP counts (`WAR_XP_SHARE`, 0.6): at the full rate the simulator's hero reached level 130
+  nine days after the cap, against the two weeks the owner was shown.
+- **The trees.** Three, seven rows each, as in WoW Classic: **Blade** (his attack: harder swings, crits, a ×1.5/×2/×3 first
+  swing at a boss, Execute's bosses falling below 2/4/6% of their health, the capstone Deathblow's every tenth swing
+  doubled), **Bulwark** (staying up: health, armour, Brace and Fortress against blows, Second Wind once a minute,
+  Riposte and Vengeance on a dodge, the capstone Unbreakable: no blow takes more than a third of his health) and **Hunt**
+  (+1 s a rank on a boss's clock, gold, drops, essence, Second Chance's shorter regroup, Lord's Due's second piece,
+  Veteran's Focus, Bounty, the capstone Relentless: each time a boss holds out its next try gives 2 s more, up to 10). A
+  row opens with five more points in its tree (`ROW_POINTS`), so the capstone is the 31st; a talent an arrow points to
+  (`needs`) waits for the one above it to be full; 134 points fill everything (`TALENT_POINTS_MAX`). A talent's stats
+  reach the hero as a perk's do (`mods`, `mult` in `collectModifiers`); its rules are read in the fight (`talentFx`,
+  `derived.talents`, `src/systems/combat.js`), never in the clan boss's (which the server reckons), and a Trial's rule
+  wins (Glass Hero still falls to the first blow). Nothing in the tree speeds the prestige loop itself.
+- **Unlearning** the whole tree gives every point back for essence: 20,000, then ×1.5 each time (`RESPEC`).
+- **Where.** A War Tree tab in the perks dialog (three columns on a desktop, one tree at a time with a switch on a phone):
+  each talent its atlas picture with its rank, a green frame where a point can go, gold when full, dim when its row or
+  arrow is shut, arrows down the columns; a tap shows what it does now and at its next rank, with Learn. The purse shows
+  the talent points beside the skill points, the dock's Perks card counts them, the fight shows the level past 99 and a
+  word over the big swings (Execute, Deathblow, Opening blow, Riposte, Second wind). It opens as a piece of the screen
+  (the disclosure `talents`) with a card when Combat passes 99.
+- **Sized** (`tools/talents.mjs`, a fresh run from heroes the simulator saved at 600, 1,000 and 1,250, with and without a
+  build): a 31-point capstone build adds 10–20 stages to a run in Blade (its first numbers, ×4 first swings and a ×3
+  Deathblow, added 20–30), about 10 in Hunt, 0–10 in Bulwark, whose worth is in heavier fights (Trials, dungeons, the
+  Titan; a deep hero barely falls on the stages); a 51-point Blade-and-Hunt build adds about 20. The bot learns along
+  `TALENT_ORDER` in `tools/simulate.mjs` (`--without=talents` turns it off).
+- **Pace** (`tools/batch.mjs --seeds=7 --hours=600 --auto`): the first point at hour 108–114, the old cap's seven at
+  147–153, level 120 at 274–281 (five days after the cap), the first capstone (level 130) at 446–465 (thirteen days
+  after it), 35 points at hour 600; the best stage at hour 600 is 2,380 (2,370–2,400) against 2,300 (2,280–2,310) without
+  the tree. The server counts total XP to the old cap and checks the levels past 99 on their own (`warLevel` in
+  `RANKED`: eight at once, half a level an hour after).
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat

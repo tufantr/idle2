@@ -14,6 +14,13 @@
 // the value at ranks 1, 2, ... `text(rank)` says what a rank does, in the tree's detail line. The rules stay out of the clan
 // boss's fight, which the server reckons (core/power.js), as a Trial's do.
 
+/**
+ * The share of combat XP past level 99 that counts: the simulator's hero, fighting round the clock, reached level 130
+ * nine days after the old cap at the full rate, against the two weeks the owner was shown (level 120 in five days, 130 in
+ * two weeks, 140 in five weeks); at this share he keeps that pace.
+ */
+export const WAR_XP_SHARE = 0.6;
+
 /** Points in a tree that open its next row; the seventh row (the capstone) opens at 6 × this. */
 export const ROW_POINTS = 5;
 export const ROWS = 7;
