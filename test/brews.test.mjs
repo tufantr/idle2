@@ -347,7 +347,7 @@ test('or for essence: 2,000 for the first, half as much again each time, the gol
     assert.equal(g.buyBagUpgrade('essence'), false, 'as big as it gets');
 });
 
-test('"weaker" salvages any drop that would not improve what is worn, never an upgrade or a unique', () => {
+test('"weaker" salvages any drop that would not improve what is worn, a spare unique too, never an upgrade or the Seal\'s copy', () => {
     rng.setSource(seededRandom(4));
     const g = hero({ bestStage: 60 });
     const worn = sword(5, 'common', 9001);
@@ -356,18 +356,21 @@ test('"weaker" salvages any drop that would not improve what is worn, never an u
     g.recompute();
     const weak = sword(1, 'legendary', 9002);
     const better = sword(7, 'common', 9003);
-    const unique = { ...sword(1, 'legendary', 9004), uniqueId: 'goblin_crown' };
-    for (const item of [weak, better, unique]) addItem(g, item);
+    const unique = { ...sword(1, 'legendary', 9004), uniqueId: 'goblin_crown' };   // a spare, the bag's only copy: the Seal's
+    const spare = { ...sword(1, 'legendary', 9006), uniqueId: 'goblin_crown' };    // a second spare
+    const first = { ...sword(1, 'legendary', 9007), uniqueId: 'crystal_heart', locked: true };   // a first copy arrives locked
+    for (const item of [weak, better, unique, spare, first]) addItem(g, item);
     const kept = g.state.inventory.map(i => i.id);
     assert.ok(!kept.includes(9002), 'a weaker legendary goes');
-    assert.ok(kept.includes(9003) && kept.includes(9004), 'an upgrade and a unique stay');
+    assert.ok(kept.includes(9003) && kept.includes(9004) && kept.includes(9007), 'an upgrade, the Seal\'s copy and a first copy stay');
+    assert.ok(!kept.includes(9006), 'a second spare goes');
     // the bag's button does the same for what is already in it
     g.state.settings.autoSalvage = 'off';
-    const weak2 = sword(2, 'rare', 9005);
-    addItem(g, weak2);
+    addItem(g, sword(2, 'rare', 9005));
+    addItem(g, { ...sword(1, 'legendary', 9008), uniqueId: 'goblin_crown' });
     const r = g.salvageWeaker();
-    assert.equal(r.count, 1);
-    assert.deepEqual(g.state.inventory.map(i => i.id).sort(), [9003, 9004]);
+    assert.equal(r.count, 2);
+    assert.deepEqual(g.state.inventory.map(i => i.id).sort(), [9003, 9004, 9007]);
 });
 
 // ---------- the bonfire ----------

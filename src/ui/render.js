@@ -23,7 +23,7 @@ import { masteryProgress, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
-import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, equipGain, gainStages } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, equipGain, gainStages, weakerInBag } from '../systems/inventory.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_CHOICE_MS, titanBonusUnits, dungeonAt, dungeonTierInfo, dungeonBossTime, uniqueAt, parseUniqueKey, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
@@ -48,7 +48,7 @@ import { rankFor, nextRank, RANKS } from '../data/ranks.js';
 import { LOOKS, lookOpen, lookForMedal } from '../data/looks.js';
 import { CAPES, capeFor, capeEarned, capesEarned, capeWorn, festivalCloaksOwned, CLAN_CLOAK } from '../data/capes.js';
 import { HALL, HALL_ROOMS, HALL_STAGES, HALL_LEVELS, LEVEL_AT, ROOM_SECONDS, WEEKLY_SECONDS, CLOAK_STAGE, BANNER_COLOURS, BANNER_EMBLEMS, bannerColour, bannerEmblem, roomLevel, hallLevels, hallRoom, giftWorth, roomTakes } from '../data/clanhall.js';
-import { HERO_NAME_MAX } from '../core/text.js';
+import { HERO_NAME_MAX, withArticle } from '../core/text.js';
 import { BESTIARY, BESTIARY_SIZE, BESTIARY_MAX_STARS, KILL_STARS, starsFor, nextStarAt, bestiaryStars } from '../data/bestiary.js';
 import { FEATURES, feature, artStyle, aboutButton, DUNGEON_ART, EVENT_ART, paintStyle, fightTab } from './features.js';
 import { seen } from '../systems/disclosure.js';
@@ -1351,7 +1351,11 @@ export function renderItemDetail(game, id) {
         ? `<button class="mini-btn" onclick="FI.toBench(${itemId})" title="Upgrade it and reroll its bonuses with gems">${glyph('up')} Bench</button>` : '';
     const upgradeBtn = forged ? anvilBtn : benchBtn;
     const salvage = salvagePreview(item);
-    const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([mid, q]) => `~${q.toFixed(1)} ${RESOURCES[mid].name}`)].filter(Boolean).join(', ') || 'nothing';
+    // what comes back, said (a crafted piece's share of a bar or gem is a chance) and shown: the button carries its icons,
+    // since a phone has no title (a player read a crafted ring's salvage as nothing, 29 October 2026)
+    const share = (q, name) => (q >= 1 ? `~${Number.isInteger(q) ? q : q.toFixed(1)} ${name}` : `a ${pct(q, 0)} chance of ${withArticle(name)}`);
+    const salvageText = [salvage.essence ? `${salvage.essence} essence` : '', ...Object.entries(salvage.materials).map(([mid, q]) => share(q, RESOURCES[mid].name))].filter(Boolean).join(', ') || 'nothing';
+    const salvageIcons = [salvage.essence || !Object.keys(salvage.materials).length ? 'essence' : null, ...Object.keys(salvage.materials)].filter(Boolean).slice(0, 3).map(mid => resIcon(mid)).join('');
     const source = item.source === 'drop' ? 'dropped' : item.source === 'unique' ? 'unique' : 'crafted';
     let compare = '';
     if (!slot) {
@@ -1384,7 +1388,7 @@ export function renderItemDetail(game, id) {
         <div class="detail-actions">
             ${slot ? `<button class="mini-btn" onclick="FI.unequip('${slot}')" ${locked ? 'disabled' : ''}>Take off</button>` : `<button class="prestige-btn" onclick="FI.equip(${itemId})" ${wearable && !locked ? '' : 'disabled'}>Equip</button>`}
             ${upgradeBtn}
-            ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">${resIcon('essence')} Salvage${forged && salvage.essence ? `: +${fmt(salvage.essence)} essence for the forge` : ''}</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell for ${fmt(itemSellValue(item))}</button>`}
+            ${slot ? '' : `<button class="mini-btn" onclick="FI.salvage(${itemId})" ${item.locked ? 'disabled' : ''} title="Salvage for ${esc(salvageText)}">${salvageIcons} Salvage${forged && salvage.essence ? `: +${fmt(salvage.essence)} essence for the forge` : ''}</button><button class="sell-btn mini-btn" onclick="FI.sellItem(${itemId})" ${item.locked ? 'disabled' : ''}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell for ${fmt(itemSellValue(item))}</button>`}
         </div>
     </div>`;
 }
@@ -1411,7 +1415,9 @@ export function renderInventory(game, ui) {
     const picked = ui.resSelected && state.resources[ui.resSelected] > 0 ? ui.resSelected : null;
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
-    const hasWeaker = items.some(i => !i.locked && !i.uniqueId && !isUpgrade(state, i));
+    const hasWeaker = weakerInBag(state).length > 0;
+    // (one copy of each dungeon unique stays in the bag for the Seal: systems/inventory.js keptForSeal)
+    const keeps = !Object.keys(state.uniques || {}).length ? '' : `, and one of each dungeon unique stays${seen(state, 'dungeon_seal') ? ' for the Seal' : ''}`;
     const doll = seen(state, 'jewellery') ? DOLL.jewelled : DOLL.plain;
     const stat = (icon, value, label, title) => `<span title="${title}">${icon} <b>${value}</b> ${label}</span>`;
     return `<div class="armory${hasGear ? '' : ' bare'}">
@@ -1441,7 +1447,7 @@ export function renderInventory(game, ui) {
             <div class="panel-header"><h2>Bag <span class="muted">${items.length}/${size}</span></h2>
                 ${seen(state, 'bag_tools') ? `<div class="btn-row">
                     <button class="mini-btn" onclick="FI.salvageAll('common')" ${hasCommons ? '' : 'disabled'}>${resIcon('essence')} Salvage commons</button>
-                    <button class="mini-btn" onclick="FI.salvageWeaker()" ${hasWeaker ? '' : 'disabled'} title="Salvage everything in the bag that wouldn't improve what you wear (never a locked item or a dungeon's unique)">${resIcon('essence')} Salvage weaker</button>
+                    <button class="mini-btn" onclick="FI.salvageWeaker()" ${hasWeaker ? '' : 'disabled'} title="Salvage everything in the bag that wouldn't improve what you wear (never a locked item${keeps})">${resIcon('essence')} Salvage weaker</button>
                     <button class="mini-btn" onclick="FI.sellAll('common')" ${hasCommons ? '' : 'disabled'}>${sprite('gold', { scale: 0.5, cls: 'soft res-spr' })} Sell commons</button>
                     ${roomPrice !== null ? `<button class="gold-btn bag-room" onclick="FI.buyBagUpgrade('gold')" ${state.gold >= roomPrice ? '' : 'disabled'} title="Five more slots in the bag (it holds ${size} now), for gold">+5 slots ${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(roomPrice)}</button>
                     <button class="mini-btn bag-room" onclick="FI.buyBagUpgrade('essence')" ${(state.resources.essence || 0) >= roomEssence ? '' : 'disabled'} title="Five more slots in the bag (it holds ${size} now), for essence">+5 slots ${resIcon('essence')} ${fmt(roomEssence)}</button>` : ''}
@@ -1449,7 +1455,7 @@ export function renderInventory(game, ui) {
             </div>
             <div class="bag-grid">${bag}</div>
             ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Bosses drop some, and a smith can forge it.</p>'}
-            ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality (or with Weaker, any drop weaker than what you wear) is salvaged for essence as it lands: never an upgrade, never a locked item or a dungeon's unique. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
+            ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality (or with Weaker, any drop weaker than what you wear) is salvaged for essence as it lands: never an upgrade or a locked item${keeps}. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
                 <span>${resIcon('essence')} Auto-salvage drops up to</span>
                 <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
                     const r = RARITIES.find(x => x.id === o);

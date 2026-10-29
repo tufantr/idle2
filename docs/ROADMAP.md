@@ -1436,6 +1436,11 @@ Keeping it running:
       A Hall column in the members table, the stage on the clan list, a card for each room's level, stage and the cloak.
       After the owner's first gift (the slider began at the most allowed, a whole week in one tap): it begins at one, Give
       says what goes, the week's last gift may run a little over, and a week given says when more comes
+- [x] **Salvage that says what it gives** (a player's ask in the Discord's feedback, the owner's go, 29 October 2026):
+      Salvage weaker and the Weaker auto-salvage take a dungeon's spare uniques too (the first copy arrives locked),
+      keeping one of each of the open tier's in the bag, since the Seal hands in a bag copy before a worn one; a bulk
+      salvage names all that came back, a crafted piece's bars and gems besides essence ("+0 essence" read as
+      nothing), and an item's Salvage button shows the icons of what it gives
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

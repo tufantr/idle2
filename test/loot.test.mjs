@@ -82,6 +82,20 @@ test('salvage: drops become essence, crafted gear returns part of its bars, lock
     assert.ok(game.state.inventory.some(i => i.id === 700), 'locked items survive bulk salvage and sell');
 });
 
+test('a bulk salvage names all that came back: a crafted ring gives its bar and gem, not essence', () => {
+    const game = new Game(null, T0);
+    // five of each went in, so the share back (two of each) needs no luck
+    const ring = id => generateEquipment({ type: 'Ring', tier: 6, power: 40, materialName: 'Silver', gemName: 'Diamond', rarity: RARITIES[0], materials: { silver_bar: 5, diamond: 5 }, source: 'crafted' }, id);
+    game.state.inventory.push(ring(800), ring(801));
+    const gems = game.state.resources.diamond;
+    const r = game.salvageAll('common');
+    assert.equal(r.count, 2);
+    assert.equal(r.essence, 0);
+    assert.deepEqual(r.materials, { silver_bar: 4, diamond: 4 });
+    assert.equal(game.state.resources.diamond, gems + 4);
+    assert.equal(game.state.log.at(-1).text, '♻️ Salvaged 2 items for 4× Silver Bar, 4× Diamond.');
+});
+
 test('a full bag salvages its weakest item and keeps upgrades', () => {
     const game = new Game(null, T0);
     game.state.settings.autoSalvage = 'off';

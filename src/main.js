@@ -24,7 +24,7 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
-import { isUpgrade, canWear, equipGain, gainStages, findGear } from './systems/inventory.js';
+import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -996,7 +996,7 @@ function handleEvents(events) {
                 break;
             case 'unique':
                 if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.record && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
-                else toast(`A spare ${ev.item.name}: salvage it for essence`, 'achievement', pic(itemSpriteKey(ev.item)));
+                else toast(ev.kept ? `A spare ${ev.item.name}: salvage it for essence` : `A spare ${ev.item.name}, salvaged as it came`, 'achievement', pic(itemSpriteKey(ev.item)));
                 break;
             case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;
             case 'bestiaryStar': // a kind of monster fell for the 10th, 100th or 1,000th time (once the bestiary can be seen)
@@ -1026,6 +1026,12 @@ function toast(text, kind = 'info', icon = '') {
     while (area.children.length > 5) area.removeChild(area.firstChild);
     setTimeout(() => el.classList.add('fade'), 3200);
     setTimeout(() => el.remove(), 3800);
+}
+
+/** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */
+function salvagedToast(r, what = '') {
+    const text = gainedText(r);
+    toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'}${what}${text ? `: ${text}` : ''}`, 'info', resIcon(r.essence ? 'essence' : Object.keys(r.materials)[0] || 'essence'));
 }
 
 // Modals queue up instead of replacing each other, so a login prompt can't hide the offline report.
@@ -1624,8 +1630,8 @@ window.FI = {
         }
         render();
     },
-    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
-    salvageWeaker() { const r = game.salvageWeaker(); if (r.count) toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'} weaker than what you wear (+${r.essence} essence)`, 'info', resIcon('essence')); render(); },
+    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) salvagedToast(r); render(); },
+    salvageWeaker() { const r = game.salvageWeaker(); if (r.count) salvagedToast(r, ' weaker than what you wear'); render(); },
     buyBagUpgrade(currency = 'gold') { if (game.buyBagUpgrade(currency === 'essence' ? 'essence' : 'gold')) { sound.play('buy'); toast('Five more slots in the bag', 'info'); } render(); },
     toggleLock(id) { game.toggleLock(id); render(); },
     setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },

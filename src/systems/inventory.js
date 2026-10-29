@@ -14,6 +14,7 @@ import { skillLevel, deriveStats } from '../core/modifiers.js';
 import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
 import { log, bumpStat } from './progress.js';
+import { dungeonTier, uniqueTierOf } from './dungeon.js';
 
 const RARITY_ORDER = RARITIES.map(r => r.id);
 const rarityIndex = id => Math.max(0, RARITY_ORDER.indexOf(id));
@@ -145,6 +146,33 @@ function neededInBag(state) {
     return needed;
 }
 
+/**
+ * The spare uniques the bag keeps for the Seal: one copy of each of the open tier's (a locked one if it holds one), since
+ * the Seal hands in a copy from the bag before a worn one (systems/dungeon.js sealDungeons). `items` is the bag to look
+ * in (with a piece about to land, addItem). Every other spare can go, to the bag's Salvage weaker too (a player's ask,
+ * 29 October 2026: the first copy arrives locked, and a spare is fragments' worth).
+ */
+function keptForSeal(state, items = state.inventory) {
+    const tier = dungeonTier(state);
+    const kept = new Map();
+    for (const item of items) {
+        if (!item.uniqueId || uniqueTierOf(item) !== tier) continue;
+        const held = kept.get(item.uniqueId);
+        if (!held || (item.locked && !held.locked)) kept.set(item.uniqueId, item);
+    }
+    return new Set(kept.values());
+}
+
+/**
+ * What the bag's Salvage weaker takes: every unlocked piece that wouldn't improve what is worn (crafted gear too, since
+ * it was asked for), and a dungeon's spare uniques but the ones kept for the Seal.
+ */
+export function weakerInBag(state) {
+    const needed = neededInBag(state);
+    const seal = keptForSeal(state);
+    return state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i) && !isUpgrade(state, i));
+}
+
 /** The bag's room: BAG_SIZE, and BAG_UPGRADE.slots more for each upgrade bought. */
 export function bagSize(state) {
     return BAG_SIZE + BAG_UPGRADE.slots * Math.max(0, Math.min(BAG_UPGRADE.max, state?.bagUpgrades || 0));
@@ -205,8 +233,11 @@ export function addItem(game, item) {
     const state = game.state;
     markCodex(state, item);   // found, even if it is salvaged as it lands
     const filter = state.settings.autoSalvage || 'off';
-    // 'weaker': whatever its rarity, a drop that wouldn't improve what is worn (never a dungeon's unique: it is a record)
-    const caught = filter === 'weaker' ? !item.uniqueId : rarityIndex(item.rarity) <= rarityIndex(filter);
+    // 'weaker': whatever its rarity, a drop that wouldn't improve what is worn, a dungeon's spare unique too, but never the
+    // copy the bag keeps for the Seal, nor a first copy, which arrives locked
+    const caught = !item.locked && (filter === 'weaker'
+        ? !(item.uniqueId && keptForSeal(state, [...state.inventory, item]).has(item))
+        : rarityIndex(item.rarity) <= rarityIndex(filter));
     if (item.source !== 'crafted' && filter !== 'off' && caught && !isUpgrade(state, item)) {
         const gained = salvageObject(game, item, { auto: true });
         return { kept: false, salvaged: item, gained };
@@ -214,10 +245,11 @@ export function addItem(game, item) {
     state.inventory.push(item);
     if (state.inventory.length <= bagSize(state)) return { kept: true, salvaged: null };
 
-    // Any unlocked item can go except the ones worth equipping. If nothing can (the bag is all locked
-    // items and upgrades), allow the overflow: an upgrade is never salvaged behind your back.
+    // Any unlocked item can go except the ones worth equipping and the spare uniques kept for the Seal. If nothing can
+    // (the bag is all locked items and upgrades), allow the overflow: an upgrade is never salvaged behind your back.
     const needed = neededInBag(state);
-    const candidates = state.inventory.filter(i => !i.locked && !needed.has(i));
+    const seal = keptForSeal(state);
+    const candidates = state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i));
     if (!candidates.length) return { kept: true, salvaged: null };
     const worst = candidates.reduce((a, b) => (itemScore(b) < itemScore(a) ? b : a));
     state.inventory.splice(state.inventory.indexOf(worst), 1);
@@ -249,6 +281,11 @@ export function salvagePreview(item) {
     return { essence, materials };
 }
 
+/** What a salvage gave, shortly: '12 essence, 3× Diamond' ('' for nothing: a crafted piece's share can come to none). */
+export function gainedText(gained) {
+    return [gained.essence ? `${gained.essence} essence` : '', ...Object.entries(gained.materials || {}).map(([id, q]) => `${q}× ${RESOURCES[id].name}`)].filter(Boolean).join(', ');
+}
+
 function salvageObject(game, item, { auto = false, quiet = auto } = {}) {
     const state = game.state;
     const preview = salvagePreview(item);
@@ -262,8 +299,8 @@ function salvageObject(game, item, { auto = false, quiet = auto } = {}) {
     bumpStat(game, 'itemsSalvaged');
     if (auto) bumpStat(game, 'itemsAutoSalvaged');
     if (!quiet || rarityIndex(item.rarity) >= 2) {
-        const parts = [gained.essence ? `${gained.essence} essence` : '', ...Object.entries(gained.materials).map(([id, q]) => `${q}× ${RESOURCES[id].name}`)].filter(Boolean);
-        log(game, `♻️ Salvaged ${item.name}${parts.length ? ` for ${parts.join(', ')}` : ''}.`, 'loot');
+        const text = gainedText(gained);
+        log(game, `♻️ Salvaged ${item.name}${text ? ` for ${text}` : ''}.`, 'loot');
     }
     game.markDirty();
     return gained;
@@ -279,34 +316,33 @@ export function salvageItem(game, id) {
 }
 
 /**
- * Salvage every unlocked item in the bag that wouldn't improve what is worn (the bag's own button; crafted
- * gear too, since it was asked for), never a dungeon's unique: it is a record.
+ * Salvage `doomed` from the bag with one line for them all (`what` says which), naming everything that came back: a
+ * crafted piece gives its bars and gems, not essence, and "+0 essence" read as nothing (a player, 29 October 2026).
+ * Returns { count, essence, materials }.
  */
-export function salvageWeaker(game) {
+function salvageBatch(game, doomed, what = '') {
     const state = game.state;
-    const needed = neededInBag(state);
-    const doomed = state.inventory.filter(i => !i.locked && !i.uniqueId && !needed.has(i) && !isUpgrade(state, i));
-    let essence = 0;
+    const total = { essence: 0, materials: {} };
     for (const item of doomed) {
         state.inventory.splice(state.inventory.indexOf(item), 1);
-        essence += salvageObject(game, item, { quiet: true }).essence;
+        const gained = salvageObject(game, item, { quiet: true });   // not automatic
+        total.essence += gained.essence;
+        for (const [id, qty] of Object.entries(gained.materials)) total.materials[id] = (total.materials[id] || 0) + qty;
     }
-    if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'} weaker than what you wear (+${essence} essence).`, 'loot');
-    return { count: doomed.length, essence };
+    const text = gainedText(total);
+    if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'}${what}${text ? ` for ${text}` : ''}.`, 'loot');
+    return { count: doomed.length, ...total };
+}
+
+/** Salvage what the bag's Salvage weaker takes (weakerInBag). */
+export function salvageWeaker(game) {
+    return salvageBatch(game, weakerInBag(game.state), ' weaker than what you wear');
 }
 
 /** Salvage every unlocked item in the bag at or below a rarity. */
 export function salvageAll(game, maxRarity = 'common') {
-    const state = game.state;
     const limit = rarityIndex(maxRarity);
-    const doomed = state.inventory.filter(i => !i.locked && rarityIndex(i.rarity) <= limit);
-    let essence = 0;
-    for (const item of doomed) {
-        state.inventory.splice(state.inventory.indexOf(item), 1);
-        essence += salvageObject(game, item, { quiet: true }).essence;   // one line for them all; not automatic
-    }
-    if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'} (+${essence} essence).`, 'loot');
-    return { count: doomed.length, essence };
+    return salvageBatch(game, game.state.inventory.filter(i => !i.locked && rarityIndex(i.rarity) <= limit));
 }
 
 // ---------- equip ----------

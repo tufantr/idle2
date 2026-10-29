@@ -235,10 +235,10 @@ function grantUnique(game, uniqueId, tier = 1) {
     item.locked = !spare;
     const record = !foundAtAnyTier(state, uniqueId);   // the first of this unique at any tier: a record
     const fresh = noteUnique(state, uniqueId, tier);   // the first of this tier's: a line in the chronicle
-    addItem(game, item);
+    const { kept } = addItem(game, item);   // (a spare may be salvaged as it lands: the Weaker auto-salvage, a full bag)
     bumpStat(game, 'uniquesFound');
     log(game, spare ? `🌟 Another ${item.name} — a spare, unlocked so it can be salvaged for essence.` : `🌟 Unique item: ${item.name}!`, 'loot');
-    game.emit({ type: 'unique', item, fresh, record });
+    game.emit({ type: 'unique', item, fresh, record, kept });
     return item;
 }
 

@@ -159,7 +159,8 @@ export const BAG_SIZE = 40;
 // whole gold (506 kills against about 400 a run, and gold goes at prestige), while essence piles up deep (378,000
 // held at stage 1,000 in the simulator). 2,000 for the first, 173,000 for the twelfth, about 520,000 for all.
 export const BAG_UPGRADE = { slots: 5, max: 12, kills: 150, growth: 1.5, essence: 2000 };
-// 'weaker': any drop that wouldn't be an upgrade for what is worn, whatever its rarity (never a unique).
+// 'weaker': any drop that wouldn't be an upgrade for what is worn, whatever its rarity: a dungeon's spare unique too, but
+// never a locked first copy, nor the one copy of each the bag keeps for the Seal (systems/inventory.js keptForSeal).
 export const AUTO_SALVAGE_OPTIONS = ['off', 'common', 'uncommon', 'rare', 'weaker'];
 
 /**

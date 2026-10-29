@@ -14,7 +14,7 @@ import { enemyBaseStats, supplyMult, abyssDropMult } from '../src/core/formulas.
 import { zoneForStage } from '../src/data/zones.js';
 import { recordsOf, collectModifiers } from '../src/core/modifiers.js';
 import { migrateState } from '../src/core/state.js';
-import { salvageItem } from '../src/systems/inventory.js';
+import { salvageItem, itemScore } from '../src/systems/inventory.js';
 import { evaluateDisclosures } from '../src/systems/disclosure.js';
 import { xpForLevel } from '../src/core/xp.js';
 
@@ -189,6 +189,44 @@ test('a spare in the bag goes before the piece worn; a run must end first', () =
     game.leaveDungeon();
     assert.equal(game.sealDungeons(), true);
     assert.equal(s.equipped.Weapon?.uniqueId, 'warlord_cleaver', 'the worn one stays');
+});
+
+test('Salvage weaker takes spare uniques but one of each, which the Seal hands in before the piece worn', () => {
+    const game = newGame({ bestStage: 300 });
+    const s = game.state;
+    readyForSeal(game);
+    for (let i = 0; i < 3; i++) s.inventory.push(makeUnique(s, 'warlord_cleaver', 1));
+    // (each copy rolls its own numbers: the best is worn, so no spare is an upgrade)
+    const worn = s.inventory.filter(i => i.uniqueId === 'warlord_cleaver').reduce((a, b) => (itemScore(b) > itemScore(a) ? b : a));
+    game.equipItem(worn.id, 'Weapon');
+    const before = s.inventory.length;
+    assert.equal(game.salvageWeaker().count, 2, 'two of the three spares go');
+    assert.equal(s.inventory.length, before - 2);
+    assert.equal(s.inventory.filter(i => i.uniqueId === 'warlord_cleaver').length, 1);
+    assert.equal(sealProgress(s).held, DUNGEONS.length, 'the other seven, each the only copy, stay');
+    assert.equal(game.sealDungeons(), true);
+    assert.equal(s.equipped.Weapon?.uniqueId, 'warlord_cleaver', 'the worn one stays');
+    // past its Seal a tier's spare is kept for nothing
+    s.inventory.push({ ...s.equipped.Weapon, id: s.idCounter++ });
+    assert.equal(game.salvageWeaker().count, 1);
+    assert.equal(s.inventory.filter(i => i.uniqueId).length, 0);
+});
+
+test('with the Weaker auto-salvage a spare past the Seal\'s copy goes as it comes, and its news says so', () => {
+    const game = newGame({ bestStage: 30 });
+    const s = game.state;
+    s.settings.autoSalvage = 'weaker';
+    s.dungeons.goblin_warren.fragments = FRAGMENTS_PER_UNIQUE * 3;
+    const first = game.assembleUnique('goblin_warren');
+    assert.equal(first.locked, true);
+    game.equipItem(first.id, 'Head');
+    s.equipped.Head.atk = 1e6;   // (each copy rolls its own numbers: here no spare is an upgrade)
+    game.drainEvents();
+    game.assembleUnique('goblin_warren');
+    assert.equal(game.drainEvents().find(e => e.type === 'unique').kept, true, 'the Seal\'s copy stays');
+    game.assembleUnique('goblin_warren');
+    assert.equal(game.drainEvents().find(e => e.type === 'unique').kept, false, 'the next goes as it comes');
+    assert.equal(s.inventory.filter(i => i.uniqueId === 'goblin_crown').length, 1);
 });
 
 test('a tier-two chest and fragments give the second tier\'s unique', () => {

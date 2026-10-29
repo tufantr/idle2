@@ -269,9 +269,14 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   best upgrade for a slot — if nothing else can go, the bag overflows instead (a bag full of locked
   items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /
   common / uncommon / rare / weaker) salvages low drops on arrival unless they are upgrades; Weaker
-  takes any drop that wouldn't improve what is worn, whatever its rarity (never a dungeon's unique: it
-  is a record), and the bag's "Salvage weaker" button does the same for what it holds. Locked items are
-  never sold or salvaged. Nothing is ever silently deleted.
+  takes any drop that wouldn't improve what is worn, whatever its rarity, and the bag's "Salvage weaker"
+  button does the same for what it holds (`weakerInBag`). A dungeon's spare unique goes too (a player's ask,
+  29 October 2026: no unique went before, and a tier's 250 clears a dungeon left some five copies of each),
+  but never a locked first copy, nor the one copy of each of the open tier's uniques the bag keeps for the
+  Seal, which hands in a copy from the bag before a worn one (`keptForSeal`; the full bag's overflow keeps it
+  too). A bulk salvage's line and toast name all that came back (`gainedText`): a crafted piece gives part of
+  its bars and gems and no essence, and "+0 essence" read as nothing; an item's Salvage button carries the
+  icons of what it gives. Locked items are never sold or salvaged. Nothing is ever silently deleted.
 
 ### 3.6 Combat
 
@@ -649,7 +654,8 @@ fight's dock leads with a panel of its own: the clears, the unique's fragments (
 - **Uniques:** 50 fragments assemble the dungeon's unique; a chest holds it outright 0.2% of the time.
   Uniques are Legendary with fixed affixes (the Crown: +15% gold find, +4% crit, +5% HP) and 10% more
   base power than their tier — the best piece of that tier, not a tier skip. The first copy starts
-  locked; a spare (assembled or found again) arrives unlocked, to salvage for essence. Uniques cannot
+  locked; a spare (assembled or found again) arrives unlocked, to salvage for essence (Salvage weaker takes all
+  but one of each, kept for the Seal: §3.5). Uniques cannot
   be reforged.
 - **The Sunken Necropolis and the Hellforge** (October 2026; `robust-and-fun/B_longterm_motivation.md`
   §8.2 item 2): two more past the Maw, a drowned city of the dead (twelve undead, the Sunken King) and a

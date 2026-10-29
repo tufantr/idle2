@@ -23,7 +23,7 @@ Some of them, like the [[Goblin King's Crown]], show on your hero when he wears 
 
 ## Spares, upgrades and salvage
 
-- Your first copy of a unique arrives locked, so nothing can sell or salvage it by accident. Another copy, assembled again or found in a chest, is a spare: it arrives unlocked, and a full bag can salvage it for essence.
+- Your first copy of a unique arrives locked, so nothing can sell or salvage it by accident. Another copy, assembled again or found in a chest, is a spare: it arrives unlocked, so a full bag, **Salvage weaker** and the Weaker auto-salvage can salvage it for essence. They leave one copy of each of the open tier's uniques in the bag, because the Seal hands in a copy from the bag before the one your hero wears.
 - A unique is worn in a slot like any gear, so it has the levels of the slot: the anvil's for a weapon or piece of armour, the jeweller's bench's for a ring or amulet (see [[Equipment]] and [[Jewellery]]). Only its bonuses are fixed.
 - A tier's eight are handed in for its Seal; the records stay.
 - Like all gear, uniques are kept when you prestige.
