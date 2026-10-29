@@ -63,6 +63,7 @@ import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } fro
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
 import { charmsOnOffer, charmCharges } from '../systems/charms.js';
 import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
+import { VERSION } from '../version.js';
 
 // The menu's order. The clan comes first (the online side, the heart of the game), then the shop and
 // the bag (the owner's order), in a group of their own above the headings; the rest follow by group.
@@ -106,6 +107,7 @@ const ICON_MAP = svg('M1.5 3.6 5.5 2l5 1.6 4-1.6v10.4l-4 1.6-5-1.6-4 1.6zM5.5 2v
 const ICON_FLAG = svg('M3.5 14.5V2M3.5 2.6h8.4l-2 3 2 3H3.5');
 const ICON_MOON = svg('M12.6 10.4A5.6 5.6 0 0 1 5.6 3.4a5.6 5.6 0 1 0 7 7z');
 const ICON_CHECK = svg('M3 8.6l3.2 3.2L13 4.6');
+const ICON_RELOAD = svg('M12.3 5.5A5 5 0 1 1 8.9 3.1M7.2 1.1l1.7 2-2.3 1.3');
 // attack and defence beside their numbers: a sword and a shield from the atlas (health is glyph('heart'))
 const ATK_ICON = sprite('item/Weapon/3', { scale: 0.5, cls: 'soft res-spr' });
 const DEF_ICON = sprite('item/Shield/3', { scale: 0.5, cls: 'soft res-spr' });
@@ -295,12 +297,16 @@ export function renderHeader(game, ui, cloud) {
     const full = battleMode(game, ui);
     const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
     const screen = full ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.battleFull(false)" aria-label="Leave full screen" title="Leave full screen (Esc). The fight goes on.">${ICON_SHRINK}</button>` : '';
+    // a newer version of the game is live (ui/update.js): one press saves and loads it, never by itself
+    const update = ui.newVersion
+        ? `<button class="update-pill${ui.reloading ? ' busy' : ''}" onclick="FI.reloadForUpdate()" ${ui.reloading ? 'disabled' : ''} aria-label="A new version of the game is out: save and load it" title="A new version of the game is out. Press to save your game and load it.">${ICON_RELOAD}<span class="update-word">${ui.reloading ? 'Saving…' : 'New version'}</span></button>`
+        : '';
     return `
         <div class="header-row">
             ${menu}
             <div class="chips">${chips.join('')}</div>
             <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
-            <div class="header-right">${daily}${screen}${mute}${user}</div>
+            <div class="header-right">${update}${daily}${screen}${mute}${user}</div>
         </div>`;
 }
 
@@ -2337,7 +2343,7 @@ export function renderSettings(game, ui, cloud) {
         ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
         <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
         ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
-        <p class="muted small">Save version ${state.version}</p>
+        <p class="muted small">${VERSION ? `Game version ${esc(VERSION)} · save` : 'Save'} version ${state.version}</p>
     </section>`;
 }
 

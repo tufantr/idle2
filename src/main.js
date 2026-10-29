@@ -45,6 +45,8 @@ import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
+import { VERSION } from './version.js';
+import { createUpdateCheck } from './ui/update.js';
 
 const BASE_RECORD_MULT = BASE.recordMult;
 
@@ -90,6 +92,8 @@ const ui = {
     invSelected: null,   // the item on the table in the inventory (an item id)
     invPreview: null,    // the item under the pointer, shown instead while hovered
     cloudStatus: '',
+    newVersion: null,    // a newer version of the game is live (src/ui/update.js): the header's pill offers the reload
+    reloading: false,    // that pill pressed: the game saves, then the page loads again
     beginAfterSignIn: false,   // the title card's Begin asked for an account: its first fight starts once it is made
     lastRender: 0,
     renderedRevision: -1,
@@ -261,6 +265,8 @@ let lastBackup = Date.now();
 let lastCloudSave = Date.now();
 let lastPresenceAt = Date.now();   // the player's last touch, or the page coming back into view
 const playerAround = now => !document.hidden && now - lastPresenceAt < CLOUD_AWAY_MS;
+// A newer version of the game live (src/ui/update.js): looked for while the page is in view, offered by the header's pill.
+const updates = createUpdateCheck({ own: VERSION, found: version => { ui.newVersion = version; render(); } });
 
 /** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
 function advance(now) {
@@ -293,6 +299,7 @@ setInterval(() => {
     if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
     // the Clan tab's board, only while someone is there (an untouched page kept the free database awake)
     if (ui.tab === 'clan' && playerAround(now) && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
+    if (!document.hidden) updates.tick(now);   // a newer version of the game, looked for now and then
     const changed = game.revision !== ui.renderedRevision;
     const pressing = pointer.down && now - pointer.downAt < 1000;
     if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
@@ -337,6 +344,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
     lastPresenceAt = Date.now();
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
+    updates.back(Date.now());   // a newer version of the game may have come out meanwhile
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
     if (cloud.loggedIn && cloudReady && hiddenAt && Date.now() - hiddenAt >= CLOUD_AWAY_MS) syncFromCloud();
 });
@@ -1946,6 +1954,19 @@ window.FI = {
         render();
     },
     cloudSaveNow() { cloudSave(true); },
+    /** The header's new-version pill: the game saved, signed in on the server too, then the page loads the new version. */
+    async reloadForUpdate() {
+        if (ui.reloading) return;
+        ui.reloading = true;
+        render();
+        save(Date.now());
+        if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync) {
+            // (after an upload already under way; a server that keeps it waiting is left to the save on leaving the page)
+            const uploaded = (async () => { while (pushing) await new Promise(resolve => setTimeout(resolve, 100)); await cloudSave(false); })();
+            await Promise.race([uploaded, new Promise(resolve => setTimeout(resolve, 4000))]);
+        }
+        location.reload();
+    },
     game: () => game
 };
 

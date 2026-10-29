@@ -29,6 +29,10 @@ Yes: press **Play as guest** on the sign-in. Your game is then kept in that brow
 
 Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Sign in there with the same account to play the same hero.
 
+### How do I get the newest version?
+
+When a new version of the game is out, a glowing green **New version** button appears in the top bar (on a phone during a fight, just its arrow). Press it: the game saves, to the server too if you are signed in, and loads the new version. It never reloads by itself. An open game looks for a new version when you come back to its tab and every {{UPDATE_CHECK_MS / 60000}} minutes while it is in view. Settings shows the version you are playing, which helps with a bug report.
+
 ### How do I turn off motion or sound?
 
 In **Settings**, under Options: **Sound and vibration** switches all sound off, with a volume slider beside it, and **Reduce motion** stills the floating numbers and effects. The game also follows your device's own reduce-motion setting.

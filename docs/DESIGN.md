@@ -903,6 +903,17 @@ gear to wear; a place that waited opens on the return and is named there too.
   prototype's save behind it.
 - **One tab plays:** a tab opened later takes the save over; the older one stops and says so, with "Play
   here" (two tabs saved their own games over each other's, and whichever wrote last won).
+- **A new version, offered** (a player's ask, 29 October 2026: an idle game's tab stays open for days, and a player
+  who doesn't read the Discord never learns that a fix came). A deploy writes its commit into `src/version.js` (the
+  copy a page runs) and `version.json` beside the page (`deploy/vps/activate.sh`). An open page asks for
+  `version.json` when it comes back into view (not again within `UPDATE_BACK_MS`, a minute) and every
+  `UPDATE_CHECK_MS` (15 minutes) while it stays in view, never while hidden (`src/ui/update.js`): one tiny file from
+  nginx, nothing for the API, so a fix reaches an open game within minutes of the player looking (the player
+  thought of every few hours, to spare the server). When the two differ, a green **New version** pill glows in the
+  header, the arrow alone on a phone's full-screen fight; a press saves to the browser and, signed in, uploads
+  (after any upload under way, waiting at most 4 s), then reloads. It never reloads by itself: the player may be in a
+  boss fight or a dialog, and a session that has run out would land on the sign-in. Settings shows the version, for
+  bug reports; a local host has none, and neither looks nor shows one.
 - **Backups:** three rotating automatic backups (every 10 minutes) plus one on load, one before each
   prestige the player makes (Auto's take none) and one before a hard reset, restorable from Settings by a
   guest, with the guest's game put aside when an account signed in (below). Signed in, Settings shows none:
@@ -2498,6 +2509,7 @@ index.html            page shell (sidebar, header, scene, stage, tab, toasts, mo
 style.css             styles: theme tokens and components (dark fantasy), the battle scene, reward moments,
                       phone layout, reduced motion
 src/main.js           browser bootstrap: loop, render-on-change, saves, backups, cloud, window.FI handlers
+src/version.js        the version this copy of the game is (empty here; a deploy writes its commit, §3.17)
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, the
                       cloud client, which save is played) · power (server-side numbers) · text (articles for names)
@@ -2521,7 +2533,8 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       worldmap.js (the zones and the dungeons as pins on the painted map) ·
                       sprites.js (atlas cells for monsters, items, perks, tools, glyphs and the hero's layers, in the look picked) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
-                      finished action makes, popping off its target) · format.js
+                      finished action makes, popping off its target) · update.js (when an open page looks for a
+                      newer version) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
 wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki.vercel.app): build.mjs makes a

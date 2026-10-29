@@ -114,6 +114,10 @@ Deploy a commit (the game, its API and its wiki together; a release whose API do
 deploy/vps/deploy.sh
 ```
 
+A release writes its commit into `version.json` beside the page and into `src/version.js`: an open game asks for the
+first now and then, and when it differs from its own, its top bar offers a reload (`src/ui/update.js`). Settings shows
+the version a player runs.
+
 Set up from nothing: `deploy/vps/provision.sh` on the server (packages, firewall, user, database, backups), then
 `node deploy/vps/cloudflare.mjs` here (DNS records, the origin certificate, SSL "Full (strict)"), then the deploy.
 On the server, `journalctl -u fantasyidle-api` shows the API's log and `runuser -u fantasyidle -- psql` opens the

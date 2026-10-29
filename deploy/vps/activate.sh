@@ -15,6 +15,10 @@ cd "$REL"
 rm -rf public
 mkdir public
 cp -a index.html manifest.json style.css src assets public/
+# the commit, as the version this copy of the game is (src/version.js) and as the one live, which an open page asks
+# for to learn that a newer one is out (version.json, src/ui/update.js)
+printf "export const VERSION = '%s';\n" "$SHA" > public/src/version.js
+printf '{"version":"%s"}\n' "$SHA" > public/version.json
 chown -R fantasyidle:fantasyidle "$REL"
 
 # the API's packages, built for this machine (bcrypt is native); npm's cache in the app's home

@@ -1441,6 +1441,10 @@ Keeping it running:
       keeping one of each of the open tier's in the bag, since the Seal hands in a bag copy before a worn one; a bulk
       salvage names all that came back, a crafted piece's bars and gems besides essence ("+0 essence" read as
       nothing), and an item's Salvage button shows the icons of what it gives
+- [x] **A new version, offered** (a player's ask in the Discord's feedback, the owner's go, 29 October 2026; DESIGN
+      §3.17): a deploy writes its commit beside the page (`version.json`), an open game looks when it comes back into
+      view and every 15 minutes in view, and a green **New version** pill in the top bar saves the game (to the
+      server too) and reloads; it never reloads by itself. Settings shows the version
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

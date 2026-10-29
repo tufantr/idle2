@@ -424,6 +424,19 @@ button.status-pill:hover { transform: none; background: rgba(214, 170, 92, 0.1);
 .daily-btn.ready { color: #1f1406; font-weight: 800; border-color: #f7d88a; background: linear-gradient(180deg, #e2b95f, #9c7127); animation: liveBadgePulse 1.3s ease-in-out infinite; }
 .daily-btn b { font-weight: 800; }
 .daily-btn.great { background: linear-gradient(180deg, #fff1b8, #e9b54a 55%, #b07a1c); box-shadow: 0 0 16px rgba(252, 211, 77, 0.65); }
+/* a newer version of the game is live (ui/update.js): green, as what is ready elsewhere, with a slow glow, not a flash */
+.update-pill {
+    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.7rem; border-radius: 999px;
+    font: inherit; font-size: 0.8rem; font-weight: 700; color: #bbf7d0;
+    border: 1px solid rgba(74, 222, 128, 0.6); background: rgba(34, 197, 94, 0.14);
+    animation: updateGlow 2.4s ease-in-out infinite;
+}
+.update-pill .ico { width: 15px; height: 15px; }
+.update-pill:hover { transform: none; color: #dcfce7; border-color: rgba(74, 222, 128, 0.85); background: rgba(34, 197, 94, 0.24); }
+.update-pill[disabled] { opacity: 0.85; cursor: progress; animation: none; }
+@keyframes updateGlow { 0%, 100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); } 50% { box-shadow: 0 0 14px rgba(74, 222, 128, 0.55); } }
+body.reduced-motion .update-pill { animation: none; box-shadow: 0 0 10px rgba(74, 222, 128, 0.45); }
+@media (prefers-reduced-motion: reduce) { .update-pill { animation: none; box-shadow: 0 0 10px rgba(74, 222, 128, 0.45); } }
 
 /* ---------- layout ---------- */
 #tab { display: flex; flex-direction: column; gap: 1rem; }
@@ -2740,7 +2753,7 @@ body.reduced-motion .talent:hover { transform: none; }
     body.battle-full .cloud-word, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
     body.battle-full .pills:empty { display: none; }
     body.battle-full #header .daily-btn { display: inline-flex; } /* the hotbar is out of sight here, so the crate keeps its button */
-    body.battle-full .daily-word { display: none; }
+    body.battle-full .daily-word, body.battle-full .update-word { display: none; }
     body.battle-full #toast-area { top: 3.2rem; }
     body.battle-full:has(#celebrate .celebration:not(.leaving)) #toast-area { z-index: 470; }   /* a card at the top goes over the toasts (they covered a new land's card) */
     .camp-buy { flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.25rem; text-align: center; }
