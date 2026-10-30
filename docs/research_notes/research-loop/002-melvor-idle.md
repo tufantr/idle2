@@ -88,7 +88,7 @@ Fantasy Idle (`000-fantasy-idle-today.md`).
 | Past 99: raising caps liked, a parallel realm not | The War Tree extends the hero (a point a level past 99, respec for essence); skills stop at 99 | Aligned |
 | Systems best skipped (Barrier, Cartography) | Not measured as such | Measure: a skip test per system |
 | Township replaced four skills | The Clan Hall multiplies the player's own skilling | Aligned |
-| Completion Log and capes; burnout on one-in-millions drops | Hall of trophies (medals, bestiary, collection, records); a dungeon's fragments are visible pity for its unique; pets have no pity (about 70 h at 99); no completion figure, no cape | Gap: the open "cape for 100%" item |
+| Completion Log and capes; burnout on one-in-millions drops | A completion percentage in the Hall over eleven parts (`src/systems/completion.js`); a dungeon's fragments are visible pity for its unique; pets have no pity (about 70 h at 99); no cape for 100% | Gap: only the cape, the open ROADMAP item (corrected in round two: the first draft missed the percentage) |
 | Ancient Relics: a loved constraint mode | Trials and Pacts are constraint runs inside prestige | Aligned; a fresh-start mode is a separate question (the Leagues item) |
 | No events since 2022, resented | Weekend events, the week's Trial, the week's clan boss | Aligned: keep the heartbeat |
 | Golbin Raid, a roguelite side mode | None | Candidate, after research on how it was received |
@@ -112,9 +112,9 @@ those players will expect.
   player plays the browser's copy when the server can't be reached, and the save syncs when it can. It must work with
   the new-version pill (network first for the page and `version.json`), or it will serve old code. Melvor's top
   complaint; Fantasy Idle runs on one server.
-- **A completion figure and its cape** (Add, S–M): one percentage over what the hall already counts (skills, mastery,
-  the bestiary, pets, uniques, medals), and the cape at 100%. The open ROADMAP item; Melvor's completion culture keeps
-  players for years. Decide whether new content takes the cape off (Melvor does) or only lowers the figure.
+- **The cape for 100%** (Add, S): the Hall's completion percentage exists (eleven parts); a cape when it reaches 100%
+  is the open ROADMAP item, and Melvor's completion culture keeps players for years. Decide whether new content takes
+  the cape off (Melvor does) or only lowers the figure.
 - **Music** (Add, M): a quiet track per land with its own volume, from CC0 sources, so the painted places sound like
   places. Silence is a recurring reason for Melvor refunds; the sequel's music is praised. Find licensed tracks first.
 - **Bad luck protection for pets** (Change, S): once a skill's training passes twice the expected time without its pet,

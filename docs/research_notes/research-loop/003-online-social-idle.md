@@ -60,7 +60,7 @@ Sources: [Idle Clans clan](https://idleclans.wiki/w/Clan), [clan bosses](https:/
 | Pause, never decay | The hall doesn't decay; the banner is the week's | Aligned |
 | Cap each member, never sell attempts | Three attacks a day; hall gifts limited by a member's week of work | Aligned; keep it so when power goes on sale |
 | Rank for the population you have | Weekly divisions (Gold, Silver, Bronze) for three live clans; one division shown this week | Gap: divisions add little at this size |
-| Scale to the roster, favour small clans | A boss level is counted in members' attacks (level 1 = 20, x1.2 a level), so it takes about 13 fully active members to fell all seven; a solo player fells one (x1.5), three players two (x1.75), a full clan seven (x3) | Gap at today's size: no clan can reach the top, and the top three live clans felled 3–4 levels this week |
+| Scale to the roster, favour small clans | A boss level is counted in attacks (level 1 = 20, x1.2 a level), and an attack counts its fight: watching x1, striking in the openings x1.33, a combat potion on top up to x6.4 (`node tools/clanpower.mjs`, every attack used). All seven fall to 13 members who only watch, 10 who strike, 3 who strike with a potion IV; one who only watches fells one (x1.5) | Reachable for a small clan, through striking and potions. The live clans felled 3–4 this week, so the route may not be seen (corrected 30 October: the first draft counted watching only) |
 | Never gate progress on another person | The banner is up to x3 for clan members and x1.5 at most alone | The owner's design (clans are the heart); worth showing the numbers |
 | A feed of members' milestones | The Clan Hall shows gifts; nothing else of members' play | Gap: cheap to add |
 | Clear out ghosts | Leadership passes to the longest-serving member only when the leader leaves; no "last seen" shown | Gap: small |
@@ -91,10 +91,9 @@ playing, paying clan XP, and levels that open clan talents. Wars stay later.
   has `last_saved`), and a leader away for 30 days hands the clan to the longest-serving active member.
 - **One table while the clans are few** (Change, S): below some number of clans (eight, say), the week's ranking is one
   table with no divisions, and each clan's own best week is shown beside it; divisions come back as clans fill.
-- **Small clans can reach the banner's top while the game is small** (Change, S, the owner's balance call): size a
-  boss level to the clan's active members up to some number (for instance, as if a clan had at least eight), so three
-  players can fell more than two levels; or keep it and say on the boss how many attacks each level takes. Numbers to
-  measure with `tools/clanpower.mjs` first.
+- **The boss says what it takes** (Change, S): the clan fight and the Clan tab show how many attacks each level takes
+  and what striking in the openings and a potion multiply, so a small clan sees its way to the top. No resizing is
+  needed: three members striking with a potion IV fell all seven levels in a week (`tools/clanpower.mjs`).
 - **Clan quests and clan levels, together** (Add, M–L, the owner's open choice): four weekly quests met by playing
   (gather, craft, fell, give), each paying clan XP and a buff the clan picks; members' XP feeding the clan at a small
   share; levels opening clan talents. Wars later.

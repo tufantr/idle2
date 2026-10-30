@@ -145,3 +145,9 @@ In order; an item done points at its file. Items found along the way are added w
 | 002 | `002-melvor-idle.md` | Melvor Idle today, and its sequel | 30 Oct 2026 |
 | 003 | `003-online-social-idle.md` | The social side of online idle games | 30 Oct 2026 |
 | 004 | `004-genre-sentiment.md` | What idle players love and hate; the 30-point audit | 30 Oct 2026 |
+| 005 | `005-measurements.md` | Round two's measurements: clans, the growth check, CPU, the skip test | 30 Oct 2026 |
+| 006 | `006-look-alikes.md` | Ensis IDLE, Scapewatch, Milky Way Idle | 30 Oct 2026 |
+| 007 | `007-idleon.md` | Legends of IdleOn in 2025–2026 | 30 Oct 2026 |
+
+Paused on 30 October after round two (the owner's word). Not yet folded into PROPOSALS.md: the proposals at the end of
+005, 006 and 007. Old School RuneScape's long-term goals (the round's fourth item) was stopped unfinished.

@@ -38,8 +38,11 @@ brackets) and the code. Update it when the game changes, so a gap analysis compa
 - **Prestige** from stage 10: tokens (permanent attack and defence), skill points for perks, records that multiply,
   Auto prestige later [§3.9]. **Trials** from best stage 200: eight rule sets, endless ladders, Pacts [§3.26].
   **Ascension** from best stage 300: Stars [§3.27].
-- **Achievements:** 45 (+1% each to attack, defence and skill speed), medals, the hall of trophies, a bestiary, a
-  collection [§3.14]. **Looks** earned by medals, **capes** at 99, festival **cloaks** [§3.19].
+- **Achievements:** 45 (+1% each to attack, defence and skill speed), medals, the hall of trophies, a bestiary (kill
+  stars at 10, 100 and 1,000), a codex of items, a collection [§3.14].
+- **A completion percentage** in the Hall: eleven equal parts (skill levels, mastery, bestiary stars, the codex,
+  medals, pets, uniques, the first Titans, Trial tiers, Agility's slots, festival cloaks), only ever rising
+  (`src/systems/completion.js`). No cape for 100% yet (ROADMAP). **Looks** earned by medals, **capes** at 99, festival **cloaks** [§3.19].
 - **The daily crate:** one every 20 hours, three banked, every seventh a great one [§3.14].
 - **Weekend events** on the UTC calendar, with their shop and milestones [§3.19].
 
