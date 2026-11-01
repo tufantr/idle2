@@ -29,7 +29,7 @@ Every improvement the loop suggests, strongest first. Nothing here is built unti
 | P-009 | **"Last seen", and a leader away 30 days hands over** to the longest-serving active member | Add | S | 003 (OSRS, Idle Clans) | new |
 | P-010 | **One ranking table while clans are few** (no divisions below about eight clans), with each clan's own best week | Change | S | 001, 003 | new |
 | P-019 | **A text-size setting**: small, normal, large, tested at 390 px | Add | S–M | 004 (Feedback Friday: tiny text, no UI scale) | new |
-| P-011 | **Ascend into a Trial** (paseux's idea, which the owner is weighing): Faithless first, a candidate for "Ascensions that each open something new" | Add | M | 001, 004 (prestige that only resets is hated) | new; measure Faithless's tiers first |
+| P-011 | **Ascend into a Trial** (paseux's idea): not worth building as it stands. Picking Faithless at the first prestige after an Ascension already gives the same token-less climb from the same stage; the idea saves only the ten-minute minimum run, and that run pays tokens | Add | S | 001; tested on the game code, 1 November | shown 31 Oct; recommendation withdrawn 1 Nov |
 | P-012 | **Music**: a quiet track per land with its own volume, from CC0 sources | Add | M | 002 (Melvor refunds over silence; Melvor Idle 2's praised music) | new; licences first |
 | P-013 | **Per-account save history** on the server, so lost progress can be undone | Add | S–M | 002, 004 (losing progress is a top hate) | new; overlaps the public roadmap's off-server backups |
 | P-014 | **Bad luck protection for pets** after twice the expected time | Change | S | 002 (thin: rarity is part of a pet's worth) | new |

@@ -53,9 +53,9 @@ clan list and on its own panel (`crownMark`), where a title names the place; the
 - **Trial cards and Pacts show what they pay** (Change, S): before choosing, the pick line says in numbers what the run
   would clear (each Trial's next tier and the records it brings), so "why three?" answers itself. Check the current
   pick line first (`FI.pickTrial` in `src/main.js`).
-- **Ascend into a Trial** (Add, M; paseux's idea, the owner is weighing it): the Ascension dialog offers the run that
-  follows as a Trial, Faithless first, since right after an Ascension the tokens restart at nothing and Faithless costs
-  little. A candidate for the open item "Ascensions that each open something new". Measure what it does to Faithless's
-  tiers before proposing numbers.
+- **Ascend into a Trial** (paseux's idea): no change proposed. Tested on the game code (1 November): after an Ascension,
+  a run must last ten minutes (`minRunMs`), then a prestige into Faithless is allowed, from the same start stage and with
+  the same attack as right after the Ascension (tokens give nothing either way), and the ten-minute run pays tokens
+  besides. The idea would save those ten minutes. What helps is telling players the order.
 - No change for guests: the sign-in already says "A guest plays in this browser only, and an account made later starts
   a new game", and Settings says it again (`src/ui/render.js`). closer92 was told, and asked anyway.
