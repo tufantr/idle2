@@ -1577,7 +1577,7 @@ function renderWarTree(game, pick, shown) {
             const from = talentById(id);
             return { on: bridgeOpen(state, id, t), at: `x1="${from.col - 0.5}" y1="${from.row - 0.5}" x2="${t.col - 0.5}" y2="${t.row - 0.5}"` };
         })).sort((a, b) => a.on - b.on);
-        const links = `<svg class="war-links" viewBox="0 0 3 ${ROWS}" preserveAspectRatio="none" aria-hidden="true">${bridges.map(b => `<line class="casing" ${b.at}/>`).join('')}${bridges.map(b => `<line class="bridge${b.on ? ' on' : ''}" ${b.at}/>`).join('')}</svg>`;
+        const links = `<svg class="war-links" viewBox="0 0 3 ${ROWS}" preserveAspectRatio="none" aria-hidden="true">${bridges.map(b => `<line class="casing${b.on ? ' on' : ''}" ${b.at}/>`).join('')}${bridges.map(b => `<line class="bridge${b.on ? ' on' : ''}" ${b.at}/>`).join('')}</svg>`;
         return `<section class="war-col${open === tree.id ? ' shown' : ''}" data-tree="${tree.id}">
             <div class="war-head">${sprite(tree.icon, { scale: 1 })}<b>${esc(tree.name)}</b><span class="war-spent">${inTree}</span></div>
             <div class="war-grid">${links}${cells}</div>

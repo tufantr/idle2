@@ -2697,11 +2697,13 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .talent.shut { border-color: #2a2015; }
 .talent.picked { outline: 2px solid #fff3d6; outline-offset: 3px; }
 .talent.capstone { width: 54px; height: 54px; border-radius: 50%; }
-/* the bridges between talents (render.js renderWarTree): aged brass on a dark casing, molten gold once crossed */
+/* the bridges between talents (render.js renderWarTree): two cues for crossed or not, colour and width: aged brass on a dark
+   casing, molten gold and thicker once crossed */
 .war-links { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
 .war-links line { vector-effect: non-scaling-stroke; stroke-linecap: round; }
-.war-links .casing { stroke: #0a0603; stroke-width: 10px; }
-.war-links .bridge { stroke: #b0935c; stroke-width: 5px; }
+.war-links .casing { stroke: #0a0603; stroke-width: 7px; }
+.war-links .casing.on { stroke-width: 10px; }
+.war-links .bridge { stroke: #b0935c; stroke-width: 3.5px; }
 .war-links .bridge.on { stroke: #ffc84a; stroke-width: 6px; filter: drop-shadow(0 0 3px rgba(255, 186, 66, 0.8)); }
 .talent-detail { display: flex; align-items: center; gap: 0.7rem; min-height: 66px; padding: 0.55rem 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 7, 4, 0.8); }
 .talent-detail p { margin: 0.15rem 0 0; }

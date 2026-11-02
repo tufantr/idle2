@@ -1934,7 +1934,7 @@ the forge is: a page running the older game drops a field it doesn't know).
 - **Unlearning** the whole tree gives every point back for essence: 20,000, then ×1.5 each time (`RESPEC`).
 - **Where.** A War Tree tab in the perks dialog (three columns on a desktop, one tree at a time with a switch on a phone):
   each talent its atlas picture with its rank, a green frame where a point can go, gold when full, dim when its row or
-  bridge is shut, bridges from talent to talent (brass, molten gold once crossed); a tap shows what it does now and at its next rank, with Learn. The purse shows
+  bridge is shut, bridges from talent to talent (thin aged brass; thicker and molten gold once crossed); a tap shows what it does now and at its next rank, with Learn. The purse shows
   the talent points beside the skill points, the dock's Perks card counts them, the fight shows the level past 99 and a
   word over the big swings (Execute, Deathblow, Opening blow, Riposte, Second wind). It opens as a piece of the screen
   (the disclosure `talents`) with a card when Combat passes 99.
