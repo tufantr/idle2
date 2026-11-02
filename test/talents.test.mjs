@@ -1,5 +1,5 @@
 // The War Tree (DESIGN §3.33): Combat's levels go on past 99, each a talent point; three trees of seven rows, a row
-// opening with five more points in its tree, a talent once one joined to it from above has a point (or is full, if it `needs` it); unlearning for essence, more
+// opening with five more points in its tree, a talent once one joined to it from above is full; unlearning for essence, more
 // each time. The talents' stats reach the hero as a perk's do, their rules bite in the fight (never the clan boss's),
 // and saves keep only a tree a hero could have learned.
 import { test } from 'node:test';
@@ -92,8 +92,7 @@ test('learning: a point a rank, rows open five points at a time, a talent that n
     // Execute hangs from Opening Blow and needs it full (and its row ten points)
     s.skills.combat.xp = xpForCombatLevel(120);
     assert.equal(talentPoints(s), 14);
-    game.learnTalent('keen_eye');
-    for (let i = 0; i < 2; i++) game.learnTalent('precision');
+    for (let i = 0; i < 3; i++) game.learnTalent('keen_eye');
     assert.equal(game.learnTalent('execute'), false);
     assert.match(game.drainEvents().filter(e => e.type === 'error').pop().text, /above it/);
     game.learnTalent('opening_blow');
@@ -417,14 +416,17 @@ test("the bridges (the owner, 2 November 2026): every talent below the first row
     }
 });
 
-test('a talent opens once one joined to it from above has a point, either of two will do, and a tree learned before the bridges stays', () => {
+test('a talent opens once one joined to it from above is full, either of two will do, and a tree learned before the bridges stays', () => {
     const game = hero(130);
     for (let i = 0; i < 5; i++) game.learnTalent('sharpened_edge');
-    assert.equal(game.learnTalent('precision'), false, "its row is open, but nothing leads to it");
+    assert.equal(game.learnTalent('precision'), false, 'its row is open, but nothing leads to it');
     assert.match(game.drainEvents().filter(e => e.type === 'error').pop().text, /joined to it from above/);
-    assert.equal(game.learnTalent('keen_eye'), true);
+    for (let i = 0; i < 4; i++) game.learnTalent('keen_eye');
+    assert.equal(game.learnTalent('precision'), false, 'Keen Eye at 4 of 5 is not full');
+    game.learnTalent('keen_eye');
     assert.equal(game.learnTalent('precision'), true);
-    for (let i = 0; i < 3; i++) game.learnTalent('keen_eye');
+    assert.equal(game.learnTalent('cleave'), false, 'neither Opening Blow nor Precision is full');
+    for (let i = 0; i < 4; i++) game.learnTalent('precision');
     assert.equal(game.learnTalent('cleave'), true, 'Cleave hangs from Opening Blow or Precision: Precision will do');
     // an old save: Precision with nothing above it keeps its rank and may go on
     const raw = JSON.parse(hero(130).serialize(T0));
@@ -434,22 +436,34 @@ test('a talent opens once one joined to it from above has a point, either of two
     assert.equal(old.learnTalent('precision'), true);
 });
 
-test("the tree's bridges are drawn: one line for each, crossed once the talent above has a point, or is full if it is needed so", async () => {
+test('with every bridge asking for a full talent, a capstone is still the 31st point in its tree', () => {
+    const r = (id, n) => Array(n).fill(id);
+    const builds = {
+        deathblow: [...r('sharpened_edge', 5), ...r('keen_eye', 5), ...r('opening_blow', 3), ...r('execute', 3), 'cleave', ...r('weak_spot', 3), ...r('giant_slayer', 5), ...r('savage_blows', 5), 'deathblow'],
+        unbreakable: [...r('thick_skin', 5), ...r('iron_hide', 5), ...r('brace', 3), 'second_wind', ...r('lifeblood', 2), ...r('hamstring', 3), 'light_feet', ...r('stalwart', 5), ...r('fortress', 5), 'unbreakable'],
+        relentless: [...r('patient_hunter', 5), ...r('scavenger', 5), ...r('treasure_sense', 5), ...r('essence_drinker', 2), ...r('second_chance', 2), ...r('long_draught', 3), ...r('veterans_focus', 3), ...r('bounty', 5), 'relentless']
+    };
+    for (const [capstone, build] of Object.entries(builds)) {
+        const game = hero(130);
+        assert.equal(build.length, 31);
+        for (const [i, id] of build.entries()) assert.equal(game.learnTalent(id), true, `${capstone}: point ${i + 1}, ${id}`);
+        assert.equal(game.state.talents.ranks[capstone], 1);
+    }
+});
+
+test("the tree's bridges are drawn: one line for each, crossed once the talent above is full", async () => {
     const { renderPerksModal } = await import('../src/ui/render.js');
     const game = hero(140);
     game.state.seen.talents = true;   // (the tree shows once its disclosure has opened)
     const drawn = () => [...renderPerksModal(game, { view: 'talents', pick: null, tree: null }).matchAll(/<line class="bridge( on)?" x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"\/>/g)];
     const wanted = TALENTS.flatMap(t => talentParents(t).map(id => { const f = talentById(id); return `${f.col - 0.5},${f.row - 0.5},${t.col - 0.5},${t.row - 0.5}`; })).sort();
     assert.deepEqual(drawn().map(m => m.slice(2, 6).join(',')).sort(), wanted);
-    assert.equal(drawn().filter(m => m[1]).length, 0);
-    game.learnTalent('sharpened_edge');
-    assert.equal(drawn().filter(m => m[1]).length, 1, 'a point crosses the bridge to Opening Blow');
     for (let i = 0; i < 4; i++) game.learnTalent('sharpened_edge');
-    game.learnTalent('opening_blow');
-    game.learnTalent('opening_blow');
-    assert.equal(drawn().filter(m => m[1]).length, 2, "to Cleave as well; Execute's waits for Opening Blow to be full");
-    game.learnTalent('opening_blow');
-    assert.equal(drawn().filter(m => m[1]).length, 3);
+    assert.equal(drawn().filter(m => m[1]).length, 0, 'four of five crosses nothing');
+    game.learnTalent('sharpened_edge');
+    assert.equal(drawn().filter(m => m[1]).length, 1, 'full: the bridge to Opening Blow');
+    for (let i = 0; i < 3; i++) game.learnTalent('opening_blow');
+    assert.equal(drawn().filter(m => m[1]).length, 3, 'and on to Execute and Cleave');
 });
 
 test("the sidebar's Combat badge counts the levels past 99, with the bar to the next (the owner's report: 106 showed as 99)", async () => {

@@ -1447,8 +1447,8 @@ Keeping it running:
       server too) and reloads; it never reloads by itself. Settings shows the version
 - [x] **The War Tree flows from top to bottom** (the owner's report and ask, 2 November 2026): an arrow between neighbouring
       rows was a dark stub in an 8-pixel gap, and most talents stood alone. Now bridges, plain lines of thin brass that turn
-      thicker and molten gold once crossed, join each tree down to its capstone; a talent opens once one joined to it from above has a point
-      (the old arrows' talents still want theirs full), a dead end may stop short, and trees already learned stay
+      thicker and molten gold once crossed, join each tree down to its capstone; a talent opens once one joined to it from above is full, a
+      dead end may stop short, and trees already learned stay
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

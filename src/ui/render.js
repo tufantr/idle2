@@ -1542,7 +1542,7 @@ export function renderPerksModal(game, { view = 'perks', pick = null, tree = nul
 function talentBlockWords(t, block) {
     if (block === 'row') return `Opens with ${rowOpensAt(t.row)} points in ${treeById(t.tree).name}`;
     if (block === 'needs') return `Needs ${talentById(t.needs).name} full first`;
-    if (block === 'bridge') return `Needs a point in ${talentParents(t).map(id => talentById(id).name).join(' or ')} first`;
+    if (block === 'bridge') return `Needs ${talentParents(t).map(id => talentById(id).name).join(' or ')} full first`;
     if (block === 'points') return 'No talent points now: each combat level past 99 brings one';
     return '';
 }
@@ -1575,7 +1575,7 @@ function renderWarTree(game, pick, shown) {
         // squares (one a cell: the svg stretches over the grid); those crossed drawn last, over the rest
         const bridges = TALENTS.filter(t => t.tree === tree.id).flatMap(t => talentParents(t).map(id => {
             const from = talentById(id);
-            return { on: bridgeOpen(state, id, t), at: `x1="${from.col - 0.5}" y1="${from.row - 0.5}" x2="${t.col - 0.5}" y2="${t.row - 0.5}"` };
+            return { on: bridgeOpen(state, id), at: `x1="${from.col - 0.5}" y1="${from.row - 0.5}" x2="${t.col - 0.5}" y2="${t.row - 0.5}"` };
         })).sort((a, b) => a.on - b.on);
         const links = `<svg class="war-links" viewBox="0 0 3 ${ROWS}" preserveAspectRatio="none" aria-hidden="true">${bridges.map(b => `<line class="casing${b.on ? ' on' : ''}" ${b.at}/>`).join('')}${bridges.map(b => `<line class="bridge${b.on ? ' on' : ''}" ${b.at}/>`).join('')}</svg>`;
         return `<section class="war-col${open === tree.id ? ' shown' : ''}" data-tree="${tree.id}">

@@ -31,7 +31,7 @@ const BLOCKED = {
     points: 'No talent points left: each combat level past 99 brings one.',
     row: 'That row opens with more points in its tree.',
     needs: 'Fill the talent above it first.',
-    bridge: 'Put a point in a talent joined to it from above first.'
+    bridge: 'Fill a talent joined to it from above first.'
 };
 
 /** Learn one rank of a talent. True if learned. */

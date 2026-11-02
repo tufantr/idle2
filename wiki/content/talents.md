@@ -16,7 +16,7 @@ keywords: war tree, talents, talent, talent points, talent tree, combat level pa
 - **Bulwark**: staying up. Health and armour, blows turned aside, and a dodge that strikes back. It matters most where the blows are heavy: [[Trials]], [[Dungeons|dungeons]] and [[The Titan]].
 - **Hunt**: the boss's clock, the loot and the climb. More time against a boss, a quicker retry after one holds out, more gold, drops and essence, and more from the Lords.
 
-Each tree has {{ROWS}} rows. The first row is open from the start; each row after opens once you have spent {{ROW_POINTS}} more points in that tree, so the last row opens at {{ROW_POINTS * (ROWS - 1)}} and its one talent, the tree's **capstone**, is the {{ROW_POINTS * (ROWS - 1) + 1}}st point. Bridges run down each tree from the top to the capstone: a talent opens once a talent joined to it from above has a point, and a few need that talent at its full rank. Each talent has one to five ranks, and a point buys one rank.
+Each tree has {{ROWS}} rows. The first row is open from the start; each row after opens once you have spent {{ROW_POINTS}} more points in that tree, so the last row opens at {{ROW_POINTS * (ROWS - 1)}} and its one talent, the tree's **capstone**, is the {{ROW_POINTS * (ROWS - 1) + 1}}st point. Bridges run down each tree from the top to the capstone: a talent opens once a talent joined to it from above is at its full rank. Where two bridges lead in, either one will do. Each talent has one to five ranks, and a point buys one rank.
 
 There are {{TALENT_POINTS_MAX}} points' worth of talents in all, far more than any hero will have, so a tree is a choice: one capstone, or two trees halfway.
 

@@ -7,9 +7,9 @@
 // Three trees: Blade (his attack), Bulwark (staying up) and Hunt (the boss's clock, the loot, the climb), seven rows
 // each. A row opens once ROW_POINTS more points are spent in its tree (the seventh at 30, so its capstone is the 31st).
 // Bridges join each tree from the top down to its capstone (the owner, 2 November 2026: no talent alone in the middle; a
-// dead end may stop short of the capstone): a talent below the first row hangs from `from`, and opens once any of those
-// has a point, or from `needs`, which must be full. Talents never speed the prestige loop itself (the owner turned the
-// Quartermaster down for that): a run starts where it did.
+// dead end may stop short of the capstone): a talent below the first row opens once a talent joined to it from above is
+// full: any of `from`, or the one it `needs` (the talents that had arrows; a save is checked against these, see talentsValid).
+// Talents never speed the prestige loop itself (the owner turned the Quartermaster down for that): a run starts where it did.
 //
 // Each talent's numbers are per rank: `mods` add to the modifier pipeline as a perk's do and `mult` multiplies as Knight's
 // does (core/modifiers.js); `fx` are its rules, read in the fight (systems/combat.js, through talentFx), each an array of
@@ -151,12 +151,12 @@ export const rowOpensAt = row => ROW_POINTS * (row - 1);
 /** The talents one hangs from, joined to it by a bridge in the tree (none in the first row). */
 export const talentParents = t => (t.needs ? [t.needs] : t.from || []);
 
-/** Is the bridge from `parent` down to `t` crossed? A point in it does, or (`needs`) all its ranks. */
-export const bridgeOpen = (state, parent, t) => (t.needs ? talentRank(state, parent) >= talentById(parent).max : talentRank(state, parent) > 0);
+/** Is the bridge down from `parent` crossed? Once every rank of it is learned. */
+export const bridgeOpen = (state, parent) => talentRank(state, parent) >= talentById(parent).max;
 
 /**
  * Why a talent can't take its next rank, given `points` free (null when it can): a full talent, no point, a row not yet
- * open, the talent it `needs` not full, or no point in any talent it hangs `from` (a talent already learned keeps going:
+ * open, the talent it `needs` not full, or none of those it hangs `from` full (a talent already learned keeps going:
  * trees learned before the bridges came).
  */
 export function talentBlock(state, t, points) {
@@ -165,7 +165,7 @@ export function talentBlock(state, t, points) {
     if (points < 1) return 'points';
     if (talentPointsSpent(state, t.tree) < rowOpensAt(t.row)) return 'row';
     if (t.needs && talentRank(state, t.needs) < talentById(t.needs).max) return 'needs';
-    if (!rank && t.from && !t.from.some(id => talentRank(state, id) > 0)) return 'bridge';
+    if (!rank && t.from && !t.from.some(id => bridgeOpen(state, id))) return 'bridge';
     return null;
 }
 

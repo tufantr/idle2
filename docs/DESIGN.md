@@ -1925,8 +1925,8 @@ the forge is: a page running the older game drops a field it doesn't know).
   Veteran's Focus, Bounty, the capstone Relentless: each time a boss holds out its next try gives 2 s more, up to 10). A
   row opens with five more points in its tree (`ROW_POINTS`), so the capstone is the 31st. **Bridges** join each tree from
   the top down to its capstone (the owner, 2 November 2026: no talent alone in the middle; a dead end may stop short, as
-  Swift Kill and Vengeance do): a talent opens once one it hangs `from` has a point, or once the one it `needs` is full. A
-  talent already learned keeps going, and `talentsValid` doesn't check `from`, so trees learned before the bridges stay;
+  Swift Kill and Vengeance do): a talent opens once one joined to it from above is full, either where two lead in. A talent
+  already learned keeps going, and `talentsValid` doesn't check `from`, so trees learned before the bridges stay;
   134 points fill everything (`TALENT_POINTS_MAX`). A talent's stats
   reach the hero as a perk's do (`mods`, `mult` in `collectModifiers`); its rules are read in the fight (`talentFx`,
   `derived.talents`, `src/systems/combat.js`), never in the clan boss's (which the server reckons), and a Trial's rule

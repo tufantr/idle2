@@ -7,7 +7,7 @@ import { xpForLevel, XP_FOR_MAX_LEVEL } from '../../src/core/xp.js';
 import { PERKS, PERK_COST_MAX, perkCost } from '../../src/data/perks.js';
 import { RANKS } from '../../src/data/ranks.js';
 import { TRIALS, TRIALS_FROM, TRIAL_TIERS, TRIAL_STEP, TRIAL_LADDER, TRIAL_MAX_TIER, PACT_MAX, PACTS_FROM, trialTarget } from '../../src/data/trials.js';
-import { TREES, TALENTS, ROWS, ROW_POINTS, RESPEC, TALENT_POINTS_MAX, talentById, rowOpensAt } from '../../src/data/talents.js';
+import { TREES, TALENTS, ROWS, ROW_POINTS, RESPEC, TALENT_POINTS_MAX, talentById, talentParents, rowOpensAt } from '../../src/data/talents.js';
 import { xpForCombatLevel } from '../../src/core/xp.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS, starsFor, starGain } from '../../src/data/ascension.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS, MASTERY_XP_DIVISOR, MASTERY_MAX_LEVEL, MASTERY_SKILLS, masteryActions } from '../../src/data/mastery.js';
@@ -80,9 +80,9 @@ function talentsPage(help) {
     const trees = TREES.map(tree => {
         const rows = TALENTS.filter(t => t.tree === tree.id).sort((a, b) => a.row - b.row || a.col - b.col).map(t => [
             `<span id="${t.id.replace(/_/g, '-')}" class="act">${icon(t.icon, 1)} ${esc(t.name)}</span>`, t.row, t.max,
-            esc(t.text(t.max)), t.needs ? `${esc(talentById(t.needs).name)}, full` : (t.from || []).map(id => esc(talentById(id).name)).join(' or ')]);
+            esc(t.text(t.max)), talentParents(t).map(id => esc(talentById(id).name)).join(' or ')]);
         const total = TALENTS.filter(t => t.tree === tree.id).reduce((n, t) => n + t.max, 0);
-        return section(`${tree.name}`, `<p>${esc(tree.blurb)} ${total} points fill it.</p>${table(['Talent', 'Row #', 'Ranks #', 'At its full rank', 'Comes from'], rows, { sort: false })}`);
+        return section(`${tree.name}`, `<p>${esc(tree.blurb)} ${total} points fill it.</p>${table(['Talent', 'Row #', 'Ranks #', 'At its full rank', 'Opens once full'], rows, { sort: false })}`);
     }).join('\n');
     const levels = [100, 106, 110, 120, 130, 140, 150, 160, 170, 180].map(l => [l, l - 99, fmt(xpForCombatLevel(l)), `×${(xpForCombatLevel(l) / XP_FOR_MAX_LEVEL).toFixed(1)}`]);
     return {

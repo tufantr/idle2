@@ -28,13 +28,13 @@ const STEP = 500;
 // takes its tree to the capstone by the shortest road the rows and bridges allow.
 const r = (id, n) => Array(n).fill(id);
 export const BUILDS = {
-    blade31: [...r('sharpened_edge', 5), ...r('keen_eye', 5), ...r('opening_blow', 3), ...r('precision', 5), ...r('execute', 3), ...r('weak_spot', 3), 'giant_slayer', ...r('savage_blows', 5), 'deathblow'],
-    bulwark31: [...r('thick_skin', 5), ...r('iron_hide', 5), ...r('brace', 3), ...r('light_feet', 5), 'second_wind', ...r('lifeblood', 2), ...r('hamstring', 3), 'stalwart', ...r('fortress', 5), 'unbreakable'],
-    hunt31: [...r('patient_hunter', 5), ...r('scavenger', 5), ...r('treasure_sense', 5), ...r('essence_drinker', 2), ...r('second_chance', 2), ...r('long_draught', 3), 'gilded_eye', 'lords_due', 'veterans_focus', ...r('bounty', 5), 'relentless'],
+    blade31: [...r('sharpened_edge', 5), ...r('keen_eye', 5), ...r('opening_blow', 3), ...r('execute', 3), 'cleave', ...r('weak_spot', 3), ...r('giant_slayer', 5), ...r('savage_blows', 5), 'deathblow'],
+    bulwark31: [...r('thick_skin', 5), ...r('iron_hide', 5), ...r('brace', 3), 'second_wind', ...r('lifeblood', 2), ...r('hamstring', 3), 'light_feet', ...r('stalwart', 5), ...r('fortress', 5), 'unbreakable'],
+    hunt31: [...r('patient_hunter', 5), ...r('scavenger', 5), ...r('treasure_sense', 5), ...r('essence_drinker', 2), ...r('second_chance', 2), ...r('long_draught', 3), ...r('veterans_focus', 3), ...r('bounty', 5), 'relentless'],
     // the first seven points of a hero at the old cap (level 106), and a 51-point Blade-and-Hunt build (level 150)
     first7: [...r('patient_hunter', 5), ...r('sharpened_edge', 2)],
     mix51: [...r('patient_hunter', 5), ...r('scavenger', 5), ...r('treasure_sense', 5), ...r('second_chance', 2),
-        ...r('sharpened_edge', 5), ...r('keen_eye', 5), ...r('opening_blow', 3), ...r('precision', 5), ...r('execute', 3), ...r('weak_spot', 3), 'giant_slayer', ...r('savage_blows', 5), 'deathblow', ...r('essence_drinker', 3), ...r('long_draught', 3)]
+        ...r('sharpened_edge', 5), ...r('keen_eye', 5), ...r('opening_blow', 3), ...r('execute', 3), 'cleave', ...r('weak_spot', 3), ...r('giant_slayer', 5), ...r('savage_blows', 5), 'deathblow', ...r('essence_drinker', 3)]
 };
 const SHOWN = String(args.builds || 'first7,blade31,hunt31,bulwark31,mix51').split(',').filter(b => BUILDS[b]);
 
