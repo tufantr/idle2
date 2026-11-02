@@ -371,9 +371,9 @@ function nextPerk() {
 const rk = (id, n) => Array(n).fill(id);
 const TALENT_ORDER = [...rk('patient_hunter', 5), ...rk('sharpened_edge', 5), ...rk('keen_eye', 5), ...rk('opening_blow', 3), ...rk('precision', 5),
     ...rk('execute', 3), ...rk('weak_spot', 3), 'giant_slayer', ...rk('savage_blows', 5), 'deathblow',
-    ...rk('scavenger', 5), ...rk('treasure_sense', 5), ...rk('second_chance', 2), ...rk('essence_drinker', 3), ...rk('long_draught', 3), ...rk('lords_due', 3), ...rk('bounty', 5), 'relentless',
+    ...rk('scavenger', 5), ...rk('treasure_sense', 5), ...rk('second_chance', 2), ...rk('essence_drinker', 3), ...rk('long_draught', 3), 'gilded_eye', ...rk('lords_due', 3), 'veterans_focus', ...rk('bounty', 5), 'relentless',
     ...rk('giant_slayer', 4), ...rk('flurry', 3), ...rk('cleave', 3), ...rk('berserker', 2), ...rk('swift_kill', 2),
-    ...rk('gilded_eye', 3), ...rk('veterans_focus', 3), ...rk('tracker', 5),
+    ...rk('gilded_eye', 2), ...rk('veterans_focus', 2), ...rk('tracker', 5),
     ...rk('thick_skin', 5), ...rk('iron_hide', 5), ...rk('brace', 3), ...rk('light_feet', 5), 'second_wind', ...rk('lifeblood', 2), ...rk('hamstring', 3), ...rk('riposte', 3),
     ...rk('stalwart', 5), ...rk('rally', 3), ...rk('hearty_meals', 3), ...rk('fortress', 5), ...rk('vengeance', 2), 'unbreakable'];
 function learnTalents() {

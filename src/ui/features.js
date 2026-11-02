@@ -92,7 +92,7 @@ export const FEATURES = {
     talents: { name: 'War Tree', art: 'armory', icon: 'item/Weapon/6', blurb: 'A talent point for every combat level past 99, in three trees.',
         points: ["Combat's levels go on past 99, each slower to come than the last, and each one brings a talent point.",
             `Three trees: Blade for his attack, Bulwark for staying up, Hunt for the boss's clock, the loot and the climb. A row opens with ${ROW_POINTS} more points in its tree; the last row's capstone takes ${ROW_POINTS * (ROWS - 1) + 1}.`,
-            'A talent an arrow points to opens once the talent above it is full.',
+            'Bridges run down each tree: a talent opens once one joined to it from above has a point, and a few once that one is full.',
             `Unlearning the whole tree gives every point back, for ${RESPEC.essence.toLocaleString('en-US')} essence the first time and more each time after.`,
             "The talents' rules stay out of the clan boss's fight."] },
     charms: { name: 'Charms', art: 'charms', icon: 'item/Gloves/3', blurb: 'Kits with charges that make one skill go further.',

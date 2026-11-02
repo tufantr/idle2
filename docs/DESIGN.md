@@ -1923,15 +1923,18 @@ the forge is: a page running the older game drops a field it doesn't know).
   Riposte and Vengeance on a dodge, the capstone Unbreakable: no blow takes more than a third of his health) and **Hunt**
   (+1 s a rank on a boss's clock, gold, drops, essence, Second Chance's shorter regroup, Lord's Due's second piece,
   Veteran's Focus, Bounty, the capstone Relentless: each time a boss holds out its next try gives 2 s more, up to 10). A
-  row opens with five more points in its tree (`ROW_POINTS`), so the capstone is the 31st; a talent an arrow points to
-  (`needs`) waits for the one above it to be full; 134 points fill everything (`TALENT_POINTS_MAX`). A talent's stats
+  row opens with five more points in its tree (`ROW_POINTS`), so the capstone is the 31st. **Bridges** join each tree from
+  the top down to its capstone (the owner, 2 November 2026: no talent alone in the middle; a dead end may stop short, as
+  Swift Kill and Vengeance do): a talent opens once one it hangs `from` has a point, or once the one it `needs` is full. A
+  talent already learned keeps going, and `talentsValid` doesn't check `from`, so trees learned before the bridges stay;
+  134 points fill everything (`TALENT_POINTS_MAX`). A talent's stats
   reach the hero as a perk's do (`mods`, `mult` in `collectModifiers`); its rules are read in the fight (`talentFx`,
   `derived.talents`, `src/systems/combat.js`), never in the clan boss's (which the server reckons), and a Trial's rule
   wins (Glass Hero still falls to the first blow). Nothing in the tree speeds the prestige loop itself.
 - **Unlearning** the whole tree gives every point back for essence: 20,000, then ×1.5 each time (`RESPEC`).
 - **Where.** A War Tree tab in the perks dialog (three columns on a desktop, one tree at a time with a switch on a phone):
   each talent its atlas picture with its rank, a green frame where a point can go, gold when full, dim when its row or
-  arrow is shut, arrows down the columns (bronze, gold once the upper talent is full); a tap shows what it does now and at its next rank, with Learn. The purse shows
+  bridge is shut, bridges from talent to talent (brass, molten gold once crossed); a tap shows what it does now and at its next rank, with Learn. The purse shows
   the talent points beside the skill points, the dock's Perks card counts them, the fight shows the level past 99 and a
   word over the big swings (Execute, Deathblow, Opening blow, Riposte, Second wind). It opens as a piece of the screen
   (the disclosure `talents`) with a card when Combat passes 99.

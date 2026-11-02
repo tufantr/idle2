@@ -58,7 +58,7 @@ import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
 import { TRIAL_TIERS, trialBite } from '../data/trials.js';
-import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice } from '../data/talents.js';
+import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
 import { charmsOnOffer, charmCharges } from '../systems/charms.js';
@@ -1542,13 +1542,14 @@ export function renderPerksModal(game, { view = 'perks', pick = null, tree = nul
 function talentBlockWords(t, block) {
     if (block === 'row') return `Opens with ${rowOpensAt(t.row)} points in ${treeById(t.tree).name}`;
     if (block === 'needs') return `Needs ${talentById(t.needs).name} full first`;
+    if (block === 'bridge') return `Needs a point in ${talentParents(t).map(id => talentById(id).name).join(' or ')} first`;
     if (block === 'points') return 'No talent points now: each combat level past 99 brings one';
     return '';
 }
 
 /**
  * The War Tree (data/talents.js): three trees of seven rows, as in WoW Classic. Each talent a picture with its rank; a lit
- * frame when a point can go there, a full one gold, a row not yet open dim; arrows from a talent to the one it opens. A
+ * frame when a point can go there, a full one gold, one not yet open dim; bridges from each talent to those it opens. A
  * tap picks a talent: the line under the trees says what it does now and at its next rank, and Learn spends a point. On a
  * phone one tree shows at a time.
  */
@@ -1565,21 +1566,21 @@ function renderWarTree(game, pick, shown) {
         const cells = TALENTS.filter(t => t.tree === tree.id).map(t => {
             const rank = talentRank(state, t.id);
             const block = learnBlock(state, t.id);
-            const rowShut = inTree < rowOpensAt(t.row);
-            const cls = rank >= t.max ? 'full' : !block ? 'ready' : rowShut || block === 'needs' ? 'shut' : rank ? 'part' : 'open';
+            const gate = talentBlock(state, t, 1);   // what stands in its way, a free point or not
+            const cls = rank >= t.max ? 'full' : !block ? 'ready' : gate ? 'shut' : rank ? 'part' : 'open';
             return `<button class="talent ${cls}${pick === t.id ? ' picked' : ''}${t.row === ROWS ? ' capstone' : ''}" style="grid-row:${t.row};grid-column:${t.col}" onclick="FI.pickTalent('${t.id}')"
                 title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b></button>`;
         }).join('');
-        // the arrows: from a talent down its column to the one it opens (data/talents.js `needs`), standing in the rows
-        // below the upper talent, and drawn in the gap up to the lower one's frame (style.css)
-        const arrows = TALENTS.filter(t => t.tree === tree.id && t.needs).map(t => {
-            const from = talentById(t.needs);
-            const lit = talentRank(state, from.id) >= from.max;
-            return `<i class="talent-arrow${lit ? ' lit' : ''}${t.row === ROWS ? ' to-capstone' : ''}" style="grid-column:${t.col};grid-row:${from.row + 1} / ${t.row + 1}" aria-hidden="true"></i>`;
-        }).join('');
+        // the bridges: a line from each talent to each one it opens, centre to centre behind them, in the grid's own
+        // squares (one a cell: the svg stretches over the grid); those crossed drawn last, over the rest
+        const bridges = TALENTS.filter(t => t.tree === tree.id).flatMap(t => talentParents(t).map(id => {
+            const from = talentById(id);
+            return { on: bridgeOpen(state, id, t), at: `x1="${from.col - 0.5}" y1="${from.row - 0.5}" x2="${t.col - 0.5}" y2="${t.row - 0.5}"` };
+        })).sort((a, b) => a.on - b.on);
+        const links = `<svg class="war-links" viewBox="0 0 3 ${ROWS}" preserveAspectRatio="none" aria-hidden="true">${bridges.map(b => `<line class="casing" ${b.at}/>`).join('')}${bridges.map(b => `<line class="bridge${b.on ? ' on' : ''}" ${b.at}/>`).join('')}</svg>`;
         return `<section class="war-col${open === tree.id ? ' shown' : ''}" data-tree="${tree.id}">
             <div class="war-head">${sprite(tree.icon, { scale: 1 })}<b>${esc(tree.name)}</b><span class="war-spent">${inTree}</span></div>
-            <div class="war-grid">${arrows}${cells}</div>
+            <div class="war-grid">${links}${cells}</div>
         </section>`;
     }).join('');
     const detail = picked ? (() => {

@@ -80,9 +80,9 @@ function talentsPage(help) {
     const trees = TREES.map(tree => {
         const rows = TALENTS.filter(t => t.tree === tree.id).sort((a, b) => a.row - b.row || a.col - b.col).map(t => [
             `<span id="${t.id.replace(/_/g, '-')}" class="act">${icon(t.icon, 1)} ${esc(t.name)}</span>`, t.row, t.max,
-            esc(t.text(t.max)), t.needs ? esc(talentById(t.needs).name) : '']);
+            esc(t.text(t.max)), t.needs ? `${esc(talentById(t.needs).name)}, full` : (t.from || []).map(id => esc(talentById(id).name)).join(' or ')]);
         const total = TALENTS.filter(t => t.tree === tree.id).reduce((n, t) => n + t.max, 0);
-        return section(`${tree.name}`, `<p>${esc(tree.blurb)} ${total} points fill it.</p>${table(['Talent', 'Row #', 'Ranks #', 'At its full rank', 'Needs'], rows, { sort: false })}`);
+        return section(`${tree.name}`, `<p>${esc(tree.blurb)} ${total} points fill it.</p>${table(['Talent', 'Row #', 'Ranks #', 'At its full rank', 'Comes from'], rows, { sort: false })}`);
     }).join('\n');
     const levels = [100, 106, 110, 120, 130, 140, 150, 160, 170, 180].map(l => [l, l - 99, fmt(xpForCombatLevel(l)), `×${(xpForCombatLevel(l) / XP_FOR_MAX_LEVEL).toFixed(1)}`]);
     return {

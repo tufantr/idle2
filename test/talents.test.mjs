@@ -1,5 +1,5 @@
 // The War Tree (DESIGN §3.33): Combat's levels go on past 99, each a talent point; three trees of seven rows, a row
-// opening with five more points in its tree, an arrow's talent once the one above is full; unlearning for essence, more
+// opening with five more points in its tree, a talent once one joined to it from above has a point (or is full, if it `needs` it); unlearning for essence, more
 // each time. The talents' stats reach the hero as a perk's do, their rules bite in the fight (never the clan boss's),
 // and saves keep only a tree a hero could have learned.
 import { test } from 'node:test';
@@ -11,7 +11,7 @@ import { migrateState } from '../src/core/state.js';
 import { BALANCE, enemyDamage, enemyForStage, goldForKill } from '../src/core/formulas.js';
 import { BASE, isFocused } from '../src/core/modifiers.js';
 import { levelForXp, combatLevelForXp, xpForCombatLevel, COMBAT_XP_CAP, XP_FOR_MAX_LEVEL, MAX_COMBAT_LEVEL } from '../src/core/xp.js';
-import { TREES, TALENTS, ROWS, ROW_POINTS, RESPEC, RELENTLESS, SECOND_WIND_MS, TALENT_POINTS_MAX, WAR_XP_SHARE, talentById, rowOpensAt, talentFx, respecPrice } from '../src/data/talents.js';
+import { TREES, TALENTS, ROWS, ROW_POINTS, RESPEC, RELENTLESS, SECOND_WIND_MS, TALENT_POINTS_MAX, WAR_XP_SHARE, talentById, rowOpensAt, talentFx, respecPrice, talentParents } from '../src/data/talents.js';
 import { warLevel, talentPoints, talentsOpen } from '../src/systems/talents.js';
 import { grantXp } from '../src/systems/progress.js';
 import { spawnEnemy, playerAttack, enemyAttack, onEnemyDeath, onBossTimeout, tickCombat } from '../src/systems/combat.js';
@@ -74,7 +74,7 @@ test('Combat goes on past 99 on the same table, a talent point each level; the o
     assert.equal(seen(hero(99).state, 'talents'), false);
 });
 
-test('learning: a point a rank, rows open five points at a time, an arrow once the talent above is full', () => {
+test('learning: a point a rank, rows open five points at a time, a talent that needs another once that one is full', () => {
     const game = hero(106);
     const s = game.state;
     assert.equal(talentPoints(s), 7);
@@ -89,12 +89,13 @@ test('learning: a point a rank, rows open five points at a time, an arrow once t
     assert.equal(game.learnTalent('opening_blow'), true);
     assert.equal(talentPoints(s), 0);
     assert.equal(game.learnTalent('precision'), false, 'no points');
-    // Execute's arrow comes from Opening Blow: it waits for it to be full (and its row for ten points)
+    // Execute hangs from Opening Blow and needs it full (and its row ten points)
     s.skills.combat.xp = xpForCombatLevel(120);
     assert.equal(talentPoints(s), 14);
-    for (let i = 0; i < 3; i++) game.learnTalent('precision');
+    game.learnTalent('keen_eye');
+    for (let i = 0; i < 2; i++) game.learnTalent('precision');
     assert.equal(game.learnTalent('execute'), false);
-    assert.match(game.drainEvents().filter(e => e.type === 'error').pop().text, /arrow/);
+    assert.match(game.drainEvents().filter(e => e.type === 'error').pop().text, /above it/);
     game.learnTalent('opening_blow');
     assert.equal(game.learnTalent('execute'), true);
     assert.equal(game.derived.talents.execute, 0.02);
@@ -129,7 +130,7 @@ test('saves keep a tree a hero could have learned, and only as many points as hi
     assert.deepEqual(s.talents, { ranks: {}, respecs: 3 });
     raw.talents = { ranks: { patient_hunter: 5, scavenger: 1, treasure_sense: '1.8' } };
     assert.deepEqual(migrateState(raw, T0).talents, { ranks: { patient_hunter: 5, scavenger: 1, treasure_sense: 1 }, respecs: 0 });
-    // a row before its points, or an arrow before its talent is full: unlearned
+    // a row before its points, or a talent before the one it needs is full: unlearned
     raw.skills.combat.xp = xpForCombatLevel(150);
     raw.talents = { ranks: { patient_hunter: 5, second_chance: 1 } };
     assert.deepEqual(migrateState(raw, T0).talents.ranks, {});
@@ -356,7 +357,7 @@ test("the clan boss's fight leaves the talents' rules out, as the server reckons
     assert.equal(game.derived.talents.openingBlow, 3);
 });
 
-test('the War Tree data hangs together: three trees of seven rows, every row reachable, arrows straight down, a capstone each', () => {
+test('the War Tree data hangs together: three trees of seven rows, every row reachable, a capstone each', () => {
     const ids = new Set();
     for (const tree of TREES) {
         const ts = TALENTS.filter(t => t.tree === tree.id);
@@ -369,11 +370,6 @@ test('the War Tree data hangs together: three trees of seven rows, every row rea
             assert.ok(SPRITES[t.icon], `${t.id}: ${t.icon}`);
             for (let r = 1; r <= t.max; r++) assert.ok(typeof t.text(r) === 'string' && t.text(r).length > 5, `${t.id} ${r}`);
             for (const values of Object.values(t.fx || {})) assert.equal(values.length, t.max, t.id);
-            if (t.needs) {
-                const from = talentById(t.needs);
-                assert.ok(from && from.tree === t.tree && from.col === t.col && from.row < t.row, `${t.id}'s arrow`);
-                assert.ok(!ts.some(o => o.col === t.col && o.row > from.row && o.row < t.row), `${t.id}'s arrow crosses a talent`);
-            }
         }
         for (let row = 2; row <= ROWS; row++) {
             const below = ts.filter(t => t.row < row).reduce((n, t) => n + t.max, 0);
@@ -388,15 +384,72 @@ test('the War Tree data hangs together: three trees of seven rows, every row rea
     assert.equal(MAX_COMBAT_LEVEL, 99 + TALENT_POINTS_MAX);
 });
 
-test("the tree's arrows: one for each talent that needs another, standing in the rows below the upper talent (the owner's report: the short ones hardly showed, and the long ones poked out past their talents)", async () => {
+test("the bridges (the owner, 2 November 2026): every talent below the first row hangs from one above it, no two cross, and all but a dead end lead to the capstone", () => {
+    for (const tree of TREES) {
+        const ts = TALENTS.filter(t => t.tree === tree.id);
+        const cap = ts.find(t => t.row === ROWS);
+        const lines = [];
+        for (const t of ts) {
+            const parents = talentParents(t);
+            assert.ok(!(t.needs && t.from), `${t.id}: needs or from, not both`);
+            assert.equal(parents.length > 0, t.row > 1, `${t.id} ${t.row === 1 ? 'tops its tree' : 'hangs from nothing'}`);
+            for (const id of parents) {
+                const from = talentById(id);
+                assert.ok(from && from.tree === t.tree && from.row < t.row, `${t.id} from ${id}`);
+                // straight down past no talent, or one row down to the next column
+                if (from.col === t.col) assert.ok(!ts.some(o => o.col === t.col && o.row > from.row && o.row < t.row), `${id} to ${t.id} runs through a talent`);
+                else assert.ok(t.row === from.row + 1 && Math.abs(t.col - from.col) === 1, `${id} to ${t.id}: too long a slant`);
+                lines.push({ name: `${id} to ${t.id}`, a: [from.col, from.row], b: [t.col, t.row] });
+            }
+        }
+        const side = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+        const same = (p, q) => p[0] === q[0] && p[1] === q[1];
+        for (const [i, l] of lines.entries()) for (const m of lines.slice(i + 1)) {
+            if (same(l.a, m.a) || same(l.a, m.b) || same(l.b, m.a) || same(l.b, m.b)) continue;
+            const crosses = side(l.a, l.b, m.a) !== side(l.a, l.b, m.b) && side(m.a, m.b, l.a) !== side(m.a, m.b, l.b);
+            assert.ok(!crosses, `${l.name} crosses ${m.name}`);
+        }
+        const children = id => ts.filter(t => talentParents(t).includes(id));
+        const reaches = t => t === cap || children(t.id).some(reaches);
+        const deadEnds = ts.filter(t => t !== cap && !children(t.id).length);
+        assert.ok(deadEnds.length <= 1, `${tree.id}: dead ends ${deadEnds.map(t => t.id)}`);
+        for (const t of ts) if (!deadEnds.includes(t) && !children(t.id).every(c => deadEnds.includes(c))) assert.ok(reaches(t), `${t.id} leads to no capstone`);
+    }
+});
+
+test('a talent opens once one joined to it from above has a point, either of two will do, and a tree learned before the bridges stays', () => {
+    const game = hero(130);
+    for (let i = 0; i < 5; i++) game.learnTalent('sharpened_edge');
+    assert.equal(game.learnTalent('precision'), false, "its row is open, but nothing leads to it");
+    assert.match(game.drainEvents().filter(e => e.type === 'error').pop().text, /joined to it from above/);
+    assert.equal(game.learnTalent('keen_eye'), true);
+    assert.equal(game.learnTalent('precision'), true);
+    for (let i = 0; i < 3; i++) game.learnTalent('keen_eye');
+    assert.equal(game.learnTalent('cleave'), true, 'Cleave hangs from Opening Blow or Precision: Precision will do');
+    // an old save: Precision with nothing above it keeps its rank and may go on
+    const raw = JSON.parse(hero(130).serialize(T0));
+    raw.talents = { ranks: { sharpened_edge: 5, precision: 1 } };
+    const old = new Game(raw, T0);
+    assert.deepEqual(old.state.talents.ranks, { sharpened_edge: 5, precision: 1 });
+    assert.equal(old.learnTalent('precision'), true);
+});
+
+test("the tree's bridges are drawn: one line for each, crossed once the talent above has a point, or is full if it is needed so", async () => {
     const { renderPerksModal } = await import('../src/ui/render.js');
     const game = hero(140);
     game.state.seen.talents = true;   // (the tree shows once its disclosure has opened)
-    const html = renderPerksModal(game, { view: 'talents', pick: null, tree: null });
-    const drawn = [...html.matchAll(/<i class="talent-arrow([^"]*)" style="grid-column:(\d);grid-row:(\d) \/ (\d)"/g)].map(m => `${m[1].trim()}|${m[2]}|${m[3]}|${m[4]}`).sort();
-    const wanted = TALENTS.filter(t => t.needs).map(t => `${t.row === ROWS ? 'to-capstone' : ''}|${t.col}|${talentById(t.needs).row + 1}|${t.row + 1}`).sort();
-    assert.deepEqual(drawn, wanted);
-    assert.ok(wanted.length > 0);
+    const drawn = () => [...renderPerksModal(game, { view: 'talents', pick: null, tree: null }).matchAll(/<line class="bridge( on)?" x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"\/>/g)];
+    const wanted = TALENTS.flatMap(t => talentParents(t).map(id => { const f = talentById(id); return `${f.col - 0.5},${f.row - 0.5},${t.col - 0.5},${t.row - 0.5}`; })).sort();
+    assert.deepEqual(drawn().map(m => m.slice(2, 6).join(',')).sort(), wanted);
+    assert.equal(drawn().filter(m => m[1]).length, 0);
+    game.learnTalent('sharpened_edge');
+    assert.equal(drawn().filter(m => m[1]).length, 1, 'a point crosses the bridge to Opening Blow');
+    for (let i = 0; i < 4; i++) game.learnTalent('sharpened_edge');
+    game.learnTalent('opening_blow');
+    game.learnTalent('opening_blow');
+    assert.equal(drawn().filter(m => m[1]).length, 2, "to Cleave as well; Execute's waits for Opening Blow to be full");
+    game.learnTalent('opening_blow');
+    assert.equal(drawn().filter(m => m[1]).length, 3);
 });
 
 test("the sidebar's Combat badge counts the levels past 99, with the bar to the next (the owner's report: 106 showed as 99)", async () => {

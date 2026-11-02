@@ -5,9 +5,11 @@
 // WoW Classic's talents and League of Legends' old masteries.
 //
 // Three trees: Blade (his attack), Bulwark (staying up) and Hunt (the boss's clock, the loot, the climb), seven rows
-// each. A row opens once ROW_POINTS more points are spent in its tree (the seventh at 30, so its capstone is the 31st), a
-// talent with `needs` once that one is full (an arrow in the tree). Talents never speed the prestige loop itself (the
-// owner turned the Quartermaster down for that): a run starts where it did.
+// each. A row opens once ROW_POINTS more points are spent in its tree (the seventh at 30, so its capstone is the 31st).
+// Bridges join each tree from the top down to its capstone (the owner, 2 November 2026: no talent alone in the middle; a
+// dead end may stop short of the capstone): a talent below the first row hangs from `from`, and opens once any of those
+// has a point, or from `needs`, which must be full. Talents never speed the prestige loop itself (the owner turned the
+// Quartermaster down for that): a run starts where it did.
 //
 // Each talent's numbers are per rank: `mods` add to the modifier pipeline as a perk's do and `mult` multiplies as Knight's
 // does (core/modifiers.js); `fx` are its rules, read in the fight (systems/combat.js, through talentFx), each an array of
@@ -48,25 +50,25 @@ export const TALENTS = [
         mult: { atk: 1.01 }, text: r => `×${(1.01 ** r).toFixed(3)} attack` },
     { id: 'keen_eye', tree: 'blade', row: 1, col: 3, max: 5, name: 'Keen Eye', icon: 'icon/crit',
         mods: { critDmg: 0.05 }, text: r => `+${pct(0.05 * r)} critical damage` },
-    { id: 'opening_blow', tree: 'blade', row: 2, col: 1, max: 3, name: 'Opening Blow', icon: 'item/Weapon/5',
+    { id: 'opening_blow', tree: 'blade', row: 2, col: 1, max: 3, from: ['sharpened_edge'], name: 'Opening Blow', icon: 'item/Weapon/5',
         fx: { openingBlow: [1.5, 2, 3] }, text: r => `his first swing at a boss deals ×${[1.5, 2, 3][r - 1]}` },
-    { id: 'precision', tree: 'blade', row: 2, col: 3, max: 5, name: 'Precision', icon: 'item/Gloves/4',
+    { id: 'precision', tree: 'blade', row: 2, col: 3, max: 5, from: ['keen_eye'], name: 'Precision', icon: 'item/Gloves/4',
         mods: { critChance: 0.01 }, text: r => `+${pct(0.01 * r)} critical chance` },
     { id: 'execute', tree: 'blade', row: 3, col: 1, max: 3, needs: 'opening_blow', name: 'Execute', icon: 'icon/skull',
         fx: { execute: [0.02, 0.04, 0.06] }, text: r => `a boss below ${pct([0.02, 0.04, 0.06][r - 1])} of its health falls` },
-    { id: 'cleave', tree: 'blade', row: 3, col: 2, max: 3, name: 'Cleave', icon: 'uniq/warlord_cleaver',
+    { id: 'cleave', tree: 'blade', row: 3, col: 2, max: 3, from: ['opening_blow', 'precision'], name: 'Cleave', icon: 'uniq/warlord_cleaver',
         fx: { cleave: [0.2, 0.4, 0.6] }, text: r => `${pct([0.2, 0.4, 0.6][r - 1])} of a killing blow's spare damage carries to the next monster` },
-    { id: 'weak_spot', tree: 'blade', row: 4, col: 1, max: 3, name: 'Weak Spot', icon: 'mon/Cursed Knight',
+    { id: 'weak_spot', tree: 'blade', row: 4, col: 1, max: 3, from: ['execute'], name: 'Weak Spot', icon: 'mon/Cursed Knight',
         fx: { weakSpot: [0.04, 0.08, 0.12] }, text: r => `critical hits on a boss deal +${pct([0.04, 0.08, 0.12][r - 1])}` },
     { id: 'flurry', tree: 'blade', row: 4, col: 3, max: 3, needs: 'precision', name: 'Flurry', icon: 'icon/spark',
         fx: { flurry: [0.08, 0.16, 0.25] }, text: r => `after a critical hit, his next swing comes ${pct([0.08, 0.16, 0.25][r - 1])} sooner` },
-    { id: 'giant_slayer', tree: 'blade', row: 5, col: 2, max: 5, name: 'Giant Slayer', icon: 'mon/Mountain Troll',
+    { id: 'giant_slayer', tree: 'blade', row: 5, col: 2, max: 5, from: ['weak_spot', 'cleave'], name: 'Giant Slayer', icon: 'mon/Mountain Troll',
         fx: { giantSlayer: per(5, 0.02) }, text: r => `+${pct(0.02 * r)} damage to bosses` },
-    { id: 'berserker', tree: 'blade', row: 5, col: 3, max: 2, name: 'Berserker', icon: 'mon/Orc Warlord',
+    { id: 'berserker', tree: 'blade', row: 5, col: 3, max: 2, from: ['flurry'], name: 'Berserker', icon: 'mon/Orc Warlord',
         fx: { berserker: [0.1, 0.2] }, text: r => `+${pct(0.1 * r)} damage while under half his health` },
-    { id: 'savage_blows', tree: 'blade', row: 6, col: 2, max: 5, name: 'Savage Blows', icon: 'item/Weapon/7',
+    { id: 'savage_blows', tree: 'blade', row: 6, col: 2, max: 5, from: ['giant_slayer', 'berserker'], name: 'Savage Blows', icon: 'item/Weapon/7',
         mult: { atk: 1.01 }, text: r => `×${(1.01 ** r).toFixed(3)} attack` },
-    { id: 'swift_kill', tree: 'blade', row: 6, col: 3, max: 2, name: 'Swift Kill', icon: 'item/Boots/5',
+    { id: 'swift_kill', tree: 'blade', row: 6, col: 3, max: 2, from: ['berserker'], name: 'Swift Kill', icon: 'item/Boots/5',
         fx: { swiftKill: [0.25, 0.5] }, text: r => `a kill readies his next swing ${pct(0.25 * r)} sooner` },
     { id: 'deathblow', tree: 'blade', row: 7, col: 2, max: 1, needs: 'savage_blows', name: 'Deathblow', icon: 'uniq/hellforged_gauntlets',
         fx: { deathblow: [2] }, text: () => 'every tenth swing deals double' },
@@ -76,25 +78,25 @@ export const TALENTS = [
         mult: { hp: 1.02 }, text: r => `×${(1.02 ** r).toFixed(3)} health` },
     { id: 'iron_hide', tree: 'bulwark', row: 1, col: 3, max: 5, name: 'Iron Hide', icon: 'item/Shield/3',
         mult: { def: 1.02 }, text: r => `×${(1.02 ** r).toFixed(3)} defence` },
-    { id: 'brace', tree: 'bulwark', row: 2, col: 1, max: 3, name: 'Brace', icon: 'item/Shield/5',
+    { id: 'brace', tree: 'bulwark', row: 2, col: 1, max: 3, from: ['thick_skin'], name: 'Brace', icon: 'item/Shield/5',
         fx: { brace: [0.07, 0.14, 0.2] }, text: r => `a blow of over 30% of his health is cut by ${pct([0.07, 0.14, 0.2][r - 1])}` },
-    { id: 'light_feet', tree: 'bulwark', row: 2, col: 3, max: 5, name: 'Light Feet', icon: 'icon/dodge',
+    { id: 'light_feet', tree: 'bulwark', row: 2, col: 3, max: 5, from: ['iron_hide'], name: 'Light Feet', icon: 'icon/dodge',
         mods: { dodge: 0.01 }, text: r => `+${pct(0.01 * r)} dodge` },
     { id: 'second_wind', tree: 'bulwark', row: 3, col: 1, max: 1, needs: 'brace', name: 'Second Wind', icon: 'icon/heart',
         fx: { secondWind: [1] }, text: () => `once a minute, a blow that would fell him leaves him standing, and he eats` },
-    { id: 'hearty_meals', tree: 'bulwark', row: 4, col: 2, max: 3, name: 'Hearty Meals', icon: 'res/cooked_shark',
+    { id: 'hearty_meals', tree: 'bulwark', row: 4, col: 2, max: 3, from: ['lifeblood'], name: 'Hearty Meals', icon: 'res/cooked_shark',
         mods: { foodMult: 0.1 }, text: r => `food heals +${pct(0.1 * r)}` },
-    { id: 'lifeblood', tree: 'bulwark', row: 3, col: 2, max: 2, name: 'Lifeblood', icon: 'mon/Leech',
+    { id: 'lifeblood', tree: 'bulwark', row: 3, col: 2, max: 2, from: ['brace', 'light_feet'], name: 'Lifeblood', icon: 'mon/Leech',
         mods: { lifesteal: 0.01 }, fx: { lifestealCeiling: [0.005, 0.01] }, text: r => `+${pct(0.01 * r)} lifesteal, and it heals up to ${+(0.5 * r).toFixed(1)}% more of his health a second` },
-    { id: 'hamstring', tree: 'bulwark', row: 4, col: 1, max: 3, name: 'Hamstring', icon: 'item/Boots/3',
+    { id: 'hamstring', tree: 'bulwark', row: 4, col: 1, max: 3, from: ['second_wind'], name: 'Hamstring', icon: 'item/Boots/3',
         fx: { hamstring: [0.05, 0.1, 0.15] }, text: r => `a boss swings ${pct([0.05, 0.1, 0.15][r - 1])} slower` },
     { id: 'riposte', tree: 'bulwark', row: 4, col: 3, max: 3, needs: 'light_feet', name: 'Riposte', icon: 'item/Weapon/2',
         fx: { riposte: [0.33, 0.66, 1] }, text: r => `a dodge strikes back with ${pct([0.33, 0.66, 1][r - 1])} of a swing` },
-    { id: 'stalwart', tree: 'bulwark', row: 5, col: 1, max: 5, name: 'Stalwart', icon: 'item/Head/6',
+    { id: 'stalwart', tree: 'bulwark', row: 5, col: 1, max: 5, from: ['hamstring'], name: 'Stalwart', icon: 'item/Head/6',
         mult: { def: 1.015, hp: 1.015 }, text: r => `×${(1.015 ** r).toFixed(3)} defence and health` },
-    { id: 'rally', tree: 'bulwark', row: 5, col: 2, max: 3, name: 'Rally', icon: 'campfire',
+    { id: 'rally', tree: 'bulwark', row: 5, col: 2, max: 3, from: ['hearty_meals', 'riposte'], name: 'Rally', icon: 'campfire',
         fx: { rally: [0.01, 0.02, 0.03] }, text: r => `a kill heals ${pct(0.01 * r)} of his health` },
-    { id: 'fortress', tree: 'bulwark', row: 6, col: 2, max: 5, name: 'Fortress', icon: 'uniq/dragonheart_plate',
+    { id: 'fortress', tree: 'bulwark', row: 6, col: 2, max: 5, from: ['stalwart', 'rally'], name: 'Fortress', icon: 'uniq/dragonheart_plate',
         fx: { fortress: per(5, 0.03) }, text: r => `blows hurt ${pct(0.03 * r)} less` },
     { id: 'vengeance', tree: 'bulwark', row: 6, col: 3, max: 2, needs: 'riposte', name: 'Vengeance', icon: 'mon/Abyss Warlord',
         fx: { vengeance: [0.25, 0.5] }, text: r => `after a dodge, his next swing deals +${pct(0.25 * r)}` },
@@ -106,23 +108,23 @@ export const TALENTS = [
         fx: { patientMs: per(5, 1000) }, text: r => `+${r} s on a boss's clock` },
     { id: 'scavenger', tree: 'hunt', row: 1, col: 3, max: 5, name: 'Scavenger', icon: 'gold',
         mods: { goldMult: 0.05 }, text: r => `+${pct(0.05 * r)} gold` },
-    { id: 'treasure_sense', tree: 'hunt', row: 2, col: 2, max: 5, name: 'Treasure Sense', icon: 'crate',
+    { id: 'treasure_sense', tree: 'hunt', row: 2, col: 2, max: 5, from: ['patient_hunter', 'scavenger'], name: 'Treasure Sense', icon: 'crate',
         mods: { dropMult: 0.04 }, text: r => `+${pct(0.04 * r)} drop chance` },
-    { id: 'essence_drinker', tree: 'hunt', row: 2, col: 3, max: 3, name: 'Essence Drinker', icon: 'res/essence',
+    { id: 'essence_drinker', tree: 'hunt', row: 2, col: 3, max: 3, from: ['scavenger'], name: 'Essence Drinker', icon: 'res/essence',
         fx: { essence: [0.15, 0.3, 0.45] }, text: r => `+${pct(0.15 * r)} essence from kills` },
     { id: 'second_chance', tree: 'hunt', row: 3, col: 1, max: 2, needs: 'patient_hunter', name: 'Second Chance', icon: 'icon/away',
         fx: { regroupCut: [30000, 60000] }, text: r => (r >= 2 ? 'a boss that held out is tried again at once' : `a boss that held out is tried again ${sec(30000 * r)} sooner`) },
-    { id: 'gilded_eye', tree: 'hunt', row: 3, col: 3, max: 3, name: 'Gilded Eye', icon: 'item/Ring/4',
+    { id: 'gilded_eye', tree: 'hunt', row: 3, col: 3, max: 3, from: ['essence_drinker', 'treasure_sense'], name: 'Gilded Eye', icon: 'item/Ring/4',
         mods: { gildedChance: 0.2 }, text: r => `gilded monsters come ${pct(0.2 * r)} more often` },
-    { id: 'long_draught', tree: 'hunt', row: 4, col: 1, max: 3, name: 'Long Draught', icon: 'res/combat_potion_4',
+    { id: 'long_draught', tree: 'hunt', row: 4, col: 1, max: 3, from: ['second_chance'], name: 'Long Draught', icon: 'res/combat_potion_4',
         mods: { potionDuration: 0.15 }, text: r => `a potion's dose lasts ${pct(0.15 * r)} longer` },
-    { id: 'lords_due', tree: 'hunt', row: 4, col: 3, max: 3, name: "Lord's Due", icon: 'crown',
+    { id: 'lords_due', tree: 'hunt', row: 4, col: 3, max: 3, from: ['gilded_eye'], name: "Lord's Due", icon: 'crown',
         fx: { lordsDue: [0.15, 0.3, 0.5] }, text: r => `a Lord's first fall leaves a second piece ${pct([0.15, 0.3, 0.5][r - 1])} of the time` },
-    { id: 'veterans_focus', tree: 'hunt', row: 5, col: 1, max: 3, name: "Veteran's Focus", icon: 'icon/keep',
+    { id: 'veterans_focus', tree: 'hunt', row: 5, col: 1, max: 3, from: ['long_draught'], name: "Veteran's Focus", icon: 'icon/keep',
         fx: { focusCut: [15000, 30000, 45000] }, text: r => `Focus settles in after ${sec(60000 - 15000 * r)} instead of a minute` },
-    { id: 'tracker', tree: 'hunt', row: 5, col: 3, max: 5, name: 'Tracker', icon: 'icon/xp',
+    { id: 'tracker', tree: 'hunt', row: 5, col: 3, max: 5, from: ['lords_due'], name: 'Tracker', icon: 'icon/xp',
         mods: { combatXpMult: 0.04 }, text: r => `+${pct(0.04 * r)} combat XP` },
-    { id: 'bounty', tree: 'hunt', row: 6, col: 2, max: 5, name: 'Bounty', icon: 'mon/Griffin',
+    { id: 'bounty', tree: 'hunt', row: 6, col: 2, max: 5, from: ['veterans_focus', 'tracker'], name: 'Bounty', icon: 'mon/Griffin',
         fx: { bounty: per(5, 0.2) }, text: r => `a boss's first fall pays +${pct(0.2 * r)} gold and XP` },
     { id: 'relentless', tree: 'hunt', row: 7, col: 2, max: 1, needs: 'bounty', name: 'Relentless', icon: 'mon/Marsh Hydra',
         fx: { relentless: [1] }, text: () => `each time a boss holds out, its next try gives ${sec(RELENTLESS.stepMs)} more, up to ${sec(RELENTLESS.maxMs)}` }
@@ -146,9 +148,16 @@ export function talentPointsSpent(state, tree = null) {
 /** The points a tree needs for a row to open (row 1: none). */
 export const rowOpensAt = row => ROW_POINTS * (row - 1);
 
+/** The talents one hangs from, joined to it by a bridge in the tree (none in the first row). */
+export const talentParents = t => (t.needs ? [t.needs] : t.from || []);
+
+/** Is the bridge from `parent` down to `t` crossed? A point in it does, or (`needs`) all its ranks. */
+export const bridgeOpen = (state, parent, t) => (t.needs ? talentRank(state, parent) >= talentById(parent).max : talentRank(state, parent) > 0);
+
 /**
  * Why a talent can't take its next rank, given `points` free (null when it can): a full talent, no point, a row not yet
- * open, or the talent its arrow comes from not full.
+ * open, the talent it `needs` not full, or no point in any talent it hangs `from` (a talent already learned keeps going:
+ * trees learned before the bridges came).
  */
 export function talentBlock(state, t, points) {
     const rank = talentRank(state, t.id);
@@ -156,12 +165,14 @@ export function talentBlock(state, t, points) {
     if (points < 1) return 'points';
     if (talentPointsSpent(state, t.tree) < rowOpensAt(t.row)) return 'row';
     if (t.needs && talentRank(state, t.needs) < talentById(t.needs).max) return 'needs';
+    if (!rank && t.from && !t.from.some(id => talentRank(state, id) > 0)) return 'bridge';
     return null;
 }
 
 /**
  * Is this set of ranks a tree a hero could have learned in order? Each talent's row open with the points below it, each
- * arrow's talent full. (A save is checked with it: one that isn't is unlearned, its points given back.)
+ * talent it `needs` full. (A save is checked with it: one that isn't is unlearned, its points given back. `from` isn't
+ * checked: trees learned before the bridges came stay as they are.)
  */
 export function talentsValid(ranks) {
     const state = { talents: { ranks } };
