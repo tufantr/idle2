@@ -98,6 +98,7 @@ const ui = {
     lastRender: 0,
     renderedRevision: -1,
     modalOpen: false,
+    modalUnder: null,    // the dialog a question stands over, while it is asked (askConfirm): back when it closes
     modalQueue: [],
     perks: { view: 'perks', pick: null, tree: null },   // the perks dialog: Perks or the War Tree, its talent picked, the tree on a phone
     // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
@@ -1056,13 +1057,17 @@ function showModal(html, key) {
     const root = document.getElementById('modal-root');
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
-    // The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
-    // scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
+    ui.modalUnder = null;
+    focusDialog(root);
+    for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
+}
+// The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
+// scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
+function focusDialog(root) {
     const touch = !!window.matchMedia?.('(hover: none)').matches;
     // (one selector at a time: a list matched the first button in the dialog, and Enter on the welcome-back opened Prestige)
     const first = root.querySelector('[data-autofocus]') || (!touch && root.querySelector('input')) || root.querySelector('button.btn-confirm') || root.querySelector('button');
     first?.focus({ preventScroll: true });
-    for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
 }
 /** A new hero's first fight, from the title card (or the account made from it). */
 function startAdventure() {
@@ -1127,9 +1132,25 @@ let pendingConfirm = null;
 /** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
 function askConfirm(title, text, confirmLabel, onYes) {
     pendingConfirm = onYes;
-    openModal(renderConfirmModal(title, text, confirmLabel), 'confirm');
+    const html = renderConfirmModal(title, text, confirmLabel);
+    if (!ui.modalOpen || ui.modalOpen === 'confirm') { openModal(html, 'confirm'); return; }
+    // Asked from inside a dialog, the question stands over it: queued, it waited behind until that dialog was closed
+    // (the owner's report: the War Tree's Unlearn all). The dialog under it stays as it is, and closeModal goes back to it.
+    const over = Object.assign(document.createElement('div'), { className: 'modal-overlay active', innerHTML: html });
+    over.setAttribute('role', 'dialog');
+    over.setAttribute('aria-modal', 'true');
+    document.getElementById('modal-root').appendChild(over);
+    ui.modalUnder = ui.modalOpen;
+    ui.modalOpen = 'confirm';
+    focusDialog(over);
 }
 function closeModal() {
+    if (ui.modalUnder) {
+        document.querySelector('#modal-root .modal-overlay:last-child')?.remove();
+        ui.modalOpen = ui.modalUnder;
+        ui.modalUnder = null;
+        return;
+    }
     document.getElementById('modal-root').innerHTML = '';
     ui.modalOpen = false;
     const next = ui.modalQueue.shift();
@@ -1549,8 +1570,7 @@ window.FI = {
         const price = respecPrice(game.state);
         askConfirm('Unlearn the War Tree?', `Every talent point comes back to spend again, for ${fmt(price)} essence. It costs more each time.`, 'Unlearn', () => {
             if (game.unlearnTalents()) sound.play('buy');
-            ui.perks.view = 'talents';
-            window.FI.openPerks('talents');
+            render();   // the War Tree under the question shows it (refreshPerks)
         });
     },
     setAutoEat(rule) { game.setAutoEat(rule); render(); },

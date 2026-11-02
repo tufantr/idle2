@@ -1596,7 +1596,7 @@ function renderWarTree(game, pick, shown) {
     const phoneTabs = segments(TREES.map(t => [t.id, `${t.name} ${talentPointsSpent(state, t.id)}`, sprite(t.icon, { scale: 0.5 })]), open, 'FI.talentTree', 'Which tree');
     return `<div class="war-tree">
         <p class="about-blurb war-purse">Combat level <b>${level}</b>${next.xpNeeded ? ` <span class="war-next" title="${fmt(next.xpInto)} of ${fmt(next.xpNeeded)} XP to the next level"><i style="width:${(next.fraction * 100).toFixed(1)}%"></i></span>` : ''} · <b class="tp-text">${points} talent point${points === 1 ? '' : 's'}</b>
-            ${spent ? `<button class="mini-btn war-unlearn" onclick="FI.unlearnTalents()" title="Every point back, for essence (more each time)">Unlearn all · ${resIcon('essence')} ${fmt(price)}</button>` : ''}</p>
+            ${spent ? `<button class="mini-btn war-unlearn" onclick="FI.unlearnTalents()" ${(state.resources.essence || 0) < price ? 'disabled' : ''} title="Every point back, for essence (more each time)">Unlearn all · ${resIcon('essence')} ${fmt(price)}</button>` : ''}</p>
         ${detail}
         <div class="war-tabs">${phoneTabs}</div>
         <div class="war-cols">${trees}</div>

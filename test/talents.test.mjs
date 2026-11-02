@@ -451,6 +451,19 @@ test('with every bridge asking for a full talent, a capstone is still the 31st p
     }
 });
 
+test('Unlearn all is pressed only with the essence for it', async () => {
+    const { renderPerksModal } = await import('../src/ui/render.js');
+    const game = hero(140);
+    game.state.seen.talents = true;
+    const button = () => renderPerksModal(game, { view: 'talents', pick: null, tree: null }).match(/<button class="mini-btn war-unlearn"[^>]*>/)?.[0];
+    assert.equal(button(), undefined, 'nothing learned, nothing to unlearn');
+    game.learnTalent('sharpened_edge');
+    game.state.resources.essence = RESPEC.essence - 1;
+    assert.match(button(), /disabled/);
+    game.state.resources.essence = RESPEC.essence;
+    assert.doesNotMatch(button(), /disabled/);
+});
+
 test("the tree's bridges are drawn: one line for each, crossed once the talent above is full", async () => {
     const { renderPerksModal } = await import('../src/ui/render.js');
     const game = hero(140);
