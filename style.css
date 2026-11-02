@@ -2684,7 +2684,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .war-col { padding: 0.5rem 0.4rem 0.6rem; border: 1px solid var(--line); border-radius: 12px; background: rgba(10, 7, 4, 0.74); }
 .war-head { display: flex; align-items: center; gap: 0.45rem; margin: 0 0.2rem 0.35rem; font-family: var(--font-display); color: var(--heading); }
 .war-spent { margin-left: auto; font-weight: 800; color: #fecaca; }
-.war-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(7, 56px); justify-items: center; align-items: center; }
+.war-grid { --talent-row: 60px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(7, var(--talent-row)); justify-items: center; align-items: center; }
 .talent { position: relative; z-index: 1; overflow: visible; width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 10px; border: 2px solid #3d2e1d; background: radial-gradient(circle at 50% 35%, #2d2217, #110c07); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
 .talent:hover { transform: translateY(-2px); }
 .talent-rank { position: absolute; right: -7px; bottom: -7px; padding: 0 4px; border-radius: 6px; font-size: 0.6rem; font-weight: 800; line-height: 1.35; color: #e7d9c0; background: rgba(12, 8, 4, 0.92); border: 1px solid #4a3a26; }
@@ -2697,11 +2697,13 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .talent.shut { border-color: #2a2015; }
 .talent.picked { outline: 2px solid #fff3d6; outline-offset: 3px; }
 .talent.capstone { width: 54px; height: 54px; border-radius: 50%; }
-/* an arrow from a talent down its column to the one it opens: a line behind the two, its head just over the lower one */
-.talent-arrow { position: relative; z-index: 0; align-self: stretch; width: 4px; border-radius: 2px; background: #3d2e1d; }
-.talent-arrow::after { content: ""; position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); border: 6px solid transparent; border-bottom: 0; border-top-color: #3d2e1d; }
-.talent-arrow.lit { background: #d4a73c; }
-.talent-arrow.lit::after { border-top-color: #d4a73c; }
+/* an arrow from a talent down its column to the one it opens: its box stands in the rows below the upper talent, a line from
+   that talent's frame, the head on the lower one's (a talent is 48px tall, centred in its row; a capstone 54px) */
+.talent-arrow { --arrow: #8f7549; --head: 7px; position: relative; z-index: 0; align-self: stretch; width: 4px; background: var(--arrow);
+    margin-top: calc((48px - var(--talent-row)) / 2); margin-bottom: calc((var(--talent-row) + 48px) / 2 + var(--head)); }
+.talent-arrow.to-capstone { margin-bottom: calc((var(--talent-row) + 54px) / 2 + var(--head)); }
+.talent-arrow::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: solid transparent; border-width: var(--head) 6px 0; border-top-color: var(--arrow); }
+.talent-arrow.lit { --arrow: #e0b342; }
 .talent-detail { display: flex; align-items: center; gap: 0.7rem; min-height: 66px; padding: 0.55rem 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 7, 4, 0.8); }
 .talent-detail p { margin: 0.15rem 0 0; }
 .talent-detail.empty { justify-content: center; }
@@ -2716,8 +2718,7 @@ body.reduced-motion .talent:hover { transform: none; }
     .war-cols { grid-template-columns: 1fr; }
     .war-col:not(.shown) { display: none; }
     .war-head { display: none; }
-    .war-grid { grid-template-rows: repeat(7, 62px); }
-    .talent-arrow::after { bottom: 55px; }
+    .war-grid { --talent-row: 62px; }
 }
 
 @media (max-width: 900px) {

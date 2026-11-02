@@ -1570,11 +1570,12 @@ function renderWarTree(game, pick, shown) {
             return `<button class="talent ${cls}${pick === t.id ? ' picked' : ''}${t.row === ROWS ? ' capstone' : ''}" style="grid-row:${t.row};grid-column:${t.col}" onclick="FI.pickTalent('${t.id}')"
                 title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b></button>`;
         }).join('');
-        // the arrows: from a talent down its column to the one it opens (data/talents.js `needs`)
+        // the arrows: from a talent down its column to the one it opens (data/talents.js `needs`), standing in the rows
+        // below the upper talent, and drawn in the gap up to the lower one's frame (style.css)
         const arrows = TALENTS.filter(t => t.tree === tree.id && t.needs).map(t => {
             const from = talentById(t.needs);
             const lit = talentRank(state, from.id) >= from.max;
-            return `<i class="talent-arrow${lit ? ' lit' : ''}" style="grid-column:${t.col};grid-row:${from.row} / ${t.row + 1}" aria-hidden="true"></i>`;
+            return `<i class="talent-arrow${lit ? ' lit' : ''}${t.row === ROWS ? ' to-capstone' : ''}" style="grid-column:${t.col};grid-row:${from.row + 1} / ${t.row + 1}" aria-hidden="true"></i>`;
         }).join('');
         return `<section class="war-col${open === tree.id ? ' shown' : ''}" data-tree="${tree.id}">
             <div class="war-head">${sprite(tree.icon, { scale: 1 })}<b>${esc(tree.name)}</b><span class="war-spent">${inTree}</span></div>

@@ -388,6 +388,17 @@ test('the War Tree data hangs together: three trees of seven rows, every row rea
     assert.equal(MAX_COMBAT_LEVEL, 99 + TALENT_POINTS_MAX);
 });
 
+test("the tree's arrows: one for each talent that needs another, standing in the rows below the upper talent (the owner's report: the short ones hardly showed, and the long ones poked out past their talents)", async () => {
+    const { renderPerksModal } = await import('../src/ui/render.js');
+    const game = hero(140);
+    game.state.seen.talents = true;   // (the tree shows once its disclosure has opened)
+    const html = renderPerksModal(game, { view: 'talents', pick: null, tree: null });
+    const drawn = [...html.matchAll(/<i class="talent-arrow([^"]*)" style="grid-column:(\d);grid-row:(\d) \/ (\d)"/g)].map(m => `${m[1].trim()}|${m[2]}|${m[3]}|${m[4]}`).sort();
+    const wanted = TALENTS.filter(t => t.needs).map(t => `${t.row === ROWS ? 'to-capstone' : ''}|${t.col}|${talentById(t.needs).row + 1}|${t.row + 1}`).sort();
+    assert.deepEqual(drawn, wanted);
+    assert.ok(wanted.length > 0);
+});
+
 test("the sidebar's Combat badge counts the levels past 99, with the bar to the next (the owner's report: 106 showed as 99)", async () => {
     const { renderNav } = await import('../src/ui/render.js');
     const game = hero(106);

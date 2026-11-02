@@ -1445,6 +1445,10 @@ Keeping it running:
       §3.17): a deploy writes its commit beside the page (`version.json`), an open game looks when it comes back into
       view and every 15 minutes in view, and a green **New version** pill in the top bar saves the game (to the
       server too) and reloads; it never reloads by itself. Settings shows the version
+- [x] **The War Tree's arrows** (the owner's report, 2 November 2026): an arrow between neighbouring rows was a dark stub in
+      an 8-pixel gap, so five of the nine hardly showed, and every line poked out past its two talents, like a link
+      that isn't there. Each now runs from the upper talent's frame to the lower one's, with a clear head, bronze until
+      the upper talent is full, then gold; rows a little taller on desktop for the room
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
