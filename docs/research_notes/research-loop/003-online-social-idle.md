@@ -59,7 +59,7 @@ Sources: [Idle Clans clan](https://idleclans.wiki/w/Clan), [clan bosses](https:/
 | Split automatically, with a floor | The banner lifts every member, fought or not; the board shows shares | Aligned |
 | Pause, never decay | The hall doesn't decay; the banner is the week's | Aligned |
 | Cap each member, never sell attempts | Three attacks a day; hall gifts limited by a member's week of work | Aligned; keep it so when power goes on sale |
-| Rank for the population you have | Weekly divisions (Gold, Silver, Bronze) for three live clans; one division shown this week | Gap: divisions add little at this size |
+| Rank for the population you have | Weekly divisions (Champion, Gold, Silver, Bronze: four, corrected 4 November from 012) for three live clans; one division shown this week | Gap: divisions add little at this size |
 | Scale to the roster, favour small clans | A boss level is counted in attacks (level 1 = 20, x1.2 a level), and an attack counts its fight: watching x1, striking in the openings x1.33, a combat potion on top up to x6.4 (`node tools/clanpower.mjs`, every attack used). All seven fall to 13 members who only watch, 10 who strike, 3 who strike with a potion IV; one who only watches fells one (x1.5) | Reachable for a small clan, through striking and potions. The live clans felled 3–4 this week, so the route may not be seen (corrected 30 October: the first draft counted watching only) |
 | Never gate progress on another person | The banner is up to x3 for clan members and x1.5 at most alone | The owner's design (clans are the heart); worth showing the numbers |
 | A feed of members' milestones | The Clan Hall shows gifts; nothing else of members' play | Gap: cheap to add |

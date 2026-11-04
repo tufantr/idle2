@@ -23,9 +23,8 @@ Three clans were live in the week's ranking: Insomniacs [ZZZ], Curiosity [CUTE],
 ## The crowns bug, measured
 
 In "This week's ranking" (`clanStandings` in `src/ui/render.js`) the top three wear a crown, tinted by place in
-`style.css`: 2nd greyed (`grayscale`), 3rd sepia, 1st left as the atlas draws it. The atlas's crown is red and white,
-not gold, so at half scale the 1st reads as silver too, and all three look alike. The player's screenshot shows exactly
-that, for this week's ranks and for last week's crowns beside the division names. The same crown marks a clan in the
+`style.css`: 2nd greyed (`grayscale`), 3rd sepia, 1st left as the atlas draws it. The atlas's crown is red and amber with blue and white gems,
+not gold, so at half scale the 1st reads like the others (012 works out grey for the 2nd and nearly the same brown for the 1st and 3rd). The player's screenshot shows that, for this week's ranks and for last week's crowns beside the division names. The same crown marks a clan in the
 clan list and on its own panel (`crownMark`), where a title names the place; the ranking's crowns have no title.
 
 ## What the feedback says as a whole
@@ -61,3 +60,23 @@ clan list and on its own panel (`crownMark`), where a title names the place; the
   Faithless card says only "Your tokens give nothing"; the "?" says the next prestige ends a Trial (see P-007).
 - No change for guests: the sign-in already says "A guest plays in this browser only, and an account made later starts
   a new game", and Settings says it again (`src/ui/render.js`). closer92 was told, and asked anyway.
+
+## Second pass, 30 October to 4 November (read 4 November)
+
+The same channels. Names are left out where a false flag is involved (flagged accounts stay out of this repo).
+
+| Date | Who | What | Where it stands |
+|---|---|---|---|
+| 31 Oct | paseux | Withdrew "Everybody 2nd" after reading the wiki | The crowns stay a small fix (P-001), no longer a reported bug |
+| 31 Oct | paseux | "The skill's 12 actions", but only 7 show | Told on 1 November they open with the level; wrong, at Smithing 84 with 160+ levels in the other five. They are the metals at the anvil, listed since 6ea4de0 |
+| 31 Oct | paseux | A link to the wiki in the game; a mark when attack speed reaches its cap | The owner, 1 November: both "this week". Not built |
+| 1 Nov | paseux | A black box behind a word over the boss | The War Tree's words shared a class with its talent frames. Fixed in 6ea4de0 |
+| 1 Nov | a player | Gone from the leaderboard | Told it was the delay after changing clans, which doesn't touch boards. A false flag was the cause. |
+| 4 Nov | a player | Clan attacks suddenly doing almost nothing | A false flag, capped at 1%. Limits fixed (2b8bc24), flags cleared, the 4 attacks given back |
+| 4 Nov | a player | Do lower metals need low gear to train? | The owner: "for now, yes". True: reinforcing uses the best tier the slot has held, so a lower metal trains only by rerolling a worn low piece: 282 rerolls of a copper chest piece for mastery 50, 36,207 for 99 (5 bars a reroll, a second of practice a bar) |
+
+What it adds:
+
+- **One careful player found five real issues in a week.** Each came with a precise description. They read the wiki, and it settled one.
+- **The game's own word for a flag didn't explain it.** "Capped: this account's save showed impossible numbers" was reported as a message about "no possible value". Nothing says what to do next, and players were capped for days before one of them asked (P-025).
+- **Answers given from memory went wrong twice.** Both sounded right, and both took days to come apart. The code and the database settled them in minutes.

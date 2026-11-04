@@ -54,7 +54,7 @@ clans with a weekly boss, guest play, and nothing to buy.
 - **Scale:** English reviews 72% of 768; all languages about 49% of 2,464, two-thirds not in English; peak 3,310 at once.
 - **What hurt it:** **pay-to-win** (the theme of 7 of the 10 most helpful English reviews); moderation and the developer's
   attitude (9 of the 10 top Chinese reviews); a market dominated by early players and gold sellers; ban waves of 500+
-  main accounts.
+  main accounts. (Added 4 November, from 010: its worst month, 13% of 852 in June 2025, followed the ban of a high spender in a dispute over a balance change.)
 - Sources: [Steam](https://store.steampowered.com/app/3224420), [wiki](https://milkywayidle.wiki.gg/),
   [Cowbell Store](https://milkywayidle.wiki.gg/wiki/Cowbell_Store),
   [MooPass thread](https://steamcommunity.com/app/3224420/discussions/0/600776571073120773).

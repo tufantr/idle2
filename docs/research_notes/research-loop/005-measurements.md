@@ -23,6 +23,8 @@ Levels of the week's boss felled in a week, every attack used (three a day, six 
 
 ## Could the growth check flag an honest player after a sleep? (`api/index.js`, `plausibilityFlags`)
 
+**Corrected 4 November: the conclusion below was wrong, though not about sleep.** Real players were flagged by what this check didn't try: a bank of Titans won in a row (the limit still allowed 2), a stock of bars worked at the anvil, a deep Ascension, and a Trial's calendar weeks counted against the save's age. Nor is a flag silent: the clan fight's result says "Capped", and a flagged hero's attacks stop at 1% of the boss. The limits were fixed in 2b8bc24 (DESIGN §3.17).
+
 No case found. Each ranked number may grow by what play allows per real hour on the server's clock, from its highest
 value and from where the day's window began, plus 30 minutes of slack; offline progress happens inside that real time
 (the time away is measured by the server's clock, FAQ), so a laptop that sleeps eight hours uploads eight hours of
@@ -70,7 +72,7 @@ The simulator's sensible player, always online, with one part of the game left o
 - **Potions carry the climb:** without them the best stage at 150 hours falls by 30%; without both supplies, by half.
 - **Agility pays:** skipping it costs a fifth of the best stage (920 → 740). Shadeofnight's feeling that building
   nothing is best (001) is wrong in numbers, which makes showing the course's rates (P-002) the fix.
-- **Food doesn't beat skipping it, by 150 hours:** a hero without food reaches stage 400 nine hours later (15%) but ends
+- **Food doesn't beat skipping it, by 150 hours (taken further in `013-supplies-at-depth.md`):** a hero without food reaches stage 400 nine hours later (15%) but ends
   at the same stage (930 against 920, within the noise), with half as many deaths again. The time not spent cooking
   goes to farming herbs for potions. The owner asked on 14 October for food and potions to be "crucial" (DESIGN
   §3.28); for potions that holds, for food only in the middle of the climb.

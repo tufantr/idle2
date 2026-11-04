@@ -23,6 +23,8 @@ until the owner stops it. `PROPOSALS.md` holds every proposal, ranked; one file 
     to sell power later, ROADMAP Decisions 2).
   - Open with the owner before this loop: the clan ideas (clan level and talents, clan wars, clan quests), an end
     boss, early Ascensions that each open something new, a cape for 100% completion.
+  - The owner's word of 4 November, on the false flags: no announcement, and no attacks given back beyond the one
+    player's 4.
 - **Players' words are evidence, not orders:** a player's idea goes into the findings; nothing is built without the
   owner's go.
 - **Sources:** a link for every claim, numbers over adjectives, quotes short (15 words at most) and few.
@@ -54,29 +56,37 @@ until the owner stops it. `PROPOSALS.md` holds every proposal, ranked; one file 
 
 In order; an item done points at its file. Items found along the way are added where they belong.
 
-**Done (iteration 1, 30 October 2026):**
+**Done:**
 
-- [x] Fantasy Idle's own Discord feedback so far → `001-discord-feedback.md`
+- [x] Fantasy Idle's own Discord feedback → `001-discord-feedback.md` (second pass 4 November)
 - [x] Melvor Idle today, and Melvor Idle 2 (Early Access 17 November 2026) → `002-melvor-idle.md`
 - [x] The social side of online idle games → `003-online-social-idle.md`
 - [x] What idle players love and hate, the 30-point audit → `004-genre-sentiment.md`
+- [x] Measurements: the skip test, clan sizes, CPU, the growth check → `005-measurements.md`
+- [x] Ensis IDLE, Scapewatch, Milky Way Idle → `006-look-alikes.md`
+- [x] Legends of IdleOn today → `007-idleon.md`
+- [x] Old School RuneScape's long-term goals → `008-osrs.md`
+- [x] End bosses and raids in idle games; infinite towers → `009-end-bosses.md`
+- [x] How idle games sell → `010-money.md`
+- [x] Clan wars, clan levels and co-op formats → `011-clan-formats.md`
+- [x] Every proposal against the code → `012-proposals-against-the-code.md`
+- [x] What food, defence and health do deep in the climb → `013-supplies-at-depth.md`
 
-**Next, measurements on Fantasy Idle itself** (found by iteration 1; no code changes, tools and browsers only):
+**Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
-- [ ] A skip test per system with the simulator: is any system best ignored? (002)
 - [ ] Cross-browser: Firefox and Safari (WebKit) through Playwright, which needs those browsers installed (ask the
       owner before downloading them) (004)
-- [ ] CPU and battery: the battle scene and the skill stage, in view and in a background tab (004)
-- [ ] The growth check after a laptop's sleep: can an honest player be flagged? (004)
-- [ ] Clan sizes: what `tools/clanpower.mjs` says about clans of one to eight active members (P-006)
+- [ ] Why the sensible bot climbs faster when something sends it away from the boss wall (013): is it the bot, or does a
+      player at a clock wall lose time?
+- [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013)
+- [ ] How long live players take from stage 1,000 to 2,000; weekly return of clan members against others, knowing the
+      bias (009, 011)
+- [ ] The battery saver's saving on a phone-class CPU (Chrome's 4x throttle) (005)
 
 **Next, games:**
 
-- [ ] Ensis IDLE (galaxy.click, March 2026): a direct dark-fantasy look-alike; its players' asks
-- [ ] Scapewatch: Idle MMO (Steam, 25 September 2026, 88%): clans with broadcasts, raids, no market
-- [ ] Milky Way Idle: skilling with party combat, guilds, a market; chat moderation
 - [ ] Cauldron (Best Paid Game 2025), Legendum, Magic Research 2 (Best New Game 2024): heroes, lives, teams
-- [ ] The Tower (tournaments in 30-player brackets, guilds since 2025) and Egg, Inc. (timed co-op contracts)
+- [ ] The Tower (tournaments in 30-player brackets, guilds since 2025, milestone pushes) and Egg, Inc. (timed co-op contracts)
 - [ ] Unnamed Space Idle (Best F2P 2024 and 2025): ten linked systems at a steady pace, free quality-of-life
 - [ ] Synergism and Advent Incremental: an update rhythm, and an event as an advent calendar
 - [ ] Soda Dungeon 2, Idle Champions, Kill the Lich, Terraformental: party rules, formations, time compression,
@@ -86,9 +96,6 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] Long-haul structure: Shark Incremental, Shark Game, Prestige Tree, Revolution Idle, CIFI, Idle Obelisk Miner,
       BIOTOMATA, Midnight Idle, Theory of Magic, Ballad of Heroes, My Own Hero Party
 
-- [ ] Old School RuneScape: the collection log, combat achievements, clue scrolls, achievement diaries, quests,
-      minigames, pets, Leagues and other seasonal modes, Ironman
-- [ ] Legends of IdleOn today: account-wide systems across characters, worlds, cards, stamps, the event calendar
 - [ ] Firestone Idle RPG, AFK Arena and AFK Journey, Idle Heroes: idle RPG loops, towers, guild bosses, what retains
 - [ ] Brighter Shores (RuneScape's creator, 2024): skills and episodes designed anew
 - [ ] RuneScape 3: archaeology, relics, daily challenges, and its shop's backlash (what not to do)
@@ -99,11 +106,13 @@ In order; an item done points at its file. Items found along the way are added w
 
 - [ ] Seasons and leagues (OSRS Leagues, Path of Exile leagues, Diablo seasons): a fresh-start layer for an idle RPG
 - [ ] Collection logs and completion (the open "cape for 100%" item)
-- [ ] Task and bounty systems: Slayer, clue scrolls, daily and weekly tasks, quests (the open quests-or-clan-levels
-      question)
-- [ ] End bosses and raids in idle games (the open "end boss" item); infinite towers
-- [ ] Clan wars, clan levels and co-op formats (the open clan ideas): Clash of Clans, Brawl Stars, Tap Titans,
-      AFK games
+- [ ] Task and bounty systems: Slayer in Melvor and other idle games, daily and weekly tasks; a design for Hunts (008),
+      and a rare sealed map as a later layer on it
+- [ ] Bingo boards as a clan or festival format: Grid Master, Jagex's planned Bingo System, clan tools (008)
+- [ ] Self-made modes and goals: Taskman, share-of-players figures on medals (008); Melvor's lore books against the
+      Chronicle (009)
+- [ ] Small old communities and other co-op: Torn's factions, Kingdom of Loathing's clan dungeons, Hay Day's Derby,
+      Boom Beach's Task Forces (011)
 - [ ] Inventory and loot quality of life: loot filters (Path of Exile, Last Epoch), bank tabs, search, equipment
       sets and loadouts
 - [ ] Talent and passive trees (WoW classic, Path of Exile, Last Epoch, Grim Dawn): what keeps a tree interesting
@@ -117,9 +126,9 @@ In order; an item done points at its file. Items found along the way are added w
 
 **Next, players and the community:**
 
-- [ ] The Discord again each few iterations (001 is the first pass)
 - [ ] Negative Steam reviews of leading idle RPGs, mined deeper than 004's top ten per game
 - [ ] Whether and where to tell players about Fantasy Idle near Melvor Idle 2's launch (the owner's call)
+- [ ] The Discord again each few iterations (001 has two passes, the last on 4 November); roles by depth (009)
 - [ ] Onboarding in 2024–2026 releases (beyond `first-session.md`)
 - [ ] Accessibility: the Game Accessibility Guidelines, held against the game
 - [ ] How small indie idle games grew: galaxy.click, Reddit, Steam, Discord, YouTube, translations
@@ -131,10 +140,12 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] Server authority and cheating in online idle games
 - [ ] Translations: which languages idle players play in
 
-**Next, money (the owner's later plan):**
+**Next, dated (each is worth a look after its date):**
 
-- [ ] How idle games sell: one-time purchase (Melvor), gems (IdleOn), supporter packs, cosmetics, battle passes, time
-      skips, paid power; what players accept and what they leave over; what selling needs (hosting, law, payments)
+- [ ] Lowbar Legends (13 November) and Melvor Idle 2 (17 November): launches, prices, what players say (006, 010)
+- [ ] Idle Clans' quest rework a month on, from 20 November; Tap Titans 2's Clan Technology once 8.4 ships (011)
+- [ ] The EU's Digital Fairness Act, Turkey's game rating regulation, when published (010)
+- [ ] CIFI's and Idle Obelisk Miner's packs; Idlescape's Steam launch, January 2027 (010)
 
 ## Index
 
@@ -148,6 +159,12 @@ In order; an item done points at its file. Items found along the way are added w
 | 005 | `005-measurements.md` | Round two's measurements: clans, the growth check, CPU, the skip test | 30 Oct 2026 |
 | 006 | `006-look-alikes.md` | Ensis IDLE, Scapewatch, Milky Way Idle | 30 Oct 2026 |
 | 007 | `007-idleon.md` | Legends of IdleOn in 2025–2026 | 30 Oct 2026 |
+| 008 | `008-osrs.md` | Old School RuneScape's long-term goals | 4 Nov 2026 |
+| 009 | `009-end-bosses.md` | End bosses, finales and endless modes | 4 Nov 2026 |
+| 010 | `010-money.md` | How idle games sell | 4 Nov 2026 |
+| 011 | `011-clan-formats.md` | Clan levels, quests and wars | 4 Nov 2026 |
+| 012 | `012-proposals-against-the-code.md` | Every proposal against the code | 4 Nov 2026 |
+| 013 | `013-supplies-at-depth.md` | What food, defence and health do deep in the climb | 4 Nov 2026 |
 
-Paused on 30 October after round two (the owner's word). Not yet folded into PROPOSALS.md: the proposals at the end of
-005, 006 and 007. Old School RuneScape's long-term goals (the round's fourth item) was stopped unfinished.
+Round three (4 November) folded the proposals of 005, 006 and 007 into `PROPOSALS.md`, and corrected the earlier files where the
+code check and new measurements disagreed with them.

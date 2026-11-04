@@ -96,7 +96,7 @@ Yes = good. "Deliberate" = a no the owner chose.
 | 27 | Casual clan members count; no carry? | Yes: clan power holds each member between x0.5 and x2 of the average |
 | 28 | Tap-only at 390 px, adjustable text size? | Tap yes (some details sit only in hover titles); no text-size setting |
 | 29 | No-flash, reduced motion everywhere? | Reduced motion yes (the game's switch and the system's) |
-| 30 | AI art disclosed in the game? | **No:** credited in `assets/CREDITS.md` and on itch.io and galaxy.click, not inside the game |
+| 30 | AI art disclosed in the game? | **No:** credited in `assets/CREDITS.md`, on the wiki's Credits page (added 4 November, from 012) and on itch.io and galaxy.click, not inside the game |
 
 ## What it means
 

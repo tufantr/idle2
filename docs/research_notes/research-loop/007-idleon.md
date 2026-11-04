@@ -31,7 +31,7 @@ allegations about the developer are unverified.
   giveaways.
 - **One developer**, about 20 updates a year; worlds every 9 to 21 months.
 
-## How players took it (Steam, English reviews by month)
+## How players took it (Steam, reviews by month, all languages: the histogram ignores its language setting, found 4 November)
 
 | Period | Positive |
 |---|---|
@@ -57,7 +57,7 @@ the link from the pets to the 2023 fall is a reading of the timing and forum thr
 
 | IdleOn | Fantasy Idle today | Verdict |
 |---|---|---|
-| Cards: a bestiary that gives power | A bestiary with kill stars (10, 100, 1,000) counted in the completion figure; stars give no power | A candidate (below) |
+| Cards: a bestiary that gives power | A bestiary with kill stars (10, 100, 1,000) counted in the completion figure; stars add no power directly, though 25 and 100 of them earn medals (012) | A candidate (below) |
 | A Tome: one score from many counters | A completion percentage in the Hall, eleven equal parts (`src/systems/completion.js`) | Covered; percentile titles among players would be new |
 | Event points carry over; stock returns | Weekend events with their own shop and milestones; festival tokens keep between events (the About card) | Covered |
 | Offline without a cap, but 20% rate | 24 hours at the full rate (the same code as online) | Fantasy Idle's is the honest form players prefer (004) |
@@ -70,7 +70,7 @@ the link from the pets to the 2023 fall is a reading of the timing and forum thr
 
 - **Bestiary stars that give a little power** (Add, S–M): each kind's stars (today 10, 100, 1,000 defeats) add a small,
   equal bonus, more for bosses, with a set bonus for a land whose kinds all have three stars; the bestiary page shows
-  it. A reason to farm a given land, from a collection that already exists. Size it so it never rivals tokens.
+  it. A reason to farm a given land, from a collection that already exists. Size it so it never rivals tokens. (008: OSRS's diaries suggest paying a land's set in convenience or looks instead.)
 - **Projected gains before leaving** (Add, S): the welcome-back report exists; a line before leaving ("away 8 hours:
   about this many stages and levels") would show what the 24 hours are worth. Thin: one game's evidence.
 - **For the queue:** a score with percentile titles among players.
