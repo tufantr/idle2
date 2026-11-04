@@ -1452,6 +1452,13 @@ Keeping it running:
 - [x] **A question asked inside a dialog stands over it** (the owner's report, 2 November 2026): the War Tree's Unlearn all
       asked behind the tree, unseen until it was closed. Now it stands over the tree, which is still there after Cancel
       or Unlearn; the button waits for the essence
+- [x] **The growth check stops flagging honest play** (a player's report, 4 November 2026): a full bank of Titans won in a
+      row, a stock of bars worked at the anvil, one big Ascension and a Trial's laurels in an account's first days were each
+      flagged as impossible, and a flag caps clan attacks at 1%. The limits now allow them (DESIGN §3.17)
+- [x] **The black box behind the War Tree's words** (the same report): Opening Blow, Execute, Deathblow and Riposte popped in
+      the talent's own 48-pixel frame, because both shared the class `talent`. The word now stands alone over the number
+- [x] **The anvil lists its metals** (the same report): Smithing's mastery counted five actions the game never named. A strip
+      over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

@@ -6,7 +6,7 @@ import { SKILLS, SKILL_IDS, NON_COMBAT_SKILLS, GATHERING_SKILLS } from '../data/
 import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '../data/resources.js';
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
-import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, forgeMult } from '../data/workshop.js';
+import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, METALS, forgeMult } from '../data/workshop.js';
 import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
 import { benchCost, onBench, benchLevel, benchSlotOf } from '../systems/bench.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
@@ -19,8 +19,8 @@ import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal, legacyMult } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
 import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js';
-import { masteryProgress, skillMastery } from '../systems/mastery.js';
-import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt } from '../data/mastery.js';
+import { masteryProgress, masteryBonus, skillMastery } from '../systems/mastery.js';
+import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt, forgeKey } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
 import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, equipGain, gainStages, weakerInBag } from '../systems/inventory.js';
@@ -738,7 +738,8 @@ function xpHeader(game, skillId, extra = '') {
         const share = masteryShare(state, skillId);
         const next = MASTERY_CHECKPOINTS.find(c => share < c.at);
         const sped = checkpointsAt(share).reduce((sum, c) => sum + c.speed, 0);
-        const tip = `${fmt(m.levels)} mastery levels across this skill's ${m.actions} actions (${m.maxed} at ${MASTERY_MAX_LEVEL})${sped ? `; its actions are ${Math.round(sped * 100)}% faster` : ''}${next ? `. At ${Math.round(next.at * 100)}%: +${Math.round(next.speed * 100)}% speed` : ''}`;
+        const where = skillId === 'smithing' ? `: ${SMELTING_RECIPES.length} bars to smelt and ${METALS.length} metals at the anvil` : '';
+        const tip = `${fmt(m.levels)} mastery levels across this skill's ${m.actions} actions${where} (${m.maxed} at ${MASTERY_MAX_LEVEL})${sped ? `; its actions are ${Math.round(sped * 100)}% faster` : ''}${next ? `. At ${Math.round(next.at * 100)}%: +${Math.round(next.speed * 100)}% speed` : ''}`;
         mastery = `<button class="mastery-total" style="--share:${(share * 100).toFixed(1)}%${next ? `;--next:${next.at * 100}%` : ''}" onclick="FI.about('mastery')" title="${esc(tip)}">Mastery ${share < 0.01 && share > 0 ? '<1' : Math.floor(share * 100)}%</button>`;
     }
     return `<div class="panel-header">
@@ -1076,7 +1077,22 @@ function renderAnvil(state, ui = {}) {
     if (!worn.length) return '<p class="muted small anvil-empty">Wear a weapon or a piece of armour to work it here.</p>';
     // a reroll just made (main.js FI.reroll): its piece's new bonuses glow a few seconds
     const rolled = ui.anvilRolled && Date.now() - ui.anvilRolled.at < ANVIL_ROLL_GLOW_MS ? ui.anvilRolled : null;
-    return `<div class="anvil-grid">${worn.map(item => anvilCard(state, item, rolled && Number(rolled.id) === Number(item.id) ? rolled.before : null)).join('')}</div>`;
+    return `${anvilMastery(state)}<div class="anvil-grid">${worn.map(item => anvilCard(state, item, rolled && Number(rolled.id) === Number(item.id) ? rolled.before : null)).join('')}</div>`;
+}
+/**
+ * Each open metal's mastery (data/mastery.js forgeKey): the work at the anvil trains it, a second of practice a bar, and each
+ * level takes bars off that metal's jobs (systems/anvil.js anvilCost). Smithing's other actions show theirs on their cards.
+ */
+function anvilMastery(state) {
+    if (!seen(state, 'mastery')) return '';
+    const level = skillLevel(state, 'smithing');
+    const metals = METALS.filter(m => m.levelReq <= level).map(m => {
+        const p = masteryProgress(state, 'smithing', forgeKey(m.bar));
+        const off = masteryBonus(p.level, { produces: false, hasInputs: true }).preserve;
+        const tip = tipAttrs(`${m.name} at the anvil: mastery ${p.level}`, `${off ? `Its jobs take ${pct(off, 1)} fewer ${m.name.toLowerCase()} bars` : 'No bonus yet: every level adds a little'}. Each bar worked is a second of practice.`);
+        return `<div class="anvil-metal" ${tip}>${resIcon(m.bar)}<span class="mastery-lvl${p.level >= MASTERY_MAX_LEVEL ? ' max' : ''}">${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div>${off ? `<span class="anvil-metal-off">−${pct(off, 1)} bars</span>` : ''}</div>`;
+    }).join('');
+    return `<div class="anvil-metals" aria-label="Mastery of each metal at the anvil"><span class="loadout-label">Mastery</span>${metals}</div>`;
 }
 /** How long a reroll's new bonuses glow on the anvil. */
 export const ANVIL_ROLL_GLOW_MS = 4000;

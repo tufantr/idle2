@@ -13,6 +13,7 @@ import { RESOURCES } from '../src/data/resources.js';
 import { generateDrop } from '../src/core/formulas.js';
 import { reinforceCost } from '../src/data/workshop.js';
 import { anvilCost } from '../src/systems/anvil.js';
+import { renderSmithing } from '../src/ui/render.js';
 
 rng.setSource(seededRandom(4242));
 const T0 = 1_700_000_000_000;
@@ -105,6 +106,27 @@ test('a metal past copper is practised at the anvil, and its mastery takes bars 
     s.forge.Body.level = 6;
     const practised = anvilCost(s, s.equipped.Body).bars;
     assert.ok(practised < reinforceCost('Body', 6, 2).bars * 0.85, `${practised} bars at mastery 99`);
+});
+
+test('the anvil lists the metals open at this Smithing level, each with its mastery and the bars it saves, once mastery has opened', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.smithing.xp = xpForLevel(40);
+    s.seen.anvil = true;
+    s.equipped.Body = generateDrop(2, true, s.idCounter++, 0, [{ type: 'Body', weight: 1 }], { tier: 2 });
+    const anvil = () => renderSmithing(game, { smithView: 'anvil' });
+    assert.ok(!anvil().includes('anvil-metals'), 'not before mastery opens');
+    s.seen.mastery = true;
+    s.mastery.smithing[forgeKey('iron_bar')] = practiceFor(99);
+    const html = anvil();
+    assert.match(html, /Iron at the anvil: mastery 99/);
+    assert.match(html, /−19\.6% bars/, 'said on the strip, for phones have no tooltips');
+    assert.match(html, /Copper at the anvil: mastery 1\b/);
+    assert.match(html, /Mithril at the anvil/);
+    assert.ok(!html.includes('Adamant at the anvil'), 'a metal past the level stays out');
+    assert.match(html, /7 bars to smelt and 5 metals at the anvil/, "the header's tip says where Smithing's actions are");
+    s.equipped.Body = null;
+    assert.ok(!anvil().includes('anvil-metals'), 'and nothing to work, no strip');
 });
 
 test('level-ups count toward stats and achievements; milestones are logged', () => {

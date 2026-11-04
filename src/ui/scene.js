@@ -829,7 +829,7 @@ export function createScene(root, actions) {
                     move(el.heroSprite, ev.riposte ? 'jab' : 'lunge');
                     move(el.foeSprite, big ? 'crit' : 'hurt');
                     spawnFx(`dmg${big ? ' crit' : ''}`, big ? `${fmt(ev.dmg)}!` : fmt(ev.dmg), foe.x + jitter(22), foe.top + Math.random() * 12, big ? 1100 : 900);
-                    if (talent) spawnFx('dmg talent', talent, foe.x + jitter(8), foe.top - 16, 1100);
+                    if (talent) spawnFx('dmg talent-word', talent, foe.x + jitter(8), foe.top - 16, 1100);
                     spawnFx('slash', '', foe.x, foe.mid + 6, 320);
                     break;
                 }

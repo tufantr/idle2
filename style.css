@@ -1463,7 +1463,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .fx-layer > div { position: absolute; transform: translate(-50%, -50%); pointer-events: none; will-change: transform, opacity; }
 .dmg { font-weight: 900; font-size: 1.15rem; line-height: 1; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 #000, 0 0 6px rgba(0, 0, 0, 0.9); animation: dmgFloat 0.9s ease-out forwards; }
 .dmg.crit { font-size: 1.8rem; color: #fcd34d; text-shadow: 0 2px 0 #7c2d12, 0 0 14px rgba(245, 158, 11, 0.9); animation: dmgCrit 1.1s ease-out forwards; }
-.dmg.talent { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #fca5a5; }   /* the War Tree's big swings: Execute, Deathblow (data/talents.js) */
+.dmg.talent-word { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #fca5a5; }   /* the War Tree's big swings: Execute, Deathblow (data/talents.js) */
 .dmg.manual { font-size: 1.15rem; color: #e0f2fe; text-shadow: 0 2px 0 #0c4a6e, 0 0 10px rgba(125, 211, 252, 0.9); }
 .dmg.taken { color: #fca5a5; }
 .dmg.dodge { font-size: 1rem; font-style: italic; color: #e2e8f0; }
@@ -2294,6 +2294,11 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .pick.empty .spr { opacity: 0.5; filter: grayscale(0.6) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
 .pick.empty .pick-sub { color: var(--text-muted); }
 /* the anvil (Smithing): each worn weapon and piece of armour, its plus, and its two jobs with their costs */
+/* each metal's mastery at the anvil (render.js anvilMastery) */
+.anvil-metals { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin-bottom: 0.7rem; padding: 0.4rem 0.65rem; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 7, 4, 0.62); }
+.anvil-metal { display: flex; flex: 1 1 110px; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--text-muted); cursor: help; }
+.anvil-metal .mastery-bar { min-width: 28px; }
+.anvil-metal-off { white-space: nowrap; color: #bbf7d0; }
 .anvil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; }
 .anvil-card {
     position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; padding: 1rem 0.9rem 0.9rem;
