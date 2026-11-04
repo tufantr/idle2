@@ -168,7 +168,8 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.equal((await post('/save', { state: heroSave({ playtimeMs: 1000, bestStage: 50, tokens: 100 }) }, token)).status, 200);
     clock += 1000;
     // Uploads a second apart can't carry 99 in every skill or 950 new stages.
-    const res = await (await post('/save', { state: heroSave({ bestStage: 1000, xp: 13_034_431 * 3 }) }, token)).json();
+    const at99 = { xp: 13_034_431 };
+    const res = await (await post('/save', { state: { ...heroSave({ bestStage: 1000 }), skills: { combat: at99, woodcutting: at99, mining: at99 } } }, token)).json();
     assert.equal(res.flagged, true);
     const flags = (await peek.flags('speedy')).map(f => f.reason);
     assert.ok(flags.includes('best stage grew faster than any play could'));
@@ -214,9 +215,20 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.ok(run(highs(m()), m({ totalXp: 30e6 }), t0 + 60 * 1000).flags.length, 'but not a minute later');
     assert.ok(run(null, m({ bestStage: 5, attackDamage: 1e12 }), t0).flags.includes('attack beyond what its best stage allows'), 'a weapon no play could make');
     // Stars come with Ascensions only: a few a day, and none past what any save could hold.
-    assert.ok(run(null, m({ stars: 5000 }), t0).flags.includes('Stars beyond any possible save'));
+    assert.ok(run(null, m({ stars: 200000 }), t0).flags.includes('Stars beyond any possible save'));
     assert.deepEqual(run(highs(m({ stars: 20 })), m({ stars: 50 }), t0 + 24 * hour).flags, [], 'an Ascension a day');
     assert.ok(run(highs(m({ stars: 20 })), m({ stars: 400 }), t0 + hour).flags.includes('Stars grew faster than any play could'));
+    // What honest players were flagged for (November 2026): one Ascension of a deep hero, a stock of bars worked at the anvil,
+    // and a full bank of Titans won in a row, each upload a minute apart
+    assert.deepEqual(run(highs(m({ stars: 300 })), m({ stars: 350 }), t0 + 60 * 1000).flags, [], "100 million tokens' Ascension");
+    assert.deepEqual(run(highs(m({ totalXp: 70e6 })), m({ totalXp: 80e6 }), t0 + 60 * 1000).flags, [], 'bars worked at the anvil');
+    let titans = highs(m({ titanKills: 10 }));
+    for (const [i, titanKills] of [11, 12, 13].entries()) {
+        const up = run(titans, m({ titanKills }), t0 + (i + 1) * 60 * 1000);
+        assert.deepEqual(up.flags, [], `Titan ${i + 1} of a full bank`);
+        titans = up.peaks;
+    }
+    assert.ok(run(titans, m({ titanKills: 15 }), t0 + 5 * 60 * 1000).flags.includes('Titans defeated grew faster than any play could'), 'more than a bank holds');
     // Combat's levels past 99 (the War Tree's points): seven at once for a hero at the old cap, then a few a day at most
     assert.deepEqual(run(highs(m()), m({ warLevel: 7 }), t0 + 60 * 1000).flags, [], 'the old cap brings seven at once');
     assert.ok(run(highs(m({ warLevel: 7 })), m({ warLevel: 40 }), t0 + hour).flags.includes('combat levels past 99 grew faster than any play could'));

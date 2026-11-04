@@ -343,15 +343,18 @@ const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 const RANKED = [
     // (perHour, flat: only without honestClimb; the ceiling far past any hero's: 2,000 after 1,200 simulated hours of the endless climb)
     { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 6000, byDepth: true },
-    { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 2, ceiling: 20000 },
+    // (`flat`: a full bank of attempts won one after another, data/dungeons.js TITAN_BANK)
+    { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 3, ceiling: 20000 },
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
-    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 0, ceiling: 13 * 2 * 13_034_431 },
+    // (`flat`: a whole skill's XP at once, twice level 99's where it stops: the anvil and the bench pay for a stock of bars in minutes)
+    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 2 * 13_034_431, ceiling: 13 * 2 * 13_034_431 },
     { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e12 },   // (a few hundred million after 1,200 simulated hours)
     // Combat's levels past 99, the War Tree's points (src/data/talents.js): a hero at the old cap had 7 at once, and each later
     // level takes longer than the last (hours at the start, weeks by 150); 134 fill the tree
     { key: 'warLevel', label: 'combat levels past 99', perHour: 0.5, flat: 8, ceiling: 200 },
-    // Stars come only with an Ascension (data/ascension.js): ten for each tenfold of tokens, at most a few a day
-    { key: 'stars', label: 'Stars', perHour: 3, flat: 40, ceiling: 2000 }
+    // Stars come only with an Ascension (data/ascension.js): ten for each tenfold of tokens, all at once, one a day: 90 at the
+    // tokens' ceiling (a real hero's 100 million tokens pay 50), so a few years of them at the most for the ceiling
+    { key: 'stars', label: 'Stars', perHour: 4, flat: 90, ceiling: 100000 }
 ];
 
 /**

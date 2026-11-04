@@ -1013,6 +1013,12 @@ gear to wear; a place that waited opens on the return and is named there too.
   simulated honest runs of 150 to 1,000 hours, the faster variants of the dungeon tiers among them, upload by the
   hour without a single flag. A determined cheat can still fake a save that grows plausibly; that is the limit of a
   client-side game, until the online side decides fights and rewards itself.
+  **In November 2026 the check flagged real players for what play can do**: the replay above has no Titans won in a row, no
+  stock of bars worked at the anvil and no deep Ascension. Titans may now grow by 3 at once (`TITAN_BANK`, raised to 3 on 7
+  October, the limit left at 2). Total XP may grow by a whole skill's at once (twice level 99's, where a skill stops; the
+  anvil pays up to 34,161 XP a click before XP bonuses, the bench pays in bursts), and 3 million an hour stays. Stars come all at once: 90 (what the tokens' ceiling would pay; 100 million tokens pay 50), 4 an hour on top,
+  and a ceiling of 100,000, for one Ascension a day for years outgrew 2,000 in weeks. Laurels are counted by the Trial's own
+  weeks, Monday to Monday, not by the save's age: an account begun on a Sunday had two by the Monday, and a limit of one.
 - **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
   address) in 15 minutes and logins wait; an address makes at most three accounts a day (ten an hour until the
   beta: each is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried). Each try is

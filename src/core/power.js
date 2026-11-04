@@ -6,7 +6,7 @@ import { migrateState, MAX_STAGE } from './state.js';
 import { deriveStats, BASE } from './modifiers.js';
 import { levelForXp, combatLevelForXp, XP_FOR_MAX_LEVEL, MAX_LEVEL } from './xp.js';
 import { enemyBaseStats, BALANCE, supplyMult } from './formulas.js';
-import { TRIALS, WEEK_MS, PACT_MAX, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
+import { TRIALS, WEEK_MS, WEEKLY_FROM, PACT_MAX, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
 import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf } from '../data/social.js';
 
 export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf };   // the server reads them here
@@ -119,6 +119,8 @@ export function clanAttackFromSave(rawState, strikes, ms = CLAN_FIGHT_MS, now = 
 }
 
 /** Summary of a stored save for social features. Accepts any raw save object. */
+const weekOfTrials = at => Math.floor((at - WEEKLY_FROM) / WEEK_MS);
+
 export function powerSummary(rawState, now = Date.now()) {
     const state = stableState(rawState, now);
     const derived = deriveStats(state);
@@ -143,9 +145,9 @@ export function powerSummary(rawState, now = Date.now()) {
         // the best stage this week in the week's Trial, and the week it belongs to (the week's board)
         weeklyTrial: state.trials.weekly?.start === weeklyTrialAt(now).start ? state.trials.weekly.best || 0 : 0,
         weeklyTrialWeek: weeklyTrialAt(now).start,
-        // laurels past what the weeks since the save began allow (the week's Trial: data/trials.js; a Pact with it stakes
-        // up to PACT_MAX a week)
-        laurelsBeyondWeeks: Math.max(0, laurelsOf(state) - PACT_MAX * (Math.floor(Math.max(0, now - (Number(state.meta.createdAt) || 0)) / WEEK_MS) + 1))
+        // laurels past what the weeks since the save began allow: the Trial's weeks, Monday to Monday (data/trials.js), the
+        // one it began in among them; a Pact with the week's Trial stakes up to PACT_MAX a week
+        laurelsBeyondWeeks: Math.max(0, laurelsOf(state) - PACT_MAX * Math.max(1, weekOfTrials(now) - weekOfTrials(Number(state.meta.createdAt) || 0) + 1))
     };
 }
 

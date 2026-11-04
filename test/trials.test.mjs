@@ -359,6 +359,14 @@ test('the boards compare the hero, not the Trial a run is in, and see tiers no b
     assert.equal(powerSummary(save(), T0).laurelsBeyondWeeks, 0);
     game.state.trials.laurels = 4 * PACT_MAX + 5;
     assert.equal(powerSummary(save(), T0).laurelsBeyondWeeks, 5);
+    // the weeks are the Trial's, Monday to Monday: a save begun on a Sunday (1 November 2026) has held two by the Monday
+    const sunday = Date.UTC(2026, 10, 1, 12);
+    game.state.meta.createdAt = sunday;
+    game.state.trials.laurels = 2 * PACT_MAX;
+    assert.equal(powerSummary(save(), sunday + 24 * 3600 * 1000).laurelsBeyondWeeks, 0);
+    game.state.trials.laurels = 2 * PACT_MAX + 1;
+    assert.equal(powerSummary(save(), sunday + 24 * 3600 * 1000).laurelsBeyondWeeks, 1);
+    assert.equal(powerSummary(save(), sunday + 3600 * 1000).laurelsBeyondWeeks, PACT_MAX + 1, 'and only one on the Sunday');
 });
 
 test('the Trials data hangs together', () => {
