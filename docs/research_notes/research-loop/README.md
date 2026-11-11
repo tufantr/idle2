@@ -177,7 +177,9 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] The queue's small leads: Egg, Inc.'s Path of Virtue, Revolution Idle's Minerals, CIFI's and Idle Obelisk Miner's logs,
       Kittens Game on Steam, the sub's best of 2025, r/ScapeLikes' rules, the CHI 2026 paper on exit and re-entry, the Digital
       Fairness Act's Annex I, the ICO on children's games, Turkey's rating rules (016, 018, 014, 038, 010) → `045-leftover-leads.md`
-- [ ] The measurements still open below, once round seven's runs free the machine → `046`
+- [x] The pages the agents couldn't open, in a real browser: Ofcom's gaming guidance and dates, the UK's under-16 ban, Australia's
+      model (038, 045) → `046-pages-in-a-real-browser.md`
+- [ ] The measurements still open below, once round seven's runs free the machine → `047`
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
@@ -203,16 +205,16 @@ In order; an item done points at its file. Items found along the way are added w
       and 029 (the coverage map lists each game's files); Kittens Game's Steam build, CIFI's and Idle Obelisk Miner's logs and
       the Best of 2025 winners in 045
 - [ ] Idles that fight without a hero, mostly tower defence: 20 of the tier list's names, only The Tower read (043; low priority)
-- [ ] Pets and companions with a job: Wizard and Minion Idle's minion, Deskrawl's captured minions, Dragon Cliff's adventurers (043)
 
 **Next, mechanics across games:**
 
-- [ ] Seasons and leagues (OSRS Leagues, Path of Exile leagues, Diablo seasons): a fresh-start layer for an idle RPG
-- [ ] Collection logs and completion (the open "cape for 100%" item)
-- [ ] Self-made modes and goals: Taskman, share-of-players figures on medals (008); Melvor's lore books against the
-      Chronicle (009)
-- [ ] Pets and companions with a job (IdleOn, Melvor's Summoning, OSRS)
-- [ ] Achievements and medals: design, rewards, secret ones
+- [x] Seasons and leagues: OSRS's Leagues (008 §7), Path of Exile's leagues (017), seasons in long-haul games (016), Path of Idle's
+      seasons on their own saves (037). No seasonal mode at this size: the Trials, the weekly Hydra and three reset layers are the
+      fresh starts inside the save; ask again at a few hundred weekly players
+- [x] Collection logs and completion → 008, 026, 031 (P-005, P-108)
+- [x] Self-made modes and goals: Taskman and ironman (008), share-of-players figures and lore books (031), ironman modes praised (036)
+- [x] Pets and companions with a job → 031 and 043; companions on the scale of Melvor's Summoning are deferred (ROADMAP)
+- [x] Achievements and medals: design, rewards, secret ones → 031 (P-117, P-118)
 
 **Next, players and the community:**
 
@@ -239,6 +241,8 @@ In order; an item done points at its file. Items found along the way are added w
       through a real browser (its regulation checker, gaming guidance and list of fines) and its autumn 2026 decision on the rest of
       its measures (038)
 - [ ] Melvor Idle 2 again after 24 November with its launch reviews (033), coded with 035's and 036's codebooks
+- [ ] The UK's under-16 social media ban: its regulations (due by the end of 2026) and Ofcom's guidance on them; Ofcom's
+      Additional Safety Measures statement (autumn 2026) (046)
 - [ ] Turkey's Official Gazette weekly for the game-platform rating regulation; the ICO's findings on mobile games (winter
       2026/27); the Digital Fairness Act on EUR-Lex once filed (045)
 - [ ] Your Chronicle's crowd after its next chapter; Mimic2 a month on (did it reset its boards?); Stone Story: Ascension's price;
@@ -297,6 +301,7 @@ In order; an item done points at its file. Items found along the way are added w
 | 043 | `043-classics-and-fringes.md` | The idle RPG classics, the phone giants, the fringes, and the tier list swept | 12 Nov 2026 |
 | 044 | `044-players-again.md` | The Discord's third pass; live depth week by week; clans and who stays | 12 Nov 2026 |
 | 045 | `045-leftover-leads.md` | The queue's small leads, from Egg, Inc. to Annex I | 12 Nov 2026 |
+| 046 | `046-pages-in-a-real-browser.md` | Ofcom's gaming guidance and dates; the UK's under-16 ban against Australia's | 12 Nov 2026 |
 
 Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
 round eight (042–046) checks for anything new; then the final ranked report goes to the owner.
