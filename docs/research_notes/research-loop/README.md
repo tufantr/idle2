@@ -115,7 +115,8 @@ after their dates and added as updates.
 - Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth and the bot's patience (013); builds at depth
   (015); the bag and the Equip card (017); the Titan's bank (014); the economy's flows (022); accessibility (021); the first hour
   (019); live retention (027); every Trial and dungeon at the hero's frontier, dungeons against the clock wall (032); the boot's
-  catch-up time (037); every proposal from P-023 on against the code (041); still to do: cross-browser (waits on the owner's OK to
+  catch-up time (037); the deep balance with a fixed stall test, visit lengths, the ceiling's date (039); every proposal from P-023
+  on against the code (041); live depth by week (044); still to do: cross-browser (waits on the owner's OK to
   download two test browsers), a long session's memory and frames
 
 ## Queue
@@ -183,19 +184,20 @@ In order; an item done points at its file. Items found along the way are added w
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
-- [ ] The replay of a day away at Chrome's 4× throttle, with P-037's test (037)
-- [ ] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
-      too, the best dungeon visit length, P-024's ceiling date (032)
+- [ ] The replay of a day away at Chrome's 4× throttle, with P-037's test (037) → `047`
+- [x] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
+      too, the best dungeon visit length, P-024's ceiling date (032) → `039-balance-with-a-fixed-bot.md`
 - [ ] A long session: the game open 6–24 hours in Chromium, heap and frame rate every ten minutes, plain and throttled (028)
 - [ ] The Titan's bank and the laurel against a one-day floor with the daily and check-in bots (034, P-059); a Titan at the hero's best (032)
 - [ ] Cross-browser: Firefox and Safari (WebKit) through Playwright, which needs those browsers installed (ask the
       owner before downloading them) (004)
-- [ ] Why the sensible bot climbs faster when something sends it away from the boss wall (013): is it the bot, or does a
-      player at a clock wall lose time?
-- [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013); every Trial and dungeon at the
-      hero's frontier, build by build, and a dodge set in Glass Hero or a lifesteal set in Fasting (015, 017)
-- [ ] The economy talents over a whole game; XP and essence below the frontier against the War Tree's pace (014, 015)
-- [ ] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017)
+- [x] Why the sensible bot climbs faster when something sends it away from the boss wall (013): it was the bot, whose stall test
+      never fired; fixed, it leaves the wall on its own (039)
+- [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013) → `047`; every Trial and dungeon at
+      the hero's frontier, build by build, and a dodge set in Glass Hero or a lifesteal set in Fasting (015, 017)
+- [x] The economy talents over a whole game: the fixed bot reaches them near hour 1,270, not 2,100 (039); XP and essence below the
+      frontier against the War Tree's pace: essence piles up faster with the fix (1.1 million held at hour 300) (039)
+- [ ] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017) → `047`
 - [ ] Live depth by week again in two weeks (W47–W48): whether the slowdown near 1,800–2,000 holds for the next players (044)
 - [ ] The battery saver's saving on a phone-class CPU (Chrome's 4x throttle) (005)
 
@@ -296,6 +298,7 @@ In order; an item done points at its file. Items found along the way are added w
 | 036 | `036-positive-reviews.md` | What idle RPG players praise: 1,000 positive reviews | 11 Nov 2026 |
 | 037 | `037-last-leads.md` | The last game leads; the boot's catch-up timed | 11 Nov 2026 |
 | 038 | `038-online-safety-law.md` | Online-safety and platform law for a small game | 11 Nov 2026 |
+| 039 | `039-balance-with-a-fixed-bot.md` | The balance again, with a bot that leaves the wall | 12 Nov 2026 |
 | 041 | `041-newer-proposals-against-the-code.md` | P-023 to P-122 against the code | 11 Nov 2026 |
 | 042 | `042-cultivation-idle-rpgs.md` | Cultivation idle RPGs and the Chinese-made idle RPGs around them | 12 Nov 2026 |
 | 043 | `043-classics-and-fringes.md` | The idle RPG classics, the phone giants, the fringes, and the tier list swept | 12 Nov 2026 |
