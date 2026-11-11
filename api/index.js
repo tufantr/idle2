@@ -8,7 +8,8 @@ const { sendMail, codeMail } = require('./mail');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+// (inflate: false: the game never compresses what it sends, so a compressed body is refused before it is unpacked)
+app.use(express.json({ limit: '1mb', inflate: false }));
 
 // A known secret would let anyone forge tokens, so the fallback exists only for local development
 // (`vercel dev` sets NODE_ENV=development); anywhere else the API refuses to sign in without one.
@@ -1131,6 +1132,7 @@ app.get('/api/leaderboard', authenticateToken, route('leaderboard', async (req, 
 app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
     if (err && err.type === 'entity.parse.failed') return res.status(400).json({ error: 'That request was not valid JSON.' });
     if (err && err.type === 'entity.too.large') return res.status(413).json({ error: 'That save is too large.' });
+    if (err && err.type === 'encoding.unsupported') return res.status(415).json({ error: 'Compressed requests are not accepted.' });
     console.error('request failed', err);
     if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
 });

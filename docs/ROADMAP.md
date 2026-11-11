@@ -1459,6 +1459,8 @@ Keeping it running:
       the talent's own 48-pixel frame, because both shared the class `talent`. The word now stands alone over the number
 - [x] **The anvil lists its metals** (the same report): Smithing's mastery counted five actions the game never named. A strip
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
+- [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
+      packages moved to their patched releases, and a compressed request body is refused before it is unpacked
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

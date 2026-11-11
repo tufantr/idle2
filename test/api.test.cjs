@@ -137,6 +137,16 @@ test('register validates username and password', async () => {
     assert.equal((await post('/register', { username: 'hero', password: 'short' })).status, 400);
 });
 
+test('a compressed body is refused before it is unpacked, and a broken one gets a JSON answer', async () => {
+    const zlib = require('node:zlib');
+    const packed = await fetch(base + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' }, body: zlib.gzipSync(JSON.stringify({ username: 'hero', password: 'longenough' })) });
+    assert.equal(packed.status, 415);
+    assert.match((await packed.json()).error, /Compressed/);
+    const broken = await fetch(base + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"username":' });
+    assert.equal(broken.status, 400);
+    assert.match((await broken.json()).error, /not valid JSON/);
+});
+
 test('register, login, save and load round-trip, with the server clock', async () => {
     const token = await register('hero_1');
     const again = await post('/register', { username: 'hero_1', password: 'correct horse', email: 'someone.else@example.test' });
