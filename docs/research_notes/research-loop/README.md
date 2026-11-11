@@ -77,7 +77,11 @@ after their dates and added as updates.
 - Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them, the family 037 found missing: Path of the Idle
   Cultivator, Idle Cultivation, Goddess Cultivation, Immortality Idle, Immortal Taoists, Overmortal (一念逍遥), Nobody's Adventure
   (寻道大千), Angel Legion, Dragon Cliff and ten Chinese-made Steam idles read through their Chinese reviews (042)
-- On the edge: single-player games that act out an MMO; walking RPGs on phones (WalkScape in 037, Fantasy Hike) (043)
+- On the edge: single-player games that act out an MMO (MMO Simulator: ASCENSIONS, Mimic2, MMOAlone, World of Talesworth, Tower
+  Walker); walking RPGs on phones (WalkScape in 037, Fantasy Hike); the tier list's 410 names swept, 74 RPG-like ones given a line
+  each (043); idles that fight without a hero, mostly tower defence (The Tower in 011 and 016; 20 names in 043, low priority)
+- Long-lived games read for one question each: Egg, Inc.'s Path of Virtue, Revolution Idle's Minerals, CIFI's and Idle Obelisk
+  Miner's update logs, Kittens Game's Steam build (045)
 - Incrementals with long reset ladders: Antimatter Dimensions (009, 016, 017, 019, 022), NGU Idle (009, 014, 016, 022), Trimps
   (009, 017, 026), Unnamed Space Idle (009, 016, 019, 020), Synergism and Revolution Idle (016), The Tower and Egg, Inc. (011, 016),
   Clicker Heroes 1 and 2 (009, 015, 016), Increlution and CIFI (016), Realm Grinder, Kittens Game, Evolve, Cookie Clicker, Leaf
@@ -104,7 +108,8 @@ after their dates and added as updates.
   (006, 023, 030, 038; chat is deferred); running a small community (018, 030)
 - Business and operations: money, law and payments (010); stores, launch and growth (010, 018); translations (018); analytics and
   retention (027); cheating and server authority, save safety and backups, privacy, security (023); online-safety and platform law:
-  the UK's Online Safety Act, the EU's Digital Services Act, the KIDS Act and the Digital Fairness Act proposals (038)
+  the UK's Online Safety Act, the EU's Digital Services Act, the KIDS Act and the Digital Fairness Act proposals (038); the
+  Digital Fairness Act's Annex I, the ICO's children's code for games, Turkey's platform and children's rules (045)
 - Players' own words: Steam reviews and Reddit (in most files; 1,000 negative reviews coded in 035, 1,000 positive in 036); Fantasy
   Idle's Discord (001, 044) and its own numbers (027, 044); the design literature (034)
 - Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth and the bot's patience (013); builds at depth
@@ -165,13 +170,13 @@ In order; an item done points at its file. Items found along the way are added w
 **Round eight, the check for anything new** (started 12 November):
 
 - [x] Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them (037) → `042-cultivation-idle-rpgs.md`
-- [ ] The older idle RPG classics, the phone giants, games that act out an MMO, walking RPGs, and a sweep of the tier list's 410
-      names (037) → `043`
+- [x] The older idle RPG classics, the phone giants, games that act out an MMO, walking RPGs, and a sweep of the tier list's 410
+      names (037) → `043-classics-and-fringes.md`
 - [x] The Discord's third pass, 4 to 12 November (001), and live depth week by week; clan members against others (009, 011)
       → `044-players-again.md`
-- [ ] The queue's small leads: Egg, Inc.'s Path of Virtue, Revolution Idle's Minerals, CIFI's and Idle Obelisk Miner's logs,
+- [x] The queue's small leads: Egg, Inc.'s Path of Virtue, Revolution Idle's Minerals, CIFI's and Idle Obelisk Miner's logs,
       Kittens Game on Steam, the sub's best of 2025, r/ScapeLikes' rules, the CHI 2026 paper on exit and re-entry, the Digital
-      Fairness Act's Annex I, the ICO on children's games, Turkey's rating rules (016, 018, 014, 038, 010) → `045`
+      Fairness Act's Annex I, the ICO on children's games, Turkey's rating rules (016, 018, 014, 038, 010) → `045-leftover-leads.md`
 - [ ] The measurements still open below, once round seven's runs free the machine → `046`
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
@@ -194,16 +199,11 @@ In order; an item done points at its file. Items found along the way are added w
 
 **Next, games:**
 
-- [ ] Egg, Inc.'s Path of Virtue as players took it; Revolution Idle's Minerals update as a disliked layer; CIFI's and Idle
-      Obelisk Miner's update logs; Shark Incremental, BIOTOMATA and Kill the Lich, Best Web 2025 (016)
-- [ ] Tiny Terraces and Harvest Dice Profit; how Kittens Game wrapped its web game for Steam (018)
-
-- [ ] Short arcs with endings: Nodebuster, the Gnorp Apologue, Tower Wizard, Download RAM Idle, Astro Prospector
-- [ ] Presentation and charm: Asbury Pines, Sixty Four, Rusty's Retirement, Cast n Chill, Digseum, Booster Pack Heroes
-- [ ] Long-haul structure: Shark Incremental, Shark Game, Prestige Tree, Revolution Idle, CIFI, Idle Obelisk Miner,
-      BIOTOMATA, Midnight Idle, Theory of Magic, Ballad of Heroes, My Own Hero Party
-
-- [ ] Idle Loops and Progress Knight: loop games and their automation (Clicker Heroes 2, Idle Champions and Increlution are in 016)
+- [x] Short arcs with endings, presentation and charm, long-haul structure, and the loop games: read in 018–020, 024, 026, 028
+      and 029 (the coverage map lists each game's files); Kittens Game's Steam build, CIFI's and Idle Obelisk Miner's logs and
+      the Best of 2025 winners in 045
+- [ ] Idles that fight without a hero, mostly tower defence: 20 of the tier list's names, only The Tower read (043; low priority)
+- [ ] Pets and companions with a job: Wizard and Minion Idle's minion, Deskrawl's captured minions, Dragon Cliff's adventurers (043)
 
 **Next, mechanics across games:**
 
@@ -219,7 +219,9 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] The Discord again each few iterations (001 has two passes, the last on 4 November); roles by depth (009), as Unnamed
       Space Idle's bot gives roles by sector (016)
 - [ ] r/ScapeLikes' rules; galaxy.click's answer on the submission; referrers in Cloudflare's analytics (the owner's) (018)
-- [ ] Developers' heuristics for exit and re-entry (Byers, Gibbs and Nansen, CHI 2026) against the welcome-back report (014)
+- [x] Developers' heuristics for exit and re-entry (Byers, Gibbs and Nansen, CHI 2026) against the welcome-back report (014)
+      → `045-leftover-leads.md` (P-127)
+- [ ] r/ScapeLikes' rules page through a real browser before any post there (045)
 - [ ] A question to the Discord on whether the deep rounds read as repeats (025); a first-hour funnel from the server's saves, with the owner's OK (019)
 - [ ] An anonymous Discord poll on players' countries and age bands, with the owner's OK, to answer the UK Act's s.4 and s.35 with
       evidence (038)
@@ -236,7 +238,11 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] The KIDS Act and the Digital Fairness Act through Parliament and Council (games, small firms, age checks); Ofcom's own pages
       through a real browser (its regulation checker, gaming guidance and list of fines) and its autumn 2026 decision on the rest of
       its measures (038)
-- [ ] Melvor Idle 2 again after 24 November with its launch reviews (033)
+- [ ] Melvor Idle 2 again after 24 November with its launch reviews (033), coded with 035's and 036's codebooks
+- [ ] Turkey's Official Gazette weekly for the game-platform rating regulation; the ICO's findings on mobile games (winter
+      2026/27); the Digital Fairness Act on EUR-Lex once filed (045)
+- [ ] Your Chronicle's crowd after its next chapter; Mimic2 a month on (did it reset its boards?); Stone Story: Ascension's price;
+      CIFI's Cellmas 2026; Kittens Game leaving Early Access; Revolution Idle's next layer (043, 045)
 - [ ] Path of the Idle Cultivator's reviews after its Supporter Pack (11 November): power for sale beside boards; Idle Cultivation
       2's Early Access (end of 2026); 凡修 a month on (042)
 - [ ] Dragon's Tear's demo (16–23 November); Wickhaven's store page when it appears; Booster Pack Heroes' finish share a month on
@@ -288,7 +294,9 @@ In order; an item done points at its file. Items found along the way are added w
 | 038 | `038-online-safety-law.md` | Online-safety and platform law for a small game | 11 Nov 2026 |
 | 041 | `041-newer-proposals-against-the-code.md` | P-023 to P-122 against the code | 11 Nov 2026 |
 | 042 | `042-cultivation-idle-rpgs.md` | Cultivation idle RPGs and the Chinese-made idle RPGs around them | 12 Nov 2026 |
+| 043 | `043-classics-and-fringes.md` | The idle RPG classics, the phone giants, the fringes, and the tier list swept | 12 Nov 2026 |
 | 044 | `044-players-again.md` | The Discord's third pass; live depth week by week; clans and who stays | 12 Nov 2026 |
+| 045 | `045-leftover-leads.md` | The queue's small leads, from Egg, Inc. to Annex I | 12 Nov 2026 |
 
 Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
 round eight (042–046) checks for anything new; then the final ranked report goes to the owner.
