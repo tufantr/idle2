@@ -73,32 +73,35 @@ after their dates and added as updates.
 - Incrementals with long reset ladders: Antimatter Dimensions (009, 016, 017, 019, 022), NGU Idle (009, 014, 016, 022), Trimps
   (009, 017, 026), Unnamed Space Idle (009, 016, 019, 020), Synergism and Revolution Idle (016), The Tower and Egg, Inc. (011, 016),
   Clicker Heroes 1 and 2 (009, 015, 016), Increlution and CIFI (016), Realm Grinder, Kittens Game, Evolve, Cookie Clicker, Leaf
-  Blower Revolution, Idling to Rule the Gods, Idle Wizard, Exponential Idle and Prestige Tree (026); still to read: Idle Obelisk
-  Miner, Theory of Magic, Shark Incremental, Shark Game, BIOTOMATA, Midnight Idle, Idle Loops, Progress Knight, The Point Tree
+  Blower Revolution, Idling to Rule the Gods, Idle Wizard, Exponential Idle and Prestige Tree (026), Idle Obelisk Miner, CIFI,
+  Theory of Magic, Shark Incremental, Shark Game, BIOTOMATA, Midnight Idle, Idle Loops, Progress Knight, The Point Tree, The
+  Communitree, Celestial Incremental, Ethos Idle, Points Progression, Terraformental and Spire Assault (029)
 - Short arcs and charm: Nodebuster, the Gnorp Apologue, Tower Wizard and Astro Prospector (009, 018, 019, 020), Tiny Terraces (018),
-  Cast n Chill and Rusty's Retirement (020); still to read: Download RAM Idle, Universal Paperclips, A Dark Room, Spaceplan, Asbury
-  Pines, Sixty Four, Digseum, Booster Pack Heroes, Harvest Dice Profit, Master Healer Kale, Loot Loop, Horripilant, Magic Archery
+  Cast n Chill and Rusty's Retirement (020); Download RAM Idle, Universal Paperclips, A Dark Room, Spaceplan, Asbury Pines, Sixty
+  Four, Digseum, Booster Pack Heroes, Harvest Dice Profit, Master Healer Kale, Loot Loop, Horripilant, Magic Archery, Shelldiver,
+  Bills Must Be Paid and Berry Bury Berry (028)
 - Outside the genre, for one system each: Path of Exile, Last Epoch and Diablo 4 (015, 017, 022), Grim Dawn and World of Warcraft
   (015, 017), Clash of Clans, Clash Royale, Brawl Stars, Boom Beach, Marvel Snap, Destiny 2 and Black Desert (011), Hearthstone and
-  Hypixel SkyBlock (014), RAID (017); still to read: Hay Day, Torn, Kingdom of Loathing
+  Hypixel SkyBlock (014), RAID (017), Torn, Kingdom of Loathing, Hay Day and Boom Beach (030)
 
 **Topics** (files in brackets; none means still to do):
 
 - Design: onboarding (019); pacing and the hours to each goal (016, 019); prestige layers (016, 026); offline play (022); combat
   depth, builds and trees (015, 024); gear and loot (015, 017); crafting and the economy, sinks and inflation (022); collections and
-  completion (008, 026); achievements and pets (008; deeper still to do); tasks and dailies (014, 025, 026); events and seasons (016,
-  026); ends and finales (009); story and lore (009, 024, a little); automation and quality of life (016, 017)
+  completion (008, 026, 031); achievements and pets (008, 031); tasks and dailies (014, 025, 026); events and seasons (016,
+  026); ends and finales (009, 028); story and lore (009, 024, 028, 031); automation and quality of life (016, 017)
 - Presentation: UI and readability (019, 021); game feel, sound and music, art direction (020); accessibility (021); performance
   and battery (005, 021); phones (018, 019); number notation (019, 022)
 - Social: clans, boards and co-op (003, 011, 025); markets and trading (022, 024, 025: not for this game); chat and moderation
-  (006, 023, a little; chat is deferred); running a small community (018; more still to do)
+  (006, 023, 030; chat is deferred); running a small community (018, 030)
 - Business and operations: money, law and payments (010); stores, launch and growth (010, 018); translations (018); analytics and
   retention (027); cheating and server authority, save safety and backups, privacy, security (023)
-- Players' own words: Steam reviews and Reddit (in most files); Fantasy Idle's Discord (001) and its own numbers (027)
+- Players' own words: Steam reviews and Reddit (in most files; 1,000 negative reviews coded in 035); Fantasy Idle's Discord (001)
+  and its own numbers (027); the design literature (034)
 - Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth and the bot's patience (013); builds at depth
   (015); the bag and the Equip card (017); the Titan's bank (014); the economy's flows (022); accessibility (021); the first hour
-  (019); live retention (027); still to do: cross-browser (waits on the owner's OK to download two test browsers), every Trial and
-  dungeon at the hero's frontier, dungeons against the clock wall
+  (019); live retention (027); every Trial and dungeon at the hero's frontier, dungeons against the clock wall (032); still to do:
+  cross-browser (waits on the owner's OK to download two test browsers), a long session's memory and frames
 
 ## Queue
 
@@ -133,14 +136,25 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] Skilling and MMO-idle games not yet read → `025-skilling-mmo-idle.md`
 - [x] Classic incrementals not yet read → `026-classic-incrementals.md`
 - [x] Fantasy Idle's own numbers: retention, depth → `027-live-numbers.md`
+- [x] Short arcs and charm → `028-short-arcs.md`
+- [x] More incrementals → `029-more-incrementals.md`
+- [x] Small communities, and running one alone → `030-small-communities.md`
+- [x] Achievements, pets and lore → `031-achievements-pets-lore.md`
+- [x] Trials and dungeons at the hero's frontier, measured → `032-trials-and-dungeons-measured.md`
+- [x] Melvor Idle 2 before its launch → `033-melvor-idle-2-before-launch.md`
+- [x] What the design literature says → `034-design-literature.md`
+- [x] Why idle RPG players leave negative reviews → `035-negative-reviews.md`
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
+- [ ] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
+      too, the best dungeon visit length, P-024's ceiling date (032)
+- [ ] A long session: the game open 6–24 hours in Chromium, heap and frame rate every ten minutes, plain and throttled (028)
+- [ ] The Titan's bank and the laurel against a one-day floor with the daily and check-in bots (034, P-059); a Titan at the hero's best (032)
 - [ ] Cross-browser: Firefox and Safari (WebKit) through Playwright, which needs those browsers installed (ask the
       owner before downloading them) (004)
 - [ ] Why the sensible bot climbs faster when something sends it away from the boss wall (013): is it the bot, or does a
       player at a clock wall lose time?
-- [ ] Dungeons against the clock wall: does a run pay more in dungeon records than waiting at the wall (013)?
 - [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013); every Trial and dungeon at the
       hero's frontier, build by build, and a dodge set in Glass Hero or a lifesteal set in Fasting (015, 017)
 - [ ] The economy talents over a whole game; XP and essence below the frontier against the War Tree's pace (014, 015)
@@ -151,9 +165,8 @@ In order; an item done points at its file. Items found along the way are added w
 
 **Next, games:**
 
-- [ ] Short arcs and charm still to read (the coverage map), with Master Healer Kale, Loot Loop, Horripilant and Magic Archery (024)
-- [ ] Incrementals still to read (the coverage map); Trimps' Spire Assault; The Point Tree and The Communitree (026)
-- [ ] Torn and Kingdom of Loathing (small old communities), Hay Day's Derby (011)
+- [ ] The positive reviews of 035's ten games, coded the same way, to set each theme against praise (035)
+- [ ] Last leads: Shelldiver's makers' next, One Trillion Free Draws, Q-UP, WalkScape, Solvendra Idle, Dragon's Tear, Idleforge's Wickhaven (024, 025, 028, 029)
 - [ ] Egg, Inc.'s Path of Virtue as players took it; Revolution Idle's Minerals update as a disliked layer; CIFI's and Idle
       Obelisk Miner's update logs; Shark Incremental, BIOTOMATA and Kill the Lich, Best Web 2025 (016)
 - [ ] Tiny Terraces and Harvest Dice Profit; how Kittens Game wrapped its web game for Steam (018)
@@ -171,20 +184,15 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] Collection logs and completion (the open "cape for 100%" item)
 - [ ] Self-made modes and goals: Taskman, share-of-players figures on medals (008); Melvor's lore books against the
       Chronicle (009)
-- [ ] Small old communities and other co-op: Torn's factions, Kingdom of Loathing's clan dungeons, Hay Day's Derby,
-      Boom Beach's Task Forces (011)
 - [ ] Pets and companions with a job (IdleOn, Melvor's Summoning, OSRS)
 - [ ] Achievements and medals: design, rewards, secret ones
 
 **Next, players and the community:**
 
-- [ ] Negative Steam reviews of leading idle RPGs, mined deeper than 004's top ten per game
 - [ ] The Discord again each few iterations (001 has two passes, the last on 4 November); roles by depth (009), as Unnamed
       Space Idle's bot gives roles by sector (016)
 - [ ] r/ScapeLikes' rules; galaxy.click's answer on the submission; referrers in Cloudflare's analytics (the owner's) (018)
 - [ ] Developers' heuristics for exit and re-entry (Byers, Gibbs and Nansen, CHI 2026) against the welcome-back report (014)
-- [ ] Achievements, pets and lore in depth: secret goals, shares of players on medals, pets with jobs, story logs to reread (008, 009, 024)
-- [ ] The design literature on idle games: GDC talks (Pecorella), the CHI 2018 study of 66 idle games, Fizek, Lost Garden (017, 022)
 - [ ] A question to the Discord on whether the deep rounds read as repeats (025); a first-hour funnel from the server's saves, with the owner's OK (019)
 
 **Next, technology and platforms:**
@@ -196,7 +204,9 @@ In order; an item done points at its file. Items found along the way are added w
       Slayer, trees, bank, loadouts and automation (006, 010, 014, 015, 017)
 - [ ] My Own Hero Party on Steam (4 December) (016)
 - [ ] Idle Clans' quest rework a month on, from 20 November; Tap Titans 2's Clan Technology once 8.4 ships (011)
-- [ ] The EU's Digital Fairness Act, Turkey's game rating regulation, when published (010)
+- [ ] The EU's Digital Fairness Act, Turkey's game rating regulation, when published (010); the UK's Online Safety Act and the EU's
+      Digital Services Act for a small service with player-written clan text (030)
+- [ ] Melvor Idle 2 again after 24 November with its launch reviews (033)
 - [ ] CIFI's and Idle Obelisk Miner's packs; Idlescape's free Steam launch, 8 January 2027 (010, 018)
 
 ## Index
@@ -231,6 +241,14 @@ In order; an item done points at its file. Items found along the way are added w
 | 025 | `025-skilling-mmo-idle.md` | Skilling and MMO-idle games not yet read | 11 Nov 2026 |
 | 026 | `026-classic-incrementals.md` | Classic incrementals not yet read | 11 Nov 2026 |
 | 027 | `027-live-numbers.md` | Fantasy Idle's own numbers | 11 Nov 2026 |
+| 028 | `028-short-arcs.md` | Short arcs and charm | 11 Nov 2026 |
+| 029 | `029-more-incrementals.md` | More incrementals | 11 Nov 2026 |
+| 030 | `030-small-communities.md` | Small communities, and running one alone | 11 Nov 2026 |
+| 031 | `031-achievements-pets-lore.md` | Achievements, pets and lore | 11 Nov 2026 |
+| 032 | `032-trials-and-dungeons-measured.md` | Trials and dungeons at the hero's frontier, measured | 11 Nov 2026 |
+| 033 | `033-melvor-idle-2-before-launch.md` | Melvor Idle 2 before its launch | 11 Nov 2026 |
+| 034 | `034-design-literature.md` | What the design literature says | 11 Nov 2026 |
+| 035 | `035-negative-reviews.md` | Why idle RPG players leave negative reviews | 11 Nov 2026 |
 
 Round three (4 November) folded the proposals of 005, 006 and 007 into `PROPOSALS.md`, and corrected the earlier files where the
 code check and new measurements disagreed with them.
