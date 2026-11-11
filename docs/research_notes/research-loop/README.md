@@ -75,7 +75,8 @@ after their dates and added as updates.
   Story RPG, Wizard and Minion Idle, PokeClicker) and the phone giants (Almost a Hero, Nonstop Knight 2, Endless Frontier, Grow Castle,
   Bit Heroes) (043); after launch, My Own Hero Party (4 December) and Dragon's Tear's demo (16 November)
 - Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them, the family 037 found missing: Path of the Idle
-  Cultivator, Idle Cultivation, Goddess Cultivation, Immortality Idle, Immortal Taoists (042)
+  Cultivator, Idle Cultivation, Goddess Cultivation, Immortality Idle, Immortal Taoists, Overmortal (一念逍遥), Nobody's Adventure
+  (寻道大千), Angel Legion, Dragon Cliff and ten Chinese-made Steam idles read through their Chinese reviews (042)
 - On the edge: single-player games that act out an MMO; walking RPGs on phones (WalkScape in 037, Fantasy Hike) (043)
 - Incrementals with long reset ladders: Antimatter Dimensions (009, 016, 017, 019, 022), NGU Idle (009, 014, 016, 022), Trimps
   (009, 017, 026), Unnamed Space Idle (009, 016, 019, 020), Synergism and Revolution Idle (016), The Tower and Egg, Inc. (011, 016),
@@ -163,7 +164,7 @@ In order; an item done points at its file. Items found along the way are added w
 
 **Round eight, the check for anything new** (started 12 November):
 
-- [ ] Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them (037) → `042`
+- [x] Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them (037) → `042-cultivation-idle-rpgs.md`
 - [ ] The older idle RPG classics, the phone giants, games that act out an MMO, walking RPGs, and a sweep of the tier list's 410
       names (037) → `043`
 - [x] The Discord's third pass, 4 to 12 November (001), and live depth week by week; clan members against others (009, 011)
@@ -236,6 +237,8 @@ In order; an item done points at its file. Items found along the way are added w
       through a real browser (its regulation checker, gaming guidance and list of fines) and its autumn 2026 decision on the rest of
       its measures (038)
 - [ ] Melvor Idle 2 again after 24 November with its launch reviews (033)
+- [ ] Path of the Idle Cultivator's reviews after its Supporter Pack (11 November): power for sale beside boards; Idle Cultivation
+      2's Early Access (end of 2026); 凡修 a month on (042)
 - [ ] Dragon's Tear's demo (16–23 November); Wickhaven's store page when it appears; Booster Pack Heroes' finish share a month on
       (17.4% on day two); Path of Idle's second season; WalkScape's open beta and its wipe (037)
 - [ ] CIFI's and Idle Obelisk Miner's packs; Idlescape's free Steam launch, 8 January 2027 (010, 018)
@@ -284,6 +287,7 @@ In order; an item done points at its file. Items found along the way are added w
 | 037 | `037-last-leads.md` | The last game leads; the boot's catch-up timed | 11 Nov 2026 |
 | 038 | `038-online-safety-law.md` | Online-safety and platform law for a small game | 11 Nov 2026 |
 | 041 | `041-newer-proposals-against-the-code.md` | P-023 to P-122 against the code | 11 Nov 2026 |
+| 042 | `042-cultivation-idle-rpgs.md` | Cultivation idle RPGs and the Chinese-made idle RPGs around them | 12 Nov 2026 |
 | 044 | `044-players-again.md` | The Discord's third pass; live depth week by week; clans and who stays | 12 Nov 2026 |
 
 Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
