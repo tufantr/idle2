@@ -147,6 +147,8 @@ In order; an item done points at its file. Items found along the way are added w
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
+- [ ] Every proposal from P-023 on against the code, as 012 did for the first ones: status, claims, effort, overlaps, order,
+      and the ten with the best value for the effort (before the final report)
 - [ ] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
       too, the best dungeon visit length, P-024's ceiling date (032)
 - [ ] A long session: the game open 6–24 hours in Chromium, heap and frame rate every ten minutes, plain and throttled (028)
@@ -249,6 +251,11 @@ In order; an item done points at its file. Items found along the way are added w
 | 033 | `033-melvor-idle-2-before-launch.md` | Melvor Idle 2 before its launch | 11 Nov 2026 |
 | 034 | `034-design-literature.md` | What the design literature says | 11 Nov 2026 |
 | 035 | `035-negative-reviews.md` | Why idle RPG players leave negative reviews | 11 Nov 2026 |
+
+Paused cleanly on 11 November after round six, at the owner's word. Round seven (positive reviews, the last game leads,
+online-safety law, the balance with a fixed bot, a long session and the banked clocks, and the newer proposals against the code)
+had just started and was stopped before it wrote anything; it starts again on resume, then one check for anything new, then the
+final ranked report to the owner.
 
 Round three (4 November) folded the proposals of 005, 006 and 007 into `PROPOSALS.md`, and corrected the earlier files where the
 code check and new measurements disagreed with them.
