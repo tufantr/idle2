@@ -64,12 +64,19 @@ after their dates and added as updates.
 - Skilling and MMO-idle: Melvor Idle (002, 014, 015, 017, 018, 019, 020, 022), Old School RuneScape (008, 014), Legends of IdleOn
   (007, 011, 014, 015, 022), Milky Way Idle (006, 011, 014, 017, 022), Scapewatch (006, 018, 019), Ensis IDLE (006, 018), Idle Clans
   (003, 011, 014, 017, 022, 025), RuneScape 3, Brighter Shores, Idlescape, Idle Skilling, Glenwich, Vanya Online, Guilds of Mountgate,
-  Evitania Online, Bloobs Adventure Idle and the Golbin Raid (025); after their launches, Lowbar Legends (13 November; 025 read it
-  before) and Melvor Idle 2 (17 November; its demo in 017, 019, 020); Idlescape's Steam launch (8 January); Idleforge's Wickhaven
+  Bloobs Adventure Idle and the Golbin Raid (025), Evitania Online (025, 037), WalkScape, Solvendra Idle and Idleforge's Wickhaven
+  (037, Wickhaven before any store page); after their launches, Lowbar Legends (13 November; 025 read it before), Melvor Idle 2
+  (17 November; its demo in 017, 019, 020, and 033 before launch) and Wickhaven; Idlescape's Steam launch (8 January)
 - Idle RPGs and auto-battlers: Idle Champions (009, 015, 016), Tap Titans 2 (003, 011, 015), Soda Dungeon 1 and 2 (009, 015, 024),
   Magic Research 1 and 2 (009, 015, 024), Cauldron (009, 015, 019), Kill the Lich (015), Firestone, AFK Arena and Idle Heroes (014,
-  024), AFK Journey (015), Idle Slayer (009, 014, 020), Legendum, My Own Hero Party, Ballad of Heroes, Lowmoor, TBH: Task Bar Hero and
-  the taskbar wave, Legends of Dragaea, Incremental Epic Hero 2, Path of Idle (024); after launch, My Own Hero Party (4 December)
+  024), AFK Journey (015), Idle Slayer (009, 014, 020), Legendum, My Own Hero Party, Ballad of Heroes, TBH: Task Bar Hero and the
+  taskbar wave, Legends of Dragaea, Incremental Epic Hero 2 (024), Lowmoor and Path of Idle (024, 037), Dragon's Tear, Duelist: Idle
+  Expedition and One Trillion Free Draws (037); the older classics (Dragon Cliff, Crusaders of the Lost Idols, Your Chronicle, Stone
+  Story RPG, Wizard and Minion Idle, PokeClicker) and the phone giants (Almost a Hero, Nonstop Knight 2, Endless Frontier, Grow Castle,
+  Bit Heroes) (043); after launch, My Own Hero Party (4 December) and Dragon's Tear's demo (16 November)
+- Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them, the family 037 found missing: Path of the Idle
+  Cultivator, Idle Cultivation, Goddess Cultivation, Immortality Idle, Immortal Taoists (042)
+- On the edge: single-player games that act out an MMO; walking RPGs on phones (WalkScape in 037, Fantasy Hike) (043)
 - Incrementals with long reset ladders: Antimatter Dimensions (009, 016, 017, 019, 022), NGU Idle (009, 014, 016, 022), Trimps
   (009, 017, 026), Unnamed Space Idle (009, 016, 019, 020), Synergism and Revolution Idle (016), The Tower and Egg, Inc. (011, 016),
   Clicker Heroes 1 and 2 (009, 015, 016), Increlution and CIFI (016), Realm Grinder, Kittens Game, Evolve, Cookie Clicker, Leaf
@@ -78,8 +85,8 @@ after their dates and added as updates.
   Communitree, Celestial Incremental, Ethos Idle, Points Progression, Terraformental and Spire Assault (029)
 - Short arcs and charm: Nodebuster, the Gnorp Apologue, Tower Wizard and Astro Prospector (009, 018, 019, 020), Tiny Terraces (018),
   Cast n Chill and Rusty's Retirement (020); Download RAM Idle, Universal Paperclips, A Dark Room, Spaceplan, Asbury Pines, Sixty
-  Four, Digseum, Booster Pack Heroes, Harvest Dice Profit, Master Healer Kale, Loot Loop, Horripilant, Magic Archery, Shelldiver,
-  Bills Must Be Paid and Berry Bury Berry (028)
+  Four, Digseum, Harvest Dice Profit, Master Healer Kale, Loot Loop, Horripilant, Magic Archery, Shelldiver, Bills Must Be Paid
+  and Berry Bury Berry (028), Booster Pack Heroes (028, 037), Q-UP (037)
 - Outside the genre, for one system each: Path of Exile, Last Epoch and Diablo 4 (015, 017, 022), Grim Dawn and World of Warcraft
   (015, 017), Clash of Clans, Clash Royale, Brawl Stars, Boom Beach, Marvel Snap, Destiny 2 and Black Desert (011), Hearthstone and
   Hypixel SkyBlock (014), RAID (017), Torn, Kingdom of Loathing, Hay Day and Boom Beach (030)
@@ -93,15 +100,17 @@ after their dates and added as updates.
 - Presentation: UI and readability (019, 021); game feel, sound and music, art direction (020); accessibility (021); performance
   and battery (005, 021); phones (018, 019); number notation (019, 022)
 - Social: clans, boards and co-op (003, 011, 025); markets and trading (022, 024, 025: not for this game); chat and moderation
-  (006, 023, 030; chat is deferred); running a small community (018, 030)
+  (006, 023, 030, 038; chat is deferred); running a small community (018, 030)
 - Business and operations: money, law and payments (010); stores, launch and growth (010, 018); translations (018); analytics and
-  retention (027); cheating and server authority, save safety and backups, privacy, security (023)
+  retention (027); cheating and server authority, save safety and backups, privacy, security (023); online-safety and platform law:
+  the UK's Online Safety Act, the EU's Digital Services Act, the KIDS Act and the Digital Fairness Act proposals (038)
 - Players' own words: Steam reviews and Reddit (in most files; 1,000 negative reviews coded in 035); Fantasy Idle's Discord (001)
   and its own numbers (027); the design literature (034)
 - Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth and the bot's patience (013); builds at depth
   (015); the bag and the Equip card (017); the Titan's bank (014); the economy's flows (022); accessibility (021); the first hour
-  (019); live retention (027); every Trial and dungeon at the hero's frontier, dungeons against the clock wall (032); still to do:
-  cross-browser (waits on the owner's OK to download two test browsers), a long session's memory and frames
+  (019); live retention (027); every Trial and dungeon at the hero's frontier, dungeons against the clock wall (032); the boot's
+  catch-up time (037); every proposal from P-023 on against the code (041); still to do: cross-browser (waits on the owner's OK to
+  download two test browsers), a long session's memory and frames
 
 ## Queue
 
@@ -144,11 +153,27 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] Melvor Idle 2 before its launch → `033-melvor-idle-2-before-launch.md`
 - [x] What the design literature says → `034-design-literature.md`
 - [x] Why idle RPG players leave negative reviews → `035-negative-reviews.md`
+- [x] Last leads: Shelldiver's makers' next, One Trillion Free Draws, Q-UP, WalkScape, Solvendra Idle, Dragon's Tear, Idleforge's
+      Wickhaven, and the boot's catch-up timed → `037-last-leads.md`
+- [x] The UK's Online Safety Act and the EU's Digital Services Act for a small service with player-written clan text; the KIDS Act
+      and the Digital Fairness Act proposals → `038-online-safety-law.md`
+- [x] Every proposal from P-023 on against the code: status, claims, effort, overlaps, order, and the ten with the best value for
+      the effort → `041-newer-proposals-against-the-code.md`
+
+**Round eight, the check for anything new** (started 12 November):
+
+- [ ] Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them (037) → `042`
+- [ ] The older idle RPG classics, the phone giants, games that act out an MMO, walking RPGs, and a sweep of the tier list's 410
+      names (037) → `043`
+- [ ] The Discord's third pass, 4 to 12 November (001) → `044`
+- [ ] The queue's small leads: Egg, Inc.'s Path of Virtue, Revolution Idle's Minerals, CIFI's and Idle Obelisk Miner's logs,
+      Kittens Game on Steam, the sub's best of 2025, r/ScapeLikes' rules, the CHI 2026 paper on exit and re-entry, the Digital
+      Fairness Act's Annex I, the ICO on children's games, Turkey's rating rules (016, 018, 014, 038, 010) → `045`
+- [ ] The measurements still open below, once round seven's runs free the machine → `046`
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
-- [ ] Every proposal from P-023 on against the code, as 012 did for the first ones: status, claims, effort, overlaps, order,
-      and the ten with the best value for the effort (before the final report)
+- [ ] The replay of a day away at Chrome's 4× throttle, with P-037's test (037)
 - [ ] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
       too, the best dungeon visit length, P-024's ceiling date (032)
 - [ ] A long session: the game open 6–24 hours in Chromium, heap and frame rate every ten minutes, plain and throttled (028)
@@ -168,7 +193,6 @@ In order; an item done points at its file. Items found along the way are added w
 **Next, games:**
 
 - [ ] The positive reviews of 035's ten games, coded the same way, to set each theme against praise (035)
-- [ ] Last leads: Shelldiver's makers' next, One Trillion Free Draws, Q-UP, WalkScape, Solvendra Idle, Dragon's Tear, Idleforge's Wickhaven (024, 025, 028, 029)
 - [ ] Egg, Inc.'s Path of Virtue as players took it; Revolution Idle's Minerals update as a disliked layer; CIFI's and Idle
       Obelisk Miner's update logs; Shark Incremental, BIOTOMATA and Kill the Lich, Best Web 2025 (016)
 - [ ] Tiny Terraces and Harvest Dice Profit; how Kittens Game wrapped its web game for Steam (018)
@@ -196,6 +220,8 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] r/ScapeLikes' rules; galaxy.click's answer on the submission; referrers in Cloudflare's analytics (the owner's) (018)
 - [ ] Developers' heuristics for exit and re-entry (Byers, Gibbs and Nansen, CHI 2026) against the welcome-back report (014)
 - [ ] A question to the Discord on whether the deep rounds read as repeats (025); a first-hour funnel from the server's saves, with the owner's OK (019)
+- [ ] An anonymous Discord poll on players' countries and age bands, with the owner's OK, to answer the UK Act's s.4 and s.35 with
+      evidence (038)
 
 **Next, technology and platforms:**
 
@@ -206,9 +232,12 @@ In order; an item done points at its file. Items found along the way are added w
       Slayer, trees, bank, loadouts and automation (006, 010, 014, 015, 017)
 - [ ] My Own Hero Party on Steam (4 December) (016)
 - [ ] Idle Clans' quest rework a month on, from 20 November; Tap Titans 2's Clan Technology once 8.4 ships (011)
-- [ ] The EU's Digital Fairness Act, Turkey's game rating regulation, when published (010); the UK's Online Safety Act and the EU's
-      Digital Services Act for a small service with player-written clan text (030)
+- [ ] The KIDS Act and the Digital Fairness Act through Parliament and Council (games, small firms, age checks); Ofcom's own pages
+      through a real browser (its regulation checker, gaming guidance and list of fines) and its autumn 2026 decision on the rest of
+      its measures (038)
 - [ ] Melvor Idle 2 again after 24 November with its launch reviews (033)
+- [ ] Dragon's Tear's demo (16–23 November); Wickhaven's store page when it appears; Booster Pack Heroes' finish share a month on
+      (17.4% on day two); Path of Idle's second season; WalkScape's open beta and its wipe (037)
 - [ ] CIFI's and Idle Obelisk Miner's packs; Idlescape's free Steam launch, 8 January 2027 (010, 018)
 
 ## Index
@@ -251,11 +280,12 @@ In order; an item done points at its file. Items found along the way are added w
 | 033 | `033-melvor-idle-2-before-launch.md` | Melvor Idle 2 before its launch | 11 Nov 2026 |
 | 034 | `034-design-literature.md` | What the design literature says | 11 Nov 2026 |
 | 035 | `035-negative-reviews.md` | Why idle RPG players leave negative reviews | 11 Nov 2026 |
+| 037 | `037-last-leads.md` | The last game leads; the boot's catch-up timed | 11 Nov 2026 |
+| 038 | `038-online-safety-law.md` | Online-safety and platform law for a small game | 11 Nov 2026 |
+| 041 | `041-newer-proposals-against-the-code.md` | P-023 to P-122 against the code | 11 Nov 2026 |
 
-Paused cleanly on 11 November after round six, at the owner's word. Round seven (positive reviews, the last game leads,
-online-safety law, the balance with a fixed bot, a long session and the banked clocks, and the newer proposals against the code)
-had just started and was stopped before it wrote anything; it starts again on resume, then one check for anything new, then the
-final ranked report to the owner.
+Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
+round eight (042–046) checks for anything new; then the final ranked report goes to the owner.
 
 Round three (4 November) folded the proposals of 005, 006 and 007 into `PROPOSALS.md`, and corrected the earlier files where the
 code check and new measurements disagreed with them.
