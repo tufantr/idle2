@@ -104,8 +104,8 @@ after their dates and added as updates.
 - Business and operations: money, law and payments (010); stores, launch and growth (010, 018); translations (018); analytics and
   retention (027); cheating and server authority, save safety and backups, privacy, security (023); online-safety and platform law:
   the UK's Online Safety Act, the EU's Digital Services Act, the KIDS Act and the Digital Fairness Act proposals (038)
-- Players' own words: Steam reviews and Reddit (in most files; 1,000 negative reviews coded in 035); Fantasy Idle's Discord (001)
-  and its own numbers (027); the design literature (034)
+- Players' own words: Steam reviews and Reddit (in most files; 1,000 negative reviews coded in 035, 1,000 positive in 036); Fantasy
+  Idle's Discord (001, 044) and its own numbers (027, 044); the design literature (034)
 - Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth and the bot's patience (013); builds at depth
   (015); the bag and the Equip card (017); the Titan's bank (014); the economy's flows (022); accessibility (021); the first hour
   (019); live retention (027); every Trial and dungeon at the hero's frontier, dungeons against the clock wall (032); the boot's
@@ -153,6 +153,7 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] Melvor Idle 2 before its launch → `033-melvor-idle-2-before-launch.md`
 - [x] What the design literature says → `034-design-literature.md`
 - [x] Why idle RPG players leave negative reviews → `035-negative-reviews.md`
+- [x] The positive reviews of 035's ten games, coded the same way, each theme set against praise → `036-positive-reviews.md`
 - [x] Last leads: Shelldiver's makers' next, One Trillion Free Draws, Q-UP, WalkScape, Solvendra Idle, Dragon's Tear, Idleforge's
       Wickhaven, and the boot's catch-up timed → `037-last-leads.md`
 - [x] The UK's Online Safety Act and the EU's Digital Services Act for a small service with player-written clan text; the KIDS Act
@@ -165,7 +166,8 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] Cultivation (xianxia) idle RPGs and the Chinese-made idle RPGs around them (037) → `042`
 - [ ] The older idle RPG classics, the phone giants, games that act out an MMO, walking RPGs, and a sweep of the tier list's 410
       names (037) → `043`
-- [ ] The Discord's third pass, 4 to 12 November (001) → `044`
+- [x] The Discord's third pass, 4 to 12 November (001), and live depth week by week; clan members against others (009, 011)
+      → `044-players-again.md`
 - [ ] The queue's small leads: Egg, Inc.'s Path of Virtue, Revolution Idle's Minerals, CIFI's and Idle Obelisk Miner's logs,
       Kittens Game on Steam, the sub's best of 2025, r/ScapeLikes' rules, the CHI 2026 paper on exit and re-entry, the Digital
       Fairness Act's Annex I, the ICO on children's games, Turkey's rating rules (016, 018, 014, 038, 010) → `045`
@@ -186,13 +188,11 @@ In order; an item done points at its file. Items found along the way are added w
       hero's frontier, build by build, and a dodge set in Glass Hero or a lifesteal set in Fasting (015, 017)
 - [ ] The economy talents over a whole game; XP and essence below the frontier against the War Tree's pace (014, 015)
 - [ ] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017)
-- [ ] How long live players take from stage 1,000 to 2,000; weekly return of clan members against others, knowing the
-      bias (009, 011)
+- [ ] Live depth by week again in two weeks (W47–W48): whether the slowdown near 1,800–2,000 holds for the next players (044)
 - [ ] The battery saver's saving on a phone-class CPU (Chrome's 4x throttle) (005)
 
 **Next, games:**
 
-- [ ] The positive reviews of 035's ten games, coded the same way, to set each theme against praise (035)
 - [ ] Egg, Inc.'s Path of Virtue as players took it; Revolution Idle's Minerals update as a disliked layer; CIFI's and Idle
       Obelisk Miner's update logs; Shark Incremental, BIOTOMATA and Kill the Lich, Best Web 2025 (016)
 - [ ] Tiny Terraces and Harvest Dice Profit; how Kittens Game wrapped its web game for Steam (018)
@@ -280,9 +280,11 @@ In order; an item done points at its file. Items found along the way are added w
 | 033 | `033-melvor-idle-2-before-launch.md` | Melvor Idle 2 before its launch | 11 Nov 2026 |
 | 034 | `034-design-literature.md` | What the design literature says | 11 Nov 2026 |
 | 035 | `035-negative-reviews.md` | Why idle RPG players leave negative reviews | 11 Nov 2026 |
+| 036 | `036-positive-reviews.md` | What idle RPG players praise: 1,000 positive reviews | 11 Nov 2026 |
 | 037 | `037-last-leads.md` | The last game leads; the boot's catch-up timed | 11 Nov 2026 |
 | 038 | `038-online-safety-law.md` | Online-safety and platform law for a small game | 11 Nov 2026 |
 | 041 | `041-newer-proposals-against-the-code.md` | P-023 to P-122 against the code | 11 Nov 2026 |
+| 044 | `044-players-again.md` | The Discord's third pass; live depth week by week; clans and who stays | 12 Nov 2026 |
 
 Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
 round eight (042–046) checks for anything new; then the final ranked report goes to the owner.
