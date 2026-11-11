@@ -71,6 +71,13 @@ Food makes no measurable difference to the best stage for either. The visiting b
 - **Over a whole game**, always on for 300 hours: best stage 1,665 (1,630–1,680) with food and 1,645 (1,610–1,660) without, so food is worth about 20 stages, at the edge of the noise. Deaths 4,417 and 5,952, against 1,926 today.
 - **The climb went up by 15%**, from 1,450 to 1,665. Harder monsters don't help; the bot behaves differently. It spends 41% of its time in the fight against 64%, 19% in dungeons against 7% and 15.5% on farms against 6%, and makes 332 prestiges against 269 and 445,000 kills against 299,000. My reading: today's bot times out again and again against a boss it can't fell, and blows that hurt send it to do something better. That says more about the bot's patience than about the balance, so don't rely on this number until it's checked (in the queue, `POLICY.stallMin`). A real player at a clock wall may lose time the same way.
 
+## Why the bot climbed further under harder blows (measured 11 November)
+
+The bot's patience isn't it. With `POLICY.stallMin:10;POLICY.longStallMin:30` (it gives up on a stalled run twice as fast), 12 seeds over the same 300 hours
+made 1,200 prestiges against 269 and reached 1,020 (918–1,100) against 1,450. What the 1.035 runs gained was records: 173 against 154, with 19% of their time in
+dungeons against 7%. Nineteen records are ×2.5 on what the tokens give (×1.05 each), which is the 15%. So at a clock wall, dungeon time pays more than waiting at
+the wall, and the bot only leaves the wall when blows push it out. Whether a live player gains the same is in the queue (dungeons against the clock wall).
+
 ## What this doesn't settle
 
 - **Live heroes.** The benches use two simulated heroes. A live save through `tools/supplies.mjs` needs the owner's OK each time.
