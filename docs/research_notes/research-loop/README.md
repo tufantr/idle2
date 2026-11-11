@@ -52,6 +52,51 @@ until the owner stops it. `PROPOSALS.md` holds every proposal, ranked; one file 
 5. Put what it led to into the queue; update `PROPOSALS.md`.
 6. Commit the notes alone, landed by fast-forward; tell the owner the best of it.
 
+## Coverage map: what "complete" means
+
+The owner, 11 November 2026: "every game, every information, everything you need to know to improve the game". The loop
+ends when every line below has its file and a round finds nothing new; then one ranked report of improvements goes to the
+owner. A game is read for what it teaches Fantasy Idle, not reviewed for its own sake. Lines found along the way are added.
+
+**Games, by family.** The numbers are the files that read a game; a game without one is still to read. Later launches are read
+after their dates and added as updates.
+
+- Skilling and MMO-idle: Melvor Idle (002, 014, 015, 017, 018), Old School RuneScape (008, 014), Legends of IdleOn (007, 011,
+  014, 015), Milky Way Idle (006, 011, 014, 017), Scapewatch (006, 018), Ensis IDLE (006, 018), Idle Clans (003, 011, 014, 017);
+  only glanced at: RuneScape 3 (011), Glenwich, Vanya Online and Guilds of Mountgate (006), Idle Skilling (010); still to read:
+  Brighter Shores, Idlescape, the Golbin Raid; after their launches, Lowbar Legends (13 November) and Melvor Idle 2 (17 November)
+- Idle RPGs and auto-battlers: Idle Champions (009, 015, 016), Tap Titans 2 (003, 011, 015), Soda Dungeon 2 (009, 015), Magic
+  Research 2 and Cauldron (009, 015), Kill the Lich (015), Firestone and AFK Arena (014), AFK Journey (015), Idle Slayer (009, 014);
+  still to read: Idle Heroes, Soda Dungeon 1, Legendum, Magic Research 1, My Own Hero Party (Steam, 4 December), Ballad of Heroes, Lowmoor
+- Incrementals with long reset ladders: Antimatter Dimensions (009, 016, 017), NGU Idle (009, 014, 016), Trimps (009, 017),
+  Unnamed Space Idle (009, 016), Synergism and Revolution Idle (016), The Tower and Egg, Inc. (011, 016), Clicker Heroes 1 and 2
+  (009, 015, 016), Increlution (016), CIFI (016); only glanced at: Realm Grinder, Kittens Game, Cookie Clicker, Leaf Blower
+  Revolution, Idling to Rule the Gods, Idle Wizard (010, 018); still to read: Prestige Tree, Idle Obelisk Miner, Theory of Magic,
+  Exponential Idle, Evolve, Shark Incremental, Shark Game, BIOTOMATA, Midnight Idle, Idle Loops, Progress Knight
+- Short arcs and charm: Nodebuster, the Gnorp Apologue, Tower Wizard and Astro Prospector (009, 018), Tiny Terraces (018); still to
+  read: Download RAM Idle, Universal Paperclips, A Dark Room, Spaceplan, Asbury Pines, Sixty Four, Rusty's Retirement, Cast n Chill,
+  Digseum, Booster Pack Heroes, Harvest Dice Profit
+- Outside the genre, for one system each: Path of Exile, Last Epoch and Diablo 4 (015, 017), Grim Dawn and World of Warcraft (015,
+  017), Clash of Clans, Clash Royale, Brawl Stars, Boom Beach, Marvel Snap, Destiny 2 and Black Desert (011), Hearthstone and Hypixel
+  SkyBlock (014), RAID (017); still to read: Hay Day, Torn, Kingdom of Loathing
+
+**Topics** (files in brackets; none means still to do):
+
+- Design: onboarding; pacing and the hours to each goal (016); prestige layers (016); offline play; combat depth, builds and trees
+  (015); gear and loot (015, 017); crafting and the economy; sinks and inflation; collections and completion (008); achievements
+  (008); pets (008); tasks and dailies (014); events and seasons (016); ends and finales (009); story and lore (009, a little);
+  automation and quality of life (016, 017)
+- Presentation: UI and readability; game feel; sound and music; art direction; accessibility; performance and battery (005);
+  phones (018); number notation
+- Social: clans, boards and co-op (003, 011); markets and trading; chat and moderation; running a community (018, a little)
+- Business and operations: money, law and payments (010); stores, launch and growth (010, 018); translations (018); analytics and
+  retention; cheating and server authority; save safety and backups; privacy; security
+- Players' own words: Steam reviews and Reddit (in most files); Fantasy Idle's Discord (001) and its own numbers (live depths
+  in 009 and 013; retention still to do)
+- Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth (013); builds at depth (015); the bag and
+  the Equip card (017); the Titan's bank (014); still to do: cross-browser, the bot's patience, live retention, every Trial and dungeon
+  at the hero's frontier
+
 ## Queue
 
 In order; an item done points at its file. Items found along the way are added where they belong.
@@ -71,6 +116,11 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] Clan wars, clan levels and co-op formats → `011-clan-formats.md`
 - [x] Every proposal against the code → `012-proposals-against-the-code.md`
 - [x] What food, defence and health do deep in the climb → `013-supplies-at-depth.md`
+- [x] Tasks, dailies and bingo boards; Hunts tested against the code → `014-tasks-and-dailies.md`
+- [x] Talent trees and build depth; the War Tree measured → `015-trees-and-builds.md`
+- [x] How long-haul idle games keep players; their update rhythm → `016-long-haul.md`
+- [x] Loot quality of life and automation; the bag and the Equip card measured → `017-loot-and-automation.md`
+- [x] How small idle games find players: Reddit, galaxy.click, Steam, phones, translations → `018-finding-players.md`
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
@@ -78,17 +128,22 @@ In order; an item done points at its file. Items found along the way are added w
       owner before downloading them) (004)
 - [ ] Why the sensible bot climbs faster when something sends it away from the boss wall (013): is it the bot, or does a
       player at a clock wall lose time?
-- [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013)
+- [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013); every Trial and dungeon at the
+      hero's frontier, build by build, and a dodge set in Glass Hero or a lifesteal set in Fasting (015, 017)
+- [ ] The economy talents over a whole game; XP and essence below the frontier against the War Tree's pace (014, 015)
+- [ ] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017)
 - [ ] How long live players take from stage 1,000 to 2,000; weekly return of clan members against others, knowing the
       bias (009, 011)
 - [ ] The battery saver's saving on a phone-class CPU (Chrome's 4x throttle) (005)
 
 **Next, games:**
 
+- [ ] Lowmoor (a zero-player idle RPG with 2,108 nodes) and Tap Titans 2's build talk (015)
+- [ ] Egg, Inc.'s Path of Virtue as players took it; Revolution Idle's Minerals update as a disliked layer; CIFI's and Idle
+      Obelisk Miner's update logs; Shark Incremental, BIOTOMATA and Kill the Lich, Best Web 2025 (016)
+- [ ] Tiny Terraces and Harvest Dice Profit; how Kittens Game wrapped its web game for Steam (018)
+
 - [ ] Cauldron (Best Paid Game 2025), Legendum, Magic Research 2 (Best New Game 2024): heroes, lives, teams
-- [ ] The Tower (tournaments in 30-player brackets, guilds since 2025, milestone pushes) and Egg, Inc. (timed co-op contracts)
-- [ ] Unnamed Space Idle (Best F2P 2024 and 2025): ten linked systems at a steady pace, free quality-of-life
-- [ ] Synergism and Advent Incremental: an update rhythm, and an event as an advent calendar
 - [ ] Soda Dungeon 2, Idle Champions, Kill the Lich, Terraformental: party rules, formations, time compression,
       remembered routines
 - [ ] Short arcs with endings: Nodebuster, the Gnorp Apologue, Tower Wizard, Download RAM Idle, Astro Prospector
@@ -99,53 +154,43 @@ In order; an item done points at its file. Items found along the way are added w
 - [ ] Firestone Idle RPG, AFK Arena and AFK Journey, Idle Heroes: idle RPG loops, towers, guild bosses, what retains
 - [ ] Brighter Shores (RuneScape's creator, 2024): skills and episodes designed anew
 - [ ] RuneScape 3: archaeology, relics, daily challenges, and its shop's backlash (what not to do)
-- [ ] Clicker Heroes 2, Idle Champions, Increlution, Idle Loops, Progress Knight: loops and automation
+- [ ] Idle Loops and Progress Knight: loop games and their automation (Clicker Heroes 2, Idle Champions and Increlution are in 016)
 - [ ] The Golbin Raid (Melvor's roguelite side mode): how players took it
 
 **Next, mechanics across games:**
 
 - [ ] Seasons and leagues (OSRS Leagues, Path of Exile leagues, Diablo seasons): a fresh-start layer for an idle RPG
 - [ ] Collection logs and completion (the open "cape for 100%" item)
-- [ ] Task and bounty systems: Slayer in Melvor and other idle games, daily and weekly tasks; a design for Hunts (008),
-      and a rare sealed map as a later layer on it
-- [ ] Bingo boards as a clan or festival format: Grid Master, Jagex's planned Bingo System, clan tools (008)
 - [ ] Self-made modes and goals: Taskman, share-of-players figures on medals (008); Melvor's lore books against the
       Chronicle (009)
 - [ ] Small old communities and other co-op: Torn's factions, Kingdom of Loathing's clan dungeons, Hay Day's Derby,
       Boom Beach's Task Forces (011)
-- [ ] Inventory and loot quality of life: loot filters (Path of Exile, Last Epoch), bank tabs, search, equipment
-      sets and loadouts
-- [ ] Talent and passive trees (WoW classic, Path of Exile, Last Epoch, Grim Dawn): what keeps a tree interesting
-      for hundreds of hours (the War Tree)
 - [ ] Late-game economies: gold inflation, sinks that stay meaningful, number notation
-- [ ] Automation unlocks: what to automate, when, and what that does to play
-- [ ] Daily and weekly loops that are not chores; login rewards; streaks
-- [ ] Combat depth in auto-battlers: active skills, auto-casting, styles, builds
 - [ ] Pets and companions with a job (IdleOn, Melvor's Summoning, OSRS)
 - [ ] Achievements and medals: design, rewards, secret ones
 
 **Next, players and the community:**
 
 - [ ] Negative Steam reviews of leading idle RPGs, mined deeper than 004's top ten per game
-- [ ] Whether and where to tell players about Fantasy Idle near Melvor Idle 2's launch (the owner's call)
-- [ ] The Discord again each few iterations (001 has two passes, the last on 4 November); roles by depth (009)
+- [ ] The Discord again each few iterations (001 has two passes, the last on 4 November); roles by depth (009), as Unnamed
+      Space Idle's bot gives roles by sector (016)
+- [ ] r/ScapeLikes' rules; galaxy.click's answer on the submission; referrers in Cloudflare's analytics (the owner's) (018)
+- [ ] Developers' heuristics for exit and re-entry (Byers, Gibbs and Nansen, CHI 2026) against the welcome-back report (014)
 - [ ] Onboarding in 2024–2026 releases (beyond `first-session.md`)
 - [ ] Accessibility: the Game Accessibility Guidelines, held against the game
-- [ ] How small indie idle games grew: galaxy.click, Reddit, Steam, Discord, YouTube, translations
 
 **Next, technology and platforms:**
 
-- [ ] Web push notifications and the installed web app (crate ready, offline cap reached), iOS's limits
-- [ ] Bringing a web game to Steam (wrappers, achievements, cloud) and to phone stores
 - [ ] Server authority and cheating in online idle games
-- [ ] Translations: which languages idle players play in
 
 **Next, dated (each is worth a look after its date):**
 
-- [ ] Lowbar Legends (13 November) and Melvor Idle 2 (17 November): launches, prices, what players say (006, 010)
+- [ ] Lowbar Legends (13 November) and Melvor Idle 2 (17 November): launches, prices, what players say; the sequel's
+      Slayer, trees, bank, loadouts and automation (006, 010, 014, 015, 017)
+- [ ] My Own Hero Party on Steam (4 December) (016)
 - [ ] Idle Clans' quest rework a month on, from 20 November; Tap Titans 2's Clan Technology once 8.4 ships (011)
 - [ ] The EU's Digital Fairness Act, Turkey's game rating regulation, when published (010)
-- [ ] CIFI's and Idle Obelisk Miner's packs; Idlescape's Steam launch, January 2027 (010)
+- [ ] CIFI's and Idle Obelisk Miner's packs; Idlescape's free Steam launch, 8 January 2027 (010, 018)
 
 ## Index
 
@@ -165,6 +210,11 @@ In order; an item done points at its file. Items found along the way are added w
 | 011 | `011-clan-formats.md` | Clan levels, quests and wars | 4 Nov 2026 |
 | 012 | `012-proposals-against-the-code.md` | Every proposal against the code | 4 Nov 2026 |
 | 013 | `013-supplies-at-depth.md` | What food, defence and health do deep in the climb | 4 Nov 2026 |
+| 014 | `014-tasks-and-dailies.md` | Tasks, dailies and bingo boards | 11 Nov 2026 |
+| 015 | `015-trees-and-builds.md` | Talent trees and build depth | 11 Nov 2026 |
+| 016 | `016-long-haul.md` | How long-haul idle games keep players | 11 Nov 2026 |
+| 017 | `017-loot-and-automation.md` | Loot quality of life and automation | 11 Nov 2026 |
+| 018 | `018-finding-players.md` | How small idle games find players | 11 Nov 2026 |
 
 Round three (4 November) folded the proposals of 005, 006 and 007 into `PROPOSALS.md`, and corrected the earlier files where the
 code check and new measurements disagreed with them.

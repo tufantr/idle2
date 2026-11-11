@@ -81,7 +81,7 @@ Food makes no measurable difference to the best stage for either. The visiting b
 
 **A second wall past stage 700** (Change; P-023). The owner's call on what the deep game should be. Three ways, none tried on real saves:
 
-1. **Monsters' attack keeps pace** (`denseAtkGrowth` 1.035, S to change, M with balance runs). Survival returns at the wall, a supplied hero loses nothing, and food is worth about half a potion. Costs: every hero past stage 700 meets harder blows at once (about ×3 at stage 940), 1,500–2,400 dishes a run, and twice the deaths.
+1. **Monsters' attack keeps pace** (`denseAtkGrowth` 1.035, S to change, M with balance runs). For a hero at stage 1,000, survival returns at the wall, a supplied hero loses nothing, and food is worth about half a potion. Costs: 1,500–2,400 dishes a run and twice the deaths, and **it can't be done to a live game**. The easing from stage 400 moves too, so monsters would hit ×2.1 harder at 700, ×6.6 at 940, ×38 at 1,300, ×1,124 at 2,000 and ×9,461 at 2,440 (`enemyBaseStats`; corrected 11 November, from 015, which first said about ×3 at 940). Every live hero past about stage 1,300 would be felled at once. A survival wall deep would need a rule tied to the hero, not a change in growth.
 2. **Dishes that also give a bonus in the fight** (Melvor's perfect cooks are the nearest; S–M, with balance runs). Food then pays at the clock wall without touching monsters, and it mustn't rival potions.
 3. **Leave it, and say so.** The deep climb is an attack race and potions carry it; food is for the first 700 stages. Then the Cooking card's "?" should say so, so nobody cooks for nothing.
 
