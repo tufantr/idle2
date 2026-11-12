@@ -2861,7 +2861,7 @@ export function renderWelcomeBack(summary, game) {
         return h >= 48 ? `${Math.floor(h / 24)}d${h % 24 ? ` ${h % 24}h` : ''}` : h ? `${h}h${mins % 60 ? ` ${mins % 60}m` : ''}` : `${mins}m`;
     };
     const capTip = tipAttrs('Time away', `Your hero keeps at it for up to ${span(summary.simulated)} while you are away${seen(state, 'skill_points') ? '; the Endurance perk adds more' : ''}`);
-    const awayLine = summary.capped && summary.elapsed > summary.simulated
+    const awayLine = summary.capped && summary.elapsed - summary.simulated >= 60000   // (a few seconds past the cap read as one figure)
         ? `<b>${span(summary.elapsed)}</b> away, <b ${capTip}>${span(summary.simulated)}</b> counted`
         : `You were away <b>${span(summary.simulated)}</b>`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'

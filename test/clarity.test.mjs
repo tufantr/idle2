@@ -130,6 +130,10 @@ test('back after more than the cap, the report says the hours away and the hours
     // three days away: in days
     const [g72, s72] = back(75 * HOUR + 20 * 60000);
     assert.match(renderWelcomeBack(s72, g72), /<b>3d 3h<\/b> away, <b [^>]*>24h<\/b> counted/);
+    // seconds past the cap cut nothing worth a word: one figure
+    const [g24, s24] = back(24 * HOUR + 20_000);
+    assert.ok(s24.capped);
+    assert.match(renderWelcomeBack(s24, g24), /<p class="wb-away">You were away <b>24h<\/b><\/p>/);
     // inside the cap, one figure as before
     const [g5, s5] = back(5 * HOUR + 12 * 60000);
     assert.equal(s5.capped, false);
