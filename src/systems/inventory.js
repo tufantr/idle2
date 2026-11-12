@@ -403,8 +403,20 @@ export function equipItem(game, id, requestedSlot = null) {
     if (!slot) slot = judgeOf(game).place(item).slot;   // an empty slot, else where it is worth the most (systems/worth.js)
     if (!slot) return false;
 
-    const previous = state.equipped[slot];
     const gain = equipGain(state, item, slot);   // (before the swap: what it does to him, for the screen)
+    const { forge, firstForge } = wear(game, item, index, slot);
+    game.emit({ type: 'equip', item, slot, gain, forge, firstForge });
+    game.markDirty();
+    return true;
+}
+
+/**
+ * Put the bag's `item` (at `index`) on in `slot`, the piece there back into the bag: { previous, forge, firstForge }, the
+ * slot's levels it has now and whether it is the first piece ever to take a slot's levels.
+ */
+function wear(game, item, index, slot) {
+    const state = game.state;
+    const previous = state.equipped[slot];
     state.equipped[slot] = item;
     state.inventory.splice(index, 1);
     if (previous) state.inventory.push(previous);
@@ -418,11 +430,59 @@ export function equipItem(game, id, requestedSlot = null) {
         forge = levels.level || 0;
     }
     // the first time a piece takes a slot's levels, a card says how the forge works (main.js), once
-    const firstForge = forge > 0 && previous && !state.seen.forge_slots;
+    const firstForge = forge > 0 && !!previous && !state.seen.forge_slots;
     if (firstForge) state.seen.forge_slots = true;
-    game.emit({ type: 'equip', item, slot, gain, forge, firstForge });
+    return { previous, forge, firstForge };
+}
+
+/**
+ * The upgrades waiting in the bag, a slot each: what Equip all puts on, best first ([{ item, slot, stages }]). Each slot
+ * takes the bag's piece worth the most there (systems/worth.js), a piece one slot: two rings, the best two.
+ */
+export function upgradesWaiting(state, judge = wallJudge(state)) {
+    const offers = [];
+    for (const item of state.inventory) {
+        if (!canWear(state, item)) continue;
+        for (const slot of TYPE_SLOTS[item.type] || []) {
+            const stages = judge.worth(item, slot);
+            if (stages > UPGRADE_EPS) offers.push({ item, slot, stages });
+        }
+    }
+    offers.sort((a, b) => (b.stages - a.stages) || (itemScore(b.item) - itemScore(a.item)) || 0);
+    const items = new Set();
+    const slots = new Set();
+    return offers.filter(o => !items.has(o.item) && !slots.has(o.slot) && items.add(o.item) && slots.add(o.slot));
+}
+
+/**
+ * Equip all (the research loop's P-076: about six kinds of upgrade wait at nearly every return): the best waiting piece
+ * for every slot, one at a time, each judged again on what is worn by then; a piece this takes off never goes back on in
+ * the same tap. One 'equip' event says what it all did to the hero, with the pieces (`items`). Returns how many went on.
+ */
+export function equipAll(game) {
+    const state = game.state;
+    if (gearLocked(game)) return 0;
+    const before = deriveStats(state);
+    const put = [];
+    const off = new Set();
+    let first = null;
+    for (let guard = 0; guard < EQUIP_SLOTS.length * 2; guard++) {
+        game.recompute();   // (the stats with what is on now: the next piece is judged on them)
+        const next = upgradesWaiting(state, judgeOf(game)).find(o => !off.has(o.item.id));
+        if (!next) break;
+        const done = wear(game, next.item, state.inventory.indexOf(next.item), next.slot);
+        if (done.previous) off.add(done.previous.id);
+        if (done.firstForge) first = { ...next, forge: done.forge };
+        put.push(next);
+    }
+    if (!put.length) return 0;
+    const after = deriveStats(state);
+    const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
+    const gain = { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
+    const lead = first || put[0];
+    game.emit({ type: 'equip', item: lead.item, slot: lead.slot, gain, forge: first ? first.forge : 0, firstForge: !!first, count: put.length, items: put.map(p => p.item) });
     game.markDirty();
-    return true;
+    return put.length;
 }
 
 export function unequipItem(game, slot) {

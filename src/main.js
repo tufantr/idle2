@@ -1625,6 +1625,8 @@ window.FI = {
     runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
 
     equip(id) { if (game.equipItem(id) !== false) { sound.play('equip'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
+    /** Equip all (the dock's, once two pieces wait): every slot's best at once, one sound and one rise over the hero. */
+    equipAll() { if (game.equipAll() > 0) { sound.play('equip'); sound.play('upgrade'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
     unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
     sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
     sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },

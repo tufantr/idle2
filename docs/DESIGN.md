@@ -277,6 +277,11 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   too). A bulk salvage's line and toast name all that came back (`gainedText`): a crafted piece gives part of
   its bars and gems and no essence, and "+0 essence" read as nothing; an item's Salvage button carries the
   icons of what it gives. Locked items are never sold or salvaged. Nothing is ever silently deleted.
+- **Equip all** (the research loop's P-076, 12 November 2026: about six kinds of upgrade wait at nearly every return,
+  one tap apiece): once two or more slots have an upgrade waiting, an **All** beside the dock's Equip puts on the best
+  waiting piece for every slot (`upgradesWaiting`, `equipAll` in `src/systems/inventory.js`), two rings for the two ring
+  slots, each judged again on what is worn by then (§3.31's measure); a piece it takes off doesn't go back on in the
+  same tap. One rise over the hero says what it all did. Nothing goes on by itself: putting on a legendary stays a moment.
 
 ### 3.6 Combat
 

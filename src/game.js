@@ -7,7 +7,7 @@ import { tickAction, startNodeAction, startSmelting, startCrafting, startAgility
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
-import { equipItem, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
+import { equipItem, equipAll, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
 import { upgradeJewel, rerollJewel } from './systems/bench.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
@@ -249,6 +249,8 @@ export class Game {
     setFarmMode(on) { this.state.combat.farmMode = !!on; }
 
     equipItem(id, slot) { return this._act(() => equipItem(this, id, slot)); }
+    /** Equip all: the best waiting piece for every slot (systems/inventory.js); how many went on. */
+    equipAll() { return this._act(() => equipAll(this)); }
     unequipItem(slot) { return this._act(() => unequipItem(this, slot)); }
     sellItem(id) { return this._act(() => sellItem(this, id)); }
     sellAllItems(rarity) { return this._act(() => sellAllItems(this, rarity)); }

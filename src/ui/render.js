@@ -23,7 +23,7 @@ import { masteryProgress, masteryBonus, skillMastery } from '../systems/mastery.
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt, forgeKey } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
-import { goldShopPrice, goldShopOpen, canWear, isUpgrade, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, weakerInBag, bagByWorth } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, canWear, isUpgrade, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, weakerInBag, bagByWorth, upgradesWaiting } from '../systems/inventory.js';
 import { judgeOf } from '../systems/worth.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
@@ -691,7 +691,10 @@ function renderLoopActions(game) {
         const gain = judge.gain(upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
         const words = gainWords(gain);
         const stages = stagesWords(upgrade.stages);   // and about how far it takes him
-        parts.push(`<button class="mini-btn dock-equip" data-item="${Number(upgrade.item.id)}" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}${stages ? ` <b class="dock-stages">${esc(stages)}</b>` : ''}</i>` : ''}</span></button>`);
+        const equip = `<button class="mini-btn dock-equip" data-item="${Number(upgrade.item.id)}" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}${stages ? ` <b class="dock-stages">${esc(stages)}</b>` : ''}</i>` : ''}</span></button>`;
+        // Equip all, beside it once two or more pieces wait (systems/inventory.js upgradesWaiting), as Auto sits by Prestige
+        const waiting = upgradesWaiting(state, judge).length;
+        parts.push(waiting < 2 ? equip : `<div class="dock-equip-row">${equip}<button class="mini-btn dock-equip-all" onclick="FI.equipAll()" title="Put on the best waiting piece for every slot: ${waiting} pieces"><b>▲ All</b><span>${waiting} pieces</span></button></div>`);
     }
     return parts.length ? `<div class="dock-group dock-loop ${painted('shrine', 'center 45%')}">${parts.join('')}</div>` : '';
 }
