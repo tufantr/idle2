@@ -1979,7 +1979,13 @@ the forge is: a page running the older game drops a field it doesn't know).
   swing at a boss, Execute's bosses falling below 2/4/6% of their health, the capstone Deathblow's every tenth swing
   doubled), **Bulwark** (staying up: health, armour, Brace and Fortress against blows, Second Wind once a minute,
   Riposte and Vengeance on a dodge, the capstone Unbreakable: no blow takes more than a third of his health) and **Hunt**
-  (+1 s a rank on a boss's clock, gold, drops, essence, Second Chance's shorter regroup, Lord's Due's second piece,
+  (+1 s a rank on a boss's clock, gold, drops, essence, Second Chance's shorter regroup with the farming it skips paid at
+  once, at the same gold an hour (`regroupPayout`, `BALANCE.combat.secondChancePay`; the research loop's P-121, 12 November
+  2026: with the regroup's minute gone a hero at a boss's clock wall earned 0.29 of its gold, the gold that buys the camp,
+  and 5 of 8 heroes lost a gate. The cut time is paid as the farming at the stage below would pay it, at the game's own
+  payout and the hero's usual swing, times the try ÷ (the try + the regroup): an hour at a clock wall, rank 2 earns 1.01
+  of the gold without the talent and tries the boss 2.26 times as often, rank 1 0.98 and 1.40; paying the whole minute
+  each time would have made it 2.26 of the gold), Lord's Due's second piece,
   Veteran's Focus, Bounty, the capstone Relentless: each time a boss holds out its next try gives 2 s more, up to 10). A
   row opens with five more points in its tree (`ROW_POINTS`), so the capstone is the 31st. **Bridges** join each tree from
   the top down to its capstone (the owner, 2 November 2026: no talent alone in the middle; a dead end may stop short, as

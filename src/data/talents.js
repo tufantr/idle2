@@ -113,7 +113,7 @@ export const TALENTS = [
     { id: 'essence_drinker', tree: 'hunt', row: 2, col: 3, max: 3, from: ['scavenger'], name: 'Essence Drinker', icon: 'res/essence',
         fx: { essence: [0.15, 0.3, 0.45] }, text: r => `+${pct(0.15 * r)} essence from kills` },
     { id: 'second_chance', tree: 'hunt', row: 3, col: 1, max: 2, needs: 'patient_hunter', name: 'Second Chance', icon: 'icon/away',
-        fx: { regroupCut: [30000, 60000] }, text: r => (r >= 2 ? 'a boss that held out is tried again at once' : `a boss that held out is tried again ${sec(30000 * r)} sooner`) },
+        fx: { regroupCut: [30000, 60000] }, text: r => `${r >= 2 ? 'a boss that held out is tried again at once' : `a boss that held out is tried again ${sec(30000 * r)} sooner`}, the farming it skips paid at the same gold an hour` },
     { id: 'gilded_eye', tree: 'hunt', row: 3, col: 3, max: 3, from: ['essence_drinker', 'treasure_sense'], name: 'Gilded Eye', icon: 'item/Ring/4',
         mods: { gildedChance: 0.2 }, text: r => `gilded monsters come ${pct(0.2 * r)} more often` },
     { id: 'long_draught', tree: 'hunt', row: 4, col: 1, max: 3, from: ['second_chance'], name: 'Long Draught', icon: 'res/combat_potion_4',

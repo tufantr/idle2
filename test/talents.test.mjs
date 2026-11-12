@@ -491,3 +491,92 @@ test("the sidebar's Combat badge counts the levels past 99, with the bar to the 
     game.state.skills.combat.xp = xpForCombatLevel(MAX_COMBAT_LEVEL);
     assert.match(renderNav(game, { tab: 'combat', fresh: new Set() }), new RegExp(`class="nav-level max" title="Max level">${MAX_COMBAT_LEVEL}<`));
 });
+
+/** A hero at a boss's clock wall at stage 150: its monsters fall in about five swings, the boss (seven times their health) holds out. */
+function atTheClock(ranks = {}) {
+    const game = withTalents(hero(106), ranks);
+    const s = game.state;
+    Object.assign(s.combat, { bestStage: 150, maxStage: 150, stage: 149, active: true, mode: 'stages', regroupLeft: 0 });
+    s.settings.autoSalvage = 'off';
+    s.equipped.Body.def = 1e8;   // (no blow there fells him: the wall is the boss's clock)
+    const target = enemyForStage(149).maxHp / 4.5;   // a swing's worth
+    for (let i = 0; i < 4; i++) {
+        const perSwing = game.derived.atk * (1 + game.derived.critChance * (game.derived.critDmg - 1));
+        s.equipped.Weapon.atk = Math.max(1, (s.equipped.Weapon.atk + 5) * target / perSwing - 5);
+        game.recompute();
+    }
+    spawnEnemy(game);
+    return game;
+}
+
+/** An hour of that wall: the gold and combat XP earned, and how often the boss held out. */
+function anHour(game) {
+    const s = game.state;
+    const gold = s.gold, xp = s.skills.combat.xp, held = s.stats.bossEscapes;
+    for (let t = 1; t <= 3600; t++) game.tick(T0 + t * 1000);
+    return { gold: s.gold - gold, xp: s.skills.combat.xp - xp, held: s.stats.bossEscapes - held, best: s.combat.bestStage };
+}
+
+test('Second Chance pays the farming it skips at once: the same gold an hour at a boss\'s clock wall, the tries far more often', () => {
+    rng.setSource(seededRandom(8));
+    const plain = anHour(atTheClock({ patient_hunter: 5 }));
+    rng.setSource(seededRandom(8));
+    const chance = anHour(atTheClock({ patient_hunter: 5, second_chance: 2 }));
+    assert.equal(plain.best, 150, 'the boss never falls: a clock wall');
+    assert.equal(chance.best, 150);
+    assert.ok(chance.held >= 2 * plain.held, `tried ${chance.held} times against ${plain.held}`);
+    assert.ok(chance.gold >= 0.85 * plain.gold && chance.gold <= 1.35 * plain.gold, `gold ${chance.gold} against ${plain.gold} (tries ${chance.held}, ${plain.held})`);
+    assert.ok(chance.xp >= 0.85 * plain.xp, `combat XP ${chance.xp} against ${plain.xp}`);
+    // the old rule, with nothing paid: the talent cost most of the wall's gold (research loop 032: 0.29 of it)
+    BALANCE.combat.secondChancePay = 0;
+    try {
+        rng.setSource(seededRandom(8));
+        const old = anHour(atTheClock({ patient_hunter: 5, second_chance: 2 }));
+        assert.ok(old.gold < 0.5 * plain.gold, `the old rule: gold ${old.gold} against ${plain.gold}`);
+    } finally {
+        BALANCE.combat.secondChancePay = 1;
+    }
+});
+
+test('Second Chance\'s payout: the cut time\'s farming at the game\'s own payout, a third of it at rank 2 for a 30 s try', async () => {
+    const { regroupPayout } = await import('../src/systems/combat.js');
+    const game = atTheClock({ patient_hunter: 5, second_chance: 2 });
+    const s = game.state;
+    const d = game.derived;
+    s.combat.stage = 150;
+    spawnEnemy(game);
+    const tryMs = s.combat.enemy.timeLimit;
+    assert.equal(tryMs, BALANCE.combat.bossTimeMs + 5000, 'Patient Hunter\'s 5 s on the clock');
+    const pay = regroupPayout(s, d, 149, 60000, tryMs);
+    const e = enemyForStage(149);
+    const perSwing = d.atk * (1 + d.critChance * (d.critDmg - 1));
+    const killMs = Math.ceil(e.maxHp / perSwing) * d.attackInterval;
+    assert.ok(Math.abs(pay.kills - 60000 * tryMs / (tryMs + 60000) / killMs) < 1e-9);
+    assert.ok(pay.gold >= Math.floor(pay.kills * goldForKill(e, d.goldMult)), 'at its monsters\' gold (and a gilded one now and then)');
+    const gold = s.gold;
+    game.drainEvents();
+    onBossTimeout(game);
+    assert.equal(s.combat.regroupLeft, 0, 'tried again at once');
+    assert.equal(s.combat.stage, 149);
+    assert.equal(s.gold - gold, pay.gold, 'paid on the spot');
+    const ev = game.drainEvents().find(x => x.type === 'bossTimeout');
+    assert.equal(ev.paid, pay.gold);
+    assert.equal(ev.regroupMs, 0);
+    assert.match(s.log.at(-1).text, /tried again at once; its farming is paid at once/);
+    // rank 1: half the regroup farmed, the other half paid
+    withTalents(game, { patient_hunter: 5, second_chance: 1 });
+    s.combat.stage = 150;
+    spawnEnemy(game);
+    const before = s.gold;
+    onBossTimeout(game);
+    assert.equal(s.combat.regroupLeft, 30000);
+    assert.equal(s.gold - before, regroupPayout(s, game.derived, 149, 30000, tryMs).gold);
+    // and without the talent nothing is paid, as before
+    withTalents(game, { patient_hunter: 5 });
+    s.combat.stage = 150;
+    spawnEnemy(game);
+    const was = s.gold;
+    onBossTimeout(game);
+    assert.equal(s.gold, was);
+    assert.equal(s.combat.regroupLeft, BALANCE.combat.regroupMs);
+});

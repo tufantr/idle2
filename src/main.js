@@ -860,7 +860,11 @@ function handleEvents(events) {
                 }
                 break;
             case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
-            case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
+            case 'bossTimeout': {   // (Second Chance: sooner or at once, and the farming it skips paid)
+                const how = ev.regroupMs === 0 ? 'tried again at once' : ev.regroupMs < BALANCE.combat.regroupMs ? `regrouping for ${Math.round(ev.regroupMs / 1000)} s` : 'regrouping for a minute';
+                if (!onCombat) toast(`The boss held out — ${how}${ev.paid > 0 ? `, +${fmt(ev.paid)} gold` : ''}`, 'death');
+                break;
+            }
             case 'prestige': {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);

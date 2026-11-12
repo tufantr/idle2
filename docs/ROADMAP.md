@@ -1482,6 +1482,10 @@ Keeping it running:
       §3.20): the anvil's mastery strip has a Practise on each open metal held, which works its bars for that metal's
       mastery alone, to its next level a tap, a second of practice a bar as the anvil's jobs pay, with no slot's levels;
       a copper mastery no longer takes a worn copper piece and 36,207 rerolls
+- [x] **Second Chance keeps the regroup's farming** (the research loop's P-121, 12 November 2026; DESIGN §3.33): a boss that
+      held out is still tried again sooner (at once at rank 2), and the farming the cut regroup skips is paid at once, at
+      the same gold an hour, with its coins on the banner: at a boss's clock wall rank 2 earned 0.29 of the gold, now 1.01,
+      with the boss tried 2.26 times as often
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
