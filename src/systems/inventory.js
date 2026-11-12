@@ -509,12 +509,13 @@ function wear(game, item, index, slot) {
 
 /**
  * The upgrades waiting in the bag, a slot each: what Equip all puts on, best first ([{ item, slot, stages }]). Each slot
- * takes the bag's piece worth the most there (systems/worth.js), a piece one slot: two rings, the best two.
+ * takes the bag's piece worth the most there (systems/worth.js), a piece one slot: two rings, the best two. `skip`: ids
+ * of pieces to leave out.
  */
-export function upgradesWaiting(state, judge = wallJudge(state)) {
+export function upgradesWaiting(state, judge = wallJudge(state), skip = null) {
     const offers = [];
     for (const item of state.inventory) {
-        if (!canWear(state, item)) continue;
+        if (!canWear(state, item) || skip?.has(item.id)) continue;
         for (const slot of TYPE_SLOTS[item.type] || []) {
             const stages = judge.worth(item, slot);
             if (stages > UPGRADE_EPS) offers.push({ item, slot, stages });
@@ -540,7 +541,7 @@ export function equipAll(game) {
     let first = null;
     for (let guard = 0; guard < EQUIP_SLOTS.length * 2; guard++) {
         game.recompute();   // (the stats with what is on now: the next piece is judged on them)
-        const next = upgradesWaiting(state, judgeOf(game)).find(o => !off.has(o.item.id));
+        const [next] = upgradesWaiting(state, judgeOf(game), off);
         if (!next) break;
         const done = wear(game, next.item, state.inventory.indexOf(next.item), next.slot);
         if (done.previous) off.add(done.previous.id);
