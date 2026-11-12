@@ -999,7 +999,10 @@ gear to wear; a place that waited opens on the return and is named there too.
   prestige as a player would, the climb came to 76% of it from stage 300 over 43 hours (430 stages) and 72%
   from 1,200 (28 runs of 400 hours, every window of 1 to 48 hours from the best at its start); the rates an hour
   went up from 150 to 1,500 (the bursts stayed: a day's climb was what came close), and the worst is now 49%.
-  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). Trial tiers
+  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). In November 2026 the best stage's became the
+  save's own wall, `MAX_STAGE` (10,000, where a load clamps it; mirrored in `api/index.js`, a test checks the two agree): the
+  deepest live hero was climbing 460 stages a week, about eight weeks short of 6,000, and the medals at 7,500 and 10,000 lay
+  past it. Total XP's counts the game's 11 skills each stopped at twice level 99's (it counted 13). Trial tiers
   a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save

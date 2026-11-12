@@ -187,9 +187,9 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     const loaded = await (await get('/load', token)).json();
     assert.equal(loaded.state.combat.bestStage, 1000, 'the save itself is accepted');
 
-    // A first upload is checked against what no save can reach.
+    // A first upload is checked against what no save can reach (a skill's XP past where every skill stops).
     const fresh = await register('fresh_cheat');
-    assert.equal((await (await post('/save', { state: heroSave({ bestStage: 1e9 }) }, fresh)).json()).flagged, true);
+    assert.equal((await (await post('/save', { state: { ...heroSave(), skills: { combat: { xp: 0 }, mining: { xp: 1e12 } } } }, fresh)).json()).flagged, true);
 
     // A save played with the developer switches on (they only work on a local host) is flagged.
     const dev = await register('dev_switches');
@@ -203,10 +203,12 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.equal((await (await post('/save', { state: trialsAt(120, { brutes: 5 }) }, await register('forged_trials'))).json()).flagged, true);
     assert.equal((await (await post('/save', { state: trialsAt(280, { brutes: 5 }) }, await register('earned_trials'))).json()).flagged, false);
 
-    // The numbers checked are the server's own reading of the save: a raw field can't be dressed up.
-    const sneaky = await register('sneaky_stage');
+    // The numbers checked are the server's own reading of the save: a raw field can't be dressed up. A far stage under a
+    // modest best stage is read as the best stage it makes (the save's own wall, MAX_STAGE), and checked as that.
+    const sneaky = await register('sneaky_stage', { fresh: true });
     const sneakySave = { ...heroSave(), combat: { stage: 999999, bestStage: 1, maxStage: 1 } };
     assert.equal((await (await post('/save', { state: sneakySave }, sneaky)).json()).flagged, true, 'a far stage under a modest best stage');
+    assert.equal((await peek.metrics('sneaky_stage')).bestStage, 10000);
 
     // Growth is measured from each number's highest value and when it was reached.
     const { plausibilityFlags } = app;
@@ -299,6 +301,28 @@ test('a made-up climb is caught: bursts chained a minute apart, and a new accoun
     assert.equal((await (await post('/save', { state: heroSave({ bestStage: 3, playtimeMs: 60000 }) }, newcomer)).json()).flagged, false, 'a real first minute');
     clock += 2 * 60 * 60 * 1000;
     assert.equal((await (await post('/save', { state: heroSave({ bestStage: 60, playtimeMs: 2 * 3600000 }) }, newcomer)).json()).flagged, false, 'and a good first two hours');
+});
+
+test("the ceilings are the save's own: the best stage at its wall (MAX_STAGE), total XP at every skill stopped", async () => {
+    // the best stage's was 6,000, weeks ahead of the deepest live hero, with two medals past it; total XP counted 13 skills
+    const { MAX_STAGE } = await import('../src/core/state.js');
+    const { SKILLS } = await import('../src/data/skills.js');
+    const { XP_FOR_MAX_LEVEL } = await import('../src/core/xp.js');
+    const { plausibleAttackDamage } = await import('../src/core/power.js');
+    const ceiling = key => app.RANKED.find(r => r.key === key).ceiling;
+    assert.equal(ceiling('bestStage'), MAX_STAGE, 'the mirror agrees with the game');
+    const everySkill = Object.keys(SKILLS).length * 2 * XP_FOR_MAX_LEVEL;
+    assert.equal(ceiling('totalXp'), everySkill);
+    const impossible = metrics => app.plausibilityFlags(null, { bestStage: 1, ...metrics }, clock, plausibleAttackDamage, null).flags;
+    assert.deepEqual(impossible({ bestStage: MAX_STAGE }), [], 'the deepest a save can hold');
+    assert.ok(impossible({ bestStage: MAX_STAGE + 1 }).includes('best stage beyond any possible save'));
+    assert.deepEqual(impossible({ totalXp: everySkill }), [], 'every skill at its stop');
+    assert.ok(impossible({ totalXp: everySkill + 1 }).includes('total XP beyond any possible save'));
+    // a hero past the old ceiling, a month into his account: not flagged for it
+    const deep = await register('past_six_thousand');
+    const res = await (await post('/save', { state: heroSave({ bestStage: 7600, playtimeMs: 600 * 3600 * 1000 }) }, deep)).json();
+    assert.equal(res.flagged, false);
+    assert.deepEqual(await peek.flags('past_six_thousand'), []);
 });
 
 test('a save cannot reach the server\'s own objects', async () => {

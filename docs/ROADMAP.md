@@ -1461,6 +1461,9 @@ Keeping it running:
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
+- [x] **The server's ceilings keep up** (the research loop's R1, the owner's pick, November 2026; DESIGN §3.17): a best stage
+      past 6,000 no longer flags an account, weeks before the deepest hero would have met it; the ceiling is the save's own
+      wall at 10,000, and total XP's counts the game's 11 skills
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

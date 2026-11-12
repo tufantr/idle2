@@ -334,6 +334,13 @@ function totalXp(state) {
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
 // Tokens one prestige can pay at a stage (BALANCE.prestige in src/core/formulas.js).
 const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
+// Mirrored from the game, whose ES modules this file can't load before RANKED is built (test/api.test.cjs checks that they
+// agree): the deepest stage a save holds (MAX_STAGE in src/core/state.js: a load clamps the best stage there), the game's
+// skills (src/data/skills.js) and where a skill's XP stops, twice level 99's (src/systems/progress.js; Combat's past it is
+// the War Tree's, counted by its levels in warLevel).
+const MAX_STAGE = 10000;
+const SKILL_COUNT = 11;
+const SKILL_XP_STOP = 2 * 13_034_431;
 
 // Ranked numbers, read from the server's own reading of the save (powerSummary on the migrated save,
 // the numbers the boards show; a raw field can't be dressed up): how fast each can honestly grow per
@@ -342,13 +349,15 @@ const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 // was reached, so restoring a backup and coming forward again is never flagged, and from where the day's window began
 // (plausibilityFlags); an account's first upload from when it began to play (firstPeaks).
 const RANKED = [
-    // (perHour, flat: only without honestClimb; the ceiling far past any hero's: 2,000 after 1,200 simulated hours of the endless climb)
-    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 6000, byDepth: true },
+    // (perHour, flat: only without honestClimb; the ceiling the save's own wall, MAX_STAGE. It was 6,000 until November 2026,
+    // which the deepest live hero, 460 stages a week then, would have met within weeks, with the medals at 7,500 and 10,000 past it)
+    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: MAX_STAGE, byDepth: true },
     // (`flat`: a full bank of attempts won one after another, data/dungeons.js TITAN_BANK)
     { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 3, ceiling: 20000 },
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
-    // (`flat`: a whole skill's XP at once, twice level 99's where it stops: the anvil and the bench pay for a stock of bars in minutes)
-    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 2 * 13_034_431, ceiling: 13 * 2 * 13_034_431 },
+    // (`flat`: a whole skill's XP at once, twice level 99's where it stops: the anvil and the bench pay for a stock of bars in minutes;
+    // the ceiling every skill stopped, which counted 13 skills until November 2026, where the game has 11)
+    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: SKILL_XP_STOP, ceiling: SKILL_COUNT * SKILL_XP_STOP },
     { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e12 },   // (a few hundred million after 1,200 simulated hours)
     // Combat's levels past 99, the War Tree's points (src/data/talents.js): a hero at the old cap had 7 at once, and each later
     // level takes longer than the last (hours at the start, weeks by 150); 134 fill the tree
@@ -1140,4 +1149,5 @@ app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
 // VERY IMPORTANT FOR VERCEL
 module.exports = app;
 module.exports.plausibilityFlags = plausibilityFlags;
+module.exports.RANKED = RANKED;
 module.exports.isoWeek = isoWeek;
