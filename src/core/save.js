@@ -119,6 +119,7 @@ export class CloudClient {
         this.username = this.token ? decodeUsername(this.token) : null;
         this.available = null; // unknown until the first request
         this.base = null;      // the cloud save this page has seen (pull or push), as the server's lastSaved
+        this.flaggedUntil = 0; // the account is flagged until then, as the last save or load said (Settings tells the player)
     }
 
     /** The cloud save this device saw last time, for this account ({ at, savedAt, game } or null). */
@@ -173,6 +174,7 @@ export class CloudClient {
         this.token = token;
         this.username = token ? decodeUsername(token) : null;
         this.base = null;   // another account (or none): nothing seen of its cloud yet
+        this.flaggedUntil = 0;
         const store = storage();
         if (!store) return;
         if (token) store.setItem(TOKEN_KEY, token); else store.removeItem(TOKEN_KEY);
@@ -223,6 +225,7 @@ export class CloudClient {
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
         this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null, state?.meta.createdAt ?? null);
+        this.flaggedUntil = Number(data.flaggedUntil) || 0;
         return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0, banner: data.banner ?? null,
             hall: data.hall ?? null, hallGifts: Array.isArray(data.hallGifts) ? data.hallGifts : [] };   // the clan's hall, and its gifts the save has yet to give
     }
@@ -235,6 +238,7 @@ export class CloudClient {
     async push(stateObject, { keepalive = false } = {}) {
         const answer = await this.request('/save', { method: 'POST', body: { state: stateObject, ...(this.base === null ? {} : { base: this.base }) }, keepalive });
         if (Number.isFinite(answer?.timestamp)) this.noteBase(answer.timestamp, stateObject?.meta?.savedAt ?? null, stateObject?.meta?.createdAt ?? null);
+        if (answer && 'flaggedUntil' in answer) this.flaggedUntil = Number(answer.flaggedUntil) || 0;
         return answer;
     }
 

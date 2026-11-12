@@ -1031,7 +1031,11 @@ gear to wear; a place that waited opens on the return and is named there too.
   November, unseen. The cost: a forger who stays inside the ceilings plays on, on the boards too, until the owner looks.
   Each flag carries the check's version (`FLAG_CHECK`: 2 from then; flags from before carry none and count as 1), and
   flags of an older version lapse, so a check made looser clears what it flagged by itself (five were cleared by hand on 4
-  November); the owner's own (`by: owner`) last their 30 days whatever the version.
+  November); the owner's own (`by: owner`) last their 30 days whatever the version. **A flagged player is told** (P-025: in
+  November the one word in the game, "Capped", was misread and false flags sat for days): every save and load answer says
+  until when the account is flagged (`flaggedUntil`, 0 when it isn't), Settings' account panel shows one line while it is,
+  "Flagged until 12 December: a save showed numbers the game's check doesn't allow.", with a "?" for what a flag does, why,
+  how long, and to tell the team on the Discord (`FEATURES.flagged`); a held-back clan attack's card says so too (§3.18).
 - **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
   address) in 15 minutes and logins wait; an address makes at most three accounts a day (ten an hour until the
   beta: each is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried). Each try is
@@ -1137,8 +1141,9 @@ with the game's own stat code; the client never submits damage or scores.
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real
-  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`,
-  the card why). A card shows the damage and the member's place in the clan that week; a felled boss
+  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`;
+  the card says "Flagged: at most 1% of the boss", why, and to tell the team on the Discord, and a tap opens Settings,
+  §3.17). A card shows the damage and the member's place in the clan that week; a felled boss
   shows which level comes back and when ("Level 2 in 5h 12m", or a new boss on Monday). A fight in progress never survives a reload (the
   attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent

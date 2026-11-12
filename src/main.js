@@ -1238,6 +1238,9 @@ async function claimGifts() {
  */
 let sendingClan = false;
 let clanRetryAt = 0;
+// The card of a flagged account's clan attack says why and how to answer; its tap goes to Settings, whose line and "?" say
+// the rest (src/ui/features.js FEATURES.flagged).
+const FLAGGED_NOTE = "A save showed numbers the game's check doesn't allow. Think it's a mistake? Tell the team on the Discord.";
 async function sendClanResult(now = false) {
     const result = game.state.clanResult;
     if (!result || sendingClan || !cloud.loggedIn || !cloudReady || passive || (!now && Date.now() < clanRetryAt)) return;
@@ -1255,9 +1258,11 @@ async function sendClanResult(now = false) {
         const look = clanBossFor(answer.week || result.week);
         const lines = [answer.killed ? 'The boss is down! It comes back at midnight UTC, a level stronger' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
             answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-            answer.capped ? 'Capped: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+            answer.capped ? 'Flagged: at most 1% of the boss' : ''].filter(Boolean);
+        // a flagged account's attack held back: what a flag does, why, and how to answer, on the card (Settings has the rest)
         rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
-            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: 4200 });
+            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: answer.capped ? 9000 : 4200,
+            ...(answer.capped ? { note: FLAGGED_NOTE, go: 'settings' } : {}) });
         sound.play(answer.killed ? 'victory' : 'chest');
         render();
     } catch (err) {
@@ -1277,9 +1282,10 @@ function endlessAnswered(answer) {
     const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
         answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
         answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-        answer.counted === false ? 'Not counted: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+        answer.counted === false ? 'Flagged: not counted in the ranking' : ''].filter(Boolean);
+    const flagged = answer.counted === false;
     rewards.celebrate({ key: `endless:${answer.week}:${answer.depth}:${answer.attacksLeft}`, kind: 'unlock', art: paintStyle(ENDLESS.zone), icon: sprite(`mon/${ENDLESS.look}`, { scale: 2, fallback: '🐉' }),
-        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: 4200 });
+        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: flagged ? 9000 : 4200, ...(flagged ? { note: FLAGGED_NOTE, go: 'settings' } : {}) });
     sound.play('chest');
     render();
 }

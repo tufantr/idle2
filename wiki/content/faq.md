@@ -6,7 +6,7 @@ sectionPath: /guides
 icon: perk/scholar
 order: 90
 summary: Short answers to the questions players ask most: offline progress, saves, coal and gems, bosses, prestige, gear, pets, mastery, dungeons and more.
-keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion
+keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, flagged, flag
 aliases: Frequently asked questions, Questions, Help
 ---
 Short answers, each with a link to the page that tells the whole story. New to the game? Start with [[/guides/getting-started|Getting started]].
@@ -24,6 +24,10 @@ With an account, on the game's server, as in any online game: any device you sig
 ### Can I play without an account?
 
 Yes: press **Play as guest** on the sign-in. Your game is then kept in that browser only, with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
+
+### Settings says my account is flagged. What does that mean?
+
+One of your saves showed numbers the game's check doesn't allow: numbers no save can reach. For 30 days from that save, each of your [[/clans|clan]] attacks counts for at most 1% of the boss, your fights at the Endless Hydra stay out of the clan ranking, and you are left off the leaderboards. Your game itself plays and saves as always, and nothing is taken away. A save that only grew faster than the check allows is looked at by the team first, never flagged by itself. Think it's a mistake? Tell the team on the Discord (the link is in Settings), with your username.
 
 ### Can I play on my phone, or install it like an app?
 

@@ -1468,6 +1468,9 @@ Keeping it running:
       at once. A save that grows faster than the check allows, inside the ceilings, goes on a list for the owner instead
       (mailed each week), and the owner flags by hand what deserves it. Flags carry the check's version: a fixed check's old
       flags lapse by themselves
+- [x] **A flagged player is told** (R1, November 2026; DESIGN §3.17): Settings' account panel says "Flagged until …" while
+      it is, with a "?" for what a flag does, why, how long and how to answer (the Discord); a held-back clan attack's card
+      says "Flagged: at most 1% of the boss" with the same few words, and a tap opens Settings. The wiki's FAQ has it too
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

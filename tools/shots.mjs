@@ -17,7 +17,9 @@
 //                                                 # 'banner' the fight under a clan banner of ×2;
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
-//                                                 # and 'bannerpick' its banner picker: the API is
+//                                                 # and 'bannerpick' its banner picker; 'account'
+//                                                 # Settings signed in and flagged, 'clancapped' a
+//                                                 # flagged account's attack card: the API is
 //                                                 # answered by the tool, CLAN_API below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
@@ -146,6 +148,20 @@ const CLAN_SHOTS = {
         }
         FI.openHallGive('stores');
     },
+    // Settings signed in, the account flagged (the tool's server says until when): the account panel's line and its "?"
+    account: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ flagged: true }) });
+        FI.cloudSaveNow();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        FI.switchTab('settings');
+    },
+    // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
+    clancapped: async () => {
+        document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
+        FI.game().state.clanResult = { strikes: [], ms: 30000, at: Date.now(), week: '2026-W44' };
+        // (it waits behind the cards the late-game save brought, a few seconds each)
+        for (let i = 0; i < 100 && !document.querySelector('.celebration .cel-note'); i++) await new Promise(resolve => setTimeout(resolve, 250));
+    },
     // the Forge given 100 runite bars (the tool's server takes them): the bank holds 100 fewer, the Forge's bar has grown
     hallgiven: async () => {
         const before = FI.game().state.resources.runite_bar;
@@ -163,6 +179,7 @@ function clanApi() {
     const hall = { clan: 7, rooms: { forge: 30500, stores: 12000, kitchen: 7400, apothecary: 2100, garden: 0, library: 41000 }, stage: 1, colour: 'forest', emblem: 'troll',
         given: { week: 4200, total: 26000 }, weekly: 10800, endsInMs: 3 * 864e5, cloak: false };
     let seq = 0;
+    let shotMode = {};   // a shot's own answers (CLAN_SHOTS: `flagged` the account flagged), set by the shot and reset before each one
     const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
     const answer = () => ({
         clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
@@ -181,9 +198,15 @@ function clanApi() {
         const path = new URL(request.url()).pathname.replace(/^\/api/, '');
         const json = body => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
         const news = () => ({ banner: { week, kills: 1 }, hall: { ...hall }, hallGifts: [] });
-        if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, ...news() });
-        if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, gifts: 0, ...news() });
+        const flaggedUntil = shotMode.flagged ? Date.now() + 12 * 864e5 : 0;
+        if (path === '/__shots') { shotMode = JSON.parse(request.postData() || '{}'); return json({}); }
+        if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, flaggedUntil, ...news() });
+        if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, flaggedUntil, gifts: 0, ...news() });
         if (path === '/clan') return json(answer());
+        if (path === '/clan/attack') {   // a flagged account's attack, held back (api/index.js FLAGGED_ATTACK_SHARE)
+            return json({ damage: 9.6e6, capped: true, strikes: 0, hp: 4.0e8, maxHp: 9.6e8, level: 2, killed: false, attacksLeft: 1, kills: 1,
+                banner: { week, kills: 1 }, rank: 2, of: 4, week });
+        }
         if (path === '/rewards') return json({ rewards: [] });
         if (path === '/leaderboard') return json({ entries: [], optIn: false, label: 'Best stage', period: 'all' });
         if (path === '/clans/ranking') return json({ week, divisions: [], last: { week, divisions: [] } });
@@ -318,11 +341,14 @@ for (const viewport of VIEWPORTS) {
         await quiet(page);
         await page.waitForTimeout(1600);
         for (const tab of clanTabs) {
+            await page.evaluate(() => fetch('/api/__shots', { method: 'POST', body: '{}' }));   // the tool's server as it answers every shot
             await page.evaluate(() => { FI.closeModal(); FI.switchTab('clan'); });
             await page.waitForTimeout(900);
             if (CLAN_SHOTS[tab]) { await page.evaluate(CLAN_SHOTS[tab]); await page.waitForTimeout(700); }
             else await page.evaluate(() => { document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' }); if (innerWidth < 900) window.scrollBy(0, -(document.querySelector('#sidebar')?.offsetHeight || 0) - 8); });
-            if (!['clancloak', 'clanfight'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (!['clancloak', 'clanfight', 'account'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (tab === 'account' && !(await page.$('.flag-line'))) problems.push(`no flagged line in Settings at ${viewport.width}px`);
+            if (tab === 'clancapped' && !(await page.$('.celebration .cel-note'))) problems.push(`no card for a held-back attack at ${viewport.width}px`);
             await shoot(page, tab, viewport.width);
         }
         await page.context().close();

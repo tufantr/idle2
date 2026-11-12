@@ -345,11 +345,20 @@ test("flags list before they act: a fixed check's old flags lapse, the owner's b
     assert.equal(held.capped, true, "the owner's own flag stands");
     // what this check writes carries its version, and stands
     const forger = await register('new_flag');
-    await post('/save', { state: { ...heroSave({ tokens: 400, bestStage: 60 }), skills: { combat: { xp: 0 }, mining: { xp: 1e12 } } } }, forger);   // beyond any possible save
+    const saved = await (await post('/save', { state: { ...heroSave({ tokens: 400, bestStage: 60 }), skills: { combat: { xp: 0 }, mining: { xp: 1e12 } } } }, forger)).json();   // beyond any possible save
     const [flag] = await peek.flags('new_flag');
     assert.deepEqual([flag.reason, flag.check], ['total XP beyond any possible save', 2]);
     await post('/clans/join', { clanId }, forger);
     assert.equal((await (await post('/clan/attack', { strikes: [], ms: 30000 }, forger)).json()).capped, true);
+    // the game is told until when an account is flagged (Settings says so): on every save and load, 0 when it isn't
+    const month = 30 * 24 * 3600 * 1000;
+    assert.equal(saved.flaggedUntil, saved.timestamp + month);
+    assert.equal((await (await get('/load', forger)).json()).flaggedUntil, saved.timestamp + month);
+    assert.equal((await (await get('/load', owned)).json()).flaggedUntil, clock - 3600 * 1000 + month, "the owner's flag");
+    assert.equal((await (await get('/load', old)).json()).flaggedUntil, 0, 'a lapsed flag');
+    assert.equal((await (await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, host)).json()).flaggedUntil, 0);
+    await peek.setFlags('new_flag', [{ ...flag, at: clock - month - 1000 }]);   // (as if made thirty days ago)
+    assert.equal((await (await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, forger)).json()).flaggedUntil, 0, 'thirty days on, and a save no longer impossible');
 });
 
 test("the week's review list goes to the owner by mail (api/review.js): each account by name with its numbers, nothing else; no address, no mail", async () => {

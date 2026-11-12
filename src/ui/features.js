@@ -126,6 +126,13 @@ export const FEATURES = {
             `Every week the clans are ranked. The levels felled put a clan in its division (${CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below'}`).join(', ')}), and ${ENDLESS.name.replace(/^The /, 'the ')} decides inside it: awake from Saturday 00:00 UTC to the Monday reset, its heads grow back, so it never falls.`,
             `Each member who was in the clan when the week began has ${ENDLESS.attacks} fights at it, and the deepest counts: how many of its levels the hit breaks through, each a fifth tougher than the last, so a far stronger hero goes only somewhat deeper. A clan's depth is its best ${ENDLESS.counted} members' together, and the top three of each division wear a crown through the next week.`] },
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
+    // behind the "?" of Settings' line while the account is flagged (the server's check, api/index.js; the 1% is its FLAGGED_ATTACK_SHARE)
+    flagged: { name: 'A flagged account', icon: 'gear', blurb: "One of your saves showed numbers the game's check doesn't allow.",
+        points: ['While your account is flagged, each clan attack counts for at most 1% of the boss, your fights at the Endless Hydra stay out of the clan ranking, and you are left off the leaderboards.',
+            'Your game plays and saves as always, and nothing is taken away.',
+            "A save is flagged for numbers no save can reach. One that only grew faster than the check allows is looked at by the team first, and never flagged by itself.",
+            'A flag lasts 30 days from the save that showed the numbers.',
+            "Think it's a mistake? Tell the team on the Discord, with your username."] },
     camp: { name: 'Camp', art: 'camp', icon: 'mon/Magma Slime', blurb: 'Upgrades for this run, bought with gold.',
         points: ['The whetstone, the armour rack and the hearth multiply your attack, defence and health.', 'The camp is packed up when you prestige, so every run is a climb.',
             `Once you have gone far, ${CAMP_GOLD.from} levels of each follow your best stage in price: each run buys its camp again as it nears its best.`,

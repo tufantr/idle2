@@ -433,6 +433,13 @@ function recentlyFlagged(flagsJson, now) {
     try { return JSON.parse(flagsJson || '[]').some(f => standing(f, now)); } catch { return false; }
 }
 
+/** When an account's flags stop counting (its latest standing flag's 30 days), or 0: the game tells a flagged player (Settings). */
+function flaggedUntil(flagsJson, now) {
+    let flags = [];
+    try { flags = JSON.parse(flagsJson || '[]'); } catch { flags = []; }
+    return Array.isArray(flags) ? Math.max(0, ...flags.filter(f => standing(f, now)).map(f => num(f.at) + FLAG_MEMORY_MS)) : 0;
+}
+
 app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     const state = req.body && req.body.state;
     if (!state || typeof state !== 'object' || Array.isArray(state)) return res.status(400).json({ error: 'No state provided' });
@@ -490,7 +497,9 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     // "This week" leaderboards count from where the player stood when the week began: the numbers stored
     // before this upload (the first upload of the week, an empty one say, made the whole week's gain).
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(previous || metrics));
-    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id), ...await clanNews(req.user.id, savedAt, state) });
+    // (`flagged`: this upload was; `flaggedUntil`: until when the account is, which the game tells the player)
+    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, flaggedUntil: flaggedUntil(JSON.stringify(flags), savedAt),
+        gifts: await store.unclaimedGiftCount(req.user.id), ...await clanNews(req.user.id, savedAt, state) });
 }));
 
 app.get('/api/load', authenticateToken, route('load', async (req, res) => {
@@ -499,9 +508,10 @@ app.get('/api/load', authenticateToken, route('load', async (req, res) => {
     const state = current && current.state ? JSON.parse(current.state) : null;
     // the clan's banner this week (src/data/social.js CLAN_BANNER), its hall, and the hall's gifts the save has yet to give
     const news = await clanNews(req.user.id, Date.now(), state);
+    const until = flaggedUntil(current && current.flags, Date.now());   // (the account flagged until then: the game says so)
     // serverNow lets the client measure time away on the server's clock, not its own.
-    if (!state) return res.json({ state: null, serverNow: Date.now(), gifts, ...news });
-    res.json({ state, lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, ...news });
+    if (!state) return res.json({ state: null, serverNow: Date.now(), gifts, flaggedUntil: until, ...news });
+    res.json({ state, lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, flaggedUntil: until, ...news });
 }));
 
 // ---------- clans ----------

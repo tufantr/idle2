@@ -127,6 +127,32 @@ test("the account's own game is the one this device last saw on its server, for 
     }
 });
 
+test('the cloud keeps until when the account is flagged, as its last save or load said (Settings tells the player); another account starts with none', async () => {
+    const realFetch = globalThis.fetch;
+    let answer = { flaggedUntil: 5000 };
+    globalThis.fetch = async url => new Response(JSON.stringify(url.endsWith('/load') ? { state: null, serverNow: 5, ...answer } : { success: true, timestamp: 6, ...answer }),
+        { status: 200, headers: { 'content-type': 'application/json' } });
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        assert.equal(cloud.flaggedUntil, 0);
+        await cloud.pull(10);
+        assert.equal(cloud.flaggedUntil, 5000);
+        answer = { flaggedUntil: 0 };
+        await cloud.push({ version: 3 });
+        assert.equal(cloud.flaggedUntil, 0, 'lapsed: the next answer says so');
+        answer = { flaggedUntil: 7000 };
+        await cloud.push({ version: 3 });
+        answer = {};   // a server from before says nothing of it: an upload changes nothing
+        await cloud.push({ version: 3 });
+        assert.equal(cloud.flaggedUntil, 7000);
+        cloud.setToken('a.eyJ1c2VybmFtZSI6InNvbWVvbmUifQ.b');
+        assert.equal(cloud.flaggedUntil, 0, 'another account');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
 test("a guest's game put aside at sign-in is listed among the backups and outlasts a reset", () => {
     const game = new Game(null, 1);
     game.state.gold = 77;
