@@ -8,7 +8,7 @@ Every action you repeat has a **mastery** of its own, from level 1 to {{MASTERY_
 
 - Every spot in [[/skills/mining|Mining]], [[/skills/woodcutting|Woodcutting]] and [[/skills/hunting|Hunting]], the river's too.
 - Every dish in [[/skills/cooking|Cooking]], every kind of log in [[/skills/firemaking|Firemaking]], and every herb and potion in [[/skills/alchemy|Alchemy]].
-- In [[/skills/smithing|Smithing]], every bar you smelt, and one mastery per metal for working its gear: reinforcing or rerolling each metal's gear at the anvil. All the pieces of one metal share it, and the anvil's screen lists each metal's level and the bars it saves.
+- In [[/skills/smithing|Smithing]], every bar you smelt, and one mastery per metal for working its gear: reinforcing or rerolling each metal's gear at the anvil. All the pieces of one metal share it, and the anvil's screen lists each metal's level and the bars it saves. A metal can also be practised there: its **Practise** works that metal's bars for its mastery alone, up to its next level a tap (or as many bars as you hold), a second a bar as the anvil's jobs pay, with no Smithing XP and no slot's levels. So a lower metal trains without wearing a piece of it.
 - In [[/skills/crafting|Crafting]], one mastery per gem, shared by every ring, earring and amulet set with it.
 
 [[/skills/farming|Farming]], [[/skills/agility|Agility]], making tools and combat have no mastery. The last table below counts the actions of each skill.

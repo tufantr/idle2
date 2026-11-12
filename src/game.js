@@ -9,7 +9,7 @@ import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage
 import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
 import { equipItem, equipAll, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade, flushSalvageLine, lastUndo, undoLast } from './systems/inventory.js';
 import { upgradeJewel, rerollJewel } from './systems/bench.js';
-import { reinforceItem, rerollItem } from './systems/anvil.js';
+import { reinforceItem, rerollItem, practise } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
@@ -267,6 +267,8 @@ export class Game {
     buyBagUpgrade(currency = 'gold') { return this._act(() => buyBagUpgrade(this, currency)); }
     reinforceItem(id) { return this._act(() => reinforceItem(this, id)); }
     rerollItem(id) { return this._act(() => rerollItem(this, id)); }
+    /** Practise at the anvil: a metal's bars for its mastery alone (systems/anvil.js). */
+    practise(bar) { return this._act(() => practise(this, bar)); }
     /** The jeweller's bench (systems/bench.js): a worn piece of jewellery upgraded one level, or its bonuses rerolled. */
     upgradeJewel(id) { return this._act(() => upgradeJewel(this, id)); }
     rerollJewel(id) { return this._act(() => rerollJewel(this, id)); }

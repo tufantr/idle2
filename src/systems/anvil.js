@@ -7,11 +7,12 @@
 
 import { SMITHING_TYPES } from '../data/items.js';
 import { RESOURCES } from '../data/resources.js';
-import { reinforceCost, rerollCost, forgeMult, FORGE_MAX } from '../data/workshop.js';
-import { forgeKey } from '../data/mastery.js';
+import { reinforceCost, rerollCost, forgeMult, FORGE_MAX, METALS, ANVIL_LEVEL_PER_UPGRADE } from '../data/workshop.js';
+import { forgeKey, MASTERY_MAX_LEVEL, MASTERY_XP_DIVISOR } from '../data/mastery.js';
+import { xpForLevel } from '../core/xp.js';
 import { skillLevel } from '../core/modifiers.js';
 import { rerollAffixes } from '../core/formulas.js';
-import { masteryLevel, masteryBonus, addMasteryXp } from './mastery.js';
+import { masteryLevel, masteryBonus, masteryXp, addMasteryXp } from './mastery.js';
 import { grantXp, bumpStat } from './progress.js';
 import { findGear } from './inventory.js';
 
@@ -98,6 +99,47 @@ export function rerollItem(game, id) {
     item.reforges = (item.reforges || 0) + 1;
     bumpStat(game, 'reforges');
     game.emit({ type: 'reforge', item, anvil: true });
+    game.markDirty();
+    return true;
+}
+
+/**
+ * Practise (the research loop's P-058, the owner's decision): a metal's bars worked for that metal's mastery alone. A slot
+ * works only the best metal it has held, so a lower metal trained only by rerolling a worn piece of it (36,207 rerolls of
+ * a copper chest piece for mastery 99). It pays what the anvil's jobs pay in mastery, a second of practice a bar paid, and
+ * no faster: no mastery takes bars off it, and it gives no Smithing XP, no slot's levels and costs no essence. A tap takes
+ * the bars to the metal's next mastery level, or as many as are held. { bar, bars, need, level, ok, why }: `bars` the
+ * tap's, `need` to the next level, `why` '' (it can be done), 'level' (Smithing below the metal's), 'max' (mastery 99) or
+ * 'short' (no bars of it).
+ */
+export function practiseCost(state, bar) {
+    const metal = METALS.find(m => m.bar === bar);
+    if (!metal) return null;
+    const key = forgeKey(bar);
+    const level = masteryLevel(state, 'smithing', key);
+    const need = level >= MASTERY_MAX_LEVEL ? 0 : Math.max(1, Math.ceil(xpForLevel(level + 1) / MASTERY_XP_DIVISOR - masteryXp(state, 'smithing', key)));
+    const held = Math.floor(state.resources[bar] || 0);
+    let why = '';
+    if (skillLevel(state, 'smithing') < Math.max(ANVIL_LEVEL_PER_UPGRADE, metal.levelReq)) why = 'level';
+    else if (level >= MASTERY_MAX_LEVEL) why = 'max';
+    else if (held < 1) why = 'short';
+    return { bar, bars: Math.min(held, need), need, level, ok: !why, why };
+}
+
+/** Practise with a metal's bars (practiseCost): its mastery only, a second of practice a bar. */
+export function practise(game, bar) {
+    const state = game.state;
+    const cost = practiseCost(state, bar);
+    if (!cost) return false;
+    if (!cost.ok) {
+        const name = METALS.find(m => m.bar === bar).name;
+        game.emit({ type: 'error', text: { level: `Smithing ${Math.max(ANVIL_LEVEL_PER_UPGRADE, METALS.find(m => m.bar === bar).levelReq)} is needed to work ${name.toLowerCase()}.`, max: `${name} is mastered.`, short: `No ${RESOURCES[bar].name.toLowerCase()}s to practise with.` }[cost.why] });
+        return false;
+    }
+    state.resources[bar] -= cost.bars;
+    addMasteryXp(game, 'smithing', forgeKey(bar), cost.bars);   // a second of practice a bar, as the jobs give
+    bumpStat(game, 'barsWorked', cost.bars);
+    game.emit({ type: 'practise', bar, bars: cost.bars, level: masteryLevel(state, 'smithing', forgeKey(bar)) });
     game.markDirty();
     return true;
 }

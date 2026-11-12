@@ -1671,6 +1671,8 @@ window.FI = {
         render();
         if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
     },
+    /** Practise at the anvil: a metal's bars for its mastery alone, to its next level (systems/anvil.js practise). */
+    practise(bar) { const ok = game.practise(bar); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#metal-${bar}`); },
     toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },
     // The jeweller's bench (systems/bench.js): an upgrade, or a reroll whose new bonuses glow a few seconds (render.js benchCard)
     benchUpgrade(id) { const ok = game.upgradeJewel(id); sound.play(ok ? 'craft' : 'error'); render(); if (ok) flourish(`#bench-${Number(id)} .anvil-art`); },

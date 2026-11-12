@@ -7,7 +7,7 @@ import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '.
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, METALS, forgeMult } from '../data/workshop.js';
-import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
+import { anvilCost, onAnvil, forgeLevel, forgeStepGain, practiseCost } from '../systems/anvil.js';
 import { benchCost, onBench, benchLevel, benchSlotOf } from '../systems/bench.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
@@ -1097,6 +1097,8 @@ function renderAnvil(state, ui = {}) {
 /**
  * Each open metal's mastery (data/mastery.js forgeKey): the work at the anvil trains it, a second of practice a bar, and each
  * level takes bars off that metal's jobs (systems/anvil.js anvilCost). Smithing's other actions show theirs on their cards.
+ * Practise (systems/anvil.js practise, the research loop's P-058): with bars of a metal held, a tap works them for its
+ * mastery alone, to its next level, so a lower metal trains without a worn piece of it.
  */
 function anvilMastery(state) {
     if (!seen(state, 'mastery')) return '';
@@ -1105,7 +1107,10 @@ function anvilMastery(state) {
         const p = masteryProgress(state, 'smithing', forgeKey(m.bar));
         const off = masteryBonus(p.level, { produces: false, hasInputs: true }).preserve;
         const tip = tipAttrs(`${m.name} at the anvil: mastery ${p.level}`, `${off ? `Its jobs take ${pct(off, 1)} fewer ${m.name.toLowerCase()} bars` : 'No bonus yet: every level adds a little'}. Each bar worked is a second of practice.`);
-        return `<div class="anvil-metal" ${tip}>${resIcon(m.bar)}<span class="mastery-lvl${p.level >= MASTERY_MAX_LEVEL ? ' max' : ''}">${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div>${off ? `<span class="anvil-metal-off">−${pct(off, 1)} bars</span>` : ''}</div>`;
+        const drill = practiseCost(state, m.bar);
+        const practise = drill && drill.why !== 'max' && drill.why !== 'level'
+            ? `<button class="anvil-practise${drill.ok ? ' ready' : ''}" onclick="FI.practise('${m.bar}')" ${drill.ok ? '' : 'aria-disabled="true"'} title="${esc(drill.ok ? `Practise: ${fmt(drill.bars)} ${m.name.toLowerCase()} bar${drill.bars === 1 ? '' : 's'} for its mastery alone${drill.bars < drill.need ? '' : `, to ${p.level + 1}`} (no slot's levels)` : `Practise needs ${m.name.toLowerCase()} bars`)}" aria-label="Practise ${esc(m.name)}: ${fmt(drill.ok ? drill.bars : drill.need)} bars">${glyph('up')}<span>${fmt(drill.ok ? drill.bars : drill.need)}</span></button>` : '';
+        return `<div class="anvil-metal" id="metal-${m.bar}" ${tip}>${resIcon(m.bar)}<span class="mastery-lvl${p.level >= MASTERY_MAX_LEVEL ? ' max' : ''}">${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div>${off ? `<span class="anvil-metal-off">−${pct(off, 1)} bars</span>` : ''}${practise}</div>`;
     }).join('');
     return `<div class="anvil-metals" aria-label="Mastery of each metal at the anvil"><span class="loadout-label">Mastery</span>${metals}</div>`;
 }

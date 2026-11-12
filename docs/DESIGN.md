@@ -1236,6 +1236,15 @@ pool: every repeatable action has its own level from 1 to 99, earned by doing it
   (2,500: +5% double chance in every skill) and Grandmaster (a first 99: +5% XP).
 - **Kept through prestige**, replayed offline (the replay speeds up as levels come), and on each save
   load unknown actions are dropped and the mastery stats are rebuilt from the levels.
+- **Practise** (the research loop's P-058, the owner's decision, 12 November 2026): a slot works only the best metal it has
+  held, so a lower metal trained only by rerolling a worn piece of it (36,207 rerolls of a copper chest piece for 99). The
+  anvil's mastery strip now has a Practise on each open metal held (`practise`, `practiseCost` in `src/systems/anvil.js`):
+  a tap works that metal's bars for its mastery alone, to its next level (or as many as are held; 98 taps from 1 to 99).
+  It pays what the anvil's jobs pay and no faster: one mastery XP, a second of practice, a bar paid (181,034 bars for 99,
+  the same as today's rerolls or reinforcing), no mastery taking bars off it, and no Smithing XP, essence or slot's
+  levels; the levels cost what they did. Lower metals' mastery will come faster in play than it did, the bars being the
+  only gate where a worn piece, essence and a tap a reroll were: Smithing's checkpoints (smelting speed) and the mastery
+  medals with it.
 
 ### 3.21 Presentation: the battle scene
 

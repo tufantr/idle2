@@ -1478,6 +1478,10 @@ Keeping it running:
 - [x] **The camp says which levels still work** (the research loop's P-091, 12 November 2026; DESIGN §3.8): each camp token
       says what its next level is worth in stages at the hero's wall, by the gear's measure on this run's camp: deep, the
       Whetstone +1.4 and, once a run's camp is up, the Armour Rack and the Hearth +0
+- [x] **Lower metals that can be trained** (the research loop's P-058, the owner's decision, 12 November 2026; DESIGN
+      §3.20): the anvil's mastery strip has a Practise on each open metal held, which works its bars for that metal's
+      mastery alone, to its next level a tap, a second of practice a bar as the anvil's jobs pay, with no slot's levels;
+      a copper mastery no longer takes a worn copper piece and 36,207 rerolls
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
