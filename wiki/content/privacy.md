@@ -36,7 +36,7 @@ This page says what Fantasy Idle keeps about you, and why. The short version com
 
 - **See it:** email us, and we send you a copy.
 - **Change it:** set a new password with "Forgot your password?" when you sign in. To change your email or username, email us.
-- **Delete it:** **Settings → Delete my account**. Leaving the leaderboards, or your clan, takes one tap.
+- **Delete it:** **Settings → Delete my account**. You can leave the leaderboards, or your clan, at any time.
 - **Complain:** tell us, or a data protection authority (below).
 
 ## The full notice
