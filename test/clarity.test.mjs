@@ -7,7 +7,10 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing } from '../src/ui/render.js';
+import { actionXp } from '../src/systems/skilling.js';
+import { SKILLS } from '../src/data/skills.js';
+import { SMELTING_RECIPES } from '../src/data/workshop.js';
 
 const T0 = 1_760_000_000_000;
 const literal = text => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -62,4 +65,29 @@ test('nothing promises forging, which is gone (DESIGN §3.25): the empty bag, th
     const home = readFileSync(new URL('../wiki/pages/home.mjs', import.meta.url), 'utf8');
     assert.match(home, /Fight monsters, gather, upgrade your gear\./);
     assert.doesNotMatch(home, /forge your gear/i);
+});
+
+test('a card says the XP an action pays: under a skill potion, the potion\'s XP too', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    Object.assign(s.unlocks, { smithing: true });
+    s.resources.skill_potion_4 = 3;
+    s.resources.copper_ore = 50;
+    game.startNodeAction('mining', 'copper_ore');
+    game.setWorkPotion('skill_potion_4');
+    game.tick(T0 + 100);   // the first bottle is drunk as the work starts
+    const d = game.derived;
+    assert.ok(d.skillXpMult > 1, 'a skill potion at work');
+    const copper = SKILLS.mining.nodes.find(n => n.id === 'copper_ore');
+    const shown = Math.round(actionXp(copper.xp, d));
+    assert.ok(shown > Math.round(copper.xp * d.xpMult), `${shown} XP with the potion against ${Math.round(copper.xp * d.xpMult)} without`);
+    assert.match(renderSkill(game, {}, 'mining'), literal(`+${shown} XP`));
+    // and it is what one ore pays
+    const before = s.skills.mining.xp;
+    let now = T0 + 100;
+    while (s.skills.mining.xp === before) game.tick(now += 100);
+    assert.equal(Math.round(s.skills.mining.xp - before), shown);
+    // the smelter's card too
+    const bar = SMELTING_RECIPES.find(r => r.id === 'copper_bar');
+    assert.match(renderSmithing(game, {}), literal(`+${Math.round(actionXp(bar.xp, game.derived))} XP`));
 });

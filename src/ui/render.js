@@ -18,7 +18,7 @@ import { stratumById } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal, legacyMult } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
-import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js';
+import { canComplete, resolveAction, intervalFor, actionXp } from '../systems/skilling.js';
 import { masteryProgress, masteryBonus, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt, forgeKey } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
@@ -937,7 +937,7 @@ export function renderSkill(game, ui, skillId) {
             const interval = intervalFor(def, d);
             const check = canComplete(state, def);
             const inputs = needChips(state, node.consumes);   // (a dish's log among them)
-            const xp = Math.round(node.xp * d.xpMult);
+            const xp = Math.round(actionXp(node.xp, d));   // as paid: a skill potion's XP too (systems/skilling.js)
             const heals = node.produces && out.heal > 0 ? { share: out.heal * d.foodMult, hp: foodHeal(out, d) } : null;   // a dish: what it heals in the fight
             const gives = node.produces ? `${out.name}${heals ? `, heals ${pct(heals.share)} of your health (${fmt(heals.hp)} now)` : ''}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;
             cards += actionCard({
@@ -1052,7 +1052,7 @@ export function renderSmithing(game, ui) {
             return recipeCard({
                 title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), pic: cardPic(r.id, 'smithy'), color: res(r.produces).color, inputs: Object.entries(r.consumes),
                 have: state.resources[r.produces], haveIcon: resIcon(r.produces), haveName: res(r.produces).name,
-                skill: 'smithing', xp: Math.round(r.xp * d.xpMult), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
+                skill: 'smithing', xp: Math.round(actionXp(r.xp, d)), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
                 active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
                 onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: `Level ${r.levelReq}`
             }, state);
@@ -1261,7 +1261,7 @@ function renderCraftStep(game, ui) {
     const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gemId }) }));
     const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
         title: `${plain ? bar.name : res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${plain ? 1 : res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(plain ? bar.bar : gem.gem).color,
-        inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(recipe.xp * d.xpMult), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
+        inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(actionXp(recipe.xp, d)), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gemId, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gemId}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
@@ -2099,7 +2099,7 @@ export function renderAgility(game, ui) {
     return `<section class="glass-panel skill-panel ${skillPainted('agility')}">
         ${xpHeader(game, 'agility')}
         ${course ? `<div class="course-run ${running ? 'active' : ''}">
-            <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div></div>
+            <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(actionXp(course.xp, d)))} XP</div></div>
             <button class="prestige-btn" onclick="FI.runCourse()">${running ? 'Stop' : 'Run'}</button>
             ${running ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-agility-course" style="width:${Math.min(100, state.action.progress / interval * 100)}%; background:${SKILLS.agility.color}"></div></div>` : ''}
         </div>` : ''}

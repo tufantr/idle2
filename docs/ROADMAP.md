@@ -1467,6 +1467,8 @@ Keeping it running:
 - [x] **No forging promised** (the same small fixes): the empty bag said a smith can forge gear, and the title card and the
       wiki's front page said "forge your gear", though forging went in October. The bag says monsters drop it, bosses most
       often, and both taglines "upgrade your gear"
+- [x] **A card says the XP it pays** (the same small fixes): under a skill potion, the gathering, smelting and jewellery
+      cards, the course and the skill stage's line showed the XP without the potion's; they show what an action pays
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

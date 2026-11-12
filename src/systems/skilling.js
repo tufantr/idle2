@@ -162,6 +162,9 @@ export function intervalFor(def, derived) {
     return actionInterval(def.interval, derived, def.skill, def.mastery?.speed || 0);
 }
 
+/** The XP an action of `xp` base XP pays: every XP bonus, and a skill potion's while one is at work. Its card shows the same. */
+export const actionXp = (xp, derived) => xp * derived.xpMult * (derived.skillXpMult || 1);
+
 /** Advance the current action by dt ms; may complete several times if dt is large. Returns completions. */
 export function tickAction(game, dt) {
     const state = game.state;
@@ -217,7 +220,7 @@ export function completeAction(game, def, { offline = false } = {}) {
         const wasLit = (state.bonfire.until || 0) > now;
         state.bonfire.until = Math.min(now + BASE.bonfireMaxMs, Math.max(state.bonfire.until || 0, now) + addMs);
         bumpStat(game, 'logsBurnt');
-        if (times === 2) grantXp(game, skill, def.xp * derived.xpMult * (derived.skillXpMult || 1));
+        if (times === 2) grantXp(game, skill, actionXp(def.xp, derived));
         if (!offline && times === 2) game.emit({ type: 'doubleDrop', resource: def.bonfireLog });
         made = { burnt: def.bonfireLog, qty: times };
         // its XP bonus starts now: worked out again only when it was out (every log used to, and a day
@@ -263,11 +266,11 @@ export function completeAction(game, def, { offline = false } = {}) {
         }
     }
 
-    grantXp(game, skill, def.xp * derived.xpMult * (derived.skillXpMult || 1));   // a Scholar's Tonic's on top
+    grantXp(game, skill, actionXp(def.xp, derived));   // a skill potion's on top
     if (mastery) addMasteryXp(game, skill, mastery.key, def.interval / 1000);
     rollPet(game, skill, def.interval);
     eventProgress(game, 1);
-    const xp = def.xp * derived.xpMult * (derived.skillXpMult || 1) * (def.bonfireLog ? made.qty : 1);   // a log burnt twice paid twice
+    const xp = actionXp(def.xp, derived) * (def.bonfireLog ? made.qty : 1);   // a log burnt twice paid twice
     noteBoostGain(game, skill, made, xp);   // a mini-game's ×2 running: what it made, for the line at its end
     game.emit({ type: 'actionComplete', skill, made, xp });
     return true;
