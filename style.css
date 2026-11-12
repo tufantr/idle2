@@ -202,8 +202,8 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .equip-btn { color: #bfdbfe; border-color: rgba(96, 165, 250, 0.45); }
 .equip-btn:hover { border-color: #93c5fd; box-shadow: 0 0 12px rgba(96, 165, 250, 0.3); }
 .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
-.toggle { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-main); cursor: pointer; }
-.toggle input { accent-color: var(--accent-color); }
+.toggle { display: flex; align-items: center; gap: 0.5rem; min-height: 2rem; font-size: 0.8rem; color: var(--text-main); cursor: pointer; }   /* a row a finger can't miss (WCAG 2.5.8) */
+.toggle input { flex: none; width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent-color); cursor: pointer; }
 
 /* ---------- fields ---------- */
 .material-select, .text-input {
@@ -1373,7 +1373,9 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path b, .stage-path button {
     min-width: 22px; height: 22px; padding: 0 4px; border-radius: 11px;
     display: grid; place-items: center;
-    font: 800 0.6rem/1 inherit; font-variant-numeric: tabular-nums;
+    /* (longhands: `inherit` can't stand in the `font` shorthand, which dropped the whole rule, and a button's
+       numbers came out 15 px, a stage's own 10) */
+    font-family: inherit; font-weight: 800; font-size: 0.72rem; line-height: 1; font-variant-numeric: tabular-nums;
     color: #7c8799; background: rgba(15, 18, 28, 0.92); border: 1px solid rgba(214, 170, 92, 0.3);
     backdrop-filter: none; box-shadow: none;
 }
@@ -1382,7 +1384,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path button::after { display: none; }
 .stage-path button:hover { transform: scale(1.18); box-shadow: 0 0 10px rgba(251, 191, 36, 0.55); background: linear-gradient(180deg, #a8843f, #5c421a); border-color: #fde68a; }
 .stage-path button:focus-visible { outline: 2px solid #fde68a; outline-offset: 2px; }
-.stage-path .now b { min-width: 27px; height: 27px; border-radius: 14px; font-size: 0.66rem; color: #1a1205; background: radial-gradient(circle, #fcd34d, #b45309); border-color: #fde68a; animation: nodePulse 1.6s ease-in-out infinite; }
+.stage-path .now b { min-width: 27px; height: 27px; border-radius: 14px; font-size: 0.8rem; color: #1a1205; background: radial-gradient(circle, #fcd34d, #b45309); border-color: #fde68a; animation: nodePulse 1.6s ease-in-out infinite; }
 .stage-path .boss b, .stage-path .boss button { font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.65); }
 /* the bosses' due (src/ui/scene.js): eight marks round the boss's node, the earned ones gold */
 .stage-path li.pity::after {
@@ -1655,10 +1657,11 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
     .battle-sub { font-size: 0.72rem; }
     .stage-path { gap: 3px; padding: 3px 6px; }
     .stage-path li + li::before { width: 3px; }
-    .stage-path b, .stage-path button { min-width: 19px; height: 19px; padding: 0 3px; font-size: 0.55rem; }
-    .stage-path .now b { min-width: 23px; height: 23px; }
-    .stage-path .portrait b { width: 22px; min-width: 22px; height: 22px; }
-    .stage-path .portrait.now b { width: 26px; min-width: 26px; height: 26px; }
+    /* a finger's target: 24 px at least (WCAG 2.5.8), its number 11 px */
+    .stage-path b, .stage-path button { min-width: 24px; height: 24px; padding: 0 2px; border-radius: 12px; font-size: 0.6875rem; }
+    .stage-path .now b { min-width: 27px; height: 27px; font-size: 0.75rem; }
+    .stage-path .portrait b { width: 24px; min-width: 24px; height: 24px; }
+    .stage-path .portrait.now b { width: 28px; min-width: 28px; height: 28px; }
     .stage-path .portrait .spr { --k: 0.625 !important; }
     .battle-field { gap: 0.4rem; padding: 0 0.5rem 0.55rem; }
     .fighter-stand { height: 88px; }

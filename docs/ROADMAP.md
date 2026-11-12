@@ -1461,6 +1461,11 @@ Keeping it running:
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
+- [x] **The accessibility pass** (R10 of the research loop's ranking, November 2026; the faults measured in
+      `docs/research_notes/research-loop/021-accessibility.md`): on a phone the stage path's buttons are 24 px, a finger's
+      target, and Settings' checkboxes stand in rows 32 px tall. The path's numbers have their own type again (its `font`
+      rule held `inherit`, which a shorthand can't, so browsers dropped it: a button's number came out 15 px, the stage's
+      own 10 px); they are 11.5 px, 11 px on a phone
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
