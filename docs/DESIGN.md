@@ -2131,8 +2131,11 @@ comfortably (while its chests or unique still help — otherwise it keeps fighti
 an hour) and training a skill (Mining and Smithing first while they can't yet make the bars for the
 weapon it wears; once Crafting is open, every third turn goes to it, with a gem pouch from the shop
 when it has no gem to cut: until October 2026 Crafting never got a turn); put bars and essence into its
-worn gear at the anvil; challenge the Titan whenever
-it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
+worn gear at the anvil; challenge the Titan when the dungeons tab's badge says it can win (the game's own
+preview), and see the fight out before a visit ends (until November 2026 it tried every Titan whenever one
+was awake and left in the middle of one, the hero then working all the time away: with bigger banks, 24
+for the daily visit and 8 or 24 for three a day, its heroes stuck at stage 40 in 12 of 18 runs,
+research-loop 040; `--set=POLICY.titanFix:0` plays it so); tend the farm; build and upgrade the agility course (training agility, and gathering its
 materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
 it holds (15% early, ~2% at 7,000 tokens), or when it has gone an hour without a new best in the run
 (its own stall clock: until October 2026 a fresh fight restarted it, so at the wall near stage 310 the

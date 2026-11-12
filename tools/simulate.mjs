@@ -9,7 +9,8 @@
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
 // --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, PERKS, POTION_KINDS, POLICY; numbers
-// only), for sweeps; --set=POLICY.stallFix:0 plays the old stall test (see fightStalled). --json writes the run as JSON (milestones, a log of big moments by band, time by
+// only), for sweeps; --set=POLICY.stallFix:0 plays the old stall test (see fightStalled), POLICY.titanFix:0 the old Titan bot.
+// --json writes the run as JSON (milestones, a log of big moments by band, time by
 // task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
 // --ascend=0: never ascend. By default, once Ascension opens (data/ascension.js) the bot ascends with its
@@ -47,7 +48,7 @@ import { benchCost } from '../src/systems/bench.js';
 import { generateEquipment } from '../src/core/formulas.js';
 import { RARITIES } from '../src/data/items.js';
 import { resolveAction, consumesOf } from '../src/systems/skilling.js';
-import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_TIER_CLEARS, dungeonBossTime } from '../src/data/dungeons.js';
+import { DUNGEONS, FRAGMENTS_PER_UNIQUE, DUNGEON_TIER_CLEARS, dungeonBossTime, TITAN_TIME_MS } from '../src/data/dungeons.js';
 import { dungeonPreview, dungeonUnlocked, fightPreview, dungeonNow, dungeonTier, ownsUnique, sealProgress } from '../src/systems/dungeon.js';
 import { AGILITY_SLOTS } from '../src/data/agility.js';
 import { canBuild, obstacleCost, upgradeInfo } from '../src/systems/agility.js';
@@ -64,6 +65,7 @@ import { talentById } from '../src/data/talents.js';
 import { charmById } from '../src/data/charms.js';
 import { charmOpen, charmCharges } from '../src/systems/charms.js';
 import { firstPrestigeDue } from '../src/systems/guide.js';
+import { titanBeatable } from './simlib.mjs';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
@@ -91,8 +93,10 @@ const SPEED_PRESTIGE = !!args['speed-prestige'];
 // share of time for agility, how long it trains, and the order it buys perks in.
 // potionStock: combat and dungeon potions kept in stock (a dose is POTION_MINUTES of fighting: an hour's worth); workStock: skill potions (half an hour's).
 // stallFix: the fight's stall test reads the game's own stall clock (1, the default; 0: the old test, for comparisons: see fightStalled).
+// titanFix: the bot fights only the Titans it can beat, and sees a fight out before a visit ends (1, the default; 0: the old bot,
+// which tried every Titan whenever one was awake and left in the middle of one: see the Titan in the main loop).
 const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60, potionStock: 60, workStock: 30, foodStock: 60,
-    stallFix: 1,
+    stallFix: 1, titanFix: 1,
     perkOrder: ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'] };
 if (args.vary) {
     const r = seededRandom(1_000_003 * Number(args.vary));
@@ -870,6 +874,8 @@ function nextSessionStart(t) {
 const returns = { n: 0, something: 0, nothing: 0, crate: 0, titan: 0, prestige: 0, gear: 0, newBest: 0, medal: 0, autoPrestige: 0 };
 let bestAtLeave = 0;
 let offlineCappedMs = 0;
+let titanSeenOut = 0;   // visits whose end waited on a Titan fight (POLICY.titanFix)
+let seeingTitanOut = false;
 function noteReturn(summary, evs) {
     if (!summary) return;
     returns.n++;
@@ -919,7 +925,13 @@ const bestByHour = [];   // the best stage at each whole hour (the leaderboard's
 let awayFromFight = { since: null, longest: 0 };   // the longest stretch without fighting while a stage could be gained
 let curEnd = sessionEndAt(now);
 while (now < totalMs) {
-    if (curEnd !== Infinity && now >= curEnd) {
+    // A Titan fight under way as a visit ends: the player sees it out (its minute at most) and then leaves, so after it the hero
+    // goes back to the fight leaveBehind sets running. The old bot (POLICY.titanFix:0) left at once, and the hero went back to
+    // the work the Titan had interrupted (titan.before, systems/dungeon.js), all the time away (research-loop 040 §2).
+    const seeTitanOut = POLICY.titanFix && S.combat.mode === 'titan' && now < curEnd + 2 * TITAN_TIME_MS;
+    if (curEnd !== Infinity && now >= curEnd && seeTitanOut && !seeingTitanOut) { seeingTitanOut = true; titanSeenOut++; }
+    if (curEnd !== Infinity && now >= curEnd && !seeTitanOut) {
+        seeingTitanOut = false;
         // Leave: set what runs while away, then come back at the next session.
         leaveBehind();
         const back = Math.min(nextSessionStart(now), totalMs);
@@ -967,9 +979,11 @@ while (now < totalMs) {
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
     if (task.kind === 'farm' && !task.stage && !S.combat.active && S.combat.hp >= game.derived.maxHp * 0.9) game.enterCombat();
     if (task.kind === 'farm' && now % 60000 < STEP) buyCamp();
-    // The Titan: a sensible player tries it whenever it is awake (it only costs a minute). When the
-    // fight is over the hero goes back to what he was doing, so the task goes on.
-    if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages') game.challengeTitan();
+    // The Titan: a sensible player fights it, during a visit, when the dungeons tab's badge says he can beat it (simlib.mjs
+    // titanBeatable, the game's own preview). The old bot (POLICY.titanFix:0) tried every Titan whenever one was awake: with a
+    // bigger bank each visit went on Titan fights, most of them lost, and in 12 of 18 runs the hero never passed stage 40
+    // (research-loop 040 §2). When the fight is over the hero goes back to what he was doing, so the task goes on.
+    if (!NO_TITAN && game.titanReady() && S.combat.mode === 'stages' && (!POLICY.titanFix || (now < curEnd && titanBeatable(game)))) game.challengeTitan();
     if (S.combat.mode === 'titan') continue;
     if (taskDone(task) || (task.kind !== 'dungeon' && task.kind !== 'farm' && now - lastDecision > 10 * 60000)) {
         task = apply(decide());
@@ -995,7 +1009,7 @@ for (const m of milestones) (byKey[m.key] ||= []).push(`${m.value}@${fmtH(m.at)}
 for (const [key, list] of Object.entries(byKey)) console.log(`  ${key.padEnd(16)} ${list.join('  ')}`);
 console.log(`\nRuns: ${runLog.map(r => `#${r.run} ${r.hours.toFixed(1)}h→stage ${r.reached} (+${r.tokens})`).join('; ') || 'none'}`);
 console.log(`Deaths: ${deathStages.boss} on boss stages, ${deathStages.regular} on regular stages (${Math.round(100 * deathStages.regular / Math.max(1, deathStages.boss + deathStages.regular))}% of walls are not bosses)`);
-console.log(`Dungeons (tier ${dungeonTier(S)}): ${DUNGEONS.map(d => `${d.name} ${S.dungeons[d.id].clears} clears/${S.dungeons[d.id].fragments} frags`).join('; ')}; ${dungeonFails} failed runs. Titan: ${S.titan.kills} kills in ${titanTries} tries. Pets: ${Object.keys(S.pets).join(', ') || 'none'}`);
+console.log(`Dungeons (tier ${dungeonTier(S)}): ${DUNGEONS.map(d => `${d.name} ${S.dungeons[d.id].clears} clears/${S.dungeons[d.id].fragments} frags`).join('; ')}; ${dungeonFails} failed runs. Titan: ${S.titan.kills} kills in ${titanTries} tries (${S.titan.attempts || 0} begun, with any that ended while away). Pets: ${Object.keys(S.pets).join(', ') || 'none'}`);
 const spentRatio = (e, sp) => (e > 0 ? `${Math.round(100 * sp / e)}%` : 'n/a');
 const lostToPrestige = S.stats.goldEarned - S.stats.goldSpent - S.gold;
 console.log(`Gold spent by sink: ${Object.entries(spentOn).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${spentRatio(S.stats.goldEarned, v)}`).join(', ')}; left at prestige ${spentRatio(S.stats.goldEarned, lostToPrestige)}.`);
@@ -1009,7 +1023,7 @@ console.log(`Gear: ${EQUIP_SLOTS.map(s => S.equipped[s] ? `${s}:${S.equipped[s].
 console.log(`Achievements: ${Object.keys(S.achievements).length}; perks: ${Object.entries(S.perks).filter(([, v]) => v).map(([k, v]) => `${k}${v}`).join(' ')}`);
 const majors = moments.filter(m => m.cls === 'major');
 if (PLAYER === 'online') console.log(`Big moments by band (major: per hour, median / P90 / longest gap in hours): ${bandStats(majors).map(b => `${b.band} h ${b.perHour}/h ${b.p50}/${b.p90}/${b.max}`).join(' · ')}`);
-else console.log(`Returns: ${returns.n}, ${returns.nothing} with nothing to do; offline capped ${H(offlineCappedMs).toFixed(1)} h in all`);
+else console.log(`Returns: ${returns.n}, ${returns.nothing} with nothing to do; offline capped ${H(offlineCappedMs).toFixed(1)} h in all; ${titanSeenOut} visits saw a Titan fight out before leaving`);
 
 if (JSON_OUT) {
     let commit = '';
@@ -1024,7 +1038,7 @@ if (JSON_OUT) {
         levels: Object.fromEntries(milestones.filter(m => m.key.endsWith(' lv')).map(m => [`${m.key.slice(0, -3)} ${m.value}`, +H(m.at).toFixed(2)])),
         final: {
             bestStage: S.combat.bestStage, prestiges: S.prestige.count, tokens: S.prestige.tokens, records: game.derived.records.count, kills: S.stats.kills, deaths: S.stats.deaths,
-            titanKills: S.titan.kills, seals: dungeonTier(S) - 1, titanTries, pityDrops: S.stats.pityDrops || 0, mythics: S.stats.mythicsFound || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
+            titanKills: S.titan.kills, seals: dungeonTier(S) - 1, titanTries, titanAttempts: S.titan.attempts || 0, pityDrops: S.stats.pityDrops || 0, mythics: S.stats.mythicsFound || 0, skillLevels: Object.keys(S.skills).reduce((sum, id) => sum + lvl(id), 0),
             gear: SMITHING_TYPES.map(t => S.equipped[t] ? { type: t, tier: S.equipped[t].tier, upgrade: S.forge?.[t]?.level || 0, depth: S.equipped[t].depth || 0 } : null),
             obstacles: S.agility.built.filter(Boolean).length, medals: Object.keys(S.achievements).length, pets: Object.keys(S.pets).length,
             // Crafting: its level, what it made, and the jewellery worn at the end (crafted or dropped)
@@ -1044,7 +1058,7 @@ if (JSON_OUT) {
         longestAwayFromFightHours: +H(awayFromFight.longest).toFixed(2),
         bestByHour,
         moments: PLAYER === 'online' ? { major: bandStats(majors), majorAndMedium: bandStats(moments), list: majors.map(m => [+H(m.at).toFixed(2), m.what]) } : null,
-        returns: PLAYER !== 'online' ? { ...returns, offlineCappedHours: +H(offlineCappedMs).toFixed(1) } : null,
+        returns: PLAYER !== 'online' ? { ...returns, offlineCappedHours: +H(offlineCappedMs).toFixed(1), titanSeenOut } : null,
         simSeconds: +((Date.now() - t0) / 1000).toFixed(1)
     };
     writeFileSync(JSON_OUT, JSON.stringify(out));
