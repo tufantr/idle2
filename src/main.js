@@ -104,6 +104,10 @@ const ui = {
     // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
     social: freshSocial()
 };
+// The fight's two keys (M, the map; Space, a strike) can be turned off in Settings (WCAG 2.1.4: speech input types
+// them): a switch for this device, kept in the browser, not the save.
+const SHORTCUTS_KEY = 'fantasyIdle.keys';
+ui.shortcuts = prefs.get(SHORTCUTS_KEY) !== '0';
 
 function loadFresh() {
     try {
@@ -484,8 +488,9 @@ document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game waits for an account or a guest
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
-    // holding it does nothing more).
+    // holding it does nothing more). Settings can turn both off (ui.shortcuts).
     if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (!ui.shortcuts) return;
     if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
     const c = game.state.combat;
     if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
@@ -1892,6 +1897,8 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** Settings' switch for the M and Space keys, on this device only. */
+    setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },
     /** The playtest log as a file to keep or send (systems/playtest.js). */
     exportPlaytest() {

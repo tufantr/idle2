@@ -6,7 +6,7 @@ sectionPath: /guides
 icon: perk/scholar
 order: 90
 summary: Short answers to the questions players ask most: offline progress, saves, coal and gems, bosses, prestige, gear, pets, mastery, dungeons and more.
-keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion
+keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, keyboard, keys, shortcuts
 aliases: Frequently asked questions, Questions, Help
 ---
 Short answers, each with a link to the page that tells the whole story. New to the game? Start with [[/guides/getting-started|Getting started]].
@@ -35,7 +35,7 @@ When a new version of the game is out, a glowing green **New version** button ap
 
 ### How do I turn off motion or sound?
 
-In **Settings**, under Options: **Sound and vibration** switches all sound off, with a volume slider beside it, and **Reduce motion** stills the floating numbers and effects. The game also follows your device's own reduce-motion setting.
+In **Settings**, under Options: **Sound and vibration** switches all sound off, with a volume slider beside it, and **Reduce motion** stills the floating numbers and effects. The game also follows your device's own reduce-motion setting. **Keyboard shortcuts** turns off the fight's two keys (Space strikes, M opens the map) on that device.
 
 ### How do I change my hero's name or look?
 

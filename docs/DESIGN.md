@@ -1229,6 +1229,9 @@ keeps:
   so a monster's entrance isn't interrupted by the first hit.
 - **Bounded.** At most 8 effects per frame and 14 coins in flight, nothing while the tab is hidden, and
   no floating effects under reduced motion (the setting or the system preference).
+- **Two keys.** M opens the map (and closes it), Space strikes; Esc folds the full-screen fight. Settings turns M and
+  Space off (WCAG 2.1.4: speech input types letters), on that device only (`ui.shortcuts`, kept in the browser as
+  `fantasyIdle.keys`, not in the save); Enter or Space on a focused control still presses it.
 - **Clicks on the real clock.** A strike first runs the game up to the current time, so the
   auto-clicker guard (120 ms) measures real time rather than the last 100 ms tick; the first input
   after a long absence gets its welcome-back report the same way.
