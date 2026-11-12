@@ -23,7 +23,8 @@ import { masteryProgress, masteryBonus, skillMastery } from '../systems/mastery.
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt, forgeKey } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
-import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, equipGain, gainStages, weakerInBag } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, canWear, isUpgrade, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, weakerInBag, bagByWorth } from '../systems/inventory.js';
+import { judgeOf } from '../systems/worth.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_CHOICE_MS, titanBonusUnits, dungeonAt, dungeonTierInfo, dungeonBossTime, uniqueAt, parseUniqueKey, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
@@ -158,7 +159,7 @@ function readyBadge(game, id) {
         const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique, tier));
         return whole ? pill('!', `${uniqueAt(whole.unique, tier)?.name || 'A unique'} is ready to assemble`, 'gold') : '';
     }
-    if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
+    if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i, judgeOf(game))) ? pill('▲', 'Better gear is in the bag') : '';
     if (id === 'shop') return toolReady(state) ? pill('▲', 'A better tool is ready to buy') : '';
     return '';
 }
@@ -229,7 +230,7 @@ export function renderHotbar(game, ui) {
     const action = resolveAction(state);
     const fighting = state.combat.active;
     const banked = state.daily.banked;
-    const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
+    const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i, judgeOf(game)));
     const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
         `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge" aria-label="${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}">${badge}</b>` : ''}</button>`;
     const work = action && SKILLS[action.skill]
@@ -684,11 +685,12 @@ function renderLoopActions(game) {
         const words = [sp > 0 ? `${sp} SP` : '', tp > 0 ? `${tp} talent point${tp === 1 ? '' : 's'}` : ''].filter(Boolean);
         parts.push(`<button class="shop-btn dock-perks${sp > 0 || tp > 0 ? ' ready' : ''}" onclick="FI.openPerks('${tp > 0 && !sp ? 'talents' : 'perks'}')" title="Spend skill points on perks that last forever${seen(state, 'talents') ? ', and talent points on the War Tree' : ''}"><b>Perks</b><span>${words.length ? `${words.join(' · ')} to spend` : 'no SP now'}</span></button>`);
     }
-    const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
+    const judge = judgeOf(game);   // what a piece is worth at the wall that binds (systems/worth.js)
+    const upgrade = gearIsLocked(state) ? null : findUpgrade(state, judge);
     if (upgrade) {
-        const gain = equipGain(state, upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
+        const gain = judge.gain(upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
         const words = gainWords(gain);
-        const stages = stagesWords(gainStages(state, gain));   // and about how far it takes him
+        const stages = stagesWords(upgrade.stages);   // and about how far it takes him
         parts.push(`<button class="mini-btn dock-equip" data-item="${Number(upgrade.item.id)}" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}${stages ? ` <b class="dock-stages">${esc(stages)}</b>` : ''}</i>` : ''}</span></button>`);
     }
     return parts.length ? `<div class="dock-group dock-loop ${painted('shrine', 'center 45%')}">${parts.join('')}</div>` : '';
@@ -1295,13 +1297,13 @@ function findItem(state, id) {
     return item ? { item, slot: null } : null;
 }
 
-function itemTile(state, item, { slot = null, selected = false } = {}) {
+function itemTile(state, item, { slot = null, selected = false, judge = null } = {}) {
     const id = Number(item.id);
     // a worn piece's plate is its slot's levels (the anvil's forge, the jeweller's bench); one in the bag has none of its own
     const up = !slot ? 0 : onAnvil(item) ? forgeLevel(state, slot) : benchLevel(state, slot);
     const rarity = RARITIES.find(r => r.id === item.rarity);
     const wearable = canWear(state, item);
-    const better = !slot && wearable && isUpgrade(state, item);
+    const better = !slot && wearable && isUpgrade(state, item, judge || undefined);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
     return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
@@ -1357,7 +1359,8 @@ export function renderItemDetail(game, id) {
     // every piece has its slot's levels (the anvil's forge, the jeweller's bench), worn or as it would be worn: in the
     // slot of the weakest of its kind worn, where an Equip puts it
     const forged = onAnvil(item);
-    const target = slot || [...(TYPE_SLOTS[item.type] || [])].sort((a, b) => itemScore(state.equipped[a]) - itemScore(state.equipped[b]))[0];
+    const judge = judgeOf(game);   // (what a piece is worth at the wall: systems/worth.js)
+    const target = slot || judge.place(item).slot;
     const up = forged ? forgeLevel(state, item.type) : benchLevel(state, target);
     const mult = forgeMult(up);
     const rarity = RARITIES.find(r => r.id === item.rarity);
@@ -1387,9 +1390,9 @@ export function renderItemDetail(game, id) {
         const deltas = delta(Math.round((item.atk || 0) * mult) - Math.round((worn?.atk || 0) * wornMult), ATK_ICON) + delta(Math.round((item.def || 0) * mult) - Math.round((worn?.def || 0) * wornMult), DEF_ICON);
         compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${up ? ` +${up}` : ''}` : 'That slot is empty'}${up ? `, both with the slot's +${up}` : ''}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
         // and what it does to the hero, every bonus counted (a +900 sword is +40% attack, or +4%)
-        const worth = canWear(state, item) ? equipGain(state, item) : null;
+        const worth = canWear(state, item) ? judge.gain(item, target) : null;
         const gain = worth ? gainMarkup(worth) : '';
-        const stages = worth ? stagesWords(gainStages(state, worth)) : '';
+        const stages = worth ? stagesWords(judge.worth(item, target)) : '';
         if (gain) compare += `<div class="detail-gain">Worn: ${gain}${stages ? ` · <b class="${stages.startsWith('+') ? 'up' : 'down'}">${esc(stages)}</b>` : ''}</div>`;
     }
     return `<div class="detail" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}">
@@ -1420,14 +1423,15 @@ export function renderInventory(game, ui) {
     const d = game.derived;
     const selectedId = findItem(state, ui.invSelected) ? ui.invSelected : null;
     const shownId = findItem(state, ui.invPreview) ? ui.invPreview : selectedId;
-    const items = [...state.inventory].sort((a, b) => itemScore(b) - itemScore(a));
+    const judge = judgeOf(game);   // the bag in order of what each piece adds at the wall (systems/worth.js)
+    const items = bagByWorth(state, judge).map(e => e.item);
     const size = bagSize(state);
     const roomPrice = bagUpgradePrice(game);   // null once the bag is as big as it gets
     const roomEssence = bagUpgradeEssence(state);   // or for essence (data/items.js BAG_UPGRADE)
     const hasGear = items.length > 0 || EQUIP_SLOTS.some(slot => state.equipped[slot]);
     // A new bag shows a row or two of cells; the whole grid comes once the bag is in use.
     const cells = seen(state, 'bag_tools') ? size : Math.min(size, Math.max(8, Math.ceil((items.length + 1) / 8) * 8));
-    const bag = items.map(i => itemTile(state, i, { selected: i.id === selectedId })).join('')
+    const bag = items.map(i => itemTile(state, i, { selected: i.id === selectedId, judge })).join('')
         + Array.from({ length: Math.max(0, cells - items.length) }, () => '<div class="tile empty" aria-hidden="true"></div>').join('');
     const owned = Object.keys(RESOURCES).filter(id => state.resources[id] > 0);
     const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'crop', 'herb', 'potion', 'material'].filter(c => owned.some(id => RESOURCES[id].category === c));
@@ -1437,7 +1441,7 @@ export function renderInventory(game, ui) {
     const picked = ui.resSelected && state.resources[ui.resSelected] > 0 ? ui.resSelected : null;
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
-    const hasWeaker = weakerInBag(state).length > 0;
+    const hasWeaker = weakerInBag(state, judge).length > 0;
     // (one copy of each dungeon unique stays in the bag for the Seal: systems/inventory.js keptForSeal)
     const keeps = !Object.keys(state.uniques || {}).length ? '' : `, and one of each dungeon unique stays${seen(state, 'dungeon_seal') ? ' for the Seal' : ''}`;
     const doll = seen(state, 'jewellery') ? DOLL.jewelled : DOLL.plain;

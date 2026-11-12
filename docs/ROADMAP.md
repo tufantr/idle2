@@ -1461,6 +1461,11 @@ Keeping it running:
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
+- [x] **The Equip card counts the wall that binds** (the research loop's P-075, 12 November 2026; DESIGN §3.31): "+N stages"
+      is what a piece is worth where the hero is stuck: its damage a second at the boss's clock, and its defence (below the
+      90% cap) and health only while a boss's blow still takes a tenth of his health. Deep, a mythic plate said +20 and gave
+      nothing; now it says what its bonuses do, and the same figure decides the ▲, the dock's Equip, Weaker, what the full
+      bag keeps and the bag's order, which is now best first
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

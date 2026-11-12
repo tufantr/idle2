@@ -9,12 +9,13 @@ import {
 import { salvageBars, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
-import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, enemyBaseStats } from '../core/formulas.js';
+import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
 import { skillLevel, deriveStats } from '../core/modifiers.js';
 import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
 import { log, bumpStat } from './progress.js';
 import { dungeonTier, uniqueTierOf } from './dungeon.js';
+import { wallJudge, judgeOf } from './worth.js';
 
 const RARITY_ORDER = RARITIES.map(r => r.id);
 const rarityIndex = id => Math.max(0, RARITY_ORDER.indexOf(id));
@@ -72,76 +73,98 @@ export function canWear(state, item) {
 }
 
 /**
- * Rough power of an item for comparisons (affixes count; the anvil's and the bench's levels belong to the slots,
- * data/workshop.js, so any piece worn there has them).
+ * Rough power of an item (affixes count; the anvil's and the bench's levels belong to the slots, data/workshop.js, so
+ * any piece worn there has them). Pieces are judged by what they are worth at the wall (systems/worth.js); this breaks
+ * ties, and the bosses' due still counts by it (outscores).
  */
 export function itemScore(item) {
     if (!item) return -1;
     return (item.atk || 0) + (item.def || 0) + 5 * (item.affixes?.length || 0);
 }
 
-/** True if the item beats what is worn in the weakest slot it fits (empty slots count as beaten). */
-export function isUpgrade(state, item) {
+/**
+ * True if the item outscores what is worn in a slot it fits (empty slots count as beaten): the old test, by itemScore.
+ * The bosses' due reads it (systems/combat.js pityMark: an upgrade wipes its marks), so the drops come as they did.
+ */
+export function outscores(state, item) {
     const slots = TYPE_SLOTS[item.type] || [];
     return slots.some(slot => itemScore(item) > itemScore(state.equipped[slot]));
 }
 
-/** The weakest equipped slot an item could go into (empty slots first). */
-function weakestSlotFor(state, type) {
-    const slots = TYPE_SLOTS[type] || [];
-    return slots.reduce((worst, slot) => (itemScore(state.equipped[slot]) < itemScore(state.equipped[worst]) ? slot : worst), slots[0]);
+/** Less than this many stages better is the same (rounding in the sums). */
+const UPGRADE_EPS = 1e-9;
+
+/**
+ * True if wearing the item makes the hero stronger at his wall: an empty slot it fits, or more stages there than the piece
+ * worn (systems/worth.js). `judge` is the wall's (judgeOf for a Game); without one it is made for this state on first need.
+ */
+export function isUpgrade(state, item, judge = wallJudge(state)) {
+    return judge.place(item).stages > UPGRADE_EPS;
+}
+
+/** The slot an Equip puts an item in: its kind's one, or an empty one, else where it is worth the most (systems/worth.js). */
+function slotFor(state, item) {
+    const slots = TYPE_SLOTS[item.type] || [];
+    return slots.length < 2 ? slots[0] : wallJudge(state).place(item).slot;
 }
 
 /**
  * What wearing `item` does to the hero, all bonuses counted: his attack, defence and max health after, as
- * ratios to before (0.38 is +38%; Infinity where he had none), in the slot equipItem would choose (with its
- * forge levels). The fight's Equip, the bag and the equip itself say it, so a better piece is seen to make
- * him stronger (the owner, October 2026: a legendary should be felt).
+ * ratios to before (0.38 is +38%; Infinity where he had none), and his damage a second at a boss (`dps`, crits
+ * and swing time counted), in the slot equipItem would choose (with its forge levels). The fight's Equip, the
+ * bag and the equip itself say it, so a better piece is seen to make him stronger (the owner, October 2026: a
+ * legendary should be felt).
  */
-export function equipGain(state, item, slot = weakestSlotFor(state, item.type)) {
+export function equipGain(state, item, slot = slotFor(state, item)) {
     const before = deriveStats(state);
     const after = deriveStats({ ...state, equipped: { ...state.equipped, [slot]: item } });
     const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
-    return { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
+    const dps = s => s.atk * (1 + s.critChance * (s.critDmg - 1)) / s.attackInterval;
+    return { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp), dps: ratio(dps(after), dps(before)) };
 }
 
 /**
  * About how many stages a change in the hero's attack, defence and health (`gain`, as equipGain gives it) is worth
- * at his best stage: attack where a boss must fall in time (its health grows a stage's growth), defence and health
- * together where he must live through a blow (its attack grows likewise), whichever moves more (the exchange rate of
- * docs/research_notes/endless-late-game.md §1.1). Null when it can't be said (a slot that was empty).
+ * at his wall, the one measure of systems/worth.js: the damage a second where the boss must fall in time, defence
+ * (below its 90% cap) and health where his blow still threatens, whichever moves more. Null when it can't be said (a
+ * slot that was empty). `judge`: the wall's, if one is at hand.
  */
-export function gainStages(state, gain) {
+export function gainStages(state, gain, judge = wallJudge(state)) {
     if (!gain || ![gain.atk, gain.def, gain.hp].every(Number.isFinite)) return null;
-    const best = Math.max(1, state.combat?.bestStage || 1);
-    const here = enemyBaseStats(best);
-    const next = enemyBaseStats(best + 1);
-    const ln = v => Math.log(1 + Math.max(-0.99, v));
-    const boss = ln(gain.atk) / Math.log(next.hp / here.hp);
-    const blow = (ln(gain.def) + ln(gain.hp)) / (2 * Math.log(next.atk / here.atk));
-    return Math.abs(boss) >= Math.abs(blow) ? boss : blow;
+    return judge.stagesOf(gain);
 }
 
-/** The best wearable upgrade in the bag, if any: { item, slot, gain } (the fight's one-tap Equip). */
-export function findUpgrade(state) {
+/**
+ * The best wearable upgrade in the bag, if any: { item, slot, stages } (the fight's one-tap Equip), the one that takes
+ * the hero furthest at his wall (systems/worth.js; a piece for an empty slot first).
+ */
+export function findUpgrade(state, judge = wallJudge(state)) {
     let best = null;
     for (const item of state.inventory) {
         if (!canWear(state, item)) continue;
-        const slot = weakestSlotFor(state, item.type);
-        const gain = itemScore(item) - itemScore(state.equipped[slot]);
-        if (gain > 0 && (!best || gain > best.gain)) best = { item, slot, gain };
+        const { slot, stages } = judge.place(item);
+        if (!(stages > UPGRADE_EPS)) continue;
+        if (!best || stages > best.stages || (stages === best.stages && itemScore(item) > itemScore(best.item))) best = { item, slot, stages };
     }
     return best;
 }
 
+/**
+ * The bag's pieces by what they add where an Equip would put them, best first ({ item, stages }; an empty slot's at the
+ * top, ties by itemScore): the bag's order, and what the keep list and the full bag read.
+ */
+export function bagByWorth(state, judge = wallJudge(state), items = state.inventory) {
+    return items.map(item => ({ item, stages: judge.place(item).stages }))
+        .sort((a, b) => (b.stages - a.stages) || (itemScore(b.item) - itemScore(a.item)) || 0);
+}
+
 /** Bag items worth equipping: the best of their type in the bag (one per slot) that beat what is worn. */
-function neededInBag(state) {
+function neededInBag(state, judge = wallJudge(state)) {
     const needed = new Set();
     const byType = {};
-    for (const item of state.inventory) (byType[item.type] ||= []).push(item);
-    for (const [type, items] of Object.entries(byType)) {
-        const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
-        for (const item of best) if (isUpgrade(state, item)) needed.add(item);
+    for (const entry of bagByWorth(state, judge)) (byType[entry.item.type] ||= []).push(entry);
+    for (const [type, entries] of Object.entries(byType)) {
+        for (const { item, stages } of entries.slice(0, (TYPE_SLOTS[type] || []).length)) if (stages > UPGRADE_EPS) needed.add(item);
     }
     return needed;
 }
@@ -167,10 +190,10 @@ function keptForSeal(state, items = state.inventory) {
  * What the bag's Salvage weaker takes: every unlocked piece that wouldn't improve what is worn (crafted gear too, since
  * it was asked for), and a dungeon's spare uniques but the ones kept for the Seal.
  */
-export function weakerInBag(state) {
-    const needed = neededInBag(state);
+export function weakerInBag(state, judge = wallJudge(state)) {
+    const needed = neededInBag(state, judge);
     const seal = keptForSeal(state);
-    return state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i) && !isUpgrade(state, i));
+    return state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i) && !isUpgrade(state, i, judge));
 }
 
 /** The bag's room: BAG_SIZE, and BAG_UPGRADE.slots more for each upgrade bought. */
@@ -233,25 +256,32 @@ export function addItem(game, item) {
     const state = game.state;
     markCodex(state, item);   // found, even if it is salvaged as it lands
     const filter = state.settings.autoSalvage || 'off';
+    const judge = judgeOf(game);   // (what a piece is worth at the wall: systems/worth.js)
     // 'weaker': whatever its rarity, a drop that wouldn't improve what is worn, a dungeon's spare unique too, but never the
     // copy the bag keeps for the Seal, nor a first copy, which arrives locked
     const caught = !item.locked && (filter === 'weaker'
         ? !(item.uniqueId && keptForSeal(state, [...state.inventory, item]).has(item))
         : rarityIndex(item.rarity) <= rarityIndex(filter));
-    if (item.source !== 'crafted' && filter !== 'off' && caught && !isUpgrade(state, item)) {
+    if (item.source !== 'crafted' && filter !== 'off' && caught && !isUpgrade(state, item, judge)) {
         const gained = salvageObject(game, item, { auto: true });
         return { kept: false, salvaged: item, gained };
     }
     state.inventory.push(item);
     if (state.inventory.length <= bagSize(state)) return { kept: true, salvaged: null };
 
-    // Any unlocked item can go except the ones worth equipping and the spare uniques kept for the Seal. If nothing can
-    // (the bag is all locked items and upgrades), allow the overflow: an upgrade is never salvaged behind your back.
-    const needed = neededInBag(state);
+    // Any unlocked item can go except the ones worth equipping and the spare uniques kept for the Seal: the one worth
+    // least where it would be worn. If nothing can (the bag is all locked items and upgrades), allow the overflow: an
+    // upgrade is never salvaged behind your back.
+    const needed = neededInBag(state, judge);
     const seal = keptForSeal(state);
     const candidates = state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i));
     if (!candidates.length) return { kept: true, salvaged: null };
-    const worst = candidates.reduce((a, b) => (itemScore(b) < itemScore(a) ? b : a));
+    let low = null;   // (the first of the least worth: ties go by itemScore, then by the bag's order, as before)
+    for (const item of candidates) {
+        const stages = judge.place(item).stages;
+        if (!low || stages < low.stages || (stages === low.stages && itemScore(item) < itemScore(low.item))) low = { item, stages };
+    }
+    const worst = low.item;
     state.inventory.splice(state.inventory.indexOf(worst), 1);
     const gained = salvageObject(game, worst, { auto: true });
     return { kept: worst !== item, salvaged: worst, gained };
@@ -370,7 +400,8 @@ export function equipItem(game, id, requestedSlot = null) {
     const slots = TYPE_SLOTS[item.type] || [];
     let slot = requestedSlot;
     if (slot && !slots.includes(slot)) return false;
-    if (!slot) slot = slots.find(s => !state.equipped[s]) || slots.reduce((w, s) => (itemScore(state.equipped[s]) < itemScore(state.equipped[w]) ? s : w), slots[0]);
+    if (!slot) slot = judgeOf(game).place(item).slot;   // an empty slot, else where it is worth the most (systems/worth.js)
+    if (!slot) return false;
 
     const previous = state.equipped[slot];
     const gain = equipGain(state, item, slot);   // (before the swap: what it does to him, for the screen)

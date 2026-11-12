@@ -891,6 +891,12 @@ function normalise(data, now) {
     // camp levels as whole numbers in range: a negative one multiplied the hero's health to nothing
     // (the camp has no top, but the most gold a number holds buys about 2,300 levels: a save's 1e300 made attack Infinity)
     for (const u of CAMP_UPGRADES) state.camp[u.id] = Math.min(u.max, 2500, Math.max(0, Math.floor(Number(state.camp[u.id]) || 0)));
+    // the camp the hero had when he last set a new best stage (systems/worth.js judges gear with it), in the same range; a
+    // save from before it that stands at its wall has this run's (`meta`, which a page running the older game keeps)
+    const wallCamp = isPlainObject(data?.meta?.wallCamp) ? data.meta.wallCamp : null;
+    if (wallCamp) state.meta.wallCamp = Object.fromEntries(CAMP_UPGRADES.map(u => [u.id, Math.min(u.max, 2500, Math.max(0, Math.floor(Number(wallCamp[u.id]) || 0)))]));
+    else if (state.combat.maxStage >= state.combat.bestStage) state.meta.wallCamp = { ...state.camp };
+    else delete state.meta.wallCamp;
     // Mini-game challenges never survive a reload: one left open counts as missed (it ends the streak, and
     // the next chance comes in the usual minutes; a reload used to give a fresh chance at once).
     const mgRules = BALANCE.minigame;

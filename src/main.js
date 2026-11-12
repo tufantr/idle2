@@ -24,7 +24,8 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
-import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
+import { isUpgrade, canWear, findGear, gainedText } from './systems/inventory.js';
+import { judgeOf } from './systems/worth.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -717,7 +718,7 @@ function soundFor(ev, onCombat) {
 function lootSound(item) {
     if (['rare', 'epic', 'legendary'].includes(item.rarity)) return item.rarity;
     if (['mythic', 'primal'].includes(item.rarity)) return 'mythic';
-    return canWear(game.state, item) && isUpgrade(game.state, item) ? 'upgrade' : 'drop';
+    return canWear(game.state, item) && isUpgrade(game.state, item, judgeOf(game)) ? 'upgrade' : 'drop';
 }
 
 /**
@@ -726,8 +727,9 @@ function lootSound(item) {
  */
 function legendaryCard(item, lord = false) {
     const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[4];
-    const worth = equipGain(game.state, item);
-    const stages = stagesWords(gainStages(game.state, worth));
+    const judge = judgeOf(game);   // what it is worth at the wall that binds (systems/worth.js)
+    const worth = judge.gain(item);
+    const stages = stagesWords(judge.worth(item));
     const gain = gainMarkup(worth) + (stages ? ` · <b class="up">${escapeHtml(stages)}</b>` : '');
     const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => {
@@ -817,7 +819,7 @@ function handleEvents(events) {
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'itemDropped': {
                 const rank = RARITIES.findIndex(r => r.id === ev.item.rarity);
-                const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);   // legendary and above
+                const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item, judgeOf(game));   // legendary and above
                 if (better) legendaryCard(ev.item, !!ev.lord);   // its card says it
                 else if (rank >= 2) toast(`${ev.lord ? 'A Lord\'s due: ' : ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
                 break;

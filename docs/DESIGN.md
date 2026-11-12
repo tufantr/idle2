@@ -270,7 +270,7 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /
   common / uncommon / rare / weaker) salvages low drops on arrival unless they are upgrades; Weaker
   takes any drop that wouldn't improve what is worn, whatever its rarity, and the bag's "Salvage weaker"
-  button does the same for what it holds (`weakerInBag`). A dungeon's spare unique goes too (a player's ask,
+  button does the same for what it holds (`weakerInBag`); "improve" is the wall's measure (§3.31, "+N stages"). A dungeon's spare unique goes too (a player's ask,
   29 October 2026: no unique went before, and a tier's 250 clears a dungeon left some five copies of each),
   but never a locked first copy, nor the one copy of each of the open tier's uniques the bag keeps for the
   Seal, which hands in a copy from the bag before a worn one (`keptForSeal`; the full bag's overflow keeps it
@@ -1869,9 +1869,26 @@ forge is shown agreed first (the owner asked how a player would know it):
 - **The frontier's piece** (`FRONTIER_DROP`, `frontierPiece` in `src/systems/combat.js`): once a run, from a best of 100,
   the first ladder boss beaten at 90% of the best stage or deeper leaves a sure piece from the best stage's depth at a
   boss's odds (Tap Titans 2 seeds frontier drops on every prestige run), so every run has a real chance at an upgrade.
-- **"+N stages"** (`gainStages` in `src/systems/inventory.js`): every item card and the fight's ▲ Equip say about how
-  far a piece takes the hero: its attack at the boss's wall (ln(1 + gain) over the stage's health growth), its defence
-  and health at the blow he must live through, whichever moves more (the exchange rate of the research, §1.1).
+- **"+N stages"** (`src/systems/worth.js`, the research loop's P-075, 12 November 2026): every item card and the fight's ▲
+  Equip say about how far a piece takes the hero at the wall that binds, and the same figure judges every piece: the ▲ on
+  a tile (`isUpgrade`), the dock's pick (`findUpgrade`), Weaker as a drop lands and the bag's Salvage weaker
+  (`weakerInBag`), the full bag's keep list and the piece it gives up, the bag's order (`bagByWorth`), and where an Equip
+  puts a ring or an earring. The hero stands at his wall: the first boss at or past his best stage, with the camp he had
+  when he last set a new best (`meta.wallCamp`, noted by `systems/combat.js`; a save from before has its run's when it
+  stands at its wall) or this run's if more, his combat potion running if he picked one and holds a bottle, and Focus
+  settled in. A change is worth, at the boss's clock, ln(damage a second after ÷ before) over ln(the boss's health growth
+  a stage), crits and swing time counted (Weak Spot's and Flurry's too); and at its blow, while the blow threatens (a
+  tenth of his health or more, `THREAT_SHARE`), how much harder the boss could hit for the same share of his health, over
+  ln(its attack growth a stage), defence counting only below the 90% cap; whichever moves more. Under a tenth only the
+  clock counts, and in Glass Hero defence and health count for nothing. It was the attack's ratio at the boss and
+  defence and health at the blow with no cap and no threat (the exchange rate of the research, §1.1): past about stage
+  700 a legendary plate said +19 stages at 1,000 and gave none, and the dock offered it before a sword. Now, on heroes
+  built from the game's own drops at 700, 1,300 and 2,000 (`test/worth.test.mjs`), a frontier shield, helm, plate or
+  greaves says −0.3 to +1 (what its bonuses do), as research loop 047 measured (−1.5 to +1.7), where the old card said
+  +8 to +22; the weapon, gloves and jewellery say within 0.2 of what they are worth. Where blows still threaten (a
+  hero at 300 takes about half his health a blow) the plate's defence counts as before. The bosses' due still wipes its
+  marks on an upgrade by score (`outscores`), so the sure pieces come as they did. It reads and changes nothing, and for
+  a game it works from the stats the game has (`judgeOf`), the bag's every piece in a few sums.
 
 Numbers (median of 7 seeds, with Auto; part one alone → with this): the best stage at 100 h 420 → 470, 300 h 1,010 →
 1,130, 600 h 1,410 → 1,590, 1,000 h 1,660 → 1,850, 1,200 h 1,830 → 2,010 (stage 2,000 at hour 1,161). The forge reaches
@@ -2530,6 +2547,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · clanhall (the Clan Hall's rooms, stages, banner colours, what a gift is worth)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, uniques found, the Seal, Titan) · inventory (bag, salvage, reforge)
+                      · worth (what a piece or a camp level is worth in stages at the wall that binds: the one measure)
                       · anvil (reinforcing and rerolling worn gear with bars) · bench (the jeweller's bench: jewellery slots with gems)
                       · potions (doses on the clock) · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)

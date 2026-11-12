@@ -3,7 +3,8 @@
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS, FRONTIER_DROP, MYTHIC, PRIMAL } from '../data/items.js';
-import { addItem, dropTypesFor, isUpgrade, laggingSlot, PITY_LAG } from './inventory.js';
+import { addItem, dropTypesFor, outscores, laggingSlot, PITY_LAG } from './inventory.js';
+import { noteWallCamp } from './worth.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing, foodHeal } from '../data/resources.js';
 import { spendFightPotion } from './potions.js';
@@ -493,7 +494,8 @@ function lordsDue(game, enemy, drops) {
 function pityMark(game, zone, drops, stage) {
     const state = game.state;
     const c = state.combat;
-    if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && isUpgrade(state, dr.item))) { c.pity = 0; return; }
+    // (an upgrade by score, as since the marks came: judging by the wall's measure would bring the sure pieces more often)
+    if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && outscores(state, dr.item))) { c.pity = 0; return; }
     const lag = laggingSlot(state, zone);
     if (!lag || lag.ratio >= PITY_LAG) return;   // nothing this place drops could beat what the hero wears
     c.pity = (c.pity || 0) + 1;
@@ -584,6 +586,7 @@ export function onEnemyDeath(game) {
         if (c.stage > c.maxStage) { c.maxStage = c.stage; c.stallMs = 0; checkTrial(game); }
         if (c.stage > c.bestStage) {
             c.bestStage = c.stage;
+            noteWallCamp(state);   // the camp that pushed the wall: gear is judged with it (systems/worth.js)
             // a record: every 25 stages of all-time best make the tokens stronger (core/modifiers.js recordsOf)
             if (c.bestStage % BASE.recordStages === 0) { game.recompute(); game.emit({ type: 'record', stage: c.bestStage, records: game.derived.records }); }
             // the first step ever into a zone (the Abyss once, at its first depth)
