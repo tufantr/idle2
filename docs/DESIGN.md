@@ -1149,7 +1149,10 @@ with the game's own stat code; the client never submits damage or scores.
   Clan tab (`/api/rewards`), once each.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
   level, Titans or dungeon clears, all time or this week (from where each player stood when the week
-  began: the numbers stored before their first upload of the week, not that upload's).
+  began: the numbers stored before their first upload of the week, not that upload's). They open on this week,
+  so a newcomer meets a board a week of play can climb, not the beta's head start (P-129), and on all time while
+  the week's board holds fewer than `BOARD_WEEK_MIN` (5) names: decided at the first look, kept once the player
+  taps the period (`boardOpensOn`, `src/data/social.js`; `openingBoard`, `src/main.js`).
   The numbers are computed once per upload and stored, so a board is one query.
 - **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open
   and in view.

@@ -9,7 +9,7 @@ import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
 import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
-import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth } from '../src/data/social.js';
+import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
 import { actionXp } from '../src/systems/skilling.js';
 import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
@@ -246,4 +246,23 @@ test('the crowns read 1st, 2nd and 3rd: gold, silver and bronze, the place in a 
     assert.match(list, literal('<span class="clan-crown rank-3" data-tip-title="3rd" data-tip="in the Bronze division last week"'), 'on the clan list');
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     for (const [rank, metal] of [[1, 'gold'], [2, 'silver'], [3, 'bronze']]) assert.match(css, new RegExp(`\\.clan-crown\\.rank-${rank} \\.spr \\{ filter: [^}]+\\}\\s+/\\* ${metal} \\*/`), metal);
+});
+
+test('the boards open on This week, and on All time while the week\'s board holds fewer than five names (P-129)', () => {
+    const names = n => ({ entries: Array.from({ length: n }, (_, i) => ({ rank: i + 1, username: `p${i}`, value: 10 - i })) });
+    assert.equal(BOARD_WEEK_MIN, 5);
+    assert.equal(boardOpensOn(names(5)), 'week');
+    assert.equal(boardOpensOn(names(12)), 'week');
+    assert.equal(boardOpensOn(names(4)), 'all');
+    assert.equal(boardOpensOn(names(0)), 'all');
+    assert.equal(boardOpensOn(null), 'all', 'no answer: All time');
+    // the game asks for this week's first (main.js freshSocial; openingBoard falls back once, a tap on the period chooses)
+    const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+    assert.match(main, /metric: 'bestStage', period: 'week', periodSet: false/);
+    assert.match(main, /boardPeriod\(period\) \{ ui\.social\.period = period; ui\.social\.periodSet = true;/);
+    // and the board says which it is: This week on the period's switch, "(this week)" over its column
+    const board = { ...names(6), label: 'Best stage', period: 'week', optIn: true };
+    const html = renderClan(new Game(null, T0), { social: { loaded: true, clan: null, clans: [], leaderboard: board, metric: 'bestStage', period: 'week', optIn: true } }, { loggedIn: true });
+    assert.match(html, /onclick="FI\.boardPeriod\('all'\)">This week<\/button>/);
+    assert.match(html, /Best stage \(this week\)/);
 });

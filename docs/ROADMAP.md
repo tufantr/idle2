@@ -1488,6 +1488,9 @@ Keeping it running:
       content, so a new medal, pet, unique or festival took points from everyone. Each part's whole is fixed at today's
       game, and new things fill it; the secret medals keep their power, count when held and are never needed; the Trials'
       part counts each Trial's five tiers, where its ladder's rungs filled it for a deep hero with Trials never cleared
+- [x] **The boards open on This week** (P-129): they opened on all-time best stage, where the beta's players will stand when
+      a post brings strangers. They open on this week's board, which counts from each player's first upload of the week,
+      or on all time while it holds fewer than five names; a tap on the period still switches, and the choice holds
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

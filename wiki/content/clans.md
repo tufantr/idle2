@@ -80,7 +80,7 @@ As its rooms are built, the hall grows, and its painting with it: {{HALL_STAGES.
 ## Leaderboards
 
 The leaderboards are opt-in: you are only listed if you join them (on the Clan tab), and you can leave at any time. They show your username beside numbers the server works out from your cloud save:
-- your best stage, total level, [[The Titan|Titans]] defeated and [[Dungeons|dungeon]] clears, all time or just this week (counted from where you stood when the week began);
+- your best stage, total level, [[The Titan|Titans]] defeated and [[Dungeons|dungeon]] clears, all time or just this week (counted from where you stood when the week began). They open on this week's, or on all time while fewer than {{BOARD_WEEK_MIN}} players are on this week's;
 - the week's [[Trials|Trial]]: the best stage reached in it this week, ranked as a share of each player's own best stage.
 
 Each board shows the top fifty, and your own place if you are further down. Saves whose numbers no honest play could reach are left off the boards, and out of their clan's measure for the clan boss.
