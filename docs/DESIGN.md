@@ -1359,6 +1359,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   `tools/resource_art.py`). Controls that are switches rather than things (sound, cloud save, the
   map, retreat, resting, full screen) are drawn line icons in `src/ui/render.js`. Toasts take a
   sprite beside their text.
+- **Said how it was made.** Settings ends with "How it was made": the paintings made with Google Gemini, an AI, and
+  how they were edited (their count, `PAINTINGS` in `src/ui/render.js`, is the files under `assets/paint/`, a test
+  keeps it so); the sprites drawn by Dungeon Crawl Stone Soup's artists (CC0) and the pictures the game's code draws;
+  the sounds made in code; the code and the words written with an AI, Claude; the type. A disclosure that understates
+  draws anger (P-020 in the research loop); `assets/CREDITS.md` names every source.
 - **One card per moment.** Places that open together share a card (the first boss opens five), so
   nothing queues up. A card is a button: it goes to the place.
 - **Dialogs on a phone are cards, not screens** (October 2026: the owner found every popup took a phone

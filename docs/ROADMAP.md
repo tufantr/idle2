@@ -1499,6 +1499,10 @@ Keeping it running:
       listings, makes a new player a guest at once, as a frame does: the title card's Begin goes straight into the fight,
       the account one click away (the Guest pill), and the choice is remembered. The bare address keeps the sign-in
       first; a signed-in player's link plays the account's game. The rule is `src/core/door.js`, tested
+- [x] **How it was made, at the foot of Settings** (R7 of the research loop's ranking, P-020; the words wait for the
+      owner's OK): the 161 paintings made with Google Gemini and how they were edited, the CC0 sprites drawn by Dungeon
+      Crawl Stone Soup's artists and the pictures the game's code draws, the sounds made in code, the code and the words
+      written with an AI (Claude), the type. The wiki's credits page says the same
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

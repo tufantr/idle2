@@ -135,8 +135,9 @@ function creditsPage() {
         body: `<p>Fantasy Idle is a browser game; this wiki is made from its own data and pictures.</p>
         ${section('Pictures', `<ul>
             <li>The pixel art (monsters, items, the hero and his looks, pets) is the tile set of <a href="https://github.com/crawl/crawl" rel="noopener">Dungeon Crawl Stone Soup</a>, released into the public domain (CC0 1.0), some of it from the public-domain <a href="http://rltiles.sf.net" rel="noopener">RLTiles</a>. Ores, bars, logs, fish, crops, some tools, obstacles and small icons are drawn in the same manner for the game.</li>
-            <li>The paintings of the places, dungeons, the Abyss's strata, the world map and the action cards are made with Google Gemini (AI-generated) for the game.</li></ul>`)}
-        ${section('Type and sound', `<ul><li>The type is <a href="https://github.com/NDISCOVER/Cinzel" rel="noopener">Cinzel</a> and <a href="https://github.com/Outfitio/Outfit-Fonts" rel="noopener">Outfit</a> (SIL Open Font License), served by the game and this wiki themselves.</li><li>The game's sounds are made in the browser as it plays; there are no sound files.</li></ul>`)}`
+            <li>The paintings of the places, dungeons, the Abyss's strata, the world map and the action cards are made with Google Gemini (AI-generated) for the game, then cut, cropped and scaled by script.</li></ul>`)}
+        ${section('Type and sound', `<ul><li>The type is <a href="https://github.com/NDISCOVER/Cinzel" rel="noopener">Cinzel</a> and <a href="https://github.com/Outfitio/Outfit-Fonts" rel="noopener">Outfit</a> (SIL Open Font License), served by the game and this wiki themselves.</li><li>The game's sounds are made in the browser as it plays; there are no sound files.</li></ul>`)}
+        ${section('Code and words', '<ul><li>The game\'s code and its words, and this wiki\'s, were written with an AI (Claude).</li></ul>')}`
     };
 }
 

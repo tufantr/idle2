@@ -1,9 +1,16 @@
 // The door (src/core/door.js, DESIGN §3.17): the bare address keeps the sign-in first; a guest's link and a frame start as
-// a guest at once.
+// a guest at once; and Settings says how the game was made (P-020).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { playLink, startsAsGuest } from '../src/core/door.js';
+import { renderSettings, PAINTINGS } from '../src/ui/render.js';
+import { Game } from '../src/game.js';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 test('a guest\'s link is `play` among the address\'s parameters, whatever else stands beside it', () => {
     for (const search of ['?play', '?play=1', '?play=', '?src=reddit&play', '?play&src=galaxy', 'play']) assert.equal(playLink(search), true, search);
@@ -19,4 +26,15 @@ test('the bare address keeps the sign-in first; the link, a frame or a guest\'s 
     assert.equal(startsAsGuest({ chosen: true }), true, 'Play as guest, chosen before in this browser');
     assert.equal(startsAsGuest({ search: '?play', signedIn: true }), false, 'signed in, the link plays the account\'s game');
     assert.equal(startsAsGuest(), false);
+});
+
+test('Settings says how the game was made, and its count of paintings is the files under assets/paint/', () => {
+    const count = dir => readdirSync(join(ROOT, dir), { withFileTypes: true }).filter(e => e.isFile() && /\.(webp|png|jpe?g)$/.test(e.name)).length;
+    assert.equal(PAINTINGS, count('assets/paint') + count('assets/paint/cards'), 'a painting added or taken away: say so in Settings');
+    const html = renderSettings(new Game(null, 1_760_000_000_000), {}, null);
+    const foot = html.slice(html.lastIndexOf('<section'));
+    assert.match(foot, /How it was made/, 'at the foot of Settings');
+    for (const words of [`The ${PAINTINGS} paintings were made with Google Gemini, an AI`, 'Dungeon Crawl Stone Soup', 'CC0', 'drawn by the game\'s code', 'made by the game\'s code as you play', 'written with an AI, Claude', 'SIL Open Font License']) {
+        assert.ok(foot.replace(/&#39;/g, "'").includes(words), words);
+    }
 });

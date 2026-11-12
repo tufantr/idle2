@@ -2366,6 +2366,24 @@ export function renderSettings(game, ui, cloud) {
         <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
         ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
         <p class="muted small">${VERSION ? `Game version ${esc(VERSION)} · save` : 'Save'} version ${state.version}</p>
+    </section>
+    ${madeWith()}`;
+}
+
+// How the game was made, said in full at the foot of Settings (P-020 in the research loop: a disclosure that
+// understates draws anger). PAINTINGS counts the files under assets/paint/ (a test keeps it true); assets/CREDITS.md
+// names every source.
+export const PAINTINGS = 161;
+function madeWith() {
+    return `<section class="glass-panel made-with ${painted('study', 'center 85%')}">
+        <div class="panel-header"><h2>How it was made</h2></div>
+        <ul class="made-list small">
+            <li>The ${PAINTINGS} paintings were made with Google Gemini, an AI, then cut, cropped and scaled by script; one was retouched by hand.</li>
+            <li>The pixel sprites are tiles from Dungeon Crawl Stone Soup, drawn by its artists and free for anyone to use (CC0). The ores, bars, logs, fish, crops and a few other pictures are drawn by the game's code in the same style.</li>
+            <li>The sounds are made by the game's code as you play. There are no recordings.</li>
+            <li>The game's code and its words were written with an AI, Claude.</li>
+            <li>The type is Cinzel and Outfit, under the SIL Open Font License.</li>
+        </ul>
     </section>`;
 }
 
