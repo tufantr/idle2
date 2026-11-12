@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
@@ -228,4 +228,22 @@ test('the clan boss\'s "?" gives each level\'s attacks and what striking makes a
     const openings = Array.from({ length: CLAN_FIGHT_MS / 250 + 1 }, (_, i) => i * 250).filter(clanGuardDown);
     const worth = clanAttackFromSave(save, openings, CLAN_FIGHT_MS, T0).damage / clanAttackFromSave(save, [], CLAN_FIGHT_MS, T0).damage;
     assert.ok(Math.abs(worth - strikeWorth(atCap)) < 0.01, `the server: ×${worth.toFixed(3)}`);
+});
+
+test('the crowns read 1st, 2nd and 3rd: gold, silver and bronze, the place in a tip a phone can open (P-001)', () => {
+    const game = new Game(null, T0);
+    const clans = (prefix, n) => Array.from({ length: n }, (_, i) => ({ rank: i + 1, name: `${prefix} ${i + 1}`, tag: `C${i + 1}`, kills: 5, score: 40 - i, you: i === 1 }));
+    const ranking = { week: '2026-W46', divisions: [{ id: 'gold', name: 'Gold', clans: clans('Clan', 4) }], last: { week: '2026-W45', divisions: [{ id: 'silver', name: 'Silver', clans: clans('Old', 3) }] } };
+    const social = { loaded: true, clan: { id: 7, name: 'Wolves', tag: 'WLF', crown: { rank: 1, division: 'gold' } }, members: [], ranking };
+    const html = renderClan(game, { social }, { loggedIn: true });
+    assert.match(html, literal('<span class="clan-crown rank-1" data-tip-title="1st" data-tip="in the Gold division last week"'), 'the clan\'s own crown');
+    for (const [rank, place] of [[1, '1st'], [2, '2nd'], [3, '3rd']]) {
+        assert.match(html, literal(`<span class="clan-crown rank-${rank}" data-tip-title="${place}" data-tip="in the Gold division this week"`), `this week's ${place}`);
+        assert.match(html, literal(`<span class="clan-crown rank-${rank}" data-tip-title="${place}" data-tip="in the Silver division last week"`), `last week's ${place}`);
+    }
+    assert.doesNotMatch(html, /clan-crown rank-4/, 'the top three only');
+    const list = renderClan(game, { social: { loaded: true, clan: null, clans: [{ id: 3, name: 'Hawks', tag: 'HWK', members: 4, crown: { rank: 3, division: 'bronze' } }] } }, { loggedIn: true });
+    assert.match(list, literal('<span class="clan-crown rank-3" data-tip-title="3rd" data-tip="in the Bronze division last week"'), 'on the clan list');
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    for (const [rank, metal] of [[1, 'gold'], [2, 'silver'], [3, 'bronze']]) assert.match(css, new RegExp(`\\.clan-crown\\.rank-${rank} \\.spr \\{ filter: [^}]+\\}\\s+/\\* ${metal} \\*/`), metal);
 });

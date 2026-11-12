@@ -973,8 +973,9 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .clan-ranking .division-row td { padding-top: 0.7rem; border-bottom: none; }
 .clan-ranking td.clan-name { width: 100%; white-space: normal; overflow-wrap: anywhere; }   /* the name takes what is left, so the numbers fit a phone */
 .clan-crown { display: inline-flex; vertical-align: middle; margin-right: 0.2rem; }
-.clan-crown.rank-2 .spr { filter: grayscale(0.85) brightness(1.15); }   /* silver */
-.clan-crown.rank-3 .spr { filter: sepia(0.8) hue-rotate(-25deg) saturate(1.4) brightness(0.85); }   /* bronze */
+.clan-crown.rank-1 .spr { filter: grayscale(1) sepia(1) saturate(4) brightness(1.45); }   /* gold */
+.clan-crown.rank-2 .spr { filter: grayscale(1) brightness(1.35); }   /* silver */
+.clan-crown.rank-3 .spr { filter: grayscale(1) sepia(1) saturate(3) hue-rotate(-28deg) brightness(0.82); }   /* bronze */
 .last-week { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; margin-top: 0.5rem; }
 .last-crowns { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .clan-refill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-muted); }   /* when the next attacks come */

@@ -1098,7 +1098,8 @@ with the game's own stat code; the client never submits damage or scores.
   (`clanDepthScore`); accounts flagged for impossible numbers are left out. The standings are worked out on request
   (at most once a minute, cleared by an Endless attack or a kill); a finished week's are kept once (`clan_rankings`,
   with the clan's name and tag) by the first look after it ends, and give its top three of each division a crown for
-  the next week, on the clan list and the clan's header, and the clan its best week (its record). On screen
+  the next week, on the clan list and the clan's header, and the clan its best week (its record). A crown is gold for
+  the 1st, silver for the 2nd and bronze for the 3rd, and says its place in a tip a phone opens (`clanCrown`). On screen
   (`endlessPanel`, `clanStandings` in `src/ui/render.js`): the Hydra's card under the week's boss (asleep, when it
   wakes; awake, the fight and two pips), the clan's division, place and depth, the week's table by division and last
   week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar

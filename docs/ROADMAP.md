@@ -1481,6 +1481,9 @@ Keeping it running:
 - [x] **The boss says what it takes** (P-006): the Clan's "?" gave level 1's attacks and the strike's ×2.5. It gives every
       level's (20, 24, 29, 35, 41, 50 and 60 attacks of an average member) and what striking fast through every opening
       makes an attack worth, ×1.33 at full attack speed, worked out from the server's own reckoning of the fight
+- [x] **Crowns that read 1st, 2nd and 3rd** (P-001; a player once read the ranking as "everybody 2nd"): the 1st's crown was
+      the atlas's red and amber, close to the 3rd's sepia. The 1st is gold, the 2nd silver, the 3rd bronze, and every crown
+      (the ranking's, last week's, the clan list's and the header's) says its place in a tip a phone opens with a tap
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

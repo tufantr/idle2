@@ -51,7 +51,7 @@ The clan's reward for its boss is its banner. Each level the clan fells raises i
 
 ## The week's ranking
 
-Every week the clans are ranked, and the top three of each division wear a crown through the next week, on the clan list and beside the clan's name.
+Every week the clans are ranked, and the top three of each division wear a crown through the next week, on the clan list and beside the clan's name: gold for the 1st, silver for the 2nd, bronze for the 3rd. Tap a crown (or point at it) to see its place.
 
 - **Divisions.** The levels of the week's boss a clan fells put it in its division: {{CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below that'}`).join(', ')}}. So clans of a like size and activity meet.
 - **The Endless Hydra** decides inside each division. It wakes for every clan on Saturday at 00:00 UTC and stays until the Monday reset. Its heads grow back, so it never falls.
