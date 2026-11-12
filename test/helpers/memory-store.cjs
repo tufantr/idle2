@@ -17,7 +17,7 @@ function createMemoryStore() {
         async createUser(username, hash, email = null) {
             if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) throw unique('users_username_lower');
             if (email && db.users.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) throw unique('users_email_lower');
-            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null };
+            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0 };
             db.users.push(row);
             return row.id;
         },
@@ -25,14 +25,29 @@ function createMemoryStore() {
             const same = db.users.filter(x => x.username.toLowerCase() === username.toLowerCase())
                 .sort((a, b) => (b.username === username) - (a.username === username) || a.id - b.id);
             const u = same[0];
-            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0 } : null;
+            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0, tokenVersion: u.token_version || 0 } : null;
         },
         async findUserByEmail(email) {
             const u = db.users.find(x => (x.email || '').toLowerCase() === String(email).toLowerCase());
-            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0 } : null;
+            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0, tokenVersion: u.token_version || 0 } : null;
         },
         async setEmailVerified(userId, now) { const u = db.users.find(x => x.id === userId); if (u) u.email_verified_at = now; },
-        async setPassword(userId, hash) { const u = db.users.find(x => x.id === userId); if (u) u.password_hash = hash; },
+        async setPassword(userId, hash) {
+            const u = db.users.find(x => x.id === userId);
+            if (!u) return 0;
+            Object.assign(u, { password_hash: hash, token_version: (u.token_version || 0) + 1 });
+            return u.token_version;
+        },
+        async tokenAccount(userId) {
+            const u = db.users.find(x => x.id === userId);
+            return u ? { username: u.username, tokenVersion: u.token_version || 0 } : null;
+        },
+        async bumpTokenVersion(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if (!u) return null;
+            u.token_version = (u.token_version || 0) + 1;
+            return { username: u.username, tokenVersion: u.token_version };
+        },
         async putEmailCode(userId, purpose, codeHash, expiresAt, now) {
             db.codes = db.codes.filter(c => !(c.userId === userId && c.purpose === purpose));
             db.codes.push({ id: ++seq.codes, userId, purpose, codeHash, expiresAt, attempts: 0, createdAt: now });

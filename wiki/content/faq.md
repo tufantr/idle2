@@ -25,6 +25,10 @@ With an account, on the game's server, as in any online game: any device you sig
 
 Yes: press **Play as guest** on the sign-in. Your game is then kept in that browser only, with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
 
+### How do I sign out on a device I no longer use?
+
+In **Settings**, under Account, press **Sign out everywhere**: every other device signed in to your account is signed out, and this one stays signed in. Setting a new password (**Forgot your password?** on the sign-in) does the same, and a mail to your address says it was changed.
+
 ### Settings says my account is flagged. What does that mean?
 
 One of your saves showed numbers the game's check doesn't allow: numbers no save can reach. For 30 days from that save, each of your [[/clans|clan]] attacks counts for at most 1% of the boss, your fights at the Endless Hydra stay out of the clan ranking, and you are left off the leaderboards. Your game itself plays and saves as always, and nothing is taken away. A save that only grew faster than the check allows is looked at by the team first, never flagged by itself. Think it's a mistake? Tell the team on the Discord (the link is in Settings), with your username.

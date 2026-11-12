@@ -211,6 +211,17 @@ export class CloudClient {
 
     logout() { this.setToken(null); }
 
+    /** "Sign out everywhere": every other device signed in to this account is signed out; this one keeps a fresh token. */
+    async signOutEverywhere() {
+        const data = await this.request('/account/signout-all', { method: 'POST', body: {} });
+        if (data.token) {
+            const { base, flaggedUntil } = this;
+            this.setToken(data.token);
+            Object.assign(this, { base, flaggedUntil });   // the same account: what this page has seen of its cloud stays
+        }
+        return data;
+    }
+
     /**
      * Returns { state, lastSaved } (state may be null for a fresh account). Time away is measured on
      * the server's clock: the save's timestamp is moved so that now − savedAt equals the time the

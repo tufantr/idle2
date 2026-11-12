@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const store = require('./store');
 const crypto = require('node:crypto');
-const { sendCounted, codeMail } = require('./mail');
+const { sendCounted, codeMail, passwordChangedMail } = require('./mail');
 
 const app = express();
 app.disable('x-powered-by');
@@ -65,8 +65,9 @@ function requireSecret(res) {
     return false;
 }
 
+/** A token for an account, carrying its token version now (`v`: one below the account's is refused, tokenStillValid). */
 function signToken(user) {
-    return jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: TOKEN_TTL, algorithm: JWT_ALGORITHM });
+    return jwt.sign({ id: user.id, username: user.username, v: user.tokenVersion || 0 }, JWT_SECRET, { expiresIn: TOKEN_TTL, algorithm: JWT_ALGORITHM });
 }
 
 function validateCredentials(body) {
@@ -79,16 +80,25 @@ function validateCredentials(body) {
 }
 
 // A token names an account by id and name; the name must still be that id's (a database made anew under
-// the same secret would otherwise hand an old token whoever has that id now). Kept a while per instance.
+// the same secret would otherwise hand an old token whoever has that id now). It also carries the account's token version
+// when it was signed (`v`; tokens from before versions carry none and count as 0, as every account began): one below the
+// account's version now is refused, so a password reset or "Sign out everywhere" (store.setPassword, bumpTokenVersion) ends
+// every session made before it (the research loop's P-096, November 2026: a 30-day token outlived a reset). Kept a while
+// per instance; a bump here puts the new version in at once (noteVersion).
 const NAME_CHECK_MS = 10 * 60 * 1000;
 const namesSeen = new Map();
+const tokenVersionOf = user => (Number.isSafeInteger(user.v) && user.v > 0 ? user.v : 0);
 async function tokenStillValid(user) {
-    const seen = namesSeen.get(user.id);
-    if (seen && Date.now() - seen.at < NAME_CHECK_MS) return seen.name === user.username;
-    const name = await store.userNameOf(user.id);
-    namesSeen.set(user.id, { name, at: Date.now() });
-    return name !== null && name === user.username;
+    let seen = namesSeen.get(user.id);
+    if (!seen || Date.now() - seen.at >= NAME_CHECK_MS) {
+        const account = await store.tokenAccount(user.id);
+        seen = { name: account ? account.username : null, version: account ? account.tokenVersion : 0, at: Date.now() };
+        namesSeen.set(user.id, seen);
+    }
+    return seen.name !== null && seen.name === user.username && tokenVersionOf(user) >= seen.version;
 }
+/** An account's sessions after a bump of its version (`account`: { username, tokenVersion } from the store), known here at once. */
+const noteVersion = (userId, account) => namesSeen.set(userId, { name: account.username, version: account.tokenVersion, at: Date.now() });
 
 const authenticateToken = (req, res, next) => {
     if (!requireSecret(res)) return;
@@ -299,9 +309,21 @@ app.post('/api/password/reset', route('reset password', async (req, res) => {
     const now = Date.now();
     const result = user ? await checkCode(user, 'reset', code, now) : 'wrong';
     if (result !== 'ok') return res.status(400).json({ error: CODE_WORDS[result] });
-    await store.setPassword(user.id, await bcrypt.hash(password, 10));
+    // the new password ends every session made before it (its token version goes up); this device signs in with a fresh one
+    const tokenVersion = await store.setPassword(user.id, await bcrypt.hash(password, 10));
+    noteVersion(user.id, { username: user.username, tokenVersion });
     if (!user.emailVerifiedAt) await store.setEmailVerified(user.id, now);
-    res.json({ token: signToken(user), message: 'Password changed' });
+    // and the account's own address hears of it, in one line (a mail that can't go doesn't undo the change)
+    try { await sendCounted(store, { to: user.email, ...passwordChangedMail({ username: user.username }) }, now); } catch (err) { console.error('password mail failed', err && err.message); }
+    res.json({ token: signToken({ ...user, tokenVersion }), message: 'Password changed' });
+}));
+
+/** "Sign out everywhere" (Settings): every session of the account ends but this one, which gets a fresh token. */
+app.post('/api/account/signout-all', authenticateToken, route('sign out everywhere', async (req, res) => {
+    const account = await store.bumpTokenVersion(req.user.id);
+    if (!account) return res.sendStatus(401);
+    noteVersion(req.user.id, account);
+    res.json({ token: signToken({ id: req.user.id, ...account }), message: 'Signed out everywhere else' });
 }));
 
 app.post('/api/login', route('login', async (req, res) => {

@@ -1979,6 +1979,14 @@ window.FI = {
         } else toast('Logged out — playing locally', 'info');
         render();
     },
+    /** Settings' "Sign out everywhere": every other device signed in to this account is signed out; this one stays. */
+    signOutEverywhere() {
+        if (!cloud.loggedIn) return;
+        askConfirm('Sign out everywhere?', 'Every other device signed in to your account is signed out. This one stays signed in.', 'Sign out everywhere', async () => {
+            try { await cloud.signOutEverywhere(); toast('Signed out everywhere else', 'info'); } catch (err) { toast(err.message, 'error'); }
+            render();
+        });
+    },
     cloudSaveNow() { cloudSave(true); },
     /** The header's new-version pill: the game saved, signed in on the server too, then the page loads the new version. */
     async reloadForUpdate() {

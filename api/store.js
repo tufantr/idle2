@@ -242,6 +242,9 @@ async function ensureSchema() {
         )
     `;
     await sql`CREATE INDEX IF NOT EXISTS flag_reviews_last ON flag_reviews (last_at)`;
+    // Each account's token version (November 2026, api/index.js): a token carries the version it was signed at, and one
+    // below the account's is refused, so a password reset or "Sign out everywhere" ends every session made before it.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0`;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -264,12 +267,12 @@ async function createUser(username, hash, email = null) {
     return rows[0].id;
 }
 
-const accountRow = r => (r ? { id: r.id, username: r.username, password_hash: r.password_hash, email: r.email || null, emailVerifiedAt: int(r.email_verified_at) } : null);
+const accountRow = r => (r ? { id: r.id, username: r.username, password_hash: r.password_hash, email: r.email || null, emailVerifiedAt: int(r.email_verified_at), tokenVersion: int(r.token_version) } : null);
 
 /** The account of a name, whatever its case (the one spelled exactly so first, where two older ones differ only in case). */
 async function findUserByName(username) {
     const { rows } = await sql`
-        SELECT id, username, password_hash, email, email_verified_at FROM users WHERE lower(username) = lower(${username})
+        SELECT id, username, password_hash, email, email_verified_at, token_version FROM users WHERE lower(username) = lower(${username})
         ORDER BY (username = ${username}) DESC, id ASC LIMIT 1
     `;
     return accountRow(rows[0]);
@@ -277,7 +280,7 @@ async function findUserByName(username) {
 
 /** The account of an email address, whatever its case. */
 async function findUserByEmail(email) {
-    const { rows } = await sql`SELECT id, username, password_hash, email, email_verified_at FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
+    const { rows } = await sql`SELECT id, username, password_hash, email, email_verified_at, token_version FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
     return accountRow(rows[0]);
 }
 
@@ -285,8 +288,22 @@ async function setEmailVerified(userId, now) {
     await sql`UPDATE users SET email_verified_at = ${now}::bigint WHERE id = ${userId}`;
 }
 
+/** A new password, which ends every session made before it: the account's token version goes up. Returns the new version. */
 async function setPassword(userId, hash) {
-    await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${userId}`;
+    const { rows } = await sql`UPDATE users SET password_hash = ${hash}, token_version = COALESCE(token_version, 0) + 1 WHERE id = ${userId} RETURNING token_version`;
+    return rows[0] ? int(rows[0].token_version) : 0;
+}
+
+/** What a token is checked against: the account's name and token version now, or null. */
+async function tokenAccount(userId) {
+    const { rows } = await sql`SELECT username, token_version FROM users WHERE id = ${userId}`;
+    return rows[0] ? { username: rows[0].username, tokenVersion: int(rows[0].token_version) } : null;
+}
+
+/** Every session of an account ends ("Sign out everywhere"): its token version goes up. Returns { username, tokenVersion }, or null. */
+async function bumpTokenVersion(userId) {
+    const { rows } = await sql`UPDATE users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = ${userId} RETURNING username, token_version`;
+    return rows[0] ? { username: rows[0].username, tokenVersion: int(rows[0].token_version) } : null;
 }
 
 /** A new code for an account and a purpose, in place of any before it. */
@@ -929,7 +946,7 @@ async function claimGifts(userId, now) {
 module.exports = {
     ensureSchema, ping,
     createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
-    userNameOf, getSave, putSave, setOptIn, leaderboardRows,
+    userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
     addReview, reviewsSince,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,

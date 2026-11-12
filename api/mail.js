@@ -82,4 +82,24 @@ function codeMail({ username, code, purpose, minutes }) {
     return { subject, text, html };
 }
 
-module.exports = { sendMail, sendCounted, setMailer, codeMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };
+/** A short notice to an account's own address, in the same colours: a greeting, its lines, and the site. */
+function noticeMail({ username, subject, lines }) {
+    const text = `Hi ${username},\n\n${lines.join('\n\n')}\n\nFantasy Idle - https://fantasyidle.com\n`;
+    const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0d0a07;font-family:Georgia,'Times New Roman',serif;color:#f3e6cc">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
+<table role="presentation" cellspacing="0" cellpadding="0" style="max-width:440px;width:100%;background:#1a130c;border:1px solid #b08a4a;border-radius:14px">
+<tr><td style="padding:28px 28px 8px;text-align:center;font-size:22px;letter-spacing:2px;color:#fde68a">FANTASY IDLE</td></tr>
+<tr><td style="padding:8px 28px 28px;font-size:15px;line-height:1.5">Hi ${escapeHtml(username)},${lines.map(l => `<br><br>${escapeHtml(l)}`).join('')}</td></tr>
+</table>
+<p style="font-size:12px;color:#8a7a5c">fantasyidle.com</p>
+</td></tr></table></body></html>`;
+    return { subject, text, html };
+}
+
+/** A password changed (a reset): one line to the account's address, and what to do if it wasn't them. */
+function passwordChangedMail({ username }) {
+    return noticeMail({ username, subject: 'Your Fantasy Idle password was changed',
+        lines: ['Your Fantasy Idle password was just changed, and every other device signed in to your account was signed out. If that wasn\'t you, set a new one now with "Forgot your password?" on the sign-in.'] });
+}
+
+module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };

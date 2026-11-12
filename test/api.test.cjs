@@ -1096,6 +1096,41 @@ test('a token whose name is no longer its account\'s is refused', async () => {
     assert.equal((await get('/load', t)).status, 401);
 });
 
+test('tokens can be revoked: "Sign out everywhere" and a password reset end every session before them; a token from before versions still plays', async () => {
+    const jwt = require('../api/node_modules/jsonwebtoken');
+    const phone = await register('many_devices');
+    const laptop = (await (await post('/login', { username: 'many_devices', password: 'correct horse' })).json()).token;
+    assert.equal(jwt.decode(phone).v, 0);
+    // a token signed before tokens carried a version counts as version 0, as every account began
+    const old = jwt.sign({ id: jwt.decode(phone).id, username: 'many_devices' }, 'test-secret', { expiresIn: '30d', algorithm: 'HS256' });
+    for (const t of [old, phone, laptop]) assert.equal((await get('/load', t)).status, 200);   // (each checked, and kept in the instance's memory)
+    // from the phone: every other session ends at once, the instance's memory too; the phone plays on with a fresh token
+    const out = await post('/account/signout-all', {}, phone);
+    assert.equal(out.status, 200);
+    const fresh = (await out.json()).token;
+    assert.equal(jwt.decode(fresh).v, 1);
+    assert.equal((await get('/load', laptop)).status, 401, 'the other device');
+    assert.equal((await get('/load', phone)).status, 401, "this device's old token");
+    assert.equal((await get('/load', old)).status, 401, 'one from before versions');
+    assert.equal((await get('/load', fresh)).status, 200, 'the fresh one plays');
+    assert.equal((await post('/account/signout-all', {}, laptop)).status, 401, 'a device signed out signs no one out');
+    assert.equal((await post('/account/signout-all', {})).status, 401, 'nor does nobody');
+    // a password reset ends them too, and the account's own address hears of it in a line
+    const from = { 'X-Forwarded-For': '192.0.2.40' };
+    await post('/password/forgot', { email: emailOf('many_devices') }, null, from);
+    const reset = await post('/password/reset', { email: emailOf('many_devices'), code: codeFor(emailOf('many_devices')), password: 'a whole new phrase' }, null, from);
+    assert.equal(reset.status, 200);
+    const afterReset = (await reset.json()).token;
+    assert.equal((await get('/load', fresh)).status, 401, 'the session before the reset');
+    assert.equal((await get('/load', afterReset)).status, 200, 'the device that reset it');
+    const told = mailbox.at(-1);
+    assert.deepEqual([told.to, told.subject], [emailOf('many_devices'), 'Your Fantasy Idle password was changed']);
+    assert.match(told.text, /was just changed.*Forgot your password/s);
+    const again = (await (await post('/login', { username: 'many_devices', password: 'a whole new phrase' })).json()).token;
+    assert.equal(jwt.decode(again).v, 2, 'a login signs at the version now');
+    assert.equal((await get('/load', again)).status, 200);
+});
+
 test('the health check asks the database every time, and a body that is not JSON gets a JSON answer', async () => {
     if (memory) {
         const ping = memory.ping;

@@ -153,6 +153,29 @@ test('the cloud keeps until when the account is flagged, as its last save or loa
     }
 });
 
+test('"Sign out everywhere" keeps this device signed in, on a fresh token, with what it has seen of its cloud', async () => {
+    const realFetch = globalThis.fetch;
+    const calls = [];
+    globalThis.fetch = async (url, init) => {
+        calls.push({ url, init });
+        const body = url.endsWith('/account/signout-all') ? { token: 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c', message: 'Signed out everywhere else' } : { success: true, timestamp: 9, flaggedUntil: 0 };
+        return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        await cloud.push({ version: 3 });
+        await cloud.signOutEverywhere();
+        assert.equal(calls.at(-1).init.method, 'POST');
+        assert.equal(calls.at(-1).init.headers.Authorization, 'Bearer a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b', 'asked with the token it had');
+        assert.equal(cloud.token, 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c');
+        assert.equal(localStorage.getItem(TOKEN_KEY), cloud.token, 'kept for the next visit');
+        assert.deepEqual([cloud.username, cloud.base], ['hero', 9], 'the same account, its cloud as this page saw it');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
 test("a guest's game put aside at sign-in is listed among the backups and outlasts a reset", () => {
     const game = new Game(null, 1);
     game.state.gold = 77;

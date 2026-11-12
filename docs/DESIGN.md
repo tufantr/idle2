@@ -950,7 +950,11 @@ gear to wear; a place that waited opens on the return and is named there too.
   player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):
   bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
-  version-checked saves. The client uploads **every minute while the page is open**, in the background
+  version-checked saves. A token carries its account's token version (`v`, the research loop's P-096, November 2026: a
+  30-day token outlived a password reset); one below the account's is refused, and tokens from before versions count as 0.
+  A password reset and Settings' **Sign out everywhere** (`POST /api/account/signout-all`) raise it, so every session made
+  before ends at once (the instance's 10-minute memory of names learns the new version with the bump); the device that
+  asked gets a fresh token, and a reset mails the account's own address one line. The client uploads **every minute while the page is open**, in the background
   too, and once on leaving the page (hidden or closed: a keepalive request, under the 64 KB browsers allow),
   unless it uploaded seconds before; the local save stays current every 15 s. That is since the game moved to
   its own server (October 2026, the owner: "traffic is not an issue"). On Vercel's free Neon database, which

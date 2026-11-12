@@ -89,7 +89,8 @@ save. It needs Node 20.19+ or 22+.
 |---|---|
 | `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`) |
 | `POST /api/verify`, `POST /api/verify/resend` | the sign-up code (6 digits, 15 minutes, 5 tries), and another one (once a minute, 5 an hour) |
-| `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not) |
+| `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not); a new password ends every session before it, and the address hears of it |
+| `POST /api/account/signout-all` | "Sign out everywhere": every session of the account ends (its tokens' version goes up) but the asking device's, which gets a fresh token |
 | `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected; both say the clan's banner |
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
 | `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss, board and banner, its place in the week's ranking and your fights at the Endless Hydra; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6; with `endless: true` one of the 2 a week at the Hydra, at the weekend); the owner removes a member |

@@ -2336,7 +2336,7 @@ export function renderSettings(game, ui, cloud) {
             <div class="panel-header"><h2>Account</h2><span class="muted small">${signedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest'}</span></div>
             <p class="muted small">${signedIn ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'This game is kept in this browser only. An account plays a game of its own, kept on the server for any device.'}</p>
             ${signedIn && cloud.flaggedUntil > Date.now() ? `<p class="warn small flag-line">Flagged until ${esc(new Date(cloud.flaggedUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }))}: a save showed numbers the game's check doesn't allow. ${aboutButton('flagged')}</p>` : ''}
-            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
+            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button><button class="mini-btn" onclick="FI.signOutEverywhere()">Sign out everywhere</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>
         <section class="glass-panel ${painted('study', 'right 45%')}">
