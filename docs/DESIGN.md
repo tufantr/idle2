@@ -942,7 +942,10 @@ gear to wear; a place that waited opens on the return and is named there too.
   own (browsers keep a framed page's storage per host site). So does a guest's link, `?play` among the address's
   parameters (`src/core/door.js`, for posts and listings: the first post's top comment was "Instant downvote for
   needing an account"): not signed in, the page starts as a guest and remembers it, as Play as guest does; signed in,
-  it plays the account's game. The bare address keeps the sign-in first. Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
+  it plays the account's game. The bare address keeps the sign-in first. A guest's game is kept by asking the
+  browser, quietly, to keep its storage (`navigator.storage.persist()`, once a load until it does; not in Firefox,
+  which would ask its player), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a
+  guest's game says Safari clears it after seven days away unless the game is on the Home Screen (P-069). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
   there next starts its own game, not a copy of the last one. A local development host (`DEV_HOST` in
   `src/main.js`: the tools, the screenshots) plays as a guest without asking.
 - **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a

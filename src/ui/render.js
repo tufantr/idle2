@@ -2958,9 +2958,10 @@ export function renderIntroModal(state, { signedIn = false } = {}) {
  * a 6-digit code goes to the email, and the account plays once it is entered here); the code; a forgotten password (a
  * code to the email, then a new password). `ctx.mode` says which; `email` is the address as shown (part hidden).
  * `required`: the game waits behind it until the player signs in or plays as a guest; `register`: a new player from
- * the title card, so Register is the button Enter presses.
+ * the title card, so Register is the button Enter presses. `keep`: an iPhone or iPad not playing from its Home Screen,
+ * where Safari clears a guest's game after seven days away: the dialog that offers the guest's game says so (P-069).
  */
-export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '' } = {}) {
+export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '', keep = false } = {}) {
     const header = { login: required ? 'Sign in to play' : 'Sign in', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
     const error = `<div class="auth-error" id="auth-error">${esc(message)}</div>`;
     const back = `<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode('login')">Back to log in</a></p>`;
@@ -2994,7 +2995,8 @@ export function renderAuthModal(message = '', { required = false, register = fal
                 <input type="password" id="auth-pass" placeholder="Password" autocomplete="${first === 'register' ? 'new-password' : 'current-password'}" class="text-input">
                 <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.authMode('${other}')">${first === 'register' ? 'Log in instead' : label[other]}</button></div>
             </form>
-            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}`;
+            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}
+            ${keep ? '<p class="muted small auth-keep">On an iPhone or iPad, Safari clears a guest\'s game after seven days away, unless the game is on your Home Screen.</p>' : ''}`;
     }
     return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
         <div class="modal-header">${header}</div>

@@ -1503,6 +1503,10 @@ Keeping it running:
       owner's OK): the 161 paintings made with Google Gemini and how they were edited, the CC0 sprites drawn by Dungeon
       Crawl Stone Soup's artists and the pictures the game's code draws, the sounds made in code, the code and the words
       written with an AI (Claude), the type. The wiki's credits page says the same
+- [x] **A guest's game kept on phones** (R19 of the research loop's ranking, P-069): Safari clears a site's storage after
+      seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
+      the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
+      prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

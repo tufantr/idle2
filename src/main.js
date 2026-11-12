@@ -155,6 +155,23 @@ function setGuest(on) {
     if (on) prefs.set(GUEST_KEY, '1'); else prefs.remove(GUEST_KEY);
 }
 if (GUEST_LINK && SIGN_IN_REQUIRED) setGuest(true);
+// On an iPhone or iPad every browser is Safari's engine, which clears a site's storage after seven days without a visit
+// unless the site is on the Home Screen (WebKit, 2020): the sign-in that offers a guest's game says so there (P-069).
+const SAFARI_CLEARS = (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+    && !(navigator.standalone || window.matchMedia?.('(display-mode: standalone)').matches);
+/**
+ * A guest's game lives in this browser only, so the browser is asked, quietly, to keep it: once a load, and not again
+ * once it does (Chrome may grant it as the game is played more; Safari grants it to a Home Screen app). Not in Firefox,
+ * which would ask its player in a prompt; its storage is cleared only when the disk runs short.
+ */
+let askedToKeep = false;
+function keepGuestGame() {
+    if (askedToKeep || !guest || cloud.loggedIn || /Firefox\//.test(navigator.userAgent)) return;
+    const storage = navigator.storage;
+    if (!storage?.persist) return;
+    askedToKeep = true;
+    (storage.persisted ? storage.persisted() : Promise.resolve(false)).then(kept => kept || storage.persist()).catch(() => { /* not granted: the backups in Settings remain */ });
+}
 // Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
 // looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
 // failed sync is tried again.
@@ -274,6 +291,7 @@ if (cloud.loggedIn) syncFromCloud();
 // and straight into a fight. Signing in stays one click away (on the card, and in the header).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
 if (needsSignIn() && !ui.modalOpen) openSignIn();   // a returning player meets the sign-in (a new one, the title card first)
+keepGuestGame();   // a guest's game: the browser is asked to keep it
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -1218,13 +1236,13 @@ function startAdventure() {
 /** The sign-in the game waits behind (SIGN_IN_REQUIRED) until there is an account or a guest: Escape leaves it up. */
 function openSignIn(register = false) {
     ui.auth = { mode: register ? 'register' : 'login' };
-    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register }), 'signin');
+    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register, keep: SAFARI_CLEARS }), 'signin');
 }
 /** The account dialog at a step (renderAuthModal's `mode`), in place of the one open. */
 function showAuth(message = '', ctx = {}) {
     ui.auth = { ...ctx };
     const key = ui.modalOpen === 'auth' ? 'auth' : 'signin';
-    showModal(renderAuthModal(message, { required: key === 'signin', ...ui.auth }), key);
+    showModal(renderAuthModal(message, { required: key === 'signin', keep: SAFARI_CLEARS, ...ui.auth }), key);
 }
 function authError(text) {
     const err = document.getElementById('auth-error');
@@ -2027,11 +2045,12 @@ window.FI = {
 
     openAuth() {
         if (ui.modalOpen === 'intro') closeModal();
-        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal(), 'auth'); }
+        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal('', { keep: SAFARI_CLEARS }), 'auth'); }
     },
     /** The sign-in's other way in: no account, the game kept in this browser only (an account made later starts its own). */
     playAsGuest() {
         setGuest(true);
+        keepGuestGame();
         ui.auth = null;
         closeModal();
         sound.unlock();

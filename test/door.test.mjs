@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { playLink, startsAsGuest } from '../src/core/door.js';
-import { renderSettings, PAINTINGS } from '../src/ui/render.js';
+import { renderSettings, renderAuthModal, PAINTINGS } from '../src/ui/render.js';
 import { Game } from '../src/game.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -37,4 +37,13 @@ test('Settings says how the game was made, and its count of paintings is the fil
     for (const words of [`The ${PAINTINGS} paintings were made with Google Gemini, an AI`, 'Dungeon Crawl Stone Soup', 'CC0', 'drawn by the game\'s code', 'made by the game\'s code as you play', 'written with an AI, Claude', 'SIL Open Font License']) {
         assert.ok(foot.replace(/&#39;/g, "'").includes(words), words);
     }
+});
+
+test("on an iPhone or iPad the sign-in that offers a guest's game says Safari clears it after seven days away", () => {
+    const note = /class="muted small auth-keep">On an iPhone or iPad, Safari clears a guest's game after seven days away, unless the game is on your Home Screen\.</;
+    assert.match(renderAuthModal('', { required: true, keep: true }), note, 'the sign-in the game waits behind');
+    assert.match(renderAuthModal('', { required: true, register: true, keep: true }), note, 'its account step');
+    assert.match(renderAuthModal('', { keep: true }), note, 'and the one the Guest pill opens');
+    assert.doesNotMatch(renderAuthModal('', { required: true }), /auth-keep/, 'elsewhere, not said');
+    for (const mode of ['verify', 'forgot', 'reset']) assert.doesNotMatch(renderAuthModal('', { mode, keep: true }), /auth-keep/, mode);
 });

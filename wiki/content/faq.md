@@ -23,7 +23,7 @@ With an account, on the game's server, as in any online game: any device you sig
 
 ### Can I play without an account?
 
-Yes: press **Play as guest** on the sign-in, or open the game from a link ending in `?play` (fantasyidle.com/?play), which starts you as a guest at once. Your game is then kept in that browser only, with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
+Yes: press **Play as guest** on the sign-in, or open the game from a link ending in `?play` (fantasyidle.com/?play), which starts you as a guest at once. Your game is then kept in that browser only (on an iPhone or iPad, Safari clears it after seven days away unless the game is on your Home Screen), with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
 
 ### Can I play on my phone, or install it like an app?
 
