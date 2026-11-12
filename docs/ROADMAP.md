@@ -1495,6 +1495,10 @@ Keeping it running:
       fall or boss timeout at a wall keeps them; for ten minutes after it the next ones there play one soft note and fold
       into one counted toast ("Fell again ×4", "The boss held out again ×2"), the hero still falling. Tested in
       `test/access.test.mjs`
+- [x] **A link that starts as a guest** (R7 of the research loop's ranking, P-065): `fantasyidle.com/?play`, for posts and
+      listings, makes a new player a guest at once, as a frame does: the title card's Begin goes straight into the fight,
+      the account one click away (the Guest pill), and the choice is remembered. The bare address keeps the sign-in
+      first; a signed-in player's link plays the account's game. The rule is `src/core/door.js`, tested
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

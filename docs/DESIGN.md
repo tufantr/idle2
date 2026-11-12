@@ -939,7 +939,10 @@ gear to wear; a place that waited opens on the return and is named there too.
   chosen. Inside another site's frame (`EMBEDDED` in `src/main.js`: galaxy.click shows its games in one, and
   its players shy away from sign-up forms) a new player is a guest at once and Begin goes straight into the
   fight; the account is one click away (the Guest pill), and the frame's game is stored apart from the site's
-  own (browsers keep a framed page's storage per host site). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
+  own (browsers keep a framed page's storage per host site). So does a guest's link, `?play` among the address's
+  parameters (`src/core/door.js`, for posts and listings: the first post's top comment was "Instant downvote for
+  needing an account"): not signed in, the page starts as a guest and remembers it, as Play as guest does; signed in,
+  it plays the account's game. The bare address keeps the sign-in first. Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
   there next starts its own game, not a copy of the last one. A local development host (`DEV_HOST` in
   `src/main.js`: the tools, the screenshots) plays as a guest without asking.
 - **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a
@@ -2546,6 +2549,7 @@ src/version.js        the version this copy of the game is (empty here; a deploy
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, the
                       cloud client, which save is played) · power (server-side numbers) · text (articles for names)
+                      · door (who meets the sign-in first: the bare address, a guest's link, a frame)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, their tiers and rules, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)

@@ -32,6 +32,7 @@ import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECO
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
 import { noteWall } from './systems/walls.js';
+import { playLink, startsAsGuest } from './core/door.js';
 import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
@@ -143,12 +144,17 @@ const GUEST_KEY = 'fantasyIdle.guest';
 // Inside another site's frame (galaxy.click shows its games in one, and its players shy away from sign-up forms),
 // a new player is a guest at once: Begin goes straight into the fight, the account one click away (the Guest pill).
 const EMBEDDED = (() => { try { return window.top !== window.self; } catch { return true; } })();
-let guest = EMBEDDED || prefs.get(GUEST_KEY) === '1';   // framed, or the sign-in's "Play as guest" chosen (until an account signs in)
+// So does one who comes by a guest's link (`?play`, for posts and listings: core/door.js); the bare address keeps the
+// sign-in first. The link's choice is remembered, as the sign-in's "Play as guest" is.
+const GUEST_LINK = !EMBEDDED && playLink(location.search) && !cloud.loggedIn;
+// framed, the link, or the sign-in's "Play as guest" chosen (until an account signs in)
+let guest = startsAsGuest({ search: location.search, embedded: EMBEDDED, chosen: prefs.get(GUEST_KEY) === '1', signedIn: cloud.loggedIn });
 const needsSignIn = () => SIGN_IN_REQUIRED && !cloud.loggedIn && !guest;
 function setGuest(on) {
     guest = on;
     if (on) prefs.set(GUEST_KEY, '1'); else prefs.remove(GUEST_KEY);
 }
+if (GUEST_LINK && SIGN_IN_REQUIRED) setGuest(true);
 // Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
 // looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
 // failed sync is tried again.
