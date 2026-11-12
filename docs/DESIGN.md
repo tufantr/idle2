@@ -1393,7 +1393,10 @@ needs another screen: fight, spend, prestige and fight on.
   it does and what the next level costs (Learn 1 SP, then Upgrade 2 SP), lit only while there are
   points enough.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
-  fight; toasts move under the top bar so they never cover the dock.
+  fight; toasts move under the top bar so they never cover the dock. A dialog holds the keys (WCAG 2.4.3): the
+  page behind it is inert, Tab and Shift+Tab go round the dialog on top (a question over a dialog, the one under
+  it inert too), each is named by its title, and once the last closes the focus goes back to the control a key
+  opened it from; after a click or a tap it is let go, as after any button, so Space strikes again.
 - **A dungeon run and the Titan are fought on the Dungeons tab** (`fightTab` in `src/ui/features.js`;
   the owner, October 2026: mid-run the Dungeons tab showed the list as if no run were on, the fight had
   to be found under Combat, and a Titan felled took the screen to the stages' fight). While one lasts,

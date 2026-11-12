@@ -245,6 +245,9 @@ function withDevFlags(g) {
     return g;
 }
 
+// The control that had the focus when the first dialog opened ({ find, keys }: showModal), and gets it back.
+let dialogOpener = null;
+
 // ---------- boot ----------
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
@@ -468,6 +471,7 @@ document.addEventListener('keydown', event => {
     noteInput(event);
     sound.unlock();
     pointer.keyAt = Date.now();
+    if (event.key === 'Tab' && ui.modalOpen) { keepTabInDialog(event); return; }
     // Keyboard access for the clickable cards (role="button"). A key held down presses once: held, it
     // would start and stop an action over and over, or buy again and again.
     const target = event.target;
@@ -596,9 +600,13 @@ function refreshPerks() {
     const html = renderPerksModal(game, ui.perks);
     if (!overlay || overlay.__html === html) return;
     const scroll = overlay.querySelector('.modal-content')?.scrollTop || 0;
+    const focus = document.activeElement;
+    const findAgain = overlay.contains(focus) ? focusFinder(focus) : null;   // a key's place in the tree, kept
     setHtml(overlay, html);
+    nameDialog(overlay);   // (Perks, or the War Tree)
     const content = overlay.querySelector('.modal-content');
     if (content) content.scrollTop = scroll;
+    if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
 }
 
 // A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
@@ -1055,11 +1063,66 @@ function openModal(html, key = 'modal') {
 }
 function showModal(html, key) {
     const root = document.getElementById('modal-root');
+    if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
     ui.modalUnder = null;
+    nameDialog(root.lastElementChild);
+    holdPage(true);
     focusDialog(root);
     for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
+}
+// While a dialog is open the page behind it can't be reached: Tab goes round the dialog on top (the War Tree's
+// Unlearn question over the tree, say), and once every dialog has closed the focus goes back where the keys
+// left it. After a click or a tap it is let go instead, as after any button (Space, the strike, pressed it again).
+function noteOpener() {
+    const el = document.activeElement;
+    return el?.closest('#modal-root') ? null : noteFocus(el);
+}
+/** A control to give the focus back to: found again if it was drawn anew meanwhile; `keys`: the keyboard had it. */
+function noteFocus(el) {
+    if (!el || el === document.body) return null;
+    return { find: focusFinder(el) || (() => el), keys: pointer.keyAt > pointer.downAt };
+}
+function returnFocus() {
+    const opener = dialogOpener;
+    dialogOpener = null;
+    if (!opener?.keys || pointer.downAt > pointer.keyAt) return;
+    const el = opener.find();
+    if (el?.isConnected && el.getClientRects().length) el.focus({ preventScroll: true });
+}
+/** The page behind the dialogs (and every dialog under the one on top) is inert: no focus, no screen reader. */
+function holdPage(on) {
+    for (const id of ['app', 'hotbar', 'celebrate']) document.getElementById(id)?.toggleAttribute('inert', on);
+    const boxes = [...document.querySelectorAll('#modal-root > .modal-overlay')];
+    boxes.forEach((box, i) => box.toggleAttribute('inert', on && i < boxes.length - 1));
+}
+/** A dialog is named by its title (its header's words, without the "?" beside them). */
+function nameDialog(box) {
+    const head = box?.querySelector('.modal-header, h1');
+    if (!head) return;
+    const words = head.cloneNode(true);
+    for (const b of words.querySelectorAll('button')) b.remove();
+    const name = words.textContent.replace(/\s+/g, ' ').trim();
+    if (name) box.setAttribute('aria-label', name);
+}
+/** The controls a key can reach in a dialog, in order. */
+function dialogStops(box) {
+    return [...box.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length && !el.closest('[hidden], [inert]'));
+}
+/** Tab and Shift+Tab within the dialog on top: from its last control to its first, and back. */
+function keepTabInDialog(event) {
+    const box = document.querySelector('#modal-root > .modal-overlay:last-child');
+    if (!box) return;
+    const stops = dialogStops(box);
+    if (!stops.length) { event.preventDefault(); return; }
+    const i = stops.indexOf(document.activeElement);
+    // (not on one of them: the dialog was drawn again under the focus, or the focus was let go after a click)
+    if (i < 0 || (!event.shiftKey && i === stops.length - 1) || (event.shiftKey && i === 0)) {
+        event.preventDefault();
+        stops[event.shiftKey ? stops.length - 1 : 0].focus();
+    }
 }
 // The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
 // scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
@@ -1139,23 +1202,31 @@ function askConfirm(title, text, confirmLabel, onYes) {
     const over = Object.assign(document.createElement('div'), { className: 'modal-overlay active', innerHTML: html });
     over.setAttribute('role', 'dialog');
     over.setAttribute('aria-modal', 'true');
+    underFocus = noteFocus(document.activeElement);   // the control in the dialog under it: the focus goes back there
     document.getElementById('modal-root').appendChild(over);
     ui.modalUnder = ui.modalOpen;
     ui.modalOpen = 'confirm';
+    nameDialog(over);
+    holdPage(true);
     focusDialog(over);
 }
+let underFocus = null;
 function closeModal() {
     if (ui.modalUnder) {
         document.querySelector('#modal-root .modal-overlay:last-child')?.remove();
         ui.modalOpen = ui.modalUnder;
         ui.modalUnder = null;
+        holdPage(true);   // the dialog under it is on top again
+        const back = underFocus;
+        underFocus = null;
+        if (back?.keys && pointer.keyAt > pointer.downAt) back.find()?.focus({ preventScroll: true });
         return;
     }
     document.getElementById('modal-root').innerHTML = '';
     ui.modalOpen = false;
     const next = ui.modalQueue.shift();
     if (next) showModal(next.html, next.key);
-    else rewards.resume();
+    else { holdPage(false); rewards.resume(); returnFocus(); }
 }
 
 // ---------- persistence ----------
