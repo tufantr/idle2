@@ -11,7 +11,8 @@
 // --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, PERKS, POTION_KINDS, POLICY; numbers
 // only), for sweeps; --set=POLICY.stallFix:0 plays the old stall test (see fightStalled), POLICY.titanFix:0 the old Titan bot.
 // --json writes the run as JSON (milestones, a log of big moments by band, time by
-// task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
+// task, gold by sink, essence, bars and gems by source and sink with the bands that pooled and what sat past a cap (the pool
+// check, P-114), the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
 // --ascend=0: never ascend. By default, once Ascension opens (data/ascension.js) the bot ascends with its
 // run near its best (95%), the first time as soon as it may, later when the Stars would raise the
@@ -65,7 +66,7 @@ import { talentById } from '../src/data/talents.js';
 import { charmById } from '../src/data/charms.js';
 import { charmOpen, charmCharges } from '../src/systems/charms.js';
 import { firstPrestigeDue } from '../src/systems/guide.js';
-import { titanBeatable } from './simlib.mjs';
+import { titanBeatable, createPoolBook, watchPools, poolTotals, poolFlags, createCapLog, POOL } from './simlib.mjs';
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
@@ -150,6 +151,28 @@ for (const [method, label] of [['buyCampUpgrade', 'camp'], ['buyGoldShopItem', '
     game[method] = (...a) => { const before = S.gold; const r = original(...a); spentOn[label] = (spentOn[label] || 0) + Math.max(0, before - S.gold); return r; };
 }
 const H = ms => (ms / 3600000);
+// Where essence, bars and gems come from and where they go (the pool check, P-114; simlib.mjs): every change the game makes to
+// them is booked, put down to the game method under way (its sink when it takes, its source when it adds) or else to what the
+// hero is doing (crafting takes bars and gems as he works; the fight, the dungeons and the Titan pay), in bands of 50 hours,
+// the offline replay's too. A band that spent under a tenth of its income is a pool. The cap log samples, every 10 minutes
+// outside a Trial, the Armour Rack's levels and the worn affixes past their caps.
+const pools = createPoolBook(POOL.bandHours, HOURS);
+const poolLabels = [];
+const POOL_LABELS = {
+    reinforceItem: 'anvil', rerollItem: 'anvil', upgradeJewel: 'bench', rerollJewel: 'bench', buyCharm: 'charms', buyBagUpgrade: 'bag',
+    learnTalent: 'talents', unlearnTalents: 'talents', buildObstacle: 'agility', upgradeObstacle: 'agility', buyTool: 'tools', sellResource: 'sold',
+    buyGoldShopItem: 'gold shop', salvageItem: 'salvage', salvageAll: 'salvage', salvageWeaker: 'salvage', claimDaily: 'crate', applyReward: 'reward',
+    buyEventItem: 'event shop', buyEventCharm: 'event shop', dungeonEnd: 'dungeons', dungeonKeepGoing: 'dungeons', sealDungeons: 'seal', resolveMinigame: 'mini-game'
+};
+for (const [method, label] of Object.entries(POOL_LABELS)) {
+    if (typeof game[method] !== 'function') continue;
+    const original = game[method].bind(game);   // (a gold sink's wrapper above, for those that are one)
+    game[method] = (...a) => { poolLabels.push(label); try { return original(...a); } finally { poolLabels.pop(); } };
+}
+const ACTION_LABELS = { smelt: 'smelting', craft: 'crafting', agility: 'agility course' };
+const poolLabel = () => poolLabels.at(-1) || (S.action ? ACTION_LABELS[S.action.kind] || S.action.skill || S.action.kind : S.combat.mode === 'stages' ? 'fight' : S.combat.mode);
+watchPools(S, pools, poolLabel, () => H(game.now));
+const capLog = createCapLog(POOL.bandHours, HOURS);
 const lvl = id => levelForXp(S.skills[id].xp);
 const fmtH = ms => `${H(ms).toFixed(1)}h`;
 
@@ -974,6 +997,7 @@ while (now < totalMs) {
     if (task.kind === 'combat' && fightStalled()) needTraining = true;
 
     if (now % (5 * 60000) < STEP) { tendFarm(); buildObstacles(); }
+    if (now % (10 * 60000) < STEP && !S.trials.active && S.combat.mode !== 'clan') capLog.sample(game, H(now));
     if (now % 3600000 < STEP) { claimCrates(); buyCloak(); }   // the daily crate, as a player who drops by takes it; a cloak
     if (now >= totalMs / 2 && !steady) steady = { earned: S.stats.goldEarned, spent: S.stats.goldSpent };
     if (task.kind === 'combat' && now % 60000 < STEP) buyCamp();
@@ -1013,6 +1037,22 @@ console.log(`Dungeons (tier ${dungeonTier(S)}): ${DUNGEONS.map(d => `${d.name} $
 const spentRatio = (e, sp) => (e > 0 ? `${Math.round(100 * sp / e)}%` : 'n/a');
 const lostToPrestige = S.stats.goldEarned - S.stats.goldSpent - S.gold;
 console.log(`Gold spent by sink: ${Object.entries(spentOn).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${spentRatio(S.stats.goldEarned, v)}`).join(', ')}; left at prestige ${spentRatio(S.stats.goldEarned, lostToPrestige)}.`);
+// The pools (P-114): what came in of essence, bars and gems, and the share of it each sink took; the bands that pooled; what sat past a cap.
+const big = x => (x >= 1e9 ? `${(x / 1e9).toFixed(2)}B` : x >= 1e6 ? `${(x / 1e6).toFixed(2)}M` : x >= 1e4 ? `${(x / 1e3).toFixed(0)}k` : `${Math.round(x)}`);
+const pct1 = (part, whole) => (whole > 0 ? `${(100 * part / whole).toFixed(part / whole < 0.1 ? 1 : 0)}%` : 'n/a');
+const poolGroups = poolTotals(pools);
+const poolFlagList = poolFlags(pools, { hours: HOURS });
+console.log(`Essence, bars and gems (got: the share spent, by sink): ${['essence', 'bars', 'gems'].map(g => { const t = poolGroups[g]; return t ? `${g} ${big(t.got)}: ${pct1(t.spent, t.got)} (${Object.entries(t.bySink).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pct1(v, t.got)}`).join(', ') || 'nothing'})` : `${g} none`; }).join('; ')}; essence held ${big(S.resources.essence || 0)}.`);
+const pooledText = Object.entries(poolFlagList.reduce((by, f) => { (by[f.id] ||= []).push(f); return by; }, {})).map(([id, list]) => {
+    const spans = [];   // contiguous bands merged: 50-300 h
+    for (const f of list) { const [a, b] = f.band.split('-').map(Number); if (spans.length && spans.at(-1)[1] === a) spans.at(-1)[1] = b; else spans.push([a, b]); }
+    const shares = list.map(f => f.share);
+    const [lo, hi] = [Math.min(...shares), Math.max(...shares)];
+    return `${id} ${spans.map(([a, b]) => `${a}-${b}`).join(', ')} h (${pct1(lo, 1)}${hi > lo ? `-${pct1(hi, 1)}` : ''})`;
+});
+console.log(`Pools (a ${POOL.bandHours}-hour band spending under ${100 * POOL.floor}% of its income): ${pooledText.join('; ') || 'none'}.`);
+const capBands = capLog.bands(HOURS);
+console.log(`Past a cap, the most at a sample in each ${POOL.bandHours}-hour band: Armour Rack levels past the mitigation cap ${capBands.map(b => `${b.rackPast}/${b.rack}`).join(', ') || 'n/a'}; worn affixes past their caps ${capBands.map(b => `${b.affixesPast}/${b.affixes}${b.affixesPast ? ` (${Object.entries(b.byStat).map(([k, v]) => `${k} ${v}`).join(', ')})` : ''}`).join(', ') || 'n/a'}.`);
 console.log(`Gold sinks: ${spentRatio(S.stats.goldEarned, S.stats.goldSpent)} of all gold earned was spent; second half: ${steady ? spentRatio(S.stats.goldEarned - steady.earned, S.stats.goldSpent - steady.spent) : 'n/a'}. Agility: ${S.agility.built.filter(Boolean).length}/6 obstacles, level ${lvl('agility')}. Farming level ${lvl('farming')}, ${S.stats.cropsHarvested} crops.`);
 if (VERBOSE) for (const d of DUNGEONS) {
     const p = dungeonPreview(game.derived, d);
@@ -1029,6 +1069,7 @@ if (JSON_OUT) {
     let commit = '';
     try { commit = execSync('git rev-parse --short HEAD', { cwd: new URL('..', import.meta.url).pathname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* not a checkout */ }
     const at = (key, value) => { const m = milestones.find(x => x.key === key && x.value === value); return m ? +H(m.at).toFixed(3) : null; };
+    const roundAll = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v)]));
     const out = {
         commit, seed: SEED, hours: HOURS, player: PLAYER, auto: AUTO, flags: { noDungeons: NO_DUNGEONS, noTitan: NO_TITAN, farmLadder: FARM_LADDER, without: [...WITHOUT], speedPrestige: SPEED_PRESTIGE, vary: args.vary ? Number(args.vary) : null, trials: TRIAL_EVERY, ascend: ASCEND }, policy: POLICY, overrides,
         stages: Object.fromEntries(STAGE_MARKS.map(m => [m, at('stage', m)])),
@@ -1054,6 +1095,18 @@ if (JSON_OUT) {
         runs: { count: runLog.length, auto: runLog.filter(r => r.auto).length, medianHours: runLog.length ? +[...runLog].map(r => r.hours).sort((a, b) => a - b)[Math.floor(runLog.length / 2)].toFixed(3) : null },
         deaths: deathStages,
         gold: { earned: S.stats.goldEarned, spent: S.stats.goldSpent, bySink: spentOn, lostToPrestige },
+        // the pool check (P-114): essence, bars and gems by group and by resource (got, spent, held, by source and by sink, and per
+        // band of 50 hours [got, spent]), the bands that pooled, and what sat past a cap (the most at a sample in each band)
+        pools: {
+            bandHours: POOL.bandHours, floor: POOL.floor,
+            groups: Object.fromEntries(Object.entries(poolGroups).map(([g, t]) => [g, { got: Math.round(t.got), spent: Math.round(t.spent), bySink: roundAll(t.bySink) }])),
+            resources: Object.fromEntries(Object.entries(pools.res).map(([id, r]) => [id, {
+                got: Math.round(r.got), spent: Math.round(r.spent), held: Math.round(S.resources[id] || 0), bySource: roundAll(r.bySource), bySink: roundAll(r.bySink),
+                bands: r.bands.map(([g, sp]) => [Math.round(g), Math.round(sp)])
+            }])),
+            flags: poolFlagList.map(f => ({ ...f, got: Math.round(f.got), spent: Math.round(f.spent), share: +f.share.toFixed(4) })),
+            caps: capBands
+        },
         taskHours: Object.fromEntries(Object.entries(taskMs).map(([k, v]) => [k, +H(v).toFixed(2)])),
         longestAwayFromFightHours: +H(awayFromFight.longest).toFixed(2),
         bestByHour,

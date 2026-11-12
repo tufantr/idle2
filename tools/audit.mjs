@@ -2,7 +2,7 @@
 // The report card of docs/research_notes/robust-and-fun/D_robustness_methods.md §6: reads the batches in
 // runs/ (tools/batch.mjs) and checks them against the research's thresholds. Each check reads the
 // batch labels the audit's runs use (E1-P1 the baseline, E1-P2-auto, E4-without-<system>, E6-cursed…);
-// missing batches are skipped.
+// missing batches are skipped. The pool check (E12, P-114) reads every batch whose runs book their pools.
 //
 //   node tools/audit.mjs            # the report card, as Markdown
 //   node tools/audit.mjs --json     # the numbers behind it
@@ -161,6 +161,34 @@ if (all.length && all[0].bestByHour) {
         const top = pct(gains, 0.999);
         data.e11.push({ from: a, to: b, p999: top, max: Math.max(...gains), n: gains.length });
         out.push(`| ${a}–${b === 1e9 ? '…' : b} | ${gains.length} | ${top} | ${Math.max(...gains)} |`);
+    }
+}
+
+// ---------- E12: pools and caps (P-114) ----------
+// Every batch whose runs book their essence, bars and gems (tools/simulate.mjs with tools/simlib.mjs): a resource that spent
+// under a tenth of its income in a band of 50 hours pools there, and a camp level or a worn affix past its cap does nothing.
+const pooledBatches = existsSync(RUNS) ? readdirSync(RUNS, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => [e.name, batch(e.name)])
+    .filter(([, runs]) => runs?.length && runs.every(r => r.pools)) : [];
+if (pooledBatches.length) {
+    out.push('\n## E12 · pools and caps (P-114: under a tenth of the income spent in a 50-hour band; a level or an affix past its cap)\n');
+    data.e12 = {};
+    for (const [label, runs] of pooledBatches) {
+        const n = runs.length;
+        const pooled = {};
+        for (const r of runs) for (const f of r.pools.flags) {
+            const p = pooled[f.id] ||= { seeds: new Set(), bands: new Set(), shares: [] };
+            p.seeds.add(r.seed); p.bands.add(f.band); p.shares.push(f.share);
+        }
+        const list = Object.entries(pooled).sort((a, b) => b[1].seeds.size - a[1].seeds.size || b[1].bands.size - a[1].bands.size);
+        const most = k => runs.map(r => Math.max(0, ...r.pools.caps.map(c => c[k])));
+        const rack = most('rackPast');
+        const affixes = most('affixesPast');
+        const stats = [...new Set(runs.flatMap(r => r.pools.caps.flatMap(c => Object.keys(c.byStat || {}))))];
+        data.e12[label] = { pooled: Object.fromEntries(list.map(([id, p]) => [id, { seeds: p.seeds.size, bands: [...p.bands] }])), rackPast: rack, affixesPast: affixes };
+        const spent = p => { const [lo, hi] = [Math.min(...p.shares), Math.max(...p.shares)].map(x => fmt(100 * x, 0)); return lo === hi ? `${lo}%` : `${lo}–${hi}%`; };
+        check(!list.length, `${label} (${n} runs): ${list.length ? `pooled: ${list.map(([id, p]) => `${id} in ${p.seeds.size}/${n} (${p.bands.size} band${p.bands.size > 1 ? 's' : ''}, ${spent(p)} spent)`).join(', ')}` : 'no pools'}`);
+        check(Math.max(...rack) === 0, `${label}: Armour Rack levels past the mitigation cap, the most at a sample: median ${med(rack)}, at most ${Math.max(...rack)}`);
+        check(Math.max(...affixes) === 0, `${label}: worn affixes past their caps, the most at a sample: median ${med(affixes)}, at most ${Math.max(...affixes)}${stats.length ? ` (${stats.join(', ')})` : ''}`);
     }
 }
 

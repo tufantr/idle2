@@ -2144,9 +2144,13 @@ Trial (§3.26; `--trials=0` never, as every figure before them); claim the daily
 the dock's Auto switch once earned; `--player=<schedule>` plays a login schedule (online, tab16,
 evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay between sessions;
 `--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
-of hours. `node tools/batch.mjs --seeds=30` runs many seeds in parallel (about 7 runs of 150 h a
-minute on 8 cores) and reports medians with the 10th and 90th percentiles; `node tools/audit.mjs`
-checks the batches against the research's thresholds (the report card, §5.7). A real player's rhythm can be
+of hours. Its report books essence, bars and gems by source and sink, in bands of 50 hours, as it books
+gold by sink, and names each band in which one of them spent under a tenth of what came in (a pool), and
+the most Armour Rack levels and worn affixes past their caps (the pool check, P-114: `tools/simlib.mjs`;
+`tools/batch.mjs` summarises it and the report card checks it, E12). `node tools/batch.mjs --seeds=30`
+runs many seeds in parallel (about 7 runs of 150 h a minute on 8 cores) and reports medians with the
+10th and 90th percentiles; `node tools/audit.mjs` checks the batches against the research's thresholds
+(the report card, §5.7). A real player's rhythm can be
 set beside it: Settings' **playtest log** (off unless turned on; `src/systems/playtest.js`) keeps a
 timeline of the moments of play in the save, exported as a file that `node tools/playtest.mjs` reads.
 Three seeds, 150 hours each:
