@@ -746,7 +746,7 @@ function xpHeader(game, skillId, extra = '') {
         <h2><span class="h-icon">${tabIcon(skillId, 1)}</span>${skill.name} ${aboutButton(skillId)}</h2>
         <div class="skill-info">
             ${extra}${mastery}
-            <span class="skill-level" style="color:${skill.color}; background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
+            <span class="skill-level" style="color:color-mix(in srgb, ${skill.color} 62%, #fff); background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
             <div class="xp-bar-container"><div class="xp-bar-fill" style="width:${(lp.fraction * 100).toFixed(1)}%; background:${skill.color}"></div></div>
             <span class="skill-xp">${lp.level >= MAX_LEVEL ? fmt(state.skills[skillId].xp) + ' XP' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}</span>
         </div>
