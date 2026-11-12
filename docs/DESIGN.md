@@ -2563,7 +2563,9 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       finished action makes, popping off its target) · update.js (when an open page looks for a
                       newer version) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
-                      parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
+                      parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
+                      and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,
+                      no request leaves for Google) · CREDITS.md
 wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki.vercel.app): build.mjs makes a
                       static site from src/ and assets/ (pages/*.mjs: tables, infoboxes and cross-links from the
                       data; content/**/*.md: the written explanations, with {{ }} numbers read from the game;

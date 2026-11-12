@@ -34,7 +34,7 @@ import { createRequire } from 'node:module';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'shots');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
-    '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+    '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
 // 'battle' is not a tab: it is the combat tab with the fight on, which fills the screen.
 const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons', 'map'];
@@ -230,7 +230,7 @@ const browser = await chromium.launch();
 const errors = [];
 const problems = [];
 
-/** A page that records errors; requests the static server can't answer (the API, web fonts offline) don't count. */
+/** A page that records errors; requests the static server can't answer (the API) don't count. (The fonts are the game's own.) */
 async function open(viewport, url, { clan = false } = {}) {
     const ctx = await browser.newContext({ viewport });
     if (clan) {   // signed in, the API answered here (CLAN_SHOTS)
@@ -241,7 +241,7 @@ async function open(viewport, url, { clan = false } = {}) {
     page.on('pageerror', e => errors.push(`${viewport.width}px: ${e.message}`));
     page.on('console', m => {
         const where = m.location()?.url || '';
-        if (m.type() === 'error' && !where.includes('/api/') && !where.includes('fonts.g')) errors.push(`${viewport.width}px: ${m.text()}`);
+        if (m.type() === 'error' && !where.includes('/api/')) errors.push(`${viewport.width}px: ${m.text()}`);
     });
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1200);

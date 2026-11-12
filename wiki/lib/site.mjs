@@ -82,9 +82,9 @@ ${siteUrl ? `<meta property="og:url" content="${siteUrl}${page.path === '/' ? ''
 <meta name="theme-color" content="#0d0a07">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-32.png">
 <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="preload" href="/assets/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/cinzel-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/fonts/fonts.css">
 <link rel="stylesheet" href="/wiki.css?v=${assetsVersion}">
 <script defer src="/wiki.js?v=${assetsVersion}"></script>
 </head>

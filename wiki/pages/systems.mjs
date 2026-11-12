@@ -136,7 +136,7 @@ function creditsPage() {
         ${section('Pictures', `<ul>
             <li>The pixel art (monsters, items, the hero and his looks, pets) is the tile set of <a href="https://github.com/crawl/crawl" rel="noopener">Dungeon Crawl Stone Soup</a>, released into the public domain (CC0 1.0), some of it from the public-domain <a href="http://rltiles.sf.net" rel="noopener">RLTiles</a>. Ores, bars, logs, fish, crops, some tools, obstacles and small icons are drawn in the same manner for the game.</li>
             <li>The paintings of the places, dungeons, the Abyss's strata, the world map and the action cards are made with Google Gemini (AI-generated) for the game.</li></ul>`)}
-        ${section('Type and sound', `<ul><li>The type is <a href="https://fonts.google.com/specimen/Cinzel" rel="noopener">Cinzel</a> and <a href="https://fonts.google.com/specimen/Outfit" rel="noopener">Outfit</a>, from Google Fonts (SIL Open Font License).</li><li>The game's sounds are made in the browser as it plays; there are no sound files.</li></ul>`)}`
+        ${section('Type and sound', `<ul><li>The type is <a href="https://github.com/NDISCOVER/Cinzel" rel="noopener">Cinzel</a> and <a href="https://github.com/Outfitio/Outfit-Fonts" rel="noopener">Outfit</a> (SIL Open Font License), served by the game and this wiki themselves.</li><li>The game's sounds are made in the browser as it plays; there are no sound files.</li></ul>`)}`
     };
 }
 

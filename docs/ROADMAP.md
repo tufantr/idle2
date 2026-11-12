@@ -1485,6 +1485,11 @@ Keeping it running:
       numbers were 8.8 px, the dock's supply counts 9.9, the doll's slots 9, the monster's numbers 9.9, the hotbar's labels
       10.6, and the War Tree's ranks, the Trials' badges, the perks' lines and a card's kicker under 11 too. Each is 11 px
       or more now, every layout as it was (four-digit stages fit the path; "Earring" fits under its slot)
+- [x] **The fonts come from the game's own server** (R18 of the research loop's ranking, P-066): Cinzel and Outfit were
+      loaded from Google Fonts by the game, the wiki and the link preview's tool, a request that blocks the first paint,
+      is unreliable in mainland China and drew a court award in Munich. The four files (Google's own cuts, 87 KB) are in
+      `assets/fonts/` with their stylesheet, credited under the SIL Open Font License; no request leaves for Google, and
+      the same panel draws pixel for pixel as before
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

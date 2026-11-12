@@ -150,6 +150,7 @@ export async function build({ out = OUT, quiet = false, assets = true } = {}) {
 async function copyAssets(out) {
     await mkdir(join(out, 'assets', 'paint', 'cards'), { recursive: true });
     await mkdir(join(out, 'assets', 'icons'), { recursive: true });
+    await mkdir(join(out, 'assets', 'fonts'), { recursive: true });
     await copyFile(join(ROOT, 'assets', 'sprites.png'), join(out, 'assets', 'sprites.png'));
     for (const dir of ['paint', 'paint/cards', 'icons']) {
         for (const f of await readdir(join(ROOT, 'assets', dir))) {
@@ -157,11 +158,13 @@ async function copyAssets(out) {
             await copyFile(join(ROOT, 'assets', dir, f), join(out, 'assets', dir, f));
         }
     }
+    // the game's two typefaces and their stylesheet (assets/fonts): the wiki serves them itself, as the game does
+    for (const f of await readdir(join(ROOT, 'assets', 'fonts'))) if (/\.(woff2|css)$/.test(f)) await copyFile(join(ROOT, 'assets', 'fonts', f), join(out, 'assets', 'fonts', f));
 }
 
 /** A static server with the same clean URLs as Vercel (/items/coal serves items/coal.html). */
 function serve(dir, port) {
-    const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp' };
+    const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
     createServer(async (req, res) => {
         let p = decodeURIComponent(new URL(req.url, 'http://local').pathname);
         if (p.includes('..')) { res.writeHead(400).end(); return; }
