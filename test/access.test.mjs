@@ -8,6 +8,7 @@ import { renderNav, renderHotbar, renderInventory, renderPerksModal } from '../s
 import { generateEquipment } from '../src/core/formulas.js';
 import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
 import { xpForCombatLevel } from '../src/core/xp.js';
+import { noteWall, wallOf, WALL_QUIET_MS } from '../src/systems/walls.js';
 
 const T0 = 1_760_000_000_000;
 
@@ -55,4 +56,29 @@ test("the War Tree marks a talent a point can go to with a +, as well as its gre
         assert.match(t, /aria-label="[^"]*, a point can go here"/);
     }
     assert.doesNotMatch(html.replace(/<button class="talent ready[^]*?<\/button>/g, ''), /talent-plus/, 'and no other');
+});
+
+test('a wall that repeats goes quiet: the first fall there is loud, the next ten minutes count, then it is loud again', () => {
+    const memo = {};
+    const fall = (stage, at) => noteWall(memo, { type: 'death', stage, mode: 'stages' }, T0 + at);
+    assert.deepEqual(fall(297, 0), { loud: true }, 'the first fall at the wall');
+    assert.deepEqual(fall(295, 30000), { loud: false, again: 1 }, 'a fall two stages short is the same wall');
+    assert.deepEqual(fall(300, 60000), { loud: false, again: 2 }, 'and so is its boss stage');
+    assert.deepEqual(fall(301, 70000), { loud: true }, 'the next zone is another wall');
+    assert.deepEqual(fall(298, WALL_QUIET_MS - 1), { loud: false, again: 3 });
+    assert.deepEqual(fall(298, WALL_QUIET_MS), { loud: true }, 'ten minutes on, loud again, and a new count');
+    assert.deepEqual(fall(298, WALL_QUIET_MS + 5000), { loud: false, again: 1 });
+});
+
+test("a boss's timeout is a wall of its own; a fall in a dungeon, at the Titan or the clan boss is none", () => {
+    const memo = {};
+    assert.equal(wallOf({ type: 'bossTimeout', stage: 300 }), 'bossTimeout:29');
+    assert.equal(wallOf({ type: 'death', stage: 300, mode: 'stages' }), 'death:29');
+    assert.deepEqual(noteWall(memo, { type: 'death', stage: 296, mode: 'stages' }, T0), { loud: true });
+    assert.deepEqual(noteWall(memo, { type: 'bossTimeout', stage: 300 }, T0 + 1000), { loud: true }, 'the first timeout after falls there is loud');
+    assert.deepEqual(noteWall(memo, { type: 'bossTimeout', stage: 300 }, T0 + 90000), { loud: false, again: 1 });
+    for (const mode of ['dungeon', 'titan', 'clan']) assert.equal(noteWall(memo, { type: 'death', stage: 300, mode }, T0 + 2000), null, mode);
+    assert.equal(noteWall(memo, { type: 'kill', stage: 300 }, T0), null);
+    assert.equal(noteWall(memo, { type: 'death', mode: 'stages' }, T0), null, 'no stage, no wall');
+    assert.deepEqual(noteWall(memo, { type: 'bossTimeout', stage: 300 }, T0 - 60000), { loud: true }, 'a clock turned back starts over');
 });

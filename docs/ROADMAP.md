@@ -1490,6 +1490,11 @@ Keeping it running:
       is unreliable in mainland China and drew a court award in Munich. The four files (Google's own cuts, 87 KB) are in
       `assets/fonts/` with their stylesheet, credited under the SIL Open Font License; no request leaves for Google, and
       the same panel draws pixel for pixel as before
+- [x] **A wall that repeats goes quiet** (R21 of the research loop's ranking, P-081): at stage 300 a hero fell about twice
+      a minute, each time with the defeat jingle, a banner and a red edge, and a red toast on any other tab. The first
+      fall or boss timeout at a wall keeps them; for ten minutes after it the next ones there play one soft note and fold
+      into one counted toast ("Fell again ×4", "The boss held out again ×2"), the hero still falling. Tested in
+      `test/access.test.mjs`
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

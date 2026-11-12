@@ -31,6 +31,7 @@ import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
+import { noteWall } from './systems/walls.js';
 import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
@@ -792,6 +793,9 @@ const REVEAL_TOASTS = {
 };
 // A toast's picture: a sprite, small (the text beside it is plain text).
 const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
+// The walls the hero keeps meeting (systems/walls.js): a fall or a boss's timeout there is loud once, then quiet and
+// counted for ten minutes. The screen's own memory, not the save's.
+const walls = {};
 
 function handleEvents(events) {
     const frozen = endHeld();   // (an ended fight's last moment on screen: what happens meanwhile at the stages isn't drawn)
@@ -813,8 +817,10 @@ function handleEvents(events) {
         sound.play('unlock');
     }
     for (const ev of events) {
-        if (!frozen) scene.event(ev, game);
-        const heard = ev.type === 'unlock' ? null : soundFor(ev, onCombat);
+        const wall = noteWall(walls, ev, game.now);   // (null but for a fall or a timeout at the stages)
+        const again = wall && !wall.loud;             // a repeat at the wall: a soft cue, no banner, one counted toast
+        if (!frozen) scene.event(ev, game, { quiet: again });
+        const heard = ev.type === 'unlock' ? null : again ? ['again'] : soundFor(ev, onCombat);
         if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
         switch (ev.type) {
             case 'reveal':
@@ -900,8 +906,14 @@ function handleEvents(events) {
                         kicker: jewel ? 'The bench' : 'The forge', title: `+${ev.forge} kept`, lines: [`${jewel ? 'Bench' : 'Forge'} levels belong to the slot.`, `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
                 }
                 break;
-            case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
-            case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
+            case 'death':
+                if (again) countedToast('wall:death', `Fell again ×${wall.again}`);
+                else if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death');
+                break;
+            case 'bossTimeout':
+                if (again) countedToast('wall:boss', `The boss held out again ×${wall.again}`);
+                else if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death');
+                break;
             case 'prestige': {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
@@ -1079,6 +1091,29 @@ function toast(text, kind = 'info', icon = '') {
     while (area.children.length > 5) area.removeChild(area.firstChild);
     setTimeout(() => el.classList.add('fade'), 3200);
     setTimeout(() => el.remove(), 3800);
+}
+
+/** One toast that counts a repeating thing (a wall's falls): its words change in place and its time starts again. */
+const countedToasts = new Map();   // key -> { el, fade, gone }
+function countedToast(key, text, kind = 'info') {
+    const area = document.getElementById('toast-area');
+    if (!area) return;
+    let t = countedToasts.get(key);
+    if (!t?.el.isConnected) {
+        t = { el: Object.assign(document.createElement('div'), { className: `toast ${kind}` }) };
+        t.el.setAttribute('role', 'status');
+        area.appendChild(t.el);
+        while (area.children.length > 5) area.removeChild(area.firstChild);
+        countedToasts.set(key, t);
+    } else if (!document.body.classList.contains('reduced-motion') && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        t.el.animate?.([{ transform: 'scale(1.05)' }, { transform: 'none' }], { duration: 220, easing: 'ease-out' });   // the count ticks up
+    }
+    t.el.textContent = text;
+    t.el.classList.remove('fade');
+    clearTimeout(t.fade);
+    clearTimeout(t.gone);
+    t.fade = setTimeout(() => t.el.classList.add('fade'), 3200);
+    t.gone = setTimeout(() => { t.el.remove(); if (countedToasts.get(key) === t) countedToasts.delete(key); }, 3800);
 }
 
 /** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */

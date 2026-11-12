@@ -64,7 +64,7 @@ Every {{STAGES_PER_ZONE}}th stage is a boss, and it must fall within {{BALANCE.c
 There are three reasons.
 
 - **A boss held out.** Your hero steps back one stage and fights there for {{BALANCE.combat.regroupMs / 1000}} seconds, then tries the boss again. To try at once, tap the boss's skull on the stage path.
-- **Your hero fell.** Your hero goes back to the first stage of the place (or, when already there, to the stage before the previous boss), rests at the campfire until healed, then fights on.
+- **Your hero fell.** Your hero goes back to the first stage of the place (or, when already there, to the stage before the previous boss), rests at the campfire until healed, then fights on. The first fall at a place sounds its defeat; falls there in the ten minutes after it are quiet, counted in one note ("Fell again ×4").
 - **You prestiged.** A new run starts at {{pct(BALANCE.prestige.startStageFraction, 0)}} of your best stage.
 
 ### What are gilded monsters?

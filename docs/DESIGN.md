@@ -1233,6 +1233,12 @@ keeps:
   no floating effects under reduced motion (the setting or the system preference). The monster flashes at most
   three times a second (WCAG 2.3.1, `FLASH_GAP_MS`): a hit, a crit, a boss's entrance or a fall that comes sooner
   than 340 ms after the last flash moves without the light, and keeps its number and its sound.
+- **A wall that repeats goes quiet** (P-081; `src/systems/walls.js`). At a wall a hero fell about twice a minute, or a
+  boss held out every 90 seconds, each time with the defeat jingle, the banner and the red edge. The first fall or
+  timeout at a wall (a kind, in a zone of ten stages) keeps all three and its toast; for ten minutes after it the next
+  ones there play one soft note, show no banner or edge (the hero still falls), and fold into one toast that counts
+  them ("Fell again ×4"). Then the next is loud again. Only the stage ladder: a fall in a dungeon, at the Titan or the
+  clan boss stays loud.
 - **Two keys.** M opens the map (and closes it), Space strikes; Esc folds the full-screen fight. Settings turns M and
   Space off (WCAG 2.1.4: speech input types letters), on that device only (`ui.shortcuts`, kept in the browser as
   `fantasyIdle.keys`, not in the save); Enter or Space on a focused control still presses it.
@@ -2554,6 +2560,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · disclosure (which pieces of the screens have opened for the player)
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
+                      · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·

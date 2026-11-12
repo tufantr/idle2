@@ -831,8 +831,8 @@ export function createScene(root, actions) {
             }
         },
 
-        /** One game event (from the tick's event list). */
-        event(ev, game) {
+        /** One game event (from the tick's event list). `quiet`: a fall or a timeout at a wall that repeats (main.js): no banner, no red edge. */
+        event(ev, game, { quiet = false } = {}) {
             if (root.hidden) return;
             switch (ev.type) {
                 case 'hit': {
@@ -925,6 +925,7 @@ export function createScene(root, actions) {
                 }
                 case 'death':
                     move(el.heroSprite, 'fallen');
+                    if (quiet) break;   // (he falls as ever; the wall's first fall was the moment)
                     move(el.battle, 'wounded');
                     banner(ev.mode === 'stages'
                         ? `<small>Defeated at stage ${ev.stage}</small><strong>You fall back</strong><span>A rest at the campfire, then on again</span>`
@@ -934,6 +935,7 @@ export function createScene(root, actions) {
                     move(el.heroSprite, 'cheer');
                     break;
                 case 'bossTimeout':
+                    if (quiet) break;
                     banner('<small>Out of time</small><strong>The boss holds out</strong><span>Regroup, then try again</span>', 'defeat', 2200);
                     break;
                 case 'titan':
