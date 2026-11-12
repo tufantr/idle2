@@ -1853,6 +1853,22 @@ body.reduced-motion .nav-ready { animation: none; }
     .detail-panel.has-item { bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); max-height: 56vh; }
 }
 
+/* ===== Words on a phone: 11 px at least (Apple's floor) =====
+   At 390 px a third to three-fifths of the words were under 12 px, a supply's count 9.9 px and a doll's slot 9.
+   These raise each that was under 11 px there (the stage path's are in its own rule). `html` before each lets it win
+   over the rule it raises, wherever that stands in this file. */
+@media (max-width: 600px) {
+    html .pick-qty, html .pick-sub, html .pick-tier, html .doll-label, html .tile-up, html .inv-type, html .affix, html .badge-upgrade,
+    html .medal-count, html .boss-clock span, html .battle-combo span, html .battle-combo em, html .fighter-meta, html body.battle-full .fighter-meta,
+    html .cel-kicker, html .cel-go, html .nav-new, html .nav-next-kicker, html .hot-btn, html .hot-badge, html .wb-tile span, html .wb-used .wb-tile span,
+    html .talent-rank, html .trial-rungs, html .trial-heat, html .trial-week, html .pg-row h4, html .perks-modal .shop-item-name .muted,
+    html .perks-modal .shop-item-desc, html .hall-chip, html .brand-idle { font-size: 0.6875rem; }
+    html .doll-label { letter-spacing: 0.05em; }   /* "Earring" still fits under its slot */
+    html .brand-idle { letter-spacing: 0.42em; text-indent: 0.42em; }   /* the mark keeps its width */
+    html .hot-badge { min-width: 18px; height: 18px; line-height: 18px; top: 2px; right: 6px; }
+    html .boss-clock { height: 14px; }
+}
+
 /* ===== Sprites (assets/sprites.png, cut by src/ui/sprites.js) =====
    A cell is 32px; --k scales it up with hard pixels. The hero is a stack of cells. */
 :root { --k: 2; --atlas-w: 512px; --atlas-h: 640px; }

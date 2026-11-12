@@ -1360,6 +1360,9 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   390 × 664, Prestige covers 73% of the screen (it was taller than the screen), the perks 84%, an About
   card 81%, the crate about 70%; at 390 × 844, 57%, 68%, 64% and about 55% (92%, 96% and scrolling,
   96% and 79% before).
+- **Words on a phone are 11 px at least** (Apple's floor; P-019 in the research loop): at 390 px a third to
+  three-fifths of the words were under 12 px, the stage numbers 8.8 px, a supply's count 9.9 and a doll's slot 9. One
+  block in `style.css` (after the hotbar's) raises every one that was under 11 px there; a new rule keeps to it.
 - **Cards on a phone are banners.** The celebration cards (a medal, a level-up, a new land, a place, a
   rank, a pet) were columns over the middle of the fight: at 390 × 664 a new land covered 45% of the
   screen and the top of both fighters' bars, a level-up 36%, a medal 30%. Under 600 px each is now a
