@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack } from '../src/ui/render.js';
 import { actionXp } from '../src/systems/skilling.js';
 import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
 import { SMELTING_RECIPES } from '../src/data/workshop.js';
@@ -105,4 +105,28 @@ test('the README\'s opening counts what the game has, and points Play at the liv
     assert.doesNotMatch(opening, /forge/i);
     assert.match(opening, /\*\*Play:\*\* \[fantasyidle\.com\]\(https:\/\/fantasyidle\.com\)/);
     assert.doesNotMatch(opening, /vercel/i);
+});
+
+test('back after more than the cap, the report says the hours away and the hours counted (P-093)', () => {
+    const game = new Game(null, T0);
+    game.startNodeAction('mining', 'copper_ore');
+    const saved = JSON.parse(game.serialize(T0));
+    const HOUR = 3600 * 1000;
+    const back = (ms) => { const g = new Game(structuredClone(saved), T0 + ms); return [g, g.resumeFromSave(T0 + ms)]; };
+    const [g30, s30] = back(30 * HOUR);
+    assert.equal(s30.elapsed, 30 * HOUR);
+    assert.equal(s30.simulated, 24 * HOUR);
+    assert.ok(s30.capped);
+    const report = renderWelcomeBack(s30, g30);
+    assert.match(report, /<p class="wb-away"><b>30h<\/b> away, <b [^>]*>24h<\/b> counted<\/p>/);
+    assert.match(report, /data-tip="Your hero keeps at it for up to 24h while you are away"/, 'the cap, in a tip a phone can open');
+    // three days away: in days
+    const [g72, s72] = back(75 * HOUR + 20 * 60000);
+    assert.match(renderWelcomeBack(s72, g72), /<b>3d 3h<\/b> away, <b [^>]*>24h<\/b> counted/);
+    // inside the cap, one figure as before
+    const [g5, s5] = back(5 * HOUR + 12 * 60000);
+    assert.equal(s5.capped, false);
+    const short = renderWelcomeBack(s5, g5);
+    assert.match(short, /<p class="wb-away">You were away <b>5h 12m<\/b><\/p>/);
+    assert.doesNotMatch(short, /counted/);
 });

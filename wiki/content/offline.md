@@ -28,7 +28,7 @@ That makes {{BASE.baseOfflineHours + perkById('endurance').max * perkById('endur
 
 ## Welcome back
 
-Back after a while, a report greets you. It says how long you were away (and whether the cap cut it short), what your hero did and where his run stands (the stage it climbed to, and how long it then held there), with what came of it: monsters defeated and stages gained, falls, dungeon clears and fragments, gilded monsters and bestiary stars, materials gained and used, gold, gear found or made, XP and levels, mastery, pets, uniques and plots ready to harvest.
+Back after a while, a report greets you. It says how long you were away and, when that was longer than the cap, how much of it counted ("30h away, 24h counted"), what your hero did and where his run stands (the stage it climbed to, and how long it then held there), with what came of it: monsters defeated and stages gained, falls, dungeon clears and fragments, gilded monsters and bestiary stars, materials gained and used, gold, gear found or made, XP and levels, mastery, pets, uniques and plots ready to harvest.
 
 Below it is a row of what is ready, each a tap away: a prestige and what it pays, crates to open, the Titan awake, skill points to spend and better gear to wear. A place that was waiting for its turn opens as you come back, and the report names it (see [[Places and unlocks]]).
 

@@ -873,12 +873,13 @@ boss's clock runs out, so the step size never changes the result. Capped at
 **24 hours** (+2 h per Endurance perk, up to 36 h, and +1 h per level of the Zipline, up to +5 h at
 level 5; it was 12 until the check-in research found a once-a-day player losing 11 hours a day to it,
 `docs/research_notes/robust-and-fun/C_sessions_players.md`). Absences under a minute
-are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
-plots ready to harvest, how often the hero fell and got up, and why work stopped early. Since the
-check-in research it leads with where the run stopped ("climbed to stage 57, then held there for
-1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
-a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better
-gear to wear; a place that waited opens on the return and is named there too.
+are ignored. The "Welcome back" summary says the time away and, past the cap, the hours that counted ("30h away,
+24h counted": the hours the cap cut are said, as Melvor and Cookie Clicker say them); it lists gains, materials
+used, levels, dungeon clears, pets, plots ready to harvest, how often the hero fell and got up, and why work
+stopped early. Since the check-in research it leads with where the run stopped ("climbed to stage 57, then held
+there for 1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
+a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better gear to
+wear; a place that waited opens on the return and is named there too.
 
 ### 3.17 Saves, cloud and the API
 

@@ -2840,8 +2840,16 @@ function welcomeBestFind(summary, i) {
  */
 export function renderWelcomeBack(summary, game) {
     const state = game.state;
-    const mins = Math.floor(summary.simulated / 60000);
-    const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+    // The time away, and past the cap the hours that counted (systems/offline.js: `elapsed` was all of it, `simulated` was
+    // replayed): "30h away, 24h counted", so the hours the cap cut are said, not lost without a word.
+    const span = ms => {
+        const mins = Math.floor(ms / 60000), h = Math.floor(mins / 60);
+        return h >= 48 ? `${Math.floor(h / 24)}d${h % 24 ? ` ${h % 24}h` : ''}` : h ? `${h}h${mins % 60 ? ` ${mins % 60}m` : ''}` : `${mins}m`;
+    };
+    const capTip = tipAttrs('Time away', `Your hero keeps at it for up to ${span(summary.simulated)} while you are away${seen(state, 'skill_points') ? '; the Endurance perk adds more' : ''}`);
+    const awayLine = summary.capped && summary.elapsed > summary.simulated
+        ? `<b>${span(summary.elapsed)}</b> away, <b ${capTip}>${span(summary.simulated)}</b> counted`
+        : `You were away <b>${span(summary.simulated)}</b>`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'
         : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
         : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stage${summary.stages === 1 ? '' : 's'} gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}${summary.deaths === 1 ? 'one fall' : `${fmt(summary.deaths)} falls`}, and up again each time` : ''}.`;
@@ -2898,7 +2906,7 @@ export function renderWelcomeBack(summary, game) {
     return `<div class="modal-content welcome-back ${painted('guildhall', 'center 45%')}">
         ${hero}
         <div class="modal-header">Welcome back</div>
-        <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
+        <p class="wb-away">${awayLine}</p>
         <p class="wb-story">${story}</p>
         ${wall}
         ${readyRow}
