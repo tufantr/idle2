@@ -2310,8 +2310,9 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 .anvil-metal .mastery-bar { min-width: 28px; }
 .anvil-metal-off { white-space: nowrap; color: #bbf7d0; }
 /* Practise (P-058): a metal's bars for its mastery alone, to its next level; the count is the bars a tap takes */
-.anvil-practise { flex: none; display: inline-flex; align-items: center; gap: 0.15rem; margin-left: auto; padding: 0.1rem 0.45rem; border-radius: 999px; font: inherit; font-size: 0.7rem;
-    font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-muted); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); cursor: pointer; }
+.anvil-practise { flex: none; display: inline-flex; align-items: center; gap: 0.2rem; margin-left: auto; padding: 0.1rem 0.5rem; border-radius: 999px; font: inherit; font-size: 0.68rem;
+    font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-muted); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); cursor: pointer; }
+.anvil-practise b { font-weight: 800; }
 .anvil-practise.ready { color: #fde68a; border-color: rgba(252, 211, 77, 0.55); }
 .anvil-practise.ready:hover, .anvil-practise.ready:focus-visible { background: rgba(252, 211, 77, 0.15); border-color: #fde68a; }
 .anvil-practise[aria-disabled="true"] { opacity: 0.55; cursor: default; }
