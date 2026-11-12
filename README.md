@@ -99,8 +99,19 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
 - **What runs:** nginx serves the game's files and the wiki, and passes `/api/` to the API (systemd
   `fantasyidle-api`, Node 22, `deploy/vps/server.cjs`), which uses a local PostgreSQL 16 (`fantasyidle`, by its
   socket). Its settings are in `/etc/fantasyidle/api.env`; the JWT secret was made there and never leaves it.
-- **Backups:** every night at 03:30 UTC (`fantasyidle-backup.timer`) into `/var/backups/fantasyidle`, 14 days kept.
-  Copies off the server are still to do.
+- **Backups:** every night at 03:30 UTC (`fantasyidle-backup.timer`) into `/var/backups/fantasyidle`, 14 days kept,
+  then encrypted and copied to the owner's Google Drive (`deploy/vps/backup.sh`, folder `fantasyidle-backups`: 30
+  nightly copies, the first of each month for a year). They are encrypted with age to the owner's key: its public half
+  is `/etc/fantasyidle/backup-recipient.txt`, and the private half, which alone can read them, is
+  `~/.config/fantasyidle/backup-key.txt` on the owner's Mac (a copy in their password manager). rclone reaches Drive
+  with scope `drive.file` (only the files it made; `/etc/fantasyidle/rclone.conf`, and the Mac's in
+  `~/.config/fantasyidle/rclone.conf`). A failed night, or no fresh copy on Drive by 07:00 UTC, mails the owner
+  (`deploy/vps/backup-alert.sh`, to `OWNER_ALERT_EMAIL` in `api.env`); a restore drill runs on the 1st of each month
+  (`deploy/vps/restore-drill.sh`). A copy from Drive is read with `age -d -i ~/.config/fantasyidle/backup-key.txt`.
+- **Staging:** a private copy of the game at `staging.fantasyidle.com` (its own API on port 3001, its own database
+  `fantasyidle_staging` restored from a dump, its own token secret, no mail), where each change is rehearsed before it
+  goes live: `deploy/vps/stage.sh` deploys a commit there, and on the server `deploy/vps/staging-setup.sh data`
+  refreshes its data and `staging-setup.sh link` prints the private link that lets a browser in.
 - **Cloudflare:** a token for fantasyidle.com only (DNS, SSL and Certificates, Zone Settings), made by the owner, in
   `~/.config/fantasyidle/cloudflare-token` on the owner's Mac; never print it or commit it.
 - **Mail:** sign-up codes and password resets go out through Resend (`api/mail.js`) from `noreply@fantasyidle.com`:
@@ -113,6 +124,9 @@ Deploy a commit (the game, its API and its wiki together; a release whose API do
 ```bash
 deploy/vps/deploy.sh
 ```
+
+The version before a big change is tagged (`pre-patch-8a53d4d`, 12 November 2026) and its release kept in
+`/srv/fantasyidle/saved/`: `deploy/vps/deploy.sh pre-patch-8a53d4d` puts it back in about a minute.
 
 A release writes its commit into `version.json` beside the page and into `src/version.js`: an open game asks for the
 first now and then, and when it differs from its own, its top bar offers a reload (`src/ui/update.js`). Settings shows

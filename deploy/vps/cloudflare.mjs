@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Points fantasyidle.com at the server and sets up HTTPS on Cloudflare (README "The server"):
 // - an origin certificate for the server (Cloudflare's, fifteen years), its key made there and never leaving it;
-// - the DNS records: the game, www and the wiki, all through Cloudflare's proxy;
+// - the DNS records: the game, www, the wiki and the private staging copy, all through Cloudflare's proxy;
 // - SSL "Full (strict)", Always Use HTTPS, TLS 1.2 at least, and the server's own caching headers respected.
 // Running it again changes only what isn't right yet. The token (fantasyidle.com only: DNS, SSL and Certificates,
 // Zone Settings; made by the owner) is read from ~/.config/fantasyidle/cloudflare-token and never printed.
@@ -44,7 +44,8 @@ else {
 const want = [
     { type: 'A', name: DOMAIN, content: IP },
     { type: 'CNAME', name: `www.${DOMAIN}`, content: DOMAIN },
-    { type: 'A', name: `wiki.${DOMAIN}`, content: IP }
+    { type: 'A', name: `wiki.${DOMAIN}`, content: IP },
+    { type: 'A', name: `staging.${DOMAIN}`, content: IP }   // the private staging copy (deploy/vps/staging-setup.sh)
 ];
 const records = await cf(`/zones/${zone.id}/dns_records?per_page=100`);
 for (const w of want) {
