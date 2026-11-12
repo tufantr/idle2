@@ -1007,7 +1007,7 @@ gear to wear; a place that waited opens on the return and is named there too.
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
   belongs to the player), but flagged accounts are left out of leaderboards and of clan boss sizing
-  for 30 days. **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
+  for 30 days (growth past the allowance only lists since November 2026, below). **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
   each upload was measured only from the one before, so the burst allowed at each could be chained a minute apart
   (a made-up save reached stage 6,000 in 22 minutes, never flagged), and an account's first upload was checked
   against the ceilings alone. Now each number is also measured from where the day's window began (`peaks.day`,
@@ -1022,6 +1022,16 @@ gear to wear; a place that waited opens on the return and is named there too.
   anvil pays up to 34,161 XP a click before XP bonuses, the bench pays in bursts), and 3 million an hour stays. Stars come all at once: 90 (what the tokens' ceiling would pay; 100 million tokens pay 50), 4 an hour on top,
   and a ceiling of 100,000, for one Ascension a day for years outgrew 2,000 in weeks. Laurels are counted by the Trial's own
   weeks, Monday to Monday, not by the save's age: an account begun on a Sunday had two by the Monday, and a limit of one.
+  **Flags list before they act** (the research loop's R1, the owner's pick, November 2026): only what no save can hold flags
+  at once: a ceiling passed, numbers at odds with each other (an attack beyond what its best stage allows, Trial tiers, the
+  week's Trial or laurels past what it allows), the developer switches, a save the server can't read. A number that grew
+  faster than play allows, inside the ceilings, goes on a list for the owner instead (`flag_reviews`: one row a player, day
+  and number, with its worst upload's figures and the share of its allowance it took), mailed each week by `api/review.js`;
+  the owner flags by hand what deserves it (README "Flags"). Limits set too tight had capped 6 of 43 accounts for days on 4
+  November, unseen. The cost: a forger who stays inside the ceilings plays on, on the boards too, until the owner looks.
+  Each flag carries the check's version (`FLAG_CHECK`: 2 from then; flags from before carry none and count as 1), and
+  flags of an older version lapse, so a check made looser clears what it flagged by itself (five were cleared by hand on 4
+  November); the owner's own (`by: owner`) last their 30 days whatever the version.
 - **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
   address) in 15 minutes and logins wait; an address makes at most three accounts a day (ten an hour until the
   beta: each is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried). Each try is

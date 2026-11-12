@@ -221,6 +221,27 @@ async function ensureSchema() {
     await sql`CREATE INDEX IF NOT EXISTS clan_gifts_clan ON clan_gifts (clan_id, id)`;
     await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_colour VARCHAR(16)`;
     await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_emblem VARCHAR(16)`;
+    // The growth check's list for the owner (November 2026, api/index.js plausibilityFlags; mailed each week by api/review.js):
+    // a ranked number that grew faster than play allows, inside the ceilings, listed instead of flagged. One row a player,
+    // day (UTC) and number, with its worst upload's figures: what it reached, where it grew from, how much it could grow
+    // then and the share of that it took; how many uploads went past it, and the check's version.
+    await sql`
+        CREATE TABLE IF NOT EXISTS flag_reviews (
+            user_id INTEGER NOT NULL,
+            day VARCHAR(10) NOT NULL,
+            metric VARCHAR(32) NOT NULL,
+            reached DOUBLE PRECISION NOT NULL,
+            grew_from DOUBLE PRECISION NOT NULL,
+            allowed DOUBLE PRECISION NOT NULL,
+            share DOUBLE PRECISION NOT NULL,
+            uploads INTEGER NOT NULL DEFAULT 1,
+            first_at BIGINT NOT NULL,
+            last_at BIGINT NOT NULL,
+            check_version SMALLINT NOT NULL,
+            PRIMARY KEY (user_id, day, metric)
+        )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS flag_reviews_last ON flag_reviews (last_at)`;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -337,6 +358,40 @@ async function leaderboardRows(week) {
         WHERE u.leaderboard_opt_in = TRUE AND u.metrics IS NOT NULL
     `;
     return rows.map(r => ({ userId: r.id, username: r.username, flags: r.flags || '[]', metrics: r.metrics, weekMetrics: r.week_metrics || null }));
+}
+
+// ---------- the growth check's review list ----------
+
+/**
+ * A number that grew past the check's allowance, on the review list: one row a player, day and number (`metric`), which
+ * keeps the figures of its worst upload (the largest `share` of its allowance) and counts the uploads.
+ */
+async function addReview({ userId, day, metric, value, from, allowed, share, now, check }) {
+    await sql`
+        INSERT INTO flag_reviews (user_id, day, metric, reached, grew_from, allowed, share, uploads, first_at, last_at, check_version)
+        VALUES (${userId}::int, ${day}::varchar, ${metric}::varchar, ${value}::double precision, ${from}::double precision, ${allowed}::double precision,
+            ${share}::double precision, 1, ${now}::bigint, ${now}::bigint, ${check}::smallint)
+        ON CONFLICT (user_id, day, metric) DO UPDATE SET
+            uploads = flag_reviews.uploads + 1,
+            last_at = GREATEST(flag_reviews.last_at, EXCLUDED.last_at),
+            reached = CASE WHEN EXCLUDED.share > flag_reviews.share THEN EXCLUDED.reached ELSE flag_reviews.reached END,
+            grew_from = CASE WHEN EXCLUDED.share > flag_reviews.share THEN EXCLUDED.grew_from ELSE flag_reviews.grew_from END,
+            allowed = CASE WHEN EXCLUDED.share > flag_reviews.share THEN EXCLUDED.allowed ELSE flag_reviews.allowed END,
+            share = GREATEST(flag_reviews.share, EXCLUDED.share),
+            check_version = GREATEST(flag_reviews.check_version, EXCLUDED.check_version)
+    `;
+}
+
+/** The review list's rows touched since `since`, with each player's name, by name, number and day. */
+async function reviewsSince(since) {
+    const { rows } = await sql`
+        SELECT r.user_id, u.username, r.day, r.metric, r.reached, r.grew_from, r.allowed, r.share, r.uploads, r.first_at, r.last_at, r.check_version
+        FROM flag_reviews r JOIN users u ON u.id = r.user_id
+        WHERE r.last_at >= ${since}::bigint
+        ORDER BY u.username, r.metric, r.day
+    `;
+    return rows.map(r => ({ userId: r.user_id, username: r.username, day: r.day, metric: r.metric, value: Number(r.reached) || 0, from: Number(r.grew_from) || 0,
+        allowed: Number(r.allowed) || 0, share: Number(r.share) || 0, uploads: int(r.uploads), firstAt: int(r.first_at), lastAt: int(r.last_at), check: int(r.check_version) }));
 }
 
 // ---------- weekly snapshots (for "this week" boards) ----------
@@ -875,6 +930,7 @@ module.exports = {
     ensureSchema, ping,
     createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
     userNameOf, getSave, putSave, setOptIn, leaderboardRows,
+    addReview, reviewsSince,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,

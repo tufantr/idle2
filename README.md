@@ -67,6 +67,20 @@ accounts could differ only in case, and a match in any case would pay both.)
 The player's game claims it at its next cloud save or load (a reload at the latest), adds it and shows a
 card; each gift is paid once. Gift gold is that run's, like all gold.
 
+**Flags.** A save with numbers no save can reach flags its account at once (DESIGN §3.17): for 30 days its clan attacks
+count for at most 1% of the boss, its fights at the Endless Hydra stay out of the clan ranking, and it is left off the
+leaderboards. A number that grew faster than play allows, inside the ceilings, is only listed (`flag_reviews`, mailed each
+week: below). To flag an account by hand after a look (`"by": "owner"`: it stands its 30 days whatever the check's version):
+
+```sql
+UPDATE users SET flags = (COALESCE(NULLIF(flags, ''), '[]')::jsonb || jsonb_build_array(jsonb_build_object(
+    'at', (extract(epoch from now()) * 1000)::bigint, 'reason', 'flagged by the owner after review', 'by', 'owner')))::text
+WHERE username = 'PlayerName';
+```
+
+`UPDATE users SET flags = '[]' WHERE username = 'PlayerName';` clears an account's flags, and
+`SELECT username, flags FROM users WHERE flags <> '[]';` lists the accounts with any.
+
 The API imports the game's own stat code (`src/core/power.js`, ES modules — `src/package.json` marks
 them as such) so that clan damage and leaderboard numbers are computed on the server from the stored
 save. It needs Node 20.19+ or 22+.

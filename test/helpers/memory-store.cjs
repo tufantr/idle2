@@ -3,7 +3,7 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [] };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [] };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
@@ -66,6 +66,19 @@ function createMemoryStore() {
                 userId: u.id, username: u.username, flags: u.flags, metrics: u.metrics,
                 weekMetrics: db.snapshots.find(sn => sn.userId === u.id && sn.week === week)?.metrics || null
             }));
+        },
+
+        async addReview({ userId, day, metric, value, from, allowed, share, now, check }) {
+            const row = db.reviews.find(r => r.userId === userId && r.day === day && r.metric === metric);
+            if (!row) { db.reviews.push({ userId, day, metric, value, from, allowed, share, uploads: 1, firstAt: now, lastAt: now, check }); return; }
+            if (share > row.share) Object.assign(row, { value, from, allowed, share });
+            Object.assign(row, { uploads: row.uploads + 1, lastAt: Math.max(row.lastAt, now), check: Math.max(row.check, check) });
+        },
+        async reviewsSince(since) {
+            return db.reviews.filter(r => r.lastAt >= since)
+                .map(r => ({ ...r, username: db.users.find(u => u.id === r.userId)?.username }))
+                .filter(r => r.username !== undefined)   // (a join: an account gone takes its rows with it)
+                .sort((a, b) => (a.username < b.username ? -1 : a.username > b.username ? 1 : 0) || a.metric.localeCompare(b.metric) || a.day.localeCompare(b.day));
         },
 
         async getSnapshot(userId, week) {

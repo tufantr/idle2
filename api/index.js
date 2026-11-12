@@ -321,12 +321,21 @@ app.post('/api/login', route('login', async (req, res) => {
     res.json({ token: signToken(user), message: 'Login successful' });
 }));
 
-// Uploads are never rejected for looking odd (the save is the player's), but implausible numbers are
-// flagged on the account. Flagged accounts are left out of leaderboards and don't size clan bosses.
-// Offline progress happens inside the real time between two uploads, so that time is the allowance.
+// Uploads are never rejected for looking odd (the save is the player's), but impossible numbers are flagged on the account:
+// numbers beyond any possible save. Flagged accounts are left out of leaderboards and the clan ranking, and their clan
+// attacks are capped. A number that grew faster than play allows, inside the ceilings, goes on a list for the owner instead
+// (flag_reviews, mailed each week by api/review.js; the research loop's R1, November 2026): limits set too tight had capped
+// 6 of 43 accounts for days on 4 November, unseen. Offline progress happens inside the real time between two uploads, so
+// that time is the allowance.
 const XP_PER_HOUR_CEILING = 3_000_000;        // far above any skill's real rate, summed over skills
 const SLACK_MS = 30 * 60 * 1000;              // clock drift and upload delays
 const FLAG_MEMORY_MS = 30 * DAY;
+// The check's version, stored with each flag it writes (`check`). Raise it when the check is loosened, so that what it
+// flagged and would no longer flag stops counting at once: flags from an older version lapse (on 4 November five were
+// cleared by hand after the limits changed). 1 is the check before versions (its flags carry none); 2 lists growth for the
+// owner instead of flagging it, with the best stage's ceiling at the save's own (November 2026). A flag the owner adds by
+// hand (`"by": "owner"`, README "Flags") lasts its 30 days whatever the version.
+const FLAG_CHECK = 2;
 
 function totalXp(state) {
     return Object.values(state.skills || {}).reduce((sum, s) => sum + (Number(s && s.xp) || 0), 0);
@@ -368,14 +377,17 @@ const RANKED = [
 ];
 
 /**
- * Reasons a save's numbers look impossible next to their highest so far, and the new highs. Each number may grow from
- * its highest value (`v`, reached `at`) by what play allows in the time since, and also from where the day's window
- * began (`day`): measured from the last upload alone, a burst allowed at each could be chained a minute apart (a
- * made-up save reached stage 6,000 in 22 minutes, never flagged), but over a day it counts once. A window begins again
+ * A save's numbers against the check: the reasons they are impossible (`flags`: beyond a ceiling, or at odds with each
+ * other, which no save can be), the numbers that grew faster than play allows (`review`: [{ key, reason, value, from,
+ * allowed, share }], `share` the growth over its allowance, more than one: listed for the owner, not flagged), and the new
+ * highs. Each number may grow from its highest value (`v`, reached `at`) by what play allows in the time since, and also
+ * from where the day's window began (`day`): measured from the last upload alone, a burst allowed at each could be chained
+ * a minute apart (a made-up save reached stage 6,000 in 22 minutes), but over a day it counts once. A window begins again
  * a day after the last one, from the highest value then. Highs from before the windows begin one at their next upload.
  */
 function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestClimb = null) {
     const flags = [];
+    const review = [];
     const next = {};
     for (const r of RANKED) {
         const value = num(metrics[r.key]);
@@ -390,7 +402,11 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
                 const hours = (Math.max(0, now - num(at)) + SLACK_MS) / HOUR;
                 return r.byDepth && honestClimb ? honestClimb(from, hours) : r.flat + perHour * hours;
             };
-            if (value - peak.v > allowed(peak.v, peak.at) || (day && value - day.v > allowed(day.v, day.at))) flags.push(`${r.label} grew faster than any play could`);
+            // the worse of the two: from the highest so far, and from where the day's window began
+            const over = [peak, day].filter(Boolean).map(base => ({ from: base.v, allowed: allowed(base.v, base.at) }))
+                .filter(g => value - g.from > g.allowed).map(g => ({ ...g, share: (value - g.from) / Math.max(g.allowed, 1e-9) }))
+                .sort((a, b) => b.share - a.share)[0];
+            if (over) review.push({ key: r.key, reason: `${r.label} grew faster than any play could`, value, ...over });
         }
         const high = peak && peak.v >= value ? { v: peak.v, at: peak.at } : { v: value, at: now };
         high.day = day && now - num(day.at) < DAY ? day : { v: high.v, at: now };
@@ -400,7 +416,7 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
     if (num(metrics.trialTiersBeyondBest) > 0) flags.push('Trial tiers beyond its best stage');
     if (num(metrics.laurelsBeyondWeeks) > 0) flags.push('more laurels than weeks played');
     if (num(metrics.weeklyTrial) > num(metrics.bestStage)) flags.push("the week's Trial past the best stage");
-    return { flags, peaks: next };
+    return { flags, review, peaks: next };
 }
 
 /**
@@ -410,8 +426,11 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
  */
 const firstPeaks = startedAt => Object.fromEntries(RANKED.map(r => [r.key, { v: 0, at: startedAt, day: { v: 0, at: startedAt } }]));
 
+/** A stored flag that still counts: from the last 30 days, written by this version of the check (or later), or by the owner. */
+const standing = (f, now) => !!f && now - num(f.at) < FLAG_MEMORY_MS && (f.by === 'owner' || num(f.check || 1) >= FLAG_CHECK);
+
 function recentlyFlagged(flagsJson, now) {
-    try { return JSON.parse(flagsJson || '[]').some(f => now - f.at < FLAG_MEMORY_MS); } catch { return false; }
+    try { return JSON.parse(flagsJson || '[]').some(f => standing(f, now)); } catch { return false; }
 }
 
 app.post('/api/save', authenticateToken, route('save', async (req, res) => {
@@ -433,12 +452,14 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     let metrics = null;
     try { metrics = eng.powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
     let newFlags = [];
+    let grew = [];
     if (metrics) {
         // (an account's first upload, from when it began to play; one from before the addresses were confirmed, as before)
         const startedAt = num(current && current.verifiedAt);
         const peaks = previous ? previous.peaks : startedAt > 0 ? firstPeaks(startedAt) : null;
         const checked = plausibilityFlags(peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
         newFlags = checked.flags;
+        grew = checked.review;
         metrics.peaks = checked.peaks;
     } else if (previous) {
         // a save the server can't read keeps the numbers (and the highs) it had: wiping them let the next
@@ -457,9 +478,15 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     let flags = [];
     try { flags = JSON.parse((current && current.flags) || '[]'); } catch { flags = []; }
     if (!Array.isArray(flags)) flags = [];
-    if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason }))].slice(-20);
+    if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason, check: FLAG_CHECK }))].slice(-20);
     const stored = await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null, base);
     if (!stored) return res.status(409).json({ error: 'Another device saved since this game last looked.' });   // a parallel upload got there first
+    // grown faster than play allows, inside the ceilings: on the owner's list for the week (one row a number a day, its worst
+    // upload's figures), never a reason to refuse or fail the upload
+    for (const g of grew) {
+        try { await store.addReview({ userId: req.user.id, day: dayId(savedAt), metric: g.key, value: g.value, from: g.from, allowed: g.allowed, share: g.share, now: savedAt, check: FLAG_CHECK }); }
+        catch (err) { console.error('review list failed', err && err.message); }
+    }
     // "This week" leaderboards count from where the player stood when the week began: the numbers stored
     // before this upload (the first upload of the week, an empty one say, made the whole week's gain).
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(previous || metrics));
