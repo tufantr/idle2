@@ -1471,7 +1471,9 @@ Keeping it running:
       clear of the hotbar and the sticky bar of places (six bag tiles, three Shop buttons and three of Settings' controls
       had sat wholly under them). A skill's name, level and XP stand on a smoked plate (over the farm's, the river's and
       the course's pale skies they read at 1.4–2.6:1; 5:1 or more now), the level's colour lightened so Agility's red reads;
-      the food and potions the fight won't use keep their picture dimmed but their numbers above 4.5:1 (3.2–3.9:1 before)
+      the food and potions the fight won't use keep their picture dimmed but their numbers above 4.5:1 (3.2–3.9:1 before).
+      A badge says in words what its glyph shows, to a screen reader (a tab read "Shop▲"; now "Shop, a better tool is ready
+      to buy", "Combat, level 62"), and so do the phone's coins and its Menu and crate buttons, whose words the screen hides
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

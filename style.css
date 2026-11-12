@@ -35,6 +35,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
+/* words a screen reader reads where the screen shows a glyph (a badge's ▲, the Menu's ☰ on a phone) */
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 body {
     font-family: var(--font-body);
@@ -1142,7 +1144,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
     .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */
     .pills .status-pill { display: none; }  /* the hotbar's Battle and work buttons already show what the hero is doing */
-    .chip span, .chip i:not(.spr) { display: none; }
+    .chip i:not(.spr) { display: none; }
+    .chip span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the coin and the number; its name for a screen reader */
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
     .chip b { font-size: 0.9rem; }
     .brand-fantasy { font-size: 1.02rem; }
@@ -2756,7 +2759,7 @@ body.reduced-motion .talent:hover { transform: none; }
     body.battle-full #tab { max-height: 46dvh; padding: 0.5rem 0.6rem 0.6rem; }
     body.battle-full .zone-facts { display: none; } /* the map's zone card has the drops */
     body.battle-full .dock-main:not(:has(.combat-controls)) { display: none; } /* a new player's first fights: no food or potions yet, so nothing to show */
-    .menu-word { display: none; }
+    .menu-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* ☰ alone, "Menu" still read */
     .perks-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
     .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }
     /* on a phone the dock is a column: what a run uses most comes first */
@@ -2772,7 +2775,8 @@ body.reduced-motion .talent:hover { transform: none; }
     body.battle-full .cloud-word, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
     body.battle-full .pills:empty { display: none; }
     body.battle-full #header .daily-btn { display: inline-flex; } /* the hotbar is out of sight here, so the crate keeps its button */
-    body.battle-full .daily-word, body.battle-full .update-word { display: none; }
+    body.battle-full .update-word { display: none; }
+    body.battle-full .daily-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the crate alone, its name still read */
     body.battle-full #toast-area { top: 3.2rem; }
     body.battle-full:has(#celebrate .celebration:not(.leaving)) #toast-area { z-index: 470; }   /* a card at the top goes over the toasts (they covered a new land's card) */
     .camp-buy { flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.25rem; text-align: center; }

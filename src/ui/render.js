@@ -143,7 +143,8 @@ export function tabIcon(id, scale = 0.75) {
  */
 function readyBadge(game, id) {
     const state = game.state;
-    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}">${text}</span>`;
+    // (the glyph for the eye, its words for a screen reader: the tab read "Shop▲")
+    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}"><span aria-hidden="true">${text}</span><span class="sr-only">, ${esc(tip)}</span></span>`;
     if (id === 'farming') {
         const n = state.farming.plots.filter(p => p.crop && plotReady(p, game.now)).length;
         return n ? pill(n, `${n} plot${n > 1 ? 's' : ''} ready to harvest`) : '';
@@ -190,7 +191,7 @@ export function renderNav(game, ui) {
                 const combat = levelled === 'combat';
                 const lp = combat ? combatProgress(state.skills.combat.xp) : levelProgress(state.skills[levelled].xp);
                 const top = combat ? MAX_COMBAT_LEVEL : MAX_LEVEL;
-                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
+                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}"><span class="sr-only">, level </span>${lp.level}</span>`;
                 xpBar = lp.level >= top ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
@@ -231,7 +232,7 @@ export function renderHotbar(game, ui) {
     const banked = state.daily.banked;
     const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
     const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
-        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge" aria-label="${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}">${badge}</b>` : ''}</button>`;
+        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge"><span aria-hidden="true">${badge}</span><span class="sr-only">, ${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}</span></b>` : ''}</button>`;
     const work = action && SKILLS[action.skill]
         ? button(tabIcon(action.skill, 1), esc(SKILLS[action.skill].name), `FI.switchTab('${action.skill}')`, { active: ui.tab === action.skill, live: true })
         : button(tabIcon('mining', 1), 'Work', "FI.switchTab('mining')", { active: ui.tab === 'mining' });
@@ -295,7 +296,7 @@ export function renderHeader(game, ui, cloud) {
     // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
     // leave-full-screen button. Both fold the fight back into the page; it goes on.
     const full = battleMode(game, ui);
-    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
+    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on."><span aria-hidden="true">☰</span><span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-hidden="true"></i><span class="sr-only">, a new place is waiting</span>' : ''}</button>` : '';
     const screen = full ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.battleFull(false)" aria-label="Leave full screen" title="Leave full screen (Esc). The fight goes on.">${ICON_SHRINK}</button>` : '';
     // a newer version of the game is live (ui/update.js): one press saves and loads it, never by itself
     const update = ui.newVersion
@@ -1753,7 +1754,7 @@ function renderCompletion(game) {
 
 // A bestiary star: filled once the kind has fallen 10, 100 or 1,000 times.
 const ICON_STAR = '<svg class="star" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2l2.05 4.3 4.7.55-3.47 3.2.95 4.65L8 11.55 3.77 13.9l.95-4.65L1.25 6.05l4.7-.55z"/></svg>';
-const starRow = n => `<span class="beast-stars" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
+const starRow = n => `<span class="beast-stars" role="img" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
 
 /**
  * The bestiary: every kind of monster met, by place, with how many have fallen and its stars. The
@@ -2737,7 +2738,7 @@ export function renderPrestigeModal(game) {
         titanUnlocked(state) ? [sprite('titan/0', { scale: 1 }), 'Titans defeated'] : null,
         has('agility') ? [sprite('obstacle/rope_swing', { scale: 1 }), 'The agility course'] : null,
         has('farming') ? [sprite('farm/growing', { scale: 1 }), 'The farm'] : null
-    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
+    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" role="img" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
     const nextSp = Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage);
     const trials = activeTrials(state);
     return `<div class="modal-content about-card prestige-modal">
