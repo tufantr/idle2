@@ -15,13 +15,16 @@ only while an account is being made.
 **The line:**
 
 > Your **email** gets a 6-digit code to start playing, and another if you forget your password. No other player sees it, and
-> we send it nothing else. [Privacy](https://wiki.fantasyidle.com/privacy)
+> we send it nothing else. [Rules](https://wiki.fantasyidle.com/rules) · [Privacy](https://wiki.fantasyidle.com/privacy)
 
 **As HTML:**
 
 ```html
-<p class="muted small">Your <b>email</b> gets a 6-digit code to start playing, and another if you forget your password. No other player sees it, and we send it nothing else. <a href="https://wiki.fantasyidle.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
+<p class="muted small">Your <b>email</b> gets a 6-digit code to start playing, and another if you forget your password. No other player sees it, and we send it nothing else. <a href="https://wiki.fantasyidle.com/rules" target="_blank" rel="noopener">Rules</a> · <a href="https://wiki.fantasyidle.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 ```
+
+The Rules link is there because the rules page says that making an account means agreeing to them, and P-124 asks for the
+rules at sign-up.
 
 **Checked against:** codes go only for sign-up ('verify') and a new password ('reset'), and no address is ever shown to
 another player (`api/index.js:161-196`); a code is the only mail the game sends (`api/mail.js`).
