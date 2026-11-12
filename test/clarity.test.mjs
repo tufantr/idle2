@@ -3,10 +3,11 @@
 // where it bites.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal } from '../src/ui/render.js';
 
 const T0 = 1_760_000_000_000;
 const literal = text => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -48,4 +49,17 @@ test('prestige tokens are written as the game writes big numbers, and the Shop s
     const line = game.state.log.at(-1).text;
     assert.match(line, literal(`+${fmt(p.tokens)} tokens`), line);
     assert.doesNotMatch(line, raw, 'the battle log');
+});
+
+test('nothing promises forging, which is gone (DESIGN §3.25): the empty bag, the title card, the wiki\'s front page', () => {
+    const game = new Game(null, T0);
+    const bag = renderInventory(game, {});
+    assert.match(bag, /No spare gear yet\. Monsters drop it, bosses most often\./);
+    assert.doesNotMatch(bag, /forge/i);
+    const title = renderIntroModal(game.state);
+    assert.match(title, /Fight monsters, gather, upgrade your gear\./);
+    assert.doesNotMatch(title, /forge/i);
+    const home = readFileSync(new URL('../wiki/pages/home.mjs', import.meta.url), 'utf8');
+    assert.match(home, /Fight monsters, gather, upgrade your gear\./);
+    assert.doesNotMatch(home, /forge your gear/i);
 });

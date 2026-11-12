@@ -1464,6 +1464,9 @@ Keeping it running:
 - [x] **Tokens in the game's own numbers** (the research loop's small fixes, 12 November 2026): a deep run's tokens showed
       as long digits on the Combat tab's prestige strip, the dock's Prestige, the Shop and the battle log; they read 1.6M
       now, and the Shop's line says the highest stage this run, where it said "best stage"
+- [x] **No forging promised** (the same small fixes): the empty bag said a smith can forge gear, and the title card and the
+      wiki's front page said "forge your gear", though forging went in October. The bag says monsters drop it, bosses most
+      often, and both taglines "upgrade your gear"
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

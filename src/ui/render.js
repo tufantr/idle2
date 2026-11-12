@@ -1476,7 +1476,7 @@ export function renderInventory(game, ui) {
                 </div>` : ''}
             </div>
             <div class="bag-grid">${bag}</div>
-            ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Bosses drop some, and a smith can forge it.</p>'}
+            ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Monsters drop it, bosses most often.</p>'}
             ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality (or with Weaker, any drop weaker than what you wear) is salvaged for essence as it lands: never an upgrade or a locked item${keeps}. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
                 <span>${resIcon('essence')} Auto-salvage drops up to</span>
                 <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
@@ -2924,7 +2924,7 @@ export function renderIntroModal(state, { signedIn = false } = {}) {
             <div class="intro-foe" aria-hidden="true">${sprite('mon/Slime', { scale: 4 })}</div>
         </div>
         <h1 id="intro-title" class="intro-logo">Fantasy Idle</h1>
-        <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>
+        <p class="intro-tag">Fight monsters, gather, upgrade your gear. Your hero keeps at it while you're away.</p>
         <input id="intro-name" class="text-input intro-name" maxlength="${HERO_NAME_MAX}" placeholder="Name your hero" aria-label="Your hero's name (optional; Settings can change it)" autocomplete="off" spellcheck="false" onkeydown="if (event.key === 'Enter') FI.beginAdventure()">
         <button class="modal-btn btn-confirm intro-go" data-autofocus onclick="FI.beginAdventure()">${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Begin your adventure</button>
         ${signedIn ? '' : '<button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>'}

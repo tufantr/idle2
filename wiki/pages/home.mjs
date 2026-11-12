@@ -20,7 +20,7 @@ function home(help) {
         <div class="home-text">
             <p class="home-kicker">The wiki of</p>
             <p class="home-title">Fantasy Idle</p>
-            <p class="home-tag">Fight monsters, gather, forge your gear. Everything about the game, read from the game itself.</p>
+            <p class="home-tag">Fight monsters, gather, upgrade your gear. Everything about the game, read from the game itself.</p>
             <p class="home-actions"><a class="btn" href="/guides/getting-started">New here? Start here</a><a class="btn ghost" href="${gameUrl}" rel="noopener">Play the game</a>${DISCORD_INVITE ? `<a class="btn ghost" href="${esc(DISCORD_INVITE)}" rel="noopener">Join the Discord</a>` : ''}</p>
         </div>
     </section>`;
