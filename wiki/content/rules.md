@@ -2,7 +2,7 @@
 path: /rules
 keywords: rules, terms, terms of service, terms of use, code of conduct, report, report a clan, reporting, appeal, moderation, contact, email, clan names, clan words, username, flag, flagged, capped, not counted, delete account, safety
 ---
-Fantasy Idle is made and run by **the Fantasy Idle developer team**: "we" on this page. These are the game's rules, short and in plain words. They apply to everyone who plays with an account, and making an account means you agree to them.
+Fantasy Idle is made and run by **the Fantasy Idle developer team**: "we" on this page. These are the game's rules, short and in plain words. They apply to everyone who plays with an account, and making an account means you agree to them. What we keep about you is on the [[/privacy|Privacy]] page.
 
 ## How to reach us
 
@@ -73,6 +73,7 @@ Think a flag is wrong? Email [contact@fantasyidle.com](mailto:contact@fantasyidl
 
 - An account needs an **email**: we send a code there when you sign up, and another if you forget your password. We send it nothing else.
 - **You can delete your account** at any time: **Settings → Delete my account**. It deletes your account and your game from our server. A guest's game lives only in that browser.
+- What we keep, and for how long, is on the [[/privacy|Privacy]] page.
 
 ## Changes to these rules
 

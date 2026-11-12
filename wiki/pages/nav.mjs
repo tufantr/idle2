@@ -19,7 +19,7 @@ export function NAV(site) {
         { title: 'Items', links: ['/items', '/equipment', '/equipment/jewellery', '/uniques', '/tools', '/food', '/potions'].map(page) },
         { title: 'Progression', links: ['/prestige', '/perks', '/talents', '/ranks', '/trials', '/ascension', '/mastery', '/medals', '/pets', '/capes', '/looks'].map(page) },
         { title: 'The world', links: ['/places', '/daily-crate', '/shop', '/events', '/clans', '/offline', '/mini-games'].map(page) },
-        { title: 'Reference', links: ['/formulas', '/xp-table', '/credits', '/rules'].map(page) }
+        { title: 'Reference', links: ['/formulas', '/xp-table', '/credits', '/rules', '/privacy'].map(page) }
     ];
 }
 

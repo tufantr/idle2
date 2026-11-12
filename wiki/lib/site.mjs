@@ -112,7 +112,7 @@ ${siteUrl ? `<meta property="og:url" content="${siteUrl}${page.path === '/' ? ''
 </div>
 <footer class="foot">
     <p>Everything here is read from the game's own data${version ? ` (version <code>${esc(version)}</code>` : ''}${builtAt ? `, ${esc(builtAt)})` : version ? ')' : ''}, so the numbers are the game's numbers.</p>
-    <p><a href="${gameUrl}" rel="noopener">Play Fantasy Idle</a> · <a href="/credits">Credits</a> · <a href="/rules">Rules</a></p>
+    <p><a href="${gameUrl}" rel="noopener">Play Fantasy Idle</a> · <a href="/credits">Credits</a> · <a href="/rules">Rules</a> · <a href="/privacy">Privacy</a></p>
 </footer>
 </body>
 </html>

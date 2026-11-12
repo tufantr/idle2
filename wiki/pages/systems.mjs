@@ -164,6 +164,7 @@ export default {
         { path: '/xp-table', title: 'XP table', ...ref, icon: 'icon/xp', summary: 'The XP needed for every level from 1 to 99.', aliases: ['Experience table', 'Levels', 'XP'], build: xpTablePage },
         { path: '/credits', title: 'Credits', ...ref, icon: 'crown', summary: 'Where the pictures, type and sounds come from.', toc: false, build: creditsPage },
         { path: '/rules', title: 'Rules and terms', ...ref, icon: 'item/Shield/1', summary: 'The rules of Fantasy Idle in plain words: what clan names and words may hold, how to report a clan and appeal, what a flag is, and how to delete your account.', aliases: ['Rules', 'Terms', 'Terms of service', 'Code of conduct', 'Report a clan', 'Contact'] },
+        { path: '/privacy', title: 'Privacy', ...ref, icon: 'icon/lock', summary: 'What Fantasy Idle keeps about you and why, for how long, who helps run the game, where it is kept, and how to see, change or delete it.', aliases: ['Privacy policy', 'Privacy notice', 'Your data', 'Personal data', 'Cookies'] },
         { path: '/guides', title: 'Guides', section: 'Guides', sectionPath: '/guides', icon: 'tool/rod', summary: 'Guides for new and returning players.', build: guidesIndex },
         { path: '/404', title: 'Page not found', section: '', icon: '', summary: 'This page does not exist.', hidden: true, toc: false, build: notFound }
     ]
