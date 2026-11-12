@@ -41,6 +41,7 @@ function snapshot(state) {
         tokens: state.prestige.tokens,
         gilded: state.stats.gildedKills || 0,
         stars: state.stats.bestiaryStars || 0,
+        festival: state.events?.tokens || 0,
         combatMode: state.combat.mode
     };
 }
@@ -92,6 +93,7 @@ function diff(before, state) {
         tokens: state.prestige.tokens - before.tokens,
         gilded: (state.stats.gildedKills || 0) - before.gilded,        // gilded monsters defeated
         stars: (state.stats.bestiaryStars || 0) - before.stars,        // bestiary stars earned
+        festival: (state.events?.tokens || 0) - before.festival,       // Festival Tokens won (the re-entry strip's event line)
         startedInDungeon: before.combatMode === 'dungeon'
     };
 }

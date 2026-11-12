@@ -19,8 +19,9 @@
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker: the API is
 //                                                 # answered by the tool, CLAN_API below; 'catchup'
-//                                                 # is the bar a day away is replayed behind:
-//                                                 # RETURN_SHOTS below)
+//                                                 # is the bar a day away is replayed behind, and
+//                                                 # 'reentry' the welcome-back after it, with the
+//                                                 # world's strip: RETURN_SHOTS below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -205,8 +206,8 @@ function clanApi() {
 }
 
 // Back after a day (src/main.js catchUp): the late-game save, fighting in a clan during a weekend event, saved 26 hours ago and
-// loaded again under Chrome's 4× CPU throttle, so its replay lasts: 'catchup' is the bar mid-replay.
-const RETURN_SHOTS = { catchup: true };
+// loaded again under Chrome's 4× CPU throttle, so its replay lasts: 'catchup' is the bar mid-replay, 'reentry' the report after.
+const RETURN_SHOTS = { catchup: true, reentry: true };
 async function shootReturn(viewport, which) {
     const page = await open(viewport, `${base}?dev=1&event=guild_fair`);
     await lateGame(page);
@@ -231,7 +232,12 @@ async function shootReturn(viewport, which) {
     }
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     await page.waitForSelector('.welcome-back', { timeout: 60000 }).catch(() => {});
-    if (!(await page.$('.welcome-back'))) problems.push(`no welcome-back after the catch-up at ${viewport.width}px`);
+    await page.waitForTimeout(1800);   // the haul pops in
+    if (which.includes('reentry')) {
+        if (!(await page.$('.welcome-back .wb-world'))) problems.push(`no re-entry strip on the welcome-back at ${viewport.width}px`);
+        await page.evaluate(() => document.querySelector('.welcome-back .wb-world')?.scrollIntoView({ block: 'center' }));
+        await shoot(page, 'reentry', viewport.width);
+    }
     await page.context().close();
 }
 

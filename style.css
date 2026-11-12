@@ -2208,6 +2208,15 @@ body.reduced-motion .cu-bar.waiting i { animation: none; width: 100%; opacity: 0
 .cu-facts span { display: inline-flex; align-items: center; gap: 0.35rem; }
 .cu-facts b { color: var(--heading); }
 .cu-time { margin: 0; min-height: 1.1rem; color: var(--text-muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+/* the world while away, a day or more (ui/reentry.js): under the haul, a line each; the clan's and the event's go to their tab */
+.wb-world { display: flex; flex-direction: column; gap: 0.15rem; margin: 0.3rem 0 0.2rem; padding-top: 0.6rem; text-align: left;
+    border-top: 1px solid transparent; border-image: linear-gradient(90deg, transparent, var(--line-strong), transparent) 1; }
+.wb-world-line { display: flex; align-items: center; gap: 0.55rem; margin: 0; padding: 0.3rem 0.55rem; border-radius: 8px; font-size: 0.84rem; line-height: 1.35; color: var(--text-main); }
+.wb-world-line .spr { flex: 0 0 auto; }
+.wb-world-line b { color: var(--heading); font-weight: 700; }
+button.wb-world-line { width: 100%; font-weight: 400; background: none; border: 1px solid transparent; box-shadow: none; text-align: left; }
+button.wb-world-line:hover { transform: none; background: rgba(214, 170, 92, 0.1); border-color: rgba(214, 170, 92, 0.3); }
+.wb-world-line.none { justify-content: center; color: var(--text-muted); }
 /* A dialog has the floor: toasts slip behind its backdrop instead of covering its buttons. */
 body:has(#modal-root .modal-overlay.active) :is(#toast-area, #celebrate, #work-fx, .flying-coin, .flying-loot, .loot-arrive, .loot-flash) { z-index: 99; }   /* coins and work pops too: they flew over the map and the cards */
 

@@ -1,0 +1,2148 @@
+// Browser bootstrap: load the save, run the loop, render, and expose window.FI for the HTML handlers.
+
+import { Game } from './game.js';
+import {
+    loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, startsOver, progressed,
+    writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
+} from './core/save.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, renderHallGive, renderBannerPicker, workTime, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
+import { choosingAfterClear } from './systems/dungeon.js';
+import { droppingIn } from './systems/combat.js';
+import { achievementById } from './data/achievements.js';
+import { renderAboutCard, FEATURES, EVENT_ART, DUNGEON_ART, ZONE_LINES, paintStyle, fightTab } from './ui/features.js';
+import { renderWorldMapModal, renderZoneInfo, renderDungeonInfo } from './ui/worldmap.js';
+import { TOOLS } from './data/workshop.js';
+import { BALANCE, describeAffix } from './core/formulas.js';
+import { createScene } from './ui/scene.js';
+import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
+import { createActionFx } from './ui/actionfx.js';
+import { createSound } from './ui/sound.js';
+import { createStage } from './ui/stage.js';
+import { createGuide } from './ui/guide.js';
+import { renderCatchUp, paintCatchUp, renderReentry } from './ui/reentry.js';
+import { OFFLINE_MIN_MS } from './systems/offline.js';
+import { reentryFacts } from './systems/reentry.js';
+import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
+import { rankFor } from './data/ranks.js';
+import { isUnlocked } from './data/unlocks.js';
+import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
+import { withArticle } from './core/text.js';
+import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
+import { SKILLS } from './data/skills.js';
+import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
+import { AGILITY_SLOTS } from './data/agility.js';
+import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
+import { cratesTowardGreat } from './systems/daily.js';
+import { seen } from './systems/disclosure.js';
+import { nextLook, lookForMedal } from './data/looks.js';
+import { capeFor, festivalCloak } from './data/capes.js';
+import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
+import { RESOURCES } from './data/resources.js';
+import { RARITIES, MYTHIC, PRIMAL } from './data/items.js';
+import { playtestExport } from './systems/playtest.js';
+import { trialById, TRIAL_TIERS } from './data/trials.js';
+import { talentById, respecPrice } from './data/talents.js';
+import { charmById } from './data/charms.js';
+import { HALL, HALL_STAGES, hallRoom } from './data/clanhall.js';
+import { talentPoints } from './systems/talents.js';
+import { STRATUM_STAGES, stratumById } from './data/strata.js';
+import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
+import { BASE } from './core/modifiers.js';
+import { VERSION } from './version.js';
+import { createUpdateCheck } from './ui/update.js';
+
+const BASE_RECORD_MULT = BASE.recordMult;
+
+const TICK_MS = 100;
+const MIN_RENDER_GAP_MS = 150;   // re-render at most this often when something changed
+const MAX_RENDER_GAP_MS = 1000;  // and at least this often, for countdowns
+const DEFEAT_HOLD_MS = 1500;     // a lost dungeon run stays on screen this long before the list of dungeons comes back
+const AUTOSAVE_MS = 15000;
+// Cloud saves: every minute while the page is open, in the background too, and once on leaving it (the
+// owner, October 2026, once the game had its own server: "traffic is not an issue"). On Vercel's free Neon
+// database, which slept after five minutes without a request, it was every ten minutes and only while the
+// player was around; a page in the background uploaded nothing.
+const CLOUD_SAVE_MS = 60000;
+const CLOUD_AWAY_MS = 10 * 60000;    // back after this long away: another device may have played meanwhile
+const CLOUD_LEAVE_GAP_MS = 5000;     // leaving within seconds of an upload sends no other
+const TITAN_HOLD_MS = 1500;      // the Titan's fight keeps the screen this long after it ends (its last banner)
+
+// Browser storage can be blocked (private windows, the game embedded in another page). These are
+// conveniences, so failures are ignored; the save itself goes through core/save.js, which checks too.
+const prefs = {
+    get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); } catch { /* not remembered */ } },
+    remove(key) { try { localStorage.removeItem(key); } catch { /* nothing to forget */ } }
+};
+
+const ui = {
+    auth: null,          // the account dialog's step: { mode, username, email (as shown), resetEmail } (showAuth)
+    tab: (t => (t === 'fishing' ? 'hunting' : t))(prefs.get('fantasyIdle.tab') || 'combat'),   // (Fishing joined Hunting)
+    fresh: loadFresh(),  // tabs unlocked but not visited yet: a "New" badge in the sidebar
+    smithView: 'smelt',  // the step of Smithing on screen: smelt or anvil (forging and tools are gone)
+    craftView: 'craft',  // the step of Crafting on screen: craft or bench (the jeweller's bench, systems/bench.js)
+    potionMenu: false,   // the skill potion's tray, open under its chip in a skill's header
+    hallView: 'medals',  // the view of the hall of trophies: medals, bestiary or collection
+    craftBar: null,
+    craftGem: null,
+    open: {},            // drawers the player has opened (the battle log, the crop table)
+    battleFull: prefs.get('fantasyIdle.battleFull') !== '0', // the fight fills the screen while it lasts; false once the player folds it away (until the next fight)
+    battleHoldUntil: 0,  // a fight that ended keeps the screen until then (its last banner shows), when the hero goes back to work
+    dungeonHoldUntil: 0, // a fight on the Dungeons tab that ended keeps that tab on it until then (fightTab in ui/features.js)
+    clanHoldUntil: 0,    // a clan boss fight that ended while watched keeps the Clan tab on it until then (fightTab in ui/features.js)
+    invFilter: 'all',
+    resSelected: null,
+    invSelected: null,   // the item on the table in the inventory (an item id)
+    invPreview: null,    // the item under the pointer, shown instead while hovered
+    cloudStatus: '',
+    newVersion: null,    // a newer version of the game is live (src/ui/update.js): the header's pill offers the reload
+    reloading: false,    // that pill pressed: the game saves, then the page loads again
+    beginAfterSignIn: false,   // the title card's Begin asked for an account: its first fight starts once it is made
+    lastRender: 0,
+    renderedRevision: -1,
+    modalOpen: false,
+    modalUnder: null,    // the dialog a question stands over, while it is asked (askConfirm): back when it closes
+    modalQueue: [],
+    perks: { view: 'perks', pick: null, tree: null },   // the perks dialog: Perks or the War Tree, its talent picked, the tree on a phone
+    // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
+    social: freshSocial()
+};
+
+function loadFresh() {
+    try {
+        const ids = JSON.parse(prefs.get('fantasyIdle.fresh') || '[]');
+        return new Set(Array.isArray(ids) ? ids.filter(id => TABS.some(t => t.id === id)) : []);
+    } catch { return new Set(); }
+}
+function markFresh(id, on) {
+    if (on === ui.fresh.has(id)) return;
+    if (on) ui.fresh.add(id); else ui.fresh.delete(id);
+    prefs.set('fantasyIdle.fresh', JSON.stringify([...ui.fresh]));
+}
+
+function freshSocial() {
+    return {
+        clan: null, hall: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false,
+        fetchedAt: 0, loading: false, loaded: false, error: '', seq: 0,
+        form: { name: '', tag: '', description: '', lookingFor: '', search: '' } // typed values survive re-renders and errors
+    };
+}
+
+const cloud = new CloudClient('/api');
+const params = new URLSearchParams(location.search);
+// A local development host (tools/serve.py, the screenshot and test tools): dev flags work there, and the
+// game plays as a guest. Anywhere else a sign-in stands in front of the game (the owner's call, October 2026:
+// the server's save is the game, as in any online game) until the player has an account or chooses to play
+// as a guest (October 22): a guest's game stays in this browser, and an account made later starts its own
+// (startsOver in core/save.js).
+const DEV_HOST = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
+const SIGN_IN_REQUIRED = !DEV_HOST;
+const GUEST_KEY = 'fantasyIdle.guest';
+// Inside another site's frame (galaxy.click shows its games in one, and its players shy away from sign-up forms),
+// a new player is a guest at once: Begin goes straight into the fight, the account one click away (the Guest pill).
+const EMBEDDED = (() => { try { return window.top !== window.self; } catch { return true; } })();
+let guest = EMBEDDED || prefs.get(GUEST_KEY) === '1';   // framed, or the sign-in's "Play as guest" chosen (until an account signs in)
+const needsSignIn = () => SIGN_IN_REQUIRED && !cloud.loggedIn && !guest;
+function setGuest(on) {
+    guest = on;
+    if (on) prefs.set(GUEST_KEY, '1'); else prefs.remove(GUEST_KEY);
+}
+// Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
+// looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
+// failed sync is tried again.
+let cloudReady = false;
+let synced = false;           // this page has played a game it looked up on the server: one taken later is another device's play
+let syncing = false;
+let syncRetryAt = 0;
+// Time away is replayed once, a slice at a time behind a bar (catchUp, by the boot below): `pending` is time away still
+// to replay (the boot's, a gap's) while the server's save or the sign-in comes first. Nothing plays or saves the game meanwhile.
+let pending = null;          // { start: () => a Game.beginResume or beginGap, after: summary => the report's HTML, or null }
+let catching = null;         // the replay under way: { run, after, resolve, at }
+const SYNC_RETRY_MS = 45000;
+let syncFailNoted = false;
+let loaded = loadLocal(Date.now());
+// A save that can't be read (save.js keeps a copy) or can't be run: the game starts fresh, the automatic
+// backups are left alone, and the player is shown where the backups are.
+let loadProblem = !!localLoadProblem();
+let game;
+try {
+    game = withDevFlags(new Game(loaded, Date.now()));
+} catch (err) {
+    console.error('The save could not be started; kept a copy', err);
+    try { localStorage.setItem(`${LOCAL_KEY}.corrupt.${Date.now()}`, localStorage.getItem(LOCAL_KEY) || ''); } catch { /* storage full */ }
+    loaded = null;
+    loadProblem = true;
+    game = withDevFlags(new Game(null, Date.now()));
+}
+
+// One tab plays the save: a tab opened later takes it over, and the older one stops. Two tabs used to
+// save their own games over each other's, and whichever wrote last won, often the forgotten one.
+const TAB_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+const OWNER_KEY = 'fantasyIdle.owner';
+let passive = false;
+try { localStorage.setItem(OWNER_KEY, TAB_ID); } catch { /* no storage: this tab is all there is */ }
+function ownsSave() {
+    try { const owner = localStorage.getItem(OWNER_KEY); return !owner || owner === TAB_ID; } catch { return true; }
+}
+function becomePassive() {
+    if (passive) return;
+    passive = true;
+    ui.modalQueue = [];
+    showModal(`<div class="modal-content"><div class="modal-header">Playing in another tab</div>
+        <div class="modal-body"><p>The game was opened in another tab or window, and it plays there now. This one has stopped, so the two can't save over each other.</p></div>
+        <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="location.reload()">Play here</button></div></div>`, 'elsewhere');
+}
+window.addEventListener('storage', event => { if (event.key === OWNER_KEY && event.newValue && event.newValue !== TAB_ID) becomePassive(); });
+
+// The battle stage above the combat tab: built once, animated from game events (src/ui/scene.js).
+const scene = createScene(document.getElementById('scene'), {
+    // On the real clock, not the last tick's. A click inside the strike's quarter second, or at a monster still dropping
+    // in, does nothing, so it costs nothing either: no tick of the game for it (an auto-clicker's thousands a second each
+    // ran one; the owner's froze).
+    strike: () => {
+        const now = Date.now();
+        if (holding() || now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs || droppingIn(game.state, now)) return false;
+        advance(now);
+        return game.clickAttack();
+    },
+    toggle: () => window.FI.toggleCombat(),
+    stage: n => { game.setStage(n); render(); },
+    map: () => window.FI.openMap(),
+    sound: name => sound.play(name),
+    pat: () => game.patPet(),
+    chest: () => window.FI.openRunChoice()
+});
+
+// Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
+// skill cards (src/ui/actionfx.js), and the phone hotbar.
+const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
+// A boss fight in view: its clock and its health are what the player watches, so cards wait until it ends.
+const bossOnScreen = () => { const c = game.state.combat; return ui.tab === fightTab(game, ui) && c.active && !!c.enemy?.boss && !c.farmMode; };
+const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs and boss fights
+const actionFx = createActionFx(layer('div', 'work-fx'));
+const hotbar = layer('nav', 'hotbar');
+hotbar.setAttribute('aria-label', 'Shortcuts');
+// Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
+const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1);
+// The sprite atlas (its versioned URL and its size), for the CSS that cuts cells out of it.
+document.documentElement.style.setProperty('--atlas', `url(${ATLAS.url})`); // versioned, so a new layout never meets an old cached sheet
+document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
+document.documentElement.style.setProperty('--atlas-h', `${ATLAS.cell * ATLAS.rows}px`);
+document.body.insertAdjacentHTML('beforeend', tintDefs());   // the banner colours' filters (the clan's cloak: src/ui/sprites.js)
+
+// The skill stage above each skill tab: the hero at work (src/ui/stage.js).
+const stage = createStage(document.getElementById('stage'), { sound: name => sound.play(name), pat: () => game.patPet() });
+// A new hero's first minutes: a hand on the one thing to do (src/ui/guide.js).
+const guide = createGuide(document.body);
+
+// ?dev=1 unlocks every tab; ?dev=1&event=<id> runs that weekend event now (never kept without it).
+// Only on a local development host (tools/serve.py, the screenshot tool): on the live site they would
+// open every dungeon, the Titan and any event's bonuses to anyone, so there they are ignored, and a save
+// that picked them up before is cleaned (the server also flags an upload that has them on).
+function withDevFlags(g) {
+    g.setAttending(!document.hidden);   // every game made here starts knowing whether the page is in view
+    if (!DEV_HOST) {
+        g.state.settings.devUnlockAll = false;
+        g.state.settings.forceEvent = null;
+        return g;
+    }
+    if (params.has('dev')) g.state.settings.devUnlockAll = true;
+    g.state.settings.forceEvent = (params.has('dev') && params.get('event')) || null;
+    return g;
+}
+
+// ---------- catching up: time away replayed a slice at a time, behind a bar ----------
+// A day away deep in the climb with Auto prestige is seconds of work (docs/research_notes/research-loop/047: 6.8 s at
+// Chrome's 4× CPU throttle at stage 1,300, one task the page drew nothing in). The replay (Game.beginResume, beginGap) runs
+// CATCH_UP_FRAME_MS at a time and lets the browser draw a frame between; from CATCH_UP_SHOW_MS a dialog shows a bar of the
+// time replayed with the stage and gold climbing, and the report takes its place. Meanwhile nothing plays, saves or draws
+// the game: a save would keep a game halfway through its time away (and an action on it finishes the replay at once).
+const CATCH_UP_FRAME_MS = 40;
+const CATCH_UP_SHOW_MS = 250;
+const SYNC_WAIT_MS = 4000;              // signed in, the server's save is waited for this long, then this copy is replayed
+let catchUpBox = null;                  // the bar's dialog while it is up, and what it stands over ({ open, under } of ui)
+let catchUpWas = null;
+let slowTimer = 0;
+let booted = false;                     // the module has run: its end draws the game first
+const caughtUpWaits = [];
+const settledWaits = [];
+const pumpChannel = new MessageChannel();   // (a message is not slowed in a background tab as a timer is)
+pumpChannel.port1.onmessage = () => pump();
+/** Time away waiting to be replayed, or being replayed: the game holds still. */
+const holding = () => !!(pending || catching);
+/** Resolves when no replay is under way (a sync's choice waits for the one under way). */
+const caughtUp = () => (catching ? new Promise(resolve => caughtUpWaits.push(resolve)) : Promise.resolve());
+/** Resolves when nothing waits to be replayed either: a reply from the server that changes the game waits for it. */
+const settled = () => (holding() ? new Promise(resolve => settledWaits.push(resolve)) : Promise.resolve());
+function settle() { if (!holding()) for (const resolve of settledWaits.splice(0)) resolve(); }
+
+/** Replay the time away waiting (pending) now: resolves with its summary once it is reported. `news` is applied first. */
+function playPending(news = null) {
+    const p = pending;
+    if (!p) return caughtUp().then(() => null);
+    pending = null;
+    clearTimeout(slowTimer);
+    return catchUp(p.start(), summary => { news?.(); return p.after(summary); });
+}
+
+/**
+ * Signed in: the time away waiting is replayed once the server's save is looked at, or after SYNC_WAIT_MS this copy's.
+ * The bar's dialog waits meanwhile, from `showIn` ms (at once over a game on screen: nothing may act on it before its replay).
+ */
+function holdForServer(showIn = CATCH_UP_SHOW_MS) {
+    clearTimeout(slowTimer);
+    slowTimer = setTimeout(playPending, SYNC_WAIT_MS);
+    const show = () => { if (pending && !catching && !passive) openCatchUp({ waiting: true }); };
+    if (showIn > 0) setTimeout(show, showIn); else show();
+    return syncFromCloud();
+}
+
+/**
+ * Replay `run` (a Game.beginResume or beginGap) a slice at a time, behind the bar once it has taken CATCH_UP_SHOW_MS; then
+ * `after(summary)`, a report's HTML or null, takes the bar's place. Resolves with the summary.
+ */
+function catchUp(run, after) {
+    return new Promise(resolve => {
+        if (!run) { settle(); resolve(null); return; }
+        catching = { run, after, resolve, at: performance.now() };
+        pump();
+    });
+}
+function pump() {
+    const c = catching;
+    if (!c) return;
+    if (passive) {   // another tab plays now: this one stops where it is, and saves nothing more
+        catching = null;
+        closeCatchUp(null);
+        for (const resolve of [...caughtUpWaits.splice(0), ...settledWaits.splice(0)]) resolve();
+        c.resolve(null);
+        return;
+    }
+    const until = performance.now() + CATCH_UP_FRAME_MS;
+    let done;
+    try {
+        done = c.run.step(() => performance.now() >= until);
+    } catch (err) {   // a bug in the replay must not leave the page frozen behind its bar: the game plays on from here
+        console.error('Catching up failed', err);
+        Object.assign(game, { silent: false, catchingUp: null, now: Date.now() });
+        game.recompute();
+        done = true;
+    }
+    if (!done) {
+        if (!catchUpBox && performance.now() - c.at >= CATCH_UP_SHOW_MS) openCatchUp();
+        if (catchUpBox) paintCatchUp(catchUpBox, game.state, c.run.where);
+        pumpChannel.port2.postMessage(0);
+        return;
+    }
+    catching = null;
+    game.setAttending(!document.hidden);   // (as it is now: left alone while the replay ran)
+    closeCatchUp(c.after(c.run.summary));
+    for (const resolve of caughtUpWaits.splice(0)) resolve();
+    settle();
+    c.resolve(c.run.summary);
+    if (booted) render();
+}
+
+/** The bar's dialog, over whatever is open, as a question stands over a dialog (askConfirm); the page behind can't be reached. */
+function openCatchUp(view = {}) {
+    if (catchUpBox) return;
+    document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);   // (before the first render)
+    const box = Object.assign(document.createElement('div'), { className: 'modal-overlay active catch-up-overlay', tabIndex: -1, innerHTML: renderCatchUp(game.state, view) });
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', 'Catching up');
+    document.getElementById('modal-root').appendChild(box);
+    catchUpWas = { open: ui.modalOpen, under: ui.modalUnder };
+    ui.modalOpen = 'catchup';
+    ui.modalUnder = null;
+    catchUpBox = box;
+    for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = true; }
+    box.focus({ preventScroll: true });
+    if (catching?.run.where) paintCatchUp(box, game.state, catching.run.where);
+}
+/** The bar's dialog away, `html` (a report) in its place, then a dialog that waited behind it. */
+function closeCatchUp(html) {
+    const box = catchUpBox;
+    catchUpBox = null;
+    if (box) {
+        box.remove();
+        for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = false; }
+        if (ui.modalOpen === 'catchup') { ui.modalOpen = catchUpWas.open; ui.modalUnder = catchUpWas.under; }
+        else if (ui.modalUnder === 'catchup') ui.modalUnder = catchUpWas.open || null;   // (a question stood over the bar)
+    }
+    if (html) openModal(html, 'offline');
+    if (!ui.modalOpen) { const next = ui.modalQueue.shift(); if (next) showModal(next.html, next.key); }
+}
+
+/** What the new version changed, for the welcome-back's strip (systems/reentry.js): nothing yet, until a changelog fills it. */
+const whatsNew = () => [];
+/** The welcome-back report of `summary`, with its strip of what the world did meanwhile after a day or more away. */
+function welcomeBack(summary) {
+    const facts = reentryFacts(game.state, game.now, summary, { changes: whatsNew() });
+    return renderWelcomeBack(summary, game, { strip: ready => renderReentry(facts, { ready, now: game.now }) });
+}
+
+/** The boot's welcome-back, for time away fighting or working, or resting more than five minutes (its HTML, or null). */
+function bootReport(summary) {
+    return summary && (summary.mode !== 'rest' || summary.simulated > 5 * 60000) ? welcomeBack(summary) : null;
+}
+
+/** A gap in play (Game.gapAt: the machine slept, the browser paused a tab): replayed in slices; signed in and long, after the server's look. */
+function catchUpGap(now) {
+    pending = { start: () => game.beginGap(Date.now()), after: summary => (summary && summary.mode !== 'rest' ? welcomeBack(summary) : null) };
+    if (cloud.loggedIn && cloudReady && now - game.now >= CLOUD_AWAY_MS) holdForServer(0);   // another device may have played meanwhile
+    else playPending();
+}
+
+// ---------- boot ----------
+
+if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
+// The time away is replayed once, for the game that will be played (catchUp): signed in, after a look at the server's save,
+// which may hold a newer game (this copy's if the server is slow); behind the sign-in, once the player has chosen; a guest's
+// at once. Under a minute away there is nothing to replay: the game plays at once, and a sync may still replace it.
+pending = { start: () => game.beginResume(Date.now()), after: bootReport };
+if (Date.now() - game.state.meta.savedAt < OFFLINE_MIN_MS || (!cloud.loggedIn && !needsSignIn())) playPending();
+if (loadProblem && !cloud.loggedIn && !needsSignIn()) setTimeout(offerBackups, 0);
+if (cloud.loggedIn) { if (pending) holdForServer(); else syncFromCloud(); }
+// A new player meets the game first, not a login form: a title card, then an account or a guest's game,
+// and straight into a fight. Signing in stays one click away (on the card, and in the header).
+else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
+if (needsSignIn() && !ui.modalOpen) openSignIn();   // a returning player meets the sign-in (a new one, the title card first)
+
+let lastSave = Date.now();
+let lastBackup = Date.now();
+let lastCloudSave = Date.now();
+let lastPresenceAt = Date.now();   // the player's last touch, or the page coming back into view
+const playerAround = now => !document.hidden && now - lastPresenceAt < CLOUD_AWAY_MS;
+// A newer version of the game live (src/ui/update.js): looked for while the page is in view, offered by the header's pill.
+const updates = createUpdateCheck({ own: VERSION, found: version => { ui.newVersion = version; render(); } });
+
+/** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
+function advance(now) {
+    if (holding()) return;   // time away first, a slice at a time (catchUp)
+    if (game.gapAt(now)) { catchUpGap(now); return; }
+    const summary = game.tick(now);
+    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
+}
+
+let tickErrorShown = false;
+setInterval(() => {
+    if (passive || catching) return;   // the game plays in another tab now; its time away is being replayed (catchUp)
+    const now = Date.now();
+    // The clock turned back: the save clocks start again from now (they waited for it to catch up).
+    if (now < lastSave - 5000) lastSave = lastBackup = lastCloudSave = now;
+    // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
+    try {
+        advance(now);
+    } catch (err) {
+        console.error('Tick failed', err);
+        if (!tickErrorShown) { toast('Something went wrong in the game loop — details in the console.', 'error'); tickErrorShown = true; }
+        game.now = now;
+    }
+    try { handleEvents(game.drainEvents()); } catch (err) { console.error('Events failed', err); }   // never at the cost of the save below
+    if (game.state.clanResult && cloud.loggedIn && cloudReady) sendClanResult();   // a clan attack fought, not yet sent
+    if (needsSignIn() && !ui.modalOpen) openSignIn();   // signed out, or a session that expired: the game waits for an account
+    if (now - lastSave > AUTOSAVE_MS) save(now);
+    // (not while a save that couldn't be read waits to be restored: these would write over its backups)
+    if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem && !pending) { lastBackup = now; rotateBackup(game.serialize(now), now); }
+    // the sync that failed, tried again (until it has chosen, nothing is uploaded)
+    if (cloud.loggedIn && !cloudReady && !syncing && !document.hidden && now >= syncRetryAt) syncFromCloud();
+    if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
+    // the Clan tab's board, only while someone is there (an untouched page kept the free database awake)
+    if (ui.tab === 'clan' && playerAround(now) && cloud.loggedIn && !ui.social.loading && now - ui.social.fetchedAt > CLAN_POLL_MS) refreshSocial();
+    if (!document.hidden) updates.tick(now);   // a newer version of the game, looked for now and then
+    const changed = game.revision !== ui.renderedRevision;
+    const pressing = pointer.down && now - pointer.downAt < 1000;
+    if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
+        try { render(); } catch (err) { console.error('Render failed', err); }
+    }
+}, TICK_MS);
+
+function frame(now) {
+    // (the next frame is asked for first: a frame that throws must not stop the scene for the session)
+    requestAnimationFrame(frame);
+    if (holding()) return;   // (the game is drawn once its time away is replayed, which draws its own bar: catchUp)
+    try {
+        patchLive(game, ui);
+        scene.frame(game, { frozen: endHeld() });
+        stage.frame(game);
+        guide.frame({ modal: !!ui.modalOpen, card: !!document.querySelector('#celebrate .celebration') });
+        paintGold(now);
+    } catch (err) { console.error('Frame failed', err); }
+}
+
+// The gold counter rolls up to a new total instead of jumping (and drops at once when gold is spent).
+let goldShown = null;
+let goldPaintedAt = 0;
+function paintGold(now = performance.now()) {
+    const node = document.getElementById('hdr-gold');
+    if (!node) return;
+    const target = game.state.gold;
+    const dt = Math.min(250, Math.max(0, now - (goldPaintedAt || now)));
+    goldPaintedAt = now;
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (goldShown === null || target < goldShown || still) goldShown = target;
+    else goldShown += (target - goldShown) * Math.min(1, dt / 220);
+    if (target - goldShown <= Math.max(1, target * 1e-4)) goldShown = target;
+    const text = fmt(goldShown);
+    if (node.textContent !== text) node.textContent = text;
+}
+requestAnimationFrame(frame);
+
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+    if (passive) return;
+    if (!holding()) game.setAttending(!document.hidden);   // (time away being replayed: at its end, catchUp)
+    if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
+    lastPresenceAt = Date.now();
+    if (giftsWaiting) claimGifts();   // noticed while the page was hidden
+    updates.back(Date.now());   // a newer version of the game may have come out meanwhile
+    // Back after a long while: another device may have played meanwhile. Look before uploading again.
+    if (cloud.loggedIn && cloudReady && hiddenAt && Date.now() - hiddenAt >= CLOUD_AWAY_MS) syncFromCloud();
+});
+// The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
+let resizeQueued = false;
+window.addEventListener('resize', () => {
+    if (resizeQueued || !document.body.classList.contains('battle-full')) return;
+    resizeQueued = true;
+    requestAnimationFrame(() => { resizeQueued = false; render(); });
+});
+window.addEventListener('pagehide', () => { save(Date.now()); cloudSaveOnLeave(); });
+window.addEventListener('beforeunload', () => save(Date.now()));
+
+// A press in progress: re-rendering now would replace the button under the pointer and lose the click.
+const pointer = { down: false, downAt: 0, keyAt: 0 };
+document.addEventListener('pointerdown', event => {
+    pointer.down = true;
+    pointer.downAt = Date.now();
+    sound.unlock();
+    // Every button answers with a click; the monster has its own strike sound.
+    const button = event.target?.closest?.('button, [role="button"]');
+    if (button && !button.disabled && !button.closest('.foe')) sound.play('click');
+}, { capture: true, passive: true });
+for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
+// A button clicked with the mouse or a finger lets the focus go once its click is done: kept, Space (the
+// fight's strike key) and Enter pressed it again, and a click on a camp upgrade bought three more. A
+// press from the keyboard (a click with no count) keeps the focus where the keys are.
+// (the button now focused: a render in the click may have put the focus on the button drawn in its place)
+document.addEventListener('click', event => {
+    if (event.detail > 0 && event.target?.closest?.('button')) document.activeElement?.closest?.('button')?.blur();
+});
+
+// A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
+// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip]';
+let tipNode = null;
+let tipTimer = 0;
+/** The game's own tooltip over `el`: `title` in bold above `text`. It goes after a moment, or with the pointer when `stay`. */
+function showTip(el, text, { title = '', stay = false } = {}) {
+    tipNode?.remove();
+    clearTimeout(tipTimer);
+    const node = document.createElement('div');
+    node.className = 'tap-tip';
+    node.setAttribute('role', 'tooltip');
+    if (title) { const name = document.createElement('b'); name.className = 'tip-title'; name.textContent = title; node.append(name); }
+    node.append(document.createTextNode(text));
+    document.body.appendChild(node);
+    const box = el.getBoundingClientRect();
+    const w = node.offsetWidth;
+    const h = node.offsetHeight;
+    const x = Math.max(8 + w / 2, Math.min(window.innerWidth - 8 - w / 2, box.left + box.width / 2));
+    const above = box.top - h - 8 >= 8;
+    node.style.left = `${x - w / 2}px`;   // x is the bubble's centre
+    node.style.top = `${above ? box.top - h - 8 : box.bottom + 8}px`;
+    tipNode = node;
+    if (!stay) tipTimer = setTimeout(() => { node.remove(); if (tipNode === node) tipNode = null; }, 2600);
+}
+// A tap on a chip or figure inside a card (an item a recipe needs, its XP or time) names it, and does not
+// also start or stop the card's action; the bubble is placed before anything is drawn again. (Touch screens only: the
+// query is made once, not on every click.)
+const noHover = window.matchMedia?.('(hover: none)');
+document.addEventListener('click', event => {
+    if (!noHover?.matches) return;
+    const el = event.target?.closest?.('[data-tip]');
+    if (!el || !el.parentElement?.closest('[role="button"]') || el.closest('button, a')) return;
+    event.stopPropagation();
+    event.preventDefault();
+    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '' });
+}, { capture: true });
+document.addEventListener('click', event => {
+    if (!noHover?.matches) return;
+    const el = event.target?.closest?.(TIP_TARGETS);
+    if (!el || (el.closest('button, a') && !el.matches('.pg-keep-item'))) { tipNode?.remove(); tipNode = null; return; }
+    const text = el.getAttribute('title') || el.dataset.tip || el.getAttribute('aria-label');
+    if (text) showTip(el, text, { title: el.getAttribute('title') ? '' : el.dataset.tipTitle || '' });
+});
+// On a mouse, anything with a data-tip (an item an action needs, say) names itself at once in the same
+// bubble, for as long as the pointer stays on it; the browser's slower tooltip of the card under it
+// is held back meanwhile, so two never show at once.
+let hoverTip = null;
+function endHoverTip() {
+    if (!hoverTip) return;
+    for (const [node, title] of hoverTip.held) node.setAttribute('title', title);
+    if (tipNode === hoverTip.node) { tipNode.remove(); tipNode = null; }
+    hoverTip = null;
+}
+document.addEventListener('pointerover', event => {
+    if (event.pointerType && event.pointerType !== 'mouse') return;
+    const el = event.target?.closest?.('[data-tip]');
+    if (el && el === hoverTip?.el) return;
+    endHoverTip();
+    if (!el) return;
+    const held = [];
+    for (let n = el.parentElement?.closest('[title]'); n; n = n.parentElement?.closest('[title]')) { held.push([n, n.getAttribute('title')]); n.removeAttribute('title'); }
+    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '', stay: true });
+    hoverTip = { el, held, node: tipNode };
+});
+document.addEventListener('pointerdown', endHoverTip, { capture: true });
+window.addEventListener('scroll', endHoverTip, { capture: true, passive: true });
+// A choice made in a dropdown or checkbox is done: let the tab refresh right away.
+document.addEventListener('change', event => {
+    if (event.target?.matches?.('select, input[type="checkbox"], input[type="radio"]')) { event.target.blur(); render(); }
+});
+
+// Any input ends "focus" (the idle bonus); it comes back after a minute of leaving the game alone. Not a
+// mini-game's: playing one took Focus's +15% away for a minute, and ate into what the win gave.
+let lastInputNote = 0;
+const noteInput = event => {
+    const now = Date.now();
+    lastPresenceAt = now;
+    if (event?.target?.closest?.('.minigame-panel')) return;
+    if (now - lastInputNote > 1000 || game.derived.focused) {
+        lastInputNote = now;
+        advance(now); // the first click after a long absence still gets its welcome-back report
+        if (!holding()) game.noteInput(now);
+    }
+};
+document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
+document.addEventListener('keydown', event => {
+    noteInput(event);
+    sound.unlock();
+    pointer.keyAt = Date.now();
+    // Keyboard access for the clickable cards (role="button"). A key held down presses once: held, it
+    // would start and stop an action over and over, or buy again and again.
+    const target = event.target;
+    const press = event.key === 'Enter' || event.key === ' ';
+    if (press && event.repeat && target?.closest?.('button, [role="button"]')) { event.preventDefault(); return; }
+    if (press && target?.getAttribute?.('role') === 'button') {
+        event.preventDefault();
+        target.click();
+    }
+    if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin', 'catchup'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game waits for an account or a guest, or its time away
+    else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
+    // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
+    // holding it does nothing more).
+    if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
+    const c = game.state.combat;
+    if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
+    else if (event.key === ' ' && ui.tab === fightTab(game, ui) && c.active && !target?.closest?.('button, a, [role="button"]')) {
+        event.preventDefault();
+        if (!event.repeat) document.querySelector('#scene .foe')?.click();
+    }
+}, { capture: true });
+
+// ---------- rendering ----------
+
+/** Replace an element's HTML only when it changed (keeps focus, hover and scroll where nothing moved). */
+function setHtml(el, html) {
+    if (el.__html === html) return;
+    el.innerHTML = html;
+    el.__html = html;
+}
+
+/** Is the player in the middle of typing, dragging or choosing inside the tab? Then leave it alone. */
+function isInteracting(focus, tab) {
+    if (!focus || !tab.contains(focus)) return false;
+    if (focus.tagName === 'TEXTAREA') return true;
+    if (focus.tagName === 'INPUT') return focus.type === 'range' ? pointer.down : !['checkbox', 'radio', 'button', 'submit'].includes(focus.type);
+    if (focus.tagName === 'SELECT') return Date.now() - Math.max(pointer.downAt, pointer.keyAt) < 5000; // an open dropdown
+    return false;
+}
+
+/** A way to find the same control after a re-render: its id, or its (unique) click handler. */
+function focusFinder(el) {
+    if (!el || el === document.body) return null;
+    if (el.id) return () => document.getElementById(el.id);
+    const handler = el.getAttribute?.('onclick');
+    if (handler) return () => [...document.querySelectorAll('[onclick]')].find(e => e.getAttribute('onclick') === handler);
+    return null;
+}
+
+// The purse's chips bump when their number changes (gold rolls instead, see paintGold).
+let lastPurse = null;
+/** The seal in the game's mark: the hero as they are now (look, gear, rank's cloak), redrawn only when that changes. */
+let brandKey = '';
+function paintBrand() {
+    const seal = document.querySelector('.brand-seal');
+    if (!seal) return;
+    const phone = !!window.matchMedia?.('(max-width: 900px)').matches;
+    const key = `${phone}|${heroLayers(game.state).join(',')}`;
+    if (key === brandKey) return;
+    brandKey = key;
+    seal.innerHTML = heroSprite(game.state, { scale: phone ? 1 : 2 });   // whole-number scales: a bust on a desktop, the whole hero on a phone
+}
+
+function bumpPurse() {
+    const s = game.state;
+    const purse = { tokens: s.prestige.tokens, sp: s.prestige.skillPoints, essence: s.resources.essence };
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (lastPurse && !still) {
+        for (const [key, value] of Object.entries(purse)) {
+            if (value === lastPurse[key]) continue;
+            document.querySelector(`.chip.${key}`)?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.14)', boxShadow: '0 0 18px rgba(251, 191, 36, 0.55)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360, easing: 'ease-out' });
+        }
+    }
+    lastPurse = purse;
+}
+
+function render() {
+    if (catching || pending) return;   // (the game is drawn once its time away is replayed: catchUp)
+    ui.lastRender = Date.now();
+    ui.renderedRevision = game.revision;
+    if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
+    if (ui.tab === 'combat') ui.tab = fightTab(game);   // a dungeon run or the Titan is fought on the Dungeons tab, the clan boss on the Clan tab
+    const focus = document.activeElement;
+    const findAgain = focusFinder(focus);
+    const tab = document.getElementById('tab');
+    document.body.classList.toggle('battle-full', battleMode(game, ui)); // before the scene syncs: it sizes the fighters by it
+    setHtml(document.getElementById('nav'), renderNav(game, ui));
+    if (ui.tab !== navShownTab) { navShownTab = ui.tab; revealNavTab(); }
+    setHtml(document.getElementById('nav-next'), renderNavNext(game));
+    setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
+    bumpPurse();
+    setHtml(hotbar, renderHotbar(game, ui));
+    const title = pageTitle(game);
+    if (document.title !== title) document.title = title;
+    if (!isInteracting(focus, tab)) setHtml(tab, renderTab(game, ui, cloud)); // don't yank a field out of the player's hands
+    if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
+    document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);
+    scene.sync(game, ui, { frozen: endHeld() });
+    stage.sync(game, ui);
+    guide.sync(game, { battle: ui.tab === fightTab(game, ui), tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
+    rewards.resume();   // cards held back by a boss fight show once it is over
+    paintGold();
+    paintBrand();
+    glowArrivals();
+    refreshPerks();
+}
+
+// On a phone the tabs are a strip that scrolls sideways: a tab opened from elsewhere (the hotbar, a
+// card) slides into sight.
+let navShownTab = null;
+function revealNavTab() {
+    const nav = document.getElementById('nav');
+    const btn = document.getElementById(`nav-${ui.tab}`);
+    if (!nav || !btn || nav.scrollWidth <= nav.clientWidth + 1) return;
+    const strip = nav.getBoundingClientRect();
+    const tab = btn.getBoundingClientRect();
+    if (tab.left >= strip.left && tab.right <= strip.right) return;
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    nav.scrollBy({ left: tab.left - strip.left - (strip.width - tab.width) / 2, behavior: still ? 'auto' : 'smooth' });
+}
+
+/** The perks dialog stays current while it is open (a perk bought, a skill point spent, a talent learned). */
+function refreshPerks() {
+    if (ui.modalOpen !== 'perks') return;
+    const overlay = document.querySelector('#modal-root .modal-overlay');
+    const html = renderPerksModal(game, ui.perks);
+    if (!overlay || overlay.__html === html) return;
+    const scroll = overlay.querySelector('.modal-content')?.scrollTop || 0;
+    setHtml(overlay, html);
+    const content = overlay.querySelector('.modal-content');
+    if (content) content.scrollTop = scroll;
+}
+
+// A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
+const ARRIVALS = {
+    essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
+    food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
+    auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars',
+    talents: '.chip.tp', charms: '.charms-panel'
+};
+const arrivals = new Set();
+
+/**
+ * A fight on its own tab just ended while watched (the Titan's, a dungeon run lost, the clan boss's), and its screen is
+ * held a moment for its last banner (the holds above): the battle scene stays on that last moment meanwhile. The hero is
+ * already back at what he did before, a fight at the stages say, and the held screen showed him farming there (the
+ * owner, October 2026).
+ */
+function endHeld() {
+    const mode = game.state.combat.mode;
+    if (mode === 'titan' || mode === 'dungeon' || mode === 'clan') return false;
+    return Math.max(ui.battleHoldUntil || 0, ui.dungeonHoldUntil || 0, ui.clanHoldUntil || 0) > game.now;
+}
+
+/** A fight on the Dungeons tab is over (a run, the Titan's): the tab, where it was watched, shows the list again (fightTab). */
+function backToDungeons() {
+    ui.dungeonHoldUntil = 0;
+    ui.battleHoldUntil = 0;
+    render();
+}
+
+/**
+ * The clan boss's fight is over: the Clan tab, where it was fought, shows the clan again (fightTab), whatever the
+ * hero went back to (a fight at the stages goes on under Combat).
+ */
+function backToClan() {
+    if (game.state.combat.mode === 'clan') return;   // another attack already began
+    ui.clanHoldUntil = 0;
+    ui.battleHoldUntil = 0;
+    render();
+}
+
+/** A quick pop with a glow on something just drawn: the answer to a press on the armory's buttons. */
+function flourish(selector, glow = 'rgba(253, 230, 138, 0.9)') {
+    if (document.body.classList.contains('reduced-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelector(selector)?.animate?.([
+        { transform: 'none', filter: 'none' },
+        { transform: 'translateY(-6px) scale(1.12)', filter: `drop-shadow(0 0 12px ${glow}) brightness(1.35)`, offset: 0.35 },
+        { transform: 'none', filter: 'none' }
+    ], { duration: 560, easing: 'cubic-bezier(.3,1.4,.6,1)' });
+}
+
+function glowArrivals() {
+    if (!arrivals.size) return;
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    for (const id of arrivals) {
+        const node = ARRIVALS[id] && document.querySelector(ARRIVALS[id]);
+        if (!node) continue; // not on this tab: it glows when the player gets there
+        arrivals.delete(id);
+        if (!still) node.animate?.([{ boxShadow: '0 0 0 0 rgba(252, 211, 77, 0)', filter: 'brightness(1)' }, { boxShadow: '0 0 0 3px rgba(252, 211, 77, 0.7), 0 0 26px rgba(252, 211, 77, 0.5)', filter: 'brightness(1.25)', offset: 0.3 }, { boxShadow: '0 0 0 0 rgba(252, 211, 77, 0)', filter: 'brightness(1)' }], { duration: 1400, easing: 'ease-out' });
+    }
+}
+
+/** Which sound an event makes (null for none): the fight is heard only while it is watched. */
+/** What a mini-game's find was, in words and a picture, for its toast (null for none). */
+function findWords(find) {
+    if (!find) return null;
+    const name = id => RESOURCES[id]?.name || id;
+    if (find.kind === 'gem') return { text: `Found ${withArticle(name(find.id))}!`, icon: resIcon(find.id) };
+    if (find.kind === 'nest') return { text: `A bird's nest: +${fmt(find.qty)} ${name(find.id)}${find.gem ? `, and ${withArticle(name(find.gem))}` : ''}`, icon: resIcon(find.gem || find.id) };
+    if (find.kind === 'bait') return { text: `A tin of bait: +${fmt(find.qty)} bait`, icon: resIcon('fishing_bait') };
+    if (find.kind === 'bonfire') return { text: `The bonfire roars: +${duration(find.bonfireMs)}`, icon: glyph('flame') };
+    return { text: `+${fmt(find.qty)} ${name(find.id)}, for nothing`, icon: resIcon(find.id) };
+}
+
+function soundFor(ev, onCombat) {
+    switch (ev.type) {
+        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit || ev.deathblow || ev.opening || ev.executed ? 'crit' : 'hit'];
+        case 'secondWind': return onCombat ? ['unlock'] : null;
+        case 'talentPoint': return ['levelUp'];
+        case 'enemyHit': return onCombat ? ['hurt'] : null;
+        case 'dodge': return onCombat ? ['dodge'] : null;
+        case 'eat': return onCombat ? ['eat'] : null;
+        case 'kill': return [ev.enemy.boss ? 'victory' : ev.enemy.gilded ? 'gold' : 'kill'];
+        case 'itemDropped': return [lootSound(ev.item)];
+        case 'itemCrafted': return [['rare', 'epic', 'legendary'].includes(ev.item.rarity) ? ev.item.rarity : 'craft'];
+        case 'actionComplete': return ui.tab === ev.skill ? [ev.made?.gem ? 'gem' : ev.made?.item ? 'craft' : (ev.made?.qty || 1) > 1 ? 'double' : 'action'] : null;
+        case 'toolMade': return ['unlock'];
+        case 'levelUp': return ['levelUp'];
+        case 'unlock': case 'zoneReached': return ['unlock'];
+        case 'achievement': case 'eventMilestone': case 'dungeonMilestone': case 'trialTier': case 'laurel': return ['achievement'];
+        case 'masteryLevel': return ev.from < 99 && ev.level >= 99 ? ['achievement'] : [50, 75].some(m => ev.from < m && ev.level >= m) ? ['gold'] : null;
+        case 'masteryCheckpoint': return ['achievement'];
+        case 'festivalCloak': return ['legendary'];
+        case 'death': case 'bossTimeout': return ['defeat'];
+        case 'dungeonFail': return ev.lost ? ['defeat'] : null;   // leaving by choice is no defeat
+        case 'prestige': return ev.ascend ? null : ['prestige'];
+        case 'ascend': return ['legendary'];
+        case 'pet': return ['pet'];
+        case 'unique': return ['legendary'];
+        case 'dungeonSeal': return ['legendary'];
+        case 'dungeonClear': return ['chest'];
+        case 'titan': return [ev.won ? 'victory' : 'defeat'];
+        case 'glance': return onCombat ? ['dodge'] : null;   // a strike off the clan boss's guard
+        case 'minigameReady': return game.state.settings.minigameChime !== false ? ['chance'] : null;   // (Settings can turn it off)
+        case 'minigameWin': return [ev.perfect ? 'perfect' : 'gold'];
+        case 'minigameFail': return ['dodge'];
+        case 'harvest': return ['drop'];
+        case 'obstacleBuilt': return ['unlock'];
+        case 'bestiaryStar': return isUnlocked(game.state, 'achievements') ? ['gold'] : null;
+        case 'error': return ['error'];
+        default: return null;
+    }
+}
+
+/** A drop's sound: its rarity's, or for a plainer piece that beats what he wears a bright step up. */
+function lootSound(item) {
+    if (['rare', 'epic', 'legendary'].includes(item.rarity)) return item.rarity;
+    if (['mythic', 'primal'].includes(item.rarity)) return 'mythic';
+    return canWear(game.state, item) && isUpgrade(game.state, item) ? 'upgrade' : 'drop';
+}
+
+/**
+ * A legendary (or better) that beats what he wears: its card once it has landed in the fight (scene.js playLoot), with
+ * what it would do and an Equip on it, staying until it is tapped (the owner, October 2026: a legendary drop should be a moment).
+ */
+function legendaryCard(item, lord = false) {
+    const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[4];
+    const worth = equipGain(game.state, item);
+    const stages = stagesWords(gainStages(game.state, worth));
+    const gain = gainMarkup(worth) + (stages ? ` · <b class="up">${escapeHtml(stages)}</b>` : '');
+    const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(() => {
+        if (!game.state.inventory.some(i => i.id === item.id)) return;   // put on, or gone, meanwhile
+        if (document.hidden) { toast(`${rarity.name} drop: ${item.name}!`, 'achievement', pic(itemSpriteKey(item), escapeHtml(item.icon || ''))); return; }   // (no card for a page out of sight)
+        rewards.celebrate({
+            key: `loot:${item.id}`, kind: `legend-drop r-${rarity.id}`, kicker: lord ? `A Lord's due: ${rarity.name}` : `${rarity.name} drop`, title: item.name, sticky: true,   // until tapped (the owner's ask)
+            icon: `<span class="cel-loot">${sprite(itemSpriteKey(item), { scale: 3, fallback: escapeHtml(item.icon || '') })}</span>`,
+            lines: [gain ? `Worn: ${gain}` : '', `Tier ${item.tier}${item.depth ? ` · depth ${item.depth}` : ''}`].filter(Boolean),
+            act: { label: 'Equip', run: () => window.FI.equip(item.id) }
+        });
+    }, still ? 0 : 1150);
+}
+
+const REVEAL_TOASTS = {
+    mastery: 'Mastery: every action gets better the more you do it',
+    world_map: 'The map is yours: travel between the zones you have reached'
+};
+// A toast's picture: a sprite, small (the text beside it is plain text).
+const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
+
+function handleEvents(events) {
+    const frozen = endHeld();   // (an ended fight's last moment on screen: what happens meanwhile at the stages isn't drawn)
+    // a fight on the Dungeons tab that just ended while watched (a run lost, the Titan's) keeps its screen a moment, for its end to show
+    const ended = ui.tab === 'dungeons' && events.find(ev => (ev.type === 'dungeonFail' && ev.lost) || (ev.type === 'titan' && ev.reason !== 'left'));
+    if (ended) ui.dungeonHoldUntil = game.now + (ended.type === 'titan' ? TITAN_HOLD_MS : DEFEAT_HOLD_MS) + 1000;
+    // so does the clan boss's on the Clan tab ("Time is up · To the clan…"), and then the tab shows the clan again
+    if (ui.tab === 'clan' && events.some(ev => ev.type === 'clanFight' && ev.reason !== 'left')) {
+        ui.clanHoldUntil = ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
+        setTimeout(backToClan, TITAN_HOLD_MS);
+    }
+    const onCombat = ui.tab === fightTab(game, ui); // the battle scene shows these itself
+    // Places that open in the same moment share one card (and one sound), so nothing queues up.
+    const unlocked = events.filter(ev => ev.type === 'unlock').map(ev => ev.id);
+    if (unlocked.length) {
+        // (Prestige is in the Shop: it is marked new there, if the Shop is open; a dot for a closed Shop led nowhere)
+        for (const id of unlocked) if (id !== 'prestige' || isUnlocked(game.state, 'shop')) markFresh(id === 'prestige' ? 'shop' : id, true);
+        rewards.celebrate(unlockCelebration(unlocked));
+        sound.play('unlock');
+    }
+    for (const ev of events) {
+        if (!frozen) scene.event(ev, game);
+        const heard = ev.type === 'unlock' ? null : soundFor(ev, onCombat);
+        if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
+        switch (ev.type) {
+            case 'reveal':
+                arrivals.add(ev.id);
+                if (REVEAL_TOASTS[ev.id]) toast(REVEAL_TOASTS[ev.id], 'level', pic(FEATURES[ev.id]?.icon || 'res/diamond'));
+                if (ev.id === 'talents') {   // Combat past 99: the War Tree (data/talents.js), with a point for each level past it
+                    const points = talentPoints(game.state);
+                    rewards.celebrate({ key: 'talents', kind: 'legend', icon: sprite(FEATURES.talents.icon, { scale: 2 }), kicker: 'Combat past 99', title: 'The War Tree',
+                        lines: [`${points} talent point${points === 1 ? '' : 's'}: one for each combat level past 99`, 'Blade, Bulwark and Hunt: three trees of talents'] });
+                }
+                break;
+            case 'charmEmpty': {   // a charm's last charge (systems/charms.js)
+                const charm = charmById(ev.id);
+                if (charm) toast(`${charm.name}: the last charge used`, 'info', pic(charm.icon));
+                break;
+            }
+            case 'talentPoint':   // a combat level past 99 (systems/progress.js), and the War Tree's point with it
+                toast(`Combat level ${ev.level}: ${ev.points > 1 ? `${ev.points} talent points` : 'a talent point'}`, 'level', pic(FEATURES.talents.icon));
+                refreshPerks();
+                break;
+            case 'actionComplete': actionFx.actionComplete(ev, ui.tab, stage.anchor()); break;
+            case 'levelUp': {
+                const card = levelCelebration(ev);
+                const cape = ev.level >= 99 && ev.from < 99 ? capeFor(ev.skill) : null;   // 99 brings the skill's cape, worn at once
+                if (card && cape) {   // the picture is the hero in it
+                    card.icon = `<span class="cel-hero">${heroSprite(game.state, { scale: 2 })}</span>`;
+                    card.lines.unshift(`The ${escapeHtml(SKILLS[ev.skill].name)} cape: ${escapeHtml(cape.perk.charAt(0).toLowerCase() + cape.perk.slice(1))}`);
+                    card.ms = 5200;
+                }
+                if (card) rewards.celebrate(card);
+                else toast(`${SKILLS[ev.skill].name} level ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
+                break;
+            }
+            case 'achievement': { // a medal: a card with its picture, the reward it brings for good
+                const a = achievementById(ev.id);
+                if (ui.tab !== 'achievements' && isUnlocked(game.state, 'achievements')) markFresh('achievements', true);   // "New" on the Hall until visited
+                const look = lookForMedal(ev.id);   // some medals bring a look for the hero
+                const lines = [escapeHtml(a?.reward || '')];
+                if (look) lines.push(`<span class="cel-look">${heroSprite({ ...game.state, equipped: {}, hero: { ...game.state.hero, look: look.id } }, { scale: 1 })}</span> A new look: ${escapeHtml(look.name)}`);
+                if (a) rewards.celebrate({ key: `medal:${a.id}`, kind: 'medal', icon: `<span class="cel-medal">${medalArt(a, 2)}</span>`, kicker: ev.secret ? 'A secret medal' : 'A new medal', title: a.name, lines, ms: look ? 4800 : 3600 });
+                else toast(`${ev.name} — ${ev.reward}`, 'achievement', tabIcon('achievements', 0.625));
+                break;
+            }
+            case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
+            case 'itemDropped': {
+                const rank = RARITIES.findIndex(r => r.id === ev.item.rarity);
+                const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);   // legendary and above
+                if (better) legendaryCard(ev.item, !!ev.lord);   // its card says it
+                else if (rank >= 2) toast(`${ev.lord ? 'A Lord\'s due: ' : ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
+                break;
+            }
+            case 'toolMade': toast(`${TOOLS[ev.tool]?.tiers.find(t => t.tier === ev.tier)?.name || 'A new tool'}: in hand`, 'craft', toolIcon(ev.tool)); break;
+            case 'clanBanner': {   // the clan felled a level of its boss: the banner rises for everyone in it until the week ends
+                const look = clanBossFor(ev.week);
+                rewards.celebrate({ key: `banner:${ev.week}:${ev.kills}`, kind: 'legend', art: paintStyle(look.zone), icon: tabIcon('clan', 2),
+                    kicker: `Your clan felled level ${ev.kills}`, title: `Clan banner ×${ev.mult}`,
+                    lines: ['Attack, defence and health, for everyone in the clan until the week ends', ev.next ? `The next level: ×${ev.next}` : 'The week\'s last level'], ms: 5200 });
+                sound.play('levelUp');
+                break;
+            }
+            case 'hallRoom': {   // a room of the clan's hall rose a level (systems/clanhall.js): its bonus, for every member
+                const room = hallRoom(ev.room);
+                if (room) rewards.celebrate({ key: `hall:${ev.room}:${ev.level}`, kind: 'unlock', art: paintStyle(room.art), icon: sprite(room.icon, { scale: 2 }),
+                    kicker: 'The clan hall', title: `${room.name}: level ${ev.level}`, lines: [escapeHtml(`${room.text(ev.level)}, for everyone in the clan`)], ms: 4200 });
+                break;
+            }
+            case 'hallStage': {   // the hall grew (data/clanhall.js HALL_STAGES): its painting, and more for the banner
+                const stage = HALL_STAGES[ev.stage];
+                if (stage) rewards.celebrate({ key: `hallstage:${ev.stage}`, kind: 'legend', art: paintStyle(stage.art, 'center 58%'), icon: tabIcon('clan', 2),
+                    kicker: 'Your clan built', title: `The ${stage.name}`, lines: ['New colours and emblems for the clan\'s banner'], ms: 5200 });
+                sound.play('levelUp');
+                break;
+            }
+            case 'hallCloak':   // the clan's cloak, put on (systems/clanhall.js)
+                rewards.celebrate({ key: 'hallcloak', kind: 'legend', icon: `<span class="cel-hero">${heroSprite(game.state, { scale: 2 })}</span>`,
+                    kicker: 'The clan hall', title: 'The clan\'s cloak', lines: [`For ${HALL.cloakHours} hours of work given to the hall, in the banner's colour`], ms: 5200 });
+                break;
+            case 'equip':   // the first piece to take a slot's levels: how the forge (and the bench) work, said once (systems/inventory.js)
+                if (ev.firstForge) {
+                    const jewel = /^(Ring|Ear|Neck)/.test(ev.slot);
+                    const kind = ev.slot === 'Weapon' ? 'weapon' : jewel ? (ev.slot === 'Neck' ? 'amulet' : ev.slot.startsWith('Ring') ? 'ring' : 'earring') : 'piece of armour';
+                    rewards.celebrate({ key: 'forge-slots', kind: 'legend', icon: `<span class="cel-loot">${sprite(itemSpriteKey(ev.item), { scale: 2, fallback: escapeHtml(ev.item.icon || '') })}</span>`,
+                        kicker: jewel ? 'The bench' : 'The forge', title: `+${ev.forge} kept`, lines: [`${jewel ? 'Bench' : 'Forge'} levels belong to the slot.`, `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
+                }
+                break;
+            case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
+            case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
+            case 'prestige': {
+                const count = game.state.prestige.count;
+                const rank = rankFor(count);
+                const paid = `+${fmt(ev.tokens)} tokens · +${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`;
+                // prestiged into a Trial, or a Pact of several (systems/trials.js)
+                const trials = (Array.isArray(ev.trial) ? ev.trial : ev.trial ? [ev.trial] : []).map(trialById).filter(Boolean);
+                const trial = trials[0];
+                if (ev.ascend && rank === rankFor(count - 1)) { save(Date.now()); break; }   // an Ascension: its own card below ('ascend')
+                if (ev.auto && rank === rankFor(count - 1)) {   // the switch's own: a note, and the fight goes on
+                    toast(`Auto-prestige: ${paid}`, 'prestige', pic(FEATURES.prestige.icon));
+                } else if (rank !== rankFor(count - 1)) {   // a new rank: the hero shows off his new cloak
+                    rewards.celebrate({ kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: '' } }, { scale: 3 }), kicker: 'A new rank', title: rank.name,   // the new cloak, even over a cape
+                        lines: [`A ${rank.cloak} cloak, for ${count} prestige${count === 1 ? '' : 's'}`, paid] });
+                    if (trial) toast(`${trials.length > 1 ? 'A Pact' : 'Trial'}: ${trials.map(t => t.name).join(', ')}.`, 'prestige', pic(trial.icon));
+                } else if (trial) {
+                    const aims = trials.map(t => nextTrialTarget(game.state, t)).filter(x => x !== null);
+                    rewards.celebrate({ key: `trial:${trials.map(t => t.id).join('+')}`, kind: 'prestige', icon: sprite(trial.icon, { scale: 2 }), kicker: trials.length > 1 ? `A Pact of ${trials.length} begins` : 'A Trial begins',
+                        title: trials.length > 1 ? trials.map(t => t.name).join(' · ') : trial.name,
+                        lines: [...trials.map(t => t.rule), aims.length ? `Stage ${fmt(Math.min(...aims))} for a record` : `Stage ${fmt(weeklyGoal(game.state, Date.now()).target)} for this week's laurel`, paid] });
+                } else {
+                    rewards.celebrate({ kind: 'prestige', icon: sprite(FEATURES.prestige.icon, { scale: 2 }), kicker: 'Prestige', title: `+${fmt(ev.tokens)} tokens`,
+                        lines: [`+${ev.skillPoints} skill point${ev.skillPoints === 1 ? '' : 's'}`, `A new run begins at stage ${ev.startStage}`] });
+                }
+                save(Date.now());
+                break;
+            }
+            case 'minigameReady': if (ui.tab !== ev.skill) toast(`A ${SKILLS[ev.skill].name} chance appeared!`, 'minigame', tabIcon(ev.skill, 0.625)); break;
+            case 'minigameWin': {   // the boost, a Perfect said so, and the find (systems/minigame.js giveFind) with its own sound
+                toast(`${ev.perfect ? 'Perfect! ' : ''}×${ev.mult} speed for ${Math.round(ev.ms / 1000)}s`, 'minigame');
+                const found = findWords(ev.find);
+                if (found) { toast(found.text, 'minigame', found.icon); sound.play(ev.find.kind === 'gem' || ev.find.gem ? 'gem' : 'pickup'); }
+                actionFx.minigameWin(ev, ui.tab, stage.anchor());
+                break;
+            }
+            case 'minigameBoostOver': {   // what the ×2 added, in the skill's own goods
+                const what = [ev.qty > 0 && RESOURCES[ev.id] ? `+${fmt(ev.qty)} ${RESOURCES[ev.id].name}` : '', ev.xp > 0 ? `+${fmt(ev.xp)} XP` : ''].filter(Boolean).join(', ');
+                if (what) toast(`The ×2 brought ${what}`, 'minigame', ev.qty > 0 && RESOURCES[ev.id] ? resIcon(ev.id) : tabIcon(ev.skill, 0.625));
+                break;
+            }
+            case 'minigameFail': toast('Missed: the streak starts again', 'minigame'); break;
+            case 'error': toast(ev.text, 'error'); break;
+            case 'dungeonClear':   // the first clear of a visit asks (dungeonChoice); while it repeats, a note every tenth
+                if (game.state.combat.dungeon?.repeat && ev.clears % 10 === 0) toast(`Dungeon cleared (${ev.clears})${ev.item ? ` — ${ev.item.name}` : ''}`, 'boss', pic('crate'));
+                break;
+            case 'dungeonChoice':   // the hero waits at the open chest: once the boss's fall and the chest have shown, ask
+                setTimeout(() => window.FI.openRunChoice(), 1500);
+                break;
+            case 'dungeonChosen': if (ui.modalOpen === 'runChoice') closeModal(); break;
+            case 'dungeonFail':
+                toast(ev.lost ? 'The dungeon run failed' : 'You left the dungeon: the run ends here', ev.lost ? 'death' : 'info');
+                // lost (a fall, or the boss's timer): once the defeat has shown, back to the dungeons
+                if (ev.lost) setTimeout(() => { if (game.state.combat.mode !== 'dungeon') backToDungeons(); }, DEFEAT_HOLD_MS);
+                break;
+            case 'zoneReached': { // the first step ever into a land: its painting, its ruler (unmet), what it holds
+                if (ev.stratum) {   // a stratum of the Abyss (data/strata.js): its painting (a round's cast in new hues), its line
+                    const s = stratumById(ev.zone);
+                    if (!s) break;
+                    const hue = s.cycle ? `;filter:hue-rotate(${((s.cycle - 1) * 47) % 360}deg)` : '';
+                    rewards.celebrate({ key: `zone:${s.id}`, kind: 'unlock', art: paintStyle(s.paint) + hue, icon: sprite(`mon/${s.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
+                        kicker: s.cycle ? 'The strata come round again' : 'Deeper into the Abyss', title: s.name, note: s.line, lines: [`Stages ${ev.stage}–${ev.stage + STRATUM_STAGES - 1}`], ms: 5000 });
+                    break;
+                }
+                const zone = ZONES.find(z => z.id === ev.zone);
+                if (!zone) break;
+                const last = ev.stage + STAGES_PER_ZONE - 1;
+                const abyss = zone === ZONES[ZONES.length - 1];
+                rewards.celebrate({ key: `zone:${zone.id}`, kind: 'unlock', art: paintStyle(zone.id), icon: sprite(`mon/${zone.boss}`, { scale: 2, cls: 'silhouette', fallback: '⚔️' }),
+                    kicker: 'A new land', title: zone.name, note: ZONE_LINES[zone.id] || '', lines: [abyss ? `Stages ${ev.stage}+, without end` : `Stages ${ev.stage}–${last}`, zone.loot.map(l => resIcon(l.id)).join(' ')], ms: 5000 });
+                break;
+            }
+            case 'dungeonMilestone': { // 25, 100 or 250 clears: a bonus for good, on the dungeon's painting (in its tier's hues)
+                const d = dungeonAt(ev.dungeon, ev.tier || 1);
+                const hue = dungeonTierInfo(ev.tier || 1).hue;
+                if (d) rewards.celebrate({ key: `dungeon:${d.id}:${ev.tier || 1}:${ev.clears}`, kind: 'unlock', art: paintStyle(DUNGEON_ART[d.id] || 'dungeon') + (hue ? `;filter:hue-rotate(${hue}deg)` : ''), icon: sprite(`mon/${d.boss.name}`, { scale: 2, fallback: escapeHtml(d.icon) }),
+                    kicker: `${d.name} · ${fmt(ev.clears)} clears`, title: ev.desc, lines: ['Yours for good, through every prestige'] });
+                break;
+            }
+            case 'dungeonSeal': { // the eight uniques handed in: the Seal, and the dungeons a tier deeper (systems/dungeon.js)
+                const next = dungeonTierInfo(ev.next);
+                const first = dungeonAt('goblin_warren', ev.next);
+                rewards.celebrate({ key: `seal:${ev.tier}`, kind: 'legend', art: paintStyle('dungeon') + `;filter:hue-rotate(${next.hue}deg)`, icon: sprite('crown', { scale: 2, fallback: '🔱' }),
+                    kicker: `The Seal of tier ${dungeonTierInfo(ev.tier).numeral || 'I'}`, title: `The dungeons, tier ${next.numeral}`,
+                    lines: [`${DUNGEON_TIER_STAGES} stages deeper: from stage ${fmt(first.stage)}`, next.rule ? `${next.rule.name}: ${next.rule.desc.toLowerCase()}` : '', `A Seal: your tokens are ×${(BASE_RECORD_MULT ** SEAL_RECORDS).toFixed(2)} stronger`].filter(Boolean), ms: 6000 });
+                break;
+            }
+            case 'titan': {
+                toast(ev.won ? `Titan defeated! Permanent +${+((ev.bonus || 0) * 100).toFixed(1)}% ATK and HP` : `The Titan survived — ${Math.round((ev.dealt || 0) * 100)}% damage dealt`, ev.won ? 'achievement' : 'death', pic('titan/0'));
+                // fought on the Dungeons tab: while watched, its banner keeps the screen a moment (the hold above), and
+                // then the tab shows the list again; the hero is back at what he did before (a stage fight is under Combat)
+                if ((ui.dungeonHoldUntil || 0) > game.now) {
+                    ui.battleHoldUntil = game.now + TITAN_HOLD_MS;
+                    setTimeout(() => { if (game.state.combat.mode !== 'titan' && game.state.combat.mode !== 'dungeon') backToDungeons(); }, TITAN_HOLD_MS);
+                }
+                break;
+            }
+            case 'clanFight':   // the clan fight is over: what was done is sent; the Clan tab shows the clan again (the hold above)
+                sendClanResult(true);
+                break;
+            case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
+            case 'ascend':   // tokens given up for Stars: the biggest card there is
+                rewards.celebrate({ key: `ascend:${ev.count}`, kind: 'legend', icon: '<i class="coin-dot stars big" aria-hidden="true"></i>', kicker: `Ascension ${ev.count}`, title: `+${fmt(ev.stars)} Stars`,
+                    lines: [`Every prestige pays ×${ev.gain.toFixed(2)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
+                save(Date.now());
+                break;
+            case 'festivalCloak': {   // a weekend event's cloak bought (data/capes.js): the hero in it
+                const cloak = festivalCloak(ev.cape);
+                if (cloak) rewards.celebrate({ key: `cloak:${ev.event}`, kind: 'legend', icon: heroSprite({ ...game.state, hero: { ...game.state.hero, cape: ev.cape } }, { scale: 3 }), kicker: 'A festival cloak', title: cloak.name,
+                    lines: ['Yours to keep: wear it from Settings'] });
+                break;
+            }
+            case 'masteryCheckpoint':   // a checkpoint of a skill's whole mastery: its actions faster for good
+                if (!seen(game.state, 'mastery')) break;   // (said once mastery itself has been met)
+                rewards.celebrate({ key: `mastery:${ev.skill}:${ev.at}`, kind: 'level', icon: tabIcon(ev.skill, 2), kicker: 'Mastery checkpoint', title: `${SKILLS[ev.skill].name} ${Math.round(ev.at * 100)}%`,
+                    lines: [`+${Math.round(ev.speed * 100)}% speed in ${SKILLS[ev.skill].name}, for good`] });
+                break;
+            case 'laurel': {   // the week's Trial beaten (systems/trials.js): a record
+                const trial = trialById(ev.id);
+                if (!trial) break;
+                const n = Math.max(1, ev.count || 1);   // a Pact with the week's Trial in it: one for each Trial it holds
+                rewards.celebrate({ key: `laurel:${ev.laurels}`, kind: 'legend', icon: sprite(trial.icon, { scale: 2 }), kicker: "This week's Trial", title: n > 1 ? `${n} laurels` : 'A laurel',
+                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, n > 1 ? `${n} records: your tokens are ×${(BASE_RECORD_MULT ** n).toFixed(2)} stronger` : `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
+                break;
+            }
+            case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
+                const trial = trialById(ev.id);
+                if (!trial) break;
+                const target = nextTrialTarget(game.state, trial);
+                // the five tiers, then the ladder's rungs past them (data/trials.js TRIAL_LADDER)
+                const kicker = ev.tier < TRIAL_TIERS ? `Trial · tier ${ev.tier} of ${TRIAL_TIERS}` : ev.tier === TRIAL_TIERS ? 'Trial · all five tiers' : `Trial · rung ${ev.tier - TRIAL_TIERS}`;
+                rewards.celebrate({ key: `trial:${ev.id}:${ev.tier}`, kind: ev.last ? 'legend' : 'medal', icon: sprite(trial.icon, { scale: 2 }), kicker, title: trial.name,
+                    lines: [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`, ...(target ? [`${ev.tier >= TRIAL_TIERS ? 'Its ladder goes on: ' : 'Next: '}stage ${fmt(target)}`] : [])] });
+                break;
+            }
+            case 'record': {   // every 25 stages of all-time best: the tokens grow stronger (once there are tokens to strengthen)
+                // the steps of the deep say what opens there (data/items.js MYTHIC, PRIMAL)
+                const opens = ev.stage === MYTHIC.from ? 'From here a boss near your best can leave Mythic gear'
+                    : ev.stage === PRIMAL.from ? 'From here a Mythic piece can come Primal' : '';
+                if (seen(game.state, 'tokens')) rewards.celebrate({ key: `record:${ev.stage}`, kind: 'legend', icon: sprite('token', { scale: 2, fallback: '✨' }), kicker: 'A new record', title: `Stage ${fmt(ev.stage)}`,
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`, opens].filter(Boolean), ms: opens ? 5200 : undefined });
+                break;
+            }
+            case 'skillRecord':   // every 50 levels of the skills together: the tokens grow stronger too (core/modifiers.js recordsOf)
+                if (seen(game.state, 'tokens')) rewards.celebrate({ key: `skillRecord:${ev.levels}`, kind: 'legend', icon: sprite('perk/scholar', { scale: 2, fallback: '📜' }), kicker: 'A new record', title: `${fmt(ev.levels)} skill levels`,
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
+                break;
+            case 'unique':
+                if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.record && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
+                else toast(ev.kept ? `A spare ${ev.item.name}: salvage it for essence` : `A spare ${ev.item.name}, salvaged as it came`, 'achievement', pic(itemSpriteKey(ev.item)));
+                break;
+            case 'obstacleBuilt': toast(`${ev.obstacle.name} built — ${ev.obstacle.desc}`, 'achievement', tabIcon('agility', 0.625)); break;
+            case 'bestiaryStar': // a kind of monster fell for the 10th, 100th or 1,000th time (once the bestiary can be seen)
+                if (isUnlocked(game.state, 'achievements')) toast(`${ev.name} ${'★'.repeat(ev.stars)} — ${fmt(ev.kills)} defeated`, 'level', pic(`mon/${ev.name}`));
+                break;
+            case 'eventMilestone': rewards.celebrate({ kind: 'unlock', icon: sprite(EVENT_ART[ev.event.id], { scale: 2, fallback: ev.event.icon }), kicker: ev.event.name, title: ev.milestone.desc }); break;
+            case 'masteryLevel':
+                if (ev.from < 99 && ev.level >= 99) rewards.celebrate({ key: `mastery:${ev.skill}:${ev.key}`, kind: 'legend', icon: tabIcon(ev.skill, 2), kicker: 'Mastery 99', title: ev.name });
+                else if ([50, 75].some(m => ev.from < m && ev.level >= m)) toast(`${ev.name}: mastery ${ev.level}!`, 'level', tabIcon(ev.skill, 0.625));
+                break;
+            case 'kill': if (ev.enemy.boss && !onCombat) toast(`${ev.enemy.name} defeated! +${fmt(ev.gold)} gold`, 'boss', pic(monsterSpriteKey(ev.enemy))); break;
+            default: break;
+        }
+    }
+}
+
+/** A short note in the corner: plain `text`, with a picture (`icon`, sprite HTML) before it if given. */
+function toast(text, kind = 'info', icon = '') {
+    const area = document.getElementById('toast-area');
+    if (!area) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind}`;
+    el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    if (icon) el.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>`;
+    el.append(text);
+    area.appendChild(el);
+    while (area.children.length > 5) area.removeChild(area.firstChild);
+    setTimeout(() => el.classList.add('fade'), 3200);
+    setTimeout(() => el.remove(), 3800);
+}
+
+/** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */
+function salvagedToast(r, what = '') {
+    const text = gainedText(r);
+    toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'}${what}${text ? `: ${text}` : ''}`, 'info', resIcon(r.essence ? 'essence' : Object.keys(r.materials)[0] || 'essence'));
+}
+
+// Modals queue up instead of replacing each other, so a login prompt can't hide the offline report.
+// A key de-duplicates (a second offline report replaces the queued one).
+function openModal(html, key = 'modal') {
+    if (ui.modalOpen) {
+        ui.modalQueue = ui.modalQueue.filter(m => m.key !== key);
+        ui.modalQueue.push({ html, key });
+        return;
+    }
+    showModal(html, key);
+}
+function showModal(html, key) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
+    ui.modalOpen = key;
+    ui.modalUnder = null;
+    focusDialog(root);
+    for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
+}
+// The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
+// scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
+function focusDialog(root) {
+    const touch = !!window.matchMedia?.('(hover: none)').matches;
+    // (one selector at a time: a list matched the first button in the dialog, and Enter on the welcome-back opened Prestige)
+    const first = root.querySelector('[data-autofocus]') || (!touch && root.querySelector('input')) || root.querySelector('button.btn-confirm') || root.querySelector('button');
+    first?.focus({ preventScroll: true });
+}
+/** A new hero's first fight, from the title card (or the account made from it). */
+function startAdventure() {
+    sound.play('unlock');
+    if (!game.state.combat.active && !game.state.action) { game.toggleCombat(); setBattleFull(true); }
+    render();
+}
+/** The sign-in the game waits behind (SIGN_IN_REQUIRED) until there is an account or a guest: Escape leaves it up. */
+function openSignIn(register = false) {
+    ui.auth = { mode: register ? 'register' : 'login' };
+    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register }), 'signin');
+}
+/** The account dialog at a step (renderAuthModal's `mode`), in place of the one open. */
+function showAuth(message = '', ctx = {}) {
+    ui.auth = { ...ctx };
+    const key = ui.modalOpen === 'auth' ? 'auth' : 'signin';
+    showModal(renderAuthModal(message, { required: key === 'signin', ...ui.auth }), key);
+}
+function authError(text) {
+    const err = document.getElementById('auth-error');
+    if (err) err.textContent = text;
+}
+/**
+ * Signed in (a login, a code, a new password): the account's game is looked at before anything goes up. A
+ * game played here without the account (a guest's) is never it (startsOver in core/save.js): that one is put
+ * aside among the backups, and the account plays the server's game, or a new one from the title card.
+ */
+async function signedIn() {
+    ui.social = freshSocial(); // nothing from the previous account carries over
+    cloudReady = false;        // nothing goes up before the sync below has looked at the account's save
+    synced = false;
+    ui.auth = null;
+    closeModal();
+    toast(`Signed in as ${cloud.username}`, 'info');
+    const restart = startsOver(game.state, { guest, own: cloud.ownsGame(game.state) });
+    setGuest(false);
+    if (restart) {
+        writeBackup(game.serialize(pending ? game.state.meta.savedAt : Date.now()), 'guest', 'Before signing in');   // (time away not replayed: kept so)
+        pending = null;
+        freshGame();
+    }
+    await (pending ? holdForServer() : syncFromCloud());   // the account's own game, its time away waiting: replayed once, for the game chosen
+    // from the title card: a new account's hero goes into the first fight (an account with a save plays it)
+    if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();
+    else if (restart && !progressed(game.state)) openModal(renderIntroModal(game.state, { signedIn: true }), 'intro');   // the new account's hero, named on the title card as any new one is
+    ui.beginAfterSignIn = false;
+    render();
+}
+/** A new game in place of this one: the save and its backups (clearLocal keeps the ones put aside), the tab, the "new" marks. */
+function freshGame() {
+    clearLocal();
+    prefs.remove('fantasyIdle.tab');
+    for (const id of [...ui.fresh]) markFresh(id, false);   // no "new" marks from the old game
+    game = withDevFlags(new Game(null, Date.now()));
+    save(Date.now());
+}
+/** A save that couldn't be read, for a guest (signed in, the server's game is played): where its backups are. */
+function offerBackups() {
+    askConfirm('Your save could not be read', 'A copy of it was kept, and the game started fresh. Your backups are in Settings: restore one to carry on where you were.', 'Open Settings', () => window.FI.switchTab('settings'));
+}
+let pendingConfirm = null;
+/** Ask before something drastic, in the page (confirm() is blocked when the game is embedded). */
+function askConfirm(title, text, confirmLabel, onYes) {
+    pendingConfirm = onYes;
+    const html = renderConfirmModal(title, text, confirmLabel);
+    if (!ui.modalOpen || ui.modalOpen === 'confirm') { openModal(html, 'confirm'); return; }
+    // Asked from inside a dialog, the question stands over it: queued, it waited behind until that dialog was closed
+    // (the owner's report: the War Tree's Unlearn all). The dialog under it stays as it is, and closeModal goes back to it.
+    const over = Object.assign(document.createElement('div'), { className: 'modal-overlay active', innerHTML: html });
+    over.setAttribute('role', 'dialog');
+    over.setAttribute('aria-modal', 'true');
+    document.getElementById('modal-root').appendChild(over);
+    ui.modalUnder = ui.modalOpen;
+    ui.modalOpen = 'confirm';
+    focusDialog(over);
+}
+function closeModal() {
+    if (ui.modalUnder) {
+        document.querySelector('#modal-root .modal-overlay:last-child')?.remove();
+        ui.modalOpen = ui.modalUnder;
+        ui.modalUnder = null;
+        return;
+    }
+    document.getElementById('modal-root').innerHTML = '';
+    ui.modalOpen = false;
+    const next = ui.modalQueue.shift();
+    if (next) showModal(next.html, next.key);
+    else rewards.resume();
+}
+
+// ---------- persistence ----------
+
+function save(now) {
+    if (passive || holding()) return;   // (time away not replayed yet: the save keeps it, from the save's own time)
+    if (!ownsSave()) { becomePassive(); return; }   // another tab took the save (its storage event may not have come)
+    lastSave = now;
+    saveLocal(game.serialize(now));
+}
+
+/**
+ * Upload the game. Only once a sync has chosen it over the server's (`sync` is that sync's own upload),
+ * one at a time. The server refuses an upload made over a save this page hasn't seen (another device's):
+ * then the game looks at the server again, and plays its save unless this one already holds all it has.
+ */
+let pushing = false;
+let giftsWaiting = false;   // an upload's answer said gifts wait: claimed when the page is in view (their card shows)
+async function cloudSave(announce = true, { keepalive = false, sync = false } = {}) {
+    if (!cloud.loggedIn || passive || pushing || holding()) return;
+    if (!cloudReady && !sync) { if (announce) toast('Checking the cloud save first…', 'info'); return; }
+    pushing = true;
+    lastCloudSave = Date.now();
+    try {
+        const answer = await cloud.push(JSON.parse(game.serialize(Date.now())), { keepalive });
+        ui.cloudStatus = `Cloud save OK at ${new Date().toLocaleTimeString()}`;
+        if (announce) toast('Saved to cloud', 'info');
+        giftsWaiting = answer?.gifts > 0;
+        await settled();   // (time away replayed meanwhile: the clan's news goes to the game it ends in)
+        if (giftsWaiting) claimGifts();
+        if (answer && 'banner' in answer) game.setClanBanner(answer.banner);   // a kill by a clanmate shows up within an upload
+        hallNews(answer);
+    } catch (err) {
+        if (err.status === 409) {   // another device saved meanwhile: look at the server again before anything goes up
+            cloudReady = false;
+            syncRetryAt = 0;
+            return;
+        }
+        ui.cloudStatus = `Cloud save failed: ${err.message}`;
+        if (announce) toast(ui.cloudStatus, 'error');
+    } finally {
+        pushing = false;
+    }
+}
+
+/** Leaving the page (another tab, the phone's home screen, closing it): one upload, unless one went just now. */
+function cloudSaveOnLeave() {
+    if (!cloud.loggedIn || !cloudReady || passive || !game.state.settings.cloudSync || Date.now() - lastCloudSave < CLOUD_LEAVE_GAP_MS) return;
+    cloudSave(false, { keepalive: true });
+}
+
+/** Gifts waiting on the server (the owner's, README "The API"): claimed once, added to the save, shown as a card. */
+let claimingGifts = false;
+async function claimGifts() {
+    // (not into a game the sync may yet replace, nor while hidden: its card would show to nobody)
+    if (claimingGifts || !cloud.loggedIn || !cloudReady || passive || document.hidden || holding()) return;
+    claimingGifts = true;
+    try {
+        const { gifts = [] } = await cloud.claimGifts();
+        await settled();   // (into the game its time away ends in)
+        for (const gift of gifts) {
+            const text = game.applyReward(gift);
+            const gold = Math.floor(Number(gift.gold) || 0);
+            rewards.celebrate({ key: `gift:${gift.id}`, kind: 'unlock', icon: sprite(gold > 0 ? 'gold' : 'crate', { scale: 2 }),
+                kicker: gift.text || 'A gift', title: text.slice(text.lastIndexOf(': ') + 2), ms: 5000 });   // what came, after the gift's own words (which may hold a colon); the card escapes them
+        }
+        giftsWaiting = false;
+        if (gifts.length) { save(Date.now()); cloudSave(false); render(); }
+    } catch (err) {
+        ui.cloudStatus = err.message;   // it waits on the server for the next save
+    } finally {
+        claimingGifts = false;
+    }
+}
+
+// ---------- clans, rewards, leaderboards ----------
+
+/**
+ * Send the clan attack fought (game.state.clanResult) to the server, which reckons its damage from the
+ * stored hero and the strikes; show what it did. On a lost connection it waits and goes again; when the
+ * server refuses it for good (no attacks waiting, the boss already down, no clan any more) it is dropped.
+ */
+let sendingClan = false;
+let clanRetryAt = 0;
+async function sendClanResult(now = false) {
+    const result = game.state.clanResult;
+    if (!result || sendingClan || !cloud.loggedIn || !cloudReady || passive || (!now && Date.now() < clanRetryAt)) return;
+    sendingClan = true;
+    try {
+        // the fight's own mark goes with it: sent again after a lost answer, the server counts it once
+        const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms, at: result.at, endless: !!result.endless });
+        await settled();   // (time away replayed meanwhile: then the game it ends in)
+        game.clearClanResult();
+        if (answer.banner) game.setClanBanner(answer.banner);
+        save(Date.now());
+        if (answer.endless) { endlessAnswered(answer); return; }
+        if (ui.social.boss) Object.assign(ui.social.boss, { hp: answer.hp, maxHp: answer.maxHp, killed: !!answer.killed }, Number.isFinite(answer.kills) ? { kills: answer.kills } : {});
+        ui.social.attacksLeft = answer.attacksLeft;
+        ui.social.fetchedAt = 0;   // the Clan tab brings its board up to date when it is next shown
+        const look = clanBossFor(answer.week || result.week);
+        const lines = [answer.killed ? 'The boss is down! It comes back at midnight UTC, a level stronger' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
+            answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
+            answer.capped ? 'Capped: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+        rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
+            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: 4200 });
+        sound.play(answer.killed ? 'victory' : 'chest');
+        render();
+    } catch (err) {
+        if (err.status >= 400 && err.status < 500) { game.clearClanResult(); toast(err.message, 'info'); render(); }   // refused for good
+        else clanRetryAt = Date.now() + 30000;   // the connection, or the server busy: again in a while
+    } finally {
+        sendingClan = false;
+    }
+}
+
+/** An attack at the Endless Hydra came back: how deep it went, the player's best of the week and the clan's place. */
+function endlessAnswered(answer) {
+    const e = ui.social.endless;
+    if (e) Object.assign(e, { attacksLeft: answer.attacksLeft, best: answer.best });
+    if (ui.social.standing && answer.rank) Object.assign(ui.social.standing, { rank: answer.rank, of: answer.of, score: answer.score, division: answer.division, divisionName: answer.divisionName });
+    ui.social.fetchedAt = 0;   // the Clan tab brings the ranking up to date when it is next shown
+    const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
+        answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
+        answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
+        answer.counted === false ? 'Not counted: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+    rewards.celebrate({ key: `endless:${answer.week}:${answer.depth}:${answer.attacksLeft}`, kind: 'unlock', art: paintStyle(ENDLESS.zone), icon: sprite(`mon/${ENDLESS.look}`, { scale: 2, fallback: '🐉' }),
+        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: 4200 });
+    sound.play('chest');
+    render();
+}
+
+async function refreshSocial() {
+    if (!cloud.loggedIn) return;
+    const social = ui.social;
+    const seq = ++social.seq;
+    const current = () => seq === social.seq && social === ui.social; // a newer refresh, or another account, took over
+    social.loading = true;
+    social.fetchedAt = Date.now();
+    try {
+        const [mine, rewards, board, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
+        await settled();   // (its banner and hall go to the game the time away ends in)
+        if (!current()) return;
+        social.clan = mine.clan;
+        Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20,
+            standing: mine.standing || null, endless: mine.endless || null, ranking });
+        game.setClanBanner(mine.clan ? mine.banner : null);
+        social.hall = mine.clan && mine.hall ? { ...mine.hall, at: Date.now() } : null;   // (`at`: its week's end counts down from then)
+        game.setClanHall(social.hall);
+        social.rewards = rewards.rewards || [];
+        social.leaderboard = board;
+        social.optIn = !!board.optIn;
+        if (!social.clan) {
+            const list = await cloud.clans(social.search);
+            if (!current()) return;
+            social.clans = list.clans || [];
+            social.maxMembers = list.maxMembers || 20;
+        }
+        social.error = '';
+        social.loaded = true;
+    } catch (err) {
+        if (current()) social.error = err.message;
+    } finally {
+        if (current()) { social.loading = false; render(); }
+    }
+}
+
+async function socialAction(fn, success) {
+    // Leave any clan form field, so the refreshed view isn't held back by the typing guard in render().
+    if (document.activeElement && document.getElementById('tab').contains(document.activeElement)) document.activeElement.blur();
+    try {
+        const result = await fn();
+        if (success) toast(typeof success === 'function' ? success(result) : success, 'info');
+        await refreshSocial();
+        return result;
+    } catch (err) {
+        toast(err.message, 'error');
+        return null;
+    }
+}
+
+/**
+ * What an answer says of the clan's hall (a save's, a load's, a gift's): its rooms, stage, banner and cloak for the game
+ * (the Clan tab's copy too, keeping its builders and gifts), and the gifts the bank has yet to give, taken out of it.
+ */
+function hallNews(answer) {
+    if (!answer) return;
+    if (Array.isArray(answer.hallGifts) && answer.hallGifts.length) game.applyHallGifts(answer.hallGifts);
+    if (!('hall' in answer)) return;
+    game.setClanHall(answer.hall);
+    const shown = ui.social?.hall;
+    if (shown && answer.hall && answer.hall.clan === shown.clan) Object.assign(shown, answer.hall, { at: Date.now() });
+}
+
+/**
+ * A gift to the clan's hall. The server gives from the bank of the save it keeps, so the game uploads first (after any
+ * upload under way); the answer's gifts leave the bank here, and the next upload carries that.
+ */
+let givingToHall = false;
+async function giveToHall(room, resource, qty) {
+    if (givingToHall || !cloud.loggedIn) return;
+    givingToHall = true;
+    try {
+        for (let i = 0; pushing && i < 50; i++) await new Promise(resolve => setTimeout(resolve, 100));
+        await cloudSave(false);
+        const answer = await cloud.hallGive(room, resource, qty);
+        hallNews(answer);
+        const gift = answer.gift;
+        sound.play('chest');
+        toast(`${fmt(gift.qty)} ${RESOURCES[gift.resource]?.name || gift.resource} to the ${hallRoom(gift.room)?.name || 'hall'}: ${workTime(gift.work)} of work`, 'craft', resIcon(gift.resource));
+        save(Date.now());
+        cloudSave(false);
+        refreshSocial();   // the members' work and the latest gifts
+    } catch (err) {
+        toast(err.message, 'error');
+    } finally {
+        givingToHall = false;
+        render();
+    }
+}
+
+/**
+ * Look at the server's save and play it: the server's save is the game, as in any online game, and the
+ * player is never asked. This one is kept (and uploaded) only when it is the server's carried on
+ * (syncChoice). Until it has chosen nothing goes up; a failed one is tried again (the loop), never
+ * followed by a blind upload. Time away waiting for it (pending: the boot's, a long gap's) is replayed
+ * once, for the game chosen: the server's, or this one (holdForServer replays this one if the server is slow).
+ */
+async function syncFromCloud() {
+    if (syncing || !cloud.loggedIn) return;
+    syncing = true;
+    const before = synced;
+    // the server's save as this device last saw it: this page's look, or (at load) the one noted last time
+    const known = cloud.base ?? cloud.knownBase()?.at ?? null;
+    cloudReady = false;
+    try {
+        const { state: remote, lastSaved, gifts, banner, hall, hallGifts } = await cloud.pull(Date.now());
+        clearTimeout(slowTimer);
+        await caughtUp();   // (the server was slow and this game's time away is being replayed: the choice waits for its end)
+        // the clan's banner this week, as the server says it, and its hall: for the game played, its time away replayed
+        const news = () => { game.setClanBanner(banner); hallNews({ hall, hallGifts }); };
+        if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
+            pending = null;   // this game's time away is never replayed: the server's game is played
+            cloudReady = true;
+            await adoptState(remote, news);
+            if (before) toast('Your game was played on another device: carrying on from there', 'info');
+        } else {
+            if (pending) await playPending(news); else news();
+            cloudReady = true;
+            await cloudSave(false, { sync: true });
+        }
+        synced = true;
+        syncRetryAt = 0;
+        syncFailNoted = false;
+        giftsWaiting = gifts > 0;
+        if (giftsWaiting) claimGifts();
+    } catch (err) {
+        clearTimeout(slowTimer);
+        ui.cloudStatus = err.message;
+        syncRetryAt = Date.now() + SYNC_RETRY_MS;   // again in a while; nothing goes up meanwhile
+        playPending();   // this game, then: its time away waited for the server
+        if (!syncFailNoted) toast(`${err.message} The cloud save is checked again shortly.`, 'error');
+        syncFailNoted = true;
+    } finally {
+        syncing = false;
+    }
+}
+
+/** Play `stateObject` (the server's game, a backup): its time away replayed behind the bar, then `news`, then its report. */
+function adoptState(stateObject, news = null) {
+    if (ui.modalOpen === 'offline') closeModal();   // the report of the game it replaces would act on this one
+    ui.modalQueue = ui.modalQueue.filter(m => m.key !== 'offline');
+    game = withDevFlags(new Game(stateObject, Date.now()));
+    return catchUp(game.beginResume(Date.now()), summary => {
+        news?.();
+        return summary && summary.mode !== 'rest' ? welcomeBack(summary) : null;
+    }).then(summary => { save(Date.now()); render(); return summary; });
+}
+
+/** The fight fills the screen, or is folded into the page; a fold is remembered until the next fight. */
+function setBattleFull(on) {
+    ui.battleFull = !!on;
+    if (on) prefs.remove('fantasyIdle.battleFull'); else prefs.set('fantasyIdle.battleFull', '0');
+}
+
+// ---------- public facade for inline handlers ----------
+
+window.FI = {
+    switchTab(id) {
+        if (id === 'combat') id = fightTab(game);   // a run or the Titan is fought on the Dungeons tab, the clan boss on the Clan tab: Combat waits until it is over
+        ui.dungeonHoldUntil = 0;   // a lost run's moment on screen ends with the player's next step
+        ui.clanHoldUntil = 0;
+        ui.potionMenu = false;
+        ui.tab = id;
+        prefs.set('fantasyIdle.tab', id);
+        markFresh(id, false);
+        if (id === 'clan' && cloud.loggedIn && Date.now() - ui.social.fetchedAt > 5000) refreshSocial();
+        render();
+    },
+    refreshSocial() { refreshSocial(); },
+    clanForm(field, value) { if (field in ui.social.form) ui.social.form[field] = String(value || '').slice(0, 200); },
+    searchClans() { ui.social.search = ui.social.form.search.slice(0, 32); document.activeElement?.blur(); refreshSocial(); },
+    async createClan() {
+        const { name, tag, description, lookingFor } = ui.social.form;
+        const made = await socialAction(() => cloud.createClan({ name, tag, description, lookingFor }), 'Clan created');
+        if (made) ui.social.form = { ...ui.social.form, name: '', tag: '', description: '', lookingFor: '' };
+    },
+    kickMember(username) {
+        askConfirm('Remove this member?', `${username} leaves the clan. Their damage this week stays on the board.`, 'Remove',
+            () => socialAction(() => cloud.kickMember(username), `Removed ${username}`));
+    },
+    joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
+    leaveClan() { askConfirm('Leave your clan?', 'Your damage this week stays on its board.', 'Leave clan', () => socialAction(() => cloud.leaveClan(), 'You left the clan')); },
+    /**
+     * A clan attack: the hero fights the week's clan boss on screen (systems/clanfight.js), and when it
+     * is over the game sends what the player did (sendClanResult). The server fights with the stored
+     * hero, so he goes up first. `endless`: a fight at the Endless Hydra, the week's ranking (at the weekend).
+     */
+    async clanFight(endless = false) {
+        if (!cloud.loggedIn || ui.social.attacking || game.state.combat.mode === 'clan') return;
+        if (!cloudReady) { toast('Checking the cloud save first…', 'info'); return; }   // the server fights with the stored hero
+        ui.social.attacking = true;
+        render();
+        try {
+            if (game.state.clanResult) await sendClanResult(true);   // the last attack first
+            if (game.state.clanResult) return;                        // still not sent: it is retried, and this waits
+            await cloudSave(false);
+            const mine = await cloud.myClan();
+            Object.assign(ui.social, { clan: mine.clan, members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0,
+                attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, standing: mine.standing || null, endless: mine.endless || null });
+            const boss = mine.boss;
+            if (!mine.clan || !boss) { toast('Join a clan first.', 'info'); return; }
+            if (endless) {
+                const e = mine.endless;
+                if (!e?.open) { toast(`${ENDLESS.name} wakes on Saturday at 00:00 UTC.`, 'info'); return; }
+                if (!e.eligible) { toast(`${ENDLESS.name} counts members who were in the clan when the week began: next week, you are.`, 'info'); return; }
+                if (!(e.attacksLeft > 0)) { toast(`You have made your ${e.attacks} attacks at ${ENDLESS.name.replace(/^The /, 'the ')} this week.`, 'info'); return; }
+                if (!game.startClanFight({ week: boss.week, endless: true, scale: mine.attackScale })) return;
+                ui.battleHoldUntil = 0;
+                setBattleFull(true);
+                window.FI.switchTab('clan');
+                return;
+            }
+            if (boss.killed) { toast("This week's boss is already defeated.", 'info'); return; }
+            if (!(mine.attacksLeft > 0)) { toast(`No attacks waiting: ${ui.social.attacksPerDay} more come each day.`, 'info'); return; }
+            if (!game.startClanFight({ week: boss.week, hp: boss.hp, maxHp: boss.maxHp, scale: mine.attackScale })) return;
+            ui.battleHoldUntil = 0;
+            setBattleFull(true);
+            window.FI.switchTab('clan');   // fought on the Clan tab, which shows the clan again when it is over (fightTab)
+        } catch (err) {
+            toast(err.message, 'error');
+        } finally {
+            ui.social.attacking = false;
+            render();
+        }
+    },
+    async claimRewards() {
+        const ids = ui.social.rewards.map(r => r.id);
+        const result = await socialAction(() => cloud.claimRewards(ids));
+        for (const reward of result?.rewards || []) toast(game.applyReward(reward), 'achievement', pic('crate'));
+        if (result?.rewards?.length) { save(Date.now()); cloudSave(false); }
+    },
+    boardMetric(metric) { ui.social.metric = metric; refreshSocial(); },
+    boardPeriod(period) { ui.social.period = period; refreshSocial(); },
+    setLeaderboardConsent(on) { socialAction(() => cloud.setLeaderboardConsent(on).then(r => { ui.social.optIn = r.optIn; return r; }), on ? 'You joined the leaderboards' : 'You left the leaderboards'); },
+    startNode(skill, node) { game.startNodeAction(skill, node); render(); },
+    stopAction() { game.stopAction(); render(); },
+    smelt(id) { game.startSmelting(id); render(); },
+    craft(type, bar, gem) { game.startCrafting(type, bar, gem); render(); },
+    buyTool(toolId) { if (game.buyTool(toolId)) sound.play('buy'); render(); },   // the Shop's tools (systems/tools.js)
+    smithView(view) { ui.smithView = view; render(); },
+    craftView(view) { ui.craftView = view; render(); },
+    hallView(view) { ui.hallView = view; render(); },
+    selectCraftBar(bar) { ui.craftBar = bar; render(); },
+    selectCraftGem(gem) { ui.craftGem = gem; render(); },
+
+    /** Enter or leave the fight. Entering it lets it fill the screen. */
+    toggleCombat() {
+        const c = game.state.combat;
+        const fighting = c.active;
+        const inDungeon = c.mode === 'dungeon';
+        const special = c.mode === 'titan' || c.mode === 'clan' ? c.mode : null;
+        game.toggleCombat();
+        if (!fighting && c.active) setBattleFull(true);
+        if (inDungeon && c.mode !== 'dungeon') { backToDungeons(); return; }   // Leave dungeon: back to the list of them
+        if (special && c.mode !== special) ui.battleHoldUntil = ui.clanHoldUntil = 0;   // Give up: its tab shows its page again (fightTab)
+        render();
+    },
+    /** After a fall: rest without going back into the fight. */
+    stayAtCamp() { game.leaveCombat(); render(); },
+    /** Fold the full-screen fight back into the page (it goes on), or let it fill the screen again. */
+    battleFull(on) { setBattleFull(on); render(); },
+    /** Perks in a dialog over the fight: skill points are spent without leaving it (and talent points, on its War Tree). */
+    openPerks(view = 'perks') {
+        ui.perks.view = view;
+        const html = renderPerksModal(game, ui.perks);
+        openModal(html, 'perks');
+        const overlay = document.querySelector('#modal-root .modal-overlay');
+        if (overlay && ui.modalOpen === 'perks') overlay.__html = html;
+    },
+    /** The War Tree (data/talents.js), in the perks dialog. */
+    openTalents() { window.FI.openPerks('talents'); },
+    perksView(view) { ui.perks.view = view === 'talents' ? 'talents' : 'perks'; sound.play('click'); refreshPerks(); },
+    /** A talent tapped: its line under the trees says what it does, and Learn takes a rank. */
+    pickTalent(id) { ui.perks.pick = id; ui.perks.tree = talentById(id)?.tree || ui.perks.tree; sound.play('click'); refreshPerks(); },
+    /** On a phone, the tree in view. */
+    talentTree(id) { ui.perks.tree = id; sound.play('click'); refreshPerks(); },
+    learnTalent(id) {
+        if (game.learnTalent(id)) sound.play('buy');
+        refreshPerks();
+        flourish(`.talent.picked`);
+        render();
+    },
+    buyCharm(id) { if (game.buyCharm(id)) sound.play('buy'); render(); },
+    unlearnTalents() {
+        const price = respecPrice(game.state);
+        askConfirm('Unlearn the War Tree?', `Every talent point comes back to spend again, for ${fmt(price)} essence. It costs more each time.`, 'Unlearn', () => {
+            if (game.unlearnTalents()) sound.play('buy');
+            render();   // the War Tree under the question shows it (refreshPerks)
+        });
+    },
+    setAutoEat(rule) { game.setAutoEat(rule); render(); },
+    setPotion(id) { game.setPotion(id); render(); },
+    setDungeonPotion(id) { game.setDungeonPotion(id); render(); },
+    setWorkPotion(id) { game.setWorkPotion(id); ui.potionMenu = false; render(); },
+    togglePotionMenu() { ui.potionMenu = !ui.potionMenu; render(); },
+    goZone(stage) { game.setStage(stage); render(); },
+    toggleFarm(on) { game.setFarmMode(on); },
+    buyCamp(id, count) { if (game.buyCampUpgrade(id, count) !== false) sound.play('buy'); render(); },
+    enterDungeon(id) { if (game.enterDungeon(id)) { setBattleFull(true); window.FI.switchTab('dungeons'); } else render(); },
+    /** After the first clear of a visit: the choice, in a dialog over whatever is on screen. */
+    openRunChoice() { if (choosingAfterClear(game.state) && !ui.modalOpen) openModal(renderRunChoiceModal(game), 'runChoice'); },
+    dungeonKeepGoing() { if (game.dungeonKeepGoing()) sound.play('unlock'); if (ui.modalOpen === 'runChoice') closeModal(); render(); },
+    dungeonEnd() {
+        const ended = game.dungeonEnd();
+        if (ui.modalOpen === 'runChoice') closeModal();
+        if (ended) backToDungeons(); else render();
+    },
+    assembleUnique(id) { game.assembleUnique(id); render(); }, // the unique event celebrates it
+    sealDungeons() { game.sealDungeons(); render(); },   // the dungeonSeal event celebrates it
+    challengeTitan() {
+        if (!game.challengeTitan()) { render(); return; }
+        ui.battleHoldUntil = 0;
+        setBattleFull(true);
+        window.FI.switchTab('dungeons');   // fought where it is challenged, and the tab shows the list again after it (fightTab)
+    },
+
+    plant(plot, crop) { ui.lastCrop = crop; game.plant(plot, crop); render(); },
+    /** The seed the farm plants: picked from the bag of seeds, used by every empty plot. */
+    pickSeed(crop) { ui.lastCrop = crop; render(); },
+    plantAll(crop) { ui.lastCrop = crop; if (game.plantAll(crop) > 0) sound.play('drop'); render(); },
+    buyEventItem(id) { if (game.buyEventItem(id)) toast('Bought!', 'info'); render(); },
+    buyEventCharm(id) { if (game.buyEventCharm(id)) sound.play('buy'); render(); },
+    buyFestivalCloak() { game.buyFestivalCloak(); render(); },
+    harvest(plot) { game.harvest(plot); render(); },
+    harvestAll() { const r = game.harvestAll({ replant: true }); if (r.harvested) toast(`Harvested ${r.harvested} plot${r.harvested > 1 ? 's' : ''}${r.replanted ? `, replanted ${r.replanted}` : ''}`, 'info', tabIcon('farming', 0.625)); render(); },
+    /** Build an obstacle; swapping out a built one (no refund, its levels lost) asks first. */
+    buildObstacle(id) {
+        const slot = AGILITY_SLOTS.findIndex(s => s.obstacles.some(o => o.id === id));
+        const old = slot >= 0 && game.state.agility.built[slot] ? AGILITY_SLOTS[slot].obstacles.find(o => o.id === game.state.agility.built[slot]) : null;
+        const build = () => { if (game.buildObstacle(id)) { ui.agilitySwap = null; sound.play('unlock'); } render(); };
+        if (!old) { build(); return; }
+        const fresh = AGILITY_SLOTS[slot].obstacles.find(o => o.id === id);
+        askConfirm('Swap obstacles?', `The ${old.name} is torn down with no refund, and its levels are lost. The ${fresh.name} goes up in its place.`, 'Swap', build);
+    },
+    /** Show a built obstacle's slot with the other two to pick from (null: back to the obstacle). */
+    agilitySwap(slot) { ui.agilitySwap = slot; render(); },
+    upgradeObstacle(slot) { game.upgradeObstacle(slot); render(); },
+    runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
+
+    equip(id) { if (game.equipItem(id) !== false) { sound.play('equip'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
+    unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
+    sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
+    sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
+    setAutoPrestige(on) { if (game.setAutoPrestige(on)) sound.play(on ? 'unlock' : 'click'); render(); },
+    reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
+    // a reroll: the bonuses it brought glow on the card a few seconds (render.js anvilCard)
+    reroll(id) {
+        const before = (findGear(game.state, id)?.affixes || []).map(describeAffix);
+        const ok = game.rerollItem(id);
+        sound.play(ok ? 'rare' : 'error');
+        if (ok) { ui.anvilRolled = { id: Number(id), before, at: Date.now() }; setTimeout(() => render(), ANVIL_ROLL_GLOW_MS + 50); }
+        render();
+        if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
+    },
+    toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },
+    // The jeweller's bench (systems/bench.js): an upgrade, or a reroll whose new bonuses glow a few seconds (render.js benchCard)
+    benchUpgrade(id) { const ok = game.upgradeJewel(id); sound.play(ok ? 'craft' : 'error'); render(); if (ok) flourish(`#bench-${Number(id)} .anvil-art`); },
+    benchReroll(id) {
+        const before = (findGear(game.state, id)?.affixes || []).map(describeAffix);
+        const ok = game.rerollJewel(id);
+        sound.play(ok ? 'rare' : 'error');
+        if (ok) { ui.benchRolled = { id: Number(id), before, at: Date.now() }; setTimeout(() => render(), ANVIL_ROLL_GLOW_MS + 50); }
+        render();
+        if (ok) flourish(`#bench-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
+    },
+    toBench() { ui.craftView = 'bench'; ui.invSelected = null; window.FI.switchTab('crafting'); },
+    salvage(id) {
+        const g = game.salvageItem(id);
+        if (g) {
+            sound.play('drop');
+            const got = [g.essence ? `${g.essence} essence` : '', ...Object.entries(g.materials).map(([res, qty]) => `${qty} ${RESOURCES[res].name}${qty === 1 ? '' : 's'}`)].filter(Boolean);
+            toast(got.length ? `+${got.join(', ')}` : 'Salvaged', 'info', resIcon(Object.keys(g.materials)[0] || 'essence'));
+        }
+        render();
+    },
+    salvageAll(rarity) { const r = game.salvageAll(rarity); if (r.count) salvagedToast(r); render(); },
+    salvageWeaker() { const r = game.salvageWeaker(); if (r.count) salvagedToast(r, ' weaker than what you wear'); render(); },
+    buyBagUpgrade(currency = 'gold') { if (game.buyBagUpgrade(currency === 'essence' ? 'essence' : 'gold')) { sound.play('buy'); toast('Five more slots in the bag', 'info'); } render(); },
+    toggleLock(id) { game.toggleLock(id); render(); },
+    setAutoSalvage(rarity) { game.setAutoSalvage(rarity); render(); },
+    sellRes(id, amount) { game.sellResource(id, amount); render(); },
+    invFilter(cat) { ui.invFilter = cat; render(); },
+    selectRes(id) { ui.resSelected = ui.resSelected === id ? null : id; render(); },
+    selectItem(id) { ui.invSelected = id === null || ui.invSelected === id ? null : id; ui.invPreview = null; render(); },
+    /** Hovering a tile shows it on the table without a full re-render; leaving shows the picked item again. */
+    previewItem(id) {
+        if (window.matchMedia?.('(hover: none)').matches) return; // touch screens pick with a tap
+        ui.invPreview = id;
+        const panel = document.getElementById('item-detail');
+        if (!panel) return;
+        const shown = id ?? ui.invSelected;
+        panel.innerHTML = renderItemDetail(game, shown);
+        panel.classList.toggle('has-item', panel.querySelector('.detail') !== null);
+    },
+    buyShop(id) { if (game.buyGoldShopItem(id) !== false) sound.play('buy'); render(); },
+    buyPerk(id) { if (game.buyPerk(id) !== false) sound.play('buy'); render(); },
+
+    openPrestige() { if (isUnlocked(game.state, 'prestige') && game.canPrestige()) { ui.trialPicks = []; openModal(renderPrestigeModal(game), 'prestige'); } },
+    confirmPrestige() {
+        // the Trials picked in the dialog: one, or a Pact's several (systems/trials.js)
+        const trials = [...document.querySelectorAll('.prestige-modal input[name="trial"]:checked')].map(input => input.value);
+        writeBackup(game.serialize(Date.now()), 'prestige', `Before prestige ${game.state.prestige.count + 1}`);
+        closeModal();
+        if (trials.length) game.startTrial(trials);
+        else game.prestige({ resume: true }); // a hero who was fighting walks into the new run's first fight
+        render();
+    },
+    /** The prestige dialog's Ascend: it gives every token up, so it asks first, in a dialog of its own. */
+    askAscend() {
+        const a = game.ascendPreview();
+        if (!a.allowed) return;
+        closeModal();
+        askConfirm('Ascend?', `Your ${fmt(a.tokens)} tokens become ${fmt(a.stars)} Stars, and the tokens start again from nothing. Every prestige after pays ×${a.gainAfter.toFixed(2)} tokens. Your best stage, gear, skills and perks stay.`, 'Ascend', () => {
+            writeBackup(game.serialize(Date.now()), 'prestige', `Before Ascension ${game.state.ascension.count + 1}`);
+            game.ascend();
+            render();
+        });
+    },
+    /**
+     * A Trial card in the prestige dialog, ticked or unticked: one at most, or up to a Pact's size once Pacts are open
+     * (the oldest pick lets go of its tick for a new one past it), and the button and the line say what the run plays for.
+     */
+    pickTrial(input) {
+        const modal = input.closest('.prestige-modal');
+        if (!modal) return;
+        const most = Math.max(1, Number(modal.querySelector('.pg-trials')?.dataset.most) || 1);
+        const order = (ui.trialPicks || []).filter(id => id !== input.value);
+        if (input.checked) order.push(input.value);
+        while (order.length > most) order.shift();
+        ui.trialPicks = order;
+        for (const other of modal.querySelectorAll('input[name="trial"]')) other.checked = order.includes(other.value);
+        const picked = order.map(id => modal.querySelector(`input[name="trial"][value="${id}"]`)?.dataset).filter(Boolean);
+        const button = modal.querySelector('.btn-confirm');
+        if (button) button.textContent = !picked.length ? 'Prestige now' : picked.length === 1 ? `Prestige into ${picked[0].name}` : `Prestige into a Pact of ${picked.length}`;
+        const line = modal.querySelector('.trial-pick-line');
+        const aims = picked.filter(t => Number(t.target) > 0);
+        // the week's laurels this run can still win: one for each Trial it holds, less those the week has given
+        const week = picked.find(t => t.laurel);
+        const owed = week ? Math.min(picked.length, most) - (Number(week.won) || 0) : 0;
+        const heat = picked.reduce((sum, t) => sum + (Number(t.heat) || 0), 0);
+        // the stages the ladders ask for, each with its Trials ("750 (Thick Hides) and 1,000 (Brutes, Rusted Gear)")
+        const stages = new Map();
+        for (const t of aims) stages.set(Number(t.target), [...(stages.get(Number(t.target)) || []), t.name]);
+        const at = [...stages].sort((a, b) => a[0] - b[0]).map(([stage, names]) => `${fmt(stage)}${stages.size > 1 ? ` (${names.join(', ')})` : ''}`);
+        const each = picked.length > 1 && stages.size === 1 ? (aims.length === picked.length ? ' on each ladder' : ` (${[...stages.values()][0].join(', ')})`) : '';
+        const parts = [at.length ? `A record${each} at stage ${at.length > 1 ? `${at.slice(0, -1).join(', ')} and ${at.at(-1)}` : at[0]}` : '',
+            owed > 0 ? `${owed > 1 ? `${owed} of this week's laurels` : "this week's laurel"} at stage ${fmt(Number(week.laurel))}` : ''].filter(Boolean);
+        const records = aims.length + Math.max(0, owed);
+        if (line) line.textContent = !picked.length ? ''
+            : (parts.length ? `${parts.join('; ')}: ${records > 1 ? 'each makes your tokens' : 'your tokens'} ×${BASE_RECORD_MULT} stronger, for good.` : '') + (picked.length > 1 ? ` Heat ${heat}.` : '');
+        sound.play(picked.length ? 'equip' : 'click');
+    },
+    closeModal() { closeModal(); },
+
+    startMinigame(skill) { game.startMinigame(skill); render(); },
+    resolveMinigame(skill) { advance(Date.now()); if (holding()) return; game.resolveMinigame(skill); render(); },   // judged at the moment of the tap, as the marker was drawn
+    failMinigame(skill) { game.failMinigame(skill); render(); },
+    pumpHeat(skill) { game.pumpHeat(skill); },
+    setDragValue(skill, value) { game.setDragValue(skill, value); },
+    claimDaily() {
+        const crate = game.claimDaily();
+        if (crate) {
+            sound.play(crate.great ? 'legendary' : 'chest');
+            if (ui.modalOpen === 'crate') closeModal(); // "open the next": the new crate replaces this one
+            openModal(renderCrateModal(crate, game.state.daily.banked, cratesTowardGreat(game.state)), 'crate');
+        }
+        render();
+    },
+    /** The "?" on a panel: what this place is, with its picture. */
+    about(id) { openModal(renderAboutCard(id), 'about'); },
+    // the clan's hall (data/clanhall.js): giving to a room, and the banner its owner picks
+    openHallGive(room) {
+        if (!hallRoom(room) || !ui.social?.hall) return;
+        ui.hallGive = { room, resource: null, qty: null };
+        openModal(renderHallGive(game, ui), 'hallGive');
+    },
+    hallGivePick(resource) {
+        if (!ui.hallGive || ui.modalOpen !== 'hallGive') return;
+        ui.hallGive = { ...ui.hallGive, resource, qty: null };
+        showModal(renderHallGive(game, ui), 'hallGive');
+    },
+    /** The slider moved: its count and work in words, the dialog left as it is (the slider keeps its grip). */
+    hallGiveQty(value, worth) {
+        if (!ui.hallGive) return;
+        const qty = Math.max(0, Math.floor(Number(value) || 0));
+        ui.hallGive.qty = qty;
+        const count = document.getElementById('give-count');
+        const work = document.getElementById('give-work');
+        const label = document.getElementById('give-label');   // the Give button says what goes
+        if (count) count.textContent = fmt(qty, { short: false });
+        if (work) work.textContent = workTime(qty * (Number(worth) || 0));
+        if (label) label.textContent = ` ${fmt(qty, { short: false })} · ${workTime(qty * (Number(worth) || 0))}`;
+    },
+    hallGive() {
+        const input = document.getElementById('give-qty');
+        const give = ui.hallGive;
+        const qty = Math.floor(Number(input?.value) || 0);
+        closeModal();
+        if (give && input?.dataset.res && qty > 0) giveToHall(give.room, input.dataset.res, qty);
+    },
+    openBannerPicker() {
+        if (!ui.social?.clan?.isOwner || !ui.social.hall) return;
+        ui.bannerPick = null;
+        openModal(renderBannerPicker(game, ui), 'bannerPicker');
+    },
+    bannerPick(kind, id) {
+        if (ui.modalOpen !== 'bannerPicker' || !ui.social?.hall) return;
+        const hall = ui.social.hall;
+        ui.bannerPick = { colour: ui.bannerPick?.colour || hall.colour, emblem: ui.bannerPick?.emblem || hall.emblem, [kind]: id };
+        showModal(renderBannerPicker(game, ui), 'bannerPicker');
+    },
+    async saveBanner() {
+        const hall = ui.social?.hall;
+        const pick = { colour: ui.bannerPick?.colour || hall?.colour, emblem: ui.bannerPick?.emblem || hall?.emblem };
+        closeModal();
+        if (!hall) return;
+        try {
+            hallNews(await cloud.setClanBanner(pick.colour, pick.emblem));
+            sound.play('chest');
+        } catch (err) {
+            toast(err.message, 'error');
+        }
+        render();
+    },
+    /** A drawer was opened or closed; remember it, so a re-render keeps it that way. */
+    setOpen(key, open) { ui.open[key] = !!open; },
+    openMap() { openModal(renderWorldMapModal(game), 'map'); },
+    /** A pin on the map was tapped (a zone's index or a dungeon's id): show it under the map, which stays put. */
+    mapSelect(key) {
+        const info = document.querySelector('.map-info');
+        if (!info) return;
+        info.innerHTML = typeof key === 'number' ? renderZoneInfo(game, key) : renderDungeonInfo(game, key);
+        for (const pin of document.querySelectorAll('.map-pin')) pin.classList.toggle('picked', pin.dataset.pick === String(key));
+    },
+    mapTravel(stage) { closeModal(); game.travel(stage); if (ui.tab !== 'combat') window.FI.switchTab('combat'); else render(); },
+    mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
+
+    setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    setPlaytestLog(on) { game.setPlaytestLog(on); render(); },
+    /** The playtest log as a file to keep or send (systems/playtest.js). */
+    exportPlaytest() {
+        const blob = new Blob([playtestExport(game.state, Date.now())], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `fantasy-idle-playtest-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    },
+    /** The volume slider: heard at once, saved when let go. */
+    setVolume(value, done = false) {
+        game.state.settings.volume = Math.max(0, Math.min(1, Number(value) || 0));
+        if (done) { game.markDirty(); sound.play('coin'); }
+    },
+    setHeroName(name) { game.setHeroName(name); render(); },
+    toggleSound() {
+        game.state.settings.sound = game.state.settings.sound === false;
+        game.markDirty();
+        if (game.state.settings.sound) { sound.unlock(); sound.play('click'); }
+        render();
+    },
+    restoreBackup(slot) {
+        if (cloud.loggedIn) return;   // signed in, the server's save is the game: no rolling it back from here
+        askConfirm('Restore this backup?', 'Your current progress will be replaced. A backup of it is kept.', 'Restore backup', () => {
+            try {
+                const state = restoreBackup(slot, Date.now());
+                writeBackup(game.serialize(Date.now()), slot === 'reset' ? 'auto0' : 'reset', 'Before restoring a backup');
+                adoptState(state);
+                toast('Backup restored', 'info');
+            } catch (err) { toast(err.message, 'error'); }
+        });
+    },
+    hardReset() {
+        // Signed in, the fresh game goes to the server too: the old one came back from there on the next load.
+        const what = cloud.loggedIn ? 'The game starts over from the beginning, on the server too. This cannot be undone.'
+            : 'The game starts over from the beginning. One backup is kept in Settings in case you change your mind.';
+        askConfirm('Wipe your save?', what, 'Wipe save', () => {
+            writeBackup(game.serialize(Date.now()), 'reset', 'Before hard reset');
+            freshGame();
+            if (cloud.loggedIn) cloudSave(false);
+            render();
+            toast('Save wiped. Fresh start!', 'info');
+        });
+    },
+    confirmYes() {
+        const onYes = pendingConfirm;
+        pendingConfirm = null;
+        closeModal();
+        onYes?.();
+    },
+
+    openAuth() {
+        if (ui.modalOpen === 'intro') closeModal();
+        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal(), 'auth'); }
+    },
+    /** The sign-in's other way in: no account, the game kept in this browser only (an account made later starts its own). */
+    playAsGuest() {
+        setGuest(true);
+        ui.auth = null;
+        closeModal();
+        sound.unlock();
+        playPending();   // the boot's time away waited for this choice: replayed now, then its welcome-back
+        if (loadProblem) offerBackups();
+        if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();   // from the title card's Begin: the first fight
+        ui.beginAfterSignIn = false;
+        render();
+    },
+    collectOffline() { closeModal(); sound.unlock(); sound.play('chest'); },
+    /** The title card's arrows: the next or the previous look, tried on at once. */
+    turnLook(step) {
+        game.setHeroLook(nextLook(game.state.hero.look, step, game.state));
+        const hero = document.querySelector('.intro-hero');
+        if (hero) hero.innerHTML = heroSprite(game.state, { scale: 5 });
+        flourish('.intro-hero .hero-doll');
+    },
+    setHeroLook(id) { game.setHeroLook(id); sound.play('equip'); render(); },
+    setHeroCape(skill) { if (game.setHeroCape(skill)) { sound.play('equip'); render(); } },
+    setCompanion(id) { if (game.setCompanion(id)) sound.play('pet'); render(); },
+    beginAdventure() {
+        const name = document.getElementById('intro-name')?.value || '';
+        if (name.trim()) game.setHeroName(name);   // optional: without one he is "You"
+        closeModal();
+        sound.unlock();
+        if (needsSignIn()) { ui.beginAfterSignIn = true; openSignIn(true); return; }   // an account first; the fight once it is made
+        startAdventure();
+    },
+    /** Log in, or make an account: a new one waits for the code mailed to its address (FI.verifyCode). */
+    async auth(kind) {
+        const user = document.getElementById('auth-user')?.value.trim();
+        const pass = document.getElementById('auth-pass')?.value;
+        const email = document.getElementById('auth-email')?.value.trim() || '';
+        ui.auth = { mode: kind, username: user || '' };
+        if (!user || !pass) return authError('Username and password are required.');
+        if (kind === 'register' && !email) return authError('An email address is needed: the game sends a code there.');
+        try {
+            if (kind === 'login') { await cloud.login(user, pass); await signedIn(); return; }
+            const data = await cloud.register(user, pass, email);
+            if (cloud.loggedIn) { await signedIn(); return; }   // (a server from before codes)
+            showAuth('', { mode: 'verify', username: data.username || user, email: data.email || email });
+        } catch (e) {
+            // made, or with the right password, but the address not confirmed yet: to the code
+            if (e.data?.pending) return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email });
+            authError(SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message);
+        }
+    },
+    /** Another step of the account dialog: 'login', 'register', 'forgot'. */
+    authMode(mode) { showAuth('', { mode, username: ui.auth?.username || document.getElementById('auth-user')?.value.trim() || '' }); },
+    async verifyCode() {
+        const code = document.getElementById('auth-code')?.value.trim();
+        if (!code) return authError('Enter the 6-digit code from the email.');
+        try { await cloud.verify(ui.auth?.username, code); await signedIn(); } catch (e) { authError(e.message); }
+    },
+    async resendCode() {
+        try {
+            const data = await cloud.resendCode(ui.auth?.username);
+            showAuth(`A new code is on its way to ${data.email || 'your email'}.`, { ...ui.auth });
+        } catch (e) { authError(e.message); }
+    },
+    /** A code to set a new password; `again` sends another to the same address. */
+    async forgotPassword(again = false) {
+        const email = again ? ui.auth?.resetEmail : document.getElementById('auth-email')?.value.trim();
+        if (!email) return authError('Enter your account\'s email address.');
+        try {
+            const data = await cloud.forgotPassword(email);
+            showAuth(again ? 'If an account has this address, another code is on its way.' : '', { mode: 'reset', resetEmail: email, email: data.email || email });
+        } catch (e) { authError(e.message); }
+    },
+    async resetPassword() {
+        const code = document.getElementById('auth-code')?.value.trim();
+        const pass = document.getElementById('auth-pass')?.value;
+        if (!code || !pass) return authError('The code and a new password are both needed.');
+        try { await cloud.resetPassword(ui.auth?.resetEmail, code, pass); toast('Password changed', 'info'); await signedIn(); } catch (e) { authError(e.message); }
+    },
+    async logout() {
+        if (cloudReady) await cloudSave(false);   // the latest play goes up first: this browser keeps none of it
+        cloud.logout();
+        cloudReady = false;
+        synced = false;
+        game.clearClanResult();   // an attack not sent belongs to that account (it went to the next one to sign in)
+        ui.cloudStatus = '';
+        ui.social = freshSocial();
+        if (SIGN_IN_REQUIRED) {
+            // A fresh game behind the sign-in: an account registered here next starts its own, not a copy of this one.
+            freshGame();
+            openSignIn();
+        } else toast('Logged out — playing locally', 'info');
+        render();
+    },
+    cloudSaveNow() { cloudSave(true); },
+    /** The header's new-version pill: the game saved, signed in on the server too, then the page loads the new version. */
+    async reloadForUpdate() {
+        if (ui.reloading) return;
+        ui.reloading = true;
+        render();
+        save(Date.now());
+        if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync) {
+            // (after an upload already under way; a server that keeps it waiting is left to the save on leaving the page)
+            const uploaded = (async () => { while (pushing) await new Promise(resolve => setTimeout(resolve, 100)); await cloudSave(false); })();
+            await Promise.race([uploaded, new Promise(resolve => setTimeout(resolve, 4000))]);
+        }
+        location.reload();
+    },
+    game: () => game
+};
+
+booted = true;
+render();

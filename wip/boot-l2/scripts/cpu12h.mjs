@@ -1,0 +1,23 @@
+// CPU time of the 12 h replay of test/game.test.mjs's "silent and fast" test, for the code tree given (base or new).
+const root = process.argv[2];
+const { Game } = await import(`${root}/src/game.js`);
+const { rng, seededRandom } = await import(`${root}/src/core/rng.js`);
+const { generateEquipment } = await import(`${root}/src/core/formulas.js`);
+const { xpForLevel } = await import(`${root}/src/core/xp.js`);
+rng.setSource(seededRandom(1234));
+const T0 = 1_700_000_000_000;
+const game = new Game(null, T0);
+game.state.inventory.push(generateEquipment({ type: 'Weapon', tier: 3, power: 4.8, materialName: 'Mithril' }, 900));
+game.state.skills.combat.xp = xpForLevel(30);
+game.equipItem(900);
+game.state.resources.cooked_boar = 5000;
+game.setFarmMode(true);
+game.enterCombat();
+const saved = JSON.parse(game.serialize(T0));
+const later = T0 + 12 * 3600 * 1000;
+const g2 = new Game(saved, later);
+const started = process.cpuUsage();
+const t = performance.now();
+const summary = g2.resumeFromSave(later);
+const cpu = process.cpuUsage(started);
+console.log(JSON.stringify({ root: root.split('/').pop(), cpuMs: Math.round((cpu.user + cpu.system) / 1000), wallMs: Math.round(performance.now() - t), kills: summary.kills }));

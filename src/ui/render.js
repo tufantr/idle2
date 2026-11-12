@@ -2838,7 +2838,7 @@ function welcomeBestFind(summary, i) {
  * each skill's XP with its bar (a level-up stands out), the materials as tiles popping in one by
  * one, gold, finds (pets, uniques, items, dungeon clears) and what was used up.
  */
-export function renderWelcomeBack(summary, game) {
+export function renderWelcomeBack(summary, game, { strip = null } = {}) {
     const state = game.state;
     const mins = Math.floor(summary.simulated / 60000);
     const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
@@ -2907,6 +2907,7 @@ export function renderWelcomeBack(summary, game) {
         ${gains.length ? `<div class="wb-tiles">${gains.map(([id, d]) => tile(id, `+${shortQty(d)}`)).join('')}</div>` : ''}
         ${finds ? `<div class="wb-finds">${finds}</div>` : ''}
         ${used.length ? `<div class="wb-used"><span class="muted small">Used</span>${used.map(([id, d]) => tile(id, `−${shortQty(-d)}`, ' spent')).join('')}</div>` : ''}
+        ${strip ? strip(ready.length) : ''}
         <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="FI.collectOffline()">Collect</button></div>
     </div>`;
 }

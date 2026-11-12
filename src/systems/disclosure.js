@@ -67,7 +67,10 @@ export const DISCLOSURES = [
     // Hunting's river spots: once the kitchen has been used (as Fishing opened, before it joined Hunting)
     { id: 'river',        when: s => (s.stats.actionsBySkill.cooking || 0) >= 5 || (s.stats.fishCaught || 0) > 0 || RIVER_CATCH.some(id => s.resources[id] > 0) },
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },
-    { id: 'minigames',    when: s => s.stats.minigameWins > 0 || NON_COMBAT_SKILLS.some(id => s.minigame[id]?.opportunityUntil > 0 || !!s.minigame[id]?.challenge) }
+    { id: 'minigames',    when: s => s.stats.minigameWins > 0 || NON_COMBAT_SKILLS.some(id => s.minigame[id]?.opportunityUntil > 0 || !!s.minigame[id]?.challenge) },
+    // the welcome-back report's strip of what the world did meanwhile (systems/reentry.js): once a part of it that moves
+    // while the player is away has opened (the clan, the weekend events, the Trials' weeks)
+    { id: 'reentry',      when: s => !!(s.unlocks.clan || s.unlocks.events || s.seen.trials) }
 ];
 
 /** Has this piece of the interface opened for the player? (Developer mode opens everything.) */

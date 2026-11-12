@@ -19,8 +19,9 @@ import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
-import { renderCatchUp, paintCatchUp } from './ui/reentry.js';
+import { renderCatchUp, paintCatchUp, renderReentry, backgroundLine } from './ui/reentry.js';
 import { OFFLINE_MIN_MS } from './systems/offline.js';
+import { reentryFacts, gapTelling } from './systems/reentry.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
@@ -263,6 +264,7 @@ let catchUpBox = null;                  // the bar's dialog while it is up, and 
 let catchUpWas = null;
 let slowTimer = 0;
 let booted = false;                     // the module has run: its end draws the game first
+let heldGap = null;                     // what a hidden tab replayed, told once the page is in view: { summary, quiet }
 const caughtUpWaits = [];
 const settledWaits = [];
 const pumpChannel = new MessageChannel();   // (a message is not slowed in a background tab as a timer is)
@@ -373,16 +375,45 @@ function closeCatchUp(html) {
     if (!ui.modalOpen) { const next = ui.modalQueue.shift(); if (next) showModal(next.html, next.key); }
 }
 
+/** What the new version changed, for the welcome-back's strip (systems/reentry.js): nothing yet, until a changelog fills it. */
+const whatsNew = () => [];
+/** The welcome-back report of `summary`, with its strip of what the world did meanwhile after a day or more away. */
+function welcomeBack(summary) {
+    const facts = reentryFacts(game.state, game.now, summary, { changes: whatsNew() });
+    return renderWelcomeBack(summary, game, { strip: ready => renderReentry(facts, { ready, now: game.now }) });
+}
+
 /** The boot's welcome-back, for time away fighting or working, or resting more than five minutes (its HTML, or null). */
 function bootReport(summary) {
-    return summary && (summary.mode !== 'rest' || summary.simulated > 5 * 60000) ? renderWelcomeBack(summary, game) : null;
+    return summary && (summary.mode !== 'rest' || summary.simulated > 5 * 60000) ? welcomeBack(summary) : null;
 }
 
 /** A gap in play (Game.gapAt: the machine slept, the browser paused a tab): replayed in slices; signed in and long, after the server's look. */
-function catchUpGap(now) {
-    pending = { start: () => game.beginGap(Date.now()), after: summary => (summary && summary.mode !== 'rest' ? renderWelcomeBack(summary, game) : null) };
+function catchUpGap(now, background) {
+    pending = { start: () => game.beginGap(Date.now()), after: summary => gapReport(summary, background) };
     if (cloud.loggedIn && cloudReady && now - game.now >= CLOUD_AWAY_MS) holdForServer(0);   // another device may have played meanwhile
     else playPending();
+}
+/**
+ * A gap's report (systems/reentry.js gapTelling). A page in view when the gap began (the machine slept with the game in
+ * front) shows the welcome-back, as before. A tab that was hidden then (the browser paused it while the player was in
+ * another tab or app) opens nothing unseen: once in view it tells the gap in a toast, or from an hour on in the report.
+ */
+function gapReport(summary, background) {
+    const telling = gapTelling(summary, { background });
+    if (!telling) return null;
+    if (telling === 'report' && !document.hidden) return welcomeBack(summary);
+    heldGap = { summary, quiet: telling === 'toast' };
+    if (!document.hidden) showHeldGap();
+    return null;
+}
+function showHeldGap() {
+    const held = heldGap;
+    heldGap = null;
+    if (!held) return;
+    const s = held.summary;
+    if (!held.quiet) { openModal(welcomeBack(s), 'offline'); return; }
+    toast(backgroundLine(s), 'info', pic(s.mode === 'combat' ? FEATURES.combat.icon : FEATURES[Object.keys(s.skills || {})[0]]?.icon || 'gold'));
 }
 
 // ---------- boot ----------
@@ -411,7 +442,7 @@ const updates = createUpdateCheck({ own: VERSION, found: version => { ui.newVers
 /** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
 function advance(now) {
     if (holding()) return;   // time away first, a slice at a time (catchUp)
-    if (game.gapAt(now)) { catchUpGap(now); return; }
+    if (game.gapAt(now)) { catchUpGap(now, document.hidden); return; }
     const summary = game.tick(now);
     if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
 }
@@ -486,6 +517,9 @@ document.addEventListener('visibilitychange', () => {
     if (!holding()) game.setAttending(!document.hidden);   // (time away being replayed: at its end, catchUp)
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
     lastPresenceAt = Date.now();
+    // what this tab replayed while hidden, or a gap the browser left while it paused the hidden tab (gapReport)
+    if (heldGap && !catching) showHeldGap();
+    else if (!holding() && game.gapAt(Date.now())) catchUpGap(Date.now(), true);
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
     updates.back(Date.now());   // a newer version of the game may have come out meanwhile
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
@@ -1250,6 +1284,7 @@ async function signedIn() {
     if (restart) {
         writeBackup(game.serialize(pending ? game.state.meta.savedAt : Date.now()), 'guest', 'Before signing in');   // (time away not replayed: kept so)
         pending = null;
+        heldGap = null;
         freshGame();
     }
     await (pending ? holdForServer() : syncFromCloud());   // the account's own game, its time away waiting: replayed once, for the game chosen
@@ -1541,6 +1576,7 @@ async function syncFromCloud() {
         const news = () => { game.setClanBanner(banner); hallNews({ hall, hallGifts }); };
         if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
             pending = null;   // this game's time away is never replayed: the server's game is played
+            heldGap = null;
             cloudReady = true;
             await adoptState(remote, news);
             if (before) toast('Your game was played on another device: carrying on from there', 'info');
@@ -1570,10 +1606,11 @@ async function syncFromCloud() {
 function adoptState(stateObject, news = null) {
     if (ui.modalOpen === 'offline') closeModal();   // the report of the game it replaces would act on this one
     ui.modalQueue = ui.modalQueue.filter(m => m.key !== 'offline');
+    heldGap = null;
     game = withDevFlags(new Game(stateObject, Date.now()));
     return catchUp(game.beginResume(Date.now()), summary => {
         news?.();
-        return summary && summary.mode !== 'rest' ? renderWelcomeBack(summary, game) : null;
+        return summary && summary.mode !== 'rest' ? welcomeBack(summary) : null;
     }).then(summary => { save(Date.now()); render(); return summary; });
 }
 
@@ -2108,6 +2145,7 @@ window.FI = {
         cloud.logout();
         cloudReady = false;
         synced = false;
+        heldGap = null;
         game.clearClanResult();   // an attack not sent belongs to that account (it went to the next one to sign in)
         ui.cloudStatus = '';
         ui.social = freshSocial();
