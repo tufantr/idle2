@@ -4,10 +4,18 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const store = require('./store');
 const crypto = require('node:crypto');
-const { sendMail, codeMail } = require('./mail');
+const { sendCounted, codeMail } = require('./mail');
 
 const app = express();
-app.use(cors());
+app.disable('x-powered-by');
+// Browsers may call the API from the game's own pages only (the research loop's P-100, November 2026; it was open to every
+// site): the live site, its www name and the staging copy, and a local development host on any port (tools/serve.py, the
+// tools). A request with no Origin (the page's own GETs, curl, the deploy's check) is answered as before; another site's
+// gets no CORS headers, so its page can't read the answer.
+const GAME_ORIGINS = new Set(['https://fantasyidle.com', 'https://www.fantasyidle.com', 'https://staging.fantasyidle.com']);
+const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|([a-z0-9-]+\.)+(localhost|test))(:\d{1,5})?$/i;
+const gameOrigin = origin => !origin || GAME_ORIGINS.has(origin) || LOCAL_ORIGIN.test(origin);
+app.use(cors({ origin: (origin, done) => done(null, gameOrigin(origin)) }));
 // (inflate: false: the game never compresses what it sends, so a compressed body is refused before it is unpacked)
 app.use(express.json({ limit: '1mb', inflate: false }));
 
@@ -188,7 +196,7 @@ async function mailCode(user, email, purpose, ip, now) {
     if (await store.takeAttempt(`mail:ip:${ip}`.slice(0, 120), now, MAIL_WINDOW_MS) > MAX_MAILS_PER_IP) return { tooMany: true };
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     await store.putEmailCode(user.id, purpose, codeHash(user.id, purpose, code), now + CODE_MS, now);
-    try { await sendMail({ to: email, ...codeMail({ username: user.username, code, purpose, minutes: CODE_MS / 60000 }) }); } catch (err) {
+    try { await sendCounted(store, { to: email, ...codeMail({ username: user.username, code, purpose, minutes: CODE_MS / 60000 }) }, now); } catch (err) {
         await store.deleteEmailCodes(user.id, purpose);   // never delivered: it mustn't hold the next one back a minute
         throw err;
     }

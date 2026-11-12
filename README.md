@@ -123,7 +123,8 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   `/etc/fantasyidle/api.env`. Without it a sign-up is made but its code can't go (the dialog says so).
 - **The owner's mail:** `OWNER_ALERT_EMAIL` in `/etc/fantasyidle/api.env` (absent: none of it is sent) gets the growth
   check's review list once a week, from `node api/review.js` run by a weekly timer with the same settings: each account
-  whose numbers grew faster than the check allows, by its username, with the numbers.
+  whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
+  game's mails reach 80 of the plan's 100 (every mail is counted in its UTC day).
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 

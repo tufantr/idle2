@@ -1111,6 +1111,60 @@ test('the health check asks the database every time, and a body that is not JSON
     assert.match(res.headers.get('content-type') || '', /json/);
 });
 
+test("browsers may call the API from the game's own pages only; a request with no Origin is answered as before; no X-Powered-By", async () => {
+    const from = origin => fetch(`${base}/health`, { headers: { Origin: origin } });
+    for (const origin of ['https://fantasyidle.com', 'https://www.fantasyidle.com', 'https://staging.fantasyidle.com',
+        'http://localhost:8000', 'http://127.0.0.1:5173', 'http://[::1]:3000', 'http://game.localhost', 'https://fantasy.test:8443']) {
+        assert.equal((await from(origin)).headers.get('access-control-allow-origin'), origin, origin);
+    }
+    for (const origin of ['https://evil.example', 'https://fantasyidle.com.evil.example', 'http://fantasyidle.com', 'null', 'https://localhost.evil.example']) {
+        const res = await from(origin);
+        assert.equal(res.status, 200, 'answered (a browser keeps it from the page)');
+        assert.equal(res.headers.get('access-control-allow-origin'), null, origin);
+    }
+    const preflight = origin => fetch(`${base}/save`, { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization,content-type' } });
+    assert.equal((await preflight('https://evil.example')).headers.get('access-control-allow-origin'), null, "another site's upload is never sent");
+    assert.equal((await preflight('https://fantasyidle.com')).headers.get('access-control-allow-origin'), 'https://fantasyidle.com');
+    const plain = await get('/health');
+    assert.equal(plain.status, 200);
+    assert.equal(plain.headers.get('access-control-allow-origin'), null);
+    assert.equal(plain.headers.get('x-powered-by'), null, 'Express says nothing of itself');
+});
+
+test("the owner hears once a day when the day's mails reach 80 of the mail plan's 100; without OWNER_ALERT_EMAIL nobody does", async () => {
+    const { sendCounted, MAIL_ALERT_AT, DAILY_MAIL_CAP } = require('../api/mail.js');
+    assert.deepEqual([MAIL_ALERT_AT, DAILY_MAIL_CAP], [80, 100]);
+    const store = memory || require('../api/store.js');
+    const kept = process.env.OWNER_ALERT_EMAIL;
+    process.env.OWNER_ALERT_EMAIL = 'owner@example.test';
+    const alerts = () => mailbox.filter(m => m.to === 'owner@example.test' && /mails sent$/.test(m.subject));
+    const mailMany = async n => { for (let i = 0; i < n; i++) await sendCounted(store, { to: `reader${i}@example.test`, subject: 'A notice', text: 'x' }); };
+    try {
+        clock = (Math.floor(clock / DAY_MS) + 1) * DAY_MS + 3600 * 1000;   // a new day (UTC), counted from nothing
+        await mailMany(MAIL_ALERT_AT - 1);
+        assert.equal(alerts().length, 0, 'seventy-nine: not yet');
+        await register('eightieth_mail');   // a sign-up's code counts as any mail
+        assert.equal(alerts().length, 1, 'the eightieth');
+        assert.equal(alerts()[0].subject, "Fantasy Idle: 80 of today's 100 mails sent");
+        await mailMany(10);
+        assert.equal(alerts().length, 1, 'once that day');
+        clock += DAY_MS;
+        await mailMany(MAIL_ALERT_AT);
+        assert.equal(alerts().length, 2, 'and once the next');
+        delete process.env.OWNER_ALERT_EMAIL;
+        clock += DAY_MS;
+        await mailMany(MAIL_ALERT_AT);
+        assert.equal(alerts().length, 2, 'no address, no alert');
+        // the count and the alert are the server's bookkeeping: a failure there is never the mail's
+        process.env.OWNER_ALERT_EMAIL = 'owner@example.test';
+        const broken = { takeAttempt: async () => { throw new Error('the database is down (test)'); } };
+        await sendCounted(broken, { to: 'still.sent@example.test', subject: 'A notice', text: 'x' });
+        assert.equal(mailsTo('still.sent@example.test'), 1);
+    } finally {
+        if (kept === undefined) delete process.env.OWNER_ALERT_EMAIL; else process.env.OWNER_ALERT_EMAIL = kept;
+    }
+});
+
 test("this week's board counts from where the player stood when the week began, not from the week's first upload", async () => {
     const t = await register('weekly_honest');
     await post('/leaderboard/consent', { optIn: true }, t);

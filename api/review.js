@@ -66,9 +66,9 @@ module.exports = { weeklyReview, reviewMail, LABELS };
 
 if (require.main === module) {
     const store = require('./store');
-    const { sendMail } = require('./mail');
+    const { sendCounted } = require('./mail');
     store.ensureSchema()
-        .then(() => weeklyReview({ store, send: sendMail }))
+        .then(() => weeklyReview({ store, send: message => sendCounted(store, message) }))   // (one of the day's mails, counted)
         .then(r => {
             console.log(r.sent ? `review list mailed: ${plural(r.accounts, 'account')}` : `review list not mailed (${r.why}): ${plural(r.accounts, 'account')}`);
             process.exit(0);

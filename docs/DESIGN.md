@@ -1045,6 +1045,13 @@ gear to wear; a place that waited opens on the return and is named there too.
   whether the name exists. A token is checked against its account's name, and a body that isn't JSON
   gets a JSON answer. A business-rule refusal
   answers 409, never 403, which the client reads as a lost session.
+- **Guards** (the research loop's R12, November 2026): browsers may call the API from the game's own pages only
+  (https://fantasyidle.com, its www name, https://staging.fantasyidle.com, and a local development host on any port); another
+  site's page gets no CORS headers, and a request with no Origin is answered as before. Express no longer names itself
+  (`X-Powered-By`). Every mail is counted in its day (UTC, `sendCounted` in `api/mail.js`): the mail plan sends 100 a day,
+  and the 80th tells the owner (`OWNER_ALERT_EMAIL`), once that day. HSTS and a `Content-Security-Policy` of
+  `frame-ancestors` (the game's origins and the listings that frame it) and `connect-src 'self'` are nginx's to send; the
+  rest of a CSP waits for the screens' inline handlers to go.
 
 ### 3.18 Clans and leaderboards
 
