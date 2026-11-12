@@ -6,11 +6,12 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
-import { enemyForStage, enemyBaseStats, goldForKill, combatXpForKill, tokensForStage, BALANCE } from '../src/core/formulas.js';
+import { enemyForStage, enemyBaseStats, goldForKill, combatXpForKill, tokensForStage, generateEquipment, BALANCE } from '../src/core/formulas.js';
+import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
 import { CAMP_UPGRADES } from '../src/data/camp.js';
 import { campPrice } from '../src/systems/camp.js';
 import { findUpgrade } from '../src/systems/inventory.js';
-import { guideStep, campOnOffer, GUIDE_STRIKES } from '../src/systems/guide.js';
+import { guideStep, campOnOffer, GUIDE_STRIKES, atWall } from '../src/systems/guide.js';
 import { PERKS } from '../src/data/perks.js';
 import { seen } from '../src/systems/disclosure.js';
 import { spawnEnemy, onEnemyDeath, onPlayerDeath, packSize } from '../src/systems/combat.js';
@@ -165,6 +166,61 @@ test('while the hero regroups after a boss held out, the hand points at the boss
     game.setStage(10);   // the boss again, at once
     assert.equal(c.enemy.boss, true);
     assert.equal(guideStep(game.state, game.derived, { battle: true }), null);
+});
+
+test('at a first wall the hand points again: a better piece in the bag, then a camp level while the gold allows, then the boss', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const c = s.combat;
+    const view = { battle: true };
+    const piece = (tier, id) => generateEquipment({ type: 'Body', tier, power: GEAR_TIERS[tier - 1].power, materialName: GEAR_TIERS[tier - 1].name, rarity: RARITIES[0], source: 'drop' }, id);
+    s.skills.combat.xp = xpForLevel(20);
+    Object.assign(c, { stage: 20, maxStage: 20, bestStage: 20 });
+    Object.assign(s.stats, { strikes: GUIDE_STRIKES, campLevels: 2 });
+    s.camp.hearth = 2;
+    s.seen.camp = true;
+    s.inventory.push(piece(1, 801), piece(2, 802));
+    game.equipItem(801);
+    c.enemy = null;
+    game.enterCombat();
+    s.gold = 700;
+    assert.ok(findUpgrade(s), 'a better piece waits in the bag');
+    assert.equal(atWall(s), false);
+    assert.equal(guideStep(s, game.derived, view), null, 'on the climb, before any wall, the hand leaves them be');
+    // the stage-20 boss fells him: back to the zone's start, resting
+    onPlayerDeath(game);
+    assert.ok(c.recovering && c.stage < c.maxStage && atWall(s));
+    assert.equal(guideStep(s, game.derived, view), 'equip', 'resting after the fall: the piece that beats his');
+    assert.equal(guideStep(s, game.derived, { battle: false, tab: 'shop' }), null, 'only where the fight is in sight');
+    game.equipItem(802);
+    const cheapest = () => campOnOffer(s, game.derived).map(u => ({ id: u.id, cost: campPrice(s, u) })).sort((a, b) => a.cost - b.cost)[0];
+    assert.equal(guideStep(s, game.derived, view), `camp:${cheapest().id}`, 'then the cheapest camp level');
+    let bought = 0;
+    for (let step = guideStep(s, game.derived, view); step?.startsWith('camp:'); step = guideStep(s, game.derived, view)) {
+        assert.equal(game.buyCampUpgrade(step.split(':')[1], 1), 1);
+        bought++;
+    }
+    assert.ok(bought >= 2 && s.gold < cheapest().cost, `${bought} levels, until the gold is spent`);
+    assert.equal(guideStep(s, game.derived, view), null, 'resting, nothing more to press');
+    // a boss that holds out: the same, and then its skull
+    Object.assign(c, { recovering: false, active: true, stage: 19, regroupLeft: 30_000 });   // as a boss's timeout leaves him
+    s.stats.bossEscapes = 1;
+    s.inventory.push(piece(2, 803));
+    s.inventory.at(-1).atk = 999;   // better again
+    s.gold += cheapest().cost;
+    assert.equal(guideStep(s, game.derived, view), 'equip');
+    game.equipItem(803);
+    assert.match(guideStep(s, game.derived, view) || '', /^camp:/);
+    game.buyCampUpgrade(guideStep(s, game.derived, view).split(':')[1], 1);
+    assert.equal(guideStep(s, game.derived, view), 'retry', 'before the boss, last');
+    // staying on a stage is the player's choice, and a veteran is left alone
+    s.inventory.push(Object.assign(piece(2, 804), { atk: 5000 }));
+    c.farmMode = true;
+    assert.equal(guideStep(s, game.derived, view), null);
+    c.farmMode = false;
+    assert.equal(guideStep(s, game.derived, view), 'equip');
+    s.prestige.count = 1;
+    assert.equal(guideStep(s, game.derived, view), null);
 });
 
 test('places reached by climbing open one at a time, a breather apart, however fast the climb', () => {

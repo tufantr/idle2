@@ -26,7 +26,7 @@ import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.
 import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
-import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
+import { CLAN_POLL_MS, clanBossFor, ENDLESS, boardOpensOn } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
@@ -119,7 +119,8 @@ function markFresh(id, on) {
 
 function freshSocial() {
     return {
-        clan: null, hall: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false,
+        // the boards open on This week, or All time while it holds few names (data/social.js boardOpensOn): `periodSet` once decided
+        clan: null, hall: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'week', periodSet: false, optIn: false,
         fetchedAt: 0, loading: false, loaded: false, error: '', seq: 0,
         form: { name: '', tag: '', description: '', lookingFor: '', search: '' } // typed values survive re-renders and errors
     };
@@ -1284,6 +1285,18 @@ function endlessAnswered(answer) {
     render();
 }
 
+/**
+ * The boards' first look: This week, as asked, unless its board holds fewer than BOARD_WEEK_MIN names, then All time
+ * (data/social.js boardOpensOn). Decided once; after that, and after a tap on the period, the board is the one asked for.
+ */
+async function openingBoard(social, board) {
+    if (social.periodSet) return board;
+    social.periodSet = true;
+    if (social.period !== 'week' || social.metric === 'weeklyTrial' || boardOpensOn(board) === 'week') return board;
+    social.period = 'all';
+    return cloud.leaderboard(social.metric, 'all');
+}
+
 async function refreshSocial() {
     if (!cloud.loggedIn) return;
     const social = ui.social;
@@ -1292,7 +1305,9 @@ async function refreshSocial() {
     social.loading = true;
     social.fetchedAt = Date.now();
     try {
-        const [mine, rewards, board, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
+        const [mine, rewards, asked, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
+        if (!current()) return;
+        const board = await openingBoard(social, asked);
         if (!current()) return;
         social.clan = mine.clan;
         Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20,
@@ -1515,7 +1530,7 @@ window.FI = {
         if (result?.rewards?.length) { save(Date.now()); cloudSave(false); }
     },
     boardMetric(metric) { ui.social.metric = metric; refreshSocial(); },
-    boardPeriod(period) { ui.social.period = period; refreshSocial(); },
+    boardPeriod(period) { ui.social.period = period; ui.social.periodSet = true; refreshSocial(); },
     setLeaderboardConsent(on) { socialAction(() => cloud.setLeaderboardConsent(on).then(r => { ui.social.optIn = r.optIn; return r; }), on ? 'You joined the leaderboards' : 'You left the leaderboards'); },
     startNode(skill, node) { game.startNodeAction(skill, node); render(); },
     stopAction() { game.stopAction(); render(); },

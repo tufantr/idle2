@@ -2,6 +2,10 @@
 // itself, and moves on once it is done. A strike on the monster, the sword the first monster left,
 // the first camp upgrade, the boss's skull on the stage path while the hero regroups after it held out
 // (a tap fights it again at once), and (on the Mining tab, before any skill has been worked) the first vein.
+// At a first wall (after a fall or a boss that held out, the hero back below the run's highest stage) it
+// points again at a piece in the bag that beats what he wears, then at a camp level while the gold allows,
+// before the boss: a player who pressed only where it pointed fell at the stage-20 boss with 658-679 gold
+// unspent and better armour waiting (docs/research_notes/research-loop/019-onboarding-and-ui.md).
 // Then the first prestige, which teaches the loop (the owner: a few minutes in, for a skill point, not
 // after fourteen minutes at a wall): as soon as Prestige opens (after the stage-20 boss), the dock's
 // Prestige, the dialog's "Prestige now", and after it the Perks the first skill point buys.
@@ -20,6 +24,12 @@ export const GUIDE_STRIKES = 3;
 
 /** A hero still in his first minutes: no prestige yet, in the first three zones. */
 export const newHero = state => !state.prestige?.count && (state.combat?.bestStage || 1) <= 30;
+
+/** A wall in a new hero's run: he has fallen or a boss has held out, and he is back below the run's highest stage (resting, regrouping or climbing to it again). */
+export const atWall = state => {
+    const c = state.combat;
+    return !c.farmMode && c.stage < c.maxStage && (state.stats?.deaths || 0) + (state.stats?.bossEscapes || 0) > 0;
+};
 
 /** The first prestige is due: never prestiged, the place open, the hero climbing (no boss in front of him), a prestige allowed now. */
 export function firstPrestigeDue(state, now) {
@@ -53,19 +63,20 @@ export function guideStep(state, derived, { battle = false, tab = null, modal = 
     if (battle && firstPerkDue(state)) return 'perks';
     if (!newHero(state)) return null;
     const c = state.combat;
-    if (battle && c.active && c.mode === 'stages' && c.enemy) {
-        // the first piece of gear: nothing worn yet, and something in the bag to wear
-        if (!Object.values(state.equipped).some(Boolean) && !gearIsLocked(state) && findUpgrade(state)) return 'equip';
-        // the first camp upgrade, as soon as one is affordable (the cheapest)
-        if (!state.stats.campLevels && seen(state, 'camp')) {
+    if (battle && (c.active || c.recovering) && c.mode === 'stages' && c.enemy) {   // (resting after a fall too: the dock is there)
+        const wall = atWall(state);
+        // the first piece of gear: nothing worn yet, and something in the bag to wear; at a wall, any piece that beats its slot
+        if ((wall || !Object.values(state.equipped).some(Boolean)) && !gearIsLocked(state) && findUpgrade(state)) return 'equip';
+        // the first camp upgrade, as soon as one is affordable (the cheapest); at a wall, the cheapest level while the gold allows
+        if ((wall || !state.stats.campLevels) && seen(state, 'camp')) {
             const offer = campOnOffer(state, derived)
                 .map(u => ({ u, cost: campPrice(state, u) }))
                 .filter(o => state.gold >= o.cost)
                 .sort((a, b) => a.cost - b.cost)[0];
             if (offer) return `camp:${offer.u.id}`;
         }
-        if (c.regroupLeft > 0 && !c.farmMode && !c.enemy.boss) return 'retry';
-        if ((state.stats.strikes || 0) < GUIDE_STRIKES) return 'strike';
+        if (c.active && c.regroupLeft > 0 && !c.farmMode && !c.enemy.boss) return 'retry';
+        if (c.active && (state.stats.strikes || 0) < GUIDE_STRIKES) return 'strike';
     }
     if (tab === 'mining' && !state.action && !Object.values(state.stats.actionsBySkill || {}).some(n => n > 0)) return 'vein';
     return null;

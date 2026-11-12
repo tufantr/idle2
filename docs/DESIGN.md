@@ -776,7 +776,15 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   the first 20 Titans, the Trials' tiers, the agility course's slots and the festival cloaks. The whole
   counts every part from the start, so it only rises (a unique the player unlocks and sells away is the
   one thing that lowers it); Records names only the parts the player has met. A cape for 100% is still
-  to come.
+  to come. **100% is everything in the game on 12 November 2026, and new content never lowers it** (the
+  owner): each part's whole is fixed at that day's count (`COMPLETION_WHOLE`: 1,089 levels, 9,408 mastery
+  levels, 549 stars, 70 pages, 51 medals, 12 pets, 8 uniques, 20 Titans, 40 Trial tiers, 6 slots, 6 cloaks),
+  and new medals, pets, uniques, monsters, actions, Trials or festivals fill a part, capped at its whole, without
+  raising it (a seventh festival used to take 1.3 points from a hero who had everything). The three secret medals
+  keep their power and are never needed: the medals' whole is the 51 open ones, and a secret one held counts toward
+  it. The Trials' part counts each Trial's five tiers: their ladders' rungs are records, and counted here they filled
+  the part for a deep hero with Trials never cleared (a hero three Trials up their ladders read 9.2% where he has done
+  3.5%).
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
   when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
   Smithing after mining 5 times (ore that monsters drop no longer opens it for a hero who only
@@ -873,12 +881,13 @@ boss's clock runs out, so the step size never changes the result. Capped at
 **24 hours** (+2 h per Endurance perk, up to 36 h, and +1 h per level of the Zipline, up to +5 h at
 level 5; it was 12 until the check-in research found a once-a-day player losing 11 hours a day to it,
 `docs/research_notes/robust-and-fun/C_sessions_players.md`). Absences under a minute
-are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
-plots ready to harvest, how often the hero fell and got up, and why work stopped early. Since the
-check-in research it leads with where the run stopped ("climbed to stage 57, then held there for
-1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
-a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better
-gear to wear; a place that waited opens on the return and is named there too.
+are ignored. The "Welcome back" summary says the time away and, past the cap, the hours that counted ("30h away,
+24h counted": the hours the cap cut are said, as Melvor and Cookie Clicker say them); it lists gains, materials
+used, levels, dungeon clears, pets, plots ready to harvest, how often the hero fell and got up, and why work
+stopped early. Since the check-in research it leads with where the run stopped ("climbed to stage 57, then held
+there for 1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
+a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better gear to
+wear; a place that waited opens on the return and is named there too.
 
 ### 3.17 Saves, cloud and the API
 
@@ -1065,8 +1074,9 @@ with the game's own stat code; the client never submits damage or scores.
   midnight, then comes back as the next level with a fifth more health (`CLAN_BOSS.growth`, ×1.2; it was ×2, and
   level 7 had 64 times level 1's health, beyond any clan: the owner asked that twenty members who use all their
   attacks fell all seven), full; at most seven a week. One not felled stays as it is, damage and all; Monday brings
-  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack, and
-  with strikes Combat Potion I ×2.4, IV ×4.8, VI ×6.4. With every member's three attacks a day and the unused kept
+  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack (at attack
+  speed's cap: `strikeWorth`, `src/core/power.js`; more for a slower hero), and with strikes Combat Potion I ×2.4, IV ×4.8,
+  VI ×6.4. The Clan's "?" gives each level's attacks (20, 24, 29, 35, 41, 50 and 60) and striking's ×1.33. With every member's three attacks a day and the unused kept
   (`tools/clanpower.mjs`): just watching, 20 members fell all seven, 10 six, 5 three, 2 one, one alone one; striking,
   10 seven, 5 four, 2 two; with Potion IV, 3 seven, 2 five, alone three; with VI, 2 six, alone four. Level 1 was 30
   until 26 October 2026: counted by the fight alone, an attack no longer carries the hero's growth through the day,
@@ -1096,7 +1106,8 @@ with the game's own stat code; the client never submits damage or scores.
   (`clanDepthScore`); accounts flagged for impossible numbers are left out. The standings are worked out on request
   (at most once a minute, cleared by an Endless attack or a kill); a finished week's are kept once (`clan_rankings`,
   with the clan's name and tag) by the first look after it ends, and give its top three of each division a crown for
-  the next week, on the clan list and the clan's header, and the clan its best week (its record). On screen
+  the next week, on the clan list and the clan's header, and the clan its best week (its record). A crown is gold for
+  the 1st, silver for the 2nd and bronze for the 3rd, and says its place in a tip a phone opens (`clanCrown`). On screen
   (`endlessPanel`, `clanStandings` in `src/ui/render.js`): the Hydra's card under the week's boss (asleep, when it
   wakes; awake, the fight and two pips), the clan's division, place and depth, the week's table by division and last
   week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
@@ -1138,7 +1149,10 @@ with the game's own stat code; the client never submits damage or scores.
   Clan tab (`/api/rewards`), once each.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
   level, Titans or dungeon clears, all time or this week (from where each player stood when the week
-  began: the numbers stored before their first upload of the week, not that upload's).
+  began: the numbers stored before their first upload of the week, not that upload's). They open on this week,
+  so a newcomer meets a board a week of play can climb, not the beta's head start (P-129), and on all time while
+  the week's board holds fewer than `BOARD_WEEK_MIN` (5) names: decided at the first look, kept once the player
+  taps the period (`boardOpensOn`, `src/data/social.js`; `openingBoard`, `src/main.js`).
   The numbers are computed once per upload and stored, so a board is one query.
 - **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open
   and in view.
@@ -1331,7 +1345,10 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   its painting, one line and the rules in a few short points. That one entry is the card shown when
   the place opens, the banner on tabs without a scene or a skill stage (shop, achievements, events,
   clan, dungeons) and the About card behind every "?", which is where the "How it works"
-  paragraphs went.
+  paragraphs went. Each About card with a page of its own on the player wiki ends with a small "More on the
+  wiki" (`WIKI_PAGES` in `src/ui/features.js`; the wiki's test checks each lands), and Settings links the
+  wiki beside the Discord (`WIKI_URL`, `src/data/social.js`): the card keeps to a few lines, the page has all
+  the rules and numbers.
 - **Pictures, not emoji.** Everything the player handles has a sprite: perks are DCSS spell and god
   icons in a gold frame, the tools are items (two from DCSS, four drawn in its manner), each agility
   obstacle has its own picture, the daily crate is a DCSS chest and Settings a cog (`build_icons` in
@@ -1457,7 +1474,11 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   with a ring where it presses: the monster until the player has struck three times, the sword's
   Equip, the cheapest camp upgrade the first time one is affordable, the boss's skull on the stage
   path while the hero regroups after it held out (a tap fights it again at once; the skull pulses
-  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. No
+  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. At a first
+  wall (after a fall or a boss that held out, the hero back below the run's highest stage: `atWall`) it points
+  again, before the skull: at the dock's Equip for any piece that beats what he wears, then at the cheapest camp
+  level while the gold allows (P-079: a player who pressed only where it pointed fell at the stage-20 boss with
+  658-679 gold unspent and better armour waiting); resting after a fall too. No
   words. It comes only after a pause in which a player who would do the thing anyway has done it
   (3 s on the monster, 4 s on the camp, about a second elsewhere), never takes a click, hides under
   dialogs and cards (all but the two below), points down from above where there is no room below,
@@ -2058,7 +2079,9 @@ Rules:
    source that grows with depth, so health from armour is what keeps a deep hero from falling to
    every hit (§5.3).
 3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.75 s),
-   damage mitigation 90%, action interval ≥ 250 ms.
+   damage mitigation 90%, action interval ≥ 250 ms. Attack speed's bonuses together are kept before the cap
+   (`derived.attackSpeedBonus`): from the cap on, the Inventory marks the hero's swing "cap", and a piece's speed
+   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.
 

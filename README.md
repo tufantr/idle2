@@ -1,17 +1,16 @@
 # Fantasy Idle
 
-A browser idle RPG in the spirit of Melvor Idle: name your hero and pick a look, train twelve skills
+A browser idle RPG in the spirit of Melvor Idle: name your hero and pick a look, train eleven skills
 at Melvor's pace (level 99 is hundreds of hours, and earns the skill's cape) and master every action
-in them, forge your own gear, fight through ten zones and an endless Abyss, clear six dungeons, face
+in them, upgrade the gear the fight drops, fight through ten zones and an endless Abyss, clear eight dungeons, face
 the hourly Titan, build an agility course, fill a bestiary, and prestige for
 permanent power and a rank worn as the hero's cloak. Daily crates (every seventh a great one) and
 weekend events bring bonuses, Festival Tokens and an event shop. Painted places, pixel sprites,
 synthesized sound; it plays on a phone too. Optional accounts add cloud saves, clans with a weekly shared boss,
-and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
-Postgres API.
+and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express API on PostgreSQL.
 
-**Play:** [fantasy-idle.vercel.app](https://fantasy-idle.vercel.app) (cloud saves, clans and leaderboards wait
-for the database; see [Deploy](#deploy)).
+**Play:** [fantasyidle.com](https://fantasyidle.com), with the player wiki at [wiki.fantasyidle.com](https://wiki.fantasyidle.com)
+(the server: [below](#the-server-fantasyidlecom)).
 
 **Docs:** [Game design](docs/DESIGN.md) · [Roadmap](docs/ROADMAP.md) ·
 [Research report](docs/reports/Fantasy%20Idle%20game%20design%20research.md) · [Research notes](docs/research_notes/)

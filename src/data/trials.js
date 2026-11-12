@@ -44,7 +44,7 @@ export const TRIALS = [
     { id: 'swift_bosses', name: 'Swift Bosses', art: 'skyreach', icon: 'mon/Thunder Roc', rule: 'Bosses give you a tenth of the time.', bite: { bossTime: 0.1 }, first: 180, heat: 1 },
     { id: 'no_camp', name: 'No Camp', art: 'camp', icon: 'campfire', rule: 'The camp stays packed.', bite: { noCamp: true }, first: 180, heat: 4 },
     { id: 'fasting', name: 'Fasting', art: 'marsh', icon: 'res/cooked_rabbit', rule: 'No food, no potions, and no health comes back while you fight.', bite: { noFood: true, noRegen: true, noPotion: true }, first: 170, heat: 1 },
-    { id: 'faithless', name: 'Faithless', art: 'shrine', icon: 'res/essence', rule: 'Your tokens give nothing.', bite: { noTokens: true }, first: 125, heat: 10 }
+    { id: 'faithless', name: 'Faithless', art: 'shrine', icon: 'res/essence', rule: 'Your tokens give nothing this run; they count again from the next prestige.', bite: { noTokens: true }, first: 125, heat: 10 }
 ];
 
 const NO_BITE = Object.freeze({});

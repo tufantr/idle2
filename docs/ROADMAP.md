@@ -1461,6 +1461,42 @@ Keeping it running:
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
+- [x] **Tokens in the game's own numbers** (the research loop's small fixes, 12 November 2026): a deep run's tokens showed
+      as long digits on the Combat tab's prestige strip, the dock's Prestige, the Shop and the battle log; they read 1.6M
+      now, and the Shop's line says the highest stage this run, where it said "best stage"
+- [x] **No forging promised** (the same small fixes): the empty bag said a smith can forge gear, and the title card and the
+      wiki's front page said "forge your gear", though forging went in October. The bag says monsters drop it, bosses most
+      often, and both taglines "upgrade your gear"
+- [x] **A card says the XP it pays** (the same small fixes): under a skill potion, the gathering, smelting and jewellery
+      cards, the course and the skill stage's line showed the XP without the potion's; they show what an action pays
+- [x] **The hours the cap cut** (the research loop, P-093): back after 30 hours, the welcome-back report said "24h 0m" and
+      "capped", the six lost hours nowhere. It says "30h away, 24h counted", the cap in a tip a phone can open
+- [x] **A link to the wiki** (promised to a player on 1 November; P-074): Settings has "Read the wiki" beside the Discord,
+      and every "?" card with a page of its own on the wiki ends with a small "More on the wiki" that opens it
+- [x] **A mark at attack speed's cap** (promised on 1 November; P-074): speed stops at +100%, and every deep hero the
+      simulator made sat 7 to 48 points past it. The Inventory's swing time wears a small "cap" once there, its tip saying
+      more adds nothing, and a piece whose speed adds nothing gets the same mark beside its bonus
+- [x] **Faithless says its tokens come back** (P-007): its card said only "Your tokens give nothing", and a player read it as
+      losing them. It says they count again from the next prestige, which ends the Trial; the wiki says they are kept
+- [x] **The boss says what it takes** (P-006): the Clan's "?" gave level 1's attacks and the strike's ×2.5. It gives every
+      level's (20, 24, 29, 35, 41, 50 and 60 attacks of an average member) and what striking fast through every opening
+      makes an attack worth, ×1.33 at full attack speed, worked out from the server's own reckoning of the fight
+- [x] **Crowns that read 1st, 2nd and 3rd** (P-001; a player once read the ranking as "everybody 2nd"): the 1st's crown was
+      the atlas's red and amber, close to the 3rd's sepia. The 1st is gold, the 2nd silver, the 3rd bronze, and every crown
+      (the ranking's, last week's, the clan list's and the header's) says its place in a tip a phone opens with a tap
+- [x] **Completion that new content can't lower** (the owner's decisions, P-108 with P-117): each part divided by its own
+      content, so a new medal, pet, unique or festival took points from everyone. Each part's whole is fixed at today's
+      game, and new things fill it; the secret medals keep their power, count when held and are never needed; the Trials'
+      part counts each Trial's five tiers, where its ladder's rungs filled it for a deep hero with Trials never cleared
+- [x] **The boards open on This week** (P-129): they opened on all-time best stage, where the beta's players will stand when
+      a post brings strangers. They open on this week's board, which counts from each player's first upload of the week,
+      or on all time while it holds fewer than five names; a tap on the period still switches, and the choice holds
+- [x] **The hand points again at the first wall** (P-079): in a first run it pointed at Equip only while nothing was worn and
+      at the camp only before its first level, so a player who pressed only where it pointed fell at the stage-20 boss with
+      679 gold unspent and armour waiting. After a fall or a boss that held out it points at a waiting Equip, then at a camp
+      level while the gold lasts, before the boss's skull. Played by a scratch follower of the hand (an hour, three seeds):
+      the two who met that wall bought 18 camp levels, fell 21 and 12 times instead of 30 and 31, and stood at stage 30
+      instead of 28 and 27; `tools/opening.mjs`, whose players take every offer anyway, reads the same
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
