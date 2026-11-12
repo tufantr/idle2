@@ -1474,7 +1474,11 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   with a ring where it presses: the monster until the player has struck three times, the sword's
   Equip, the cheapest camp upgrade the first time one is affordable, the boss's skull on the stage
   path while the hero regroups after it held out (a tap fights it again at once; the skull pulses
-  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. No
+  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. At a first
+  wall (after a fall or a boss that held out, the hero back below the run's highest stage: `atWall`) it points
+  again, before the skull: at the dock's Equip for any piece that beats what he wears, then at the cheapest camp
+  level while the gold allows (P-079: a player who pressed only where it pointed fell at the stage-20 boss with
+  658-679 gold unspent and better armour waiting); resting after a fall too. No
   words. It comes only after a pause in which a player who would do the thing anyway has done it
   (3 s on the monster, 4 s on the camp, about a second elsewhere), never takes a click, hides under
   dialogs and cards (all but the two below), points down from above where there is no room below,
