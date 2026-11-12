@@ -1475,7 +1475,9 @@ Keeping it running:
       A badge says in words what its glyph shows, to a screen reader (a tab read "Shop▲"; now "Shop, a better tool is ready
       to buy", "Combat, level 62"), and so do the phone's coins and its Menu and crate buttons, whose words the screen hides.
       Settings has a switch for the fight's two keys, M (the map) and Space (a strike), kept on that device: speech input
-      types them
+      types them. The monster flashes at most three times a second (WCAG 2.3.1; striking four times a second made five, on
+      up to 90% of the area WCAG allows): a blow sooner than that knocks it back without the light, its number and sound as
+      ever
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

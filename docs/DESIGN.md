@@ -1228,7 +1228,9 @@ keeps:
   one-shot moves (lunge, knockback, entrances, the fall) are Web Animations on the outer one, ranked
   so a monster's entrance isn't interrupted by the first hit.
 - **Bounded.** At most 8 effects per frame and 14 coins in flight, nothing while the tab is hidden, and
-  no floating effects under reduced motion (the setting or the system preference).
+  no floating effects under reduced motion (the setting or the system preference). The monster flashes at most
+  three times a second (WCAG 2.3.1, `FLASH_GAP_MS`): a hit, a crit, a boss's entrance or a fall that comes sooner
+  than 340 ms after the last flash moves without the light, and keeps its number and its sound.
 - **Two keys.** M opens the map (and closes it), Space strikes; Esc folds the full-screen fight. Settings turns M and
   Space off (WCAG 2.1.4: speech input types letters), on that device only (`ui.shortcuts`, kept in the browser as
   `fantasyIdle.keys`, not in the save); Enter or Space on a focused control still presses it.

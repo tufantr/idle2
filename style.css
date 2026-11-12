@@ -1546,6 +1546,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .battle.slowmo .fighter-sprite *, .battle.slowmo .battle-particles i { animation-play-state: paused; }
 /* the monster that leaves a piece worth seeing flashes in its colour as it falls */
 .corpse.loot { animation-name: corpseLoot; }
+.corpse.calm { animation-name: corpseCalm; }   /* a fall too soon after the last flash: no light (src/ui/scene.js foeMayFlash) */
+.corpse.loot.calm { animation-name: corpseLootCalm; }
 .click-spark { font-size: 1.6rem; line-height: 1; color: #fde68a; text-shadow: 0 0 10px rgba(251, 191, 36, 0.9); animation: spark 0.45s ease-out forwards; }
 .flying-coin { position: fixed; z-index: 450; margin: -16px 0 0 -16px; font-size: 20px; line-height: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
 
@@ -1654,6 +1656,14 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
 @keyframes lootBob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
 @keyframes lootArrive { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.85); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); } }
 @keyframes lootFlash { 0% { opacity: 0; } 14% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes corpseCalm {
+    0% { opacity: 1; transform: translate(-50%, -50%); }
+    55% { opacity: 0.4; }
+    100% { opacity: 0; transform: translate(12%, -100%) rotate(60deg) scale(0.68); filter: grayscale(0.8) brightness(0.7); } }
+@keyframes corpseLootCalm {
+    0% { opacity: 1; transform: translate(-50%, -50%); filter: drop-shadow(0 0 16px var(--loot)); }
+    55% { opacity: 0.45; }
+    100% { opacity: 0; transform: translate(12%, -100%) rotate(60deg) scale(0.68); filter: grayscale(0.8) brightness(0.7) drop-shadow(0 0 0 transparent); } }
 @keyframes corpseLoot {
     0% { opacity: 1; transform: translate(-50%, -50%); filter: brightness(2.4) drop-shadow(0 0 16px var(--loot)); }
     35% { filter: brightness(1.7) drop-shadow(0 0 24px var(--loot)); }

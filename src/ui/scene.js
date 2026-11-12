@@ -36,6 +36,11 @@ const landScene = zone => (zone.depth > 0 ? zone.stratum || 'abyss' : zone.id);
 const PARTICLE_COUNT = 18;
 const ATLAS_CELL = 32;        // a sprite is 32 px before scaling
 const MAX_FX_PER_FRAME = 8;   // a background tab catching up can deliver hundreds of hits at once
+// The monster flashes at most three times a second (WCAG 2.3.1): strikes come four a second and the hero's own blows
+// besides, five flashes a second in all, on up to 90% of the area WCAG allows. A blow sooner than this after the last
+// flash knocks it back without the light; its number and its sound come as ever.
+const FLASH_GAP_MS = 340;
+const SAME_FLASH_MS = 50;      // (a killing blow and the fall it starts light up together: one flash)
 const MAX_COINS_IN_FLIGHT = 14;
 // Loot worth seeing (playLoot): how long it glows on the ground before it flies off, and its sparks.
 const LOOT_HOLD = { rare: 950, epic: 1300, legendary: 2000, mythic: 2600, primal: 3200 };
@@ -61,13 +66,17 @@ const MOVES = {
     lunge:     { ms: 260, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(26px) rotate(7deg)', offset: 0.35 }, { transform: 'none' }] },
     lungeLeft: { ms: 260, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(-26px) rotate(-7deg)', offset: 0.35 }, { transform: 'none' }] },
     jab:       { ms: 150, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(12px) rotate(4deg)', offset: 0.4 }, { transform: 'none' }] },   // the hero's answer to a strike: quick, so taps can follow fast
-    hurt:      { ms: 240, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(9px) scale(0.96)', filter: 'brightness(2.4) saturate(0.3)', offset: 0.2 }, { transform: 'none', filter: 'none' }] },
-    crit:      { ms: 360, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(16px) rotate(8deg) scale(0.9)', filter: 'brightness(3) saturate(0)', offset: 0.18 }, { transform: 'translateX(-4px) rotate(-3deg)', offset: 0.55 }, { transform: 'none', filter: 'none' }] },
+    // (`dim`: the same move without its flash of light, for a blow that comes too soon after the last flash: foeMayFlash)
+    hurt:      { ms: 240, rank: 1, dim: 'hurtDim', frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(9px) scale(0.96)', filter: 'brightness(2.4) saturate(0.3)', offset: 0.2 }, { transform: 'none', filter: 'none' }] },
+    hurtDim:   { ms: 240, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(9px) scale(0.96)', offset: 0.2 }, { transform: 'none' }] },
+    crit:      { ms: 360, rank: 1, dim: 'critDim', frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(16px) rotate(8deg) scale(0.9)', filter: 'brightness(3) saturate(0)', offset: 0.18 }, { transform: 'translateX(-4px) rotate(-3deg)', offset: 0.55 }, { transform: 'none', filter: 'none' }] },
+    critDim:   { ms: 360, rank: 1, frames: [{ transform: 'none' }, { transform: 'translateX(16px) rotate(8deg) scale(0.9)', offset: 0.18 }, { transform: 'translateX(-4px) rotate(-3deg)', offset: 0.55 }, { transform: 'none' }] },
     heroHurt:  { ms: 280, rank: 1, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateX(-9px)', filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.95)) brightness(1.3)', offset: 0.2 }, { transform: 'none', filter: 'none' }] },
     dodge:     { ms: 340, rank: 1, frames: [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-22px) skewX(-8deg)', opacity: 0.5, offset: 0.4 }, { transform: 'none', opacity: 1 }] },
     cheer:     { ms: 700, rank: 2, frames: [{ transform: 'none', filter: 'none' }, { transform: 'translateY(-14px) scale(1.06)', filter: 'drop-shadow(0 0 14px rgba(125, 255, 178, 0.9))', offset: 0.35 }, { transform: 'none', filter: 'none' }] },
     spawn:     { ms: BALANCE.combat.dropInMs, rank: 2, easing: 'cubic-bezier(.3,1.4,.6,1)', frames: [{ transform: 'translateY(-28px) scale(0.5)', opacity: 0 }, { transform: 'translateY(3px) scale(1.06)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }] },
-    bossSpawn: { ms: 900, rank: 2, frames: [{ transform: 'scale(0.2)', opacity: 0, filter: 'brightness(4)' }, { transform: 'scale(1.2)', opacity: 1, filter: 'brightness(1.6)', offset: 0.55 }, { transform: 'none', opacity: 1, filter: 'none' }] },
+    bossSpawn: { ms: 900, rank: 2, dim: 'bossSpawnDim', frames: [{ transform: 'scale(0.2)', opacity: 0, filter: 'brightness(4)' }, { transform: 'scale(1.2)', opacity: 1, filter: 'brightness(1.6)', offset: 0.55 }, { transform: 'none', opacity: 1, filter: 'none' }] },
+    bossSpawnDim: { ms: 900, rank: 2, frames: [{ transform: 'scale(0.2)', opacity: 0 }, { transform: 'scale(1.2)', opacity: 1, offset: 0.55 }, { transform: 'none', opacity: 1 }] },
     // Falls back onto the ground: lifted by the half of the body that would otherwise swing below the feet.
     fallen:    { ms: 1800, rank: 3, frames: [{ transform: 'none' }, { transform: 'translate(-6px, -40%) rotate(-80deg)', offset: 0.18 }, { transform: 'translate(-6px, -40%) rotate(-80deg)', offset: 0.72 }, { transform: 'none' }] },
     shake:     { ms: 380, rank: 1, easing: 'linear', frames: [{ transform: 'none' }, { transform: 'translate(-5px, 2px)' }, { transform: 'translate(5px, -2px)' }, { transform: 'translate(-4px, -1px)' }, { transform: 'translate(3px, 2px)' }, { transform: 'none' }] },
@@ -178,13 +187,24 @@ export function createScene(root, actions) {
 
     function move(node, name) {
         if (!node?.animate || quietNow()) return;
-        const m = MOVES[name];
+        let m = MOVES[name];
         const current = running.get(node);
         if (current && current.anim.playState === 'running') {
             if (current.rank > m.rank) return;
             current.anim.cancel();
         }
+        if (m.dim && node === el.foeSprite && !foeMayFlash()) m = MOVES[m.dim];
         running.set(node, { anim: node.animate(m.frames, { duration: m.ms, easing: m.easing || 'ease-out' }), rank: m.rank });
+    }
+
+    /** May the monster flash now? Yes once FLASH_GAP_MS have passed since its last flash began (or in the same moment). */
+    let foeFlashAt = -Infinity;
+    function foeMayFlash() {
+        const now = performance.now();
+        if (now - foeFlashAt < SAME_FLASH_MS) return true;
+        if (now - foeFlashAt < FLASH_GAP_MS) return false;
+        foeFlashAt = now;
+        return true;
     }
 
     /** The fighters' spots in % of the effects layer: x (centre), top (head room), mid and bottom (feet). */
@@ -881,7 +901,8 @@ export function createScene(root, actions) {
                     const { foe } = anchor();
                     const body = foe.bottom - (foe.bottom - foe.top) * 0.35;
                     const shine = lootShine(ev, game);   // it leaves a piece worth seeing: it flashes in that colour as it falls
-                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}${shine ? ' loot' : ''}`, sprite(monsterSpriteKey(ev.enemy), { scale: ev.enemy.boss ? bossScale(fighterScale()) : fighterScale(), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
+                    const calm = !quietNow() && !foeMayFlash() ? ' calm' : '';   // (too soon after a flash: it falls without the light)
+                    const corpse = spawnFx(`corpse${ev.enemy.boss ? ' boss' : ''}${ev.enemy.gilded ? ' gilded' : ''}${shine ? ' loot' : ''}${calm}`, sprite(monsterSpriteKey(ev.enemy), { scale: ev.enemy.boss ? bossScale(fighterScale()) : fighterScale(), fallback: esc(ev.enemy.icon || '👾') }), foe.x, body, 700);
                     if (corpse && shine) corpse.style.setProperty('--loot', shine);
                     if (corpse) spawnFx('puff', '', foe.x, body, 650);
                     coinBurst(ev.enemy.boss ? 7 : ev.enemy.gilded ? 6 : 1);
