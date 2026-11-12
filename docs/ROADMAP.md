@@ -1496,7 +1496,7 @@ Keeping it running:
       679 gold unspent and armour waiting. After a fall or a boss that held out it points at a waiting Equip, then at a camp
       level while the gold lasts, before the boss's skull. Played by a scratch follower of the hand (an hour, three seeds):
       the two who met that wall bought 18 camp levels, fell 21 and 12 times instead of 30 and 31, and stood at stage 30
-      instead of 27 and 28; `tools/opening.mjs`, whose players take every offer anyway, reads the same
+      instead of 28 and 27; `tools/opening.mjs`, whose players take every offer anyway, reads the same
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
