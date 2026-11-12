@@ -1332,7 +1332,10 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   its painting, one line and the rules in a few short points. That one entry is the card shown when
   the place opens, the banner on tabs without a scene or a skill stage (shop, achievements, events,
   clan, dungeons) and the About card behind every "?", which is where the "How it works"
-  paragraphs went.
+  paragraphs went. Each About card with a page of its own on the player wiki ends with a small "More on the
+  wiki" (`WIKI_PAGES` in `src/ui/features.js`; the wiki's test checks each lands), and Settings links the
+  wiki beside the Discord (`WIKI_URL`, `src/data/social.js`): the card keeps to a few lines, the page has all
+  the rules and numbers.
 - **Pictures, not emoji.** Everything the player handles has a sprite: perks are DCSS spell and god
   icons in a gold frame, the tools are items (two from DCSS, four drawn in its manner), each agility
   obstacle has its own picture, the daily crate is a DCSS chest and Settings a cog (`build_icons` in

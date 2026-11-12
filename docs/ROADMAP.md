@@ -1471,6 +1471,8 @@ Keeping it running:
       cards, the course and the skill stage's line showed the XP without the potion's; they show what an action pays
 - [x] **The hours the cap cut** (the research loop, P-093): back after 30 hours, the welcome-back report said "24h 0m" and
       "capped", the six lost hours nowhere. It says "30h away, 24h counted", the cap in a tip a phone can open
+- [x] **A link to the wiki** (promised to a player on 1 November; P-074): Settings has "Read the wiki" beside the Discord,
+      and every "?" card with a page of its own on the wiki ends with a small "More on the wiki" that opens it
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

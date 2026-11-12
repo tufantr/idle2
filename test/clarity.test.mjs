@@ -7,7 +7,9 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings } from '../src/ui/render.js';
+import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
+import { DISCORD_INVITE, WIKI_URL } from '../src/data/social.js';
 import { actionXp } from '../src/systems/skilling.js';
 import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
 import { SMELTING_RECIPES } from '../src/data/workshop.js';
@@ -129,4 +131,20 @@ test('back after more than the cap, the report says the hours away and the hours
     const short = renderWelcomeBack(s5, g5);
     assert.match(short, /<p class="wb-away">You were away <b>5h 12m<\/b><\/p>/);
     assert.doesNotMatch(short, /counted/);
+});
+
+test('the game links its wiki: in Settings beside the Discord, and at the foot of every "?" card with a page there (P-074)', () => {
+    assert.equal(WIKI_URL, 'https://wiki.fantasyidle.com');
+    const settings = renderSettings(new Game(null, T0), {}, null);
+    const row = /<div class="btn-row">(<a [^>]*>Join the Discord<\/a>[\s\S]*?)<\/div>/.exec(settings)?.[1] || '';
+    assert.match(row, literal(`href="${DISCORD_INVITE}"`));
+    assert.match(row, literal(`<a class="btn-link" href="${WIKI_URL}" target="_blank" rel="noopener">Read the wiki</a>`), 'beside the Discord');
+    // every place with a "?" has its page; Settings, which has none, has no link
+    for (const id of Object.keys(FEATURES).filter(id => FEATURES[id].points?.length)) {
+        assert.ok(WIKI_PAGES[id], `${id} has a wiki page`);
+        assert.match(renderAboutCard(id), literal(`<a href="${WIKI_URL}${WIKI_PAGES[id]}" target="_blank" rel="noopener">More on the wiki</a>`), id);
+    }
+    assert.equal(WIKI_PAGES.mining, '/skills/mining');
+    assert.equal(WIKI_PAGES.achievements, '/medals');
+    assert.doesNotMatch(renderAboutCard('settings'), /More on the wiki/);
 });

@@ -34,7 +34,7 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
+import { DISCORD_INVITE, WIKI_URL, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
@@ -2347,7 +2347,7 @@ export function renderSettings(game, ui, cloud) {
     ${DISCORD_INVITE ? `<section class="glass-panel ${painted('study', 'left 70%')}">
         <div class="panel-header"><h2>The beta</h2><span class="muted small">Tell us anything</span></div>
         <p class="muted small">Fantasy Idle is in beta. What's fun, what's confusing, what's too slow, any bug: every word helps.</p>
-        <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a></div>
+        <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a><a class="btn-link" href="${esc(WIKI_URL)}" target="_blank" rel="noopener">Read the wiki</a></div>
     </section>` : ''}
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>

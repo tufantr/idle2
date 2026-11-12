@@ -4,6 +4,9 @@ import { ZONES } from './zones.js';
 // The game's Discord (the owner's, made for the beta, 22 October 2026): feedback of any kind, bug reports, the clans'
 // talk. Shown on the Clan tab, in Settings and on the wiki's front page. It never expires and opens on #general.
 export const DISCORD_INVITE = 'https://discord.gg/Pxa2bHYcDg';
+// The player wiki (wiki/, built from the game's own data; README "The server"): linked in Settings beside the Discord, and
+// at the foot of each "?" card that has a page of its own there (src/ui/features.js WIKI_PAGES).
+export const WIKI_URL = 'https://wiki.fantasyidle.com';
 export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
 
 // Clan attacks (api/index.js): three a day, and those not used wait, up to six. An attack is a fight of

@@ -11,7 +11,7 @@ import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TI
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
+import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS, WIKI_URL } from '../data/social.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS, BAG_SIZE, BAG_UPGRADE } from '../data/items.js';
@@ -168,6 +168,17 @@ export const DUNGEON_ART = { goblin_warren: 'warren', crystal_depths: 'depths', 
 /** The inline style that puts painting `name` behind an element (as --art, with its focus). */
 export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/paint/${name}.webp);--art-at:${focus}`;
 
+// Each "?" card's page on the player wiki (wiki/content, wiki/pages), its foot's "More on the wiki" link: the card says the
+// rules in a few lines, the page says all of them, with the numbers (test/wiki.test.mjs checks every one lands).
+export const WIKI_PAGES = {
+    combat: '/combat', camp: '/camp', dungeons: '/dungeons', titan: '/titan', inventory: '/equipment', shop: '/shop', charms: '/shop#charms',
+    prestige: '/prestige', ascension: '/ascension', trials: '/trials', talents: '/talents', mastery: '/mastery', achievements: '/medals',
+    events: '/events', clan: '/clans', clanhall: '/clans#the-clan-hall', minigames: '/mini-games',
+    ...Object.fromEntries(Object.keys(SKILLS).filter(id => id !== 'combat').map(id => [id, `/skills/${id}`]))
+};
+/** The wiki page behind a "?" card, as an address, or '' where it has none. */
+export const wikiUrl = id => (WIKI_PAGES[id] ? `${WIKI_URL}${WIKI_PAGES[id]}` : '');
+
 // The 'prestige' unlock has no tab of its own: its card goes to the fight, whose dock holds Prestige (and
 // where the guide's hand points at it the first time); the Shop shows it too.
 export const FEATURE_TAB = { prestige: 'combat', titan: 'dungeons', camp: 'combat', mastery: null, minigames: null };
@@ -202,6 +213,7 @@ export function renderAboutCard(id, { button = 'Got it' } = {}) {
         <div class="modal-header">${esc(f.name)}</div>
         ${f.blurb ? `<p class="about-blurb">${esc(f.blurb)}</p>` : ''}
         ${f.points?.length ? `<ul class="about-points">${f.points.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
+        ${wikiUrl(id) ? `<p class="about-wiki"><a href="${esc(wikiUrl(id))}" target="_blank" rel="noopener">More on the wiki</a></p>` : ''}
         <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="FI.closeModal()">${esc(button)}</button></div>
     </div>`;
 }
