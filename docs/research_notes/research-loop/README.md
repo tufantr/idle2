@@ -180,11 +180,11 @@ In order; an item done points at its file. Items found along the way are added w
       Fairness Act's Annex I, the ICO on children's games, Turkey's rating rules (016, 018, 014, 038, 010) → `045-leftover-leads.md`
 - [x] The pages the agents couldn't open, in a real browser: Ofcom's gaming guidance and dates, the UK's under-16 ban, Australia's
       model (038, 045) → `046-pages-in-a-real-browser.md`
-- [ ] The measurements still open below, once round seven's runs free the machine → `047`
+- [x] The measurements still open: survival off the ladder, a deep drop's worth, the boot's replay at 4× → `047-measurements-left.md`
 
 **Next, measurements on Fantasy Idle itself** (no code changes, tools and browsers only):
 
-- [ ] The replay of a day away at Chrome's 4× throttle, with P-037's test (037) → `047`
+- [x] The replay of a day away at Chrome's 4× throttle (037) → `047-measurements-left.md`
 - [x] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
       too, the best dungeon visit length, P-024's ceiling date (032) → `039-balance-with-a-fixed-bot.md`
 - [ ] A long session: the game open 6–24 hours in Chromium, heap and frame rate every ten minutes, plain and throttled (028)
@@ -193,11 +193,12 @@ In order; an item done points at its file. Items found along the way are added w
       owner before downloading them) (004)
 - [x] Why the sensible bot climbs faster when something sends it away from the boss wall (013): it was the bot, whose stall test
       never fired; fixed, it leaves the wall on its own (039)
-- [ ] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013) → `047`; every Trial and dungeon at
-      the hero's frontier, build by build, and a dodge set in Glass Hero or a lifesteal set in Fasting (015, 017)
+- [x] Food and defence under Trials, in dungeons, at the Titan and at the clan boss (013); a dodge set in Glass Hero and a lifesteal
+      set in Fasting (015, 017) → `047-measurements-left.md`
 - [x] The economy talents over a whole game: the fixed bot reaches them near hour 1,270, not 2,100 (039); XP and essence below the
       frontier against the War Tree's pace: essence piles up faster with the fix (1.1 million held at hour 300) (039)
-- [ ] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017) → `047`
+- [x] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017)
+      → `047-measurements-left.md`
 - [ ] Live depth by week again in two weeks (W47–W48): whether the slowdown near 1,800–2,000 holds for the next players (044)
 - [ ] The battery saver's saving on a phone-class CPU (Chrome's 4x throttle) (005)
 
@@ -305,6 +306,7 @@ In order; an item done points at its file. Items found along the way are added w
 | 044 | `044-players-again.md` | The Discord's third pass; live depth week by week; clans and who stays | 12 Nov 2026 |
 | 045 | `045-leftover-leads.md` | The queue's small leads, from Egg, Inc. to Annex I | 12 Nov 2026 |
 | 046 | `046-pages-in-a-real-browser.md` | Ofcom's gaming guidance and dates; the UK's under-16 ban against Australia's | 12 Nov 2026 |
+| 047 | `047-measurements-left.md` | Survival off the ladder, a deep drop's worth, the boot's replay at 4× | 12 Nov 2026 |
 
 Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
 round eight (042–046) checks for anything new; then the final ranked report goes to the owner.
