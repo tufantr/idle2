@@ -1339,6 +1339,33 @@ test('sign-up needs an email, and the account plays once the code mailed there i
     assert.match((await twice.json()).error, /already has an account/);
 });
 
+test('passwords too easy to guess are refused at sign-up and reset: the most common, a repeat, a run of keys, the username', async () => {
+    const { COMMON_PASSWORDS } = require('../api/common-passwords.js');
+    assert.ok(COMMON_PASSWORDS.size >= 300, `${COMMON_PASSWORDS.size} on the list`);
+    assert.deepEqual([...COMMON_PASSWORDS].filter(p => p.length < 8 || p !== p.toLowerCase()), [], 'eight characters or more (the length rule takes the rest), lowercase');
+    const from = { 'X-Forwarded-For': '192.0.2.50' };
+    const signUp = (username, password) => post('/register', { username, password, email: `${username.toLowerCase()}@example.test` }, null, from);
+    for (const password of ['password1', 'Password123', 'iloveyou', 'FantasyIdle', '12345678', 'qwertyuiop', 'poiuytrewq', '8901234567', 'aaaaaaaa', 'abababab', 'abcdefgh', 'hgfedcba', '98765432']) {
+        const res = await signUp('weak_hero', password);
+        assert.equal(res.status, 400, password);
+        assert.match((await res.json()).error, /most common|too easy to guess/, password);
+    }
+    const same = await signUp('Plain_Hero', 'PLAIN_HERO');
+    assert.equal(same.status, 400);
+    assert.equal((await same.json()).error, "Your password can't be your username.");
+    assert.match((await (await signUp('weak_hero', 'short')).json()).error, /8-72 characters/, "today's length rule stands");
+    assert.equal((await signUp('weak_hero', 'correct horse battery')).status, 200, 'a passphrase is fine (and the refusals cost no sign-up of the day)');
+    // at a reset the same, the username only once the code is right; the code then still holds for a better one
+    const email = 'weak_hero@example.test';
+    clock += 61 * 1000;
+    await post('/password/forgot', { email }, null, from);
+    const code = codeFor(email);
+    const resetTo = password => post('/password/reset', { email, code, password }, null, from);
+    assert.match((await (await resetTo('sunshine')).json()).error, /most common/);
+    assert.match((await (await resetTo('Weak_Hero')).json()).error, /can't be your username/);
+    assert.equal((await resetTo('a better phrase')).status, 200, 'the same code, a better password');
+});
+
 test('a code takes five tries and lives fifteen minutes; a new one goes once a minute, five an hour', async () => {
     const from = { 'X-Forwarded-For': '192.0.2.11' };
     const email = 'tries@example.test';

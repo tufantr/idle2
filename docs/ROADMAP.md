@@ -1475,6 +1475,8 @@ Keeping it running:
       longer names its framework, and the owner hears when a day's mails reach 80 of the plan's 100
 - [x] **Sign out everywhere** (R12, November 2026; DESIGN §3.17): Settings' account panel signs out every other device
       (with a confirm), and a new password does the same; the account's address hears of a password change
+- [x] **Passwords too easy to guess are refused** (R12, November 2026; DESIGN §3.17): at sign-up and reset, the most common
+      ones, a character or short run repeated, a run of keys in a row and the username itself, with a plain reason
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

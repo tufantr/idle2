@@ -949,7 +949,10 @@ gear to wear; a place that waited opens on the return and is named there too.
   address not confirmed answers 409 with `pending` (a 403 is the game's word for a session gone, which would sign the
   player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):
-  bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
+  bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords (8 to 72 characters, and at sign-up
+  and reset not too easy to guess: not among the 377 most common, `api/common-passwords.js`, not one character or a short
+  run repeated, not a run of letters, digits or keys in a row, not the username; the research loop's P-101, November 2026;
+  a reset says the username only once its code is right), 1 MB body cap,
   version-checked saves. A token carries its account's token version (`v`, the research loop's P-096, November 2026: a
   30-day token outlived a password reset); one below the account's is refused, and tokens from before versions count as 0.
   A password reset and Settings' **Sign out everywhere** (`POST /api/account/signout-all`) raise it, so every session made

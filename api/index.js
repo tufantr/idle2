@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const store = require('./store');
 const crypto = require('node:crypto');
 const { sendCounted, codeMail, passwordChangedMail } = require('./mail');
+const { COMMON_PASSWORDS } = require('./common-passwords');
 
 const app = express();
 app.disable('x-powered-by');
@@ -76,6 +77,20 @@ function validateCredentials(body) {
     if (typeof password !== 'string' || password.length < MIN_PASSWORD || Buffer.byteLength(password) > MAX_PASSWORD) {
         return `Password must be ${MIN_PASSWORD}-${MAX_PASSWORD} characters.`;
     }
+    return weakPassword(password, username);
+}
+
+// Passwords too easy to guess are refused at sign-up and reset, past the length rule (the research loop's P-101, November
+// 2026; NIST asks for a blocklist): the most common ones (api/common-passwords.js), one character or a short run repeated,
+// a run of letters, digits or keys in a row (forwards or backwards, round again), and the username itself.
+const KEY_RUNS = ['1234567890', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm', 'abcdefghijklmnopqrstuvwxyz'].flatMap(row => [row + row, [...row + row].reverse().join('')]);
+const steadyRun = p => { const step = p.charCodeAt(1) - p.charCodeAt(0); return Math.abs(step) === 1 && [...p].every((c, i) => i === 0 || p.charCodeAt(i) - p.charCodeAt(i - 1) === step); };
+/** Why a password is too easy to guess, in the player's words, or null. */
+function weakPassword(password, username = null) {
+    const p = String(password).toLowerCase();
+    if (username && p === String(username).toLowerCase()) return "Your password can't be your username.";
+    if (COMMON_PASSWORDS.has(p)) return 'That password is one of the most common: pick another.';
+    if (/^(.{1,4})\1+$/su.test(p) || KEY_RUNS.some(run => run.includes(p)) || steadyRun(p)) return 'That password is too easy to guess: pick another.';
     return null;
 }
 
@@ -213,15 +228,15 @@ async function mailCode(user, email, purpose, ip, now) {
     return { sent: true };
 }
 
-/** A code given for an account and a purpose: 'ok' (and spent), or 'wrong', 'expired', 'tries'. */
-async function checkCode(user, purpose, code, now) {
+/** A code given for an account and a purpose: 'ok' (and spent, unless `spend` is false), or 'wrong', 'expired', 'tries'. */
+async function checkCode(user, purpose, code, now, { spend = true } = {}) {
     const c = await store.getEmailCode(user.id, purpose);
     if (!c || c.expiresAt <= now) return 'expired';
     const tries = await store.bumpEmailCodeAttempts(c.id);
     if (tries > CODE_TRIES) { await store.expireEmailCode(c.id); return 'tries'; }   // (kept, run out: the next one still waits its minute)
     const given = typeof code === 'string' || typeof code === 'number' ? String(code).replace(/\D/g, '') : '';
     if (given.length !== 6 || !crypto.timingSafeEqual(Buffer.from(codeHash(user.id, purpose, given)), Buffer.from(c.codeHash))) return 'wrong';
-    await store.deleteEmailCodes(user.id, purpose);
+    if (spend) await store.deleteEmailCodes(user.id, purpose);
     return 'ok';
 }
 
@@ -304,11 +319,18 @@ app.post('/api/password/reset', route('reset password', async (req, res) => {
     if (typeof password !== 'string' || password.length < MIN_PASSWORD || Buffer.byteLength(password) > MAX_PASSWORD) {
         return res.status(400).json({ error: `Password must be ${MIN_PASSWORD}-${MAX_PASSWORD} characters.` });
     }
+    const weak = weakPassword(password);
+    if (weak) return res.status(400).json({ error: weak });
     const email = cleanEmail((req.body || {}).email);
     const user = validEmail(email) ? await store.findUserByEmail(email) : null;
     const now = Date.now();
-    const result = user ? await checkCode(user, 'reset', code, now) : 'wrong';
+    const result = user ? await checkCode(user, 'reset', code, now, { spend: false }) : 'wrong';
     if (result !== 'ok') return res.status(400).json({ error: CODE_WORDS[result] });
+    // the username itself is said only to one who holds the code (said before it, it would tell whose address this is),
+    // and the code still holds for a better password
+    const own = weakPassword(password, user.username);
+    if (own) return res.status(400).json({ error: own });
+    await store.deleteEmailCodes(user.id, 'reset');
     // the new password ends every session made before it (its token version goes up); this device signs in with a fresh one
     const tokenVersion = await store.setPassword(user.id, await bcrypt.hash(password, 10));
     noteVersion(user.id, { username: user.username, tokenVersion });
