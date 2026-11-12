@@ -1461,6 +1461,16 @@ Keeping it running:
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
+- [x] **Back after a day: a bar, and the time away replayed once** (the research loop's R20, P-123; DESIGN §3.16, §3.17): the
+      boot replayed up to a day in one task with only the sidebar's title drawn (6.8–7.4 s at Chrome's 4× CPU throttle for a
+      stage-1,300 hero with Auto prestige, research-loop/047), and a second time for a signed-in player whose server save won.
+      Now it replays a slice at a time behind a bar of the time replayed, the stage and the gold climbing, and the
+      welcome-back takes its place; signed in it waits for the server's save (at most 4 s) and replays only the game played;
+      a tab back from sleep takes the same path; the outcome is the replay in one go, bit for bit. Timed with
+      `tools/bootbench.mjs` (the stage-1,300 hero a day away, three runs each, a machine at load 150–280): plain, one task of
+      2.2 s and the game drawn at 4.1 s before; after, the bar at 1.9 s, no task over 0.1 s, the game drawn at 3.7 s. At 4×,
+      one task of 7.8 s and the game drawn at 9.6 s before; after, the bar at 2.0 s, a frame at least every 0.28 s (the
+      longest task, 0.26 s, is the first drawing of the game), the game drawn at 11.5 s: the slices cost about a tenth more
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

@@ -19,6 +19,8 @@ import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
+import { renderCatchUp, paintCatchUp } from './ui/reentry.js';
+import { OFFLINE_MIN_MS } from './systems/offline.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
@@ -151,7 +153,10 @@ let cloudReady = false;
 let synced = false;           // this page has played a game it looked up on the server: one taken later is another device's play
 let syncing = false;
 let syncRetryAt = 0;
-let heldReport = null;       // the boot's welcome-back, held until the sync has chosen which game is played
+// Time away is replayed once, a slice at a time behind a bar (catchUp, by the boot below): `pending` is time away still
+// to replay (the boot's, a gap's) while the server's save or the sign-in comes first. Nothing plays or saves the game meanwhile.
+let pending = null;          // { start: () => a Game.beginResume or beginGap, after: summary => the report's HTML, or null }
+let catching = null;         // the replay under way: { run, after, resolve, at }
 const SYNC_RETRY_MS = 45000;
 let syncFailNoted = false;
 let loaded = loadLocal(Date.now());
@@ -195,7 +200,7 @@ const scene = createScene(document.getElementById('scene'), {
     // ran one; the owner's froze).
     strike: () => {
         const now = Date.now();
-        if (now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs || droppingIn(game.state, now)) return false;
+        if (holding() || now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs || droppingIn(game.state, now)) return false;
         advance(now);
         return game.clickAttack();
     },
@@ -245,17 +250,151 @@ function withDevFlags(g) {
     return g;
 }
 
+// ---------- catching up: time away replayed a slice at a time, behind a bar ----------
+// A day away deep in the climb with Auto prestige is seconds of work (docs/research_notes/research-loop/047: 6.8 s at
+// Chrome's 4× CPU throttle at stage 1,300, one task the page drew nothing in). The replay (Game.beginResume, beginGap) runs
+// CATCH_UP_FRAME_MS at a time and lets the browser draw a frame between; from CATCH_UP_SHOW_MS a dialog shows a bar of the
+// time replayed with the stage and gold climbing, and the report takes its place. Meanwhile nothing plays, saves or draws
+// the game: a save would keep a game halfway through its time away (and an action on it finishes the replay at once).
+const CATCH_UP_FRAME_MS = 40;
+const CATCH_UP_SHOW_MS = 250;
+const SYNC_WAIT_MS = 4000;              // signed in, the server's save is waited for this long, then this copy is replayed
+let catchUpBox = null;                  // the bar's dialog while it is up, and what it stands over ({ open, under } of ui)
+let catchUpWas = null;
+let slowTimer = 0;
+let booted = false;                     // the module has run: its end draws the game first
+const caughtUpWaits = [];
+const settledWaits = [];
+const pumpChannel = new MessageChannel();   // (a message is not slowed in a background tab as a timer is)
+pumpChannel.port1.onmessage = () => pump();
+/** Time away waiting to be replayed, or being replayed: the game holds still. */
+const holding = () => !!(pending || catching);
+/** Resolves when no replay is under way (a sync's choice waits for the one under way). */
+const caughtUp = () => (catching ? new Promise(resolve => caughtUpWaits.push(resolve)) : Promise.resolve());
+/** Resolves when nothing waits to be replayed either: a reply from the server that changes the game waits for it. */
+const settled = () => (holding() ? new Promise(resolve => settledWaits.push(resolve)) : Promise.resolve());
+function settle() { if (!holding()) for (const resolve of settledWaits.splice(0)) resolve(); }
+
+/** Replay the time away waiting (pending) now: resolves with its summary once it is reported. `news` is applied first. */
+function playPending(news = null) {
+    const p = pending;
+    if (!p) return caughtUp().then(() => null);
+    pending = null;
+    clearTimeout(slowTimer);
+    return catchUp(p.start(), summary => { news?.(); return p.after(summary); });
+}
+
+/**
+ * Signed in: the time away waiting is replayed once the server's save is looked at, or after SYNC_WAIT_MS this copy's.
+ * The bar's dialog waits meanwhile, from `showIn` ms (at once over a game on screen: nothing may act on it before its replay).
+ */
+function holdForServer(showIn = CATCH_UP_SHOW_MS) {
+    clearTimeout(slowTimer);
+    slowTimer = setTimeout(playPending, SYNC_WAIT_MS);
+    const show = () => { if (pending && !catching && !passive) openCatchUp({ waiting: true }); };
+    if (showIn > 0) setTimeout(show, showIn); else show();
+    return syncFromCloud();
+}
+
+/**
+ * Replay `run` (a Game.beginResume or beginGap) a slice at a time, behind the bar once it has taken CATCH_UP_SHOW_MS; then
+ * `after(summary)`, a report's HTML or null, takes the bar's place. Resolves with the summary.
+ */
+function catchUp(run, after) {
+    return new Promise(resolve => {
+        if (!run) { settle(); resolve(null); return; }
+        catching = { run, after, resolve, at: performance.now() };
+        pump();
+    });
+}
+function pump() {
+    const c = catching;
+    if (!c) return;
+    if (passive) {   // another tab plays now: this one stops where it is, and saves nothing more
+        catching = null;
+        closeCatchUp(null);
+        for (const resolve of [...caughtUpWaits.splice(0), ...settledWaits.splice(0)]) resolve();
+        c.resolve(null);
+        return;
+    }
+    const until = performance.now() + CATCH_UP_FRAME_MS;
+    let done;
+    try {
+        done = c.run.step(() => performance.now() >= until);
+    } catch (err) {   // a bug in the replay must not leave the page frozen behind its bar: the game plays on from here
+        console.error('Catching up failed', err);
+        Object.assign(game, { silent: false, catchingUp: null, now: Date.now() });
+        game.recompute();
+        done = true;
+    }
+    if (!done) {
+        if (!catchUpBox && performance.now() - c.at >= CATCH_UP_SHOW_MS) openCatchUp();
+        if (catchUpBox) paintCatchUp(catchUpBox, game.state, c.run.where);
+        pumpChannel.port2.postMessage(0);
+        return;
+    }
+    catching = null;
+    game.setAttending(!document.hidden);   // (as it is now: left alone while the replay ran)
+    closeCatchUp(c.after(c.run.summary));
+    for (const resolve of caughtUpWaits.splice(0)) resolve();
+    settle();
+    c.resolve(c.run.summary);
+    if (booted) render();
+}
+
+/** The bar's dialog, over whatever is open, as a question stands over a dialog (askConfirm); the page behind can't be reached. */
+function openCatchUp(view = {}) {
+    if (catchUpBox) return;
+    document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);   // (before the first render)
+    const box = Object.assign(document.createElement('div'), { className: 'modal-overlay active catch-up-overlay', tabIndex: -1, innerHTML: renderCatchUp(game.state, view) });
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', 'Catching up');
+    document.getElementById('modal-root').appendChild(box);
+    catchUpWas = { open: ui.modalOpen, under: ui.modalUnder };
+    ui.modalOpen = 'catchup';
+    ui.modalUnder = null;
+    catchUpBox = box;
+    for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = true; }
+    box.focus({ preventScroll: true });
+    if (catching?.run.where) paintCatchUp(box, game.state, catching.run.where);
+}
+/** The bar's dialog away, `html` (a report) in its place, then a dialog that waited behind it. */
+function closeCatchUp(html) {
+    const box = catchUpBox;
+    catchUpBox = null;
+    if (box) {
+        box.remove();
+        for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = false; }
+        if (ui.modalOpen === 'catchup') { ui.modalOpen = catchUpWas.open; ui.modalUnder = catchUpWas.under; }
+        else if (ui.modalUnder === 'catchup') ui.modalUnder = catchUpWas.open || null;   // (a question stood over the bar)
+    }
+    if (html) openModal(html, 'offline');
+    if (!ui.modalOpen) { const next = ui.modalQueue.shift(); if (next) showModal(next.html, next.key); }
+}
+
+/** The boot's welcome-back, for time away fighting or working, or resting more than five minutes (its HTML, or null). */
+function bootReport(summary) {
+    return summary && (summary.mode !== 'rest' || summary.simulated > 5 * 60000) ? renderWelcomeBack(summary, game) : null;
+}
+
+/** A gap in play (Game.gapAt: the machine slept, the browser paused a tab): replayed in slices; signed in and long, after the server's look. */
+function catchUpGap(now) {
+    pending = { start: () => game.beginGap(Date.now()), after: summary => (summary && summary.mode !== 'rest' ? renderWelcomeBack(summary, game) : null) };
+    if (cloud.loggedIn && cloudReady && now - game.now >= CLOUD_AWAY_MS) holdForServer(0);   // another device may have played meanwhile
+    else playPending();
+}
+
 // ---------- boot ----------
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
-const offlineSummary = game.resumeFromSave(Date.now());
-const bootReport = offlineSummary && (offlineSummary.mode !== 'rest' || offlineSummary.simulated > 5 * 60000) ? offlineSummary : null;
-// Signed in, the cloud may hold a newer game: this one's report waits until the sync has chosen (shown at
-// once, it stayed up over the cloud's game, and its buttons acted on that game's items).
-if (bootReport && (cloud.loggedIn || needsSignIn())) heldReport = bootReport;
-else if (bootReport) openModal(renderWelcomeBack(bootReport, game), 'offline');
+// The time away is replayed once, for the game that will be played (catchUp): signed in, after a look at the server's save,
+// which may hold a newer game (this copy's if the server is slow); behind the sign-in, once the player has chosen; a guest's
+// at once. Under a minute away there is nothing to replay: the game plays at once, and a sync may still replace it.
+pending = { start: () => game.beginResume(Date.now()), after: bootReport };
+if (Date.now() - game.state.meta.savedAt < OFFLINE_MIN_MS || (!cloud.loggedIn && !needsSignIn())) playPending();
 if (loadProblem && !cloud.loggedIn && !needsSignIn()) setTimeout(offerBackups, 0);
-if (cloud.loggedIn) syncFromCloud();
+if (cloud.loggedIn) { if (pending) holdForServer(); else syncFromCloud(); }
 // A new player meets the game first, not a login form: a title card, then an account or a guest's game,
 // and straight into a fight. Signing in stays one click away (on the card, and in the header).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
@@ -271,13 +410,15 @@ const updates = createUpdateCheck({ own: VERSION, found: version => { ui.newVers
 
 /** Run the game up to `now`. A long gap (a sleeping laptop, a background tab) is replayed as offline progress and reported. */
 function advance(now) {
+    if (holding()) return;   // time away first, a slice at a time (catchUp)
+    if (game.gapAt(now)) { catchUpGap(now); return; }
     const summary = game.tick(now);
     if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
 }
 
 let tickErrorShown = false;
 setInterval(() => {
-    if (passive) return;   // the game plays in another tab now
+    if (passive || catching) return;   // the game plays in another tab now; its time away is being replayed (catchUp)
     const now = Date.now();
     // The clock turned back: the save clocks start again from now (they waited for it to catch up).
     if (now < lastSave - 5000) lastSave = lastBackup = lastCloudSave = now;
@@ -294,7 +435,7 @@ setInterval(() => {
     if (needsSignIn() && !ui.modalOpen) openSignIn();   // signed out, or a session that expired: the game waits for an account
     if (now - lastSave > AUTOSAVE_MS) save(now);
     // (not while a save that couldn't be read waits to be restored: these would write over its backups)
-    if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem) { lastBackup = now; rotateBackup(game.serialize(now), now); }
+    if (now - lastBackup > BACKUP_INTERVAL_MS && !loadProblem && !pending) { lastBackup = now; rotateBackup(game.serialize(now), now); }
     // the sync that failed, tried again (until it has chosen, nothing is uploaded)
     if (cloud.loggedIn && !cloudReady && !syncing && !document.hidden && now >= syncRetryAt) syncFromCloud();
     if (cloud.loggedIn && cloudReady && game.state.settings.cloudSync && now - lastCloudSave > CLOUD_SAVE_MS) cloudSave(false);
@@ -311,6 +452,7 @@ setInterval(() => {
 function frame(now) {
     // (the next frame is asked for first: a frame that throws must not stop the scene for the session)
     requestAnimationFrame(frame);
+    if (holding()) return;   // (the game is drawn once its time away is replayed, which draws its own bar: catchUp)
     try {
         patchLive(game, ui);
         scene.frame(game, { frozen: endHeld() });
@@ -341,7 +483,7 @@ requestAnimationFrame(frame);
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
     if (passive) return;
-    game.setAttending(!document.hidden);
+    if (!holding()) game.setAttending(!document.hidden);   // (time away being replayed: at its end, catchUp)
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
     lastPresenceAt = Date.now();
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
@@ -460,7 +602,7 @@ const noteInput = event => {
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
         advance(now); // the first click after a long absence still gets its welcome-back report
-        game.noteInput(now);
+        if (!holding()) game.noteInput(now);
     }
 };
 document.addEventListener('pointerdown', noteInput, { capture: true, passive: true });
@@ -477,7 +619,7 @@ document.addEventListener('keydown', event => {
         event.preventDefault();
         target.click();
     }
-    if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game waits for an account or a guest
+    if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin', 'catchup'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game waits for an account or a guest, or its time away
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
     // holding it does nothing more).
@@ -546,6 +688,7 @@ function bumpPurse() {
 }
 
 function render() {
+    if (catching || pending) return;   // (the game is drawn once its time away is replayed: catchUp)
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
@@ -1105,11 +1248,11 @@ async function signedIn() {
     const restart = startsOver(game.state, { guest, own: cloud.ownsGame(game.state) });
     setGuest(false);
     if (restart) {
-        writeBackup(game.serialize(Date.now()), 'guest', 'Before signing in');
-        heldReport = null;
+        writeBackup(game.serialize(pending ? game.state.meta.savedAt : Date.now()), 'guest', 'Before signing in');   // (time away not replayed: kept so)
+        pending = null;
         freshGame();
     }
-    await syncFromCloud();
+    await (pending ? holdForServer() : syncFromCloud());   // the account's own game, its time away waiting: replayed once, for the game chosen
     // from the title card: a new account's hero goes into the first fight (an account with a save plays it)
     if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();
     else if (restart && !progressed(game.state)) openModal(renderIntroModal(game.state, { signedIn: true }), 'intro');   // the new account's hero, named on the title card as any new one is
@@ -1161,7 +1304,7 @@ function closeModal() {
 // ---------- persistence ----------
 
 function save(now) {
-    if (passive) return;
+    if (passive || holding()) return;   // (time away not replayed yet: the save keeps it, from the save's own time)
     if (!ownsSave()) { becomePassive(); return; }   // another tab took the save (its storage event may not have come)
     lastSave = now;
     saveLocal(game.serialize(now));
@@ -1175,7 +1318,7 @@ function save(now) {
 let pushing = false;
 let giftsWaiting = false;   // an upload's answer said gifts wait: claimed when the page is in view (their card shows)
 async function cloudSave(announce = true, { keepalive = false, sync = false } = {}) {
-    if (!cloud.loggedIn || passive || pushing) return;
+    if (!cloud.loggedIn || passive || pushing || holding()) return;
     if (!cloudReady && !sync) { if (announce) toast('Checking the cloud save first…', 'info'); return; }
     pushing = true;
     lastCloudSave = Date.now();
@@ -1184,6 +1327,7 @@ async function cloudSave(announce = true, { keepalive = false, sync = false } = 
         ui.cloudStatus = `Cloud save OK at ${new Date().toLocaleTimeString()}`;
         if (announce) toast('Saved to cloud', 'info');
         giftsWaiting = answer?.gifts > 0;
+        await settled();   // (time away replayed meanwhile: the clan's news goes to the game it ends in)
         if (giftsWaiting) claimGifts();
         if (answer && 'banner' in answer) game.setClanBanner(answer.banner);   // a kill by a clanmate shows up within an upload
         hallNews(answer);
@@ -1210,10 +1354,11 @@ function cloudSaveOnLeave() {
 let claimingGifts = false;
 async function claimGifts() {
     // (not into a game the sync may yet replace, nor while hidden: its card would show to nobody)
-    if (claimingGifts || !cloud.loggedIn || !cloudReady || passive || document.hidden) return;
+    if (claimingGifts || !cloud.loggedIn || !cloudReady || passive || document.hidden || holding()) return;
     claimingGifts = true;
     try {
         const { gifts = [] } = await cloud.claimGifts();
+        await settled();   // (into the game its time away ends in)
         for (const gift of gifts) {
             const text = game.applyReward(gift);
             const gold = Math.floor(Number(gift.gold) || 0);
@@ -1245,6 +1390,7 @@ async function sendClanResult(now = false) {
     try {
         // the fight's own mark goes with it: sent again after a lost answer, the server counts it once
         const answer = await cloud.clanAttack({ strikes: result.strikes, ms: result.ms, at: result.at, endless: !!result.endless });
+        await settled();   // (time away replayed meanwhile: then the game it ends in)
         game.clearClanResult();
         if (answer.banner) game.setClanBanner(answer.banner);
         save(Date.now());
@@ -1293,6 +1439,7 @@ async function refreshSocial() {
     social.fetchedAt = Date.now();
     try {
         const [mine, rewards, board, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
+        await settled();   // (its banner and hall go to the game the time away ends in)
         if (!current()) return;
         social.clan = mine.clan;
         Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20,
@@ -1372,17 +1519,12 @@ async function giveToHall(room, resource, qty) {
     }
 }
 
-/** The boot's welcome-back, held while the sync chose: this game is the one played, so it shows now. */
-function showHeldReport() {
-    const report = heldReport;
-    heldReport = null;
-    if (report) openModal(renderWelcomeBack(report, game), 'offline');
-}
 /**
  * Look at the server's save and play it: the server's save is the game, as in any online game, and the
  * player is never asked. This one is kept (and uploaded) only when it is the server's carried on
  * (syncChoice). Until it has chosen nothing goes up; a failed one is tried again (the loop), never
- * followed by a blind upload.
+ * followed by a blind upload. Time away waiting for it (pending: the boot's, a long gap's) is replayed
+ * once, for the game chosen: the server's, or this one (holdForServer replays this one if the server is slow).
  */
 async function syncFromCloud() {
     if (syncing || !cloud.loggedIn) return;
@@ -1393,17 +1535,17 @@ async function syncFromCloud() {
     cloudReady = false;
     try {
         const { state: remote, lastSaved, gifts, banner, hall, hallGifts } = await cloud.pull(Date.now());
+        clearTimeout(slowTimer);
+        await caughtUp();   // (the server was slow and this game's time away is being replayed: the choice waits for its end)
+        // the clan's banner this week, as the server says it, and its hall: for the game played, its time away replayed
+        const news = () => { game.setClanBanner(banner); hallNews({ hall, hallGifts }); };
         if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
-            heldReport = null;
+            pending = null;   // this game's time away is never replayed: the server's game is played
             cloudReady = true;
-            adoptState(remote);
+            await adoptState(remote, news);
             if (before) toast('Your game was played on another device: carrying on from there', 'info');
-            game.setClanBanner(banner);   // the clan's banner this week, as the server says it
-            hallNews({ hall, hallGifts });
         } else {
-            game.setClanBanner(banner);
-            hallNews({ hall, hallGifts });
-            showHeldReport();
+            if (pending) await playPending(news); else news();
             cloudReady = true;
             await cloudSave(false, { sync: true });
         }
@@ -1413,9 +1555,10 @@ async function syncFromCloud() {
         giftsWaiting = gifts > 0;
         if (giftsWaiting) claimGifts();
     } catch (err) {
+        clearTimeout(slowTimer);
         ui.cloudStatus = err.message;
         syncRetryAt = Date.now() + SYNC_RETRY_MS;   // again in a while; nothing goes up meanwhile
-        showHeldReport();
+        playPending();   // this game, then: its time away waited for the server
         if (!syncFailNoted) toast(`${err.message} The cloud save is checked again shortly.`, 'error');
         syncFailNoted = true;
     } finally {
@@ -1423,12 +1566,15 @@ async function syncFromCloud() {
     }
 }
 
-function adoptState(stateObject) {
+/** Play `stateObject` (the server's game, a backup): its time away replayed behind the bar, then `news`, then its report. */
+function adoptState(stateObject, news = null) {
+    if (ui.modalOpen === 'offline') closeModal();   // the report of the game it replaces would act on this one
+    ui.modalQueue = ui.modalQueue.filter(m => m.key !== 'offline');
     game = withDevFlags(new Game(stateObject, Date.now()));
-    const summary = game.resumeFromSave(Date.now());
-    if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
-    save(Date.now());
-    render();
+    return catchUp(game.beginResume(Date.now()), summary => {
+        news?.();
+        return summary && summary.mode !== 'rest' ? renderWelcomeBack(summary, game) : null;
+    }).then(summary => { save(Date.now()); render(); return summary; });
 }
 
 /** The fight fills the screen, or is folded into the page; a fold is remembered until the next fight. */
@@ -1738,7 +1884,7 @@ window.FI = {
     closeModal() { closeModal(); },
 
     startMinigame(skill) { game.startMinigame(skill); render(); },
-    resolveMinigame(skill) { advance(Date.now()); game.resolveMinigame(skill); render(); },   // judged at the moment of the tap, as the marker was drawn
+    resolveMinigame(skill) { advance(Date.now()); if (holding()) return; game.resolveMinigame(skill); render(); },   // judged at the moment of the tap, as the marker was drawn
     failMinigame(skill) { game.failMinigame(skill); render(); },
     pumpHeat(skill) { game.pumpHeat(skill); },
     setDragValue(skill, value) { game.setDragValue(skill, value); },
@@ -1885,7 +2031,7 @@ window.FI = {
         ui.auth = null;
         closeModal();
         sound.unlock();
-        showHeldReport();   // the boot's welcome-back waited for this choice
+        playPending();   // the boot's time away waited for this choice: replayed now, then its welcome-back
         if (loadProblem) offerBackups();
         if (ui.beginAfterSignIn && !game.state.stats.kills) startAdventure();   // from the title card's Begin: the first fight
         ui.beginAfterSignIn = false;
@@ -1962,7 +2108,6 @@ window.FI = {
         cloud.logout();
         cloudReady = false;
         synced = false;
-        heldReport = null;
         game.clearClanResult();   // an attack not sent belongs to that account (it went to the next one to sign in)
         ui.cloudStatus = '';
         ui.social = freshSocial();
@@ -1990,4 +2135,5 @@ window.FI = {
     game: () => game
 };
 
+booted = true;
 render();

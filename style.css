@@ -2194,6 +2194,20 @@ body.reduced-motion .wb-find.best .wb-loot { animation: none; }
     .wb-skill-lv { grid-column: 2 / -1; justify-self: start; }
     .wb-tile { width: 54px; height: 54px; }
 }
+/* Catching up (main.js catchUp): the time away replayed behind a bar, the stage and gold climbing beside it; the report takes its place */
+.catch-up { max-width: 420px; text-align: center; }
+.catch-up-overlay:focus { outline: none; }
+.catch-up .modal-header { margin-bottom: 1rem; }
+.cu-bar { position: relative; height: 12px; border-radius: 6px; overflow: hidden; background: rgba(0, 0, 0, 0.6); box-shadow: inset 0 0 0 1px rgba(214, 170, 92, 0.4); }
+.cu-bar i { position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); border-radius: 6px; background: linear-gradient(90deg, #9c7127, #e2b95f); box-shadow: 0 0 10px rgba(226, 185, 95, 0.55); transition: width 0.15s linear; }
+.cu-bar.waiting i { width: 28%; animation: cuWait 1.1s ease-in-out infinite alternate; }   /* the save on its way from the server */
+@keyframes cuWait { from { transform: translateX(-30%); } to { transform: translateX(290%); } }
+body.reduced-motion .cu-bar.waiting i { animation: none; width: 100%; opacity: 0.35; }
+@media (prefers-reduced-motion: reduce) { .cu-bar.waiting i { animation: none; width: 100%; opacity: 0.35; } }
+.cu-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.2rem; min-height: 1.7rem; margin: 0.85rem 0 0.25rem; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.cu-facts span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.cu-facts b { color: var(--heading); }
+.cu-time { margin: 0; min-height: 1.1rem; color: var(--text-muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 /* A dialog has the floor: toasts slip behind its backdrop instead of covering its buttons. */
 body:has(#modal-root .modal-overlay.active) :is(#toast-area, #celebrate, #work-fx, .flying-coin, .flying-loot, .loot-arrive, .loot-flash) { z-index: 99; }   /* coins and work pops too: they flew over the map and the cards */
 

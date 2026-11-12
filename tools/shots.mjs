@@ -18,7 +18,9 @@
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker: the API is
-//                                                 # answered by the tool, CLAN_API below)
+//                                                 # answered by the tool, CLAN_API below; 'catchup'
+//                                                 # is the bar a day away is replayed behind:
+//                                                 # RETURN_SHOTS below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -202,6 +204,37 @@ function clanApi() {
     };
 }
 
+// Back after a day (src/main.js catchUp): the late-game save, fighting in a clan during a weekend event, saved 26 hours ago and
+// loaded again under Chrome's 4× CPU throttle, so its replay lasts: 'catchup' is the bar mid-replay.
+const RETURN_SHOTS = { catchup: true };
+async function shootReturn(viewport, which) {
+    const page = await open(viewport, `${base}?dev=1&event=guild_fair`);
+    await lateGame(page);
+    await page.evaluate(async () => {
+        const { isoWeek } = await import('/src/data/social.js');
+        const g = FI.game();
+        g.setClanHall({ clan: 7, rooms: { forge: 30500 }, stage: 1, colour: 'forest', emblem: 'troll', cloak: false });
+        g.setClanBanner({ week: isoWeek(Date.now()), kills: 3 });
+        FI.closeModal(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat();
+        localStorage.setItem('fantasyIdle.save.v2', g.serialize(Date.now() - 26 * 3600000));
+        localStorage.setItem('fantasyIdle.owner', 'shots');   // this page gives the save up: leaving, it doesn't save over it
+    });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await quiet(page);
+    if (which.includes('catchup')) {
+        await page.waitForSelector('.cu-bar:not(.waiting)', { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(500);
+        if (!(await page.$('.cu-bar'))) problems.push(`no catch-up bar at ${viewport.width}px`);
+        await shoot(page, 'catchup', viewport.width);
+    }
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    await page.waitForSelector('.welcome-back', { timeout: 60000 }).catch(() => {});
+    if (!(await page.$('.welcome-back'))) problems.push(`no welcome-back after the catch-up at ${viewport.width}px`);
+    await page.context().close();
+}
+
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
     console.error('Playwright is missing. Once: npm i --no-save playwright && npx playwright install chromium');
@@ -327,13 +360,15 @@ for (const viewport of VIEWPORTS) {
         }
         await page.context().close();
     }
-    if (!tabs.some(t => !(t in CLAN_SHOTS))) continue;
+    const returnTabs = tabs.filter(t => t in RETURN_SHOTS);
+    if (returnTabs.length) await shootReturn(viewport, returnTabs);
+    if (!tabs.some(t => !(t in CLAN_SHOTS) && !(t in RETURN_SHOTS))) continue;
     const page = await open(viewport, `${base}?dev=1`);
     await lateGame(page);
     await quiet(page);
     await page.waitForTimeout(1600); // everything this save has earned opens at once and glows: let that pass
     for (const tab of tabs) {
-        if (tab in CLAN_SHOTS) continue;
+        if (tab in CLAN_SHOTS || tab in RETURN_SHOTS) continue;
         if (DIALOGS[tab]) {
             await page.evaluate(DIALOGS[tab]);
             await page.waitForTimeout(700);
