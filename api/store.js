@@ -245,6 +245,14 @@ async function ensureSchema() {
     // Each account's token version (November 2026, api/index.js): a token carries the version it was signed at, and one
     // below the account's is refused, so a password reset or "Sign out everywhere" ends every session made before it.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0`;
+    // Where accounts come from (November 2026, the research loop's P-067): the tag of the listing's link a player landed by
+    // (`?src=reddit1`) and how many accounts were made with it. A count only: nothing ties a tag to an account.
+    await sql`
+        CREATE TABLE IF NOT EXISTS signup_sources (
+            tag VARCHAR(32) PRIMARY KEY,
+            count INTEGER NOT NULL DEFAULT 0
+        )
+    `;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -375,6 +383,19 @@ async function leaderboardRows(week) {
         WHERE u.leaderboard_opt_in = TRUE AND u.metrics IS NOT NULL
     `;
     return rows.map(r => ({ userId: r.id, username: r.username, flags: r.flags || '[]', metrics: r.metrics, weekMetrics: r.week_metrics || null }));
+}
+
+// ---------- where accounts come from ----------
+
+/** One more account made from a listing's link with this tag. */
+async function countSignupSource(tag) {
+    await sql`INSERT INTO signup_sources (tag, count) VALUES (${tag}::varchar, 1) ON CONFLICT (tag) DO UPDATE SET count = signup_sources.count + 1`;
+}
+
+/** Every tag and its accounts, the most first. */
+async function signupSources() {
+    const { rows } = await sql`SELECT tag, count FROM signup_sources ORDER BY count DESC, tag ASC`;
+    return rows.map(r => ({ tag: r.tag, count: int(r.count) }));
 }
 
 // ---------- the growth check's review list ----------
@@ -953,7 +974,7 @@ module.exports = {
     ensureSchema, ping,
     createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
     userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
-    addReview, reviewsSince,
+    addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,

@@ -3,7 +3,7 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [] };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map() };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
@@ -83,6 +83,10 @@ function createMemoryStore() {
             }));
         },
 
+        async countSignupSource(tag) { db.sources.set(tag, (db.sources.get(tag) || 0) + 1); },
+        async signupSources() {
+            return [...db.sources].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || (a.tag < b.tag ? -1 : 1));
+        },
         async addReview({ userId, day, metric, value, from, allowed, share, now, check }) {
             const row = db.reviews.find(r => r.userId === userId && r.day === day && r.metric === metric);
             if (!row) { db.reviews.push({ userId, day, metric, value, from, allowed, share, uploads: 1, firstAt: now, lastAt: now, check }); return; }

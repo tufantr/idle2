@@ -198,6 +198,7 @@ const TOO_MANY_ACCOUNTS = { error: 'This address has made enough accounts for to
 // as a hash keyed with the server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour
 // from an address. One account an email, whatever its case; no address is ever shown to another player.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const SOURCE_RE = /^[a-z0-9-]{1,32}$/;   // a listing's link tag (`?src=reddit1`), as the game keeps it
 const CODE_MS = 15 * 60 * 1000;
 const CODE_TRIES = 5;
 const RESEND_GAP_MS = 60 * 1000;
@@ -270,6 +271,10 @@ app.post('/api/register', async (req, res) => {
             }
             return res.json({ ...pending, message: 'Check your email for the code' });
         }
+        // the listing's link the player came by (`src`, kept by the game from its address), counted with the account made:
+        // a tag and a count, nothing that ties it to the account (the research loop's P-067, November 2026)
+        const src = typeof req.body.src === 'string' && SOURCE_RE.test(req.body.src) ? req.body.src : null;
+        if (src) { try { await store.countSignupSource(src); } catch (err) { console.error('sign-up source not counted', err && err.message); } }
         try { await mailCode({ id, username }, email, 'verify', ip, Date.now()); } catch (err) {
             console.error('sign-up mail failed', err && err.message);
             return unsent();

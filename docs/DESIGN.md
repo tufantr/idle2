@@ -947,7 +947,10 @@ gear to wear; a place that waited opens on the return and is named there too.
   server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour from an address; one account
   an email, whatever its case, and no address is shown to another player. A sign-up with an address that has an account
   gets the same answer as a new one (the research loop's P-103, November 2026), makes none, and mails that address's
-  owner one line instead, once a day: someone tried, and they may sign in or reset. A login with the right password but the
+  owner one line instead, once a day: someone tried, and they may sign in or reset. A listing's link may carry a tag
+  (`?src=reddit1`, `[a-z0-9-]{1,32}`; the research loop's P-067): the game keeps the first one seen (`fantasyIdle.src`)
+  until an account is made and sends it with the sign-up, and the server counts it with the account (`signup_sources`:
+  a tag and a count, nothing tying it to the account). A login with the right password but the
   address not confirmed answers 409 with `pending` (a 403 is the game's word for a session gone, which would sign the
   player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):

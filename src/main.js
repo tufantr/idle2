@@ -127,6 +127,10 @@ function freshSocial() {
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
+// The listing a player came by (its link's `?src=reddit1`, README "Listings"): kept on this device, the first one seen,
+// until an account is made, and sent with its sign-up, which counts it (a tag and a count, nothing of the account).
+const SOURCE_KEY = 'fantasyIdle.src';
+if (/^[a-z0-9-]{1,32}$/.test(params.get('src') || '') && !prefs.get(SOURCE_KEY)) prefs.set(SOURCE_KEY, params.get('src'));
 // A local development host (tools/serve.py, the screenshot and test tools): dev flags work there, and the
 // game plays as a guest. Anywhere else a sign-in stands in front of the game (the owner's call, October 2026:
 // the server's save is the game, as in any online game) until the player has an account or chooses to play
@@ -1926,12 +1930,13 @@ window.FI = {
         if (kind === 'register' && !email) return authError('An email address is needed: the game sends a code there.');
         try {
             if (kind === 'login') { await cloud.login(user, pass); await signedIn(); return; }
-            const data = await cloud.register(user, pass, email);
+            const data = await cloud.register(user, pass, email, prefs.get(SOURCE_KEY));
+            prefs.remove(SOURCE_KEY);   // (counted with the account)
             if (cloud.loggedIn) { await signedIn(); return; }   // (a server from before codes)
             showAuth('', { mode: 'verify', username: data.username || user, email: data.email || email });
         } catch (e) {
             // made, or with the right password, but the address not confirmed yet: to the code
-            if (e.data?.pending) return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email });
+            if (e.data?.pending) { prefs.remove(SOURCE_KEY); return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email }); }
             authError(SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message);
         }
     },

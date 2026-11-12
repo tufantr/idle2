@@ -186,9 +186,12 @@ export class CloudClient {
         return data;
     }
 
-    /** An account with an email: the server mails a code, and the account plays once it is given (verify). */
-    async register(username, password, email) {
-        const data = await this.request('/register', { method: 'POST', body: { username, password, email }, auth: false });
+    /**
+     * An account with an email: the server mails a code, and the account plays once it is given (verify). `src`: the tag of
+     * the listing's link the player came by (main.js keeps it), which the server counts with the account made.
+     */
+    async register(username, password, email, src = null) {
+        const data = await this.request('/register', { method: 'POST', body: { username, password, email, ...(src ? { src } : {}) }, auth: false });
         if (data.token) this.setToken(data.token);   // (a server from before codes signs in at once)
         return data;
     }

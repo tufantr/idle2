@@ -177,6 +177,10 @@ The game is listed on other sites that show it in a frame, so each always plays 
 a new player is a guest at once (`EMBEDDED` in `src/main.js`), and a game played there is saved apart from the
 site's own (browsers keep a framed page's storage per host site); an account plays the same game everywhere.
 
+A listing's link can carry a tag, `https://fantasyidle.com/?src=reddit1` (`a-z`, `0-9` and `-`, up to 32): the game keeps
+the first one it saw until an account is made, and the server counts each account made with it, nothing more
+(`SELECT tag, count FROM signup_sources ORDER BY count DESC;`).
+
 - **galaxy.click** (an incremental-games portal): its page links https://fantasyidle.com/ itself. Its form asks for
   a disclosure of generative AI in the developer's own words; tags, thumbnail and links are added after submitting.
 - **itch.io** (https://impotentrage.itch.io/fantasy-idle, the owner's account, public since 24 October 2026): an HTML

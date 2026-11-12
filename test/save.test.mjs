@@ -176,6 +176,24 @@ test('"Sign out everywhere" keeps this device signed in, on a fresh token, with 
     }
 });
 
+test("a sign-up sends the listing's tag it was given, and none without one", async () => {
+    const realFetch = globalThis.fetch;
+    const bodies = [];
+    globalThis.fetch = async (url, init) => {
+        bodies.push(JSON.parse(init.body));
+        return new Response(JSON.stringify({ pending: true, username: 'hero', email: 'he***@example.test' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        await cloud.register('hero', 'correct horse', 'hero@example.test', 'reddit1');
+        await cloud.register('hero', 'correct horse', 'hero@example.test');
+        assert.equal(bodies[0].src, 'reddit1');
+        assert.equal('src' in bodies[1], false);
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
 test("a guest's game put aside at sign-in is listed among the backups and outlasts a reset", () => {
     const game = new Game(null, 1);
     game.state.gold = 77;

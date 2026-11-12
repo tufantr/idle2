@@ -114,7 +114,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews, signup_sources');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -1359,6 +1359,24 @@ test('sign-up needs an email, and the account plays once the code mailed there i
     const twice = await post('/register', { username: 'mail_twin', password: 'correct horse', email: 'MAIL.hero@example.test' }, null, from);
     assert.equal(twice.status, 200);
     assert.equal(await (memory || require('../api/store.js')).findUserByName('mail_twin'), null);
+});
+
+test('where accounts come from: a listing\'s link tag is counted with each account made from it, and nothing else is kept', async () => {
+    const store = memory || require('../api/store.js');
+    const count = async tag => (await store.signupSources()).find(s => s.tag === tag)?.count || 0;
+    let n = 0;
+    const signUp = (src, email = null) => post('/register', { username: `src_hero_${++n}`, password: 'correct horse', email: email || `src.hero.${n}@example.test`, ...(src === undefined ? {} : { src }) },
+        null, { 'X-Forwarded-For': `192.0.2.${70 + n}` });
+    for (const src of ['reddit1', 'reddit1', 'itch']) assert.equal((await signUp(src)).status, 200);
+    assert.deepEqual([await count('reddit1'), await count('itch')], [2, 1]);
+    // a tag that isn't one ([a-z0-9-], up to 32) counts nothing, and the account is made all the same
+    for (const src of ['Bad Tag!', 'x'.repeat(33), 42, '']) assert.equal((await signUp(src)).status, 200, String(src));
+    assert.equal((await store.signupSources()).some(s => !/^[a-z0-9-]{1,32}$/.test(s.tag)), false);
+    assert.equal((await signUp(undefined)).status, 200, 'none at all');
+    // an address that has an account makes none, so counts none
+    await register('src_owner');
+    assert.equal((await signUp('reddit1', emailOf('src_owner'))).status, 200);
+    assert.equal(await count('reddit1'), 2);
 });
 
 test("a sign-up says the same whether its address has an account or not; that address's owner hears of the try instead, once a day", async () => {
