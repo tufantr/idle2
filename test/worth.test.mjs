@@ -275,3 +275,33 @@ test('the measure only reads: the fight goes exactly as it would, and the state 
     assert.deepEqual(asked.state, plain.state);
     assert.ok(plain.state.stats.kills > 50 && plain.state.stats.itemsDropped > 0, `${plain.state.stats.kills} kills, ${plain.state.stats.itemsDropped} drops`);
 });
+
+test('the camp\'s tokens say what their next level is worth at the wall: deep, defence and health nothing, attack its stages', async () => {
+    const { renderCombat } = await import('../src/ui/render.js');
+    const { CAMP_UPGRADES } = await import('../src/data/camp.js');
+    const level = (judge, id) => { const u = CAMP_UPGRADES.find(x => x.id === id); return judge.stagesOf({ [u.stat]: u.bonus }); };
+    const game = deepHero(1300);
+    const s = game.state;
+    const run = wallJudge(s, game, { camp: 'run' });
+    assert.ok(Math.abs(level(run, 'whetstone') - Math.log(1.05) / Math.log(1.035)) < 1e-6, 'the Whetstone: +5% attack, 1.4 stages');
+    assert.equal(level(run, 'armory'), 0, 'the Armour Rack: defence far past its cap');
+    assert.equal(level(run, 'hearth'), 0, 'the Hearth: no blow to fear');
+    s.seen.camp = true;
+    s.combat.active = true;
+    const html = renderCombat(game, { tab: 'combat' });
+    assert.match(html, /data-camp="whetstone"[\s\S]*?camp-worth">\+1\.4 stages/);
+    assert.match(html, /data-camp="armory"[\s\S]*?camp-worth nil">\+0 stages/);
+    assert.match(html, /data-camp="hearth"[\s\S]*?camp-worth nil">\+0 stages/);
+    // a run that has just begun, its camp not yet bought: its levels still count where they would
+    s.camp = { whetstone: 0, armory: 0, hearth: 0 };
+    game.recompute();
+    const fresh = wallJudge(s, game, { camp: 'run' });
+    assert.ok(fresh.wall.survival && level(fresh, 'armory') > 0 && level(fresh, 'hearth') > 0);
+    // where blows threaten the Hearth counts, and the Armour Rack too until the defence reaches its cap
+    const shallow = deepHero(300);
+    const at300 = wallJudge(shallow.state, shallow, { camp: 'run' });
+    assert.ok(at300.wall.survival && level(at300, 'hearth') > 0.1, `the Hearth: ${level(at300, 'hearth').toFixed(2)} stages`);
+    const bossAtk = enemyForStage(at300.wall.stage).atk;
+    assert.ok(at300.wall.def >= 9 * bossAtk, 'this hero\'s defence is past the cap already (nine times the boss\'s attack)');
+    assert.equal(level(at300, 'armory'), 0, 'so a level of the Rack is worth nothing');
+});

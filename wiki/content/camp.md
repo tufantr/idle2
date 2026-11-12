@@ -12,6 +12,7 @@ Each level multiplies rather than adds, and the camp is a layer of its own, mult
 - Tap an upgrade to buy one level. **Max** beside it buys as many levels as your gold allows.
 - The health a {{campUpgradeById('hearth').name}} level adds is health your hero has at once, not only room to heal into.
 - The {{campUpgradeById('armory').name}} shows up once your hero has some defence for it to raise.
+- Each upgrade says what its next level is worth, in stages your hero would climb at his wall (the boss he is stuck at), worked out as a piece of gear's is (see [[Equipment]]) with the camp this run has bought. Attack always counts against the boss's clock. Defence and health count only while a boss's blow still takes {{pct(THREAT_SHARE, 0)}} of his health or more, and defence only until a blow is cut as far as it goes ({{pct(MAX_MITIGATION, 0)}}), so deep in the [[/zones|Abyss]] the {{campUpgradeById('armory').name}} and the {{campUpgradeById('hearth').name}} soon say "+0 stages": there, their levels change nothing.
 
 ## It resets every prestige
 

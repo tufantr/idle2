@@ -24,7 +24,7 @@ import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, c
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
 import { goldShopPrice, goldShopOpen, canWear, isUpgrade, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, weakerInBag, bagByWorth, upgradesWaiting } from '../systems/inventory.js';
-import { judgeOf } from '../systems/worth.js';
+import { judgeOf, wallJudge } from '../systems/worth.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_CHOICE_MS, titanBonusUnits, dungeonAt, dungeonTierInfo, dungeonBossTime, uniqueAt, parseUniqueKey, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
@@ -437,15 +437,23 @@ function skillPotionChip(game, ui) {
     return `<span class="potion-chip-wrap">${chip}<span class="potion-tray" role="group" aria-label="Skill potion">${tiles}${empty}</span></span>`;
 }
 
+/** A camp level's worth in stages, short: "+1.4 stages", "+12 stages", "+0 stages" (P-091: said even when it is nothing). */
+function campStages(n) {
+    if (!Number.isFinite(n) || n < 0.05) return '+0 stages';
+    return `+${n >= 9.95 ? Math.round(n) : n.toFixed(1)} stages`;
+}
+
 /**
- * The camp's three upgrades as tokens: the picture with its level, what a level gives and its price,
- * all one button; Max beside it buys as many levels as the gold allows. The combat tab and the
- * fight's dock show the same tokens.
+ * The camp's three upgrades as tokens: the picture with its level, what a level gives, its next level's worth in
+ * stages at the wall that binds (systems/worth.js, on the camp this run has bought: the research loop's P-091, as most
+ * of a deep run's camp gold bought defence past its cap and health past any threat) and its price, all one button;
+ * Max beside it buys as many levels as the gold allows. The combat tab and the fight's dock show the same tokens.
  */
 function campTokens(game) {
     const state = game.state;
     // the No Camp Trial (data/trials.js): the camp is packed for the run, nothing on offer
     if (trialBite(state).noCamp) return `<p class="camp-packed">${sprite('campfire', { scale: 1 })}<span>Packed for the Trial</span></p>`;
+    const judge = wallJudge(state, game, { camp: 'run' });
     return campOnOffer(state, game.derived).map(u => {   // the Armour Rack once there is defence to raise
         const level = state.camp[u.id] || 0;
         const cost = nextCampCost(state, u.id);
@@ -453,10 +461,12 @@ function campTokens(game) {
         const canTwo = can && level + 1 < u.max && state.gold >= cost + campPrice(state, u, level + 1);
         const mult = Math.pow(1 + u.bonus, level);
         const total = mult >= 10 ? `×${fmt(mult)}` : `+${Math.round((mult - 1) * 100)}%`;
+        const worth = cost === null ? null : judge.stagesOf({ [u.stat]: u.bonus });
+        const stages = worth === null ? '' : campStages(worth);
         return `<div class="camp-token${can ? ' can' : ''}" data-camp="${u.id}">
-            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now ${total})` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
+            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now ${total})` : ''}${stages ? `; the next is worth ${stages} at your wall` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}, ${stages} at your wall`}">
                 <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
-                <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
+                <span class="camp-token-text"><b>${esc(u.short)}</b>${stages ? `<span class="camp-worth${worth < 0.05 ? ' nil' : ''}">${esc(stages)}</span>` : ''}<span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
             </button>
             ${canTwo ? `<button class="mini-btn camp-max" onclick="FI.buyCamp('${u.id}', 'max')" title="Buy as many levels of the ${esc(u.name)} as your gold allows">Max</button>` : ''}
         </div>`;

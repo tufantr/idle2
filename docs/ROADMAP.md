@@ -1475,6 +1475,9 @@ Keeping it running:
 - [x] **Undo the last sale or salvage** (the research loop's P-078, 12 November 2026; DESIGN §3.5): the toast after Sell,
       Salvage, the bag's batch buttons or an Equip's Weaker sweep has an Undo for a few seconds, which puts the pieces back
       and takes back exactly the gold, essence and bars they gave
+- [x] **The camp says which levels still work** (the research loop's P-091, 12 November 2026; DESIGN §3.8): each camp token
+      says what its next level is worth in stages at the hero's wall, by the gear's measure on this run's camp: deep, the
+      Whetstone +1.4 and, once a run's camp is up, the Armour Rack and the Hearth +0
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

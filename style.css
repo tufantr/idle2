@@ -2629,6 +2629,8 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .camp-token.can .camp-buy { border-color: rgba(252, 211, 77, 0.65); box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.08), 0 0 14px rgba(252, 211, 77, 0.18); }
 .camp-token-text { min-width: 0; display: flex; flex-direction: column; font-size: 0.78rem; line-height: 1.3; }
 .camp-price { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold-color); }
+.camp-worth { font-size: 0.7rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #fde68a; }   /* the next level's worth at the wall (P-091) */
+.camp-worth.nil { color: var(--text-muted); font-weight: 600; }   /* past the cap, or no blow to fear: said plainly, not hidden */
 .camp-max { align-self: center; padding: 0.2rem 0.7rem; }
 .dock-loop { flex: 1 1 210px; }
 /* a dungeon run: its clears, the unique's fragments and the repeat switch */

@@ -502,7 +502,11 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   about best stage 85, so a new player's camp is as it was (§3.24); past that, a whole upgrade costs about 50 kills at the best stage,
   so each run buys its camp again as it nears its best (the owner's choice 3a). At 0.016 the camp took
   80% of gold but each late run took 0.7 h instead of 0.5 h. It turns each new run into a climb and
-  gives gold a job.
+  gives gold a job. Each token also says what its next level is worth in stages at the wall that binds ("+1.4 stages",
+  "+0 stages": the research loop's P-091, 12 November 2026), by §3.31's measure on the camp this run has bought: past
+  stage 1,000, 51–67% of camp gold bought Armour Rack and Hearth levels past the defence cap and past any threat. Deep,
+  a Whetstone level says +1.4 stages and the other two +0 once the run's camp is up; honesty on the button, not a
+  suggestion: no glow, nothing bought by itself.
 - **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 30
   kills — the open-ended late-game sink) priced in kills at the furthest stage the run has reached (4–6
   kills a pack; a boss stage prices like its regular monsters), never under 1.25 × what they sell back for
