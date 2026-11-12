@@ -9,8 +9,10 @@ import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
 import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing } from '../src/ui/render.js';
 import { actionXp } from '../src/systems/skilling.js';
-import { SKILLS } from '../src/data/skills.js';
+import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
 import { SMELTING_RECIPES } from '../src/data/workshop.js';
+import { DUNGEONS } from '../src/data/dungeons.js';
+import { ZONES } from '../src/data/zones.js';
 
 const T0 = 1_760_000_000_000;
 const literal = text => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -90,4 +92,17 @@ test('a card says the XP an action pays: under a skill potion, the potion\'s XP 
     // the smelter's card too
     const bar = SMELTING_RECIPES.find(r => r.id === 'copper_bar');
     assert.match(renderSmithing(game, {}), literal(`+${Math.round(actionXp(bar.xp, game.derived))} XP`));
+});
+
+test('the README\'s opening counts what the game has, and points Play at the live game', () => {
+    const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+    const opening = readme.slice(0, readme.indexOf('**Docs:**'));
+    const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen'];
+    const count = what => words.indexOf(new RegExp(`(\\w+) ${what}`).exec(opening)?.[1]);
+    assert.equal(count('skills'), SKILL_IDS.length, 'skills');
+    assert.equal(count('dungeons'), DUNGEONS.length, 'dungeons');
+    assert.equal(count('zones'), ZONES.length, 'zones');
+    assert.doesNotMatch(opening, /forge/i);
+    assert.match(opening, /\*\*Play:\*\* \[fantasyidle\.com\]\(https:\/\/fantasyidle\.com\)/);
+    assert.doesNotMatch(opening, /vercel/i);
 });
