@@ -115,9 +115,10 @@ after their dates and added as updates.
 - Measurements on Fantasy Idle: the skip test, clan sizes, CPU (005); supplies at depth and the bot's patience (013); builds at depth
   (015); the bag and the Equip card (017); the Titan's bank (014); the economy's flows (022); accessibility (021); the first hour
   (019); live retention (027); every Trial and dungeon at the hero's frontier, dungeons against the clock wall (032); the boot's
-  catch-up time (037); the deep balance with a fixed stall test, visit lengths, the ceiling's date (039); every proposal from P-023
-  on against the code (041); live depth by week (044); still to do: cross-browser (waits on the owner's OK to
-  download two test browsers), a long session's memory and frames
+  catch-up time (037); the deep balance with a fixed stall test, visit lengths, the ceiling's date (039); a long session's memory
+  and frames, the Titan's bank and the laurel (040); every proposal from P-023 on against the code (041); live depth by week (044);
+  survival off the ladder, a deep drop's worth, the boot's replay at 4× (047); still to do: cross-browser (waits on the owner's
+  OK to download two test browsers)
 
 ## Queue
 
@@ -187,8 +188,10 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] The replay of a day away at Chrome's 4× throttle (037) → `047-measurements-left.md`
 - [x] The deep balance numbers again once the simulator's stall test works (P-122): 300 and 600 hours, 12 seeds, the check-in bot
       too, the best dungeon visit length, P-024's ceiling date (032) → `039-balance-with-a-fixed-bot.md`
-- [ ] A long session: the game open 6–24 hours in Chromium, heap and frame rate every ten minutes, plain and throttled (028)
-- [ ] The Titan's bank and the laurel against a one-day floor with the daily and check-in bots (034, P-059); a Titan at the hero's best (032)
+- [x] A long session: the game open 3.8 hours in Chromium, heap and frames every five minutes, plain, throttled and hidden (028)
+      → `040-long-session-and-clocks.md`
+- [x] The Titan's bank and the laurel against a one-day floor with the daily and check-in bots (034, P-059) → `040`; a Titan at the
+      hero's best (032) → `047`
 - [ ] Cross-browser: Firefox and Safari (WebKit) through Playwright, which needs those browsers installed (ask the
       owner before downloading them) (004)
 - [x] Why the sensible bot climbs faster when something sends it away from the boss wall (013): it was the bot, whose stall test
@@ -200,7 +203,8 @@ In order; an item done points at its file. Items found along the way are added w
 - [x] Deep drops: 40 of the drop table's 100 weights carry no attack, and the sure pieces go to the slot that lags (017)
       → `047-measurements-left.md`
 - [ ] Live depth by week again in two weeks (W47–W48): whether the slowdown near 1,800–2,000 holds for the next players (044)
-- [ ] The battery saver's saving on a phone-class CPU (Chrome's 4x throttle) (005)
+- [x] The battery saver's saving on a phone-class CPU (005): the cost is the frame, so a lower frame rate cuts it in proportion (040);
+      a real phone's GPU and battery stay unmeasured
 
 **Next, games:**
 
@@ -300,6 +304,7 @@ In order; an item done points at its file. Items found along the way are added w
 | 037 | `037-last-leads.md` | The last game leads; the boot's catch-up timed | 11 Nov 2026 |
 | 038 | `038-online-safety-law.md` | Online-safety and platform law for a small game | 11 Nov 2026 |
 | 039 | `039-balance-with-a-fixed-bot.md` | The balance again, with a bot that leaves the wall | 12 Nov 2026 |
+| 040 | `040-long-session-and-clocks.md` | A long session in Chromium; the Titan's bank and the week's laurel | 12 Nov 2026 |
 | 041 | `041-newer-proposals-against-the-code.md` | P-023 to P-122 against the code | 11 Nov 2026 |
 | 042 | `042-cultivation-idle-rpgs.md` | Cultivation idle RPGs and the Chinese-made idle RPGs around them | 12 Nov 2026 |
 | 043 | `043-classics-and-fringes.md` | The idle RPG classics, the phone giants, the fringes, and the tier list swept | 12 Nov 2026 |
@@ -308,8 +313,12 @@ In order; an item done points at its file. Items found along the way are added w
 | 046 | `046-pages-in-a-real-browser.md` | Ofcom's gaming guidance and dates; the UK's under-16 ban against Australia's | 12 Nov 2026 |
 | 047 | `047-measurements-left.md` | Survival off the ladder, a deep drop's worth, the boot's replay at 4× | 12 Nov 2026 |
 
-Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) runs;
-round eight (042–046) checks for anything new; then the final ranked report goes to the owner.
+Paused cleanly on 11 November after round six, at the owner's word, and resumed the same evening. Round seven (036–041) and
+round eight (042–047) ran to 12 November; round eight, the check for anything new, found a missing family (cultivation idle RPGs)
+and small additions only (P-126 to P-129). The loop then ended as the owner's 11 November words asked: every line of the coverage
+map has its file, the big proposals are checked against the code and measured, and one ranked report went to the owner as a Claude
+Doc on 12 November, its spine in `PROPOSALS.md` ("The final ranking"). The dated items above (Melvor Idle 2 from 17 November, Lowbar
+Legends, the laws in passage, live depth by week) are added after their dates; the owner's open questions are in the report.
 
 Round three (4 November) folded the proposals of 005, 006 and 007 into `PROPOSALS.md`, and corrected the earlier files where the
 code check and new measurements disagreed with them.
