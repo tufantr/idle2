@@ -74,7 +74,7 @@ if [ ! -f /etc/fantasyidle/api.env ]; then
     chmod 0640 /etc/fantasyidle/api.env
 fi
 
-# --- the nightly database backup: kept 14 days on the server (copies elsewhere: README "The server")
+# --- the nightly database backup: kept 14 days on the server (the copy off it: below)
 install -d -m 0700 -o postgres -g postgres /var/backups/fantasyidle
 cat > /etc/systemd/system/fantasyidle-backup.service <<'EOF'
 [Unit]
@@ -99,5 +99,23 @@ WantedBy=timers.target
 EOF
 systemctl daemon-reload
 systemctl enable --now fantasyidle-backup.timer >/dev/null
+
+# --- the backup off the server, and its checks (README "The server"): the owner's age key's public half
+# (/etc/fantasyidle/backup-recipient.txt), rclone's settings for their Drive (/etc/fantasyidle/rclone.conf) and
+# OWNER_ALERT_EMAIL in api.env are put in by hand; until then the night's dump stays on the server
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq age rclone >/dev/null
+HERE=$(dirname "$(readlink -f "$0")")
+for f in backup.sh backup-alert.sh restore-drill.sh; do install -D -m 0755 "$HERE/$f" /usr/local/lib/fantasyidle/$f; done
+install -d /etc/systemd/system/fantasyidle-backup.service.d
+printf '[Unit]\nOnSuccess=fantasyidle-backup-offsite.service\nOnFailure=fantasyidle-backup-alert.service\n' > /etc/systemd/system/fantasyidle-backup.service.d/offsite.conf
+unit() { printf '%b' "$2" > /etc/systemd/system/$1; }
+unit fantasyidle-backup-offsite.service '[Unit]\nDescription=Fantasy Idle backup: the night'"'"'s dump, encrypted, to the owner'"'"'s Google Drive\nAfter=network-online.target\nOnFailure=fantasyidle-backup-alert.service\n\n[Service]\nType=oneshot\nExecStart=/usr/local/lib/fantasyidle/backup.sh\n'
+unit fantasyidle-backup-alert.service '[Unit]\nDescription=Fantasy Idle backup: mail the owner that a backup failed\n\n[Service]\nType=oneshot\nExecStart=/usr/local/lib/fantasyidle/backup-alert.sh failed\n'
+unit fantasyidle-backup-check.service '[Unit]\nDescription=Fantasy Idle backup: mail the owner if Drive holds no copy from the last 26 hours\n\n[Service]\nType=oneshot\nExecStart=/usr/local/lib/fantasyidle/backup-alert.sh check\n'
+unit fantasyidle-backup-check.timer '[Unit]\nDescription=Fantasy Idle backup: the morning check\n\n[Timer]\nOnCalendar=*-*-* 07:00:00 UTC\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n'
+unit fantasyidle-restore-drill.service '[Unit]\nDescription=Fantasy Idle backup: the monthly restore drill\nOnFailure=fantasyidle-backup-alert.service\n\n[Service]\nType=oneshot\nExecStart=/usr/local/lib/fantasyidle/restore-drill.sh\n'
+unit fantasyidle-restore-drill.timer '[Unit]\nDescription=Fantasy Idle backup: the restore drill, each month\n\n[Timer]\nOnCalendar=*-*-01 05:00:00 UTC\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n'
+systemctl daemon-reload
+systemctl enable --now fantasyidle-backup-check.timer fantasyidle-restore-drill.timer >/dev/null
 
 echo "provisioned: $(node -v), $(nginx -v 2>&1 | cut -d/ -f2), $(psql --version | cut -d' ' -f3), ufw $(ufw status | head -1 | cut -d: -f2 | xargs)"
