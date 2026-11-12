@@ -945,7 +945,9 @@ gear to wear; a place that waited opens on the return and is named there too.
   not a link: on a phone a link opens in another browser than the game's). The same kind of code sets a new password
   ("Forgot your password?"). A code lives 15 minutes and takes 5 tries, and is kept only as a hash keyed with the
   server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour from an address; one account
-  an email, whatever its case, and no address is shown to another player. A login with the right password but the
+  an email, whatever its case, and no address is shown to another player. A sign-up with an address that has an account
+  gets the same answer as a new one (the research loop's P-103, November 2026), makes none, and mails that address's
+  owner one line instead, once a day: someone tried, and they may sign in or reset. A login with the right password but the
   address not confirmed answers 409 with `pending` (a 403 is the game's word for a session gone, which would sign the
   player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):

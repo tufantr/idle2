@@ -1333,10 +1333,34 @@ test('sign-up needs an email, and the account plays once the code mailed there i
     assert.ok((await confirmed.json()).token);
     assert.equal((await post('/login', { username: 'mail_hero', password: 'correct horse' }, null, from)).status, 200);
     assert.equal((await post('/verify', { username: 'mail_hero', code }, null, from)).status, 400, 'confirmed already');
-    // one account an address, whatever its case
+    // one account an address, whatever its case: a second sign-up with it makes none (and says so to nobody but the address)
     const twice = await post('/register', { username: 'mail_twin', password: 'correct horse', email: 'MAIL.hero@example.test' }, null, from);
-    assert.equal(twice.status, 400);
-    assert.match((await twice.json()).error, /already has an account/);
+    assert.equal(twice.status, 200);
+    assert.equal(await (memory || require('../api/store.js')).findUserByName('mail_twin'), null);
+});
+
+test("a sign-up says the same whether its address has an account or not; that address's owner hears of the try instead, once a day", async () => {
+    const from = { 'X-Forwarded-For': '192.0.2.60' };
+    await register('address_owner');
+    const fresh = await post('/register', { username: 'fresh_name', password: 'correct horse', email: 'fresh.name@example.test' }, null, from);
+    const taken = await post('/register', { username: 'copy_name', password: 'correct horse', email: 'Address_Owner@Example.test' }, null, from);
+    assert.deepEqual([fresh.status, taken.status], [200, 200]);
+    const [a, b] = [await fresh.json(), await taken.json()];
+    assert.deepEqual(Object.keys(b).sort(), Object.keys(a).sort(), 'the same answer');
+    assert.deepEqual([b.pending, b.username, b.email, b.message], [true, 'copy_name', 'ad***@example.test', a.message]);
+    assert.equal(await (memory || require('../api/store.js')).findUserByName('copy_name'), null, 'no account made');
+    const notice = mailbox.at(-1);
+    assert.deepEqual([notice.to, notice.subject], ['address_owner@example.test', 'Someone tried to make a Fantasy Idle account with your email']);
+    assert.match(notice.text, /already has one: yours, address_owner\..*Forgot your password/s);
+    assert.ok(!/\b\d{6}\b/.test(notice.text), 'no code in it');
+    // again the same day: the same answer, and no second mail
+    const told = mailsTo('address_owner@example.test');
+    assert.equal((await post('/register', { username: 'copy_again', password: 'correct horse', email: 'address_owner@example.test' }, null, from)).status, 200);
+    assert.equal(mailsTo('address_owner@example.test'), told, 'once a day');
+    // the name that was never made: any code is a wrong one, as for a real account
+    assert.match((await (await post('/verify', { username: 'copy_name', code: '123456' }, null, from)).json()).error, /wrong/);
+    // the game's sign-up still reaches the code step: its answer is the one it always had
+    assert.ok(b.pending && b.email);
 });
 
 test('passwords too easy to guess are refused at sign-up and reset: the most common, a repeat, a run of keys, the username', async () => {

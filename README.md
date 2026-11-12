@@ -57,7 +57,7 @@ a `false` names the missing part (`game`: the function could not load the game's
 ```sql
 INSERT INTO rewards (user_id, kind, payload, created_at, dedupe)
 SELECT id, 'gift', '{"gold":12000000,"text":"A gift from tufan"}', (extract(epoch from now()) * 1000)::bigint, 'gift:' || id || ':first-gold'
-FROM users WHERE username = 'Yarraksalih'
+FROM users WHERE username = 'PlayerName'
 ON CONFLICT (dedupe) DO NOTHING;
 ```
 
@@ -87,7 +87,7 @@ save. It needs Node 20.19+ or 22+.
 
 | Endpoint | What it does |
 |---|---|
-| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`) |
+| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`); an address that has an account gets the same answer, and its owner a line instead |
 | `POST /api/verify`, `POST /api/verify/resend` | the sign-up code (6 digits, 15 minutes, 5 tries), and another one (once a minute, 5 an hour) |
 | `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not); a new password ends every session before it, and the address hears of it |
 | `POST /api/account/signout-all` | "Sign out everywhere": every session of the account ends (its tokens' version goes up) but the asking device's, which gets a fresh token |

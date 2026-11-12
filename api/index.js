@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const store = require('./store');
 const crypto = require('node:crypto');
-const { sendCounted, codeMail, passwordChangedMail } = require('./mail');
+const { sendCounted, codeMail, passwordChangedMail, signUpTakenMail } = require('./mail');
 const { COMMON_PASSWORDS } = require('./common-passwords');
 
 const app = express();
@@ -253,17 +253,30 @@ app.post('/api/register', async (req, res) => {
         // every registration counts, before any work is done
         if (await store.takeAttempt(`register:${ip}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY_ACCOUNTS);
         const hash = await bcrypt.hash(password, 10);
-        const id = await store.createUser(username, hash, email);
         const pending = { pending: true, username, email: maskEmail(email) };
+        const unsent = () => res.status(502).json({ ...pending, error: "The account is made, but its code couldn't be sent: ask for a new one in a moment." });
+        let id;
+        try { id = await store.createUser(username, hash, email); } catch (err) {
+            if (err.code !== '23505' || err.constraint !== 'users_email_lower') throw err;
+            // An address that has an account gets the same answer as a new one, as a reset does, so a sign-up never tells
+            // whose address has one (the research loop's P-103, November 2026). Its owner hears of the try instead, once a
+            // day, and may sign in or reset; no account is made.
+            const owner = await store.findUserByEmail(email);
+            if (owner && await store.takeAttempt(`taken:user:${owner.id}`, Date.now(), DAY) === 1) {
+                try { await sendCounted(store, { to: owner.email || email, ...signUpTakenMail({ username: owner.username }) }); } catch (mailErr) {
+                    console.error('sign-up notice failed', mailErr && mailErr.message);
+                    return unsent();
+                }
+            }
+            return res.json({ ...pending, message: 'Check your email for the code' });
+        }
         try { await mailCode({ id, username }, email, 'verify', ip, Date.now()); } catch (err) {
             console.error('sign-up mail failed', err && err.message);
-            return res.status(502).json({ ...pending, error: "The account is made, but its code couldn't be sent: ask for a new one in a moment." });
+            return unsent();
         }
         res.json({ ...pending, message: 'Check your email for the code' });
     } catch (err) {
-        if (err.code === '23505') { // Postgres unique violation
-            return res.status(400).json({ error: err.constraint === 'users_email_lower' ? 'That email already has an account: log in, or reset its password.' : 'Username already exists' });
-        }
+        if (err.code === '23505') return res.status(400).json({ error: 'Username already exists' });   // (Postgres unique violation: the name)
         console.error('register failed', err);
         res.status(500).json({ error: 'Internal server error' });
     }

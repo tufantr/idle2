@@ -102,4 +102,10 @@ function passwordChangedMail({ username }) {
         lines: ['Your Fantasy Idle password was just changed, and every other device signed in to your account was signed out. If that wasn\'t you, set a new one now with "Forgot your password?" on the sign-in.'] });
 }
 
-module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };
+/** A sign-up tried with an address that has an account: a line to its owner, who may sign in or reset (no code in it). */
+function signUpTakenMail({ username }) {
+    return noticeMail({ username, subject: 'Someone tried to make a Fantasy Idle account with your email',
+        lines: [`Someone just tried to make a new Fantasy Idle account with this email address. It already has one: yours, ${username}. You can sign in, or set a new password with "Forgot your password?" on the sign-in. If it wasn't you, nothing has changed.`] });
+}
+
+module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, signUpTakenMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };
