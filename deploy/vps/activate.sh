@@ -35,7 +35,7 @@ ln -sfn /etc/nginx/sites-available/fantasyidle /etc/nginx/sites-enabled/fantasyi
 rm -f /etc/nginx/sites-enabled/default
 systemctl daemon-reload
 systemctl enable fantasyidle-api >/dev/null 2>&1
-[ -f /etc/ssl/fantasyidle/origin.pem ] || { echo "no origin certificate yet: run deploy/vps/cloudflare.sh first"; exit 1; }
+[ -f /etc/ssl/fantasyidle/origin.pem ] || { echo "no origin certificate yet: run node deploy/vps/cloudflare.mjs first"; exit 1; }
 nginx -t -q
 
 # the switch, and the check

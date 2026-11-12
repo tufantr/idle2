@@ -2,7 +2,7 @@
 # Sets up the fantasyidle.com server (Ubuntu 24.04, RackNerd, October 2026) once; running it again changes nothing
 # that is already right. As root, from a checkout:
 #   ssh -i ~/.ssh/fantasyidle_ed25519 root@75.127.4.7 'bash -s' < deploy/vps/provision.sh
-# Then deploy/vps/cloudflare.sh (DNS, HTTPS and the origin certificate) and deploy/vps/deploy.sh (the game).
+# Then node deploy/vps/cloudflare.mjs (DNS, HTTPS and the origin certificate) and deploy/vps/deploy.sh (the game).
 # SSH is keys only (/etc/ssh/sshd_config.d/00-fantasyidle.conf, set by hand with the owner's OK: README "The server").
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
