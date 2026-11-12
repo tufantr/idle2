@@ -38,7 +38,7 @@ function home(help) {
             section('Items', tiles(['/items', '/equipment', '/equipment/jewellery', '/uniques', '/tools', '/food', '/potions'].map(p => tile(p)))),
             section('Progression', tiles(['/prestige', '/perks', '/talents', '/ranks', '/trials', '/ascension', '/mastery', '/medals', '/pets', '/capes', '/looks'].map(p => tile(p)))),
             section('The world', tiles(['/places', '/daily-crate', '/shop', '/events', '/clans', '/offline', '/mini-games'].map(p => tile(p)))),
-            section('Reference', tiles(['/formulas', '/xp-table', '/credits'].map(p => tile(p))))
+            section('Reference', tiles(['/formulas', '/xp-table', '/credits', '/rules'].map(p => tile(p))))
         ].filter(Boolean).join('\n')
     };
 }

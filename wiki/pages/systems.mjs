@@ -1,6 +1,6 @@
 // The world around the fight and the skills: places and unlocks, the daily crate, the Shop, the weekend
-// events, clans, offline progress, mini-games; the reference pages (formulas, the XP table, credits); the
-// guides' index; and the page for a link that lands nowhere.
+// events, clans, offline progress, mini-games; the reference pages (formulas, the XP table, credits, the rules and
+// privacy pages); the guides' index; and the page for a link that lands nowhere.
 
 import { supplyPrice } from '../../src/systems/inventory.js';
 import { UNLOCKS, PLACE_GAPS_MS, WORK_GAP_MS } from '../../src/data/unlocks.js';
@@ -163,6 +163,7 @@ export default {
         { path: '/formulas', title: 'Formulas', ...ref, icon: 'icon/dice', summary: 'The formulas behind Fantasy Idle: monsters, damage, rewards, prestige, skills and prices.', aliases: ['Math', 'Damage formula'], build: formulasPage },
         { path: '/xp-table', title: 'XP table', ...ref, icon: 'icon/xp', summary: 'The XP needed for every level from 1 to 99.', aliases: ['Experience table', 'Levels', 'XP'], build: xpTablePage },
         { path: '/credits', title: 'Credits', ...ref, icon: 'crown', summary: 'Where the pictures, type and sounds come from.', toc: false, build: creditsPage },
+        { path: '/rules', title: 'Rules and terms', ...ref, icon: 'item/Shield/1', summary: 'The rules of Fantasy Idle in plain words: what clan names and words may hold, how to report a clan and appeal, what a flag is, and how to delete your account.', aliases: ['Rules', 'Terms', 'Terms of service', 'Code of conduct', 'Report a clan', 'Contact'] },
         { path: '/guides', title: 'Guides', section: 'Guides', sectionPath: '/guides', icon: 'tool/rod', summary: 'Guides for new and returning players.', build: guidesIndex },
         { path: '/404', title: 'Page not found', section: '', icon: '', summary: 'This page does not exist.', hidden: true, toc: false, build: notFound }
     ]
