@@ -1473,6 +1473,9 @@ Keeping it running:
       "capped", the six lost hours nowhere. It says "30h away, 24h counted", the cap in a tip a phone can open
 - [x] **A link to the wiki** (promised to a player on 1 November; P-074): Settings has "Read the wiki" beside the Discord,
       and every "?" card with a page of its own on the wiki ends with a small "More on the wiki" that opens it
+- [x] **A mark at attack speed's cap** (promised on 1 November; P-074): speed stops at +100%, and every deep hero the
+      simulator made sat 7 to 48 points past it. The Inventory's swing time wears a small "cap" once there, its tip saying
+      more adds nothing, and a piece whose speed adds nothing gets the same mark beside its bonus
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

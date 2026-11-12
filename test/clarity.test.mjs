@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL } from '../src/data/social.js';
 import { actionXp } from '../src/systems/skilling.js';
@@ -15,6 +15,9 @@ import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
 import { SMELTING_RECIPES } from '../src/data/workshop.js';
 import { DUNGEONS } from '../src/data/dungeons.js';
 import { ZONES } from '../src/data/zones.js';
+import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
+import { generateEquipment } from '../src/core/formulas.js';
+import { BASE } from '../src/core/modifiers.js';
 
 const T0 = 1_760_000_000_000;
 const literal = text => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -147,4 +150,33 @@ test('the game links its wiki: in Settings beside the Discord, and at the foot o
     assert.equal(WIKI_PAGES.mining, '/skills/mining');
     assert.equal(WIKI_PAGES.achievements, '/medals');
     assert.doesNotMatch(renderAboutCard('settings'), /More on the wiki/);
+});
+
+test('attack speed at its cap: a quiet mark on the hero\'s swing, and on a piece whose speed adds nothing (P-074)', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const piece = (type, id, speed) => Object.assign(generateEquipment({ type, tier: 1, power: GEAR_TIERS[0].power, materialName: GEAR_TIERS[0].name, rarity: RARITIES[0], source: 'drop' }, id),
+        { affixes: [{ stat: 'attackSpeed', name: 'Attack Speed', value: speed }] });
+    s.inventory.push(piece('Weapon', 901, 0.6), piece('Gloves', 902, 0.25));
+    game.equipItem(901);
+    game.equipItem(902);
+    assert.ok(Math.abs(game.derived.attackSpeedBonus - 0.85) < 1e-9, 'every bonus together');
+    assert.doesNotMatch(renderInventory(game, {}), /cap-mark/, 'under the cap: no mark');
+    s.inventory.push(piece('Boots', 903, 0.3), piece('Boots', 904, 0.2));
+    game.equipItem(903);
+    const d = game.derived;
+    assert.ok(Math.abs(d.attackSpeedBonus - 1.15) < 1e-9, `+115%: ${d.attackSpeedBonus}`);
+    assert.equal(d.attackInterval, Math.round(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed)), 'the swing stops at the cap');
+    assert.match(renderInventory(game, {}), literal('<i class="cap-mark" data-tip-title="At the cap" data-tip="Attack speed stops at +100%, and yours comes to +115%: more adds nothing."'));
+    // without any one of the three he is under the cap: each one's speed counts, so no piece is marked
+    for (const id of [901, 902, 903]) assert.doesNotMatch(renderItemDetail(game, id), /cap-mark/, `${id}`);
+    s.perks.rogue = 10;   // +30% more: +145%
+    game.recompute();
+    assert.doesNotMatch(renderItemDetail(game, 901), /cap-mark/, 'without the weapon\'s +60% he has +85%: it still counts');
+    const boots = renderItemDetail(game, 903);
+    assert.match(boots, /<li>\+30\.0% Attack Speed<i class="cap-mark"/, 'without the boots\' +30% he has +115%: theirs adds nothing');
+    assert.match(boots, literal('data-tip="Without this piece&#39;s speed, yours is already at the cap of +100%: it adds nothing."'));
+    assert.match(renderItemDetail(game, 902), /class="cap-mark"/, 'the gloves\' too');
+    // a pair in the bag is judged in place of the pair worn: +115% without them, so theirs adds nothing either
+    assert.match(renderItemDetail(game, 904), /class="cap-mark"/);
 });

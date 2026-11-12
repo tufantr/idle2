@@ -671,6 +671,8 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 .doll-label { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
 .doll-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 0.9rem; margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .doll-stats b { color: var(--text-main); }
+/* attack speed at its cap (render.js capMark): a small, quiet mark beside the speed, its rule in the tip */
+.cap-mark { display: inline-block; margin-left: 0.3rem; padding: 0 0.28rem; border: 1px solid var(--line); border-radius: 4px; font: 700 0.58rem/1.45 var(--font-body); font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 0.08em; color: var(--text-muted); cursor: help; }
 .tile {
     --r: #e2e8f0;
     position: relative; width: 100%; aspect-ratio: 1; padding: 0; border-radius: 10px;

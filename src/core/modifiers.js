@@ -363,6 +363,7 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         critChance: Math.min(BASE.caps.critChance, BASE.baseCritChance + mods.critChance),
         critDmg: BASE.baseCritDmg + mods.critDmg,
         attackInterval: Math.max(BASE.minAttackInterval, Math.round(BASE.baseAttackInterval / (1 + attackSpeed))),
+        attackSpeedBonus: mods.attackSpeed,   // every attack speed bonus together, before its cap: from the cap on, more adds nothing (the hero's panel says so)
         dodge: Math.min(BASE.caps.dodge, mods.dodge),
         lifesteal: Math.min(BASE.caps.lifesteal, mods.lifesteal),
         goldMult: 1 + mods.goldMult,

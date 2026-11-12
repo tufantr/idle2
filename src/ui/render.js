@@ -1346,6 +1346,13 @@ function bankDetail(id, state, derived) {
     </div>`;
 }
 
+// Attack speed stops at its cap (core/modifiers.js BASE.caps): a small, quiet mark says so where speed shows, its rule in a
+// tip a phone opens with a tap (every deep hero the simulator made sat 7 to 48 points past it, adding nothing).
+const SPEED_CAP = BASE.caps.attackSpeed;
+const capMark = line => `<i class="cap-mark" ${tipAttrs('At the cap', line)}>cap</i>`;
+/** A piece of gear's attack speed as it counts now (a Trial's share of gear too); 0 for none. */
+const gearSpeed = (state, item) => (item?.affixes || []).reduce((n, a) => n + (a.stat === 'attackSpeed' ? a.value : 0), 0) * (trialBite(state).gear ?? 1);
+
 export function renderItemDetail(game, id) {
     const state = game.state;
     const found = findItem(state, id);
@@ -1373,6 +1380,8 @@ export function renderItemDetail(game, id) {
         ? `<button class="mini-btn" onclick="FI.toBench(${itemId})" title="Upgrade it and reroll its bonuses with gems">${glyph('up')} Bench</button>` : '';
     const upgradeBtn = forged ? anvilBtn : benchBtn;
     const salvage = salvagePreview(item);
+    // its speed adds nothing when the hero is at the cap without it (worn here, or in place of what an Equip replaces)
+    const speedSpent = game.derived.attackSpeedBonus - gearSpeed(state, slot ? item : state.equipped[target]) >= SPEED_CAP;
     // what comes back, said (a crafted piece's share of a bar or gem is a chance) and shown: the button carries its icons,
     // since a phone has no title (a player read a crafted ring's salvage as nothing, 29 October 2026)
     const share = (q, name) => (q >= 1 ? `~${Number.isInteger(q) ? q : q.toFixed(1)} ${name}` : `a ${pct(q, 0)} chance of ${withArticle(name)}`);
@@ -1403,7 +1412,7 @@ export function renderItemDetail(game, id) {
             <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${glyph('lock', { scale: 0.75 })}</button>
         </div>
         <div class="detail-stats">${atk ? `<span class="item-atk">${ATK_ICON} ${fmt(atk)} ATK</span>` : ''}${def ? `<span class="item-def">${DEF_ICON} ${fmt(def)} DEF</span>` : ''}${def * BASE.hpPerDef >= 1 ? `<span class="item-hp" title="Armour adds health: one for every ${Math.round(1 / BASE.hpPerDef)} defence, raised by your health bonuses">${glyph('heart')} +${fmt(Math.floor(def * BASE.hpPerDef))}</span>` : ''}${atk || def ? '' : '<span class="muted">No base stats</span>'}</div>
-        ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}</li>`).join('')}</ul>` : ''}
+        ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}${a.stat === 'attackSpeed' && speedSpent ? capMark(`Without this piece's speed, yours is already at the cap of +${pct(SPEED_CAP)}: it adds nothing.`) : ''}</li>`).join('')}</ul>` : ''}
         ${compare}
         ${wearable ? '' : `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>`}
         ${locked ? '<div class="req">Gear is locked until the dungeon run ends</div>' : ''}
@@ -1458,7 +1467,7 @@ export function renderInventory(game, ui) {
             </div>
             <div class="doll-stats minor">
                 <span title="Critical hits: how often, and how much harder they hit">${glyph('crit')} ${pct(d.critChance, 1)} crit × ${d.critDmg.toFixed(2)}</span>
-                <span title="Time between your attacks">${glyph('time')} ${seconds(d.attackInterval)}</span>
+                <span title="Time between your attacks">${glyph('time')} ${seconds(d.attackInterval)}${d.attackSpeedBonus >= SPEED_CAP ? capMark(`Attack speed stops at +${pct(SPEED_CAP)}, and yours comes to +${pct(d.attackSpeedBonus)}: more adds nothing.`) : ''}</span>
                 ${d.dodge > 0 ? `<span title="Chance to dodge a hit">${glyph('dodge')} ${pct(d.dodge, 1)}</span>` : ''}
                 ${d.lifesteal > 0 ? `<span title="Lifesteal: each hit heals ${pct(d.lifesteal, 1)} of the damage it deals, ${pct(BASE.lifestealPerSecond, 0)} of your health a second at most">${glyph('heart')} ${pct(d.lifesteal, 1)} lifesteal</span>` : ''}
                 <span title="How long your hero keeps going while you are away">${glyph('away')} ${Math.round(d.offlineMs / 3600000)}h away</span>

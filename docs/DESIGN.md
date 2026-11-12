@@ -2062,7 +2062,9 @@ Rules:
    source that grows with depth, so health from armour is what keeps a deep hero from falling to
    every hit (§5.3).
 3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.75 s),
-   damage mitigation 90%, action interval ≥ 250 ms.
+   damage mitigation 90%, action interval ≥ 250 ms. Attack speed's bonuses together are kept before the cap
+   (`derived.attackSpeedBonus`): from the cap on, the Inventory marks the hero's swing "cap", and a piece's speed
+   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.
 
