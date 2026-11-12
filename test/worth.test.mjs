@@ -305,3 +305,36 @@ test('the camp\'s tokens say what their next level is worth at the wall: deep, d
     assert.ok(at300.wall.def >= 9 * bossAtk, 'this hero\'s defence is past the cap already (nine times the boss\'s attack)');
     assert.equal(level(at300, 'armory'), 0, 'so a level of the Rack is worth nothing');
 });
+
+test('with the switch BALANCE.rewards.dueByWorth a sure piece goes where it adds the most at the wall: deep, the weapon', async () => {
+    const { BALANCE } = await import('../src/core/formulas.js');
+    const { laggingSlot, dueSlot } = await import('../src/systems/inventory.js');
+    const { spawnEnemy, onEnemyDeath } = await import('../src/systems/combat.js');
+    const game = deepHero(1300);
+    const s = game.state;
+    const zone = zoneForStage(1300);
+    const old = zoneForStage(1000);
+    s.equipped.Legs = generateDrop(old.gearTier, true, s.idCounter++, old.depth, [{ type: 'Legs', weight: 1 }], { rarity: 'legendary', tier: old.gearTier });   // greaves left far behind
+    game.recompute();
+    const lag = laggingSlot(s, zone);
+    assert.equal(lag.type, 'Legs', 'by score the greaves lag');
+    assert.equal(BALANCE.rewards.dueByWorth, 0, 'off unless measured');
+    assert.deepEqual(dueSlot(s, zone, [], { rarity: 'mythic', judge: judgeOf(game) }), lag, 'off: the laggard, as before');
+    BALANCE.rewards.dueByWorth = 1;
+    try {
+        const due = dueSlot(s, zone, [], { rarity: 'mythic', judge: judgeOf(game) });
+        assert.equal(due.type, 'Weapon', 'on: the weapon');
+        assert.equal(due.ratio, lag.ratio, 'the pity count\'s gate still reads the laggard');
+        assert.notEqual(dueSlot(s, zone, ['Weapon'], { rarity: 'mythic', judge: judgeOf(game) }).type, 'Weapon', "Lord's Due's second piece: the next");
+        // a Lord's first fall in play
+        Object.assign(s.combat, { stage: 1300, maxStage: 1300, lordsBeaten: 1200, active: true, mode: 'stages' });
+        spawnEnemy(game);
+        assert.equal(s.combat.enemy.lord, true);
+        game.drainEvents();
+        onEnemyDeath(game);
+        const lord = game.drainEvents().find(e => e.type === 'itemDropped' && e.lord);
+        assert.equal(lord.item.type, 'Weapon');
+    } finally {
+        BALANCE.rewards.dueByWorth = 0;
+    }
+});

@@ -77,7 +77,13 @@ export const BALANCE = {
         gildedChance: 1 / 150,
         gildedGoldMult: 5,
         gildedXpMult: 2,
-        gildedEssence: [3, 6]
+        gildedEssence: [3, 6],
+        // Where a sure piece goes (a Lord's due, the bosses' due: systems/inventory.js dueSlot). 0: the weapon or armour
+        // that lags furthest by score, as since October 2026. 1: the one where a piece of the place would add the most
+        // stages at the hero's wall (systems/worth.js): deep, the weapon, where the lagging armour's mythic was worth
+        // 0.4-3.7 stages and a mythic weapon 15-29 (research loop 047). A switch for the measurement (tools/simulate.mjs
+        // --set=BALANCE.rewards.dueByWorth:1), off until the owner decides: it moves balance.
+        dueByWorth: 0
     },
     prestige: {
         minStage: 10,

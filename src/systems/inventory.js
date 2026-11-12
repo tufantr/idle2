@@ -9,7 +9,7 @@ import {
 import { salvageBars, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
-import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult } from '../core/formulas.js';
+import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, BALANCE } from '../core/formulas.js';
 import { skillLevel, deriveStats } from '../core/modifiers.js';
 import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
@@ -67,6 +67,30 @@ export function laggingSlot(state, zone, skip = []) {
     return worst;
 }
 
+
+/**
+ * The slot a sure piece goes to ({ type, ratio }: a Lord's due, the bosses' due, systems/combat.js): the weapon or armour
+ * that lags furthest by score (laggingSlot), or, with BALANCE.rewards.dueByWorth, the one where a piece of the place's
+ * tier at its depth (of `rarity`, its bonuses taken as those worn there) would add the most stages at the hero's wall
+ * (systems/worth.js); an empty slot first, and the laggard again if no slot would gain. `ratio` stays the laggard's, for
+ * the pity count's gate.
+ */
+export function dueSlot(state, zone, skip = [], { rarity = 'rare', judge = null } = {}) {
+    const lag = laggingSlot(state, zone, skip);
+    if (!BALANCE.rewards.dueByWorth || !lag) return lag;
+    const j = judge || wallJudge(state);
+    const power = GEAR_TIERS[Math.max(1, Math.min(GEAR_TIERS.length, zone.gearTier)) - 1].power * abyssDropMult(zone.depth || 0);
+    const quality = (RARITIES.find(r => r.id === rarity) || RARITIES[2]).quality;
+    let best = null;
+    for (const type of SMITHING_TYPES) {
+        if (skip.includes(type)) continue;
+        const base = STAT_UNIT * power * quality;
+        const piece = { type, atk: Math.round(base * SLOT_STATS[type].atk), def: Math.round(base * SLOT_STATS[type].def), affixes: state.equipped[type]?.affixes || [] };
+        const stages = j.worth(piece, type);
+        if (!best || stages > best.stages) best = { type, stages };
+    }
+    return best && best.stages > UPGRADE_EPS ? { type: best.type, ratio: lag.ratio } : lag;
+}
 
 export function canWear(state, item) {
     return skillLevel(state, 'combat') >= (TIER_WEAR_LEVEL[item.tier] || 1);

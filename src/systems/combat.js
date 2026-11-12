@@ -3,8 +3,8 @@
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS, FRONTIER_DROP, MYTHIC, PRIMAL } from '../data/items.js';
-import { addItem, dropTypesFor, outscores, laggingSlot, PITY_LAG } from './inventory.js';
-import { noteWallCamp } from './worth.js';
+import { addItem, dropTypesFor, outscores, laggingSlot, dueSlot, PITY_LAG } from './inventory.js';
+import { noteWallCamp, judgeOf } from './worth.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing, foodHeal } from '../data/resources.js';
 import { spendFightPotion } from './potions.js';
@@ -462,7 +462,7 @@ function lordsDue(game, enemy, drops) {
     c.lordsBeaten = enemy.stage;
     const zone = zoneForStage(enemy.stage);
     const top = enemy.stage < MYTHIC.from ? 'legendary' : enemy.stage >= PRIMAL.from && rng.chance(1 / PRIMAL.odds) ? 'primal' : 'mythic';
-    const lag = laggingSlot(state, zone);
+    const lag = dueSlot(state, zone, [], { rarity: top, judge: judgeOf(game) });   // (the slot that lags, unless BALANCE.rewards.dueByWorth)
     const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { rarity: top, tier: zone.gearTier });
     const result = addItem(game, item);
     bumpStat(game, 'itemsDropped');
@@ -473,7 +473,7 @@ function lordsDue(game, enemy, drops) {
     // the War Tree's Lord's Due (data/talents.js): now and then a second piece, for the next slot that lags
     const second = game.derived?.talents?.lordsDue;
     if (second && rng.chance(second)) {
-        const next = laggingSlot(state, zone, [lag.type]) || lag;
+        const next = dueSlot(state, zone, [lag.type], { rarity: top, judge: judgeOf(game) }) || lag;
         const extra = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: next.type, weight: 1 }], { rarity: top === 'primal' ? 'mythic' : top, tier: zone.gearTier });
         const kept = addItem(game, extra).kept;
         bumpStat(game, 'itemsDropped');
@@ -501,7 +501,8 @@ function pityMark(game, zone, drops, stage) {
     c.pity = (c.pity || 0) + 1;
     if (c.pity < PITY_MARKS) return;
     c.pity = 0;
-    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { tier: zone.gearTier, frontier: { stage, best: state.combat.bestStage } });
+    const due = dueSlot(state, zone, [], { judge: judgeOf(game) });   // (the slot that lags, unless BALANCE.rewards.dueByWorth)
+    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: due.type, weight: 1 }], { tier: zone.gearTier, frontier: { stage, best: state.combat.bestStage } });
     const result = addItem(game, item);
     bumpStat(game, 'itemsDropped');
     if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');

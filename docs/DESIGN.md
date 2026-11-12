@@ -1924,8 +1924,11 @@ The third part of the endless climb (§3.30, the research's §5.2 items 6–8): 
 bonuses whose worth doesn't fade as the hero grows.
 - **Lords** (`LORDS` in `src/data/zones.js`, `lordsDue` in `src/systems/combat.js`): from stage 200 the boss of every
   100th stage is its stratum's Lord, crowned on the stage path and named on its banner. Its first defeat ever leaves a
-  sure piece from its depth for the weapon or armour slot that lags furthest behind (`laggingSlot`; an earring was a
-  poor due in the first try): legendary, from stage 500 Mythic (Primal one time in 20
+  sure piece from its depth for the weapon or armour slot that lags furthest behind (`laggingSlot`, through `dueSlot`; an
+  earring was a poor due in the first try; with the switch `BALANCE.rewards.dueByWorth`, off until the owner decides on the
+  coordinator's measurement, the due and the bosses' due go instead where a piece of the place adds the most stages at the
+  wall by §3.31's measure: deep, the weapon, where the lagging armour's mythic was worth 0.4–3.7 stages and a mythic weapon
+  15–29, research loop 047): legendary, from stage 500 Mythic (Primal one time in 20
   from 1,000), with its card. After that it is a boss like the others (`combat.lordsBeaten`; a save from before counts
   those above its best as beaten, their due being for new ground).
 - **The strata come round** (`stratumAt`, `stratumById` in `src/data/strata.js`): past Pandemonium (stage 500) the
@@ -2305,6 +2308,7 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | Walls earlier/later | `BALANCE.enemy.hpGrowth`, `atkGrowth`, boss multipliers, `bossTimeMs` | `src/core/formulas.js` |
 | Bigger gear jumps | `GEAR_TIERS` power | `src/data/items.js` |
 | More/fewer gear drops | `GEAR_DROP_CHANCE`, `DROP_*` weights and slot multipliers, `PITY_MARKS`; zone `gearTier` | `src/data/items.js`, `src/data/zones.js` |
+| Where the sure pieces go (a Lord's due, the bosses' due) | `BALANCE.rewards.dueByWorth`: 0 the slot that lags by score, 1 where a piece adds the most stages at the wall (§3.32) | `src/core/formulas.js` |
 | The anvil | `ANVIL_LEVEL_PER_UPGRADE`, `ANVIL_BAR_GROWTH`, `ANVIL_REFUND`, `anvilBarMult` | `src/data/workshop.js` |
 | Dungeon rewards | `CHEST_*`, `FRAGMENTS_PER_UNIQUE`, `DUNGEON_MILESTONES`, placement | `src/data/dungeons.js` |
 | The Titan | `TITAN_*` | `src/data/dungeons.js` |
