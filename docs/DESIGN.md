@@ -2565,6 +2565,7 @@ wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki
                       lib/: Markdown, layout, search, link check). test/wiki.test.mjs keeps it building
 api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
                       clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
+                      · mail.js (Resend) · review.js (the growth check's list, mailed to the owner each week)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·

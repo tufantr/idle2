@@ -352,6 +352,29 @@ test("flags list before they act: a fixed check's old flags lapse, the owner's b
     assert.equal((await (await post('/clan/attack', { strikes: [], ms: 30000 }, forger)).json()).capped, true);
 });
 
+test("the week's review list goes to the owner by mail (api/review.js): each account by name with its numbers, nothing else; no address, no mail", async () => {
+    const { weeklyReview, LABELS } = require('../api/review.js');
+    assert.deepEqual(app.RANKED.map(r => LABELS[r.key]), app.RANKED.map(r => r.label), "every ranked number in the check's words");
+    const store = memory || require('../api/store.js');
+    const quick = await register('quick_climber', { fresh: true });
+    await post('/save', { state: heroSave({ bestStage: 900, playtimeMs: 3600 * 1000 }) }, quick);
+    const sent = [];
+    const send = async message => { sent.push(message); };
+    const quiet = await weeklyReview({ store, send, to: '', now: clock });
+    assert.deepEqual([quiet.sent, quiet.why, sent.length], [false, 'OWNER_ALERT_EMAIL is not set', 0], 'no address: no mail');
+    const mailed = await weeklyReview({ store, send, to: 'owner@example.test', now: clock });
+    assert.equal(mailed.sent, true);
+    assert.ok(mailed.accounts >= 1);
+    const [mail] = sent;
+    assert.equal(mail.to, 'owner@example.test');
+    assert.match(mail.subject, /^Fantasy Idle review list: \d+ accounts? this week$/);
+    assert.match(mail.text, /\nquick_climber\n {2}best stage: 0 to 900, where [\d,]+ more was allowed \([\d.]+ times\), 1 day, 1 upload\n/);
+    assert.ok(!mail.text.includes('@'), 'nobody\'s address, nor anything but names and numbers');
+    // a week with nothing on it says so
+    await weeklyReview({ store, send, to: 'owner@example.test', now: clock + 8 * 24 * 3600 * 1000 });
+    assert.equal(sent[1].subject, 'Fantasy Idle review list: nothing this week');
+});
+
 test("the ceilings are the save's own: the best stage at its wall (MAX_STAGE), total XP at every skill stopped", async () => {
     // the best stage's was 6,000, weeks ahead of the deepest live hero, with two medals past it; total XP counted 13 skills
     const { MAX_STAGE } = await import('../src/core/state.js');

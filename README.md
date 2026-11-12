@@ -121,6 +121,9 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   the domain is verified there (region Ireland; its DKIM, sending and DMARC records are in Cloudflare's DNS), and
   the key, made by the owner with sending access to fantasyidle.com only, is `RESEND_API_KEY` in the server's
   `/etc/fantasyidle/api.env`. Without it a sign-up is made but its code can't go (the dialog says so).
+- **The owner's mail:** `OWNER_ALERT_EMAIL` in `/etc/fantasyidle/api.env` (absent: none of it is sent) gets the growth
+  check's review list once a week, from `node api/review.js` run by a weekly timer with the same settings: each account
+  whose numbers grew faster than the check allows, by its username, with the numbers.
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
