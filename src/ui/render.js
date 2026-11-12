@@ -1301,10 +1301,11 @@ function itemTile(state, item, { slot = null, selected = false } = {}) {
     // a worn piece's plate is its slot's levels (the anvil's forge, the jeweller's bench); one in the bag has none of its own
     const up = !slot ? 0 : onAnvil(item) ? forgeLevel(state, slot) : benchLevel(state, slot);
     const rarity = RARITIES.find(r => r.id === item.rarity);
+    const steps = Math.max(0, RARITIES.indexOf(rarity));   // its rarity told twice: a pip for each step above Common, beside the colour
     const wearable = canWear(state, item);
     const better = !slot && wearable && isUpgrade(state, item);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
-    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
+    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${steps ? `<i class="tile-pips" style="--pips:${steps}" aria-hidden="true"></i>` : ''}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
 
 function dollSlot(state, slot, selectedId) {
@@ -1585,8 +1586,9 @@ function renderWarTree(game, pick, shown) {
             const block = learnBlock(state, t.id);
             const gate = talentBlock(state, t, 1);   // what stands in its way, a free point or not
             const cls = rank >= t.max ? 'full' : !block ? 'ready' : gate ? 'shut' : rank ? 'part' : 'open';
+            // a talent a point can go to is told by a + as well as its green frame (gold when full looks the same to a deuteranope)
             return `<button class="talent ${cls}${pick === t.id ? ' picked' : ''}${t.row === ROWS ? ' capstone' : ''}" style="grid-row:${t.row};grid-column:${t.col}" onclick="FI.pickTalent('${t.id}')"
-                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b></button>`;
+                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}${cls === 'ready' ? ', a point can go here' : ''}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b>${cls === 'ready' ? '<i class="talent-plus" aria-hidden="true">+</i>' : ''}</button>`;
         }).join('');
         // the bridges: a line from each talent to each one it opens, centre to centre behind them, in the grid's own
         // squares (one a cell: the svg stretches over the grid); those crossed drawn last, over the rest

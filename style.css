@@ -699,6 +699,10 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 .tile-up { position: absolute; right: 4px; bottom: 2px; font-size: 0.62rem; font-weight: 800; color: #fde68a; text-shadow: 0 1px 2px #000; }
 .tile-lock { position: absolute; left: 3px; top: 2px; font-size: 0.58rem; font-style: normal; }
 .tile-better { position: absolute; right: 4px; top: 1px; font-size: 0.72rem; font-style: normal; color: #4ade80; text-shadow: 0 0 6px rgba(74, 222, 128, 0.8); }
+/* rarity told twice (WCAG 1.4.1): a pip for each step above Common up the tile's left edge, beside its colour (to a
+   deuteranope Rare and Epic look the same) */
+.tile-pips { position: absolute; left: 3px; bottom: 3px; width: 6px; height: calc(var(--pips) * 5px); pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--r) 70%, #fff) 0 1.7px, rgba(8, 5, 3, 0.92) 1.9px 2.6px, transparent 2.8px) center top / 6px 5px repeat-y; }
 .bag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; margin-bottom: 0.8rem; }
 .bag-hint { margin: -0.3rem 0 0.8rem; }
 .detail { position: relative; display: flex; flex-direction: column; gap: 0.6rem; }
@@ -2722,6 +2726,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .talent.ready .talent-rank { color: #bbf7d0; border-color: #166534; }
 .talent.part { border-color: #b08a45; }
 .talent.full { border-color: #fcd34d; box-shadow: 0 0 10px rgba(252, 211, 77, 0.4); }
+.talent-plus { position: absolute; left: -7px; top: -7px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; font-size: 0.8rem; font-weight: 800; font-style: normal; line-height: 1; color: #052e16; background: #86efac; box-shadow: 0 0 0 1px #14532d, 0 0 8px rgba(74, 222, 128, 0.6); pointer-events: none; }   /* a point can go here: said by a mark too */
 .talent.full .talent-rank { color: #fde68a; border-color: #a16207; }
 .talent.shut > .spr { filter: grayscale(1) brightness(0.5); }
 .talent.shut { border-color: #2a2015; }

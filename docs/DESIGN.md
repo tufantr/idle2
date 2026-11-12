@@ -246,7 +246,9 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   legendary is worth about a tier (×2.2): it beats a common piece of the tier above and about matches an
   uncommon one, a rare one beats it, and **nothing reaches two tiers up** (a test enforces this); in the Abyss it
   is worth nearly three depths of the drops' ×1.45. The prototype multiplied stats by up to 64× and let
-  legendary copper beat runite.
+  legendary copper beat runite. A tile tells its rarity twice (WCAG 1.4.1; to a deuteranope Rare and Epic look the
+  same): its colour, and a pip for each step above Common up its left edge, as many as its rarity's bonuses. The War
+  Tree marks a talent a point can go to with a + beside its green frame (green and gold look alike to a deuteranope).
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
 - **Upgrades:** +5% base stats per level to +10, then ×1.05 a level with no top (§3.31). Weapons and armour are

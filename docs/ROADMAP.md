@@ -1477,7 +1477,8 @@ Keeping it running:
       Settings has a switch for the fight's two keys, M (the map) and Space (a strike), kept on that device: speech input
       types them. The monster flashes at most three times a second (WCAG 2.3.1; striking four times a second made five, on
       up to 90% of the area WCAG allows): a blow sooner than that knocks it back without the light, its number and sound as
-      ever
+      ever. A tile tells its rarity twice: its colour, and a pip for each step above Common (Rare and Epic looked the same
+      to a deuteranope); a War Tree talent a point can go to wears a + beside its green frame
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
