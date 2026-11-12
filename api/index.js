@@ -906,11 +906,14 @@ async function standingOf(ranking, clanId, kills) {
     return { division: d.id, divisionName: d.name, rank: 0, of: ranking.divisions.find(x => x.id === d.id)?.clans.length || 0, score: 0, counted: 0, kills };
 }
 
+// The clans to find: by name or tag, those whose members play first (`active`: who uploaded this past week, as a clan's
+// power counts them), then the biggest.
 app.get('/api/clans', authenticateToken, route('clans', async (req, res) => {
     const search = cleanText(req.query.search, 32);
-    const crowns = await crownsFor(Date.now());
+    const now = Date.now();
+    const crowns = await crownsFor(now);
     const { hallStage, hallLevels } = await engine();
-    res.json({ clans: (await store.listClans(search, 50)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id) || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
+    res.json({ clans: (await store.listClans(search, 50, now - ACTIVE_WITHIN)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id) || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
 }));
 
 app.get('/api/clans/ranking', authenticateToken, route('clan ranking', async (req, res) => {

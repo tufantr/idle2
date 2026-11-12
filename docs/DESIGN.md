@@ -1070,7 +1070,9 @@ with the game's own stat code; the client never submits damage or scores.
 
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
-  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
+  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member. The list of clans to
+  find shows on each row the members who played (uploaded) this past week, and puts the clans with the most of them first,
+  then the biggest (the research loop's P-035, November 2026: by members alone, a big clan gone quiet led the list).
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).

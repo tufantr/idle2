@@ -1479,6 +1479,8 @@ Keeping it running:
       ones, a character or short run repeated, a run of keys in a row and the username itself, with a plain reason
 - [x] **A sign-up doesn't tell whose address has an account** (R9, November 2026; DESIGN §3.17): it answers "check your
       email" either way, and an address that has one gets a line saying someone tried, instead of a code
+- [x] **The clan list says who plays** (R14, November 2026; DESIGN §3.18): each clan's row says how many of its members
+      played this past week, and the clans with the most of them come first, so a newcomer finds one that plays
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

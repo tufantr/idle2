@@ -424,17 +424,23 @@ async function putSnapshotIfMissing(userId, week, metricsJson) {
 
 // ---------- clans ----------
 
-/** Clans by name or tag, the biggest first, each with its hall's rooms ({ room → work }: the stage its list shows). */
-async function listClans(search, limit) {
+/**
+ * Clans by name or tag, each with its members, those of them who played (uploaded) after `activeSince` (`active`), and its
+ * hall's rooms ({ room → work }: the stage its list shows). The most members who play first, then the biggest (the research
+ * loop's P-035, November 2026: newcomers find the clans that play; by members alone, a big clan gone quiet led the list).
+ */
+async function listClans(search, limit, activeSince = 0) {
     const pattern = `%${String(search || '').replace(/[\\%_]/g, '\\$&')}%`;   // a % or _ typed is a letter, not a wildcard
     const { rows } = await sql`
         SELECT c.id, c.name, c.tag, c.description, c.looking_for, COUNT(m.user_id) AS members,
+            COUNT(m.user_id) FILTER (WHERE u.last_saved > ${activeSince}::bigint) AS active,
             (SELECT json_object_agg(h.room, h.given) FROM clan_hall h WHERE h.clan_id = c.id) AS hall
-        FROM clans c LEFT JOIN clan_members m ON m.clan_id = c.id
+        FROM clans c LEFT JOIN clan_members m ON m.clan_id = c.id LEFT JOIN users u ON u.id = m.user_id
         WHERE c.name ILIKE ${pattern} OR c.tag ILIKE ${pattern}
-        GROUP BY c.id ORDER BY COUNT(m.user_id) DESC, c.id ASC LIMIT ${limit}
+        GROUP BY c.id
+        ORDER BY COUNT(m.user_id) FILTER (WHERE u.last_saved > ${activeSince}::bigint) DESC, COUNT(m.user_id) DESC, c.id ASC LIMIT ${limit}
     `;
-    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, members: int(r.members), hall: workOf(r.hall) }));
+    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, members: int(r.members), active: int(r.active), hall: workOf(r.hall) }));
 }
 
 /** A hall's rooms as stored ({ room → work }), as plain numbers. */

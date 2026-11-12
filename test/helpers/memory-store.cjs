@@ -103,12 +103,16 @@ function createMemoryStore() {
             if (!db.snapshots.some(s => s.userId === userId && s.week === week)) db.snapshots.push({ userId, week, metrics: metricsJson });
         },
 
-        async listClans(search, limit) {
+        async listClans(search, limit, activeSince = 0) {
             const q = (search || '').toLowerCase();
+            const played = m => (db.users.find(u => u.id === m.userId)?.last_saved || 0) > activeSince;
             return db.clans
                 .filter(c => c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q))
-                .map(c => ({ id: c.id, name: c.name, tag: c.tag, description: c.description, lookingFor: c.lookingFor, members: db.members.filter(m => m.clanId === c.id).length, hall: hallOf(c.id) }))
-                .sort((a, b) => b.members - a.members || a.id - b.id)
+                .map(c => {
+                    const members = db.members.filter(m => m.clanId === c.id);
+                    return { id: c.id, name: c.name, tag: c.tag, description: c.description, lookingFor: c.lookingFor, members: members.length, active: members.filter(played).length, hall: hallOf(c.id) };
+                })
+                .sort((a, b) => b.active - a.active || b.members - a.members || a.id - b.id)
                 .slice(0, limit);
         },
         async createClan({ name, tag, description, lookingFor, ownerId, now }) {

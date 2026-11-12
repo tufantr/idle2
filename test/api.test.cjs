@@ -66,6 +66,11 @@ const peek = {
     async reviews(username) {
         return (await (memory || require('../api/store.js')).reviewsSince(0)).filter(r => r.username === username);
     },
+    /** When a player last uploaded, as if then. */
+    async lastSaved(username, at) {
+        if (memory) { memory.db.users.find(u => u.username === username).last_saved = at; return; }
+        await pool.query('UPDATE users SET last_saved = $1 WHERE username = $2', [at, username]);
+    },
     /** A player's stored flags, as an older server or the owner wrote them. */
     async setFlags(username, flags) {
         if (memory) { memory.db.users.find(u => u.username === username).flags = JSON.stringify(flags); return; }
@@ -451,6 +456,23 @@ test('clans: create, list, join, the member cap, leaving hands the clan on', asy
     const { clanId: bigId } = await (await post('/clans', { name: 'Big Guild', tag: 'BIG' }, big)).json();
     for (let i = 0; i < 19; i++) assert.equal((await post('/clans/join', { clanId: bigId }, await register(`member_${i}`))).status, 200);
     assert.equal((await post('/clans/join', { clanId: bigId }, await register('one_too_many'))).status, 400, 'full at 20');
+});
+
+test("the clan list says who plays: each clan's members who played this past week, and the clans that play first", async () => {
+    const giants = [await register('pulse_giant_0')];
+    const { clanId: big } = await (await post('/clans', { name: 'Pulse Giants', tag: 'PLG' }, giants[0])).json();
+    for (let i = 1; i < 4; i++) { giants.push(await register(`pulse_giant_${i}`)); await post('/clans/join', { clanId: big }, giants[i]); }
+    const few = [await register('pulse_few_0'), await register('pulse_few_1')];
+    const { clanId: small } = await (await post('/clans', { name: 'Pulse Few', tag: 'PLF' }, few[0])).json();
+    await post('/clans/join', { clanId: small }, few[1]);
+    for (const t of [...giants, ...few]) await post('/save', { state: heroSave({ bestStage: 30 }) }, t);
+    for (const i of [0, 1, 3]) await peek.lastSaved(`pulse_giant_${i}`, clock - 8 * 24 * 3600 * 1000);   // a week and a day without a save (one still plays)
+    const { clans } = await (await get('/clans?search=pulse', few[1])).json();
+    assert.deepEqual(clans.map(c => [c.name, c.members, c.active]), [['Pulse Few', 2, 2], ['Pulse Giants', 4, 1]], 'the clan that plays first, though smaller');
+    for (const key of ['id', 'name', 'tag', 'description', 'lookingFor', 'members', 'crown', 'stage']) assert.ok(key in clans[0], `${key} kept`);
+    // members alike in who plays: the bigger first, as before
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, giants[1]);
+    assert.deepEqual((await (await get('/clans?search=pulse', few[1])).json()).clans.map(c => c.name), ['Pulse Giants', 'Pulse Few']);
 });
 
 test("the boss is the clan's, counted in its attacks: level 1 is CLAN_BOSS.first attacks of an average member, each seeing it in their own hits", async () => {

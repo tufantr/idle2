@@ -19,8 +19,9 @@
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
-//                                                 # flagged account's attack card: the API is
-//                                                 # answered by the tool, CLAN_API below)
+//                                                 # flagged account's attack card, 'clanlist' the
+//                                                 # clans to find: the API is answered by the
+//                                                 # tool, CLAN_API below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -155,6 +156,12 @@ const CLAN_SHOTS = {
         await new Promise(resolve => setTimeout(resolve, 500));
         FI.switchTab('settings');
     },
+    // a player in no clan: the clans to find, each with its members and who of them played this past week
+    clanlist: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ noClan: true }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+    },
     // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
     clancapped: async () => {
         document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
@@ -202,7 +209,13 @@ function clanApi() {
         if (path === '/__shots') { shotMode = JSON.parse(request.postData() || '{}'); return json({}); }
         if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, flaggedUntil, ...news() });
         if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, flaggedUntil, gifts: 0, ...news() });
-        if (path === '/clan') return json(answer());
+        if (path === '/clan') return json(shotMode.noClan ? { clan: null } : answer());
+        if (path === '/clans') {   // (api/index.js's list: the clans that play first)
+            return json({ maxMembers: 20, clans: [
+                { id: 3, name: 'Night Watch', tag: 'NW', description: 'Daily players, EU evenings', lookingFor: 'anyone past stage 300', members: 12, active: 11, stage: 2, crown: { division: 'gold', rank: 1, week } },
+                { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', members: 18, active: 6, stage: 1, crown: null },
+                { id: 9, name: 'Slow Burn', tag: 'SLO', description: 'Idle when we can', lookingFor: '', members: 4, active: 0, stage: 0, crown: null }] });
+        }
         if (path === '/clan/attack') {   // a flagged account's attack, held back (api/index.js FLAGGED_ATTACK_SHARE)
             return json({ damage: 9.6e6, capped: true, strikes: 0, hp: 4.0e8, maxHp: 9.6e8, level: 2, killed: false, attacksLeft: 1, kills: 1,
                 banner: { week, kills: 1 }, rank: 2, of: 4, week });
@@ -342,11 +355,12 @@ for (const viewport of VIEWPORTS) {
         await page.waitForTimeout(1600);
         for (const tab of clanTabs) {
             await page.evaluate(() => fetch('/api/__shots', { method: 'POST', body: '{}' }));   // the tool's server as it answers every shot
-            await page.evaluate(() => { FI.closeModal(); FI.switchTab('clan'); });
+            await page.evaluate(() => { FI.closeModal(); FI.switchTab('clan'); FI.refreshSocial(); });   // (the clan back after a shot without one)
             await page.waitForTimeout(900);
             if (CLAN_SHOTS[tab]) { await page.evaluate(CLAN_SHOTS[tab]); await page.waitForTimeout(700); }
             else await page.evaluate(() => { document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' }); if (innerWidth < 900) window.scrollBy(0, -(document.querySelector('#sidebar')?.offsetHeight || 0) - 8); });
-            if (!['clancloak', 'clanfight', 'account'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (!['clancloak', 'clanfight', 'account', 'clanlist'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (tab === 'clanlist' && !(await page.$('#clan-search'))) problems.push(`no list of clans at ${viewport.width}px`);
             if (tab === 'account' && !(await page.$('.flag-line'))) problems.push(`no flagged line in Settings at ${viewport.width}px`);
             if (tab === 'clancapped' && !(await page.$('.celebration .cel-note'))) problems.push(`no card for a held-back attack at ${viewport.width}px`);
             await shoot(page, tab, viewport.width);
