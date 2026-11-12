@@ -18,6 +18,7 @@ Every clan has a name, a tag, a description and a "looking for" line, and **ever
 - slurs, or hate against people for who they are;
 - threats, bullying or harassment;
 - sexual content;
+- anything that encourages hurting yourself or anyone else, such as suicide, self-harm, eating disorders, violence, drugs or dangerous challenges;
 - anyone's personal details, such as a real name, where someone lives or goes to school, or a phone number;
 - contact details or invitations to other apps and sites: no handles, links or invite codes. You may name the game's own Discord;
 - pretending to be someone else: another player, our team, or a real person or company;
