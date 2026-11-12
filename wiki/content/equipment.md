@@ -71,7 +71,7 @@ A green ▲ marks a piece that would make your hero stronger at his wall, the bo
 
 ## Auto-salvage and locking
 
-- **Auto-salvage** salvages dropped gear up to a rarity as it lands, or with Weaker any drop weaker than what you wear, whatever its rarity: {{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : RARITIES.find(r => r.id === o).name)).join(', ')}}. It starts at Common, and the switch shows under the bag once a few pieces have dropped. It never takes an upgrade, nor anything you made. Weaker takes a dungeon's spare uniques too, but leaves one of each in the bag for the Seal.
+- **Auto-salvage** salvages dropped gear up to a rarity as it lands, or with Weaker any drop weaker than what you wear, whatever its rarity: {{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : RARITIES.find(r => r.id === o).name)).join(', ')}}. It starts at Common, and the switch shows under the bag once a few pieces have dropped. It never takes an upgrade, nor anything you made. Weaker takes a dungeon's spare uniques too, but leaves one of each in the bag for the Seal, and with it on, putting a piece on also salvages the bag's pieces of that kind it made weaker, the one taken off among them. Once the bag has been full, the Weaker switch glows until you have tried it. The log gathers what auto-salvage takes into one line a minute.
 - **Locking** a piece (the padlock in its detail) keeps it from being sold or salvaged, by hand or by the bag. The first copy of a unique arrives locked.
 
 ## The anvil

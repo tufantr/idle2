@@ -1488,7 +1488,9 @@ export function renderInventory(game, ui) {
                 <span>${resIcon('essence')} Auto-salvage drops up to</span>
                 <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
                     const r = RARITIES.find(x => x.id === o);
-                    return `<button class="rarity-pill${o === auto ? ' on' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}"${o === 'weaker' ? ' title="Any drop weaker than what you wear, whatever its rarity"' : ''}>${o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : esc(r.name)}</button>`;
+                    // Weaker glows from the bag's first fill until it is picked once (systems/disclosure.js bag_full, weaker_tried)
+                    const glow = o === 'weaker' && o !== auto && seen(state, 'bag_full') && !state.seen?.weaker_tried;
+                    return `<button class="rarity-pill${o === auto ? ' on' : ''}${glow ? ' glow' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}"${o === 'weaker' ? ' title="Any drop weaker than what you wear, whatever its rarity; with it on, putting a piece on also salvages what it made weaker"' : ''}>${o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : esc(r.name)}</button>`;
                 }).join('')}</span>
             </div>` : ''}
         </section>

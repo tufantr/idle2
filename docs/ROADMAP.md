@@ -1468,6 +1468,10 @@ Keeping it running:
       bag keeps and the bag's order, which is now best first
 - [x] **Equip all** (the research loop's P-076, 12 November 2026; DESIGN §3.5): once two or more pieces wait, an **All**
       beside the fight's Equip puts on the best for every slot in one tap, with one rise over the hero for all of it
+- [x] **Weaker that stays** (the research loop's P-077, 12 November 2026; DESIGN §3.5): with Weaker on, putting a piece on
+      also salvages what it made weaker, the piece taken off too (never a locked, crafted or Seal piece); the Weaker pill
+      glows once the bag has been full, until it is tried; and automatic salvage writes a line a minute in the log, not one
+      a piece
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

@@ -851,6 +851,7 @@ function handleEvents(events) {
                     kicker: 'The clan hall', title: 'The clan\'s cloak', lines: [`For ${HALL.cloakHours} hours of work given to the hall, in the banner's colour`], ms: 5200 });
                 break;
             case 'equip':   // the first piece to take a slot's levels: how the forge (and the bench) work, said once (systems/inventory.js)
+                if (ev.swept) salvagedToast(ev.swept, ' made weaker');   // Weaker that stays: what the Equip took with it
                 if (ev.firstForge) {
                     const jewel = /^(Ring|Ear|Neck)/.test(ev.slot);
                     const kind = ev.slot === 'Weapon' ? 'weapon' : jewel ? (ev.slot === 'Neck' ? 'amulet' : ev.slot.startsWith('Ring') ? 'ring' : 'earring') : 'piece of armour';

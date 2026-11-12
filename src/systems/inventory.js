@@ -328,12 +328,40 @@ function salvageObject(game, item, { auto = false, quiet = auto } = {}) {
     state.resources.essence += gained.essence;
     bumpStat(game, 'itemsSalvaged');
     if (auto) bumpStat(game, 'itemsAutoSalvaged');
-    if (!quiet || rarityIndex(item.rarity) >= 2) {
+    if (!quiet) {
         const text = gainedText(gained);
         log(game, `♻️ Salvaged ${item.name}${text ? ` for ${text}` : ''}.`, 'loot');
-    }
+    } else if (auto && rarityIndex(item.rarity) >= 2) tallyAutoSalvage(game, item, gained);   // (a line a minute: flushSalvageLine)
     game.markDirty();
     return gained;
+}
+
+/**
+ * Automatic salvage's line in the log, gathered (the research loop's P-077: a line for each rare or better piece the bag
+ * or Weaker salvaged came to about twenty an hour): the pieces of a minute go into one line, kept in `meta.salvageTally`
+ * until it is written, at the next such salvage or the tick after a minute (Game.tick).
+ */
+export const SALVAGE_LINE_MS = 60000;
+
+function tallyAutoSalvage(game, item, gained) {
+    const meta = game.state.meta;
+    flushSalvageLine(game);
+    const t = meta.salvageTally ||= { since: game.now, count: 0, essence: 0, materials: {}, rarities: {} };
+    t.count += 1;
+    t.essence += gained.essence || 0;
+    for (const [id, qty] of Object.entries(gained.materials || {})) t.materials[id] = (t.materials[id] || 0) + qty;
+    t.rarities[item.rarity] = (t.rarities[item.rarity] || 0) + 1;
+}
+
+/** Write the gathered line once its minute is up (`force`: now): "Salvaged 5 pieces as they came (2 epic, 3 rare) for …". */
+export function flushSalvageLine(game, force = false) {
+    const t = game.state.meta.salvageTally;
+    if (!t || (!force && game.now - t.since < SALVAGE_LINE_MS)) return false;
+    delete game.state.meta.salvageTally;
+    const kinds = [...RARITY_ORDER].reverse().filter(r => t.rarities[r] > 0).map(r => `${t.rarities[r]} ${RARITIES.find(x => x.id === r).name.toLowerCase()}`).join(', ');
+    const text = gainedText(t);
+    log(game, `♻️ Salvaged ${t.count} piece${t.count === 1 ? '' : 's'} as they came (${kinds})${text ? ` for ${text}` : ''}.`, 'loot');
+    return true;
 }
 
 export function salvageItem(game, id) {
@@ -405,9 +433,26 @@ export function equipItem(game, id, requestedSlot = null) {
 
     const gain = equipGain(state, item, slot);   // (before the swap: what it does to him, for the screen)
     const { forge, firstForge } = wear(game, item, index, slot);
-    game.emit({ type: 'equip', item, slot, gain, forge, firstForge });
+    const swept = sweepWeaker(game, [item.type]);
+    game.emit({ type: 'equip', item, slot, gain, forge, firstForge, ...(swept ? { swept } : {}) });
     game.markDirty();
     return true;
+}
+
+/**
+ * Weaker that stays (the research loop's P-077): with the Weaker auto-salvage on, an Equip also takes the bag's pieces of
+ * the kinds it put on that no longer improve what is worn, the one taken off among them, as Salvage weaker would; never
+ * a locked piece, the Seal's copy, nor one the hero made (as the auto-salvage never takes those). One line in the log;
+ * returns { count, essence, materials, items } or null.
+ */
+function sweepWeaker(game, types) {
+    const state = game.state;
+    if (state.settings.autoSalvage !== 'weaker') return null;
+    game.recompute();   // (judged on what is worn now)
+    const kinds = new Set(types);
+    const doomed = weakerInBag(state, judgeOf(game)).filter(i => kinds.has(i.type) && i.source !== 'crafted');
+    if (!doomed.length) return null;
+    return { ...salvageBatch(game, doomed, ' made weaker by what you put on'), items: doomed };
 }
 
 /**
@@ -480,7 +525,8 @@ export function equipAll(game) {
     const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
     const gain = { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
     const lead = first || put[0];
-    game.emit({ type: 'equip', item: lead.item, slot: lead.slot, gain, forge: first ? first.forge : 0, firstForge: !!first, count: put.length, items: put.map(p => p.item) });
+    const swept = sweepWeaker(game, put.map(p => p.item.type));
+    game.emit({ type: 'equip', item: lead.item, slot: lead.slot, gain, forge: first ? first.forge : 0, firstForge: !!first, count: put.length, items: put.map(p => p.item), ...(swept ? { swept } : {}) });
     game.markDirty();
     return put.length;
 }

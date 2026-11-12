@@ -897,6 +897,16 @@ function normalise(data, now) {
     if (wallCamp) state.meta.wallCamp = Object.fromEntries(CAMP_UPGRADES.map(u => [u.id, Math.min(u.max, 2500, Math.max(0, Math.floor(Number(wallCamp[u.id]) || 0)))]));
     else if (state.combat.maxStage >= state.combat.bestStage) state.meta.wallCamp = { ...state.camp };
     else delete state.meta.wallCamp;
+    // automatic salvage's gathered line, not yet written (systems/inventory.js flushSalvageLine): whole counts, or none
+    const tally = isPlainObject(data?.meta?.salvageTally) ? data.meta.salvageTally : null;
+    const whole = v => Math.min(1e300, Math.max(0, Math.floor(Number(v) || 0)));
+    if (tally && Number.isFinite(Number(tally.since)) && whole(tally.count) >= 1) {
+        const materials = isPlainObject(tally.materials) ? tally.materials : {};
+        const rarities = isPlainObject(tally.rarities) ? tally.rarities : {};
+        state.meta.salvageTally = { since: Math.min(now, Number(tally.since)), count: Math.min(1e6, whole(tally.count)), essence: whole(tally.essence),
+            materials: Object.fromEntries(Object.keys(materials).filter(id => Object.hasOwn(RESOURCES, id) && whole(materials[id]) > 0).map(id => [id, whole(materials[id])])),
+            rarities: Object.fromEntries(RARITIES.filter(r => whole(rarities[r.id]) > 0).map(r => [r.id, whole(rarities[r.id])])) };
+    } else delete state.meta.salvageTally;
     // Mini-game challenges never survive a reload: one left open counts as missed (it ends the streak, and
     // the next chance comes in the usual minutes; a reload used to give a fresh chance at once).
     const mgRules = BALANCE.minigame;

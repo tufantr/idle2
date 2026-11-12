@@ -282,6 +282,14 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   waiting piece for every slot (`upgradesWaiting`, `equipAll` in `src/systems/inventory.js`), two rings for the two ring
   slots, each judged again on what is worn by then (§3.31's measure); a piece it takes off doesn't go back on in the
   same tap. One rise over the hero says what it all did. Nothing goes on by itself: putting on a legendary stays a moment.
+- **Weaker that stays** (the research loop's P-077, 12 November 2026: unless swept by hand the bag was full from hour 10 to
+  39 on, and Weaker, judging a drop only as it lands, still left it full of yesterday's upgrades): with Weaker on, an
+  Equip (or Equip all) also salvages the bag's pieces of the kinds it put on that no longer improve what is worn, the one
+  taken off among them (`sweepWeaker`), never a locked piece, the Seal's copy or one the hero made, with one line and a
+  toast. The Weaker pill glows on the bag from the first time the bag is full until Weaker is picked once (disclosures
+  `bag_full`, `weaker_tried`). Automatic salvage's log gathers its rare or better pieces into a line a minute ("Salvaged
+  5 pieces as they came (2 epic, 3 rare) for …", `flushSalvageLine`, the minute kept in `meta.salvageTally`), where it
+  wrote about twenty lines an hour.
 
 ### 3.6 Combat
 

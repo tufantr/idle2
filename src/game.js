@@ -7,7 +7,7 @@ import { tickAction, startNodeAction, startSmelting, startCrafting, startAgility
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
-import { equipItem, equipAll, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
+import { equipItem, equipAll, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade, flushSalvageLine } from './systems/inventory.js';
 import { upgradeJewel, rerollJewel } from './systems/bench.js';
 import { reinforceItem, rerollItem } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
@@ -160,6 +160,7 @@ export class Game {
                 tickAutoPrestige(this);
             }
         } while (dt > 0);
+        flushSalvageLine(this);   // the automatic salvage's line, once its minute is up (systems/inventory.js)
 
         if (this.dirty) this.recompute();
         checkAchievements(this);
