@@ -14,7 +14,7 @@ import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, se
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
 import { tickMinigame, startMinigame, resolveMinigame, failMinigame, pumpHeat, tickChallenge, setDragValue, expireMinigames } from './systems/minigame.js';
-import { applyOffline } from './systems/offline.js';
+import { offlineReplay } from './systems/offline.js';
 import { claimDaily, dailyReady, accrueDaily } from './systems/daily.js';
 import { buyCampUpgrade } from './systems/camp.js';
 import { enterDungeon, returnToStages, setDungeonRepeat, keepGoing, endDungeon, assembleUnique, sealDungeons, challengeTitan, giveUpTitan, titanReady, scoreTitanCutShort } from './systems/dungeon.js';
@@ -46,6 +46,39 @@ const RETURN_MS = 10 * 60000;
 // Events that happen many times a second in combat; they don't warrant re-rendering a tab.
 const QUIET_EVENTS = new Set(['hit', 'enemyHit', 'dodge', 'eat']);
 
+/**
+ * Time away replayed a slice at a time (systems/offline.js offlineReplay), for a page that draws between slices
+ * (main.js catchUp): Game.beginResume and beginGap make one. step(stop) replays slices until stop() says so and
+ * says whether the replay is over (`summary` is its report then); finish() replays the rest at once. Meanwhile the
+ * game is mid-replay, so whatever acts on it (a tick, an action, a save) finishes the replay first: the game always
+ * ends where resumeFromSave, or a tick over the gap, would have taken it in one go.
+ */
+class CatchUp {
+    constructor(game, replay, end) {
+        this.game = game;
+        this.replay = replay;
+        this.end = end;
+        this.done = false;
+        this.summary = null;
+        this.where = null;     // where the replay stands: { from, to, at, mode } (offlineReplay), after a first slice
+    }
+    step(stop = () => false) {
+        while (!this.done) {
+            const next = this.replay.next();
+            if (next.done) {
+                this.done = true;
+                this.game.catchingUp = null;
+                this.summary = this.end(next.value);
+            } else {
+                this.where = next.value;
+                if (stop()) break;
+            }
+        }
+        return this.done;
+    }
+    finish() { this.step(); return this.summary; }
+}
+
 export class Game {
     constructor(state = null, now = Date.now()) {
         this.state = state ? migrateState(state, now) : createDefaultState(now);
@@ -54,6 +87,7 @@ export class Game {
         this.events = [];
         this.revision = 0;     // bumps whenever something visible changes; the UI re-renders on change
         this.silent = false;   // offline replay runs silently and reports a summary instead
+        this.catchingUp = null; // the replay of time away under way a slice at a time (CatchUp), if any
         this.attending = true; // the page is in view (the UI sets it; headless runs count as attended)
         this.dirty = true;
         this.derived = null;
@@ -75,11 +109,13 @@ export class Game {
 
     /** The page is in view, or not (attended time paces the new places; the playtest log notes it). */
     setAttending(on) {
+        this._caughtUp();
         if (!!on !== this.attending) notePlaytest(this.state, { kind: on ? 'show' : 'hide', what: '', cls: 'minor' }, this.now);
         this.attending = !!on;
     }
     /** Turn the playtest log on or off (Settings); turning it on starts it afresh. */
     setPlaytestLog(on) {
+        this._caughtUp();
         this.state.settings.playtestLog = !!on;
         if (on) { this.state.playtest = []; notePlaytest(this.state, { kind: 'start', what: `best stage ${this.state.combat.bestStage}`, cls: 'minor' }, this.now); }
         this.markDirty();
@@ -102,6 +138,7 @@ export class Game {
     /** Any click or key press: ends focus (the idle bonus) until the player leaves the game alone again. */
     noteInput(now = Date.now()) {
         if (!Number.isFinite(now)) return;
+        this._caughtUp();
         if (now > this.now) this.tick(now); // the time up to this input was still idle: simulate it first
         this.state.meta.lastInputAt = now;
         if (this.derived?.focused) { this.recompute(); this.revision++; }
@@ -117,7 +154,7 @@ export class Game {
     /** Advance the simulation to `now`. Returns the offline summary if a long gap was replayed. */
     tick(now) {
         if (!Number.isFinite(now)) return null;   // a clock that isn't a number would spoil every time kept
-        let offlineSummary = null;
+        this._caughtUp();
         let dt = now - this.now;
         if (dt < -5000) {   // the clock was turned back: carry on from the new time (it used to freeze until it caught up)
             clampTimers(this.state, now);
@@ -126,15 +163,35 @@ export class Game {
             return null;
         }
         if (dt <= 0) return null;
-        if (dt > OFFLINE_GAP_MS) {
-            // Tab was suspended or the machine slept: replay as offline progress from the last active moment.
-            this.state.meta.savedAt = this.now;
-            this.now = now;
-            this.recompute();
-            offlineSummary = applyOffline(this, now, { minMs: OFFLINE_GAP_MS });
-            this._returned(offlineSummary);
-            dt = 0;
-        }
+        if (dt > OFFLINE_GAP_MS) return this.beginGap(now).finish();
+        this._play(now, dt);
+        return null;
+    }
+
+    /** Would tick(now) replay a gap as time away (the machine slept, a background tab was paused)? */
+    gapAt(now) { return Number.isFinite(now) && now - this.now > OFFLINE_GAP_MS; }
+
+    /** tick(now) over a gap (gapAt) a slice at a time: a CatchUp whose finish() is that tick, or null when there is no gap. */
+    beginGap(now) {
+        this._caughtUp();
+        if (!this.gapAt(now)) return null;
+        // Tab was suspended or the machine slept: replay as offline progress from the last active moment.
+        this.state.meta.savedAt = this.now;
+        this.now = now;
+        this.recompute();
+        return this._catchUp(offlineReplay(this, now, { minMs: OFFLINE_GAP_MS }), summary => {
+            this._returned(summary);
+            this._play(now, 0);
+            return summary;
+        });
+    }
+
+    /** The replay under way finished at once, before anything else acts on the game (CatchUp). */
+    _caughtUp() { this.catchingUp?.finish(); }
+    _catchUp(replay, end) { return (this.catchingUp = new CatchUp(this, replay, end)); }
+
+    /** Play the `dt` ms up to `now` as ordinary play (a gap's end plays none), then what every tick looks at. */
+    _play(now, dt) {
         // Work through the gap in steps of at most MAX_TICK_MS: a background tab may only tick once a
         // minute, and every millisecond of it counts.
         do {
@@ -166,28 +223,35 @@ export class Game {
         checkUnlocks(this);
         checkDisclosures(this);
         if (this.dirty) this.recompute();
-        return offlineSummary;
     }
 
     /** Apply offline progress from the saved timestamp (call once after loading). */
     resumeFromSave(now) {
+        return this.beginResume(now)?.finish() ?? null;
+    }
+
+    /** resumeFromSave a slice at a time: a CatchUp whose finish() is resumeFromSave (null for a clock that isn't a number). */
+    beginResume(now) {
         if (!Number.isFinite(now)) return null;
+        this._caughtUp();
         this.now = now;
         this.recompute();
-        const summary = applyOffline(this, now);
-        accrueDaily(this.state, now);   // the crates that ripened while away wait now (the welcome-back offers them)
-        checkAchievements(this);
-        this._returned(summary);
-        checkUnlocks(this);
-        evaluateDisclosures(this.state);
-        if (this.dirty) this.recompute();
-        this.state.meta.savedAt = now;
-        return summary;
+        return this._catchUp(offlineReplay(this, now), summary => {
+            accrueDaily(this.state, now);   // the crates that ripened while away wait now (the welcome-back offers them)
+            checkAchievements(this);
+            this._returned(summary);
+            checkUnlocks(this);
+            evaluateDisclosures(this.state);
+            if (this.dirty) this.recompute();
+            this.state.meta.savedAt = now;
+            return summary;
+        });
     }
 
     // ----- player actions (thin wrappers so the UI has one import) -----
     // Each action recomputes derived stats immediately, so callers can read game.derived right after.
-    _act(fn) { const result = fn(); if (this.dirty) this.recompute(); return result; }
+    // (A replay under way a slice at a time is finished first: CatchUp.)
+    _act(fn) { this._caughtUp(); const result = fn(); if (this.dirty) this.recompute(); return result; }
 
     /** Name the hero (one line of plain text; '' makes him "You" again). */
     setHeroName(name) { return this._act(() => { this.state.hero.name = heroName(name); this.markDirty(); return true; }); }
@@ -246,7 +310,7 @@ export class Game {
     setAutoEat(rule) { return this._act(() => setAutoEat(this, rule)); }
     setStage(stage) { return Number.isFinite(stage) ? this._act(() => setStage(this, stage)) : false; }
     travel(stage) { return Number.isFinite(stage) ? this._act(() => travelTo(this, stage)) : false; }
-    setFarmMode(on) { this.state.combat.farmMode = !!on; }
+    setFarmMode(on) { this._caughtUp(); this.state.combat.farmMode = !!on; }
 
     equipItem(id, slot) { return this._act(() => equipItem(this, id, slot)); }
     unequipItem(slot) { return this._act(() => unequipItem(this, slot)); }
@@ -284,7 +348,7 @@ export class Game {
 
     enterDungeon(id) { return this._act(() => enterDungeon(this, id)); }
     leaveDungeon() { return this._act(() => { if (this.state.combat.mode === 'dungeon') { leaveCombat(this); } }); }
-    setDungeonRepeat(on) { return setDungeonRepeat(this, on); }
+    setDungeonRepeat(on) { this._caughtUp(); return setDungeonRepeat(this, on); }
     /** After a clear: run the dungeon again and again, until the hero leaves. */
     dungeonKeepGoing() { return this._act(() => keepGoing(this)); }
     /** After a clear: end the dungeon, back to the stages. */
@@ -335,15 +399,16 @@ export class Game {
     startMinigame(skill) { return this._act(() => startMinigame(this, skill)); }
     resolveMinigame(skill) { return this._act(() => resolveMinigame(this, skill)); }
     failMinigame(skill) { return this._act(() => failMinigame(this, skill)); }
-    pumpHeat(skill) { return pumpHeat(this, skill); }
-    setDragValue(skill, value) { return setDragValue(this, skill, value); }
+    pumpHeat(skill) { this._caughtUp(); return pumpHeat(this, skill); }
+    setDragValue(skill, value) { this._caughtUp(); return setDragValue(this, skill, value); }
 
     dailyReady() { return dailyReady(this.state, this.now); }
     claimDaily() { return this._act(() => claimDaily(this)); }
 
     /** Serialisable snapshot for saving. */
-    serialize(now = this.now) {
-        this.state.meta.savedAt = now;
+    serialize(now) {
+        this._caughtUp();   // (never a game mid-replay: its clock then is the replay's)
+        this.state.meta.savedAt = now === undefined ? this.now : now;
         return JSON.stringify(this.state);
     }
 }

@@ -19,6 +19,9 @@ import { expireMinigames } from './minigame.js';
 import { PETS } from '../data/pets.js';
 
 export const OFFLINE_MIN_MS = 60 * 1000;
+// The replay hands control back every REPLAY_SLICE_MS of game time (offlineReplay), so a page can draw a frame
+// between slices: a game minute of a deep hero with Auto prestige is about 5 ms at Chrome's 4× CPU throttle.
+export const REPLAY_SLICE_MS = 60 * 1000;
 
 function snapshot(state) {
     return {
@@ -97,8 +100,9 @@ function diff(before, state) {
  * Replay the work under way for `duration` ms from the moment `from`. Each action happens when it would
  * have, so the bonfire burns out, Focus starts and a weekend event begins or ends at the right moment
  * (and tokens land on the right day). Returns why the work stopped early (or null), and its mastery.
+ * A generator, as offlineReplay: every `slice` ms of game time it yields `where` (its clock in `at`).
  */
-function replayWork(game, from, duration) {
+function* replayWork(game, from, duration, where, slice) {
     const state = game.state;
     let def = resolveAction(state);
     const mastery = def.mastery ? { name: def.label, from: def.mastery.level } : null;
@@ -109,6 +113,7 @@ function replayWork(game, from, duration) {
     let interval = intervalFor(def, game.derived);
     let remaining = duration + (state.action?.progress || 0);   // the action under way when the game left off goes on
     let guard = 0;
+    let next = from + slice;
     while (remaining >= interval && guard++ < 200000) {
         if (!canComplete(state, def).ok) { stalledReason = `ran out of materials for ${def.label}`; break; }
         game.now += interval;
@@ -124,6 +129,7 @@ function replayWork(game, from, duration) {
             || isFocused(state, game.now) !== game.derived.focused || bonfireLit(state, game.now) !== game.derived.bonfire
             || game.eventId(game.now) !== game.derived.event;
         if (stale) { game.recompute(); def = resolveAction(state); interval = intervalFor(def, game.derived); }
+        if (game.now >= next) { next = game.now + slice; where.at = game.now; yield where; }
     }
     game.now = savedNow;
     game.recompute();
@@ -137,7 +143,21 @@ function replayWork(game, from, duration) {
  * Apply progress for the time between the last save and now.
  * Returns a summary for the "welcome back" modal, or null if under a minute passed.
  */
-export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
+export function applyOffline(game, now, options) {
+    const replay = offlineReplay(game, now, options);
+    for (;;) {
+        const step = replay.next();
+        if (step.done) return step.value;
+    }
+}
+
+/**
+ * applyOffline a slice at a time, for a page that draws between slices (main.js catchUp): a generator that
+ * yields every `slice` ms of game time where the replay stands ({ from, to, at, mode }: its clock in `at`) and
+ * returns the summary. Between slices the game is mid-replay (its clock in the past, silent), so nothing else
+ * may touch it (Game.beginResume and beginGap see to that): the slices end exactly as the replay in one go.
+ */
+export function* offlineReplay(game, now, { minMs = OFFLINE_MIN_MS, slice = REPLAY_SLICE_MS } = {}) {
     const state = game.state;
     const elapsed = now - (state.meta.savedAt || now);
     if (elapsed < minMs) return null;
@@ -150,13 +170,14 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
     const wasSilent = game.silent;
     game.silent = true;
     const medalsBefore = new Set(Object.keys(state.achievements || {}).filter(id => state.achievements[id]));
+    const where = { from: now - simulated, to: now, at: now - simulated, mode };
 
     let mastery = null;
     if (resolveAction(state)) {
-        mode = 'skill';
-        ({ stalledReason, mastery } = replayWork(game, now - simulated, simulated));
+        mode = where.mode = 'skill';
+        ({ stalledReason, mastery } = yield* replayWork(game, now - simulated, simulated, where, slice));
     } else if (state.combat.active || state.combat.recovering) {
-        mode = 'combat';
+        mode = where.mode = 'combat';
         // Replay in 1 s steps: tickCombat resolves every attack inside a step in time order, so bigger
         // steps give the same fight with a tenth of the work. A fall is not the end: the hero rests to
         // full health and fights on (combat stops only if something else ends it).
@@ -164,6 +185,7 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
         let remaining = simulated;
         const savedNow = game.now;
         game.now = now - simulated;
+        let next = game.now + slice;
         while (remaining > 0 && (state.combat.active || state.combat.recovering)) {
             const dt = Math.min(step, remaining);
             tickCombat(game, dt);
@@ -172,12 +194,13 @@ export function applyOffline(game, now, { minMs = OFFLINE_MIN_MS } = {}) {
             tickAutoPrestige(game);   // a stalled run is prestiged while away too, if the switch is on
             checkAchievements(game);  // a medal earned on the way counts from then on
             if (game.dirty) game.recompute(); // level-ups, medals and potion charges take effect mid-replay
+            if (game.now >= next) { next += slice; where.at = game.now; yield where; }
         }
         game.now = savedNow;
         if (remaining > 0 && resolveAction(state)) {
             // a Titan fight ended on the way, and the hero went back to his work: it fills the rest of the time
-            mode = 'skill';
-            ({ stalledReason, mastery } = replayWork(game, now - remaining, remaining));
+            mode = where.mode = 'skill';
+            ({ stalledReason, mastery } = yield* replayWork(game, now - remaining, remaining, where, slice));
         } else if (!state.combat.active && !state.combat.recovering) stalledReason = 'combat stopped';
     }
     game.silent = wasSilent;
