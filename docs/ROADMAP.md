@@ -1467,7 +1467,9 @@ Keeping it running:
       rule held `inherit`, which a shorthand can't, so browsers dropped it: a button's number came out 15 px, the stage's
       own 10 px); they are 11.5 px, 11 px on a phone. A dialog holds the keys: the page behind it is inert, Tab goes round
       the dialog on top (one Tab from Prestige now reached the phone's hotbar behind it), each is named by its title, and
-      when it closes the focus goes back to the control a key opened it from
+      when it closes the focus goes back to the control a key opened it from. On a phone a control the keys reach scrolls
+      clear of the hotbar and the sticky bar of places (six bag tiles, three Shop buttons and three of Settings' controls
+      had sat wholly under them)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

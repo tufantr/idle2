@@ -1084,6 +1084,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 /* ---------- tablets and phones: the sidebar becomes a scrolling tab strip ---------- */
 @media (max-width: 900px) {
     body { padding: 0.75rem 1rem; }
+    html { scroll-padding-top: 8.5rem; }   /* and clear of the sticky bar of places (WCAG 2.4.11) */
     #app.layout-sidebar { flex-direction: column; }
     #sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
     /* the top bar: the seal and the name on one line, no rule */
@@ -1822,6 +1823,7 @@ body.reduced-motion .nav-ready { animation: none; }
         border-top: 1px solid var(--line-strong); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
     }
     body { padding-bottom: calc(4.8rem + env(safe-area-inset-bottom, 0px)); }
+    html { scroll-padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px)); }   /* a control the keys reach scrolls clear of the hotbar (WCAG 2.4.11) */
     #header .daily-btn { display: none; } /* the hotbar holds the crate here */
     #toast-area { bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); }
     .detail-panel.has-item { bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); max-height: 56vh; }
