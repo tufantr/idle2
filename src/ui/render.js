@@ -480,14 +480,14 @@ function renderPrestigeStrip(game) {
     if (!isUnlocked(state, 'prestige')) return '';
     const c = state.combat;
     const preview = game.prestigePreview();
-    const line = preview.allowed ? `<b>+${preview.tokens}</b> tokens if you prestige now`
+    const line = preview.allowed ? `<b>+${fmt(preview.tokens)}</b> tokens if you prestige now`
         : c.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} first`
         : preview.blockedBy ? `After the ${afterWhat(preview)}`
         : `Ready in ${duration(preview.waitMs)}`;
     return `<section class="glass-panel prestige-strip" style="${artStyle('prestige')}">
         <div class="prestige-strip-text">
             <h2>Prestige ${aboutButton('prestige')}</h2>
-            <span class="small">${line} <span class="muted">· stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} pays ${preview.nextZoneTokens}</span></span>
+            <span class="small">${line} <span class="muted">· stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} pays ${fmt(preview.nextZoneTokens)}</span></span>
         </div>
         <div class="strip-actions">
             ${seen(state, 'skill_points') ? `<button class="shop-btn${state.prestige.skillPoints > 0 ? ' ready' : ''}" onclick="FI.openPerks()">Perks${state.prestige.skillPoints > 0 ? ` · ${state.prestige.skillPoints} SP` : ''}</button>` : ''}
@@ -676,7 +676,7 @@ function renderLoopActions(game) {
             ? `<button class="dock-auto${state.settings.autoPrestige ? ' on' : ''}" onclick="FI.setAutoPrestige(${!state.settings.autoPrestige})" aria-pressed="${!!state.settings.autoPrestige}" title="Prestige by itself when a run goes ${BALANCE.prestige.autoStallMs / 60000} minutes without a new best stage">${glyph('away')}<b>Auto</b><span>${state.settings.autoPrestige ? (autoIn === null ? 'on' : `in ${duration(autoIn)}`) : 'off'}</span></button>` : '';
         // Ready, on the button itself: the first prestige at once, a later one at its wall (systems/prestige.js)
         const ready = game.prestigeReady();
-        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige${ready ? ' ready' : ''}" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
+        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige${ready ? ' ready' : ''}" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${fmt(preview.nextZoneTokens)}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
     }
     if (seen(state, 'skill_points')) {
         const sp = state.prestige.skillPoints;
@@ -1647,10 +1647,10 @@ export function renderShop(game, ui) {
                 <div><b>${fmt(state.prestige.tokens)}</b><span>tokens held: +${fmt(d.tokenPowerPct)}% attack and defence</span></div>
                 ${seen(state, 'legacy') ? `<div><b>×${fmt(d.legacy)}</b><span>Legacy from ${fmt(state.prestige.count)} prestiges: attack, defence and health</span></div>` : ''}
                 <div><b>${state.prestige.skillPoints}</b><span>skill points to spend</span></div>
-                <div><b>+${preview.tokens}</b><span>tokens for this run (best stage ${state.combat.maxStage})</span></div>
+                <div><b>+${fmt(preview.tokens)}</b><span>tokens if you prestige now (highest stage this run: ${fmt(state.combat.maxStage)})</span></div>
                 <div><b>${preview.startStage}</b><span>is the stage the next run starts at</span></div>
             </div>
-            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : preview.blockedBy ? `Prestige after the ${afterWhat(preview)}` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
+            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${fmt(preview.tokens)} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : preview.blockedBy ? `Prestige after the ${afterWhat(preview)}` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>`;
     const perksPanel = !perksOpen ? '' : `
         <section class="glass-panel ${painted('library', 'center 40%')}">

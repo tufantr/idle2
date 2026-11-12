@@ -1461,6 +1461,9 @@ Keeping it running:
       over the anvil's cards shows each open metal's mastery and the bars it saves, and the header's tip says where the 12 are
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
+- [x] **Tokens in the game's own numbers** (the research loop's small fixes, 12 November 2026): a deep run's tokens showed
+      as long digits on the Combat tab's prestige strip, the dock's Prestige, the Shop and the battle log; they read 1.6M
+      now, and the Shop's line says the highest stage this run, where it said "best stage"
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
