@@ -111,6 +111,10 @@ Salvage a piece you don't need from its detail, or with **Salvage commons**:
 
 Jewellery is worked at the jeweller's bench in [[/skills/crafting|Crafting]], from Crafting {{BENCH_LEVEL_PER_UPGRADE}}: its slot upgraded (the levels belong to the slot, as the anvil's do, with no top: +{{pct(UPGRADE_STEP, 0)}} a level up to +{{MAX_UPGRADE}}, ×{{FORGE_STEP}} past it) and its bonuses rerolled, with gems and essence. A worn piece's detail has a **Bench** button that goes there. See [[Jewellery]].
 
+## Undo
+
+Sold or salvaged the wrong thing? The note that says so has an **Undo** for a few seconds: the pieces go back in the bag, and the gold, essence and bars they gave go back too. It takes back the last sale or salvage only, from a piece's detail, **Salvage commons**, **Salvage weaker**, **Sell commons**, or what putting a piece on took with Weaker, and only while what it gave is still there to give back.
+
 ## Selling
 
 Sell a piece for gold from its detail, or with **Sell commons**. The price is set by its tier and rarity, a little more for each level it has been upgraded. A run's kills soon pay far more, and gold goes at the next prestige, so salvaging is usually the better use of a spare piece.

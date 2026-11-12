@@ -1472,6 +1472,9 @@ Keeping it running:
       also salvages what it made weaker, the piece taken off too (never a locked, crafted or Seal piece); the Weaker pill
       glows once the bag has been full, until it is tried; and automatic salvage writes a line a minute in the log, not one
       a piece
+- [x] **Undo the last sale or salvage** (the research loop's P-078, 12 November 2026; DESIGN §3.5): the toast after Sell,
+      Salvage, the bag's batch buttons or an Equip's Weaker sweep has an Undo for a few seconds, which puts the pieces back
+      and takes back exactly the gold, essence and bars they gave
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

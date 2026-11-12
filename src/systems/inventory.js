@@ -370,7 +370,9 @@ export function salvageItem(game, id) {
     if (!found) return null;
     if (found.item.locked) { game.emit({ type: 'error', text: 'Unlock the item first.' }); return null; }
     state.inventory.splice(found.index, 1);
-    return salvageObject(game, found.item);
+    const gained = salvageObject(game, found.item);
+    noteUndo(game, 'salvage', [found.item], gained);
+    return gained;
 }
 
 /**
@@ -389,6 +391,7 @@ function salvageBatch(game, doomed, what = '') {
     }
     const text = gainedText(total);
     if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'}${what}${text ? ` for ${text}` : ''}.`, 'loot');
+    noteUndo(game, 'salvage', doomed, total);
     return { count: doomed.length, ...total };
 }
 
@@ -553,6 +556,7 @@ export function sellItem(game, id) {
     state.inventory.splice(found.index, 1);
     state.gold += value;
     bumpStat(game, 'goldEarned', value);
+    noteUndo(game, 'sale', [found.item], { gold: value });
     game.emit({ type: 'sold', item: found.item, gold: value });
     game.markDirty();
     return true;
@@ -564,14 +568,63 @@ export function sellAllItems(game, maxRarity = 'common') {
     const state = game.state;
     let gold = 0;
     let count = 0;
+    const sold = [];
     state.inventory = state.inventory.filter(item => {
-        if (!item.locked && rarityIndex(item.rarity) <= limit) { gold += itemSellValue(item); count++; return false; }
+        if (!item.locked && rarityIndex(item.rarity) <= limit) { gold += itemSellValue(item); count++; sold.push(item); return false; }
         return true;
     });
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
     if (count) { log(game, `Sold ${count} item${count === 1 ? '' : 's'} for ${gold} gold.`, 'info'); game.markDirty(); }
+    noteUndo(game, 'sale', sold, { gold });
     return { count, gold };
+}
+
+// ---------- undo ----------
+
+/**
+ * How long the last sale or salvage can be taken back (the research loop's P-078: Melvor's Undo Sell mod has 29,579
+ * subscribers, and its sequel's players asked for a buy-back): a few seconds, on its toast. One at a time, the latest:
+ * a sale, a salvage, a batch button's, or what an Equip with Weaker on took with it.
+ */
+export const UNDO_MS = 8000;
+let undoSerial = 0;
+
+/** Keep what a sale or salvage took and exactly what it gave (a salvage rolls its bars), on the game, not in the save. */
+function noteUndo(game, kind, items, { gold = 0, essence = 0, materials = {} } = {}) {
+    if (!items.length) return;
+    game.undo = { id: ++undoSerial, kind, items: [...items], gold, essence, materials: { ...materials }, at: game.now };
+}
+
+/** The last sale or salvage while it can still be taken back ({ id, kind, items, gold, essence, materials, at }), else null. */
+export function lastUndo(game, id = null) {
+    const u = game.undo;
+    return u && (id === null || u.id === id) && game.now - u.at <= UNDO_MS ? u : null;
+}
+
+/**
+ * Take back the last sale or salvage (`id`: that one): the pieces back in the bag, and exactly the gold, essence and bars
+ * it gave out of the purse and the bank, its counts too. Refused once it is too late, another came after it, or what it
+ * gave is spent.
+ */
+export function undoLast(game, id = null) {
+    const state = game.state;
+    const u = lastUndo(game, id);
+    if (!u) { game.emit({ type: 'error', text: 'Too late to take that back.' }); return false; }
+    const short = state.gold < u.gold ? 'gold' : (state.resources.essence || 0) < u.essence ? 'essence'
+        : Object.entries(u.materials).find(([m, q]) => (state.resources[m] || 0) < q)?.[0];
+    if (short) { game.emit({ type: 'error', text: `The ${RESOURCES[short]?.name.toLowerCase() || short} it gave is spent already.` }); return false; }
+    state.gold -= u.gold;
+    state.resources.essence -= u.essence;
+    for (const [m, q] of Object.entries(u.materials)) state.resources[m] -= q;
+    if (u.kind === 'sale') state.stats.goldEarned = Math.max(0, (state.stats.goldEarned || 0) - u.gold);
+    else state.stats.itemsSalvaged = Math.max(0, (state.stats.itemsSalvaged || 0) - u.items.length);
+    state.inventory.push(...u.items);
+    game.undo = null;
+    log(game, `↩️ Taken back: ${u.items.length === 1 ? u.items[0].name : `${u.items.length} items`}, in the bag again.`, 'info');
+    game.emit({ type: 'undo', kind: u.kind, count: u.items.length, items: u.items });
+    game.markDirty();
+    return true;
 }
 
 // ---------- upgrade, reforge, lock ----------

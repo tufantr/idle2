@@ -24,7 +24,7 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
-import { isUpgrade, canWear, findGear, gainedText } from './systems/inventory.js';
+import { isUpgrade, canWear, findGear, gainedText, UNDO_MS } from './systems/inventory.js';
 import { judgeOf } from './systems/worth.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
@@ -1025,25 +1025,42 @@ function handleEvents(events) {
     }
 }
 
-/** A short note in the corner: plain `text`, with a picture (`icon`, sprite HTML) before it if given. */
-function toast(text, kind = 'info', icon = '') {
+/**
+ * A short note in the corner: plain `text`, with a picture (`icon`, sprite HTML) before it if given. `act` ({ label, run })
+ * puts a button on it, and it stays a few seconds longer (the last sale or salvage's Undo).
+ */
+function toast(text, kind = 'info', icon = '', act = null) {
     const area = document.getElementById('toast-area');
     if (!area) return;
     const el = document.createElement('div');
-    el.className = `toast ${kind}`;
+    el.className = `toast ${kind}${act ? ' has-act' : ''}`;
     el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
     if (icon) el.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>`;
     el.append(text);
+    if (act) {
+        const btn = document.createElement('button');
+        btn.className = 'toast-act';
+        btn.textContent = act.label;
+        btn.addEventListener('click', () => { el.remove(); act.run(); });
+        el.append(btn);
+    }
     area.appendChild(el);
     while (area.children.length > 5) area.removeChild(area.firstChild);
-    setTimeout(() => el.classList.add('fade'), 3200);
-    setTimeout(() => el.remove(), 3800);
+    const ms = act ? UNDO_MS - 800 : 3200;
+    setTimeout(() => el.classList.add('fade'), ms);
+    setTimeout(() => el.remove(), ms + 600);
+}
+
+/** The Undo for the sale or salvage just made (systems/inventory.js undoLast), for its toast; null if there is none. */
+function undoAct() {
+    const u = game.lastUndo();
+    return u ? { label: 'Undo', run: () => window.FI.undo(u.id) } : null;
 }
 
 /** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */
 function salvagedToast(r, what = '') {
     const text = gainedText(r);
-    toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'}${what}${text ? `: ${text}` : ''}`, 'info', resIcon(r.essence ? 'essence' : Object.keys(r.materials)[0] || 'essence'));
+    toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'}${what}${text ? `: ${text}` : ''}`, 'info', resIcon(r.essence ? 'essence' : Object.keys(r.materials)[0] || 'essence'), undoAct());
 }
 
 // Modals queue up instead of replacing each other, so a login prompt can't hide the offline report.
@@ -1629,8 +1646,20 @@ window.FI = {
     /** Equip all (the dock's, once two pieces wait): every slot's best at once, one sound and one rise over the hero. */
     equipAll() { if (game.equipAll() > 0) { sound.play('equip'); sound.play('upgrade'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
     unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
-    sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
-    sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
+    sellItem(id) {
+        const item = game.state.inventory.find(i => i.id === id);
+        const before = game.state.gold;
+        if (game.sellItem(id)) toast(`Sold ${item.name} for ${fmt(game.state.gold - before)} gold`, 'info', sprite('gold', { scale: 0.5 }), undoAct());
+        sound.play('coin');
+        render();
+    },
+    sellAll(rarity) {
+        const r = game.sellAllItems(rarity);
+        if (r.count) { sound.play('gold'); toast(`Sold ${r.count} item${r.count === 1 ? '' : 's'} for ${fmt(r.gold)} gold`, 'info', sprite('gold', { scale: 0.5 }), undoAct()); }
+        render();
+    },
+    /** Take back the last sale or salvage (its toast's Undo): the pieces back in the bag with a pickup's sound. */
+    undo(id) { if (game.undoLast(id)) { sound.play('pickup'); toast('Back in the bag', 'info', glyph('keep')); } else sound.play('error'); render(); },
     setAutoPrestige(on) { if (game.setAutoPrestige(on)) sound.play(on ? 'unlock' : 'click'); render(); },
     reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
     // a reroll: the bonuses it brought glow on the card a few seconds (render.js anvilCard)
@@ -1659,7 +1688,7 @@ window.FI = {
         if (g) {
             sound.play('drop');
             const got = [g.essence ? `${g.essence} essence` : '', ...Object.entries(g.materials).map(([res, qty]) => `${qty} ${RESOURCES[res].name}${qty === 1 ? '' : 's'}`)].filter(Boolean);
-            toast(got.length ? `+${got.join(', ')}` : 'Salvaged', 'info', resIcon(Object.keys(g.materials)[0] || 'essence'));
+            toast(got.length ? `+${got.join(', ')}` : 'Salvaged', 'info', resIcon(Object.keys(g.materials)[0] || 'essence'), undoAct());
         }
         render();
     },

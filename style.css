@@ -1078,6 +1078,11 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .toast.error, .toast.death { --toast: var(--ember); border-color: rgba(239, 68, 68, 0.45); }
 .toast.prestige, .toast.craft { --toast: var(--arcane); }
 .toast.minigame { --toast: #38bdf8; }
+/* a toast with a button (the last sale or salvage's Undo, P-078): the button takes taps through the toasts' own pass-through */
+.toast.has-act { display: flex; align-items: center; gap: 0.5rem; }
+.toast-act { pointer-events: auto; flex: none; margin-left: auto; padding: 0.2rem 0.7rem; border-radius: 999px; font: inherit; font-size: 0.78rem; font-weight: 800;
+    color: #fde68a; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(252, 211, 77, 0.6); cursor: pointer; }
+.toast-act:hover, .toast-act:focus-visible { background: rgba(252, 211, 77, 0.18); border-color: #fde68a; }
 
 /* ---------- motion ---------- */
 @keyframes progressFlow { from { background-position: 0 0; } to { background-position: 40px 0; } }

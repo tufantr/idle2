@@ -165,3 +165,77 @@ test('the Weaker pill glows from the bag\'s first fill until Weaker is picked on
     game.setAutoSalvage('common');
     assert.ok(!pill().includes('glow'), 'once tried, never again');
 });
+
+test('Undo takes back the last sale: the piece in the bag again, the gold and its count as they were', async () => {
+    const { UNDO_MS } = await import('../src/systems/inventory.js');
+    const game = hero();
+    const s = game.state;
+    s.inventory.push(piece('Weapon', 2, 1), piece('Head', 2, 2));
+    const gold = s.gold;
+    const earned = s.stats.goldEarned;
+    assert.equal(game.sellItem(1), true);
+    assert.ok(s.gold > gold);
+    const u = game.lastUndo();
+    assert.equal(u.kind, 'sale');
+    assert.equal(game.undoLast(u.id), true);
+    assert.equal(s.gold, gold);
+    assert.equal(s.stats.goldEarned, earned);
+    assert.ok(s.inventory.some(i => i.id === 1));
+    assert.equal(game.undoLast(u.id), false, 'once');
+    // one at a time: a later sale's Undo is the only one
+    game.sellItem(1);
+    const first = game.lastUndo().id;
+    game.sellItem(2);
+    assert.equal(game.undoLast(first), false, 'the first sale can no longer be taken back');
+    assert.equal(game.undoLast(), true);
+    assert.ok(s.inventory.some(i => i.id === 2) && !s.inventory.some(i => i.id === 1));
+    // a few seconds only, and never with the gold spent
+    game.sellItem(2);
+    game.now += UNDO_MS + 1;
+    assert.equal(game.undoLast(), false, 'too late');
+    s.inventory.push(piece('Weapon', 3, 3));
+    game.sellItem(3);
+    s.gold = 0;
+    assert.equal(game.undoLast(), false, 'the gold is spent');
+    assert.ok(!s.inventory.some(i => i.id === 3));
+});
+
+test('Undo takes back exactly what a salvage gave, bars rolled and all, and a batch\'s or an Equip\'s sweep', () => {
+    const game = hero();
+    const s = game.state;
+    const before = () => JSON.stringify({ r: s.resources, n: s.stats.itemsSalvaged, bag: s.inventory.map(i => i.id).sort() });
+    for (let i = 0; i < 6; i++) s.inventory.push(piece('Boots', 3, 10 + i, 'rare'));
+    // a crafted ring gives back a share of its bar and gem, each a roll: 0.4 is a 40% chance of one
+    for (let i = 0; i < 6; i++) s.inventory.push({ ...piece('Ring', 1, 20 + i, 'common'), source: 'crafted', materials: { silver_bar: 1, amethyst: 1 } });
+    const rolled = new Set();
+    for (const id of [10, 11, 12, 13, 14, 15, 20, 21, 22, 23, 24, 25]) {
+        const was = before();
+        const got = game.salvageItem(id);
+        assert.ok(got);
+        if (id >= 20) rolled.add(got.materials.silver_bar || 0);
+        assert.equal(game.undoLast(), true);
+        assert.equal(before(), was, `salvage of ${id}: exactly back`);
+    }
+    assert.deepEqual([...rolled].sort(), [0, 1], 'the rolls went both ways');
+    for (let i = 0; i < 6; i++) s.inventory.splice(s.inventory.findIndex(it => it.id === 20 + i), 1);
+    const was = before();
+    assert.equal(game.salvageAll('rare').count, 6);
+    assert.equal(game.undoLast(), true);
+    assert.equal(before(), was, 'Salvage commons and its kind: all back');
+    // with Weaker on, what an Equip took with it
+    s.settings.autoSalvage = 'weaker';
+    s.inventory.push(piece('Weapon', 4, 30), piece('Weapon', 2, 31));
+    const old = s.equipped.Weapon.id;
+    game.equipItem(30);
+    assert.ok(!s.inventory.some(i => i.id === old || i.id === 31));
+    assert.equal(game.undoLast(), true);
+    assert.ok(s.inventory.some(i => i.id === old) && s.inventory.some(i => i.id === 31), 'the swept pieces are back; the new sword stays on');
+    assert.equal(s.equipped.Weapon.id, 30);
+    // and the batch sale
+    s.settings.autoSalvage = 'off';
+    const gold = s.gold;
+    const sold = game.sellAllItems('rare').count;
+    assert.ok(sold > 0);
+    assert.equal(game.undoLast(), true);
+    assert.equal(s.gold, gold);
+});

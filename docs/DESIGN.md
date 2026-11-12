@@ -290,6 +290,12 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   `bag_full`, `weaker_tried`). Automatic salvage's log gathers its rare or better pieces into a line a minute ("Salvaged
   5 pieces as they came (2 epic, 3 rare) for …", `flushSalvageLine`, the minute kept in `meta.salvageTally`), where it
   wrote about twenty lines an hour.
+- **Undo** (the research loop's P-078, 12 November 2026: Melvor's Undo Sell mod has 29,579 subscribers, and its sequel's
+  players asked for a buy-back; here Sell, Salvage and the batch buttons acted at once): the toast of a sale, a salvage,
+  a batch button or an Equip's Weaker sweep carries an **Undo** for eight seconds (`UNDO_MS`, `undoLast` in
+  `src/systems/inventory.js`). It puts the pieces back in the bag and takes back exactly what was given, a salvage's
+  rolled bars and gems included (kept on the game, not in the save), and the counts with it (gold earned, items
+  salvaged). One at a time, the latest; refused once it is too late, another came after it, or what it gave is spent.
 
 ### 3.6 Combat
 
