@@ -9,7 +9,8 @@ import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
 import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
-import { DISCORD_INVITE, WIKI_URL } from '../src/data/social.js';
+import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth } from '../src/data/social.js';
+import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
 import { actionXp } from '../src/systems/skilling.js';
 import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
 import { SMELTING_RECIPES } from '../src/data/workshop.js';
@@ -204,4 +205,27 @@ test('Faithless\'s card says its tokens count again from the next prestige, and 
     s.combat.maxStage = Math.max(s.combat.maxStage, 30);
     assert.equal(game.prestige(), true);
     assert.ok(game.derived.tokenPowerPct >= power, `${game.derived.tokenPowerPct}% against ${power}%`);
+});
+
+test('the clan boss\'s "?" gives each level\'s attacks and what striking makes an attack worth (P-006)', () => {
+    const card = renderAboutCard('clan');
+    const levels = Array.from({ length: CLAN_BOSS.levels }, (_, i) => Math.round(clanBossHealth(i + 1) / 1000));
+    assert.equal(levels[0], CLAN_BOSS.first);
+    assert.match(card, literal(`its levels take about ${levels.slice(0, -1).join(', ')} and ${levels.at(-1)} attacks of an average member`));
+    assert.match(card, /only then do strikes land, 2\.5 times as hard/, 'the strike\'s own ×2.5 stays');
+    const atCap = BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed);
+    assert.equal(strikeWorth(atCap).toFixed(2), '1.33');
+    assert.match(card, /makes an attack worth about ×1\.33 one you only watch \(at full attack speed; more for a hero who swings slower\)/);
+    assert.ok(strikeWorth(BASE.baseAttackInterval) > strikeWorth(atCap) + 0.2, 'more for a hero who swings slower');
+    // the figure is the server's own reckoning for a saved hero at the cap, striking fast through every opening
+    const game = new Game(null, T0);
+    game.state.perks.rogue = 20;
+    game.state.agility.built = [];
+    game.state.inventory.push(Object.assign(generateEquipment({ type: 'Weapon', tier: 1, power: GEAR_TIERS[0].power, materialName: GEAR_TIERS[0].name, rarity: RARITIES[0], source: 'drop' }, 950),
+        { affixes: [{ stat: 'attackSpeed', name: 'Attack Speed', value: 0.5 }] }));
+    game.equipItem(950);
+    const save = JSON.parse(game.serialize(T0));
+    const openings = Array.from({ length: CLAN_FIGHT_MS / 250 + 1 }, (_, i) => i * 250).filter(clanGuardDown);
+    const worth = clanAttackFromSave(save, openings, CLAN_FIGHT_MS, T0).damage / clanAttackFromSave(save, [], CLAN_FIGHT_MS, T0).damage;
+    assert.ok(Math.abs(worth - strikeWorth(atCap)) < 0.01, `the server: ×${worth.toFixed(3)}`);
 });

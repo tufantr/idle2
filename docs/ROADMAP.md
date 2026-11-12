@@ -1478,6 +1478,9 @@ Keeping it running:
       more adds nothing, and a piece whose speed adds nothing gets the same mark beside its bonus
 - [x] **Faithless says its tokens come back** (P-007): its card said only "Your tokens give nothing", and a player read it as
       losing them. It says they count again from the next prestige, which ends the Trial; the wiki says they are kept
+- [x] **The boss says what it takes** (P-006): the Clan's "?" gave level 1's attacks and the strike's ×2.5. It gives every
+      level's (20, 24, 29, 35, 41, 50 and 60 attacks of an average member) and what striking fast through every opening
+      makes an attack worth, ×1.33 at full attack speed, worked out from the server's own reckoning of the fight
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

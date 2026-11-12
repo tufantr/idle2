@@ -91,6 +91,18 @@ export function clanFightDamage(derived, strikes, ms = CLAN_FIGHT_MS) {
     return { damage: Math.floor(base + struck), base: Math.floor(base), struck: Math.floor(struck), strikes: strikes.length, guarded };
 }
 
+/**
+ * What striking through every opening (a strike each BALANCE.combat.strikeGapMs while the guard is down) makes a clan attack
+ * worth against one only watched, for a hero swinging every `interval` ms: ×1.33 at attack speed's cap, more for a slower
+ * hero, whose own swings count for less beside his strikes (the Clan's "?" says it; tools/clanpower.mjs sizes the boss on it).
+ */
+export function strikeWorth(interval) {
+    const hero = { atk: 1000, critChance: 0, critDmg: 1, attackInterval: interval };
+    const strikes = [];
+    for (let t = 0; t <= CLAN_FIGHT_MS; t += BALANCE.combat.strikeGapMs) if (clanGuardDown(t)) strikes.push(t);
+    return clanFightDamage(hero, strikes).damage / clanFightDamage(hero, []).damage;
+}
+
 /** The hero's plain attack: a whole clan fight without a strike or a potion (the clan's boss is sized by it, and the boards show it). */
 export function plainAttack(rawState, now = Date.now()) {
     return clanFightDamage(deriveStats(stableState(rawState, now)), []).damage;

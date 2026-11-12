@@ -11,7 +11,8 @@ import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TI
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS, WIKI_URL } from '../data/social.js';
+import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS, WIKI_URL, clanBossHealth } from '../data/social.js';
+import { strikeWorth } from '../core/power.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
 import { MAX_UPGRADE, PITY_MARKS, BAG_SIZE, BAG_UPGRADE } from '../data/items.js';
@@ -29,6 +30,11 @@ const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;   // 25th, 21st
 const secs = ms => Math.round(ms / 1000);
 const hours = ms => (ms === 3600000 ? 'an hour' : `${ms / 3600000} hours`);
+const andList = list => (list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list.at(-1)}` : `${list[0] ?? ''}`);
+// The clan boss's levels in attacks of an average member (the server sizes them so: data/social.js clanBossHealth), and what
+// striking through every opening makes an attack worth at attack speed's cap (core/power.js strikeWorth)
+const CLAN_LEVEL_ATTACKS = Array.from({ length: CLAN_BOSS.levels }, (_, i) => Math.round(clanBossHealth(i + 1) / 1000));
+const STRIKE_WORTH = strikeWorth(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed));
 
 // `art` is the painting, `focus` where its crop looks (CSS background-position), `icon` a sprite key
 // or an emoji for small places, `blurb` one line, `points` the rules in a few short lines.
@@ -118,9 +124,9 @@ export const FEATURES = {
     events: { name: 'Events', art: 'festival', icon: 'res/starfruit', blurb: 'A festival every weekend, with its own tokens and shop.',
         points: ['One event runs each weekend, Friday to Monday (UTC), and brings its own bonuses.', `Every ${EVENT_ACTIONS_PER_TOKEN} actions or kills earn a Festival Token, up to ${EVENT_DAILY_CAP} a day.`, 'Tokens keep between events. The event shop opens while one runs.'] },
     clan: { name: 'Clan', art: 'clanhall', icon: 'item/Shield/4', blurb: 'Join a clan and fight a weekly boss together.',
-        points: [`Each week the clan fights one shared boss, a land's ruler. Its first level takes about ${CLAN_BOSS.first} attacks of an average member; each time it falls it comes back the next day (midnight UTC) a level stronger (×${CLAN_BOSS.growth}), ${CLAN_BOSS.levels} levels at most. Monday brings a new one.`,
+        points: [`Each week the clan fights one shared boss, a land's ruler. Each time it falls it comes back the next day (midnight UTC) a level stronger, ${CLAN_BOSS.levels} levels at most, and its levels take about ${andList(CLAN_LEVEL_ATTACKS)} attacks of an average member. Monday brings a new one.`,
             `Every member's attack counts. The deeper your best stage against your clan's, the more: four times as deep counts twice as much, and no one counts more than ${CLAN_POWER.max / CLAN_POWER.min} times another. The boss's health is shown in your own hits.`,
-            `An attack is a ${CLAN_ATTACK_SECONDS} second fight against it, by your hero at his best of the past seven days, so it doesn't matter where in a run you attack. Strike when its guard drops: only then do strikes land, ${CLAN_GUARD.mult} times as hard. Your combat potion counts.`,
+            `An attack is a ${CLAN_ATTACK_SECONDS} second fight against it, by your hero at his best of the past seven days, so it doesn't matter where in a run you attack. Strike when its guard drops: only then do strikes land, ${CLAN_GUARD.mult} times as hard. Striking fast through every opening makes an attack worth about ×${STRIKE_WORTH.toFixed(2)} one you only watch (at full attack speed; more for a hero who swings slower). Your combat potion counts.`,
             `${CLAN_ATTACKS_PER_DAY} attacks a day; those not used wait, up to ${CLAN_ATTACK_BANK}. The server works out the damage from your saved hero.`,
             `Each level felled raises the clan banner for every member, fought or not, until the week ends: ×${CLAN_BANNER[1]} attack, defence and health at the first, ×${CLAN_BANNER[CLAN_BANNER.length - 1]} at the last. The more members fight, the further it goes.`,
             `Every week the clans are ranked. The levels felled put a clan in its division (${CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below'}`).join(', ')}), and ${ENDLESS.name.replace(/^The /, 'the ')} decides inside it: awake from Saturday 00:00 UTC to the Monday reset, its heads grow back, so it never falls.`,

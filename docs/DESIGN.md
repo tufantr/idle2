@@ -1066,8 +1066,9 @@ with the game's own stat code; the client never submits damage or scores.
   midnight, then comes back as the next level with a fifth more health (`CLAN_BOSS.growth`, ×1.2; it was ×2, and
   level 7 had 64 times level 1's health, beyond any clan: the owner asked that twenty members who use all their
   attacks fell all seven), full; at most seven a week. One not felled stays as it is, damage and all; Monday brings
-  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack, and
-  with strikes Combat Potion I ×2.4, IV ×4.8, VI ×6.4. With every member's three attacks a day and the unused kept
+  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack (at attack
+  speed's cap: `strikeWorth`, `src/core/power.js`; more for a slower hero), and with strikes Combat Potion I ×2.4, IV ×4.8,
+  VI ×6.4. The Clan's "?" gives each level's attacks (20, 24, 29, 35, 41, 50 and 60) and striking's ×1.33. With every member's three attacks a day and the unused kept
   (`tools/clanpower.mjs`): just watching, 20 members fell all seven, 10 six, 5 three, 2 one, one alone one; striking,
   10 seven, 5 four, 2 two; with Potion IV, 3 seven, 2 five, alone three; with VI, 2 six, alone four. Level 1 was 30
   until 26 October 2026: counted by the fight alone, an attack no longer carries the hero's growth through the day,
