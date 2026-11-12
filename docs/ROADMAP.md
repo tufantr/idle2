@@ -1476,6 +1476,8 @@ Keeping it running:
 - [x] **A mark at attack speed's cap** (promised on 1 November; P-074): speed stops at +100%, and every deep hero the
       simulator made sat 7 to 48 points past it. The Inventory's swing time wears a small "cap" once there, its tip saying
       more adds nothing, and a piece whose speed adds nothing gets the same mark beside its bonus
+- [x] **Faithless says its tokens come back** (P-007): its card said only "Your tokens give nothing", and a player read it as
+      losing them. It says they count again from the next prestige, which ends the Trial; the wiki says they are kept
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

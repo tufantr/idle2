@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL } from '../src/data/social.js';
 import { actionXp } from '../src/systems/skilling.js';
@@ -16,8 +16,9 @@ import { SMELTING_RECIPES } from '../src/data/workshop.js';
 import { DUNGEONS } from '../src/data/dungeons.js';
 import { ZONES } from '../src/data/zones.js';
 import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
-import { generateEquipment } from '../src/core/formulas.js';
 import { BASE } from '../src/core/modifiers.js';
+import { trialById } from '../src/data/trials.js';
+import { BALANCE, generateEquipment } from '../src/core/formulas.js';
 
 const T0 = 1_760_000_000_000;
 const literal = text => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -179,4 +180,28 @@ test('attack speed at its cap: a quiet mark on the hero\'s swing, and on a piece
     assert.match(renderItemDetail(game, 902), /class="cap-mark"/, 'the gloves\' too');
     // a pair in the bag is judged in place of the pair worn: +115% without them, so theirs adds nothing either
     assert.match(renderItemDetail(game, 904), /class="cap-mark"/);
+});
+
+test('Faithless\'s card says its tokens count again from the next prestige, and they do (P-007)', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.unlocks.prestige = true;
+    s.seen.trials = true;
+    Object.assign(s.combat, { bestStage: 250, maxStage: 30, stage: 30 });
+    Object.assign(s.prestige, { tokens: 5000, count: 3, runStartedAt: T0 - 3600_000 });
+    game.recompute();
+    const rule = trialById('faithless').rule;
+    assert.equal(rule, 'Your tokens give nothing this run; they count again from the next prestige.');
+    assert.match(renderPrestigeModal(game), literal(`<small class="trial-rule">${rule}</small>`));
+    const power = game.derived.tokenPowerPct;
+    assert.ok(power > 0);
+    assert.equal(game.startTrial('faithless'), true);
+    assert.equal(game.derived.tokenPowerPct, 0, 'nothing in the Trial\'s run');
+    assert.ok(s.prestige.tokens >= 5000, 'the tokens are kept');
+    assert.match(s.log.at(-1).text, literal(rule), 'the log says it as the run begins');
+    // the next prestige ends the Trial: they count again, with the run's own
+    game.tick(T0 + BALANCE.prestige.minRunMs + 1000);
+    s.combat.maxStage = Math.max(s.combat.maxStage, 30);
+    assert.equal(game.prestige(), true);
+    assert.ok(game.derived.tokenPowerPct >= power, `${game.derived.tokenPowerPct}% against ${power}%`);
 });
