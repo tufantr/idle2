@@ -2564,7 +2564,8 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       icons.py (the app icons in assets/icons/, the hero on the meadow; manifest.json installs them) ·
                       serve.py (the local server: no stale modules after a change) ·
                       shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors) ·
-                      trials.mjs (how far a run gets under each Trial's rule, from heroes the simulator saved)
+                      trials.mjs (how far a run gets under each Trial's rule, from heroes the simulator saved) ·
+                      bootbench.mjs (a hero's boot after a day away in Chromium, plain and at Chrome's 4× CPU throttle)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for the paintings) · reports/ ·
                       research_notes/
 ```
