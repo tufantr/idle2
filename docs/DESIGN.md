@@ -776,7 +776,15 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   the first 20 Titans, the Trials' tiers, the agility course's slots and the festival cloaks. The whole
   counts every part from the start, so it only rises (a unique the player unlocks and sells away is the
   one thing that lowers it); Records names only the parts the player has met. A cape for 100% is still
-  to come.
+  to come. **100% is everything in the game on 12 November 2026, and new content never lowers it** (the
+  owner): each part's whole is fixed at that day's count (`COMPLETION_WHOLE`: 1,089 levels, 9,408 mastery
+  levels, 549 stars, 70 pages, 51 medals, 12 pets, 8 uniques, 20 Titans, 40 Trial tiers, 6 slots, 6 cloaks),
+  and new medals, pets, uniques, monsters, actions, Trials or festivals fill a part, capped at its whole, without
+  raising it (a seventh festival used to take 1.3 points from a hero who had everything). The three secret medals
+  keep their power and are never needed: the medals' whole is the 51 open ones, and a secret one held counts toward
+  it. The Trials' part counts each Trial's five tiers: their ladders' rungs are records, and counted here they filled
+  the part for a deep hero with Trials never cleared (a hero three Trials up their ladders read 9.2% where he has done
+  3.5%).
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
   when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
   Smithing after mining 5 times (ore that monsters drop no longer opens it for a hero who only

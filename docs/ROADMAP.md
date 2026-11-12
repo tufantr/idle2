@@ -1484,6 +1484,10 @@ Keeping it running:
 - [x] **Crowns that read 1st, 2nd and 3rd** (P-001; a player once read the ranking as "everybody 2nd"): the 1st's crown was
       the atlas's red and amber, close to the 3rd's sepia. The 1st is gold, the 2nd silver, the 3rd bronze, and every crown
       (the ranking's, last week's, the clan list's and the header's) says its place in a tip a phone opens with a tap
+- [x] **Completion that new content can't lower** (the owner's decisions, P-108 with P-117): each part divided by its own
+      content, so a new medal, pet, unique or festival took points from everyone. Each part's whole is fixed at today's
+      game, and new things fill it; the secret medals keep their power, count when held and are never needed; the Trials'
+      part counts each Trial's five tiers, where its ladder's rungs filled it for a deep hero with Trials never cleared
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
