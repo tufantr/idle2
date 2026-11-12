@@ -2220,9 +2220,9 @@ body:has(#modal-root .modal-overlay.active) :is(#toast-area, #celebrate, #work-f
 .about-points li { position: relative; padding-left: 1.1rem; }
 .about-points li::before { content: "◆"; position: absolute; left: 0; top: 0.4em; font-size: 0.55rem; color: var(--accent-color); }
 /* the card's page on the wiki (features.js WIKI_PAGES): one small line at its foot */
-.about-wiki { margin: 0.9rem 0 -0.4rem; text-align: center; font-size: 0.8rem; }
-.about-wiki a { color: var(--accent-color); text-decoration: none; border-bottom: 1px solid rgba(214, 170, 92, 0.35); }
-.about-wiki a:hover { color: var(--accent-hover); border-bottom-color: currentColor; }
+.about-wiki { margin: 0.6rem 0 -0.7rem; text-align: center; font-size: 0.8rem; }
+.about-wiki a { display: inline-block; padding: 0.35rem 0.5rem; color: var(--accent-color); text-decoration: underline; text-decoration-color: rgba(214, 170, 92, 0.4); text-underline-offset: 3px; }   /* a tap target of 24 px and more */
+.about-wiki a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 .about-wiki a:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
 .about-wiki a::after { content: " ↗"; font-size: 0.85em; }
 
