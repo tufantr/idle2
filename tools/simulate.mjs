@@ -9,7 +9,7 @@
 // --player plays a login schedule (PLAYERS below; 'online' never leaves, the default): between
 // sessions the game runs by itself through its offline replay, and the bot decides only in sessions.
 // --set changes constants at start-up (roots: BALANCE, BASE, GEAR_DROP_CHANCE, CAMP_UPGRADES, CAMP_GOLD, PERKS, POTION_KINDS, POLICY; numbers
-// only), for sweeps. --json writes the run as JSON (milestones, a log of big moments by band, time by
+// only), for sweeps; --set=POLICY.stallFix:0 plays the old stall test (see fightStalled). --json writes the run as JSON (milestones, a log of big moments by band, time by
 // task, gold by sink, the pity count, the return mix): tools/batch.mjs runs many and summarises them.
 //
 // --ascend=0: never ascend. By default, once Ascension opens (data/ascension.js) the bot ascends with its
@@ -90,7 +90,9 @@ const SPEED_PRESTIGE = !!args['speed-prestige'];
 // much a run must add before it prestiges, how long a stall lasts, how long it farms a dungeon, its
 // share of time for agility, how long it trains, and the order it buys perks in.
 // potionStock: combat and dungeon potions kept in stock (a dose is POTION_MINUTES of fighting: an hour's worth); workStock: skill potions (half an hour's).
+// stallFix: the fight's stall test reads the game's own stall clock (1, the default; 0: the old test, for comparisons: see fightStalled).
 const POLICY = { prestigeShare: 0.15, stallMin: 20, longStallMin: 60, dungeonMin: 30, agilityShare: 0.25, trainMin: 45, gateTrainMin: 60, potionStock: 60, workStock: 30, foodStock: 60,
+    stallFix: 1,
     perkOrder: ['knight', 'warlord', 'forager', 'scholar', 'rogue', 'fortune', 'gourmet', 'endurance', 'paragon'] };
 if (args.vary) {
     const r = seededRandom(1_000_003 * Number(args.vary));
@@ -550,8 +552,14 @@ let lastStageGainAt = 0;
 let lastRunMax = 0;
 let lastRunRiseAt = 0;
 let lastTrainedSkill = null;
+// The fight's stall test, which sends him off the fight to a dungeon or a skill: 15 minutes on the game's own stall clock
+// (combat.stallMs, the one the Auto switch reads: it runs while he climbs the ladder, fighting or resting to fight on, and goes
+// to 0 at a new best in the run and at a new run; no restart of the fight touches it). POLICY.stallFix:0 is the old test, for
+// comparisons: 15 minutes since lastStageGainAt, which every fight the bot starts restarts, so with the bot deciding again every
+// 10 minutes it fired 0 times in 31 runs and past stage 700 he waited out an hour at each wall (P-122, research-loop 039).
+const fightStalled = () => (POLICY.stallFix ? S.combat.stallMs || 0 : now - lastStageGainAt) > 15 * 60000;
 function combatTask() {
-    return { kind: 'combat', why: `fight at stage ${S.combat.stage}`, until: () => !S.combat.active || now - lastStageGainAt > 15 * 60000 };
+    return { kind: 'combat', why: `fight at stage ${S.combat.stage}`, until: () => !S.combat.active || fightStalled() };
 }
 
 // Farming: harvest what is ready and keep every open plot planted with the best crop we can afford.
@@ -951,7 +959,7 @@ while (now < totalMs) {
     const fighting = S.combat.active || S.combat.recovering;
     if (!fighting && S.combat.maxStage < S.combat.bestStage) { awayFromFight.since ??= now; awayFromFight.longest = Math.max(awayFromFight.longest, now - awayFromFight.since); } else awayFromFight.since = null;
     if (task.kind === 'combat' && !S.combat.active && S.combat.hp <= game.derived.maxHp * 0.5) needTraining = true;
-    if (task.kind === 'combat' && now - lastStageGainAt > 15 * 60000) needTraining = true;
+    if (task.kind === 'combat' && fightStalled()) needTraining = true;
 
     if (now % (5 * 60000) < STEP) { tendFarm(); buildObstacles(); }
     if (now % 3600000 < STEP) { claimCrates(); buyCloak(); }   // the daily crate, as a player who drops by takes it; a cloak

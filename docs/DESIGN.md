@@ -2122,7 +2122,11 @@ fights about a third of the time, so a player who mostly fights gets there soone
 
 `node tools/simulate.mjs --hours=150 --seed=N` plays the game through the same `Game` API as the UI,
 with a "sensible player" policy: wear what beats what it wears and salvage the commons, keep food
-stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
+stocked, fight until stalled (15 minutes on the game's own stall clock, `combat.stallMs`; until November
+2026 it was 15 minutes since its last new best or the last fight it began, and deciding again every 10
+minutes it fired 0 times in 31 runs: past stage 700 it waited out an hour at each wall, and the always-on
+bot's deep figures from before are 210–220 stages low at hours 300 and 600, research-loop 039;
+`--set=POLICY.stallFix:0` plays it so); when stalled, alternate between farming the deepest dungeon it clears
 comfortably (while its chests or unique still help — otherwise it keeps fighting at the wall for half
 an hour) and training a skill (Mining and Smithing first while they can't yet make the bars for the
 weapon it wears; once Crafting is open, every third turn goes to it, with a gem pouch from the shop
