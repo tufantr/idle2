@@ -27,7 +27,7 @@ Yes: press **Play as guest** on the sign-in. Your game is then kept in that brow
 
 ### Can I play on my phone, or install it like an app?
 
-Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Sign in there with the same account to play the same hero.
+Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Sign in there with the same account to play the same hero. On a touch screen, tap a coin, a number or a stat to see what it is, and press and hold a button to read what it does without pressing it.
 
 ### How do I get the newest version?
 

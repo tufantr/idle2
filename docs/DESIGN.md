@@ -1316,7 +1316,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   the base), the double chance (what doubles, and how much comes from tools and from mastery), the
   keep chance and the mastery bar. Anything with
   a `data-tip` gets that tooltip at once on a mouse (`tipAttrs` in render.js, main.js), and holds
-  back the browser's slower one of the card beneath.
+  back the browser's slower one of the card beneath. A touch screen has no hover, so a tap opens the same bubble
+  (`TIP_TARGETS` in main.js): on the purse's coins, the header's pills, the hero's and the monster's numbers in
+  the fight (the monster's without a strike) and the hero's stats by his doll, as on the codex and the bestiary.
+  A button presses on a tap, so its title (or a badge's inside it) shows on a long press of half a second, and that
+  press does nothing else; not on the monster, nor in a mini-game, where holding is the game.
 - **Every action card has its own picture.** A small painting runs across the card's top, the
   medallion set on its lower edge: the vein, the tree, the fish leaping, the animal, the herb, the
   potion, the ingot, the piece on the anvil, the dish (ninety in all, `assets/paint/cards/`).

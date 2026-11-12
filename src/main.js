@@ -386,8 +386,10 @@ document.addEventListener('click', event => {
 });
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
-// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip]';
+// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records; the purse's
+// coins, the header's pills, the hero's and the monster's numbers in the fight, the hero's stats by his doll). A
+// button presses on a tap, so its title waits for a long press (below).
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip], .chip, .bonfire-pill, .focus-pill, .cloud-pill, .fighter-meta > [title], .doll-stats > [title]';
 let tipNode = null;
 let tipTimer = 0;
 /** The game's own tooltip over `el`: `title` in bold above `text`. It goes after a moment, or with the pointer when `stay`. */
@@ -414,14 +416,43 @@ function showTip(el, text, { title = '', stay = false } = {}) {
 // also start or stop the card's action; the bubble is placed before anything is drawn again. (Touch screens only: the
 // query is made once, not on every click.)
 const noHover = window.matchMedia?.('(hover: none)');
+// (So does a tap on the monster's numbers, under it: it names them, and doesn't strike.)
 document.addEventListener('click', event => {
     if (!noHover?.matches) return;
-    const el = event.target?.closest?.('[data-tip]');
+    const el = event.target?.closest?.('[data-tip], .foe .fighter-meta > [title]');
     if (!el || !el.parentElement?.closest('[role="button"]') || el.closest('button, a')) return;
     event.stopPropagation();
     event.preventDefault();
-    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '' });
+    showTip(el, el.dataset.tip || el.getAttribute('title'), { title: el.dataset.tipTitle || '' });
 }, { capture: true });
+// A long press on a button (or on a badge inside one) shows its title as the bubble, and that press does nothing
+// else: held half a second, nothing is bought or opened when the finger lifts. Not on the monster (a hold strikes it
+// once, as ever) nor in a mini-game, where holding is the game.
+const HOLD_TIP_MS = 520;
+let held = null;   // { el, x, y, timer, shown, upAt }
+function letGoHold() { if (held) clearTimeout(held.timer); held = null; }
+document.addEventListener('pointerdown', event => {
+    letGoHold();
+    if (event.pointerType === 'mouse' || !noHover?.matches) return;
+    const el = event.target?.closest?.('[title]');
+    const control = el?.closest('button, a, label, [role="button"]');
+    if (!control || control.disabled || control.closest('.foe, .minigame-panel') || !el.getAttribute('title')) return;
+    const hold = { el, x: event.clientX, y: event.clientY, shown: false, upAt: 0 };
+    hold.timer = setTimeout(() => { if (held !== hold || !el.isConnected) return; hold.shown = true; showTip(el, el.getAttribute('title')); }, HOLD_TIP_MS);
+    held = hold;
+}, { capture: true, passive: true });
+document.addEventListener('pointermove', event => {
+    if (held && !held.shown && Math.hypot(event.clientX - held.x, event.clientY - held.y) > 10) letGoHold();   // a scroll, not a hold
+}, { capture: true, passive: true });
+document.addEventListener('pointerup', () => { if (!held) return; if (held.shown) held.upAt = Date.now(); else letGoHold(); }, { capture: true, passive: true });
+document.addEventListener('pointercancel', () => { if (held && !held.shown) letGoHold(); }, { capture: true, passive: true });
+document.addEventListener('click', event => {
+    if (!held?.shown) return;
+    const fresh = Date.now() - held.upAt < 800;   // (the click of that press; a browser that sends none leaves the next tap alone)
+    letGoHold();
+    if (fresh) { event.stopPropagation(); event.preventDefault(); }
+}, { capture: true });
+document.addEventListener('contextmenu', event => { if (held?.shown) event.preventDefault(); }, { capture: true });
 document.addEventListener('click', event => {
     if (!noHover?.matches) return;
     const el = event.target?.closest?.(TIP_TARGETS);

@@ -2526,6 +2526,7 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 }
 
 /* a tap's bubble on a touch screen: what a picture's title says */
+@media (hover: none) { button, [role="button"], label, .chip { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }   /* a long press shows a tip (main.js), not a selection */
 .tap-tip { position: fixed; z-index: 400; max-width: min(260px, calc(100vw - 16px)); padding: 0.4rem 0.65rem; border-radius: 9px; font-size: 0.8rem; line-height: 1.3; color: var(--text-main); background: rgba(14, 10, 7, 0.96); border: 1px solid rgba(214, 170, 92, 0.55); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); pointer-events: none; animation: fadeIn 0.15s ease-out; }
 .tap-tip .tip-title { display: block; margin-bottom: 0.1rem; font-family: var(--font-display); font-size: 0.86rem; font-weight: 700; color: var(--heading); }
 
