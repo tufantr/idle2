@@ -53,7 +53,7 @@ No: your hero does one thing at a time, and starting one stops the other. While 
 
 ### Is tapping the monster worth it?
 
-It helps, but you never have to. A strike hits for {{pct(BALANCE.combat.manualHitMult, 0)}} of an attack and builds a combo, and each stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} to every hit, up to {{BALANCE.combat.comboMax}} stacks. That matters most against a boss's timer and in the Titan's race. Leave the game alone instead and **Focus** gives your hero +{{pct(BASE.focusAttackSpeed, 0)}} attack speed. See [[/combat|Combat]].
+It helps, but you never have to. A strike hits for {{pct(BALANCE.combat.manualHitMult, 0)}} of an attack and builds a combo, and each stack adds {{pct(BALANCE.combat.comboDmgPerStack, 0)}} to every hit, up to {{BALANCE.combat.comboMax}} stacks. That matters most against a boss's timer and in the Titan's race. Leave the game alone instead and **Focus** gives your hero +{{pct(BASE.focusAttackSpeed, 0)}} attack speed, or as much damage once attack speed is at its cap. See [[/combat|Combat]].
 
 ### What is the boss timer?
 
@@ -73,7 +73,7 @@ About one ordinary monster in {{Math.round(1 / BALANCE.rewards.gildedChance)}} o
 
 ### What is Focus?
 
-Leave the game alone for {{BASE.focusAfterMs / 1000}} seconds (no click, no key) and your hero settles in: +{{pct(BASE.focusSkillSpeed, 0)}} speed in every skill but Farming and +{{pct(BASE.focusAttackSpeed, 0)}} attack speed, until your next input. It counts while you are away, too. See [[/mini-games|Mini-games and Focus]].
+Leave the game alone for {{BASE.focusAfterMs / 1000}} seconds (no click, no key) and your hero settles in: +{{pct(BASE.focusSkillSpeed, 0)}} speed in every skill but Farming and +{{pct(BASE.focusAttackSpeed, 0)}} attack speed (damage instead, past attack speed's cap of +{{pct(BASE.caps.attackSpeed, 0)}}), until your next input. It counts while you are away, too. See [[/mini-games|Mini-games and Focus]].
 
 ### What is the Titan?
 

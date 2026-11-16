@@ -47,9 +47,9 @@ Each of your hero's hits deals his attack, give or take a little, and a critical
 
 ## Attack speed
 
-Your hero attacks every {{fmt(BASE.baseAttackInterval / 1000)}} seconds. Attack speed bonuses divide that time: the Rogue perk, gear bonuses, unique items, the Waterfall obstacle of [[/skills/agility|Agility]] and Focus. The bonus stops at +{{pct(BASE.caps.attackSpeed, 0)}}, an attack every {{fmt(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed) / 1000)}} seconds: past it more speed adds nothing. Once your hero is there, the Inventory marks the time between his attacks "cap", and a piece of gear whose speed adds nothing gets the same mark beside its bonus.
+Your hero attacks every {{fmt(BASE.baseAttackInterval / 1000)}} seconds. Attack speed bonuses divide that time: the Rogue perk, gear bonuses, unique items, the Waterfall obstacle of [[/skills/agility|Agility]] and Focus. The bonus stops at +{{pct(BASE.caps.attackSpeed, 0)}}, an attack every {{fmt(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed) / 1000)}} seconds: past it more speed adds nothing, except Focus's, which turns into damage (below). Once your hero is there, the Inventory marks the time between his attacks "cap", and a piece of gear whose speed adds nothing gets the same mark beside its bonus.
 
-After {{time(BASE.focusAfterMs)}} without a click or a key press your hero settles into [[/mini-games|Focus]]: +{{pct(BASE.focusAttackSpeed, 0)}} attack speed until your next input. A strike is input, so striking ends Focus.
+After {{time(BASE.focusAfterMs)}} without a click or a key press your hero settles into [[/mini-games|Focus]]: +{{pct(BASE.focusAttackSpeed, 0)}} attack speed until your next input. Focus's speed comes on top of every other bonus, and the part of it past the cap adds as much damage instead: a hero already at the cap hits {{pct(BASE.focusAttackSpeed, 0)}} harder while focused. A strike is input, so striking ends Focus.
 
 A monster attacks every {{fmt(BALANCE.enemy.baseInterval / 1000)}} seconds at stage 1, {{BALANCE.enemy.intervalPerStage}} milliseconds sooner each stage, and never faster than every {{fmt(BALANCE.enemy.minInterval / 1000)}} seconds (from stage {{Math.ceil((BALANCE.enemy.baseInterval - BALANCE.enemy.minInterval) / BALANCE.enemy.intervalPerStage)}} on).
 

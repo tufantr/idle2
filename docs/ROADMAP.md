@@ -1497,6 +1497,11 @@ Keeping it running:
       level while the gold lasts, before the boss's skull. Played by a scratch follower of the hand (an hour, three seeds):
       the two who met that wall bought 18 camp levels, fell 21 and 12 times instead of 30 and 31, and stood at stage 30
       instead of 28 and 27; `tools/opening.mjs`, whose players take every offer anyway, reads the same
+- [x] **Focus pays at the cap** (a player's point, 16 November 2026): Focus's +15% attack speed joined the other bonuses
+      under the cap of +100%, so a deep hero at the cap got nothing in a fight from leaving the game alone, and only
+      clicking paid. Focus's speed now comes last, and its part past the cap adds as much damage: ×1.15 for a hero
+      already at the cap, about four stages at a deep wall. The Focus pill's tip says which it gives; the server, which
+      counts no Focus, reads a hero as before
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

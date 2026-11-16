@@ -245,6 +245,19 @@ export function renderHotbar(game, ui) {
 
 // ---------- header ----------
 
+/**
+ * What Focus gives now, in words (core/modifiers.js): skill speed, and in the fight attack speed, or past attack speed's
+ * cap damage instead.
+ */
+export function focusTip(d) {
+    const shown = x => x >= 0.005;   // (never "+0%")
+    const parts = [`+${pct(BASE.focusSkillSpeed)} skill speed`];
+    if (shown(d.focusSpeed)) parts.push(`+${pct(d.focusSpeed)} attack speed`);
+    if (shown(d.focusDamage)) parts.push(`+${pct(d.focusDamage)} damage`);
+    const gives = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
+    return `You've left the game alone for a minute: ${gives}${shown(d.focusDamage) ? " (past attack speed's cap, Focus adds damage instead)" : ''}. Any click or key press ends it.`;
+}
+
 // The header is the purse and a few pills. A currency shows once the player holds some
 // (systems/disclosure.js); the status pill only says what is running somewhere else than the tab in
 // view; the next goal lives in the sidebar's Next card; the hero's numbers are in the Inventory.
@@ -275,7 +288,7 @@ export function renderHeader(game, ui, cloud) {
         ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></button>`
         : '';
     const focusPill = game.derived.focused
-        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
+        ? `<span class="focus-pill" title="${esc(focusTip(game.derived))}">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
     // What the hero is doing, when that is not what the tab in view already shows.
     const here = ui.tab === fightTab(game, ui) || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own

@@ -36,7 +36,7 @@ A Perfect always brings a find, and an ordinary win about one time in {{Math.rou
 After {{BASE.focusAfterMs / 1000}} seconds without a click, a tap or a key press, your hero settles in:
 
 - +{{pct(BASE.focusSkillSpeed, 0)}} speed in every skill but [[Farming]];
-- +{{pct(BASE.focusAttackSpeed, 0)}} attack speed in the fight.
+- +{{pct(BASE.focusAttackSpeed, 0)}} attack speed in the fight, on top of every other bonus. Attack speed stops at +{{pct(BASE.caps.attackSpeed, 0)}}, and the part of Focus's past it adds as much damage instead: a hero already at the cap hits {{pct(BASE.focusAttackSpeed, 0)}} harder.
 
 Your next click, tap or key press ends it, until you leave the game alone again, except in a mini-game: playing one keeps your Focus. Striking a monster is input too, so in a long fight Focus and strikes take turns. Focus also works through offline progress, where nobody clicks at all, so leaving the game alone has a reward of its own.
 
