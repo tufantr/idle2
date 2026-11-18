@@ -62,6 +62,20 @@ const peek = {
         const { rows } = await pool.query('SELECT metrics FROM users WHERE username = $1', [username]);
         return JSON.parse(rows[0].metrics);
     },
+    /** A player's rows on the growth check's review list (the store's own reading, every row ever). */
+    async reviews(username) {
+        return (await (memory || require('../api/store.js')).reviewsSince(0)).filter(r => r.username === username);
+    },
+    /** When a player last uploaded, as if then. */
+    async lastSaved(username, at) {
+        if (memory) { memory.db.users.find(u => u.username === username).last_saved = at; return; }
+        await pool.query('UPDATE users SET last_saved = $1 WHERE username = $2', [at, username]);
+    },
+    /** A player's stored flags, as an older server or the owner wrote them. */
+    async setFlags(username, flags) {
+        if (memory) { memory.db.users.find(u => u.username === username).flags = JSON.stringify(flags); return; }
+        await pool.query('UPDATE users SET flags = $1 WHERE username = $2', [JSON.stringify(flags), username]);
+    },
     /** A clan's boss and attacks this week as if the boss had been made `factor` times its size (before CLAN_BOSS changed). */
     async bossBigger(username, factor) {
         if (memory) {
@@ -100,7 +114,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews, signup_sources');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -177,19 +191,23 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     const token = await register('speedy');
     assert.equal((await post('/save', { state: heroSave({ playtimeMs: 1000, bestStage: 50, tokens: 100 }) }, token)).status, 200);
     clock += 1000;
-    // Uploads a second apart can't carry 99 in every skill or 950 new stages.
+    // Uploads a second apart can't carry 99 in every skill or 950 new stages: inside the ceilings, they are listed for the
+    // owner, not flagged (only numbers beyond any possible save flag at once)
     const at99 = { xp: 13_034_431 };
     const res = await (await post('/save', { state: { ...heroSave({ bestStage: 1000 }), skills: { combat: at99, woodcutting: at99, mining: at99 } } }, token)).json();
-    assert.equal(res.flagged, true);
-    const flags = (await peek.flags('speedy')).map(f => f.reason);
-    assert.ok(flags.includes('best stage grew faster than any play could'));
-    assert.ok(flags.includes('total XP grew faster than any play could'));
+    assert.equal(res.flagged, false);
+    assert.deepEqual(await peek.flags('speedy'), []);
+    const listed = await peek.reviews('speedy');
+    assert.deepEqual(listed.map(r => r.metric).sort(), ['bestStage', 'totalXp']);
+    const stage = listed.find(r => r.metric === 'bestStage');
+    assert.deepEqual([stage.value, stage.from, stage.uploads], [1000, 50, 1], 'what it reached, from where');
+    assert.ok(stage.share > 1 && Math.abs(stage.share - 950 / stage.allowed) < 1e-9, `${stage.share} of its allowance`);
     const loaded = await (await get('/load', token)).json();
     assert.equal(loaded.state.combat.bestStage, 1000, 'the save itself is accepted');
 
-    // A first upload is checked against what no save can reach.
+    // A first upload is checked against what no save can reach (a skill's XP past where every skill stops).
     const fresh = await register('fresh_cheat');
-    assert.equal((await (await post('/save', { state: heroSave({ bestStage: 1e9 }) }, fresh)).json()).flagged, true);
+    assert.equal((await (await post('/save', { state: { ...heroSave(), skills: { combat: { xp: 0 }, mining: { xp: 1e12 } } } }, fresh)).json()).flagged, true);
 
     // A save played with the developer switches on (they only work on a local host) is flagged.
     const dev = await register('dev_switches');
@@ -203,52 +221,59 @@ test('implausible uploads are kept but flagged; honest ones are not', async () =
     assert.equal((await (await post('/save', { state: trialsAt(120, { brutes: 5 }) }, await register('forged_trials'))).json()).flagged, true);
     assert.equal((await (await post('/save', { state: trialsAt(280, { brutes: 5 }) }, await register('earned_trials'))).json()).flagged, false);
 
-    // The numbers checked are the server's own reading of the save: a raw field can't be dressed up.
-    const sneaky = await register('sneaky_stage');
+    // The numbers checked are the server's own reading of the save: a raw field can't be dressed up. A far stage under a
+    // modest best stage is read as the best stage it makes (the save's own wall, MAX_STAGE), and checked as that: on a new
+    // account, far past what its first minutes allow, so listed.
+    const sneaky = await register('sneaky_stage', { fresh: true });
     const sneakySave = { ...heroSave(), combat: { stage: 999999, bestStage: 1, maxStage: 1 } };
-    assert.equal((await (await post('/save', { state: sneakySave }, sneaky)).json()).flagged, true, 'a far stage under a modest best stage');
+    assert.equal((await post('/save', { state: sneakySave }, sneaky)).status, 200);
+    assert.equal((await peek.metrics('sneaky_stage')).bestStage, 10000);
+    assert.deepEqual((await peek.reviews('sneaky_stage')).map(r => [r.metric, r.value, r.from]), [['bestStage', 10000, 0]], 'a far stage under a modest best stage');
 
-    // Growth is measured from each number's highest value and when it was reached.
+    // Growth is measured from each number's highest value and when it was reached. (`said`: whatever the check says of a
+    // save, flagged or listed; growth is only ever listed.)
     const { plausibilityFlags } = app;
     const { plausibleAttackDamage, honestClimb } = await import('../src/core/power.js');
     const hour = 3600 * 1000;
     const t0 = clock;
     const m = (o = {}) => ({ bestStage: 1, titanKills: 0, dungeonClears: 0, totalXp: 0, tokens: 0, attackDamage: 0, ...o });
     const run = (peaks, metrics, at) => plausibilityFlags(peaks, metrics, at, plausibleAttackDamage, honestClimb);
+    const said = r => [...r.flags, ...r.review.map(g => g.reason)];
+    const listedFor = (r, reason) => r.review.some(g => g.reason === reason) && !r.flags.includes(reason);
     const highs = metrics => run(null, metrics, t0).peaks;
-    assert.deepEqual(run(highs(m({ bestStage: 40 })), m({ bestStage: 90, totalXp: 2e6 }), t0 + hour).flags, [], 'a good hour is fine');
+    assert.deepEqual(said(run(highs(m({ bestStage: 40 })), m({ bestStage: 90, totalXp: 2e6 }), t0 + hour)), [], 'a good hour is fine');
     const today = m({ bestStage: 90, tokens: 900, titanKills: 10, totalXp: 9e6 });
     const restored = run(highs(today), m({ bestStage: 60, tokens: 10, titanKills: 4, totalXp: 5e6 }), t0 + 2 * 60 * 1000);
-    assert.deepEqual(restored.flags, [], 'going back (a restored backup) is not cheating');
-    assert.deepEqual(run(restored.peaks, today, t0 + 4 * 60 * 1000).flags, [], 'nor is coming forward to the newer save again');
-    assert.deepEqual(run(highs(m()), m({ totalXp: 30e6 }), t0 + 12 * hour).flags, [], 'a long absence allows a long replay');
-    assert.ok(run(highs(m()), m({ totalXp: 30e6 }), t0 + 60 * 1000).flags.length, 'but not a minute later');
+    assert.deepEqual(said(restored), [], 'going back (a restored backup) is not cheating');
+    assert.deepEqual(said(run(restored.peaks, today, t0 + 4 * 60 * 1000)), [], 'nor is coming forward to the newer save again');
+    assert.deepEqual(said(run(highs(m()), m({ totalXp: 30e6 }), t0 + 12 * hour)), [], 'a long absence allows a long replay');
+    assert.ok(listedFor(run(highs(m()), m({ totalXp: 30e6 }), t0 + 60 * 1000), 'total XP grew faster than any play could'), 'but not a minute later');
     assert.ok(run(null, m({ bestStage: 5, attackDamage: 1e12 }), t0).flags.includes('attack beyond what its best stage allows'), 'a weapon no play could make');
     // Stars come with Ascensions only: a few a day, and none past what any save could hold.
     assert.ok(run(null, m({ stars: 200000 }), t0).flags.includes('Stars beyond any possible save'));
-    assert.deepEqual(run(highs(m({ stars: 20 })), m({ stars: 50 }), t0 + 24 * hour).flags, [], 'an Ascension a day');
-    assert.ok(run(highs(m({ stars: 20 })), m({ stars: 400 }), t0 + hour).flags.includes('Stars grew faster than any play could'));
+    assert.deepEqual(said(run(highs(m({ stars: 20 })), m({ stars: 50 }), t0 + 24 * hour)), [], 'an Ascension a day');
+    assert.ok(listedFor(run(highs(m({ stars: 20 })), m({ stars: 400 }), t0 + hour), 'Stars grew faster than any play could'));
     // What honest players were flagged for (November 2026): one Ascension of a deep hero, a stock of bars worked at the anvil,
     // and a full bank of Titans won in a row, each upload a minute apart
-    assert.deepEqual(run(highs(m({ stars: 300 })), m({ stars: 350 }), t0 + 60 * 1000).flags, [], "100 million tokens' Ascension");
-    assert.deepEqual(run(highs(m({ totalXp: 70e6 })), m({ totalXp: 80e6 }), t0 + 60 * 1000).flags, [], 'bars worked at the anvil');
+    assert.deepEqual(said(run(highs(m({ stars: 300 })), m({ stars: 350 }), t0 + 60 * 1000)), [], "100 million tokens' Ascension");
+    assert.deepEqual(said(run(highs(m({ totalXp: 70e6 })), m({ totalXp: 80e6 }), t0 + 60 * 1000)), [], 'bars worked at the anvil');
     let titans = highs(m({ titanKills: 10 }));
     for (const [i, titanKills] of [11, 12, 13].entries()) {
         const up = run(titans, m({ titanKills }), t0 + (i + 1) * 60 * 1000);
-        assert.deepEqual(up.flags, [], `Titan ${i + 1} of a full bank`);
+        assert.deepEqual(said(up), [], `Titan ${i + 1} of a full bank`);
         titans = up.peaks;
     }
-    assert.ok(run(titans, m({ titanKills: 15 }), t0 + 5 * 60 * 1000).flags.includes('Titans defeated grew faster than any play could'), 'more than a bank holds');
+    assert.ok(listedFor(run(titans, m({ titanKills: 15 }), t0 + 5 * 60 * 1000), 'Titans defeated grew faster than any play could'), 'more than a bank holds');
     // Combat's levels past 99 (the War Tree's points): seven at once for a hero at the old cap, then a few a day at most
-    assert.deepEqual(run(highs(m()), m({ warLevel: 7 }), t0 + 60 * 1000).flags, [], 'the old cap brings seven at once');
-    assert.ok(run(highs(m({ warLevel: 7 })), m({ warLevel: 40 }), t0 + hour).flags.includes('combat levels past 99 grew faster than any play could'));
-    assert.deepEqual(run(highs(m({ warLevel: 7 })), m({ warLevel: 21 }), t0 + 5 * 24 * hour).flags, [], 'level 120 in five days');
+    assert.deepEqual(said(run(highs(m()), m({ warLevel: 7 }), t0 + 60 * 1000)), [], 'the old cap brings seven at once');
+    assert.ok(listedFor(run(highs(m({ warLevel: 7 })), m({ warLevel: 40 }), t0 + hour), 'combat levels past 99 grew faster than any play could'));
+    assert.deepEqual(said(run(highs(m({ warLevel: 7 })), m({ warLevel: 21 }), t0 + 5 * 24 * hour)), [], 'level 120 in five days');
     // A prestige pays more with Stars, so the tokens may grow as much faster.
-    const tokensIn = (gain, tokens) => run(highs(m({ bestStage: 300, tokens: 0 })), m({ bestStage: 300, tokens, tokenGain: gain }), t0 + hour).flags.includes('prestige tokens grew faster than any play could');
+    const tokensIn = (gain, tokens) => listedFor(run(highs(m({ bestStage: 300, tokens: 0 })), m({ bestStage: 300, tokens, tokenGain: gain }), t0 + hour), 'prestige tokens grew faster than any play could');
     assert.equal(tokensIn(1, 30_000), true);
     assert.equal(tokensIn(11, 30_000), false);
     // The best stage may grow by what its depth allows: fast early, slowly late.
-    const climbed = (from, to, hours) => run(highs(m({ bestStage: from })), m({ bestStage: to }), t0 + hours * hour).flags.includes('best stage grew faster than any play could');
+    const climbed = (from, to, hours) => listedFor(run(highs(m({ bestStage: from })), m({ bestStage: to }), t0 + hours * hour), 'best stage grew faster than any play could');
     assert.equal(climbed(1, 120, 2), false, 'a new player\'s first hours');
     assert.equal(climbed(250, 300, 24), false, 'a good day late in the game');
     assert.equal(climbed(300, 400, 168), false, 'a week late in the game');
@@ -267,13 +292,14 @@ test('a made-up climb is caught: bursts chained a minute apart, and a new accoun
     const t0 = clock;
     const m = (o = {}) => ({ bestStage: 1, titanKills: 0, dungeonClears: 0, totalXp: 0, tokens: 0, attackDamage: 0, ...o });
     const run = (peaks, metrics, at) => plausibilityFlags(peaks, metrics, at, plausibleAttackDamage, honestClimb);
+    const said = r => [...r.flags, ...r.review.map(g => g.reason)];
     // each upload as far as the one before allows: from stage 300 the second is caught, the day's window counting the burst once
     let { peaks } = run(null, m({ bestStage: 300 }), t0);
     let stage = 300, caught = 0;
     for (let i = 1; i <= 30 && !caught; i++) {
         stage += Math.floor(honestClimb(stage, (minute + 30 * minute) / (60 * minute))) - 1;
         const r = run(peaks, m({ bestStage: stage }), t0 + i * minute);
-        if (r.flags.includes('best stage grew faster than any play could')) caught = i;
+        if (r.review.some(g => g.key === 'bestStage')) caught = i;
         peaks = r.peaks;
     }
     assert.ok(caught > 0 && caught <= 3, `caught at upload ${caught}`);
@@ -281,24 +307,108 @@ test('a made-up climb is caught: bursts chained a minute apart, and a new accoun
     ({ peaks } = run(null, m({ bestStage: 300 }), t0));
     for (let h = 1; h <= 48; h++) {
         const r = run(peaks, m({ bestStage: 300 + Math.round(100 * Math.min(1, h / 24)) }), t0 + h * 60 * minute);
-        assert.deepEqual(r.flags, [], `hour ${h}`);
+        assert.deepEqual(said(r), [], `hour ${h}`);
         peaks = r.peaks;
     }
-    // highs kept before the windows: no flag, and a window begins
+    // highs kept before the windows: nothing said, and a window begins
     const old = { bestStage: { v: 300, at: t0 } };
     const begun = run(old, m({ bestStage: 310 }), t0 + 60 * minute);
-    assert.deepEqual(begun.flags, []);
+    assert.deepEqual(said(begun), []);
     assert.equal(begun.peaks.bestStage.day.v, 310);
 
-    // A new account's first save is measured from when it began to play: one that arrives far along is flagged.
+    // A new account's first save is measured from when it began to play: one that arrives far along is listed for the
+    // owner, its numbers kept (a flag acts on numbers beyond any possible save only)
     const forger = await register('fresh_forger', { fresh: true });
     const forged = await (await post('/save', { state: heroSave({ bestStage: 2000, tokens: 1e6 }) }, forger)).json();
-    assert.equal(forged.flagged, true);
-    assert.ok((await peek.flags('fresh_forger')).some(f => f.reason === 'best stage grew faster than any play could'));
+    assert.equal(forged.flagged, false);
+    assert.deepEqual((await peek.reviews('fresh_forger')).map(r => r.metric).sort(), ['bestStage', 'tokens']);
+    // each upload past the allowance that day counts on the day's row, which keeps its worst figures
+    clock += 60 * 1000;
+    await post('/save', { state: heroSave({ bestStage: 2100, tokens: 1e6 }) }, forger);
+    const row = (await peek.reviews('fresh_forger')).find(r => r.metric === 'bestStage');
+    assert.deepEqual([row.uploads, row.value, row.from], [2, 2100, 0], 'from where the day began, its worst');
     const newcomer = await register('fresh_newcomer', { fresh: true });
     assert.equal((await (await post('/save', { state: heroSave({ bestStage: 3, playtimeMs: 60000 }) }, newcomer)).json()).flagged, false, 'a real first minute');
     clock += 2 * 60 * 60 * 1000;
     assert.equal((await (await post('/save', { state: heroSave({ bestStage: 60, playtimeMs: 2 * 3600000 }) }, newcomer)).json()).flagged, false, 'and a good first two hours');
+    assert.deepEqual(await peek.reviews('fresh_newcomer'), [], 'and not listed');
+});
+
+test("flags list before they act: a fixed check's old flags lapse, the owner's by hand stand, and only today's check flags", async () => {
+    // the November false flags (012's bug 6): stored flags outlasted the fix, and five were cleared by hand
+    const host = await register('lapse_host');
+    const old = await register('old_flag');
+    const owned = await register('owner_flag');
+    for (const t of [host, old, owned]) await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, t);
+    const { clanId } = await (await post('/clans', { name: 'Lapsed Flags', tag: 'LAP' }, host)).json();
+    for (const t of [old, owned]) await post('/clans/join', { clanId }, t);
+    await peek.setFlags('old_flag', [{ at: clock - 3600 * 1000, reason: 'best stage grew faster than any play could' }]);   // the check before versions
+    await peek.setFlags('owner_flag', [{ at: clock - 3600 * 1000, reason: 'flagged by the owner after review', by: 'owner' }]);
+    const lapsed = await (await post('/clan/attack', { strikes: [], ms: 30000 }, old)).json();
+    assert.equal(lapsed.capped, false, 'a flag of the check before this one counts no more');
+    const held = await (await post('/clan/attack', { strikes: [], ms: 30000 }, owned)).json();
+    assert.equal(held.capped, true, "the owner's own flag stands");
+    // what this check writes carries its version, and stands
+    const forger = await register('new_flag');
+    const saved = await (await post('/save', { state: { ...heroSave({ tokens: 400, bestStage: 60 }), skills: { combat: { xp: 0 }, mining: { xp: 1e12 } } } }, forger)).json();   // beyond any possible save
+    const [flag] = await peek.flags('new_flag');
+    assert.deepEqual([flag.reason, flag.check], ['total XP beyond any possible save', 2]);
+    await post('/clans/join', { clanId }, forger);
+    assert.equal((await (await post('/clan/attack', { strikes: [], ms: 30000 }, forger)).json()).capped, true);
+    // the game is told until when an account is flagged (Settings says so): on every save and load, 0 when it isn't
+    const month = 30 * 24 * 3600 * 1000;
+    assert.equal(saved.flaggedUntil, saved.timestamp + month);
+    assert.equal((await (await get('/load', forger)).json()).flaggedUntil, saved.timestamp + month);
+    assert.equal((await (await get('/load', owned)).json()).flaggedUntil, clock - 3600 * 1000 + month, "the owner's flag");
+    assert.equal((await (await get('/load', old)).json()).flaggedUntil, 0, 'a lapsed flag');
+    assert.equal((await (await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, host)).json()).flaggedUntil, 0);
+    await peek.setFlags('new_flag', [{ ...flag, at: clock - month - 1000 }]);   // (as if made thirty days ago)
+    assert.equal((await (await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, forger)).json()).flaggedUntil, 0, 'thirty days on, and a save no longer impossible');
+});
+
+test("the week's review list goes to the owner by mail (api/review.js): each account by name with its numbers, nothing else; no address, no mail", async () => {
+    const { weeklyReview, LABELS } = require('../api/review.js');
+    assert.deepEqual(app.RANKED.map(r => LABELS[r.key]), app.RANKED.map(r => r.label), "every ranked number in the check's words");
+    const store = memory || require('../api/store.js');
+    const quick = await register('quick_climber', { fresh: true });
+    await post('/save', { state: heroSave({ bestStage: 900, playtimeMs: 3600 * 1000 }) }, quick);
+    const sent = [];
+    const send = async message => { sent.push(message); };
+    const quiet = await weeklyReview({ store, send, to: '', now: clock });
+    assert.deepEqual([quiet.sent, quiet.why, sent.length], [false, 'OWNER_ALERT_EMAIL is not set', 0], 'no address: no mail');
+    const mailed = await weeklyReview({ store, send, to: 'owner@example.test', now: clock });
+    assert.equal(mailed.sent, true);
+    assert.ok(mailed.accounts >= 1);
+    const [mail] = sent;
+    assert.equal(mail.to, 'owner@example.test');
+    assert.match(mail.subject, /^Fantasy Idle review list: \d+ accounts? this week$/);
+    assert.match(mail.text, /\nquick_climber\n {2}best stage: 0 to 900, where [\d,]+ more was allowed \([\d.]+ times\), 1 day, 1 upload\n/);
+    assert.ok(!mail.text.includes('@'), 'nobody\'s address, nor anything but names and numbers');
+    // a week with nothing on it says so
+    await weeklyReview({ store, send, to: 'owner@example.test', now: clock + 8 * 24 * 3600 * 1000 });
+    assert.equal(sent[1].subject, 'Fantasy Idle review list: nothing this week');
+});
+
+test("the ceilings are the save's own: the best stage at its wall (MAX_STAGE), total XP at every skill stopped", async () => {
+    // the best stage's was 6,000, weeks ahead of the deepest live hero, with two medals past it; total XP counted 13 skills
+    const { MAX_STAGE } = await import('../src/core/state.js');
+    const { SKILLS } = await import('../src/data/skills.js');
+    const { XP_FOR_MAX_LEVEL } = await import('../src/core/xp.js');
+    const { plausibleAttackDamage } = await import('../src/core/power.js');
+    const ceiling = key => app.RANKED.find(r => r.key === key).ceiling;
+    assert.equal(ceiling('bestStage'), MAX_STAGE, 'the mirror agrees with the game');
+    const everySkill = Object.keys(SKILLS).length * 2 * XP_FOR_MAX_LEVEL;
+    assert.equal(ceiling('totalXp'), everySkill);
+    const impossible = metrics => app.plausibilityFlags(null, { bestStage: 1, ...metrics }, clock, plausibleAttackDamage, null).flags;
+    assert.deepEqual(impossible({ bestStage: MAX_STAGE }), [], 'the deepest a save can hold');
+    assert.ok(impossible({ bestStage: MAX_STAGE + 1 }).includes('best stage beyond any possible save'));
+    assert.deepEqual(impossible({ totalXp: everySkill }), [], 'every skill at its stop');
+    assert.ok(impossible({ totalXp: everySkill + 1 }).includes('total XP beyond any possible save'));
+    // a hero past the old ceiling, a month into his account: not flagged for it
+    const deep = await register('past_six_thousand');
+    const res = await (await post('/save', { state: heroSave({ bestStage: 7600, playtimeMs: 600 * 3600 * 1000 }) }, deep)).json();
+    assert.equal(res.flagged, false);
+    assert.deepEqual(await peek.flags('past_six_thousand'), []);
 });
 
 test('a save cannot reach the server\'s own objects', async () => {
@@ -346,6 +456,23 @@ test('clans: create, list, join, the member cap, leaving hands the clan on', asy
     const { clanId: bigId } = await (await post('/clans', { name: 'Big Guild', tag: 'BIG' }, big)).json();
     for (let i = 0; i < 19; i++) assert.equal((await post('/clans/join', { clanId: bigId }, await register(`member_${i}`))).status, 200);
     assert.equal((await post('/clans/join', { clanId: bigId }, await register('one_too_many'))).status, 400, 'full at 20');
+});
+
+test("the clan list says who plays: each clan's members who played this past week, and the clans that play first", async () => {
+    const giants = [await register('pulse_giant_0')];
+    const { clanId: big } = await (await post('/clans', { name: 'Pulse Giants', tag: 'PLG' }, giants[0])).json();
+    for (let i = 1; i < 4; i++) { giants.push(await register(`pulse_giant_${i}`)); await post('/clans/join', { clanId: big }, giants[i]); }
+    const few = [await register('pulse_few_0'), await register('pulse_few_1')];
+    const { clanId: small } = await (await post('/clans', { name: 'Pulse Few', tag: 'PLF' }, few[0])).json();
+    await post('/clans/join', { clanId: small }, few[1]);
+    for (const t of [...giants, ...few]) await post('/save', { state: heroSave({ bestStage: 30 }) }, t);
+    for (const i of [0, 1, 3]) await peek.lastSaved(`pulse_giant_${i}`, clock - 8 * 24 * 3600 * 1000);   // a week and a day without a save (one still plays)
+    const { clans } = await (await get('/clans?search=pulse', few[1])).json();
+    assert.deepEqual(clans.map(c => [c.name, c.members, c.active]), [['Pulse Few', 2, 2], ['Pulse Giants', 4, 1]], 'the clan that plays first, though smaller');
+    for (const key of ['id', 'name', 'tag', 'description', 'lookingFor', 'members', 'crown', 'stage']) assert.ok(key in clans[0], `${key} kept`);
+    // members alike in who plays: the bigger first, as before
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, giants[1]);
+    assert.deepEqual((await (await get('/clans?search=pulse', few[1])).json()).clans.map(c => c.name), ['Pulse Giants', 'Pulse Few']);
 });
 
 test("the boss is the clan's, counted in its attacks: level 1 is CLAN_BOSS.first attacks of an average member, each seeing it in their own hits", async () => {
@@ -464,19 +591,22 @@ test('leaderboards: opt-in only, server-computed, flagged accounts left out, a w
     const shy = await register('shy_one');
     const proud = await register('proud_one');
     const cheat = await register('cheater');
+    const quick = await register('quick_one');
     await post('/save', { state: heroSave({ bestStage: 90 }) }, shy);
     await post('/save', { state: heroSave({ bestStage: 70 }) }, proud);
     await post('/save', { state: heroSave({ bestStage: 50, playtimeMs: 0 }) }, cheat);
+    await post('/save', { state: heroSave({ bestStage: 50, playtimeMs: 0 }) }, quick);
     clock += 1000;
-    await post('/save', { state: heroSave({ bestStage: 500, playtimeMs: 50 * 3600 * 1000 }) }, cheat);
+    await post('/save', { state: { ...heroSave({ bestStage: 60 }), skills: { combat: { xp: 0 }, mining: { xp: 1e12 } } } }, cheat);   // beyond any possible save
+    await post('/save', { state: heroSave({ bestStage: 500, playtimeMs: 50 * 3600 * 1000 }) }, quick);   // too fast, inside the ceilings: listed
 
-    await post('/leaderboard/consent', { optIn: true }, proud);
-    await post('/leaderboard/consent', { optIn: true }, cheat);
+    for (const t of [proud, cheat, quick]) await post('/leaderboard/consent', { optIn: true }, t);
     const board = await (await get('/leaderboard?metric=bestStage', proud)).json();
     const names = board.entries.map(e => e.username);
     assert.ok(names.includes('proud_one'));
     assert.ok(!names.includes('shy_one'), 'not opted in');
     assert.ok(!names.includes('cheater'), 'recently flagged');
+    assert.ok(names.includes('quick_one'), 'listed for the owner, not flagged: on the board until the owner acts');
     assert.equal(board.me.value, 70);
 
     // Weekly: counts from the first save of the week.
@@ -988,6 +1118,41 @@ test('a token whose name is no longer its account\'s is refused', async () => {
     assert.equal((await get('/load', t)).status, 401);
 });
 
+test('tokens can be revoked: "Sign out everywhere" and a password reset end every session before them; a token from before versions still plays', async () => {
+    const jwt = require('../api/node_modules/jsonwebtoken');
+    const phone = await register('many_devices');
+    const laptop = (await (await post('/login', { username: 'many_devices', password: 'correct horse' })).json()).token;
+    assert.equal(jwt.decode(phone).v, 0);
+    // a token signed before tokens carried a version counts as version 0, as every account began
+    const old = jwt.sign({ id: jwt.decode(phone).id, username: 'many_devices' }, 'test-secret', { expiresIn: '30d', algorithm: 'HS256' });
+    for (const t of [old, phone, laptop]) assert.equal((await get('/load', t)).status, 200);   // (each checked, and kept in the instance's memory)
+    // from the phone: every other session ends at once, the instance's memory too; the phone plays on with a fresh token
+    const out = await post('/account/signout-all', {}, phone);
+    assert.equal(out.status, 200);
+    const fresh = (await out.json()).token;
+    assert.equal(jwt.decode(fresh).v, 1);
+    assert.equal((await get('/load', laptop)).status, 401, 'the other device');
+    assert.equal((await get('/load', phone)).status, 401, "this device's old token");
+    assert.equal((await get('/load', old)).status, 401, 'one from before versions');
+    assert.equal((await get('/load', fresh)).status, 200, 'the fresh one plays');
+    assert.equal((await post('/account/signout-all', {}, laptop)).status, 401, 'a device signed out signs no one out');
+    assert.equal((await post('/account/signout-all', {})).status, 401, 'nor does nobody');
+    // a password reset ends them too, and the account's own address hears of it in a line
+    const from = { 'X-Forwarded-For': '192.0.2.40' };
+    await post('/password/forgot', { email: emailOf('many_devices') }, null, from);
+    const reset = await post('/password/reset', { email: emailOf('many_devices'), code: codeFor(emailOf('many_devices')), password: 'a whole new phrase' }, null, from);
+    assert.equal(reset.status, 200);
+    const afterReset = (await reset.json()).token;
+    assert.equal((await get('/load', fresh)).status, 401, 'the session before the reset');
+    assert.equal((await get('/load', afterReset)).status, 200, 'the device that reset it');
+    const told = mailbox.at(-1);
+    assert.deepEqual([told.to, told.subject], [emailOf('many_devices'), 'Your Fantasy Idle password was changed']);
+    assert.match(told.text, /was just changed.*Forgot your password/s);
+    const again = (await (await post('/login', { username: 'many_devices', password: 'a whole new phrase' })).json()).token;
+    assert.equal(jwt.decode(again).v, 2, 'a login signs at the version now');
+    assert.equal((await get('/load', again)).status, 200);
+});
+
 test('the health check asks the database every time, and a body that is not JSON gets a JSON answer', async () => {
     if (memory) {
         const ping = memory.ping;
@@ -1001,6 +1166,60 @@ test('the health check asks the database every time, and a body that is not JSON
     const res = await fetch(`${base}/save`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` }, body: '{"state": {' });
     assert.equal(res.status, 400);
     assert.match(res.headers.get('content-type') || '', /json/);
+});
+
+test("browsers may call the API from the game's own pages only; a request with no Origin is answered as before; no X-Powered-By", async () => {
+    const from = origin => fetch(`${base}/health`, { headers: { Origin: origin } });
+    for (const origin of ['https://fantasyidle.com', 'https://www.fantasyidle.com', 'https://staging.fantasyidle.com',
+        'http://localhost:8000', 'http://127.0.0.1:5173', 'http://[::1]:3000', 'http://game.localhost', 'https://fantasy.test:8443']) {
+        assert.equal((await from(origin)).headers.get('access-control-allow-origin'), origin, origin);
+    }
+    for (const origin of ['https://evil.example', 'https://fantasyidle.com.evil.example', 'http://fantasyidle.com', 'null', 'https://localhost.evil.example']) {
+        const res = await from(origin);
+        assert.equal(res.status, 200, 'answered (a browser keeps it from the page)');
+        assert.equal(res.headers.get('access-control-allow-origin'), null, origin);
+    }
+    const preflight = origin => fetch(`${base}/save`, { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization,content-type' } });
+    assert.equal((await preflight('https://evil.example')).headers.get('access-control-allow-origin'), null, "another site's upload is never sent");
+    assert.equal((await preflight('https://fantasyidle.com')).headers.get('access-control-allow-origin'), 'https://fantasyidle.com');
+    const plain = await get('/health');
+    assert.equal(plain.status, 200);
+    assert.equal(plain.headers.get('access-control-allow-origin'), null);
+    assert.equal(plain.headers.get('x-powered-by'), null, 'Express says nothing of itself');
+});
+
+test("the owner hears once a day when the day's mails reach 80 of the mail plan's 100; without OWNER_ALERT_EMAIL nobody does", async () => {
+    const { sendCounted, MAIL_ALERT_AT, DAILY_MAIL_CAP } = require('../api/mail.js');
+    assert.deepEqual([MAIL_ALERT_AT, DAILY_MAIL_CAP], [80, 100]);
+    const store = memory || require('../api/store.js');
+    const kept = process.env.OWNER_ALERT_EMAIL;
+    process.env.OWNER_ALERT_EMAIL = 'owner@example.test';
+    const alerts = () => mailbox.filter(m => m.to === 'owner@example.test' && /mails sent$/.test(m.subject));
+    const mailMany = async n => { for (let i = 0; i < n; i++) await sendCounted(store, { to: `reader${i}@example.test`, subject: 'A notice', text: 'x' }); };
+    try {
+        clock = (Math.floor(clock / DAY_MS) + 1) * DAY_MS + 3600 * 1000;   // a new day (UTC), counted from nothing
+        await mailMany(MAIL_ALERT_AT - 1);
+        assert.equal(alerts().length, 0, 'seventy-nine: not yet');
+        await register('eightieth_mail');   // a sign-up's code counts as any mail
+        assert.equal(alerts().length, 1, 'the eightieth');
+        assert.equal(alerts()[0].subject, "Fantasy Idle: 80 of today's 100 mails sent");
+        await mailMany(10);
+        assert.equal(alerts().length, 1, 'once that day');
+        clock += DAY_MS;
+        await mailMany(MAIL_ALERT_AT);
+        assert.equal(alerts().length, 2, 'and once the next');
+        delete process.env.OWNER_ALERT_EMAIL;
+        clock += DAY_MS;
+        await mailMany(MAIL_ALERT_AT);
+        assert.equal(alerts().length, 2, 'no address, no alert');
+        // the count and the alert are the server's bookkeeping: a failure there is never the mail's
+        process.env.OWNER_ALERT_EMAIL = 'owner@example.test';
+        const broken = { takeAttempt: async () => { throw new Error('the database is down (test)'); } };
+        await sendCounted(broken, { to: 'still.sent@example.test', subject: 'A notice', text: 'x' });
+        assert.equal(mailsTo('still.sent@example.test'), 1);
+    } finally {
+        if (kept === undefined) delete process.env.OWNER_ALERT_EMAIL; else process.env.OWNER_ALERT_EMAIL = kept;
+    }
 });
 
 test("this week's board counts from where the player stood when the week began, not from the week's first upload", async () => {
@@ -1136,10 +1355,79 @@ test('sign-up needs an email, and the account plays once the code mailed there i
     assert.ok((await confirmed.json()).token);
     assert.equal((await post('/login', { username: 'mail_hero', password: 'correct horse' }, null, from)).status, 200);
     assert.equal((await post('/verify', { username: 'mail_hero', code }, null, from)).status, 400, 'confirmed already');
-    // one account an address, whatever its case
+    // one account an address, whatever its case: a second sign-up with it makes none (and says so to nobody but the address)
     const twice = await post('/register', { username: 'mail_twin', password: 'correct horse', email: 'MAIL.hero@example.test' }, null, from);
-    assert.equal(twice.status, 400);
-    assert.match((await twice.json()).error, /already has an account/);
+    assert.equal(twice.status, 200);
+    assert.equal(await (memory || require('../api/store.js')).findUserByName('mail_twin'), null);
+});
+
+test('where accounts come from: a listing\'s link tag is counted with each account made from it, and nothing else is kept', async () => {
+    const store = memory || require('../api/store.js');
+    const count = async tag => (await store.signupSources()).find(s => s.tag === tag)?.count || 0;
+    let n = 0;
+    const signUp = (src, email = null) => post('/register', { username: `src_hero_${++n}`, password: 'correct horse', email: email || `src.hero.${n}@example.test`, ...(src === undefined ? {} : { src }) },
+        null, { 'X-Forwarded-For': `192.0.2.${70 + n}` });
+    for (const src of ['reddit1', 'reddit1', 'itch']) assert.equal((await signUp(src)).status, 200);
+    assert.deepEqual([await count('reddit1'), await count('itch')], [2, 1]);
+    // a tag that isn't one ([a-z0-9-], up to 32) counts nothing, and the account is made all the same
+    for (const src of ['Bad Tag!', 'x'.repeat(33), 42, '']) assert.equal((await signUp(src)).status, 200, String(src));
+    assert.equal((await store.signupSources()).some(s => !/^[a-z0-9-]{1,32}$/.test(s.tag)), false);
+    assert.equal((await signUp(undefined)).status, 200, 'none at all');
+    // an address that has an account makes none, so counts none
+    await register('src_owner');
+    assert.equal((await signUp('reddit1', emailOf('src_owner'))).status, 200);
+    assert.equal(await count('reddit1'), 2);
+});
+
+test("a sign-up says the same whether its address has an account or not; that address's owner hears of the try instead, once a day", async () => {
+    const from = { 'X-Forwarded-For': '192.0.2.60' };
+    await register('address_owner');
+    const fresh = await post('/register', { username: 'fresh_name', password: 'correct horse', email: 'fresh.name@example.test' }, null, from);
+    const taken = await post('/register', { username: 'copy_name', password: 'correct horse', email: 'Address_Owner@Example.test' }, null, from);
+    assert.deepEqual([fresh.status, taken.status], [200, 200]);
+    const [a, b] = [await fresh.json(), await taken.json()];
+    assert.deepEqual(Object.keys(b).sort(), Object.keys(a).sort(), 'the same answer');
+    assert.deepEqual([b.pending, b.username, b.email, b.message], [true, 'copy_name', 'ad***@example.test', a.message]);
+    assert.equal(await (memory || require('../api/store.js')).findUserByName('copy_name'), null, 'no account made');
+    const notice = mailbox.at(-1);
+    assert.deepEqual([notice.to, notice.subject], ['address_owner@example.test', 'Someone tried to make a Fantasy Idle account with your email']);
+    assert.match(notice.text, /already has one: yours, address_owner\..*Forgot your password/s);
+    assert.ok(!/\b\d{6}\b/.test(notice.text), 'no code in it');
+    // again the same day: the same answer, and no second mail
+    const told = mailsTo('address_owner@example.test');
+    assert.equal((await post('/register', { username: 'copy_again', password: 'correct horse', email: 'address_owner@example.test' }, null, from)).status, 200);
+    assert.equal(mailsTo('address_owner@example.test'), told, 'once a day');
+    // the name that was never made: any code is a wrong one, as for a real account
+    assert.match((await (await post('/verify', { username: 'copy_name', code: '123456' }, null, from)).json()).error, /wrong/);
+    // the game's sign-up still reaches the code step: its answer is the one it always had
+    assert.ok(b.pending && b.email);
+});
+
+test('passwords too easy to guess are refused at sign-up and reset: the most common, a repeat, a run of keys, the username', async () => {
+    const { COMMON_PASSWORDS } = require('../api/common-passwords.js');
+    assert.ok(COMMON_PASSWORDS.size >= 300, `${COMMON_PASSWORDS.size} on the list`);
+    assert.deepEqual([...COMMON_PASSWORDS].filter(p => p.length < 8 || p !== p.toLowerCase()), [], 'eight characters or more (the length rule takes the rest), lowercase');
+    const from = { 'X-Forwarded-For': '192.0.2.50' };
+    const signUp = (username, password) => post('/register', { username, password, email: `${username.toLowerCase()}@example.test` }, null, from);
+    for (const password of ['password1', 'Password123', 'iloveyou', 'FantasyIdle', '12345678', 'qwertyuiop', 'poiuytrewq', '8901234567', 'aaaaaaaa', 'abababab', 'abcdefgh', 'hgfedcba', '98765432']) {
+        const res = await signUp('weak_hero', password);
+        assert.equal(res.status, 400, password);
+        assert.match((await res.json()).error, /most common|too easy to guess/, password);
+    }
+    const same = await signUp('Plain_Hero', 'PLAIN_HERO');
+    assert.equal(same.status, 400);
+    assert.equal((await same.json()).error, "Your password can't be your username.");
+    assert.match((await (await signUp('weak_hero', 'short')).json()).error, /8-72 characters/, "today's length rule stands");
+    assert.equal((await signUp('weak_hero', 'correct horse battery')).status, 200, 'a passphrase is fine (and the refusals cost no sign-up of the day)');
+    // at a reset the same, the username only once the code is right; the code then still holds for a better one
+    const email = 'weak_hero@example.test';
+    clock += 61 * 1000;
+    await post('/password/forgot', { email }, null, from);
+    const code = codeFor(email);
+    const resetTo = password => post('/password/reset', { email, code, password }, null, from);
+    assert.match((await (await resetTo('sunshine')).json()).error, /most common/);
+    assert.match((await (await resetTo('Weak_Hero')).json()).error, /can't be your username/);
+    assert.equal((await resetTo('a better phrase')).status, 200, 'the same code, a better password');
 });
 
 test('a code takes five tries and lives fifteen minutes; a new one goes once a minute, five an hour', async () => {

@@ -128,6 +128,10 @@ function freshSocial() {
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
+// The listing a player came by (its link's `?src=reddit1`, README "Listings"): kept on this device, the first one seen,
+// until an account is made, and sent with its sign-up, which counts it (a tag and a count, nothing of the account).
+const SOURCE_KEY = 'fantasyIdle.src';
+if (/^[a-z0-9-]{1,32}$/.test(params.get('src') || '') && !prefs.get(SOURCE_KEY)) prefs.set(SOURCE_KEY, params.get('src'));
 // A local development host (tools/serve.py, the screenshot and test tools): dev flags work there, and the
 // game plays as a guest. Anywhere else a sign-in stands in front of the game (the owner's call, October 2026:
 // the server's save is the game, as in any online game) until the player has an account or chooses to play
@@ -1239,6 +1243,9 @@ async function claimGifts() {
  */
 let sendingClan = false;
 let clanRetryAt = 0;
+// The card of a flagged account's clan attack says why and how to answer; its tap goes to Settings, whose line and "?" say
+// the rest (src/ui/features.js FEATURES.flagged).
+const FLAGGED_NOTE = "A save showed numbers the game's check doesn't allow. Think it's a mistake? Tell the team on the Discord.";
 async function sendClanResult(now = false) {
     const result = game.state.clanResult;
     if (!result || sendingClan || !cloud.loggedIn || !cloudReady || passive || (!now && Date.now() < clanRetryAt)) return;
@@ -1256,9 +1263,11 @@ async function sendClanResult(now = false) {
         const look = clanBossFor(answer.week || result.week);
         const lines = [answer.killed ? 'The boss is down! It comes back at midnight UTC, a level stronger' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
             answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-            answer.capped ? 'Capped: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+            answer.capped ? 'Flagged: at most 1% of the boss' : ''].filter(Boolean);
+        // a flagged account's attack held back: what a flag does, why, and how to answer, on the card (Settings has the rest)
         rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
-            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: 4200 });
+            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: answer.capped ? 9000 : 4200,
+            ...(answer.capped ? { note: FLAGGED_NOTE, go: 'settings' } : {}) });
         sound.play(answer.killed ? 'victory' : 'chest');
         render();
     } catch (err) {
@@ -1278,9 +1287,10 @@ function endlessAnswered(answer) {
     const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
         answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
         answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-        answer.counted === false ? 'Not counted: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+        answer.counted === false ? 'Flagged: not counted in the ranking' : ''].filter(Boolean);
+    const flagged = answer.counted === false;
     rewards.celebrate({ key: `endless:${answer.week}:${answer.depth}:${answer.attacksLeft}`, kind: 'unlock', art: paintStyle(ENDLESS.zone), icon: sprite(`mon/${ENDLESS.look}`, { scale: 2, fallback: '🐉' }),
-        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: 4200 });
+        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: flagged ? 9000 : 4200, ...(flagged ? { note: FLAGGED_NOTE, go: 'settings' } : {}) });
     sound.play('chest');
     render();
 }
@@ -1935,12 +1945,13 @@ window.FI = {
         if (kind === 'register' && !email) return authError('An email address is needed: the game sends a code there.');
         try {
             if (kind === 'login') { await cloud.login(user, pass); await signedIn(); return; }
-            const data = await cloud.register(user, pass, email);
+            const data = await cloud.register(user, pass, email, prefs.get(SOURCE_KEY));
+            prefs.remove(SOURCE_KEY);   // (counted with the account)
             if (cloud.loggedIn) { await signedIn(); return; }   // (a server from before codes)
             showAuth('', { mode: 'verify', username: data.username || user, email: data.email || email });
         } catch (e) {
             // made, or with the right password, but the address not confirmed yet: to the code
-            if (e.data?.pending) return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email });
+            if (e.data?.pending) { prefs.remove(SOURCE_KEY); return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email }); }
             authError(SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message);
         }
     },
@@ -1987,6 +1998,14 @@ window.FI = {
             openSignIn();
         } else toast('Logged out — playing locally', 'info');
         render();
+    },
+    /** Settings' "Sign out everywhere": every other device signed in to this account is signed out; this one stays. */
+    signOutEverywhere() {
+        if (!cloud.loggedIn) return;
+        askConfirm('Sign out everywhere?', 'Every other device signed in to your account is signed out. This one stays signed in.', 'Sign out everywhere', async () => {
+            try { await cloud.signOutEverywhere(); toast('Signed out everywhere else', 'info'); } catch (err) { toast(err.message, 'error'); }
+            render();
+        });
     },
     cloudSaveNow() { cloudSave(true); },
     /** The header's new-version pill: the game saved, signed in on the server too, then the page loads the new version. */

@@ -1497,6 +1497,28 @@ Keeping it running:
       level while the gold lasts, before the boss's skull. Played by a scratch follower of the hand (an hour, three seeds):
       the two who met that wall bought 18 camp levels, fell 21 and 12 times instead of 30 and 31, and stood at stage 30
       instead of 28 and 27; `tools/opening.mjs`, whose players take every offer anyway, reads the same
+- [x] **The server's ceilings keep up** (the research loop's R1, the owner's pick, November 2026; DESIGN §3.17): a best stage
+      past 6,000 no longer flags an account, weeks before the deepest hero would have met it; the ceiling is the save's own
+      wall at 10,000, and total XP's counts the game's 11 skills
+- [x] **Flags that list before they act** (R1, November 2026; DESIGN §3.17): only numbers no save can reach flag an account
+      at once. A save that grows faster than the check allows, inside the ceilings, goes on a list for the owner instead
+      (mailed each week), and the owner flags by hand what deserves it. Flags carry the check's version: a fixed check's old
+      flags lapse by themselves
+- [x] **A flagged player is told** (R1, November 2026; DESIGN §3.17): Settings' account panel says "Flagged until …" while
+      it is, with a "?" for what a flag does, why, how long and how to answer (the Discord); a held-back clan attack's card
+      says "Flagged: at most 1% of the boss" with the same few words, and a tap opens Settings. The wiki's FAQ has it too
+- [x] **The API's guards** (R12, November 2026; DESIGN §3.17): browsers may call it from the game's own pages only, it no
+      longer names its framework, and the owner hears when a day's mails reach 80 of the plan's 100
+- [x] **Sign out everywhere** (R12, November 2026; DESIGN §3.17): Settings' account panel signs out every other device
+      (with a confirm), and a new password does the same; the account's address hears of a password change
+- [x] **Passwords too easy to guess are refused** (R12, November 2026; DESIGN §3.17): at sign-up and reset, the most common
+      ones, a character or short run repeated, a run of keys in a row and the username itself, with a plain reason
+- [x] **A sign-up doesn't tell whose address has an account** (R9, November 2026; DESIGN §3.17): it answers "check your
+      email" either way, and an address that has one gets a line saying someone tried, instead of a code
+- [x] **The clan list says who plays** (R14, November 2026; DESIGN §3.18): each clan's row says how many of its members
+      played this past week, and the clans with the most of them come first, so a newcomer finds one that plays
+- [x] **Where accounts come from** (R7, November 2026; DESIGN §3.17, README "Listings"): a listing's link can carry a
+      tag (`?src=reddit1`), kept by the game until an account is made and counted with it; no link to the account
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

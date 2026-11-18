@@ -4,10 +4,19 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const store = require('./store');
 const crypto = require('node:crypto');
-const { sendMail, codeMail } = require('./mail');
+const { sendCounted, codeMail, passwordChangedMail, signUpTakenMail } = require('./mail');
+const { COMMON_PASSWORDS } = require('./common-passwords');
 
 const app = express();
-app.use(cors());
+app.disable('x-powered-by');
+// Browsers may call the API from the game's own pages only (the research loop's P-100, November 2026; it was open to every
+// site): the live site, its www name and the staging copy, and a local development host on any port (tools/serve.py, the
+// tools). A request with no Origin (the page's own GETs, curl, the deploy's check) is answered as before; another site's
+// gets no CORS headers, so its page can't read the answer.
+const GAME_ORIGINS = new Set(['https://fantasyidle.com', 'https://www.fantasyidle.com', 'https://staging.fantasyidle.com']);
+const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|([a-z0-9-]+\.)+(localhost|test))(:\d{1,5})?$/i;
+const gameOrigin = origin => !origin || GAME_ORIGINS.has(origin) || LOCAL_ORIGIN.test(origin);
+app.use(cors({ origin: (origin, done) => done(null, gameOrigin(origin)) }));
 // (inflate: false: the game never compresses what it sends, so a compressed body is refused before it is unpacked)
 app.use(express.json({ limit: '1mb', inflate: false }));
 
@@ -57,8 +66,9 @@ function requireSecret(res) {
     return false;
 }
 
+/** A token for an account, carrying its token version now (`v`: one below the account's is refused, tokenStillValid). */
 function signToken(user) {
-    return jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: TOKEN_TTL, algorithm: JWT_ALGORITHM });
+    return jwt.sign({ id: user.id, username: user.username, v: user.tokenVersion || 0 }, JWT_SECRET, { expiresIn: TOKEN_TTL, algorithm: JWT_ALGORITHM });
 }
 
 function validateCredentials(body) {
@@ -67,20 +77,43 @@ function validateCredentials(body) {
     if (typeof password !== 'string' || password.length < MIN_PASSWORD || Buffer.byteLength(password) > MAX_PASSWORD) {
         return `Password must be ${MIN_PASSWORD}-${MAX_PASSWORD} characters.`;
     }
+    return weakPassword(password, username);
+}
+
+// Passwords too easy to guess are refused at sign-up and reset, past the length rule (the research loop's P-101, November
+// 2026; NIST asks for a blocklist): the most common ones (api/common-passwords.js), one character or a short run repeated,
+// a run of letters, digits or keys in a row (forwards or backwards, round again), and the username itself.
+const KEY_RUNS = ['1234567890', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm', 'abcdefghijklmnopqrstuvwxyz'].flatMap(row => [row + row, [...row + row].reverse().join('')]);
+const steadyRun = p => { const step = p.charCodeAt(1) - p.charCodeAt(0); return Math.abs(step) === 1 && [...p].every((c, i) => i === 0 || p.charCodeAt(i) - p.charCodeAt(i - 1) === step); };
+/** Why a password is too easy to guess, in the player's words, or null. */
+function weakPassword(password, username = null) {
+    const p = String(password).toLowerCase();
+    if (username && p === String(username).toLowerCase()) return "Your password can't be your username.";
+    if (COMMON_PASSWORDS.has(p)) return 'That password is one of the most common: pick another.';
+    if (/^(.{1,4})\1+$/su.test(p) || KEY_RUNS.some(run => run.includes(p)) || steadyRun(p)) return 'That password is too easy to guess: pick another.';
     return null;
 }
 
 // A token names an account by id and name; the name must still be that id's (a database made anew under
-// the same secret would otherwise hand an old token whoever has that id now). Kept a while per instance.
+// the same secret would otherwise hand an old token whoever has that id now). It also carries the account's token version
+// when it was signed (`v`; tokens from before versions carry none and count as 0, as every account began): one below the
+// account's version now is refused, so a password reset or "Sign out everywhere" (store.setPassword, bumpTokenVersion) ends
+// every session made before it (the research loop's P-096, November 2026: a 30-day token outlived a reset). Kept a while
+// per instance; a bump here puts the new version in at once (noteVersion).
 const NAME_CHECK_MS = 10 * 60 * 1000;
 const namesSeen = new Map();
+const tokenVersionOf = user => (Number.isSafeInteger(user.v) && user.v > 0 ? user.v : 0);
 async function tokenStillValid(user) {
-    const seen = namesSeen.get(user.id);
-    if (seen && Date.now() - seen.at < NAME_CHECK_MS) return seen.name === user.username;
-    const name = await store.userNameOf(user.id);
-    namesSeen.set(user.id, { name, at: Date.now() });
-    return name !== null && name === user.username;
+    let seen = namesSeen.get(user.id);
+    if (!seen || Date.now() - seen.at >= NAME_CHECK_MS) {
+        const account = await store.tokenAccount(user.id);
+        seen = { name: account ? account.username : null, version: account ? account.tokenVersion : 0, at: Date.now() };
+        namesSeen.set(user.id, seen);
+    }
+    return seen.name !== null && seen.name === user.username && tokenVersionOf(user) >= seen.version;
 }
+/** An account's sessions after a bump of its version (`account`: { username, tokenVersion } from the store), known here at once. */
+const noteVersion = (userId, account) => namesSeen.set(userId, { name: account.username, version: account.tokenVersion, at: Date.now() });
 
 const authenticateToken = (req, res, next) => {
     if (!requireSecret(res)) return;
@@ -165,6 +198,7 @@ const TOO_MANY_ACCOUNTS = { error: 'This address has made enough accounts for to
 // as a hash keyed with the server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour
 // from an address. One account an email, whatever its case; no address is ever shown to another player.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const SOURCE_RE = /^[a-z0-9-]{1,32}$/;   // a listing's link tag (`?src=reddit1`), as the game keeps it
 const CODE_MS = 15 * 60 * 1000;
 const CODE_TRIES = 5;
 const RESEND_GAP_MS = 60 * 1000;
@@ -188,22 +222,22 @@ async function mailCode(user, email, purpose, ip, now) {
     if (await store.takeAttempt(`mail:ip:${ip}`.slice(0, 120), now, MAIL_WINDOW_MS) > MAX_MAILS_PER_IP) return { tooMany: true };
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     await store.putEmailCode(user.id, purpose, codeHash(user.id, purpose, code), now + CODE_MS, now);
-    try { await sendMail({ to: email, ...codeMail({ username: user.username, code, purpose, minutes: CODE_MS / 60000 }) }); } catch (err) {
+    try { await sendCounted(store, { to: email, ...codeMail({ username: user.username, code, purpose, minutes: CODE_MS / 60000 }) }, now); } catch (err) {
         await store.deleteEmailCodes(user.id, purpose);   // never delivered: it mustn't hold the next one back a minute
         throw err;
     }
     return { sent: true };
 }
 
-/** A code given for an account and a purpose: 'ok' (and spent), or 'wrong', 'expired', 'tries'. */
-async function checkCode(user, purpose, code, now) {
+/** A code given for an account and a purpose: 'ok' (and spent, unless `spend` is false), or 'wrong', 'expired', 'tries'. */
+async function checkCode(user, purpose, code, now, { spend = true } = {}) {
     const c = await store.getEmailCode(user.id, purpose);
     if (!c || c.expiresAt <= now) return 'expired';
     const tries = await store.bumpEmailCodeAttempts(c.id);
     if (tries > CODE_TRIES) { await store.expireEmailCode(c.id); return 'tries'; }   // (kept, run out: the next one still waits its minute)
     const given = typeof code === 'string' || typeof code === 'number' ? String(code).replace(/\D/g, '') : '';
     if (given.length !== 6 || !crypto.timingSafeEqual(Buffer.from(codeHash(user.id, purpose, given)), Buffer.from(c.codeHash))) return 'wrong';
-    await store.deleteEmailCodes(user.id, purpose);
+    if (spend) await store.deleteEmailCodes(user.id, purpose);
     return 'ok';
 }
 
@@ -220,17 +254,34 @@ app.post('/api/register', async (req, res) => {
         // every registration counts, before any work is done
         if (await store.takeAttempt(`register:${ip}`.slice(0, 120), Date.now(), REGISTER_WINDOW_MS) > MAX_REGISTRATIONS) return res.status(429).json(TOO_MANY_ACCOUNTS);
         const hash = await bcrypt.hash(password, 10);
-        const id = await store.createUser(username, hash, email);
         const pending = { pending: true, username, email: maskEmail(email) };
+        const unsent = () => res.status(502).json({ ...pending, error: "The account is made, but its code couldn't be sent: ask for a new one in a moment." });
+        let id;
+        try { id = await store.createUser(username, hash, email); } catch (err) {
+            if (err.code !== '23505' || err.constraint !== 'users_email_lower') throw err;
+            // An address that has an account gets the same answer as a new one, as a reset does, so a sign-up never tells
+            // whose address has one (the research loop's P-103, November 2026). Its owner hears of the try instead, once a
+            // day, and may sign in or reset; no account is made.
+            const owner = await store.findUserByEmail(email);
+            if (owner && await store.takeAttempt(`taken:user:${owner.id}`, Date.now(), DAY) === 1) {
+                try { await sendCounted(store, { to: owner.email || email, ...signUpTakenMail({ username: owner.username }) }); } catch (mailErr) {
+                    console.error('sign-up notice failed', mailErr && mailErr.message);
+                    return unsent();
+                }
+            }
+            return res.json({ ...pending, message: 'Check your email for the code' });
+        }
+        // the listing's link the player came by (`src`, kept by the game from its address), counted with the account made:
+        // a tag and a count, nothing that ties it to the account (the research loop's P-067, November 2026)
+        const src = typeof req.body.src === 'string' && SOURCE_RE.test(req.body.src) ? req.body.src : null;
+        if (src) { try { await store.countSignupSource(src); } catch (err) { console.error('sign-up source not counted', err && err.message); } }
         try { await mailCode({ id, username }, email, 'verify', ip, Date.now()); } catch (err) {
             console.error('sign-up mail failed', err && err.message);
-            return res.status(502).json({ ...pending, error: "The account is made, but its code couldn't be sent: ask for a new one in a moment." });
+            return unsent();
         }
         res.json({ ...pending, message: 'Check your email for the code' });
     } catch (err) {
-        if (err.code === '23505') { // Postgres unique violation
-            return res.status(400).json({ error: err.constraint === 'users_email_lower' ? 'That email already has an account: log in, or reset its password.' : 'Username already exists' });
-        }
+        if (err.code === '23505') return res.status(400).json({ error: 'Username already exists' });   // (Postgres unique violation: the name)
         console.error('register failed', err);
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -286,14 +337,33 @@ app.post('/api/password/reset', route('reset password', async (req, res) => {
     if (typeof password !== 'string' || password.length < MIN_PASSWORD || Buffer.byteLength(password) > MAX_PASSWORD) {
         return res.status(400).json({ error: `Password must be ${MIN_PASSWORD}-${MAX_PASSWORD} characters.` });
     }
+    const weak = weakPassword(password);
+    if (weak) return res.status(400).json({ error: weak });
     const email = cleanEmail((req.body || {}).email);
     const user = validEmail(email) ? await store.findUserByEmail(email) : null;
     const now = Date.now();
-    const result = user ? await checkCode(user, 'reset', code, now) : 'wrong';
+    const result = user ? await checkCode(user, 'reset', code, now, { spend: false }) : 'wrong';
     if (result !== 'ok') return res.status(400).json({ error: CODE_WORDS[result] });
-    await store.setPassword(user.id, await bcrypt.hash(password, 10));
+    // the username itself is said only to one who holds the code (said before it, it would tell whose address this is),
+    // and the code still holds for a better password
+    const own = weakPassword(password, user.username);
+    if (own) return res.status(400).json({ error: own });
+    await store.deleteEmailCodes(user.id, 'reset');
+    // the new password ends every session made before it (its token version goes up); this device signs in with a fresh one
+    const tokenVersion = await store.setPassword(user.id, await bcrypt.hash(password, 10));
+    noteVersion(user.id, { username: user.username, tokenVersion });
     if (!user.emailVerifiedAt) await store.setEmailVerified(user.id, now);
-    res.json({ token: signToken(user), message: 'Password changed' });
+    // and the account's own address hears of it, in one line (a mail that can't go doesn't undo the change)
+    try { await sendCounted(store, { to: user.email, ...passwordChangedMail({ username: user.username }) }, now); } catch (err) { console.error('password mail failed', err && err.message); }
+    res.json({ token: signToken({ ...user, tokenVersion }), message: 'Password changed' });
+}));
+
+/** "Sign out everywhere" (Settings): every session of the account ends but this one, which gets a fresh token. */
+app.post('/api/account/signout-all', authenticateToken, route('sign out everywhere', async (req, res) => {
+    const account = await store.bumpTokenVersion(req.user.id);
+    if (!account) return res.sendStatus(401);
+    noteVersion(req.user.id, account);
+    res.json({ token: signToken({ id: req.user.id, ...account }), message: 'Signed out everywhere else' });
 }));
 
 app.post('/api/login', route('login', async (req, res) => {
@@ -321,12 +391,21 @@ app.post('/api/login', route('login', async (req, res) => {
     res.json({ token: signToken(user), message: 'Login successful' });
 }));
 
-// Uploads are never rejected for looking odd (the save is the player's), but implausible numbers are
-// flagged on the account. Flagged accounts are left out of leaderboards and don't size clan bosses.
-// Offline progress happens inside the real time between two uploads, so that time is the allowance.
+// Uploads are never rejected for looking odd (the save is the player's), but impossible numbers are flagged on the account:
+// numbers beyond any possible save. Flagged accounts are left out of leaderboards and the clan ranking, and their clan
+// attacks are capped. A number that grew faster than play allows, inside the ceilings, goes on a list for the owner instead
+// (flag_reviews, mailed each week by api/review.js; the research loop's R1, November 2026): limits set too tight had capped
+// 6 of 43 accounts for days on 4 November, unseen. Offline progress happens inside the real time between two uploads, so
+// that time is the allowance.
 const XP_PER_HOUR_CEILING = 3_000_000;        // far above any skill's real rate, summed over skills
 const SLACK_MS = 30 * 60 * 1000;              // clock drift and upload delays
 const FLAG_MEMORY_MS = 30 * DAY;
+// The check's version, stored with each flag it writes (`check`). Raise it when the check is loosened, so that what it
+// flagged and would no longer flag stops counting at once: flags from an older version lapse (on 4 November five were
+// cleared by hand after the limits changed). 1 is the check before versions (its flags carry none); 2 lists growth for the
+// owner instead of flagging it, with the best stage's ceiling at the save's own (November 2026). A flag the owner adds by
+// hand (`"by": "owner"`, README "Flags") lasts its 30 days whatever the version.
+const FLAG_CHECK = 2;
 
 function totalXp(state) {
     return Object.values(state.skills || {}).reduce((sum, s) => sum + (Number(s && s.xp) || 0), 0);
@@ -334,6 +413,13 @@ function totalXp(state) {
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
 // Tokens one prestige can pay at a stage (BALANCE.prestige in src/core/formulas.js).
 const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
+// Mirrored from the game, whose ES modules this file can't load before RANKED is built (test/api.test.cjs checks that they
+// agree): the deepest stage a save holds (MAX_STAGE in src/core/state.js: a load clamps the best stage there), the game's
+// skills (src/data/skills.js) and where a skill's XP stops, twice level 99's (src/systems/progress.js; Combat's past it is
+// the War Tree's, counted by its levels in warLevel).
+const MAX_STAGE = 10000;
+const SKILL_COUNT = 11;
+const SKILL_XP_STOP = 2 * 13_034_431;
 
 // Ranked numbers, read from the server's own reading of the save (powerSummary on the migrated save,
 // the numbers the boards show; a raw field can't be dressed up): how fast each can honestly grow per
@@ -342,13 +428,15 @@ const tokensPerRun = stage => Math.pow(Math.max(0, (stage - 5) / 5), 1.5);
 // was reached, so restoring a backup and coming forward again is never flagged, and from where the day's window began
 // (plausibilityFlags); an account's first upload from when it began to play (firstPeaks).
 const RANKED = [
-    // (perHour, flat: only without honestClimb; the ceiling far past any hero's: 2,000 after 1,200 simulated hours of the endless climb)
-    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: 6000, byDepth: true },
+    // (perHour, flat: only without honestClimb; the ceiling the save's own wall, MAX_STAGE. It was 6,000 until November 2026,
+    // which the deepest live hero, 460 stages a week then, would have met within weeks, with the medals at 7,500 and 10,000 past it)
+    { key: 'bestStage', label: 'best stage', perHour: 60, flat: 30, ceiling: MAX_STAGE, byDepth: true },
     // (`flat`: a full bank of attempts won one after another, data/dungeons.js TITAN_BANK)
     { key: 'titanKills', label: 'Titans defeated', perHour: 1, flat: 3, ceiling: 20000 },
     { key: 'dungeonClears', label: 'dungeon clears', perHour: 3600, flat: 200, ceiling: 1e8 },
-    // (`flat`: a whole skill's XP at once, twice level 99's where it stops: the anvil and the bench pay for a stock of bars in minutes)
-    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: 2 * 13_034_431, ceiling: 13 * 2 * 13_034_431 },
+    // (`flat`: a whole skill's XP at once, twice level 99's where it stops: the anvil and the bench pay for a stock of bars in minutes;
+    // the ceiling every skill stopped, which counted 13 skills until November 2026, where the game has 11)
+    { key: 'totalXp', label: 'total XP', perHour: XP_PER_HOUR_CEILING, flat: SKILL_XP_STOP, ceiling: SKILL_COUNT * SKILL_XP_STOP },
     { key: 'tokens', label: 'prestige tokens', perHour: null, flat: 0, ceiling: 1e12 },   // (a few hundred million after 1,200 simulated hours)
     // Combat's levels past 99, the War Tree's points (src/data/talents.js): a hero at the old cap had 7 at once, and each later
     // level takes longer than the last (hours at the start, weeks by 150); 134 fill the tree
@@ -359,14 +447,17 @@ const RANKED = [
 ];
 
 /**
- * Reasons a save's numbers look impossible next to their highest so far, and the new highs. Each number may grow from
- * its highest value (`v`, reached `at`) by what play allows in the time since, and also from where the day's window
- * began (`day`): measured from the last upload alone, a burst allowed at each could be chained a minute apart (a
- * made-up save reached stage 6,000 in 22 minutes, never flagged), but over a day it counts once. A window begins again
+ * A save's numbers against the check: the reasons they are impossible (`flags`: beyond a ceiling, or at odds with each
+ * other, which no save can be), the numbers that grew faster than play allows (`review`: [{ key, reason, value, from,
+ * allowed, share }], `share` the growth over its allowance, more than one: listed for the owner, not flagged), and the new
+ * highs. Each number may grow from its highest value (`v`, reached `at`) by what play allows in the time since, and also
+ * from where the day's window began (`day`): measured from the last upload alone, a burst allowed at each could be chained
+ * a minute apart (a made-up save reached stage 6,000 in 22 minutes), but over a day it counts once. A window begins again
  * a day after the last one, from the highest value then. Highs from before the windows begin one at their next upload.
  */
 function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestClimb = null) {
     const flags = [];
+    const review = [];
     const next = {};
     for (const r of RANKED) {
         const value = num(metrics[r.key]);
@@ -381,7 +472,11 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
                 const hours = (Math.max(0, now - num(at)) + SLACK_MS) / HOUR;
                 return r.byDepth && honestClimb ? honestClimb(from, hours) : r.flat + perHour * hours;
             };
-            if (value - peak.v > allowed(peak.v, peak.at) || (day && value - day.v > allowed(day.v, day.at))) flags.push(`${r.label} grew faster than any play could`);
+            // the worse of the two: from the highest so far, and from where the day's window began
+            const over = [peak, day].filter(Boolean).map(base => ({ from: base.v, allowed: allowed(base.v, base.at) }))
+                .filter(g => value - g.from > g.allowed).map(g => ({ ...g, share: (value - g.from) / Math.max(g.allowed, 1e-9) }))
+                .sort((a, b) => b.share - a.share)[0];
+            if (over) review.push({ key: r.key, reason: `${r.label} grew faster than any play could`, value, ...over });
         }
         const high = peak && peak.v >= value ? { v: peak.v, at: peak.at } : { v: value, at: now };
         high.day = day && now - num(day.at) < DAY ? day : { v: high.v, at: now };
@@ -391,7 +486,7 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
     if (num(metrics.trialTiersBeyondBest) > 0) flags.push('Trial tiers beyond its best stage');
     if (num(metrics.laurelsBeyondWeeks) > 0) flags.push('more laurels than weeks played');
     if (num(metrics.weeklyTrial) > num(metrics.bestStage)) flags.push("the week's Trial past the best stage");
-    return { flags, peaks: next };
+    return { flags, review, peaks: next };
 }
 
 /**
@@ -401,8 +496,18 @@ function plausibilityFlags(peaks, metrics, now, plausibleAttackDamage, honestCli
  */
 const firstPeaks = startedAt => Object.fromEntries(RANKED.map(r => [r.key, { v: 0, at: startedAt, day: { v: 0, at: startedAt } }]));
 
+/** A stored flag that still counts: from the last 30 days, written by this version of the check (or later), or by the owner. */
+const standing = (f, now) => !!f && now - num(f.at) < FLAG_MEMORY_MS && (f.by === 'owner' || num(f.check || 1) >= FLAG_CHECK);
+
 function recentlyFlagged(flagsJson, now) {
-    try { return JSON.parse(flagsJson || '[]').some(f => now - f.at < FLAG_MEMORY_MS); } catch { return false; }
+    try { return JSON.parse(flagsJson || '[]').some(f => standing(f, now)); } catch { return false; }
+}
+
+/** When an account's flags stop counting (its latest standing flag's 30 days), or 0: the game tells a flagged player (Settings). */
+function flaggedUntil(flagsJson, now) {
+    let flags = [];
+    try { flags = JSON.parse(flagsJson || '[]'); } catch { flags = []; }
+    return Array.isArray(flags) ? Math.max(0, ...flags.filter(f => standing(f, now)).map(f => num(f.at) + FLAG_MEMORY_MS)) : 0;
 }
 
 app.post('/api/save', authenticateToken, route('save', async (req, res) => {
@@ -424,12 +529,14 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     let metrics = null;
     try { metrics = eng.powerSummary(state, savedAt); } catch (err) { console.error('metrics failed', err); }
     let newFlags = [];
+    let grew = [];
     if (metrics) {
         // (an account's first upload, from when it began to play; one from before the addresses were confirmed, as before)
         const startedAt = num(current && current.verifiedAt);
         const peaks = previous ? previous.peaks : startedAt > 0 ? firstPeaks(startedAt) : null;
         const checked = plausibilityFlags(peaks, metrics, savedAt, eng.plausibleAttackDamage, eng.honestClimb);
         newFlags = checked.flags;
+        grew = checked.review;
         metrics.peaks = checked.peaks;
     } else if (previous) {
         // a save the server can't read keeps the numbers (and the highs) it had: wiping them let the next
@@ -448,13 +555,21 @@ app.post('/api/save', authenticateToken, route('save', async (req, res) => {
     let flags = [];
     try { flags = JSON.parse((current && current.flags) || '[]'); } catch { flags = []; }
     if (!Array.isArray(flags)) flags = [];
-    if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason }))].slice(-20);
+    if (newFlags.length) flags = [...flags, ...newFlags.map(reason => ({ at: savedAt, reason, check: FLAG_CHECK }))].slice(-20);
     const stored = await store.putSave(req.user.id, JSON.stringify(state), savedAt, JSON.stringify(flags), metrics ? JSON.stringify(metrics) : null, base);
     if (!stored) return res.status(409).json({ error: 'Another device saved since this game last looked.' });   // a parallel upload got there first
+    // grown faster than play allows, inside the ceilings: on the owner's list for the week (one row a number a day, its worst
+    // upload's figures), never a reason to refuse or fail the upload
+    for (const g of grew) {
+        try { await store.addReview({ userId: req.user.id, day: dayId(savedAt), metric: g.key, value: g.value, from: g.from, allowed: g.allowed, share: g.share, now: savedAt, check: FLAG_CHECK }); }
+        catch (err) { console.error('review list failed', err && err.message); }
+    }
     // "This week" leaderboards count from where the player stood when the week began: the numbers stored
     // before this upload (the first upload of the week, an empty one say, made the whole week's gain).
     if (metrics && current && current.optIn) await store.putSnapshotIfMissing(req.user.id, isoWeek(savedAt), JSON.stringify(previous || metrics));
-    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, gifts: await store.unclaimedGiftCount(req.user.id), ...await clanNews(req.user.id, savedAt, state) });
+    // (`flagged`: this upload was; `flaggedUntil`: until when the account is, which the game tells the player)
+    res.json({ success: true, timestamp: savedAt, flagged: newFlags.length > 0, flaggedUntil: flaggedUntil(JSON.stringify(flags), savedAt),
+        gifts: await store.unclaimedGiftCount(req.user.id), ...await clanNews(req.user.id, savedAt, state) });
 }));
 
 app.get('/api/load', authenticateToken, route('load', async (req, res) => {
@@ -463,9 +578,10 @@ app.get('/api/load', authenticateToken, route('load', async (req, res) => {
     const state = current && current.state ? JSON.parse(current.state) : null;
     // the clan's banner this week (src/data/social.js CLAN_BANNER), its hall, and the hall's gifts the save has yet to give
     const news = await clanNews(req.user.id, Date.now(), state);
+    const until = flaggedUntil(current && current.flags, Date.now());   // (the account flagged until then: the game says so)
     // serverNow lets the client measure time away on the server's clock, not its own.
-    if (!state) return res.json({ state: null, serverNow: Date.now(), gifts, ...news });
-    res.json({ state, lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, ...news });
+    if (!state) return res.json({ state: null, serverNow: Date.now(), gifts, flaggedUntil: until, ...news });
+    res.json({ state, lastSaved: current.lastSaved, serverNow: Date.now(), optIn: current.optIn, gifts, flaggedUntil: until, ...news });
 }));
 
 // ---------- clans ----------
@@ -795,11 +911,14 @@ async function standingOf(ranking, clanId, kills) {
     return { division: d.id, divisionName: d.name, rank: 0, of: ranking.divisions.find(x => x.id === d.id)?.clans.length || 0, score: 0, counted: 0, kills };
 }
 
+// The clans to find: by name or tag, those whose members play first (`active`: who uploaded this past week, as a clan's
+// power counts them), then the biggest.
 app.get('/api/clans', authenticateToken, route('clans', async (req, res) => {
     const search = cleanText(req.query.search, 32);
-    const crowns = await crownsFor(Date.now());
+    const now = Date.now();
+    const crowns = await crownsFor(now);
     const { hallStage, hallLevels } = await engine();
-    res.json({ clans: (await store.listClans(search, 50)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id) || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
+    res.json({ clans: (await store.listClans(search, 50, now - ACTIVE_WITHIN)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id) || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
 }));
 
 app.get('/api/clans/ranking', authenticateToken, route('clan ranking', async (req, res) => {
@@ -1140,4 +1259,5 @@ app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
 // VERY IMPORTANT FOR VERCEL
 module.exports = app;
 module.exports.plausibilityFlags = plausibilityFlags;
+module.exports.RANKED = RANKED;
 module.exports.isoWeek = isoWeek;

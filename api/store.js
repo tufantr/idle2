@@ -221,6 +221,38 @@ async function ensureSchema() {
     await sql`CREATE INDEX IF NOT EXISTS clan_gifts_clan ON clan_gifts (clan_id, id)`;
     await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_colour VARCHAR(16)`;
     await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_emblem VARCHAR(16)`;
+    // The growth check's list for the owner (November 2026, api/index.js plausibilityFlags; mailed each week by api/review.js):
+    // a ranked number that grew faster than play allows, inside the ceilings, listed instead of flagged. One row a player,
+    // day (UTC) and number, with its worst upload's figures: what it reached, where it grew from, how much it could grow
+    // then and the share of that it took; how many uploads went past it, and the check's version.
+    await sql`
+        CREATE TABLE IF NOT EXISTS flag_reviews (
+            user_id INTEGER NOT NULL,
+            day VARCHAR(10) NOT NULL,
+            metric VARCHAR(32) NOT NULL,
+            reached DOUBLE PRECISION NOT NULL,
+            grew_from DOUBLE PRECISION NOT NULL,
+            allowed DOUBLE PRECISION NOT NULL,
+            share DOUBLE PRECISION NOT NULL,
+            uploads INTEGER NOT NULL DEFAULT 1,
+            first_at BIGINT NOT NULL,
+            last_at BIGINT NOT NULL,
+            check_version SMALLINT NOT NULL,
+            PRIMARY KEY (user_id, day, metric)
+        )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS flag_reviews_last ON flag_reviews (last_at)`;
+    // Each account's token version (November 2026, api/index.js): a token carries the version it was signed at, and one
+    // below the account's is refused, so a password reset or "Sign out everywhere" ends every session made before it.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0`;
+    // Where accounts come from (November 2026, the research loop's P-067): the tag of the listing's link a player landed by
+    // (`?src=reddit1`) and how many accounts were made with it. A count only: nothing ties a tag to an account.
+    await sql`
+        CREATE TABLE IF NOT EXISTS signup_sources (
+            tag VARCHAR(32) PRIMARY KEY,
+            count INTEGER NOT NULL DEFAULT 0
+        )
+    `;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -243,12 +275,12 @@ async function createUser(username, hash, email = null) {
     return rows[0].id;
 }
 
-const accountRow = r => (r ? { id: r.id, username: r.username, password_hash: r.password_hash, email: r.email || null, emailVerifiedAt: int(r.email_verified_at) } : null);
+const accountRow = r => (r ? { id: r.id, username: r.username, password_hash: r.password_hash, email: r.email || null, emailVerifiedAt: int(r.email_verified_at), tokenVersion: int(r.token_version) } : null);
 
 /** The account of a name, whatever its case (the one spelled exactly so first, where two older ones differ only in case). */
 async function findUserByName(username) {
     const { rows } = await sql`
-        SELECT id, username, password_hash, email, email_verified_at FROM users WHERE lower(username) = lower(${username})
+        SELECT id, username, password_hash, email, email_verified_at, token_version FROM users WHERE lower(username) = lower(${username})
         ORDER BY (username = ${username}) DESC, id ASC LIMIT 1
     `;
     return accountRow(rows[0]);
@@ -256,7 +288,7 @@ async function findUserByName(username) {
 
 /** The account of an email address, whatever its case. */
 async function findUserByEmail(email) {
-    const { rows } = await sql`SELECT id, username, password_hash, email, email_verified_at FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
+    const { rows } = await sql`SELECT id, username, password_hash, email, email_verified_at, token_version FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
     return accountRow(rows[0]);
 }
 
@@ -264,8 +296,22 @@ async function setEmailVerified(userId, now) {
     await sql`UPDATE users SET email_verified_at = ${now}::bigint WHERE id = ${userId}`;
 }
 
+/** A new password, which ends every session made before it: the account's token version goes up. Returns the new version. */
 async function setPassword(userId, hash) {
-    await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${userId}`;
+    const { rows } = await sql`UPDATE users SET password_hash = ${hash}, token_version = COALESCE(token_version, 0) + 1 WHERE id = ${userId} RETURNING token_version`;
+    return rows[0] ? int(rows[0].token_version) : 0;
+}
+
+/** What a token is checked against: the account's name and token version now, or null. */
+async function tokenAccount(userId) {
+    const { rows } = await sql`SELECT username, token_version FROM users WHERE id = ${userId}`;
+    return rows[0] ? { username: rows[0].username, tokenVersion: int(rows[0].token_version) } : null;
+}
+
+/** Every session of an account ends ("Sign out everywhere"): its token version goes up. Returns { username, tokenVersion }, or null. */
+async function bumpTokenVersion(userId) {
+    const { rows } = await sql`UPDATE users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = ${userId} RETURNING username, token_version`;
+    return rows[0] ? { username: rows[0].username, tokenVersion: int(rows[0].token_version) } : null;
 }
 
 /** A new code for an account and a purpose, in place of any before it. */
@@ -339,6 +385,53 @@ async function leaderboardRows(week) {
     return rows.map(r => ({ userId: r.id, username: r.username, flags: r.flags || '[]', metrics: r.metrics, weekMetrics: r.week_metrics || null }));
 }
 
+// ---------- where accounts come from ----------
+
+/** One more account made from a listing's link with this tag. */
+async function countSignupSource(tag) {
+    await sql`INSERT INTO signup_sources (tag, count) VALUES (${tag}::varchar, 1) ON CONFLICT (tag) DO UPDATE SET count = signup_sources.count + 1`;
+}
+
+/** Every tag and its accounts, the most first. */
+async function signupSources() {
+    const { rows } = await sql`SELECT tag, count FROM signup_sources ORDER BY count DESC, tag ASC`;
+    return rows.map(r => ({ tag: r.tag, count: int(r.count) }));
+}
+
+// ---------- the growth check's review list ----------
+
+/**
+ * A number that grew past the check's allowance, on the review list: one row a player, day and number (`metric`), which
+ * keeps the figures of its worst upload (the largest `share` of its allowance) and counts the uploads.
+ */
+async function addReview({ userId, day, metric, value, from, allowed, share, now, check }) {
+    await sql`
+        INSERT INTO flag_reviews (user_id, day, metric, reached, grew_from, allowed, share, uploads, first_at, last_at, check_version)
+        VALUES (${userId}::int, ${day}::varchar, ${metric}::varchar, ${value}::double precision, ${from}::double precision, ${allowed}::double precision,
+            ${share}::double precision, 1, ${now}::bigint, ${now}::bigint, ${check}::smallint)
+        ON CONFLICT (user_id, day, metric) DO UPDATE SET
+            uploads = flag_reviews.uploads + 1,
+            last_at = GREATEST(flag_reviews.last_at, EXCLUDED.last_at),
+            reached = CASE WHEN EXCLUDED.share > flag_reviews.share THEN EXCLUDED.reached ELSE flag_reviews.reached END,
+            grew_from = CASE WHEN EXCLUDED.share > flag_reviews.share THEN EXCLUDED.grew_from ELSE flag_reviews.grew_from END,
+            allowed = CASE WHEN EXCLUDED.share > flag_reviews.share THEN EXCLUDED.allowed ELSE flag_reviews.allowed END,
+            share = GREATEST(flag_reviews.share, EXCLUDED.share),
+            check_version = GREATEST(flag_reviews.check_version, EXCLUDED.check_version)
+    `;
+}
+
+/** The review list's rows touched since `since`, with each player's name, by name, number and day. */
+async function reviewsSince(since) {
+    const { rows } = await sql`
+        SELECT r.user_id, u.username, r.day, r.metric, r.reached, r.grew_from, r.allowed, r.share, r.uploads, r.first_at, r.last_at, r.check_version
+        FROM flag_reviews r JOIN users u ON u.id = r.user_id
+        WHERE r.last_at >= ${since}::bigint
+        ORDER BY u.username, r.metric, r.day
+    `;
+    return rows.map(r => ({ userId: r.user_id, username: r.username, day: r.day, metric: r.metric, value: Number(r.reached) || 0, from: Number(r.grew_from) || 0,
+        allowed: Number(r.allowed) || 0, share: Number(r.share) || 0, uploads: int(r.uploads), firstAt: int(r.first_at), lastAt: int(r.last_at), check: int(r.check_version) }));
+}
+
 // ---------- weekly snapshots (for "this week" boards) ----------
 
 async function getSnapshot(userId, week) {
@@ -352,17 +445,23 @@ async function putSnapshotIfMissing(userId, week, metricsJson) {
 
 // ---------- clans ----------
 
-/** Clans by name or tag, the biggest first, each with its hall's rooms ({ room → work }: the stage its list shows). */
-async function listClans(search, limit) {
+/**
+ * Clans by name or tag, each with its members, those of them who played (uploaded) after `activeSince` (`active`), and its
+ * hall's rooms ({ room → work }: the stage its list shows). The most members who play first, then the biggest (the research
+ * loop's P-035, November 2026: newcomers find the clans that play; by members alone, a big clan gone quiet led the list).
+ */
+async function listClans(search, limit, activeSince = 0) {
     const pattern = `%${String(search || '').replace(/[\\%_]/g, '\\$&')}%`;   // a % or _ typed is a letter, not a wildcard
     const { rows } = await sql`
         SELECT c.id, c.name, c.tag, c.description, c.looking_for, COUNT(m.user_id) AS members,
+            COUNT(m.user_id) FILTER (WHERE u.last_saved > ${activeSince}::bigint) AS active,
             (SELECT json_object_agg(h.room, h.given) FROM clan_hall h WHERE h.clan_id = c.id) AS hall
-        FROM clans c LEFT JOIN clan_members m ON m.clan_id = c.id
+        FROM clans c LEFT JOIN clan_members m ON m.clan_id = c.id LEFT JOIN users u ON u.id = m.user_id
         WHERE c.name ILIKE ${pattern} OR c.tag ILIKE ${pattern}
-        GROUP BY c.id ORDER BY COUNT(m.user_id) DESC, c.id ASC LIMIT ${limit}
+        GROUP BY c.id
+        ORDER BY COUNT(m.user_id) FILTER (WHERE u.last_saved > ${activeSince}::bigint) DESC, COUNT(m.user_id) DESC, c.id ASC LIMIT ${limit}
     `;
-    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, members: int(r.members), hall: workOf(r.hall) }));
+    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, members: int(r.members), active: int(r.active), hall: workOf(r.hall) }));
 }
 
 /** A hall's rooms as stored ({ room → work }), as plain numbers. */
@@ -874,7 +973,8 @@ async function claimGifts(userId, now) {
 module.exports = {
     ensureSchema, ping,
     createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
-    userNameOf, getSave, putSave, setOptIn, leaderboardRows,
+    userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
+    addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
     listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,

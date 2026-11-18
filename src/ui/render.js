@@ -2344,7 +2344,8 @@ export function renderSettings(game, ui, cloud) {
         <section class="glass-panel ${painted('study', 'left 45%')}">
             <div class="panel-header"><h2>Account</h2><span class="muted small">${signedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest'}</span></div>
             <p class="muted small">${signedIn ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'This game is kept in this browser only. An account plays a game of its own, kept on the server for any device.'}</p>
-            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
+            ${signedIn && cloud.flaggedUntil > Date.now() ? `<p class="warn small flag-line">Flagged until ${esc(new Date(cloud.flaggedUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }))}: a save showed numbers the game's check doesn't allow. ${aboutButton('flagged')}</p>` : ''}
+            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button><button class="mini-btn" onclick="FI.signOutEverywhere()">Sign out everywhere</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>
         <section class="glass-panel ${painted('study', 'right 45%')}">
@@ -2412,7 +2413,7 @@ export function renderClan(game, ui, cloud) {
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
         const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
-            <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
+            <td>${Number(c.members)}/${Number(social.maxMembers || 20)}${c.active !== undefined ? `<div class="muted small" title="Members who played this past week">${Number(c.active) || 0} this week</div>` : ''}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
                 <div class="btn-row"><input id="clan-search" class="text-input" placeholder="Name or tag" value="${esc(form.search)}" oninput="FI.clanForm('search', this.value)" onkeydown="if (event.key === 'Enter') FI.searchClans()" aria-label="Search clans">

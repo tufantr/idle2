@@ -1,6 +1,6 @@
-// Mail from the game: the codes that confirm an email at sign-up and reset a password (api/index.js), sent
-// through Resend (README "The server": the domain fantasyidle.com is verified there; the key, made by the owner,
-// is RESEND_API_KEY in the server's settings). The tests put their own sender in its place (setMailer).
+// Mail from the game: the codes that confirm an email at sign-up and reset a password (api/index.js), and the owner's
+// alerts (api/review.js), sent through Resend (README "The server": the domain fantasyidle.com is verified there; the key,
+// made by the owner, is RESEND_API_KEY in the server's settings). The tests put their own sender in its place (setMailer).
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const FROM = () => process.env.MAIL_FROM || 'Fantasy Idle <noreply@fantasyidle.com>';
@@ -23,6 +23,40 @@ async function sendMail({ to, subject, text, html }) {
         const detail = await res.text().catch(() => '');
         throw new Error(`the mail service answered ${res.status} ${detail.slice(0, 200)}`);
     }
+}
+
+// Resend's free plan sends 100 mails a day: past them sign-up codes and resets stop until midnight UTC. Every mail the game
+// sends is counted in its day (sendCounted, with the rate limits: store.takeAttempt under a key a day), and the one that
+// makes MAIL_ALERT_AT tells the owner (OWNER_ALERT_EMAIL), once that day (the research loop's P-100, November 2026).
+const DAILY_MAIL_CAP = 100;
+const MAIL_ALERT_AT = 80;
+const DAY_MS = 24 * 3600 * 1000;
+
+/**
+ * Send a mail (as sendMail) and count it in the day's mails (UTC). The count and the owner's alert are the server's
+ * bookkeeping: a failure there is logged, never the sender's (a code that went out must still count as sent).
+ */
+async function sendCounted(store, message, now = Date.now()) {
+    await sendMail(message);
+    try {
+        const key = `mail:day:${new Date(now).toISOString().slice(0, 10)}`;
+        const sent = await store.takeAttempt(key, now, DAY_MS);
+        const owner = process.env.OWNER_ALERT_EMAIL;
+        if (sent === MAIL_ALERT_AT && owner) {
+            await sendMail({ to: owner, ...capMail(sent) });
+            await store.takeAttempt(key, now, DAY_MS);   // (the alert is one of the day's mails too)
+        }
+    } catch (err) { console.error('mail count failed', err && err.message); }
+}
+
+/** The owner's alert: the day's mails near the plan's cap. */
+function capMail(sent) {
+    return {
+        subject: `Fantasy Idle: ${sent} of today's ${DAILY_MAIL_CAP} mails sent`,
+        text: `Fantasy Idle has sent ${sent} mails today (UTC), of the ${DAILY_MAIL_CAP} a day the mail service's plan allows. `
+            + 'Past them, sign-up codes and password resets stop until midnight UTC. Many sign-ups or resets at once can do it: '
+            + 'the API\'s log shows them (journalctl -u fantasyidle-api).\n'
+    };
 }
 
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,4 +82,30 @@ function codeMail({ username, code, purpose, minutes }) {
     return { subject, text, html };
 }
 
-module.exports = { sendMail, setMailer, codeMail };
+/** A short notice to an account's own address, in the same colours: a greeting, its lines, and the site. */
+function noticeMail({ username, subject, lines }) {
+    const text = `Hi ${username},\n\n${lines.join('\n\n')}\n\nFantasy Idle - https://fantasyidle.com\n`;
+    const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0d0a07;font-family:Georgia,'Times New Roman',serif;color:#f3e6cc">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
+<table role="presentation" cellspacing="0" cellpadding="0" style="max-width:440px;width:100%;background:#1a130c;border:1px solid #b08a4a;border-radius:14px">
+<tr><td style="padding:28px 28px 8px;text-align:center;font-size:22px;letter-spacing:2px;color:#fde68a">FANTASY IDLE</td></tr>
+<tr><td style="padding:8px 28px 28px;font-size:15px;line-height:1.5">Hi ${escapeHtml(username)},${lines.map(l => `<br><br>${escapeHtml(l)}`).join('')}</td></tr>
+</table>
+<p style="font-size:12px;color:#8a7a5c">fantasyidle.com</p>
+</td></tr></table></body></html>`;
+    return { subject, text, html };
+}
+
+/** A password changed (a reset): one line to the account's address, and what to do if it wasn't them. */
+function passwordChangedMail({ username }) {
+    return noticeMail({ username, subject: 'Your Fantasy Idle password was changed',
+        lines: ['Your Fantasy Idle password was just changed, and every other device signed in to your account was signed out. If that wasn\'t you, set a new one now with "Forgot your password?" on the sign-in.'] });
+}
+
+/** A sign-up tried with an address that has an account: a line to its owner, who may sign in or reset (no code in it). */
+function signUpTakenMail({ username }) {
+    return noticeMail({ username, subject: 'Someone tried to make a Fantasy Idle account with your email',
+        lines: [`Someone just tried to make a new Fantasy Idle account with this email address. It already has one: yours, ${username}. You can sign in, or set a new password with "Forgot your password?" on the sign-in. If it wasn't you, nothing has changed.`] });
+}
+
+module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, signUpTakenMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };

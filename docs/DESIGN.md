@@ -954,12 +954,24 @@ wear; a place that waited opens on the return and is named there too.
   not a link: on a phone a link opens in another browser than the game's). The same kind of code sets a new password
   ("Forgot your password?"). A code lives 15 minutes and takes 5 tries, and is kept only as a hash keyed with the
   server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour from an address; one account
-  an email, whatever its case, and no address is shown to another player. A login with the right password but the
+  an email, whatever its case, and no address is shown to another player. A sign-up with an address that has an account
+  gets the same answer as a new one (the research loop's P-103, November 2026), makes none, and mails that address's
+  owner one line instead, once a day: someone tried, and they may sign in or reset. A listing's link may carry a tag
+  (`?src=reddit1`, `[a-z0-9-]{1,32}`; the research loop's P-067): the game keeps the first one seen (`fantasyIdle.src`)
+  until an account is made and sends it with the sign-up, and the server counts it with the account (`signup_sources`:
+  a tag and a count, nothing tying it to the account). A login with the right password but the
   address not confirmed answers 409 with `pending` (a 403 is the game's word for a session gone, which would sign the
   player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):
-  bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
-  version-checked saves. The client uploads **every minute while the page is open**, in the background
+  bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords (8 to 72 characters, and at sign-up
+  and reset not too easy to guess: not among the 377 most common, `api/common-passwords.js`, not one character or a short
+  run repeated, not a run of letters, digits or keys in a row, not the username; the research loop's P-101, November 2026;
+  a reset says the username only once its code is right), 1 MB body cap,
+  version-checked saves. A token carries its account's token version (`v`, the research loop's P-096, November 2026: a
+  30-day token outlived a password reset); one below the account's is refused, and tokens from before versions count as 0.
+  A password reset and Settings' **Sign out everywhere** (`POST /api/account/signout-all`) raise it, so every session made
+  before ends at once (the instance's 10-minute memory of names learns the new version with the bump); the device that
+  asked gets a fresh token, and a reset mails the account's own address one line. The client uploads **every minute while the page is open**, in the background
   too, and once on leaving the page (hidden or closed: a keepalive request, under the 64 KB browsers allow),
   unless it uploaded seconds before; the local save stays current every 15 s. That is since the game moved to
   its own server (October 2026, the owner: "traffic is not an issue"). On Vercel's free Neon database, which
@@ -1008,12 +1020,15 @@ wear; a place that waited opens on the return and is named there too.
   prestige as a player would, the climb came to 76% of it from stage 300 over 43 hours (430 stages) and 72%
   from 1,200 (28 runs of 400 hours, every window of 1 to 48 hours from the best at its start); the rates an hour
   went up from 150 to 1,500 (the bursts stayed: a day's climb was what came close), and the worst is now 49%.
-  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). Trial tiers
+  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). In November 2026 the best stage's became the
+  save's own wall, `MAX_STAGE` (10,000, where a load clamps it; mirrored in `api/index.js`, a test checks the two agree): the
+  deepest live hero was climbing 460 stages a week, about eight weeks short of 6,000, and the medals at 7,500 and 10,000 lay
+  past it. Total XP's counts the game's 11 skills each stopped at twice level 99's (it counted 13). Trial tiers
   a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
   belongs to the player), but flagged accounts are left out of leaderboards and of clan boss sizing
-  for 30 days. **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
+  for 30 days (growth past the allowance only lists since November 2026, below). **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
   each upload was measured only from the one before, so the burst allowed at each could be chained a minute apart
   (a made-up save reached stage 6,000 in 22 minutes, never flagged), and an account's first upload was checked
   against the ceilings alone. Now each number is also measured from where the day's window began (`peaks.day`,
@@ -1028,6 +1043,20 @@ wear; a place that waited opens on the return and is named there too.
   anvil pays up to 34,161 XP a click before XP bonuses, the bench pays in bursts), and 3 million an hour stays. Stars come all at once: 90 (what the tokens' ceiling would pay; 100 million tokens pay 50), 4 an hour on top,
   and a ceiling of 100,000, for one Ascension a day for years outgrew 2,000 in weeks. Laurels are counted by the Trial's own
   weeks, Monday to Monday, not by the save's age: an account begun on a Sunday had two by the Monday, and a limit of one.
+  **Flags list before they act** (the research loop's R1, the owner's pick, November 2026): only what no save can hold flags
+  at once: a ceiling passed, numbers at odds with each other (an attack beyond what its best stage allows, Trial tiers, the
+  week's Trial or laurels past what it allows), the developer switches, a save the server can't read. A number that grew
+  faster than play allows, inside the ceilings, goes on a list for the owner instead (`flag_reviews`: one row a player, day
+  and number, with its worst upload's figures and the share of its allowance it took), mailed each week by `api/review.js`;
+  the owner flags by hand what deserves it (README "Flags"). Limits set too tight had capped 6 of 43 accounts for days on 4
+  November, unseen. The cost: a forger who stays inside the ceilings plays on, on the boards too, until the owner looks.
+  Each flag carries the check's version (`FLAG_CHECK`: 2 from then; flags from before carry none and count as 1), and
+  flags of an older version lapse, so a check made looser clears what it flagged by itself (five were cleared by hand on 4
+  November); the owner's own (`by: owner`) last their 30 days whatever the version. **A flagged player is told** (P-025: in
+  November the one word in the game, "Capped", was misread and false flags sat for days): every save and load answer says
+  until when the account is flagged (`flaggedUntil`, 0 when it isn't), Settings' account panel shows one line while it is,
+  "Flagged until 12 December: a save showed numbers the game's check doesn't allow.", with a "?" for what a flag does, why,
+  how long, and to tell the team on the Discord (`FEATURES.flagged`); a held-back clan attack's card says so too (§3.18).
 - **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
   address) in 15 minutes and logins wait; an address makes at most three accounts a day (ten an hour until the
   beta: each is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried). Each try is
@@ -1037,6 +1066,13 @@ wear; a place that waited opens on the return and is named there too.
   whether the name exists. A token is checked against its account's name, and a body that isn't JSON
   gets a JSON answer. A business-rule refusal
   answers 409, never 403, which the client reads as a lost session.
+- **Guards** (the research loop's R12, November 2026): browsers may call the API from the game's own pages only
+  (https://fantasyidle.com, its www name, https://staging.fantasyidle.com, and a local development host on any port); another
+  site's page gets no CORS headers, and a request with no Origin is answered as before. Express no longer names itself
+  (`X-Powered-By`). Every mail is counted in its day (UTC, `sendCounted` in `api/mail.js`): the mail plan sends 100 a day,
+  and the 80th tells the owner (`OWNER_ALERT_EMAIL`), once that day. HSTS and a `Content-Security-Policy` of
+  `frame-ancestors` (the game's origins and the listings that frame it) and `connect-src 'self'` are nginx's to send; the
+  rest of a CSP waits for the screens' inline handlers to go.
 
 ### 3.18 Clans and leaderboards
 
@@ -1046,7 +1082,9 @@ with the game's own stat code; the client never submits damage or scores.
 
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
-  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
+  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member. The list of clans to
+  find shows on each row the members who played (uploaded) this past week, and puts the clans with the most of them first,
+  then the biggest (the research loop's P-035, November 2026: by members alone, a big clan gone quiet led the list).
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
@@ -1135,8 +1173,9 @@ with the game's own stat code; the client never submits damage or scores.
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real
-  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`,
-  the card why). A card shows the damage and the member's place in the clan that week; a felled boss
+  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`;
+  the card says "Flagged: at most 1% of the boss", why, and to tell the team on the Discord, and a tap opens Settings,
+  §3.17). A card shows the damage and the member's place in the clan that week; a felled boss
   shows which level comes back and when ("Level 2 in 5h 12m", or a new boss on Monday). A fight in progress never survives a reload (the
   attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
@@ -2586,6 +2625,7 @@ wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki
                       lib/: Markdown, layout, search, link check). test/wiki.test.mjs keeps it building
 api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
                       clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
+                      · mail.js (Resend) · review.js (the growth check's list, mailed to the owner each week)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·

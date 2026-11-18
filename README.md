@@ -56,7 +56,7 @@ a `false` names the missing part (`game`: the function could not load the game's
 ```sql
 INSERT INTO rewards (user_id, kind, payload, created_at, dedupe)
 SELECT id, 'gift', '{"gold":12000000,"text":"A gift from tufan"}', (extract(epoch from now()) * 1000)::bigint, 'gift:' || id || ':first-gold'
-FROM users WHERE username = 'Yarraksalih'
+FROM users WHERE username = 'PlayerName'
 ON CONFLICT (dedupe) DO NOTHING;
 ```
 
@@ -66,15 +66,30 @@ accounts could differ only in case, and a match in any case would pay both.)
 The player's game claims it at its next cloud save or load (a reload at the latest), adds it and shows a
 card; each gift is paid once. Gift gold is that run's, like all gold.
 
+**Flags.** A save with numbers no save can reach flags its account at once (DESIGN §3.17): for 30 days its clan attacks
+count for at most 1% of the boss, its fights at the Endless Hydra stay out of the clan ranking, and it is left off the
+leaderboards. A number that grew faster than play allows, inside the ceilings, is only listed (`flag_reviews`, mailed each
+week: below). To flag an account by hand after a look (`"by": "owner"`: it stands its 30 days whatever the check's version):
+
+```sql
+UPDATE users SET flags = (COALESCE(NULLIF(flags, ''), '[]')::jsonb || jsonb_build_array(jsonb_build_object(
+    'at', (extract(epoch from now()) * 1000)::bigint, 'reason', 'flagged by the owner after review', 'by', 'owner')))::text
+WHERE username = 'PlayerName';
+```
+
+`UPDATE users SET flags = '[]' WHERE username = 'PlayerName';` clears an account's flags, and
+`SELECT username, flags FROM users WHERE flags <> '[]';` lists the accounts with any.
+
 The API imports the game's own stat code (`src/core/power.js`, ES modules — `src/package.json` marks
 them as such) so that clan damage and leaderboard numbers are computed on the server from the stored
 save. It needs Node 20.19+ or 22+.
 
 | Endpoint | What it does |
 |---|---|
-| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`) |
+| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`); an address that has an account gets the same answer, and its owner a line instead |
 | `POST /api/verify`, `POST /api/verify/resend` | the sign-up code (6 digits, 15 minutes, 5 tries), and another one (once a minute, 5 an hour) |
-| `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not) |
+| `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not); a new password ends every session before it, and the address hears of it |
+| `POST /api/account/signout-all` | "Sign out everywhere": every session of the account ends (its tokens' version goes up) but the asking device's, which gets a fresh token |
 | `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected; both say the clan's banner |
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
 | `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss, board and banner, its place in the week's ranking and your fights at the Endless Hydra; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6; with `endless: true` one of the 2 a week at the Hydra, at the weekend); the owner removes a member |
@@ -117,6 +132,10 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   the domain is verified there (region Ireland; its DKIM, sending and DMARC records are in Cloudflare's DNS), and
   the key, made by the owner with sending access to fantasyidle.com only, is `RESEND_API_KEY` in the server's
   `/etc/fantasyidle/api.env`. Without it a sign-up is made but its code can't go (the dialog says so).
+- **The owner's mail:** `OWNER_ALERT_EMAIL` in `/etc/fantasyidle/api.env` (absent: none of it is sent) gets the growth
+  check's review list once a week, from `node api/review.js` run by a weekly timer with the same settings: each account
+  whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
+  game's mails reach 80 of the plan's 100 (every mail is counted in its UTC day).
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
@@ -170,6 +189,10 @@ cd /tmp/fi-wiki/site && npx vercel link --yes --project fantasy-idle-wiki --scop
 The game is listed on other sites that show it in a frame, so each always plays what fantasyidle.com plays. Framed,
 a new player is a guest at once (`EMBEDDED` in `src/main.js`), and a game played there is saved apart from the
 site's own (browsers keep a framed page's storage per host site); an account plays the same game everywhere.
+
+A listing's link can carry a tag, `https://fantasyidle.com/?src=reddit1` (`a-z`, `0-9` and `-`, up to 32): the game keeps
+the first one it saw until an account is made, and the server counts each account made with it, nothing more
+(`SELECT tag, count FROM signup_sources ORDER BY count DESC;`).
 
 - **galaxy.click** (an incremental-games portal): its page links https://fantasyidle.com/ itself. Its form asks for
   a disclosure of generative AI in the developer's own words; tags, thumbnail and links are added after submitting.
