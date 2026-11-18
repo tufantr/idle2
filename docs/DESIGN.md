@@ -2145,13 +2145,20 @@ fights about a third of the time, so a player who mostly fights gets there soone
 
 `node tools/simulate.mjs --hours=150 --seed=N` plays the game through the same `Game` API as the UI,
 with a "sensible player" policy: wear what beats what it wears and salvage the commons, keep food
-stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
+stocked, fight until stalled (15 minutes on the game's own stall clock, `combat.stallMs`; until November
+2026 it was 15 minutes since its last new best or the last fight it began, and deciding again every 10
+minutes it fired 0 times in 31 runs: past stage 700 it waited out an hour at each wall, and the always-on
+bot's deep figures from before are 210–220 stages low at hours 300 and 600, research-loop 039;
+`--set=POLICY.stallFix:0` plays it so); when stalled, alternate between farming the deepest dungeon it clears
 comfortably (while its chests or unique still help — otherwise it keeps fighting at the wall for half
 an hour) and training a skill (Mining and Smithing first while they can't yet make the bars for the
 weapon it wears; once Crafting is open, every third turn goes to it, with a gem pouch from the shop
 when it has no gem to cut: until October 2026 Crafting never got a turn); put bars and essence into its
-worn gear at the anvil; challenge the Titan whenever
-it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
+worn gear at the anvil; challenge the Titan when the dungeons tab's badge says it can win (the game's own
+preview), and see the fight out before a visit ends (until November 2026 it tried every Titan whenever one
+was awake and left in the middle of one, the hero then working all the time away: with bigger banks, 24
+for the daily visit and 8 or 24 for three a day, its heroes stuck at stage 40 in 12 of 18 runs,
+research-loop 040; `--set=POLICY.titanFix:0` plays it so); tend the farm; build and upgrade the agility course (training agility, and gathering its
 materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
 it holds (15% early, ~2% at 7,000 tokens), or when it has gone an hour without a new best in the run
 (its own stall clock: until October 2026 a fresh fight restarted it, so at the wall near stage 310 the
@@ -2160,9 +2167,13 @@ Trial (§3.26; `--trials=0` never, as every figure before them); claim the daily
 the dock's Auto switch once earned; `--player=<schedule>` plays a login schedule (online, tab16,
 evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay between sessions;
 `--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
-of hours. `node tools/batch.mjs --seeds=30` runs many seeds in parallel (about 7 runs of 150 h a
-minute on 8 cores) and reports medians with the 10th and 90th percentiles; `node tools/audit.mjs`
-checks the batches against the research's thresholds (the report card, §5.7). A real player's rhythm can be
+of hours. Its report books essence, bars and gems by source and sink, in bands of 50 hours, as it books
+gold by sink, and names each band in which one of them spent under a tenth of what came in (a pool), and
+the most Armour Rack levels and worn affixes past their caps (the pool check, P-114: `tools/simlib.mjs`;
+`tools/batch.mjs` summarises it and the report card checks it, E12). `node tools/batch.mjs --seeds=30`
+runs many seeds in parallel (about 7 runs of 150 h a minute on 8 cores) and reports medians with the
+10th and 90th percentiles; `node tools/audit.mjs` checks the batches against the research's thresholds
+(the report card, §5.7). A real player's rhythm can be
 set beside it: Settings' **playtest log** (off unless turned on; `src/systems/playtest.js`) keeps a
 timeline of the moments of play in the save, exported as a file that `node tools/playtest.mjs` reads.
 Three seeds, 150 hours each:
