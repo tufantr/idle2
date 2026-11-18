@@ -774,7 +774,8 @@ function bumpPurse() {
 }
 
 function render() {
-    if (catching || pending) return;   // (the game is drawn once its time away is replayed: catchUp)
+    // The game is drawn once its time away is replayed (catchUp); behind the sign-in, which may keep it waiting, as it was left.
+    if (catching || (pending && !needsSignIn())) return;
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
