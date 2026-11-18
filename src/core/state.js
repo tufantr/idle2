@@ -28,6 +28,7 @@ import { CLAN_FIGHT_MS, CLAN_BANNER } from '../data/social.js';
 import { HALL_ROOMS, HALL_LEVELS, HALL_STAGES, BANNER_COLOURS, BANNER_EMBLEMS } from '../data/clanhall.js';
 import { emptyHall } from '../systems/clanhall.js';
 import { LORDS } from '../data/zones.js';
+import { cleanOptions } from '../data/settings.js';
 
 // The perk reset (the owner, 15 October 2026, after the perks deepened and their prices rose): every save from
 // before it gets each perk level back as skill points, once, to spend at today's prices. What a level cost was
@@ -719,6 +720,7 @@ function normalise(data, now) {
     state.settings.autoPrestige = state.settings.autoPrestige === true;
     state.settings.minigameChime = state.settings.minigameChime !== false;   // a chime when a mini-game chance appears: on unless turned off
     state.settings.playtestLog = state.settings.playtestLog === true;
+    cleanOptions(state.settings);   // the choices of how the game looks, sounds and reads (data/settings.js): optional, and only what it knows
     // Ascension: whole, non-negative counts
     const asc = isPlainObject(data?.ascension) ? data.ascension : {};
     state.ascension = {

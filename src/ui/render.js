@@ -61,6 +61,7 @@ import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
+import { vibrationOn } from '../data/settings.js';
 import { charmsOnOffer, charmCharges } from '../systems/charms.js';
 import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
 import { VERSION } from '../version.js';
@@ -291,7 +292,7 @@ export function renderHeader(game, ui, cloud) {
     const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} ${esc(cloud.username || 'signed in')}</span>`
         : `<button class="cloud-pill local" onclick="FI.openAuth()" aria-label="Guest: sign in or make an account" title="Playing as a guest: this game is kept in this browser only">${ICON_CLOUD_UP}<span class="cloud-word">Guest</span></button>`;
     const soundOn = state.settings.sound !== false;
-    const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>`;
+    const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound on' : 'Sound off'}">${soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>`;
     // While the fight fills the screen, the sidebar is out of sight. The header carries the way back,
     // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
     // leave-full-screen button. Both fold the fight back into the page; it goes on.
@@ -2382,8 +2383,9 @@ function optionGroups(game, ui) {
     const soundOn = s.sound !== false;
     return [
         optGroup('Sound', [
-            optSwitch('Sound and vibration', "FI.setSetting('sound', this.checked)", soundOn),
+            optSwitch('Sound', "FI.setSetting('sound', this.checked)", soundOn),
             soundOn ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(s.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : '',
+            ui?.canVibrate ? optSwitch('Vibration', "FI.setOption('vibration', this.checked)", vibrationOn(s)) : '',
             seen(state, 'minigames') ? optSwitch('Chime when a mini-game chance appears', "FI.setSetting('minigameChime', this.checked)", s.minigameChime !== false) : ''
         ]),
         optGroup('Motion', [

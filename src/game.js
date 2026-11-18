@@ -33,6 +33,7 @@ import { learnTalent, unlearnTalents } from './systems/talents.js';
 import { buyCharm } from './systems/charms.js';
 import { setClanHall, applyHallGifts } from './systems/clanhall.js';
 import { doAscend, ascendPreview } from './systems/ascension.js';
+import { cleanOptions } from './data/settings.js';
 
 const MAX_TICK_MS = 5000;        // the longest single simulation step; longer gaps are split into steps
 // Gaps longer than this are replayed as offline progress (with its welcome-back report). A background
@@ -82,6 +83,13 @@ export class Game {
     setPlaytestLog(on) {
         this.state.settings.playtestLog = !!on;
         if (on) { this.state.playtest = []; notePlaytest(this.state, { kind: 'start', what: `best stage ${this.state.combat.bestStage}`, cls: 'minor' }, this.now); }
+        this.markDirty();
+    }
+
+    /** One of Settings' choices of how the game looks, sounds and reads (data/settings.js): what it doesn't know isn't kept. */
+    setOption(key, value) {
+        this.state.settings[key] = value;
+        cleanOptions(this.state.settings);
         this.markDirty();
     }
 

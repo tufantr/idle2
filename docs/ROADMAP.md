@@ -1567,6 +1567,8 @@ Keeping it running:
       prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
 - [x] **Settings' options in groups** (R23 of the research loop's ranking): Sound, Motion, and Keys and log, side by side on a
       wide screen and one under another on a phone, each row still there
+- [x] **Vibration apart from sound** (R21, P-082): a switch of its own on phones with a motor, going with the sound until it is
+      used, so that a muted game doesn't start to buzz
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

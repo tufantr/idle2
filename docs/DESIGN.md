@@ -2137,7 +2137,11 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
 
 The Options panel of Settings stands in groups (`optionGroups` in `src/ui/render.js`), each a `fieldset` with a name a screen
 reader says: a row shows only for what the player has met, and the rules go behind the panel's "?". Choices that change how
-the game looks, sounds or reads never change how it plays.
+the game looks, sounds or reads never change how it plays. Those kept in the save are optional fields (`src/data/settings.js`,
+`cleanOptions` on every load): a save without them is today's game, and an older game passes over them.
+
+- **Vibration apart from sound.** On a phone with a motor (not iPhones: Safari gives pages none) Vibration is a switch of its
+  own. Until it is used it goes with the sound, as when one switch held both, so nobody who muted the game starts to buzz.
 
 ## 4. The modifier pipeline
 

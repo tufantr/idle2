@@ -1,13 +1,13 @@
 // Sound and touch: every action answers with a short synthesized sound (Web Audio, no files) and,
 // on a phone, a tap of the motor. Nothing plays until the player has interacted once (browsers
-// insist), and one setting mutes it all. Sounds are built from oscillators and filtered noise, so
+// insist), and each has its own setting. Sounds are built from oscillators and filtered noise, so
 // they are tiny, instant and never out of tune with each other.
 
 const MAX_PER_WINDOW = 5;     // a background tab catching up can fire hundreds of events at once
 const WINDOW_MS = 120;
 const MASTER_VOLUME = 0.42;
 
-export function createSound(isOn, volume = () => 1) {
+export function createSound(isOn, volume = () => 1, canBuzz = () => false) {
     let ctx = null;
     let master = null;
     let noiseBuffer = null;
@@ -42,15 +42,24 @@ export function createSound(isOn, volume = () => 1) {
         if (c && c.state === 'suspended' && !resuming) resuming = c.resume().catch(() => {}).finally(() => { resuming = null; });
     }
 
-    function allowed() {
-        if (!unlocked || !isOn() || document.hidden) return false;
-        const c = ensure();
-        if (!c || c.state !== 'running') return false;
+    /** Room for one more answer in this moment? Never before the first gesture or out of sight. */
+    function roomNow() {
+        if (!unlocked || document.hidden) return false;
         const now = performance.now();
         recent = recent.filter(t => now - t < WINDOW_MS);
         if (recent.length >= MAX_PER_WINDOW) return false;
         recent.push(now);
         return true;
+    }
+    function audible() {
+        if (!isOn()) return false;
+        const c = ensure();
+        return !!c && c.state === 'running';
+    }
+    /** A tap of the motor, on a device that has one. */
+    function buzz(name) {
+        const pattern = HAPTICS[name];
+        if (pattern && canBuzz() && navigator.vibrate && window.matchMedia?.('(hover: none)').matches) { try { navigator.vibrate(pattern); } catch { /* not supported */ } }
     }
 
     // ----- building blocks -----
@@ -152,15 +161,18 @@ export function createSound(isOn, volume = () => 1) {
 
     return {
         unlock,
-        /** Play a named sound (and buzz, where there is a pattern for it). Unknown names are ignored. */
+        /** Play a named sound and buzz, where there is a pattern for it, each by its own switch. Unknown names are ignored. */
         play(name, arg) {
             const fn = SOUNDS[name];
-            if (!fn || !allowed()) return;
-            master.gain.value = MASTER_VOLUME * Math.max(0, Math.min(1, volume()));   // the Settings slider
-            try { fn(arg); } catch { /* an odd browser state is not worth a crash */ }
-            const pattern = HAPTICS[name];
-            if (pattern && navigator.vibrate && window.matchMedia?.('(hover: none)').matches) { try { navigator.vibrate(pattern); } catch { /* not supported */ } }
+            if (!fn || (!isOn() && !(canBuzz() && HAPTICS[name])) || !roomNow()) return;
+            if (audible()) {
+                master.gain.value = MASTER_VOLUME * Math.max(0, Math.min(1, volume()));   // the Settings slider
+                try { fn(arg); } catch { /* an odd browser state is not worth a crash */ }
+            }
+            buzz(name);
         },
+        /** The motor alone: the answer to its own switch turned on. */
+        buzz,
         names: Object.keys(SOUNDS)
     };
 }

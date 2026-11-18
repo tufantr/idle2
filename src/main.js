@@ -17,6 +17,7 @@ import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
+import { vibrationOn } from './data/settings.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
@@ -110,6 +111,8 @@ const ui = {
 // them): a switch for this device, kept in the browser, not the save.
 const SHORTCUTS_KEY = 'fantasyIdle.keys';
 ui.shortcuts = prefs.get(SHORTCUTS_KEY) !== '0';
+// A phone with a motor (iPhones have none a page can reach): only there does Settings offer the vibration's switch.
+ui.canVibrate = !!navigator.vibrate && !!window.matchMedia?.('(hover: none)').matches;
 
 function loadFresh() {
     try {
@@ -249,8 +252,8 @@ const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.m
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
-// Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
-const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1);
+// Sound and haptics (src/ui/sound.js): a setting each, unlocked by the first click or key.
+const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1, () => vibrationOn(game.state.settings));
 // The sprite atlas (its versioned URL and its size), for the CSS that cuts cells out of it.
 document.documentElement.style.setProperty('--atlas', `url(${ATLAS.url})`); // versioned, so a new layout never meets an old cached sheet
 document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
@@ -2012,6 +2015,12 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** One of Settings' choices of how the game looks, sounds and reads (data/settings.js). */
+    setOption(key, value) {
+        game.setOption(key, value);
+        if (key === 'vibration' && value) { sound.unlock(); sound.buzz('crit'); }   // turned on: felt at once
+        render();
+    },
     /** Settings' switch for the M and Space keys, on this device only. */
     setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },
