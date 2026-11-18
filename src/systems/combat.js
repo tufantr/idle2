@@ -3,7 +3,8 @@
 import { enemyForStage, enemyBaseStats, enemyDamage, goldForKill, combatXpForKill, generateDrop, generateEquipment, BALANCE } from '../core/formulas.js';
 import { BASE, skillLevel } from '../core/modifiers.js';
 import { GEAR_DROP_CHANCE, RARITIES, SMITHING_TYPES, PITY_MARKS, FRONTIER_DROP, MYTHIC, PRIMAL } from '../data/items.js';
-import { addItem, dropTypesFor, isUpgrade, laggingSlot, PITY_LAG } from './inventory.js';
+import { addItem, dropTypesFor, outscores, laggingSlot, dueSlot, PITY_LAG } from './inventory.js';
+import { noteWallCamp, judgeOf } from './worth.js';
 import { ZONES, zoneForStage, GEM_DROP_TABLE, STAGES_PER_ZONE, isBossStage } from '../data/zones.js';
 import { RESOURCES, foodsByHealing, foodHeal } from '../data/resources.js';
 import { spendFightPotion } from './potions.js';
@@ -461,7 +462,7 @@ function lordsDue(game, enemy, drops) {
     c.lordsBeaten = enemy.stage;
     const zone = zoneForStage(enemy.stage);
     const top = enemy.stage < MYTHIC.from ? 'legendary' : enemy.stage >= PRIMAL.from && rng.chance(1 / PRIMAL.odds) ? 'primal' : 'mythic';
-    const lag = laggingSlot(state, zone);
+    const lag = dueSlot(state, zone, [], { rarity: top, judge: judgeOf(game) });   // (the slot that lags, unless BALANCE.rewards.dueByWorth)
     const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { rarity: top, tier: zone.gearTier });
     const result = addItem(game, item);
     bumpStat(game, 'itemsDropped');
@@ -472,7 +473,7 @@ function lordsDue(game, enemy, drops) {
     // the War Tree's Lord's Due (data/talents.js): now and then a second piece, for the next slot that lags
     const second = game.derived?.talents?.lordsDue;
     if (second && rng.chance(second)) {
-        const next = laggingSlot(state, zone, [lag.type]) || lag;
+        const next = dueSlot(state, zone, [lag.type], { rarity: top, judge: judgeOf(game) }) || lag;
         const extra = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: next.type, weight: 1 }], { rarity: top === 'primal' ? 'mythic' : top, tier: zone.gearTier });
         const kept = addItem(game, extra).kept;
         bumpStat(game, 'itemsDropped');
@@ -493,13 +494,15 @@ function lordsDue(game, enemy, drops) {
 function pityMark(game, zone, drops, stage) {
     const state = game.state;
     const c = state.combat;
-    if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && isUpgrade(state, dr.item))) { c.pity = 0; return; }
+    // (an upgrade by score, as since the marks came: judging by the wall's measure would bring the sure pieces more often)
+    if (drops.some(dr => dr.item && dr.kept && SMITHING_TYPES.includes(dr.item.type) && outscores(state, dr.item))) { c.pity = 0; return; }
     const lag = laggingSlot(state, zone);
     if (!lag || lag.ratio >= PITY_LAG) return;   // nothing this place drops could beat what the hero wears
     c.pity = (c.pity || 0) + 1;
     if (c.pity < PITY_MARKS) return;
     c.pity = 0;
-    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: lag.type, weight: 1 }], { tier: zone.gearTier, frontier: { stage, best: state.combat.bestStage } });
+    const due = dueSlot(state, zone, [], { judge: judgeOf(game) });   // (the slot that lags, unless BALANCE.rewards.dueByWorth)
+    const item = generateDrop(zone.gearTier, true, state.idCounter++, zone.depth, [{ type: due.type, weight: 1 }], { tier: zone.gearTier, frontier: { stage, best: state.combat.bestStage } });
     const result = addItem(game, item);
     bumpStat(game, 'itemsDropped');
     if (item.rarity === 'mythic' || item.rarity === 'primal') bumpStat(game, 'mythicsFound');
@@ -584,6 +587,7 @@ export function onEnemyDeath(game) {
         if (c.stage > c.maxStage) { c.maxStage = c.stage; c.stallMs = 0; checkTrial(game); }
         if (c.stage > c.bestStage) {
             c.bestStage = c.stage;
+            noteWallCamp(state);   // the camp that pushed the wall: gear is judged with it (systems/worth.js)
             // a record: every 25 stages of all-time best make the tokens stronger (core/modifiers.js recordsOf)
             if (c.bestStage % BASE.recordStages === 0) { game.recompute(); game.emit({ type: 'record', stage: c.bestStage, records: game.derived.records }); }
             // the first step ever into a zone (the Abyss once, at its first depth)
@@ -636,21 +640,53 @@ export function onPlayerDeath(game) {
     game.markDirty();
 }
 
+/**
+ * Second Chance's cut regroup, paid (the research loop's P-121: at a boss's clock wall the regroup's farming is what buys
+ * the camp, and with the minute cut 5 of 8 heroes lost a gate): the gold and combat XP the hero would earn farming
+ * `stage`, the one below the boss, by the game's own payout for its monsters and his usual swing (crits counted, as
+ * bossCanFall reckons a swing; now and then a gilded one), for the share of the cut time that keeps his gold an hour at
+ * the wall what it was with the whole regroup: the cut `cutMs` × the try's `tryMs` ÷ (the try + the regroup), times
+ * BALANCE.combat.secondChancePay. So the boss is tried again as soon as the talent says and the camp's gold comes as it
+ * did. A kill's loot stays with the fights. { kills, gold, xp }.
+ */
+export function regroupPayout(state, d, stage, cutMs, tryMs) {
+    const e = enemyForStage(stage);
+    const hp = e.maxHp * (trialBite(state).enemyHp || 1);
+    const perSwing = d.atk * (1 + Math.min(BASE.caps.critChance, d.critChance) * (d.critDmg - 1));
+    const killMs = Math.max(1, Math.ceil(hp / Math.max(1e-9, perSwing))) * d.attackInterval;
+    const share = Math.max(0, cutMs) * tryMs / (tryMs + BALANCE.combat.regroupMs) * BALANCE.combat.secondChancePay;
+    const kills = share / killMs;
+    const r = BALANCE.rewards;
+    const gilded = Math.min(1, r.gildedChance * (d.gildedMult || 1));
+    const gold = Math.floor(kills * goldForKill(e, d.goldMult) * (1 + gilded * (r.gildedGoldMult - 1)));
+    const xp = Math.floor(kills * combatXpForKill(e, d.combatXpMult, skillLevel(state, 'combat')) * (1 + gilded * (r.gildedXpMult - 1)));
+    return { kills, gold, xp };
+}
+
 /** The boss outlasted its timer: step back one stage and farm there for a minute before retrying. */
 export function onBossTimeout(game) {
-    const c = game.state.combat;
+    const state = game.state;
+    const c = state.combat;
     if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`, { lost: true }); return; }
     if (c.mode === 'titan') { endTitan(game, false, 'time'); return; }
     if (c.mode === 'clan') { endClanFight(game, 'time'); return; }
     bumpStat(game, 'bossEscapes');
     const back = Math.max(1, c.stage - 1);
-    log(game, `⏳ ${c.enemy.name} held out for ${(c.enemy.timeLimit || BALANCE.combat.bossTimeMs) / 1000}s. Regrouping at stage ${back}; the boss will be retried in ${BALANCE.combat.regroupMs / 1000}s.`, 'death');
-    game.emit({ type: 'bossTimeout', stage: c.stage });
-    // the War Tree (data/talents.js): Second Chance cuts the regroup, Relentless gives this boss's next try more time
+    const tryMs = c.enemy.timeLimit || BALANCE.combat.bossTimeMs;
+    // the War Tree (data/talents.js): Second Chance cuts the regroup and pays the farming it cuts at once (regroupPayout),
+    // Relentless gives this boss's next try more time
     const fx = game.derived?.talents || {};
+    const cut = Math.min(BALANCE.combat.regroupMs, Math.max(0, fx.regroupCut || 0));
+    const regroup = BALANCE.combat.regroupMs - cut;
+    const paid = cut > 0 ? regroupPayout(state, game.derived, back, cut, tryMs) : null;
+    if (paid?.gold > 0) { state.gold += paid.gold; bumpStat(game, 'goldEarned', paid.gold); }
+    if (paid?.xp > 0) grantXp(game, 'combat', paid.xp);
+    const pays = paid?.gold > 0 ? (regroup > 0 ? ', the time saved paid as its farming' : '; its farming is paid at once') : '';
+    log(game, `⏳ ${c.enemy.name} held out for ${tryMs / 1000}s. ${regroup > 0 ? `Regrouping at stage ${back}; the boss will be retried in ${regroup / 1000}s` : 'It is tried again at once'}${pays}.`, 'death');
+    game.emit({ type: 'bossTimeout', stage: c.stage, regroupMs: regroup, ...(paid ? { paid: paid.gold, paidXp: paid.xp } : {}) });
     if (fx.relentless) c.relentless = { stage: c.stage, ms: Math.min(RELENTLESS.maxMs, (c.relentless?.stage === c.stage ? c.relentless.ms : 0) + RELENTLESS.stepMs) };
     c.stage = back;
-    c.regroupLeft = Math.max(0, BALANCE.combat.regroupMs - (fx.regroupCut || 0));
+    c.regroupLeft = regroup;
     spawnEnemy(game);
     game.markDirty();
 }

@@ -24,7 +24,8 @@ import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
 import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
-import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
+import { isUpgrade, canWear, findGear, gainedText, UNDO_MS } from './systems/inventory.js';
+import { judgeOf } from './systems/worth.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor, ENDLESS, boardOpensOn } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -791,7 +792,7 @@ function soundFor(ev, onCombat) {
 function lootSound(item) {
     if (['rare', 'epic', 'legendary'].includes(item.rarity)) return item.rarity;
     if (['mythic', 'primal'].includes(item.rarity)) return 'mythic';
-    return canWear(game.state, item) && isUpgrade(game.state, item) ? 'upgrade' : 'drop';
+    return canWear(game.state, item) && isUpgrade(game.state, item, judgeOf(game)) ? 'upgrade' : 'drop';
 }
 
 /**
@@ -800,8 +801,9 @@ function lootSound(item) {
  */
 function legendaryCard(item, lord = false) {
     const rarity = RARITIES.find(r => r.id === item.rarity) || RARITIES[4];
-    const worth = equipGain(game.state, item);
-    const stages = stagesWords(gainStages(game.state, worth));
+    const judge = judgeOf(game);   // what it is worth at the wall that binds (systems/worth.js)
+    const worth = judge.gain(item);
+    const stages = stagesWords(judge.worth(item));
     const gain = gainMarkup(worth) + (stages ? ` · <b class="up">${escapeHtml(stages)}</b>` : '');
     const still = document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => {
@@ -896,7 +898,7 @@ function handleEvents(events) {
             case 'itemCrafted': if (ev.item.rarity !== 'common') toast(`${ev.item.rarity} ${ev.item.name}!`, 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon))); break;
             case 'itemDropped': {
                 const rank = RARITIES.findIndex(r => r.id === ev.item.rarity);
-                const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item);   // legendary and above
+                const better = rank >= 4 && canWear(game.state, ev.item) && isUpgrade(game.state, ev.item, judgeOf(game));   // legendary and above
                 if (better) legendaryCard(ev.item, !!ev.lord);   // its card says it
                 else if (rank >= 2) toast(`${ev.lord ? 'A Lord\'s due: ' : ev.frontier ? 'From the frontier: ' : ''}${RARITIES[rank].name} drop: ${ev.item.name}!`, rank >= 4 ? 'achievement' : 'craft', pic(itemSpriteKey(ev.item), escapeHtml(ev.item.icon)));
                 break;
@@ -928,6 +930,7 @@ function handleEvents(events) {
                     kicker: 'The clan hall', title: 'The clan\'s cloak', lines: [`For ${HALL.cloakHours} hours of work given to the hall, in the banner's colour`], ms: 5200 });
                 break;
             case 'equip':   // the first piece to take a slot's levels: how the forge (and the bench) work, said once (systems/inventory.js)
+                if (ev.swept) salvagedToast(ev.swept, ' made weaker');   // Weaker that stays: what the Equip took with it
                 if (ev.firstForge) {
                     const jewel = /^(Ring|Ear|Neck)/.test(ev.slot);
                     const kind = ev.slot === 'Weapon' ? 'weapon' : jewel ? (ev.slot === 'Neck' ? 'amulet' : ev.slot.startsWith('Ring') ? 'ring' : 'earring') : 'piece of armour';
@@ -939,10 +942,13 @@ function handleEvents(events) {
                 if (again) countedToast('wall:death', `Fell again ×${wall.again}`);
                 else if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death');
                 break;
-            case 'bossTimeout':
-                if (again) countedToast('wall:boss', `The boss held out again ×${wall.again}`);
-                else if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death');
+            case 'bossTimeout': {   // (Second Chance: sooner or at once, and the farming it skips paid)
+                const how = ev.regroupMs === 0 ? 'tried again at once' : ev.regroupMs < BALANCE.combat.regroupMs ? `regrouping for ${Math.round(ev.regroupMs / 1000)} s` : 'regrouping for a minute';
+                const paid = ev.paid > 0 ? `, +${fmt(ev.paid)} gold` : '';
+                if (again) countedToast('wall:boss', `The boss held out again ×${wall.again}${paid}`);
+                else if (!onCombat) toast(`The boss held out — ${how}${paid}`, 'death');
                 break;
+            }
             case 'prestige': {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
@@ -1107,19 +1113,36 @@ function handleEvents(events) {
     }
 }
 
-/** A short note in the corner: plain `text`, with a picture (`icon`, sprite HTML) before it if given. */
-function toast(text, kind = 'info', icon = '') {
+/**
+ * A short note in the corner: plain `text`, with a picture (`icon`, sprite HTML) before it if given. `act` ({ label, run })
+ * puts a button on it, and it stays a few seconds longer (the last sale or salvage's Undo).
+ */
+function toast(text, kind = 'info', icon = '', act = null) {
     const area = document.getElementById('toast-area');
     if (!area) return;
     const el = document.createElement('div');
-    el.className = `toast ${kind}`;
+    el.className = `toast ${kind}${act ? ' has-act' : ''}`;
     el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
     if (icon) el.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>`;
     el.append(text);
+    if (act) {
+        const btn = document.createElement('button');
+        btn.className = 'toast-act';
+        btn.textContent = act.label;
+        btn.addEventListener('click', () => { el.remove(); act.run(); });
+        el.append(btn);
+    }
     area.appendChild(el);
     while (area.children.length > 5) area.removeChild(area.firstChild);
-    setTimeout(() => el.classList.add('fade'), 3200);
-    setTimeout(() => el.remove(), 3800);
+    const ms = act ? UNDO_MS - 800 : 3200;
+    setTimeout(() => el.classList.add('fade'), ms);
+    setTimeout(() => el.remove(), ms + 600);
+}
+
+/** The Undo for the sale or salvage just made (systems/inventory.js undoLast), for its toast; null if there is none. */
+function undoAct() {
+    const u = game.lastUndo();
+    return u ? { label: 'Undo', run: () => window.FI.undo(u.id) } : null;
 }
 
 /** One toast that counts a repeating thing (a wall's falls): its words change in place and its time starts again. */
@@ -1148,7 +1171,7 @@ function countedToast(key, text, kind = 'info') {
 /** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */
 function salvagedToast(r, what = '') {
     const text = gainedText(r);
-    toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'}${what}${text ? `: ${text}` : ''}`, 'info', resIcon(r.essence ? 'essence' : Object.keys(r.materials)[0] || 'essence'));
+    toast(`Salvaged ${r.count} item${r.count === 1 ? '' : 's'}${what}${text ? `: ${text}` : ''}`, 'info', resIcon(r.essence ? 'essence' : Object.keys(r.materials)[0] || 'essence'), undoAct());
 }
 
 // Modals queue up instead of replacing each other, so a login prompt can't hide the offline report.
@@ -1814,9 +1837,23 @@ window.FI = {
     runCourse() { if (game.state.action?.kind === 'agility') game.stopAction(); else game.startAgility(); render(); },
 
     equip(id) { if (game.equipItem(id) !== false) { sound.play('equip'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
+    /** Equip all (the dock's, once two pieces wait): every slot's best at once, one sound and one rise over the hero. */
+    equipAll() { if (game.equipAll() > 0) { sound.play('equip'); sound.play('upgrade'); render(); flourish('.doll-figure .hero-doll'); } else render(); },
     unequip(slot) { game.unequipItem(slot); sound.play('equip'); render(); },
-    sellItem(id) { game.sellItem(id); sound.play('coin'); render(); },
-    sellAll(rarity) { const before = game.state.gold; game.sellAllItems(rarity); if (game.state.gold > before) sound.play('gold'); render(); },
+    sellItem(id) {
+        const item = game.state.inventory.find(i => i.id === id);
+        const before = game.state.gold;
+        if (game.sellItem(id)) toast(`Sold ${item.name} for ${fmt(game.state.gold - before)} gold`, 'info', sprite('gold', { scale: 0.5 }), undoAct());
+        sound.play('coin');
+        render();
+    },
+    sellAll(rarity) {
+        const r = game.sellAllItems(rarity);
+        if (r.count) { sound.play('gold'); toast(`Sold ${r.count} item${r.count === 1 ? '' : 's'} for ${fmt(r.gold)} gold`, 'info', sprite('gold', { scale: 0.5 }), undoAct()); }
+        render();
+    },
+    /** Take back the last sale or salvage (its toast's Undo): the pieces back in the bag with a pickup's sound. */
+    undo(id) { if (game.undoLast(id)) { sound.play('pickup'); toast('Back in the bag', 'info', glyph('keep')); } else sound.play('error'); render(); },
     setAutoPrestige(on) { if (game.setAutoPrestige(on)) sound.play(on ? 'unlock' : 'click'); render(); },
     reinforce(id) { const ok = game.reinforceItem(id); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#anvil-${Number(id)} .anvil-art`); },
     // a reroll: the bonuses it brought glow on the card a few seconds (render.js anvilCard)
@@ -1828,6 +1865,8 @@ window.FI = {
         render();
         if (ok) flourish(`#anvil-${Number(id)} .anvil-art`, 'rgba(196, 165, 255, 0.95)');
     },
+    /** Practise at the anvil: a metal's bars for its mastery alone, to its next level (systems/anvil.js practise). */
+    practise(bar) { const ok = game.practise(bar); sound.play(ok ? 'anvil' : 'error'); render(); if (ok) flourish(`#metal-${bar}`); },
     toAnvil() { ui.smithView = 'anvil'; ui.invSelected = null; window.FI.switchTab('smithing'); },
     // The jeweller's bench (systems/bench.js): an upgrade, or a reroll whose new bonuses glow a few seconds (render.js benchCard)
     benchUpgrade(id) { const ok = game.upgradeJewel(id); sound.play(ok ? 'craft' : 'error'); render(); if (ok) flourish(`#bench-${Number(id)} .anvil-art`); },
@@ -1845,7 +1884,7 @@ window.FI = {
         if (g) {
             sound.play('drop');
             const got = [g.essence ? `${g.essence} essence` : '', ...Object.entries(g.materials).map(([res, qty]) => `${qty} ${RESOURCES[res].name}${qty === 1 ? '' : 's'}`)].filter(Boolean);
-            toast(got.length ? `+${got.join(', ')}` : 'Salvaged', 'info', resIcon(Object.keys(g.materials)[0] || 'essence'));
+            toast(got.length ? `+${got.join(', ')}` : 'Salvaged', 'info', resIcon(Object.keys(g.materials)[0] || 'essence'), undoAct());
         }
         render();
     },

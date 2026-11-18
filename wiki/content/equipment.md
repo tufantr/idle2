@@ -67,11 +67,11 @@ The gear codex in the Hall keeps a page for every kind of gear at every tier: {{
 
 The bag holds {{BAG_SIZE}} pieces besides what your hero wears, and {{BAG_UPGRADE.slots}} more for each bag upgrade, the buttons by the bag's tools (up to {{BAG_SIZE + BAG_UPGRADE.slots * BAG_UPGRADE.max}}). Each costs more than the last, and you pay it with gold, priced by your best stage like the Shop's, or with [[Monster Essence|essence]]: {{fmt(BAG_UPGRADE.essence)}} for the first, half as much again each time. Late in the game a run's gold goes into the camp, and essence piles up, so the essence price is the one a deep hero will use. When it is full and a new piece comes in, the weakest piece that is neither locked nor an upgrade is salvaged, and that may be the new one. If everything left is locked or an upgrade, the bag takes one more rather than lose an upgrade: nothing is ever thrown away behind your back.
 
-A green ▲ marks a piece that beats what your hero wears, and the fight's dock offers the best of them with a one-tap **Equip**. **Salvage commons** and **Sell commons** clear the bag's unlocked common pieces in one go. **Salvage weaker** salvages every unlocked piece that wouldn't improve what your hero wears, crafted ones too, and a dungeon's spare [[Unique items|uniques]], though one of each stays in the bag for the [[Dungeons|Seal]]. Its note names all that came back: a crafted piece gives bars and gems, not essence. Gear cannot be changed during a dungeon run.
+A green ▲ marks a piece that would make your hero stronger at his wall, the boss he is stuck at, and the fight's dock offers the one that takes him furthest with a one-tap **Equip**, and once two or more slots have one waiting, **All** beside it puts on the best for each; the bag lists its pieces in that order, the best first. A piece's card says how far, in stages: what it adds to his damage a second (crits and swing speed counted), against the boss's clock, and what its defence and health add, but only while a boss's blow still takes {{pct(THREAT_SHARE, 0)}} of his health or more. Defence also stops counting once a blow is cut as far as it goes ({{pct(MAX_MITIGATION, 0)}}). So deep in the Abyss, where blows hardly scratch him, a shield, helm, plate or greaves is worth what its bonuses do, and the weapon most of all. Each piece is judged with the camp your hero had when he last reached a new best stage, so it doesn't change as a new run buys its camp again. **Salvage commons** and **Sell commons** clear the bag's unlocked common pieces in one go. **Salvage weaker** salvages every unlocked piece that wouldn't improve what your hero wears, crafted ones too, and a dungeon's spare [[Unique items|uniques]], though one of each stays in the bag for the [[Dungeons|Seal]]. Its note names all that came back: a crafted piece gives bars and gems, not essence. Gear cannot be changed during a dungeon run.
 
 ## Auto-salvage and locking
 
-- **Auto-salvage** salvages dropped gear up to a rarity as it lands, or with Weaker any drop weaker than what you wear, whatever its rarity: {{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : RARITIES.find(r => r.id === o).name)).join(', ')}}. It starts at Common, and the switch shows under the bag once a few pieces have dropped. It never takes an upgrade, nor anything you made. Weaker takes a dungeon's spare uniques too, but leaves one of each in the bag for the Seal.
+- **Auto-salvage** salvages dropped gear up to a rarity as it lands, or with Weaker any drop weaker than what you wear, whatever its rarity: {{AUTO_SALVAGE_OPTIONS.map(o => (o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : RARITIES.find(r => r.id === o).name)).join(', ')}}. It starts at Common, and the switch shows under the bag once a few pieces have dropped. It never takes an upgrade, nor anything you made. Weaker takes a dungeon's spare uniques too, but leaves one of each in the bag for the Seal, and with it on, putting a piece on also salvages the bag's pieces of that kind it made weaker, the one taken off among them. Once the bag has been full, the Weaker switch glows until you have tried it. The log gathers what auto-salvage takes into one line a minute.
 - **Locking** a piece (the padlock in its detail) keeps it from being sold or salvaged, by hand or by the bag. The first copy of a unique arrives locked.
 
 ## The anvil
@@ -96,7 +96,7 @@ A slot that has held a higher tier takes the same number of bars of that metal (
 
 ## The slot keeps its levels
 
-Every weapon or piece of armour you wear in a slot has that slot's levels at once: a better drop never throws your work away, and swapping pieces loses nothing. The plate on the slot (+14) shows them, even when the slot is empty, and a new piece put on says so ("+14 kept"). The ▲, the dock's Equip and the bag's comparison judge pieces by what they are, since any of them would have the slot's levels. Saves from before the forge moved to the slots gave each slot the levels of the best reinforced piece of its kind.
+Every weapon or piece of armour you wear in a slot has that slot's levels at once: a better drop never throws your work away, and swapping pieces loses nothing. The plate on the slot (+14) shows them, even when the slot is empty, and a new piece put on says so ("+14 kept"). The ▲, the dock's Equip and the bag's comparison judge pieces with the slot's levels, since any of them would have them. Saves from before the forge moved to the slots gave each slot the levels of the best reinforced piece of its kind.
 
 ## Salvaging
 
@@ -110,6 +110,10 @@ Salvage a piece you don't need from its detail, or with **Salvage commons**:
 ## Upgrading and rerolling jewellery
 
 Jewellery is worked at the jeweller's bench in [[/skills/crafting|Crafting]], from Crafting {{BENCH_LEVEL_PER_UPGRADE}}: its slot upgraded (the levels belong to the slot, as the anvil's do, with no top: +{{pct(UPGRADE_STEP, 0)}} a level up to +{{MAX_UPGRADE}}, ×{{FORGE_STEP}} past it) and its bonuses rerolled, with gems and essence. A worn piece's detail has a **Bench** button that goes there. See [[Jewellery]].
+
+## Undo
+
+Sold or salvaged the wrong thing? The note that says so has an **Undo** for a few seconds: the pieces go back in the bag, and the gold, essence and bars they gave go back too. It takes back the last sale or salvage only, from a piece's detail, **Salvage commons**, **Salvage weaker**, **Sell commons**, or what putting a piece on took with Weaker, and only while what it gave is still there to give back.
 
 ## Selling
 

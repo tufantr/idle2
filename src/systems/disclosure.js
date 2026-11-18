@@ -9,7 +9,7 @@ import { RESOURCES } from '../data/resources.js';
 import { NON_COMBAT_SKILLS, SKILLS } from '../data/skills.js';
 import { STAGES_PER_ZONE } from '../data/zones.js';
 import { ANVIL_LEVEL_PER_UPGRADE, BENCH_LEVEL_PER_UPGRADE, BENCH_SLOTS } from '../data/workshop.js';
-import { SMITHING_TYPES } from '../data/items.js';
+import { SMITHING_TYPES, BAG_SIZE, BAG_UPGRADE } from '../data/items.js';
 import { levelForXp, combatLevelForXp, MAX_LEVEL } from '../core/xp.js';
 import { BALANCE } from '../core/formulas.js';
 import { TRIALS_FROM } from '../data/trials.js';
@@ -57,6 +57,9 @@ export const DISCLOSURES = [
     { id: 'jewellery',    when: s => !!s.unlocks.crafting || gear(s).some(item => JEWELLERY.has(item.type)) },
     { id: 'bag_tools',    when: s => s.stats.itemsDropped + s.stats.itemsCrafted >= 5 },
     { id: 'auto_salvage', when: s => s.stats.itemsDropped >= 10 },
+    // the bag full for the first time: its Weaker pill glows (render.js) until Weaker is picked once (the research loop's P-077)
+    { id: 'bag_full',     when: s => s.inventory.length >= BAG_SIZE + BAG_UPGRADE.slots * Math.max(0, Math.min(BAG_UPGRADE.max, s.bagUpgrades || 0)) },
+    { id: 'weaker_tried', when: s => s.settings.autoSalvage === 'weaker' },
     // the skill tabs
     { id: 'anvil',        when: s => levelForXp(s.skills.smithing.xp) >= ANVIL_LEVEL_PER_UPGRADE || SMITHING_TYPES.some(t => (s.forge?.[t]?.level || 0) > 0) },   // Smithing's anvil: the first reinforcing a smith can do
     // Crafting's bench (systems/bench.js): the first upgrade a jeweller can do, or a jewellery slot with levels already

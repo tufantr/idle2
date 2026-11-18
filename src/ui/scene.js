@@ -934,9 +934,10 @@ export function createScene(root, actions) {
                 case 'recovered':
                     move(el.heroSprite, 'cheer');
                     break;
-                case 'bossTimeout':
+                case 'bossTimeout':   // (Second Chance: tried again sooner, the farming it skips paid at once, with its coins)
+                    if (ev.paid > 0) coinBurst(4);   // (coins even at a quiet wall: the gold is real)
                     if (quiet) break;
-                    banner('<small>Out of time</small><strong>The boss holds out</strong><span>Regroup, then try again</span>', 'defeat', 2200);
+                    banner(`<small>Out of time</small><strong>The boss holds out</strong><span>${ev.regroupMs === 0 ? 'Again at once' : 'Regroup, then try again'}${ev.paid > 0 ? ` · ${sprite('gold', { scale: 0.5, cls: 'soft' })} +${fmt(ev.paid)}` : ''}</span>`, 'defeat', 2200);
                     break;
                 case 'titan':
                     if (ev.won) banner(`<small>Titan defeated</small><strong>+${+((ev.bonus || 0) * 100).toFixed(1)}% ATK and HP, forever</strong>`, 'victory', 2400);
