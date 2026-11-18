@@ -187,6 +187,7 @@ export const WIKI_PAGES = {
     combat: '/combat', camp: '/camp', dungeons: '/dungeons', titan: '/titan', inventory: '/equipment', shop: '/shop', charms: '/shop#charms',
     prestige: '/prestige', ascension: '/ascension', trials: '/trials', talents: '/talents', mastery: '/mastery', achievements: '/medals',
     events: '/events', clan: '/clans', clanhall: '/clans#the-clan-hall', minigames: '/mini-games',
+    flagged: '/faq#settings-says-my-account-is-flagged-what-does-that-mean',
     ...Object.fromEntries(Object.keys(SKILLS).filter(id => id !== 'combat').map(id => [id, `/skills/${id}`]))
 };
 /** The wiki page behind a "?" card, as an address, or '' where it has none. */
