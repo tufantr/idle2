@@ -379,6 +379,7 @@ function pump() {
 function openCatchUp(view = {}) {
     if (catchUpBox) return;
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);   // (before the first render)
+    if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();   // (the keys go back where they were: showModal)
     const box = Object.assign(document.createElement('div'), { className: 'modal-overlay active catch-up-overlay', tabIndex: -1, innerHTML: renderCatchUp(game.state, view) });
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-modal', 'true');
@@ -388,22 +389,28 @@ function openCatchUp(view = {}) {
     ui.modalOpen = 'catchup';
     ui.modalUnder = null;
     catchUpBox = box;
-    for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = true; }
+    holdPage(true);
     box.focus({ preventScroll: true });
     if (catching?.run.where) paintCatchUp(box, game.state, catching.run.where);
 }
-/** The bar's dialog away, `html` (a report) in its place, then a dialog that waited behind it. */
+/** The bar's dialog away, `html` (a report) in its place, then a dialog that waited behind it; with none, the page again. */
 function closeCatchUp(html) {
     const box = catchUpBox;
     catchUpBox = null;
     if (box) {
         box.remove();
-        for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = false; }
         if (ui.modalOpen === 'catchup') { ui.modalOpen = catchUpWas.open; ui.modalUnder = catchUpWas.under; }
         else if (ui.modalUnder === 'catchup') ui.modalUnder = catchUpWas.open || null;   // (a question stood over the bar)
     }
     if (html) openModal(html, 'offline');
-    if (!ui.modalOpen) { const next = ui.modalQueue.shift(); if (next) showModal(next.html, next.key); }
+    if (!ui.modalOpen) {
+        const next = ui.modalQueue.shift();
+        if (next) showModal(next.html, next.key);
+        else if (box) { holdPage(false); rewards.resume(); returnFocus(); }
+    } else if (box) {   // the dialog it stood over is on top again
+        holdPage(true);
+        focusDialog(document.querySelector('#modal-root > .modal-overlay:last-child'));
+    }
 }
 
 /** The boot's welcome-back, for time away fighting or working, or resting more than five minutes (its HTML, or null). */
@@ -1759,7 +1766,9 @@ async function syncFromCloud() {
 
 /** Play `stateObject` (the server's game, a backup): its time away replayed behind the bar, then `news`, then its report. */
 function adoptState(stateObject, news = null) {
-    if (ui.modalOpen === 'offline') closeModal();   // the report of the game it replaces would act on this one
+    // the report of the game it replaces would act on this one: shown, waiting, or under the bar
+    if (ui.modalOpen === 'offline') closeModal();
+    else if (catchUpBox && catchUpWas.open === 'offline') { catchUpBox.previousElementSibling?.remove(); catchUpWas = { open: false, under: null }; }
     ui.modalQueue = ui.modalQueue.filter(m => m.key !== 'offline');
     game = withDevFlags(new Game(stateObject, Date.now()));
     return catchUp(game.beginResume(Date.now()), summary => {
