@@ -105,7 +105,7 @@ export function createDefaultState(now = Date.now()) {
         dungeonTier: 1,        // the dungeons' open tier: each Seal opens the next (data/dungeons.js; kept in `meta` too)
         uniques: {},           // "<unique>" or "<unique>@<tier>" -> true: every unique found, kept or not (a record; in `meta` too)
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
-        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }, and { endless, dealt } at the Endless Hydra
+        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before, hero, scale }, and { endless, dealt } at the Endless Hydra
         clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at, endless? }
         clanBanner: { week: '', kills: 0 },   // the clan's banner, as the server last said it: levels felled in that ISO week (data/social.js CLAN_BANNER)
         // the clan's hall, as the server last said it (systems/clanhall.js): each room's level, the stage, the banner's colour and

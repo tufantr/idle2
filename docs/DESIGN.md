@@ -1168,7 +1168,7 @@ with the game's own stat code; the client never submits damage or scores.
   auto-clicker gets no more than a player clicking fast in the openings: ×1.3 to ×1.6 of a hero who only
   watches, by attack speed (`test/clanfight.test.mjs`). No cards, raid levels or dust: the hero is the
   deck (Tap Titans 2's raid system was weighed and left out). The page keeps only the strike times; when
-  the fight ends (time, Give up, or the boss's health running out on screen) they wait in
+  the fight ends (time, Give up, or the boss falling) they wait in
   `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
   and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
   rule inside the fight, expected values, no dice, Focus or timed boosts; the combat potion picked counts,
@@ -1177,7 +1177,15 @@ with the game's own stat code; the client never submits damage or scores.
   best over his plain attack now (`clanAttackScale`, never below 1). The camp is packed up at every prestige and
   grows through a run, so the same hero hit seven times harder at a run's end than just after a prestige: the owner
   saw another member deal 24 times their damage (October 2026) and asked that the time of an attack not matter. The fight on
-  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`). Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
+  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`). **The boss falls on screen when the server's
+  sum says so** (`clanFightFells`, November 2026, a player's report): the screen rolls crits and ±10% a hit and the server
+  counts expected values, so with the boss near one fight's health the two disagreed in 782 of 2,560 simulated fights.
+  When a hit would empty the bar, and when the clock ends, the game now works the server's sum: `clanFightDamage` of the
+  hero as he stood when the fight began (`state.clanFight.hero`: what he buys or drinks up during it isn't in the stored
+  save), the strikes so far and the whole fight's length, times `scale`. A boss it doesn't fell holds on at 1 health, a
+  sliver of its bar, and the fight goes on, so a late strike still counts and can finish it; a boss it fells falls, at the
+  clock's end if its bar outlasted the fight. The Endless Hydra never falls, and the server is unchanged (a flagged
+  account's cap stays its alone; `test/clanfight.test.mjs` plays the edge). Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real
