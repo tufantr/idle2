@@ -143,7 +143,8 @@ export function tabIcon(id, scale = 0.75) {
  */
 function readyBadge(game, id) {
     const state = game.state;
-    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}">${text}</span>`;
+    // (the glyph for the eye, its words for a screen reader: the tab read "Shop▲")
+    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}"><span aria-hidden="true">${text}</span><span class="sr-only">, ${esc(tip)}</span></span>`;
     if (id === 'farming') {
         const n = state.farming.plots.filter(p => p.crop && plotReady(p, game.now)).length;
         return n ? pill(n, `${n} plot${n > 1 ? 's' : ''} ready to harvest`) : '';
@@ -190,7 +191,7 @@ export function renderNav(game, ui) {
                 const combat = levelled === 'combat';
                 const lp = combat ? combatProgress(state.skills.combat.xp) : levelProgress(state.skills[levelled].xp);
                 const top = combat ? MAX_COMBAT_LEVEL : MAX_LEVEL;
-                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
+                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}"><span class="sr-only">, level </span>${lp.level}</span>`;
                 xpBar = lp.level >= top ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
@@ -231,7 +232,7 @@ export function renderHotbar(game, ui) {
     const banked = state.daily.banked;
     const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
     const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
-        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge" aria-label="${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}">${badge}</b>` : ''}</button>`;
+        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge"><span aria-hidden="true">${badge}</span><span class="sr-only">, ${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}</span></b>` : ''}</button>`;
     const work = action && SKILLS[action.skill]
         ? button(tabIcon(action.skill, 1), esc(SKILLS[action.skill].name), `FI.switchTab('${action.skill}')`, { active: ui.tab === action.skill, live: true })
         : button(tabIcon('mining', 1), 'Work', "FI.switchTab('mining')", { active: ui.tab === 'mining' });
@@ -295,7 +296,7 @@ export function renderHeader(game, ui, cloud) {
     // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
     // leave-full-screen button. Both fold the fight back into the page; it goes on.
     const full = battleMode(game, ui);
-    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
+    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on."><span aria-hidden="true">☰</span><span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-hidden="true"></i><span class="sr-only">, a new place is waiting</span>' : ''}</button>` : '';
     const screen = full ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.battleFull(false)" aria-label="Leave full screen" title="Leave full screen (Esc). The fight goes on.">${ICON_SHRINK}</button>` : '';
     // a newer version of the game is live (ui/update.js): one press saves and loads it, never by itself
     const update = ui.newVersion
@@ -746,7 +747,7 @@ function xpHeader(game, skillId, extra = '') {
         <h2><span class="h-icon">${tabIcon(skillId, 1)}</span>${skill.name} ${aboutButton(skillId)}</h2>
         <div class="skill-info">
             ${extra}${mastery}
-            <span class="skill-level" style="color:${skill.color}; background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
+            <span class="skill-level" style="color:color-mix(in srgb, ${skill.color} 62%, #fff); background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
             <div class="xp-bar-container"><div class="xp-bar-fill" style="width:${(lp.fraction * 100).toFixed(1)}%; background:${skill.color}"></div></div>
             <span class="skill-xp">${lp.level >= MAX_LEVEL ? fmt(state.skills[skillId].xp) + ' XP' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}</span>
         </div>
@@ -1300,10 +1301,11 @@ function itemTile(state, item, { slot = null, selected = false } = {}) {
     // a worn piece's plate is its slot's levels (the anvil's forge, the jeweller's bench); one in the bag has none of its own
     const up = !slot ? 0 : onAnvil(item) ? forgeLevel(state, slot) : benchLevel(state, slot);
     const rarity = RARITIES.find(r => r.id === item.rarity);
+    const steps = Math.max(0, RARITIES.indexOf(rarity));   // its rarity told twice: a pip for each step above Common, beside the colour
     const wearable = canWear(state, item);
     const better = !slot && wearable && isUpgrade(state, item);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
-    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
+    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${steps ? `<i class="tile-pips" style="--pips:${steps}" aria-hidden="true"></i>` : ''}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
 
 function dollSlot(state, slot, selectedId) {
@@ -1593,8 +1595,9 @@ function renderWarTree(game, pick, shown) {
             const block = learnBlock(state, t.id);
             const gate = talentBlock(state, t, 1);   // what stands in its way, a free point or not
             const cls = rank >= t.max ? 'full' : !block ? 'ready' : gate ? 'shut' : rank ? 'part' : 'open';
+            // a talent a point can go to is told by a + as well as its green frame (gold when full looks the same to a deuteranope)
             return `<button class="talent ${cls}${pick === t.id ? ' picked' : ''}${t.row === ROWS ? ' capstone' : ''}" style="grid-row:${t.row};grid-column:${t.col}" onclick="FI.pickTalent('${t.id}')"
-                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b></button>`;
+                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}${cls === 'ready' ? ', a point can go here' : ''}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b>${cls === 'ready' ? '<i class="talent-plus" aria-hidden="true">+</i>' : ''}</button>`;
         }).join('');
         // the bridges: a line from each talent to each one it opens, centre to centre behind them, in the grid's own
         // squares (one a cell: the svg stretches over the grid); those crossed drawn last, over the rest
@@ -1762,7 +1765,7 @@ function renderCompletion(game) {
 
 // A bestiary star: filled once the kind has fallen 10, 100 or 1,000 times.
 const ICON_STAR = '<svg class="star" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2l2.05 4.3 4.7.55-3.47 3.2.95 4.65L8 11.55 3.77 13.9l.95-4.65L1.25 6.05l4.7-.55z"/></svg>';
-const starRow = n => `<span class="beast-stars" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
+const starRow = n => `<span class="beast-stars" role="img" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
 
 /**
  * The bestiary: every kind of monster met, by place, with how many have fallen and its stars. The
@@ -2367,11 +2370,30 @@ export function renderSettings(game, ui, cloud) {
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
+        <label class="toggle" title="On this device only"><input type="checkbox" onchange="FI.setShortcuts(this.checked)" ${ui?.shortcuts !== false ? 'checked' : ''}> Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}</label>
         ${seen(state, 'minigames') ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('minigameChime', this.checked)" ${state.settings.minigameChime !== false ? 'checked' : ''}> Chime when a mini-game chance appears</label>` : ''}
         ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
         <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
         ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
         <p class="muted small">${VERSION ? `Game version ${esc(VERSION)} · save` : 'Save'} version ${state.version}</p>
+    </section>
+    ${madeWith()}`;
+}
+
+// How the game was made, said in full at the foot of Settings (P-020 in the research loop: a disclosure that
+// understates draws anger). PAINTINGS counts the files under assets/paint/ (a test keeps it true); assets/CREDITS.md
+// names every source.
+export const PAINTINGS = 161;
+function madeWith() {
+    return `<section class="glass-panel made-with ${painted('study', 'center 85%')}">
+        <div class="panel-header"><h2>How it was made</h2></div>
+        <ul class="made-list small">
+            <li>The ${PAINTINGS} paintings were made with Google Gemini, an AI, then cut, cropped and scaled by script; one was retouched by hand.</li>
+            <li>The pixel sprites are tiles from Dungeon Crawl Stone Soup, drawn by its artists and free for anyone to use (CC0). The ores, bars, logs, fish, crops and a few other pictures are drawn by the game's code in the same style.</li>
+            <li>The sounds are made by the game's code as you play. There are no recordings.</li>
+            <li>The game's code and its words were written with an AI, Claude.</li>
+            <li>The type is Cinzel and Outfit, under the SIL Open Font License.</li>
+        </ul>
     </section>`;
 }
 
@@ -2752,7 +2774,7 @@ export function renderPrestigeModal(game) {
         titanUnlocked(state) ? [sprite('titan/0', { scale: 1 }), 'Titans defeated'] : null,
         has('agility') ? [sprite('obstacle/rope_swing', { scale: 1 }), 'The agility course'] : null,
         has('farming') ? [sprite('farm/growing', { scale: 1 }), 'The farm'] : null
-    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
+    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" role="img" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
     const nextSp = Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage);
     const trials = activeTrials(state);
     return `<div class="modal-content about-card prestige-modal">
@@ -2959,9 +2981,10 @@ export function renderIntroModal(state, { signedIn = false } = {}) {
  * a 6-digit code goes to the email, and the account plays once it is entered here); the code; a forgotten password (a
  * code to the email, then a new password). `ctx.mode` says which; `email` is the address as shown (part hidden).
  * `required`: the game waits behind it until the player signs in or plays as a guest; `register`: a new player from
- * the title card, so Register is the button Enter presses.
+ * the title card, so Register is the button Enter presses. `keep`: an iPhone or iPad not playing from its Home Screen,
+ * where Safari clears a guest's game after seven days away: the dialog that offers the guest's game says so (P-069).
  */
-export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '' } = {}) {
+export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '', keep = false } = {}) {
     const header = { login: required ? 'Sign in to play' : 'Sign in', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
     const error = `<div class="auth-error" id="auth-error">${esc(message)}</div>`;
     const back = `<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode('login')">Back to log in</a></p>`;
@@ -2995,7 +3018,8 @@ export function renderAuthModal(message = '', { required = false, register = fal
                 <input type="password" id="auth-pass" placeholder="Password" autocomplete="${first === 'register' ? 'new-password' : 'current-password'}" class="text-input">
                 <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.authMode('${other}')">${first === 'register' ? 'Log in instead' : label[other]}</button></div>
             </form>
-            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}`;
+            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}
+            ${keep ? '<p class="muted small auth-keep">On an iPhone or iPad, Safari clears a guest\'s game after seven days away, unless the game is on your Home Screen.</p>' : ''}`;
     }
     return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
         <div class="modal-header">${header}</div>

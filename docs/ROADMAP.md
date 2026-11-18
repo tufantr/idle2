@@ -1519,6 +1519,52 @@ Keeping it running:
       played this past week, and the clans with the most of them come first, so a newcomer finds one that plays
 - [x] **Where accounts come from** (R7, November 2026; DESIGN §3.17, README "Listings"): a listing's link can carry a
       tag (`?src=reddit1`), kept by the game until an account is made and counted with it; no link to the account
+- [x] **The accessibility pass** (R10 of the research loop's ranking, November 2026; the faults measured in
+      `docs/research_notes/research-loop/021-accessibility.md`): on a phone the stage path's buttons are 24 px, a finger's
+      target, and Settings' checkboxes stand in rows 32 px tall. The path's numbers have their own type again (its `font`
+      rule held `inherit`, which a shorthand can't, so browsers dropped it: a button's number came out 15 px, the stage's
+      own 10 px); they are 11.5 px, 11 px on a phone. A dialog holds the keys: the page behind it is inert, Tab goes round
+      the dialog on top (one Tab from Prestige now reached the phone's hotbar behind it), each is named by its title, and
+      when it closes the focus goes back to the control a key opened it from. On a phone a control the keys reach scrolls
+      clear of the hotbar and the sticky bar of places (six bag tiles, three Shop buttons and three of Settings' controls
+      had sat wholly under them). A skill's name, level and XP stand on a smoked plate (over the farm's, the river's and
+      the course's pale skies they read at 1.4–2.6:1; 5:1 or more now), the level's colour lightened so Agility's red reads;
+      the food and potions the fight won't use keep their picture dimmed but their numbers above 4.5:1 (3.2–3.9:1 before).
+      A badge says in words what its glyph shows, to a screen reader (a tab read "Shop▲"; now "Shop, a better tool is ready
+      to buy", "Combat, level 62"), and so do the phone's coins and its Menu and crate buttons, whose words the screen hides.
+      Settings has a switch for the fight's two keys, M (the map) and Space (a strike), kept on that device: speech input
+      types them. The monster flashes at most three times a second (WCAG 2.3.1; striking four times a second made five, on
+      up to 90% of the area WCAG allows): a blow sooner than that knocks it back without the light, its number and sound as
+      ever. A tile tells its rarity twice: its colour, and a pip for each step above Common (Rare and Epic looked the same
+      to a deuteranope); a War Tree talent a point can go to wears a + beside its green frame. On a phone the tips open
+      (121 of 134 never showed): a tap names the purse's coins, the pills, the hero's and the monster's numbers (no strike)
+      and the hero's stats, and a long press shows a button's tip without pressing it
+- [x] **Words on a phone are 11 px at least** (R23 of the research loop's ranking, part of P-019): at 390 px the stage
+      numbers were 8.8 px, the dock's supply counts 9.9, the doll's slots 9, the monster's numbers 9.9, the hotbar's labels
+      10.6, and the War Tree's ranks, the Trials' badges, the perks' lines and a card's kicker under 11 too. Each is 11 px
+      or more now, every layout as it was (four-digit stages fit the path; "Earring" fits under its slot)
+- [x] **The fonts come from the game's own server** (R18 of the research loop's ranking, P-066): Cinzel and Outfit were
+      loaded from Google Fonts by the game, the wiki and the link preview's tool, a request that blocks the first paint,
+      is unreliable in mainland China and drew a court award in Munich. The four files (Google's own cuts, 87 KB) are in
+      `assets/fonts/` with their stylesheet, credited under the SIL Open Font License; no request leaves for Google, and
+      the same panel draws pixel for pixel as before
+- [x] **A wall that repeats goes quiet** (R21 of the research loop's ranking, P-081): at stage 300 a hero fell about twice
+      a minute, each time with the defeat jingle, a banner and a red edge, and a red toast on any other tab. The first
+      fall or boss timeout at a wall keeps them; for ten minutes after it the next ones there play one soft note and fold
+      into one counted toast ("Fell again ×4", "The boss held out again ×2"), the hero still falling. Tested in
+      `test/access.test.mjs`
+- [x] **A link that starts as a guest** (R7 of the research loop's ranking, P-065): `fantasyidle.com/?play`, for posts and
+      listings, makes a new player a guest at once, as a frame does: the title card's Begin goes straight into the fight,
+      the account one click away (the Guest pill), and the choice is remembered. The bare address keeps the sign-in
+      first; a signed-in player's link plays the account's game. The rule is `src/core/door.js`, tested
+- [x] **How it was made, at the foot of Settings** (R7 of the research loop's ranking, P-020; the words wait for the
+      owner's OK): the 161 paintings made with Google Gemini and how they were edited, the CC0 sprites drawn by Dungeon
+      Crawl Stone Soup's artists and the pictures the game's code draws, the sounds made in code, the code and the words
+      written with an AI (Claude), the type. The wiki's credits page says the same
+- [x] **A guest's game kept on phones** (R19 of the research loop's ranking, P-069): Safari clears a site's storage after
+      seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
+      the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
+      prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

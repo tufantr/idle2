@@ -246,7 +246,9 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   legendary is worth about a tier (×2.2): it beats a common piece of the tier above and about matches an
   uncommon one, a rare one beats it, and **nothing reaches two tiers up** (a test enforces this); in the Abyss it
   is worth nearly three depths of the drops' ×1.45. The prototype multiplied stats by up to 64× and let
-  legendary copper beat runite.
+  legendary copper beat runite. A tile tells its rarity twice (WCAG 1.4.1; to a deuteranope Rare and Epic look the
+  same): its colour, and a pip for each step above Common up its left edge, as many as its rarity's bonuses. The War
+  Tree marks a talent a point can go to with a + beside its green frame (green and gold look alike to a deuteranope).
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
 - **Upgrades:** +5% base stats per level to +10, then ×1.05 a level with no top (§3.31). Weapons and armour are
@@ -946,7 +948,13 @@ wear; a place that waited opens on the return and is named there too.
   chosen. Inside another site's frame (`EMBEDDED` in `src/main.js`: galaxy.click shows its games in one, and
   its players shy away from sign-up forms) a new player is a guest at once and Begin goes straight into the
   fight; the account is one click away (the Guest pill), and the frame's game is stored apart from the site's
-  own (browsers keep a framed page's storage per host site). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
+  own (browsers keep a framed page's storage per host site). So does a guest's link, `?play` among the address's
+  parameters (`src/core/door.js`, for posts and listings: the first post's top comment was "Instant downvote for
+  needing an account"): not signed in, the page starts as a guest and remembers it, as Play as guest does; signed in,
+  it plays the account's game. The bare address keeps the sign-in first. A guest's game is kept by asking the
+  browser, quietly, to keep its storage (`navigator.storage.persist()`, once a load until it does; not in Firefox,
+  which would ask its player), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a
+  guest's game says Safari clears it after seven days away unless the game is on the Home Screen (P-069). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
   there next starts its own game, not a copy of the last one. A local development host (`DEV_HOST` in
   `src/main.js`: the tools, the screenshots) plays as a guest without asking.
 - **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a
@@ -1281,7 +1289,18 @@ keeps:
   one-shot moves (lunge, knockback, entrances, the fall) are Web Animations on the outer one, ranked
   so a monster's entrance isn't interrupted by the first hit.
 - **Bounded.** At most 8 effects per frame and 14 coins in flight, nothing while the tab is hidden, and
-  no floating effects under reduced motion (the setting or the system preference).
+  no floating effects under reduced motion (the setting or the system preference). The monster flashes at most
+  three times a second (WCAG 2.3.1, `FLASH_GAP_MS`): a hit, a crit, a boss's entrance or a fall that comes sooner
+  than 340 ms after the last flash moves without the light, and keeps its number and its sound.
+- **A wall that repeats goes quiet** (P-081; `src/systems/walls.js`). At a wall a hero fell about twice a minute, or a
+  boss held out every 90 seconds, each time with the defeat jingle, the banner and the red edge. The first fall or
+  timeout at a wall (a kind, in a zone of ten stages) keeps all three and its toast; for ten minutes after it the next
+  ones there play one soft note, show no banner or edge (the hero still falls), and fold into one toast that counts
+  them ("Fell again ×4"). Then the next is loud again. Only the stage ladder: a fall in a dungeon, at the Titan or the
+  clan boss stays loud.
+- **Two keys.** M opens the map (and closes it), Space strikes; Esc folds the full-screen fight. Settings turns M and
+  Space off (WCAG 2.1.4: speech input types letters), on that device only (`ui.shortcuts`, kept in the browser as
+  `fantasyIdle.keys`, not in the save); Enter or Space on a focused control still presses it.
 - **Clicks on the real clock.** A strike first runs the game up to the current time, so the
   auto-clicker guard (120 ms) measures real time rather than the last 100 ms tick; the first input
   after a long absence gets its welcome-back report the same way.
@@ -1362,7 +1381,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   the base), the double chance (what doubles, and how much comes from tools and from mastery), the
   keep chance and the mastery bar. Anything with
   a `data-tip` gets that tooltip at once on a mouse (`tipAttrs` in render.js, main.js), and holds
-  back the browser's slower one of the card beneath.
+  back the browser's slower one of the card beneath. A touch screen has no hover, so a tap opens the same bubble
+  (`TIP_TARGETS` in main.js): on the purse's coins, the header's pills, the hero's and the monster's numbers in
+  the fight (the monster's without a strike) and the hero's stats by his doll, as on the codex and the bestiary.
+  A button presses on a tap, so its title (or a badge's inside it) shows on a long press of half a second, and that
+  press does nothing else; not on the monster, nor in a mini-game, where holding is the game.
 - **Every action card has its own picture.** A small painting runs across the card's top, the
   medallion set on its lower edge: the vein, the tree, the fish leaping, the animal, the herb, the
   potion, the ingot, the piece on the anvil, the dish (ninety in all, `assets/paint/cards/`).
@@ -1377,7 +1400,8 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   fight's supply table and war table) cover the rest. A shade lighter at the top keeps titles on the
   painting and cards readable; cards let a little of it through. The sidebar stands on the hall's
   own painting (its red banner behind the mark, its trophy cabinet behind the places); only the
-  header is smoked glass over the guild hall. In the sidebar each place is a medallion ringed in its
+  header is smoked glass over the guild hall. A skill's name, level and XP stand on a smoked plate of their own, so
+  they read over a pale sky (4.5:1 at least, WCAG 1.4.3). In the sidebar each place is a medallion ringed in its
   skill's colour (gold for the rest) with its XP bar in that colour and its level on a gold-rimmed
   badge (solid gold at 99); the place being worked breathes, its tool bobs and its bar shines.
 - **Places have pictures; rules live behind a "?".** `src/ui/features.js` holds, for every place,
@@ -1394,6 +1418,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   `tools/resource_art.py`). Controls that are switches rather than things (sound, cloud save, the
   map, retreat, resting, full screen) are drawn line icons in `src/ui/render.js`. Toasts take a
   sprite beside their text.
+- **Said how it was made.** Settings ends with "How it was made": the paintings made with Google Gemini, an AI, and
+  how they were edited (their count, `PAINTINGS` in `src/ui/render.js`, is the files under `assets/paint/`, a test
+  keeps it so); the sprites drawn by Dungeon Crawl Stone Soup's artists (CC0) and the pictures the game's code draws;
+  the sounds made in code; the code and the words written with an AI, Claude; the type. A disclosure that understates
+  draws anger (P-020 in the research loop); `assets/CREDITS.md` names every source.
 - **One card per moment.** Places that open together share a card (the first boss opens five), so
   nothing queues up. A card is a button: it goes to the place.
 - **Dialogs on a phone are cards, not screens** (October 2026: the owner found every popup took a phone
@@ -1404,6 +1433,9 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   390 × 664, Prestige covers 73% of the screen (it was taller than the screen), the perks 84%, an About
   card 81%, the crate about 70%; at 390 × 844, 57%, 68%, 64% and about 55% (92%, 96% and scrolling,
   96% and 79% before).
+- **Words on a phone are 11 px at least** (Apple's floor; P-019 in the research loop): at 390 px a third to
+  three-fifths of the words were under 12 px, the stage numbers 8.8 px, a supply's count 9.9 and a doll's slot 9. One
+  block in `style.css` (after the hotbar's) raises every one that was under 11 px there; a new rule keeps to it.
 - **Cards on a phone are banners.** The celebration cards (a medal, a level-up, a new land, a place, a
   rank, a pet) were columns over the middle of the fight: at 390 × 664 a new land covered 45% of the
   screen and the top of both fighters' bars, a level-up 36%, a medal 30%. Under 600 px each is now a
@@ -1449,7 +1481,10 @@ needs another screen: fight, spend, prestige and fight on.
   it does and what the next level costs (Learn 1 SP, then Upgrade 2 SP), lit only while there are
   points enough.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
-  fight; toasts move under the top bar so they never cover the dock.
+  fight; toasts move under the top bar so they never cover the dock. A dialog holds the keys (WCAG 2.4.3): the
+  page behind it is inert, Tab and Shift+Tab go round the dialog on top (a question over a dialog, the one under
+  it inert too), each is named by its title, and once the last closes the focus goes back to the control a key
+  opened it from; after a click or a tap it is let go, as after any button, so Space strikes again.
 - **A dungeon run and the Titan are fought on the Dungeons tab** (`fightTab` in `src/ui/features.js`;
   the owner, October 2026: mid-run the Dungeons tab showed the list as if no run were on, the fight had
   to be found under Combat, and a Titan felled took the screen to the stages' fight). While one lasts,
@@ -2595,6 +2630,7 @@ src/version.js        the version this copy of the game is (empty here; a deploy
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, the
                       cloud client, which save is played) · power (server-side numbers) · text (articles for names)
+                      · door (who meets the sign-in first: the bare address, a guest's link, a frame)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, their tiers and rules, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
@@ -2609,6 +2645,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · disclosure (which pieces of the screens have opened for the player)
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
+                      · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
@@ -2618,7 +2655,9 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       finished action makes, popping off its target) · update.js (when an open page looks for a
                       newer version) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
-                      parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
+                      parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
+                      and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,
+                      no request leaves for Google) · CREDITS.md
 wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki.vercel.app): build.mjs makes a
                       static site from src/ and assets/ (pages/*.mjs: tables, infoboxes and cross-links from the
                       data; content/**/*.md: the written explanations, with {{ }} numbers read from the game;

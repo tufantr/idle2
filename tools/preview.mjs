@@ -2,7 +2,7 @@
 // runite before the Ember Volcano facing its demon, with the title over the sky. Discord, Reddit and the like show it
 // beside a link to the game. Rerun when the hero's sprites, the volcano's painting or the title's look change:
 //
-//     node tools/preview.mjs            # needs Playwright (see tools/shots.mjs) and the network, for the fonts
+//     node tools/preview.mjs            # needs Playwright (see tools/shots.mjs); the fonts are the game's own (assets/fonts)
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, extname } from 'node:path';
@@ -11,7 +11,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const STAGE = 62;   // the Ember Volcano, a stage short of its boss: no victory banner over the fight
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.woff2': 'font/woff2' };
 const server = createServer(async (req, res) => { let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html'; try { const b = await readFile(join(ROOT, p)); res.writeHead(200, { 'content-type': TYPES[extname(p)] || 'application/octet-stream' }); res.end(b); } catch { res.writeHead(404); res.end(); } }).listen(0);
 const port = server.address().port;
 const browser = await chromium.launch();
@@ -38,11 +38,15 @@ await page.waitForTimeout(700);
 await page.evaluate(() => { const g = FI.game(); g.state.combat.hp = g.derived.maxHp; });   // at full health: a fight just begun
 await page.waitForTimeout(400);
 const scene = await (await page.$('.battle')).screenshot({ type: 'png' });
-// 2. the card
+// 2. the card, in the game's own typefaces (assets/fonts), inlined: the card is a page of its own, with no server behind it
+const fontData = async file => (await readFile(join(ROOT, 'assets', 'fonts', file))).toString('base64');
+const [cinzel, outfit] = await Promise.all([fontData('cinzel-latin.woff2'), fontData('outfit-latin.woff2')]);
+const faces = [['Cinzel', cinzel, 700], ['Cinzel', cinzel, 800], ['Outfit', outfit, 400], ['Outfit', outfit, 600]]
+    .map(([family, data, weight]) => `@font-face { font-family: ${family}; font-weight: ${weight}; src: url(data:font/woff2;base64,${data}) format('woff2'); }`).join('\n');
 const card = await (await browser.newContext({ viewport: { width: 1200, height: 630 } })).newPage();
 await card.setContent(`<!doctype html><html><head>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  ${faces}
   html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #0d0a07; }
   .bg { position: absolute; inset: 0; background: url(data:image/png;base64,${scene.toString('base64')}) center 62% / cover no-repeat; }
   .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 5, 3, 0.78) 0%, rgba(8, 5, 3, 0.35) 34%, rgba(8, 5, 3, 0) 52%, rgba(8, 5, 3, 0) 80%, rgba(8, 5, 3, 0.55) 100%); }

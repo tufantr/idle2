@@ -31,6 +31,8 @@ import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
+import { noteWall } from './systems/walls.js';
+import { playLink, startsAsGuest } from './core/door.js';
 import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
@@ -104,6 +106,10 @@ const ui = {
     // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
     social: freshSocial()
 };
+// The fight's two keys (M, the map; Space, a strike) can be turned off in Settings (WCAG 2.1.4: speech input types
+// them): a switch for this device, kept in the browser, not the save.
+const SHORTCUTS_KEY = 'fantasyIdle.keys';
+ui.shortcuts = prefs.get(SHORTCUTS_KEY) !== '0';
 
 function loadFresh() {
     try {
@@ -143,11 +149,33 @@ const GUEST_KEY = 'fantasyIdle.guest';
 // Inside another site's frame (galaxy.click shows its games in one, and its players shy away from sign-up forms),
 // a new player is a guest at once: Begin goes straight into the fight, the account one click away (the Guest pill).
 const EMBEDDED = (() => { try { return window.top !== window.self; } catch { return true; } })();
-let guest = EMBEDDED || prefs.get(GUEST_KEY) === '1';   // framed, or the sign-in's "Play as guest" chosen (until an account signs in)
+// So does one who comes by a guest's link (`?play`, for posts and listings: core/door.js); the bare address keeps the
+// sign-in first. The link's choice is remembered, as the sign-in's "Play as guest" is.
+const GUEST_LINK = !EMBEDDED && playLink(location.search) && !cloud.loggedIn;
+// framed, the link, or the sign-in's "Play as guest" chosen (until an account signs in)
+let guest = startsAsGuest({ search: location.search, embedded: EMBEDDED, chosen: prefs.get(GUEST_KEY) === '1', signedIn: cloud.loggedIn });
 const needsSignIn = () => SIGN_IN_REQUIRED && !cloud.loggedIn && !guest;
 function setGuest(on) {
     guest = on;
     if (on) prefs.set(GUEST_KEY, '1'); else prefs.remove(GUEST_KEY);
+}
+if (GUEST_LINK && SIGN_IN_REQUIRED) setGuest(true);
+// On an iPhone or iPad every browser is Safari's engine, which clears a site's storage after seven days without a visit
+// unless the site is on the Home Screen (WebKit, 2020): the sign-in that offers a guest's game says so there (P-069).
+const SAFARI_CLEARS = (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+    && !(navigator.standalone || window.matchMedia?.('(display-mode: standalone)').matches);
+/**
+ * A guest's game lives in this browser only, so the browser is asked, quietly, to keep it: once a load, and not again
+ * once it does (Chrome may grant it as the game is played more; Safari grants it to a Home Screen app). Not in Firefox,
+ * which would ask its player in a prompt; its storage is cleared only when the disk runs short.
+ */
+let askedToKeep = false;
+function keepGuestGame() {
+    if (askedToKeep || !guest || cloud.loggedIn || /Firefox\//.test(navigator.userAgent)) return;
+    const storage = navigator.storage;
+    if (!storage?.persist) return;
+    askedToKeep = true;
+    (storage.persisted ? storage.persisted() : Promise.resolve(false)).then(kept => kept || storage.persist()).catch(() => { /* not granted: the backups in Settings remain */ });
 }
 // Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
 // looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
@@ -250,6 +278,9 @@ function withDevFlags(g) {
     return g;
 }
 
+// The control that had the focus when the first dialog opened ({ find, keys }: showModal), and gets it back.
+let dialogOpener = null;
+
 // ---------- boot ----------
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
@@ -265,6 +296,7 @@ if (cloud.loggedIn) syncFromCloud();
 // and straight into a fight. Signing in stays one click away (on the card, and in the header).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
 if (needsSignIn() && !ui.modalOpen) openSignIn();   // a returning player meets the sign-in (a new one, the title card first)
+keepGuestGame();   // a guest's game: the browser is asked to keep it
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -384,8 +416,10 @@ document.addEventListener('click', event => {
 });
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
-// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip]';
+// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records; the purse's
+// coins, the header's pills, the hero's and the monster's numbers in the fight, the hero's stats by his doll). A
+// button presses on a tap, so its title waits for a long press (below).
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip], .chip, .bonfire-pill, .focus-pill, .cloud-pill, .fighter-meta > [title], .doll-stats > [title]';
 let tipNode = null;
 let tipTimer = 0;
 /** The game's own tooltip over `el`: `title` in bold above `text`. It goes after a moment, or with the pointer when `stay`. */
@@ -412,14 +446,43 @@ function showTip(el, text, { title = '', stay = false } = {}) {
 // also start or stop the card's action; the bubble is placed before anything is drawn again. (Touch screens only: the
 // query is made once, not on every click.)
 const noHover = window.matchMedia?.('(hover: none)');
+// (So does a tap on the monster's numbers, under it: it names them, and doesn't strike.)
 document.addEventListener('click', event => {
     if (!noHover?.matches) return;
-    const el = event.target?.closest?.('[data-tip]');
+    const el = event.target?.closest?.('[data-tip], .foe .fighter-meta > [title]');
     if (!el || !el.parentElement?.closest('[role="button"]') || el.closest('button, a')) return;
     event.stopPropagation();
     event.preventDefault();
-    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '' });
+    showTip(el, el.dataset.tip || el.getAttribute('title'), { title: el.dataset.tipTitle || '' });
 }, { capture: true });
+// A long press on a button (or on a badge inside one) shows its title as the bubble, and that press does nothing
+// else: held half a second, nothing is bought or opened when the finger lifts. Not on the monster (a hold strikes it
+// once, as ever) nor in a mini-game, where holding is the game.
+const HOLD_TIP_MS = 520;
+let held = null;   // { el, x, y, timer, shown, upAt }
+function letGoHold() { if (held) clearTimeout(held.timer); held = null; }
+document.addEventListener('pointerdown', event => {
+    letGoHold();
+    if (event.pointerType === 'mouse' || !noHover?.matches) return;
+    const el = event.target?.closest?.('[title]');
+    const control = el?.closest('button, a, label, [role="button"]');
+    if (!control || control.disabled || control.closest('.foe, .minigame-panel') || !el.getAttribute('title')) return;
+    const hold = { el, x: event.clientX, y: event.clientY, shown: false, upAt: 0 };
+    hold.timer = setTimeout(() => { if (held !== hold || !el.isConnected) return; hold.shown = true; showTip(el, el.getAttribute('title')); }, HOLD_TIP_MS);
+    held = hold;
+}, { capture: true, passive: true });
+document.addEventListener('pointermove', event => {
+    if (held && !held.shown && Math.hypot(event.clientX - held.x, event.clientY - held.y) > 10) letGoHold();   // a scroll, not a hold
+}, { capture: true, passive: true });
+document.addEventListener('pointerup', () => { if (!held) return; if (held.shown) held.upAt = Date.now(); else letGoHold(); }, { capture: true, passive: true });
+document.addEventListener('pointercancel', () => { if (held && !held.shown) letGoHold(); }, { capture: true, passive: true });
+document.addEventListener('click', event => {
+    if (!held?.shown) return;
+    const fresh = Date.now() - held.upAt < 800;   // (the click of that press; a browser that sends none leaves the next tap alone)
+    letGoHold();
+    if (fresh) { event.stopPropagation(); event.preventDefault(); }
+}, { capture: true });
+document.addEventListener('contextmenu', event => { if (held?.shown) event.preventDefault(); }, { capture: true });
 document.addEventListener('click', event => {
     if (!noHover?.matches) return;
     const el = event.target?.closest?.(TIP_TARGETS);
@@ -473,6 +536,7 @@ document.addEventListener('keydown', event => {
     noteInput(event);
     sound.unlock();
     pointer.keyAt = Date.now();
+    if (event.key === 'Tab' && ui.modalOpen) { keepTabInDialog(event); return; }
     // Keyboard access for the clickable cards (role="button"). A key held down presses once: held, it
     // would start and stop an action over and over, or buy again and again.
     const target = event.target;
@@ -485,8 +549,9 @@ document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game waits for an account or a guest
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
-    // holding it does nothing more).
+    // holding it does nothing more). Settings can turn both off (ui.shortcuts).
     if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (!ui.shortcuts) return;
     if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
     const c = game.state.combat;
     if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
@@ -601,9 +666,13 @@ function refreshPerks() {
     const html = renderPerksModal(game, ui.perks);
     if (!overlay || overlay.__html === html) return;
     const scroll = overlay.querySelector('.modal-content')?.scrollTop || 0;
+    const focus = document.activeElement;
+    const findAgain = overlay.contains(focus) ? focusFinder(focus) : null;   // a key's place in the tree, kept
     setHtml(overlay, html);
+    nameDialog(overlay);   // (Perks, or the War Tree)
     const content = overlay.querySelector('.modal-content');
     if (content) content.scrollTop = scroll;
+    if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
 }
 
 // A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
@@ -753,6 +822,9 @@ const REVEAL_TOASTS = {
 };
 // A toast's picture: a sprite, small (the text beside it is plain text).
 const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
+// The walls the hero keeps meeting (systems/walls.js): a fall or a boss's timeout there is loud once, then quiet and
+// counted for ten minutes. The screen's own memory, not the save's.
+const walls = {};
 
 function handleEvents(events) {
     const frozen = endHeld();   // (an ended fight's last moment on screen: what happens meanwhile at the stages isn't drawn)
@@ -774,8 +846,10 @@ function handleEvents(events) {
         sound.play('unlock');
     }
     for (const ev of events) {
-        if (!frozen) scene.event(ev, game);
-        const heard = ev.type === 'unlock' ? null : soundFor(ev, onCombat);
+        const wall = noteWall(walls, ev, game.now);   // (null but for a fall or a timeout at the stages)
+        const again = wall && !wall.loud;             // a repeat at the wall: a soft cue, no banner, one counted toast
+        if (!frozen) scene.event(ev, game, { quiet: again });
+        const heard = ev.type === 'unlock' ? null : again ? ['again'] : soundFor(ev, onCombat);
         if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
         switch (ev.type) {
             case 'reveal':
@@ -861,8 +935,14 @@ function handleEvents(events) {
                         kicker: jewel ? 'The bench' : 'The forge', title: `+${ev.forge} kept`, lines: [`${jewel ? 'Bench' : 'Forge'} levels belong to the slot.`, `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
                 }
                 break;
-            case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
-            case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
+            case 'death':
+                if (again) countedToast('wall:death', `Fell again ×${wall.again}`);
+                else if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death');
+                break;
+            case 'bossTimeout':
+                if (again) countedToast('wall:boss', `The boss held out again ×${wall.again}`);
+                else if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death');
+                break;
             case 'prestige': {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
@@ -1042,6 +1122,29 @@ function toast(text, kind = 'info', icon = '') {
     setTimeout(() => el.remove(), 3800);
 }
 
+/** One toast that counts a repeating thing (a wall's falls): its words change in place and its time starts again. */
+const countedToasts = new Map();   // key -> { el, fade, gone }
+function countedToast(key, text, kind = 'info') {
+    const area = document.getElementById('toast-area');
+    if (!area) return;
+    let t = countedToasts.get(key);
+    if (!t?.el.isConnected) {
+        t = { el: Object.assign(document.createElement('div'), { className: `toast ${kind}` }) };
+        t.el.setAttribute('role', 'status');
+        area.appendChild(t.el);
+        while (area.children.length > 5) area.removeChild(area.firstChild);
+        countedToasts.set(key, t);
+    } else if (!document.body.classList.contains('reduced-motion') && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        t.el.animate?.([{ transform: 'scale(1.05)' }, { transform: 'none' }], { duration: 220, easing: 'ease-out' });   // the count ticks up
+    }
+    t.el.textContent = text;
+    t.el.classList.remove('fade');
+    clearTimeout(t.fade);
+    clearTimeout(t.gone);
+    t.fade = setTimeout(() => t.el.classList.add('fade'), 3200);
+    t.gone = setTimeout(() => { t.el.remove(); if (countedToasts.get(key) === t) countedToasts.delete(key); }, 3800);
+}
+
 /** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */
 function salvagedToast(r, what = '') {
     const text = gainedText(r);
@@ -1060,11 +1163,66 @@ function openModal(html, key = 'modal') {
 }
 function showModal(html, key) {
     const root = document.getElementById('modal-root');
+    if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
     ui.modalUnder = null;
+    nameDialog(root.lastElementChild);
+    holdPage(true);
     focusDialog(root);
     for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
+}
+// While a dialog is open the page behind it can't be reached: Tab goes round the dialog on top (the War Tree's
+// Unlearn question over the tree, say), and once every dialog has closed the focus goes back where the keys
+// left it. After a click or a tap it is let go instead, as after any button (Space, the strike, pressed it again).
+function noteOpener() {
+    const el = document.activeElement;
+    return el?.closest('#modal-root') ? null : noteFocus(el);
+}
+/** A control to give the focus back to: found again if it was drawn anew meanwhile; `keys`: the keyboard had it. */
+function noteFocus(el) {
+    if (!el || el === document.body) return null;
+    return { find: focusFinder(el) || (() => el), keys: pointer.keyAt > pointer.downAt };
+}
+function returnFocus() {
+    const opener = dialogOpener;
+    dialogOpener = null;
+    if (!opener?.keys || pointer.downAt > pointer.keyAt) return;
+    const el = opener.find();
+    if (el?.isConnected && el.getClientRects().length) el.focus({ preventScroll: true });
+}
+/** The page behind the dialogs (and every dialog under the one on top) is inert: no focus, no screen reader. */
+function holdPage(on) {
+    for (const id of ['app', 'hotbar', 'celebrate']) document.getElementById(id)?.toggleAttribute('inert', on);
+    const boxes = [...document.querySelectorAll('#modal-root > .modal-overlay')];
+    boxes.forEach((box, i) => box.toggleAttribute('inert', on && i < boxes.length - 1));
+}
+/** A dialog is named by its title (its header's words, without the "?" beside them). */
+function nameDialog(box) {
+    const head = box?.querySelector('.modal-header, h1');
+    if (!head) return;
+    const words = head.cloneNode(true);
+    for (const b of words.querySelectorAll('button')) b.remove();
+    const name = words.textContent.replace(/\s+/g, ' ').trim();
+    if (name) box.setAttribute('aria-label', name);
+}
+/** The controls a key can reach in a dialog, in order. */
+function dialogStops(box) {
+    return [...box.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length && !el.closest('[hidden], [inert]'));
+}
+/** Tab and Shift+Tab within the dialog on top: from its last control to its first, and back. */
+function keepTabInDialog(event) {
+    const box = document.querySelector('#modal-root > .modal-overlay:last-child');
+    if (!box) return;
+    const stops = dialogStops(box);
+    if (!stops.length) { event.preventDefault(); return; }
+    const i = stops.indexOf(document.activeElement);
+    // (not on one of them: the dialog was drawn again under the focus, or the focus was let go after a click)
+    if (i < 0 || (!event.shiftKey && i === stops.length - 1) || (event.shiftKey && i === 0)) {
+        event.preventDefault();
+        stops[event.shiftKey ? stops.length - 1 : 0].focus();
+    }
 }
 // The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
 // scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
@@ -1083,13 +1241,13 @@ function startAdventure() {
 /** The sign-in the game waits behind (SIGN_IN_REQUIRED) until there is an account or a guest: Escape leaves it up. */
 function openSignIn(register = false) {
     ui.auth = { mode: register ? 'register' : 'login' };
-    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register }), 'signin');
+    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register, keep: SAFARI_CLEARS }), 'signin');
 }
 /** The account dialog at a step (renderAuthModal's `mode`), in place of the one open. */
 function showAuth(message = '', ctx = {}) {
     ui.auth = { ...ctx };
     const key = ui.modalOpen === 'auth' ? 'auth' : 'signin';
-    showModal(renderAuthModal(message, { required: key === 'signin', ...ui.auth }), key);
+    showModal(renderAuthModal(message, { required: key === 'signin', keep: SAFARI_CLEARS, ...ui.auth }), key);
 }
 function authError(text) {
     const err = document.getElementById('auth-error');
@@ -1144,23 +1302,31 @@ function askConfirm(title, text, confirmLabel, onYes) {
     const over = Object.assign(document.createElement('div'), { className: 'modal-overlay active', innerHTML: html });
     over.setAttribute('role', 'dialog');
     over.setAttribute('aria-modal', 'true');
+    underFocus = noteFocus(document.activeElement);   // the control in the dialog under it: the focus goes back there
     document.getElementById('modal-root').appendChild(over);
     ui.modalUnder = ui.modalOpen;
     ui.modalOpen = 'confirm';
+    nameDialog(over);
+    holdPage(true);
     focusDialog(over);
 }
+let underFocus = null;
 function closeModal() {
     if (ui.modalUnder) {
         document.querySelector('#modal-root .modal-overlay:last-child')?.remove();
         ui.modalOpen = ui.modalUnder;
         ui.modalUnder = null;
+        holdPage(true);   // the dialog under it is on top again
+        const back = underFocus;
+        underFocus = null;
+        if (back?.keys && pointer.keyAt > pointer.downAt) back.find()?.focus({ preventScroll: true });
         return;
     }
     document.getElementById('modal-root').innerHTML = '';
     ui.modalOpen = false;
     const next = ui.modalQueue.shift();
     if (next) showModal(next.html, next.key);
-    else rewards.resume();
+    else { holdPage(false); rewards.resume(); returnFocus(); }
 }
 
 // ---------- persistence ----------
@@ -1846,6 +2012,8 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** Settings' switch for the M and Space keys, on this device only. */
+    setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },
     /** The playtest log as a file to keep or send (systems/playtest.js). */
     exportPlaytest() {
@@ -1902,11 +2070,12 @@ window.FI = {
 
     openAuth() {
         if (ui.modalOpen === 'intro') closeModal();
-        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal(), 'auth'); }
+        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal('', { keep: SAFARI_CLEARS }), 'auth'); }
     },
     /** The sign-in's other way in: no account, the game kept in this browser only (an account made later starts its own). */
     playAsGuest() {
         setGuest(true);
+        keepGuestGame();
         ui.auth = null;
         closeModal();
         sound.unlock();

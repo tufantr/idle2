@@ -203,6 +203,10 @@ the first one it saw until an account is made, and the server counts each accoun
 
 Both pages are the owner's: what they say and when they go public is theirs to approve.
 
+A post or a listing that links the game rather than framing it can use the guest's link, https://fantasyidle.com/?play
+(`src/core/door.js`): a new player starts as a guest at once, as in a frame, while the bare address keeps the sign-in
+first.
+
 ## Tests and balance tools
 
 Node 22+, no install needed (the API tests use the packages in `api/node_modules`):
