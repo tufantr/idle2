@@ -18,7 +18,7 @@ import { stratumById } from '../data/strata.js';
 import { levelProgress, levelForXp, MAX_LEVEL } from '../core/xp.js';
 import { actionInterval, skillLevel, bonfireBonus, bonfireDouble, bonfireLit, skillLevelsTotal, legacyMult } from '../core/modifiers.js';
 import { describeAffix, itemSellValue, tokensForStage, BALANCE } from '../core/formulas.js';
-import { canComplete, resolveAction, intervalFor } from '../systems/skilling.js';
+import { canComplete, resolveAction, intervalFor, actionXp } from '../systems/skilling.js';
 import { masteryProgress, masteryBonus, skillMastery } from '../systems/mastery.js';
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt, forgeKey } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
@@ -34,7 +34,7 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
+import { DISCORD_INVITE, WIKI_URL, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
@@ -143,7 +143,8 @@ export function tabIcon(id, scale = 0.75) {
  */
 function readyBadge(game, id) {
     const state = game.state;
-    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}">${text}</span>`;
+    // (the glyph for the eye, its words for a screen reader: the tab read "Shop▲")
+    const pill = (text, tip, kind = '') => `<span class="nav-ready ${kind}" title="${esc(tip)}"><span aria-hidden="true">${text}</span><span class="sr-only">, ${esc(tip)}</span></span>`;
     if (id === 'farming') {
         const n = state.farming.plots.filter(p => p.crop && plotReady(p, game.now)).length;
         return n ? pill(n, `${n} plot${n > 1 ? 's' : ''} ready to harvest`) : '';
@@ -190,7 +191,7 @@ export function renderNav(game, ui) {
                 const combat = levelled === 'combat';
                 const lp = combat ? combatProgress(state.skills.combat.xp) : levelProgress(state.skills[levelled].xp);
                 const top = combat ? MAX_COMBAT_LEVEL : MAX_LEVEL;
-                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}">${lp.level}</span>`;
+                badge = `<span class="nav-level${lp.level >= top ? ' max' : ''}" title="${lp.level >= top ? 'Max level' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}"><span class="sr-only">, level </span>${lp.level}</span>`;
                 xpBar = lp.level >= top ? '' : `<i class="nav-xp" style="--p:${(lp.fraction * 100).toFixed(1)}%" aria-hidden="true"></i>`;
             }
             const fresh = ui.fresh?.has(tab.id) ? '<span class="nav-new" title="Just unlocked">New</span>' : '';
@@ -231,7 +232,7 @@ export function renderHotbar(game, ui) {
     const banked = state.daily.banked;
     const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
     const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
-        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge" aria-label="${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}">${badge}</b>` : ''}</button>`;
+        `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge"><span aria-hidden="true">${badge}</span><span class="sr-only">, ${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}</span></b>` : ''}</button>`;
     const work = action && SKILLS[action.skill]
         ? button(tabIcon(action.skill, 1), esc(SKILLS[action.skill].name), `FI.switchTab('${action.skill}')`, { active: ui.tab === action.skill, live: true })
         : button(tabIcon('mining', 1), 'Work', "FI.switchTab('mining')", { active: ui.tab === 'mining' });
@@ -295,7 +296,7 @@ export function renderHeader(game, ui, cloud) {
     // said two ways for two habits: Menu (with a dot when a new place is waiting there) and the
     // leave-full-screen button. Both fold the fight back into the page; it goes on.
     const full = battleMode(game, ui);
-    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on.">☰<span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-label="a new place is waiting"></i>' : ''}</button>` : '';
+    const menu = full ? `<button class="mini-btn menu-btn" onclick="FI.battleFull(false)" title="Back to the menu (Esc). The fight goes on."><span aria-hidden="true">☰</span><span class="menu-word"> Menu</span>${[...(ui.fresh || [])].some(id => isUnlocked(state, id)) ? '<i class="menu-dot" aria-hidden="true"></i><span class="sr-only">, a new place is waiting</span>' : ''}</button>` : '';
     const screen = full ? `<button class="mini-btn icon-btn screen-btn" onclick="FI.battleFull(false)" aria-label="Leave full screen" title="Leave full screen (Esc). The fight goes on.">${ICON_SHRINK}</button>` : '';
     // a newer version of the game is live (ui/update.js): one press saves and loads it, never by itself
     const update = ui.newVersion
@@ -480,14 +481,14 @@ function renderPrestigeStrip(game) {
     if (!isUnlocked(state, 'prestige')) return '';
     const c = state.combat;
     const preview = game.prestigePreview();
-    const line = preview.allowed ? `<b>+${preview.tokens}</b> tokens if you prestige now`
+    const line = preview.allowed ? `<b>+${fmt(preview.tokens)}</b> tokens if you prestige now`
         : c.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} first`
         : preview.blockedBy ? `After the ${afterWhat(preview)}`
         : `Ready in ${duration(preview.waitMs)}`;
     return `<section class="glass-panel prestige-strip" style="${artStyle('prestige')}">
         <div class="prestige-strip-text">
             <h2>Prestige ${aboutButton('prestige')}</h2>
-            <span class="small">${line} <span class="muted">· stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} pays ${preview.nextZoneTokens}</span></span>
+            <span class="small">${line} <span class="muted">· stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} pays ${fmt(preview.nextZoneTokens)}</span></span>
         </div>
         <div class="strip-actions">
             ${seen(state, 'skill_points') ? `<button class="shop-btn${state.prestige.skillPoints > 0 ? ' ready' : ''}" onclick="FI.openPerks()">Perks${state.prestige.skillPoints > 0 ? ` · ${state.prestige.skillPoints} SP` : ''}</button>` : ''}
@@ -676,7 +677,7 @@ function renderLoopActions(game) {
             ? `<button class="dock-auto${state.settings.autoPrestige ? ' on' : ''}" onclick="FI.setAutoPrestige(${!state.settings.autoPrestige})" aria-pressed="${!!state.settings.autoPrestige}" title="Prestige by itself when a run goes ${BALANCE.prestige.autoStallMs / 60000} minutes without a new best stage">${glyph('away')}<b>Auto</b><span>${state.settings.autoPrestige ? (autoIn === null ? 'on' : `in ${duration(autoIn)}`) : 'off'}</span></button>` : '';
         // Ready, on the button itself: the first prestige at once, a later one at its wall (systems/prestige.js)
         const ready = game.prestigeReady();
-        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige${ready ? ' ready' : ''}" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${preview.nextZoneTokens}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
+        parts.push(`<div class="dock-prestige-row"><button class="prestige-btn arcane dock-prestige${ready ? ' ready' : ''}" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'} title="Start a new run with permanent tokens. Stage ${Math.ceil((c.maxStage + 1) / STAGES_PER_ZONE) * STAGES_PER_ZONE} would pay ${fmt(preview.nextZoneTokens)}."><b>Prestige</b><span>${line}</span></button>${auto}</div>`);
     }
     if (seen(state, 'skill_points')) {
         const sp = state.prestige.skillPoints;
@@ -746,7 +747,7 @@ function xpHeader(game, skillId, extra = '') {
         <h2><span class="h-icon">${tabIcon(skillId, 1)}</span>${skill.name} ${aboutButton(skillId)}</h2>
         <div class="skill-info">
             ${extra}${mastery}
-            <span class="skill-level" style="color:${skill.color}; background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
+            <span class="skill-level" style="color:color-mix(in srgb, ${skill.color} 62%, #fff); background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
             <div class="xp-bar-container"><div class="xp-bar-fill" style="width:${(lp.fraction * 100).toFixed(1)}%; background:${skill.color}"></div></div>
             <span class="skill-xp">${lp.level >= MAX_LEVEL ? fmt(state.skills[skillId].xp) + ' XP' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}</span>
         </div>
@@ -937,7 +938,7 @@ export function renderSkill(game, ui, skillId) {
             const interval = intervalFor(def, d);
             const check = canComplete(state, def);
             const inputs = needChips(state, node.consumes);   // (a dish's log among them)
-            const xp = Math.round(node.xp * d.xpMult);
+            const xp = Math.round(actionXp(node.xp, d));   // as paid: a skill potion's XP too (systems/skilling.js)
             const heals = node.produces && out.heal > 0 ? { share: out.heal * d.foodMult, hp: foodHeal(out, d) } : null;   // a dish: what it heals in the fight
             const gives = node.produces ? `${out.name}${heals ? `, heals ${pct(heals.share)} of your health (${fmt(heals.hp)} now)` : ''}${skillId === 'mining' ? ', with a 2% chance of a gem' : ''}` : `+${BASE.bonfireSecondsPerLogTier * out.tier} s of bonfire`;
             cards += actionCard({
@@ -1052,7 +1053,7 @@ export function renderSmithing(game, ui) {
             return recipeCard({
                 title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), pic: cardPic(r.id, 'smithy'), color: res(r.produces).color, inputs: Object.entries(r.consumes),
                 have: state.resources[r.produces], haveIcon: resIcon(r.produces), haveName: res(r.produces).name,
-                skill: 'smithing', xp: Math.round(r.xp * d.xpMult), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
+                skill: 'smithing', xp: Math.round(actionXp(r.xp, d)), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
                 active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
                 onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: `Level ${r.levelReq}`
             }, state);
@@ -1261,7 +1262,7 @@ function renderCraftStep(game, ui) {
     const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gemId }) }));
     const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
         title: `${plain ? bar.name : res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${plain ? 1 : res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(plain ? bar.bar : gem.gem).color,
-        inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(recipe.xp * d.xpMult), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
+        inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(actionXp(recipe.xp, d)), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
         active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gemId, stalled: action?.stalled,
         onclick: `FI.craft('${type}','${bar.bar}','${gemId}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
     }, state)).join('');
@@ -1300,10 +1301,11 @@ function itemTile(state, item, { slot = null, selected = false } = {}) {
     // a worn piece's plate is its slot's levels (the anvil's forge, the jeweller's bench); one in the bag has none of its own
     const up = !slot ? 0 : onAnvil(item) ? forgeLevel(state, slot) : benchLevel(state, slot);
     const rarity = RARITIES.find(r => r.id === item.rarity);
+    const steps = Math.max(0, RARITIES.indexOf(rarity));   // its rarity told twice: a pip for each step above Common, beside the colour
     const wearable = canWear(state, item);
     const better = !slot && wearable && isUpgrade(state, item);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
-    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
+    return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${steps ? `<i class="tile-pips" style="--pips:${steps}" aria-hidden="true"></i>` : ''}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
 
 function dollSlot(state, slot, selectedId) {
@@ -1346,6 +1348,13 @@ function bankDetail(id, state, derived) {
     </div>`;
 }
 
+// Attack speed stops at its cap (core/modifiers.js BASE.caps): a small, quiet mark says so where speed shows, its rule in a
+// tip a phone opens with a tap (every deep hero the simulator made sat 7 to 48 points past it, adding nothing).
+const SPEED_CAP = BASE.caps.attackSpeed;
+const capMark = line => `<i class="cap-mark" ${tipAttrs('At the cap', line)}>cap</i>`;
+/** A piece of gear's attack speed as it counts now (a Trial's share of gear too); 0 for none. */
+const gearSpeed = (state, item) => (item?.affixes || []).reduce((n, a) => n + (a.stat === 'attackSpeed' ? a.value : 0), 0) * (trialBite(state).gear ?? 1);
+
 export function renderItemDetail(game, id) {
     const state = game.state;
     const found = findItem(state, id);
@@ -1373,6 +1382,8 @@ export function renderItemDetail(game, id) {
         ? `<button class="mini-btn" onclick="FI.toBench(${itemId})" title="Upgrade it and reroll its bonuses with gems">${glyph('up')} Bench</button>` : '';
     const upgradeBtn = forged ? anvilBtn : benchBtn;
     const salvage = salvagePreview(item);
+    // its speed adds nothing when the hero is at the cap without it (worn here, or in place of what an Equip replaces)
+    const speedSpent = game.derived.attackSpeedBonus - gearSpeed(state, slot ? item : state.equipped[target]) >= SPEED_CAP;
     // what comes back, said (a crafted piece's share of a bar or gem is a chance) and shown: the button carries its icons,
     // since a phone has no title (a player read a crafted ring's salvage as nothing, 29 October 2026)
     const share = (q, name) => (q >= 1 ? `~${Number.isInteger(q) ? q : q.toFixed(1)} ${name}` : `a ${pct(q, 0)} chance of ${withArticle(name)}`);
@@ -1403,7 +1414,7 @@ export function renderItemDetail(game, id) {
             <button class="lock-btn ${item.locked ? 'on' : ''}" onclick="FI.toggleLock(${itemId})" aria-pressed="${!!item.locked}" aria-label="${item.locked ? 'Unlock' : 'Lock'} ${esc(item.name)}" title="${item.locked ? 'Locked: never sold or salvaged' : 'Lock to protect it from selling and salvage'}">${glyph('lock', { scale: 0.75 })}</button>
         </div>
         <div class="detail-stats">${atk ? `<span class="item-atk">${ATK_ICON} ${fmt(atk)} ATK</span>` : ''}${def ? `<span class="item-def">${DEF_ICON} ${fmt(def)} DEF</span>` : ''}${def * BASE.hpPerDef >= 1 ? `<span class="item-hp" title="Armour adds health: one for every ${Math.round(1 / BASE.hpPerDef)} defence, raised by your health bonuses">${glyph('heart')} +${fmt(Math.floor(def * BASE.hpPerDef))}</span>` : ''}${atk || def ? '' : '<span class="muted">No base stats</span>'}</div>
-        ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}</li>`).join('')}</ul>` : ''}
+        ${item.affixes?.length ? `<ul class="detail-affixes">${item.affixes.map(a => `<li>${esc(describeAffix(a))}${a.stat === 'attackSpeed' && speedSpent ? capMark(`Without this piece's speed, yours is already at the cap of +${pct(SPEED_CAP)}: it adds nothing.`) : ''}</li>`).join('')}</ul>` : ''}
         ${compare}
         ${wearable ? '' : `<div class="req">Needs combat level ${TIER_WEAR_LEVEL[item.tier]}</div>`}
         ${locked ? '<div class="req">Gear is locked until the dungeon run ends</div>' : ''}
@@ -1458,7 +1469,7 @@ export function renderInventory(game, ui) {
             </div>
             <div class="doll-stats minor">
                 <span title="Critical hits: how often, and how much harder they hit">${glyph('crit')} ${pct(d.critChance, 1)} crit × ${d.critDmg.toFixed(2)}</span>
-                <span title="Time between your attacks">${glyph('time')} ${seconds(d.attackInterval)}</span>
+                <span title="Time between your attacks">${glyph('time')} ${seconds(d.attackInterval)}${d.attackSpeedBonus >= SPEED_CAP ? capMark(`Attack speed stops at +${pct(SPEED_CAP)}, and yours comes to +${pct(d.attackSpeedBonus)}: more adds nothing.`) : ''}</span>
                 ${d.dodge > 0 ? `<span title="Chance to dodge a hit">${glyph('dodge')} ${pct(d.dodge, 1)}</span>` : ''}
                 ${d.lifesteal > 0 ? `<span title="Lifesteal: each hit heals ${pct(d.lifesteal, 1)} of the damage it deals, ${pct(BASE.lifestealPerSecond, 0)} of your health a second at most">${glyph('heart')} ${pct(d.lifesteal, 1)} lifesteal</span>` : ''}
                 <span title="How long your hero keeps going while you are away">${glyph('away')} ${Math.round(d.offlineMs / 3600000)}h away</span>
@@ -1476,7 +1487,7 @@ export function renderInventory(game, ui) {
                 </div>` : ''}
             </div>
             <div class="bag-grid">${bag}</div>
-            ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Bosses drop some, and a smith can forge it.</p>'}
+            ${items.length ? '' : '<p class="muted small bag-hint">No spare gear yet. Monsters drop it, bosses most often.</p>'}
             ${seen(state, 'auto_salvage') ? `<div class="muted small auto-salvage" title="Dropped gear up to this quality (or with Weaker, any drop weaker than what you wear) is salvaged for essence as it lands: never an upgrade or a locked item${keeps}. When the bag is full the weakest item is salvaged. So far ${state.stats.itemsDropped} items dropped, ${state.stats.itemsSalvaged} salvaged (${state.stats.itemsAutoSalvaged} automatically).">
                 <span>${resIcon('essence')} Auto-salvage drops up to</span>
                 <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
@@ -1584,8 +1595,9 @@ function renderWarTree(game, pick, shown) {
             const block = learnBlock(state, t.id);
             const gate = talentBlock(state, t, 1);   // what stands in its way, a free point or not
             const cls = rank >= t.max ? 'full' : !block ? 'ready' : gate ? 'shut' : rank ? 'part' : 'open';
+            // a talent a point can go to is told by a + as well as its green frame (gold when full looks the same to a deuteranope)
             return `<button class="talent ${cls}${pick === t.id ? ' picked' : ''}${t.row === ROWS ? ' capstone' : ''}" style="grid-row:${t.row};grid-column:${t.col}" onclick="FI.pickTalent('${t.id}')"
-                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b></button>`;
+                title="${esc(`${t.name}: ${t.text(Math.max(1, rank))}`)}" aria-label="${esc(`${t.name}, rank ${rank} of ${t.max}${cls === 'ready' ? ', a point can go here' : ''}`)}">${sprite(t.icon, { scale: 1 })}<b class="talent-rank">${rank}/${t.max}</b>${cls === 'ready' ? '<i class="talent-plus" aria-hidden="true">+</i>' : ''}</button>`;
         }).join('');
         // the bridges: a line from each talent to each one it opens, centre to centre behind them, in the grid's own
         // squares (one a cell: the svg stretches over the grid); those crossed drawn last, over the rest
@@ -1647,10 +1659,10 @@ export function renderShop(game, ui) {
                 <div><b>${fmt(state.prestige.tokens)}</b><span>tokens held: +${fmt(d.tokenPowerPct)}% attack and defence</span></div>
                 ${seen(state, 'legacy') ? `<div><b>×${fmt(d.legacy)}</b><span>Legacy from ${fmt(state.prestige.count)} prestiges: attack, defence and health</span></div>` : ''}
                 <div><b>${state.prestige.skillPoints}</b><span>skill points to spend</span></div>
-                <div><b>+${preview.tokens}</b><span>tokens for this run (best stage ${state.combat.maxStage})</span></div>
+                <div><b>+${fmt(preview.tokens)}</b><span>tokens if you prestige now (highest stage this run: ${fmt(state.combat.maxStage)})</span></div>
                 <div><b>${preview.startStage}</b><span>is the stage the next run starts at</span></div>
             </div>
-            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${preview.tokens} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : preview.blockedBy ? `Prestige after the ${afterWhat(preview)}` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
+            <button class="prestige-btn arcane" onclick="FI.openPrestige()" ${preview.allowed ? '' : 'disabled'}>${preview.allowed ? `Prestige for +${fmt(preview.tokens)} tokens, +${preview.skillPoints} SP` : state.combat.maxStage < BALANCE.prestige.minStage ? `Reach stage ${BALANCE.prestige.minStage} to prestige` : preview.blockedBy ? `Prestige after the ${afterWhat(preview)}` : `Ready to prestige in ${duration(preview.waitMs)}`}</button>
         </section>`;
     const perksPanel = !perksOpen ? '' : `
         <section class="glass-panel ${painted('library', 'center 40%')}">
@@ -1753,7 +1765,7 @@ function renderCompletion(game) {
 
 // A bestiary star: filled once the kind has fallen 10, 100 or 1,000 times.
 const ICON_STAR = '<svg class="star" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2l2.05 4.3 4.7.55-3.47 3.2.95 4.65L8 11.55 3.77 13.9l.95-4.65L1.25 6.05l4.7-.55z"/></svg>';
-const starRow = n => `<span class="beast-stars" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
+const starRow = n => `<span class="beast-stars" role="img" aria-label="${n} of ${KILL_STARS.length} stars">${KILL_STARS.map((_, i) => `<i class="${i < n ? 'on' : ''}">${ICON_STAR}</i>`).join('')}</span>`;
 
 /**
  * The bestiary: every kind of monster met, by place, with how many have fallen and its stars. The
@@ -2099,7 +2111,7 @@ export function renderAgility(game, ui) {
     return `<section class="glass-panel skill-panel ${skillPainted('agility')}">
         ${xpHeader(game, 'agility')}
         ${course ? `<div class="course-run ${running ? 'active' : ''}">
-            <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(course.xp * d.xpMult))} XP</div></div>
+            <div><b>Run the course</b><div class="muted small">${seconds(interval)} a run · ${fmt(Math.round(actionXp(course.xp, d)))} XP</div></div>
             <button class="prestige-btn" onclick="FI.runCourse()">${running ? 'Stop' : 'Run'}</button>
             ${running ? `<div class="action-progress-container"><div class="action-progress-fill" id="progress-agility-course" style="width:${Math.min(100, state.action.progress / interval * 100)}%; background:${SKILLS.agility.color}"></div></div>` : ''}
         </div>` : ''}
@@ -2335,7 +2347,8 @@ export function renderSettings(game, ui, cloud) {
         <section class="glass-panel ${painted('study', 'left 45%')}">
             <div class="panel-header"><h2>Account</h2><span class="muted small">${signedIn ? `Signed in as ${esc(cloud.username || '')}` : 'Guest'}</span></div>
             <p class="muted small">${signedIn ? 'Your game is kept on the server, and any device you sign in on plays it.' : 'This game is kept in this browser only. An account plays a game of its own, kept on the server for any device.'}</p>
-            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
+            ${signedIn && cloud.flaggedUntil > Date.now() ? `<p class="warn small flag-line">Flagged until ${esc(new Date(cloud.flaggedUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }))}: a save showed numbers the game's check doesn't allow. ${aboutButton('flagged')}</p>` : ''}
+            ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button><button class="mini-btn" onclick="FI.signOutEverywhere()">Sign out everywhere</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
         </section>
         <section class="glass-panel ${painted('study', 'right 45%')}">
@@ -2347,7 +2360,7 @@ export function renderSettings(game, ui, cloud) {
     ${DISCORD_INVITE ? `<section class="glass-panel ${painted('study', 'left 70%')}">
         <div class="panel-header"><h2>The beta</h2><span class="muted small">Tell us anything</span></div>
         <p class="muted small">Fantasy Idle is in beta. What's fun, what's confusing, what's too slow, any bug: every word helps.</p>
-        <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a></div>
+        <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a><a class="btn-link" href="${esc(WIKI_URL)}" target="_blank" rel="noopener">Read the wiki</a></div>
     </section>` : ''}
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
@@ -2357,11 +2370,30 @@ export function renderSettings(game, ui, cloud) {
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
         ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
         <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
+        <label class="toggle" title="On this device only"><input type="checkbox" onchange="FI.setShortcuts(this.checked)" ${ui?.shortcuts !== false ? 'checked' : ''}> Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}</label>
         ${seen(state, 'minigames') ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('minigameChime', this.checked)" ${state.settings.minigameChime !== false ? 'checked' : ''}> Chime when a mini-game chance appears</label>` : ''}
         ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
         <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
         ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
         <p class="muted small">${VERSION ? `Game version ${esc(VERSION)} · save` : 'Save'} version ${state.version}</p>
+    </section>
+    ${madeWith()}`;
+}
+
+// How the game was made, said in full at the foot of Settings (P-020 in the research loop: a disclosure that
+// understates draws anger). PAINTINGS counts the files under assets/paint/ (a test keeps it true); assets/CREDITS.md
+// names every source.
+export const PAINTINGS = 161;
+function madeWith() {
+    return `<section class="glass-panel made-with ${painted('study', 'center 85%')}">
+        <div class="panel-header"><h2>How it was made</h2></div>
+        <ul class="made-list small">
+            <li>The ${PAINTINGS} paintings were made with Google Gemini, an AI, then cut, cropped and scaled by script; one was retouched by hand.</li>
+            <li>The pixel sprites are tiles from Dungeon Crawl Stone Soup, drawn by its artists and free for anyone to use (CC0). The ores, bars, logs, fish, crops and a few other pictures are drawn by the game's code in the same style.</li>
+            <li>The sounds are made by the game's code as you play. There are no recordings.</li>
+            <li>The game's code and its words were written with an AI, Claude.</li>
+            <li>The type is Cinzel and Outfit, under the SIL Open Font License.</li>
+        </ul>
     </section>`;
 }
 
@@ -2403,7 +2435,7 @@ export function renderClan(game, ui, cloud) {
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
         const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
-            <td>${Number(c.members)}/${Number(social.maxMembers || 20)}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
+            <td>${Number(c.members)}/${Number(social.maxMembers || 20)}${c.active !== undefined ? `<div class="muted small" title="Members who played this past week">${Number(c.active) || 0} this week</div>` : ''}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
                 <div class="btn-row"><input id="clan-search" class="text-input" placeholder="Name or tag" value="${esc(form.search)}" oninput="FI.clanForm('search', this.value)" onkeydown="if (event.key === 'Enter') FI.searchClans()" aria-label="Search clans">
@@ -2638,12 +2670,17 @@ function clanBossPanel(game, social, boss, pct) {
     </div>`;
 }
 
+/**
+ * A crown for a place in the clans' ranking: gold for the 1st, silver for the 2nd, bronze for the 3rd (style.css), the place
+ * in words in a tip a phone opens with a tap (a player read three crowns of a like colour as "everybody 2nd").
+ */
+const clanCrown = (rank, where) => `<span class="clan-crown rank-${Number(rank) || 0}" ${tipAttrs(['', '1st', '2nd', '3rd'][rank] || `#${rank}`, where)}>${sprite('crown', { scale: 0.5, cls: 'soft res-spr' })}</span>`;
+
 /** A crown for a clan in last week's top three of its division (data/social.js CLAN_DIVISIONS), or nothing. */
 function crownMark(crown) {
     if (!crown) return '';
     const division = CLAN_DIVISIONS.find(d => d.id === crown.division);
-    const place = ['', '1st', '2nd', '3rd'][crown.rank] || `#${crown.rank}`;
-    return `<span class="clan-crown rank-${Number(crown.rank) || 0}" title="${esc(`${place} in the ${division?.name || crown.division} division last week`)}">${sprite('crown', { scale: 0.5, cls: 'soft res-spr' })}</span>`;
+    return clanCrown(crown.rank, `in the ${division?.name || crown.division} division last week`);
 }
 
 /**
@@ -2685,11 +2722,11 @@ function endlessPanel(game, social) {
 function clanStandings(social) {
     const ranking = social.ranking;
     if (!ranking) return '';
-    const medal = rank => (rank <= 3 ? `<span class="clan-crown rank-${rank}">${sprite('crown', { scale: 0.5, cls: 'soft res-spr' })}</span>` : '');
+    const medal = (rank, where) => (rank <= 3 ? clanCrown(rank, where) : '');
     const divisions = (ranking.divisions || []).filter(d => d.clans.length);
     const rows = divisions.map(d => `<tr class="division-row"><td colspan="4"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span></td></tr>`
-        + d.clans.map(c => `<tr class="${c.you ? 'you-row' : ''}"><td>${medal(c.rank)}${c.rank}</td><td class="clan-name">${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></td><td>${Number(c.kills) || 0}</td><td>${fmt(Number(c.score) || 0)}</td></tr>`).join('')).join('');
-    const last = (ranking.last?.divisions || []).map(d => `<span class="last-crowns"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span> ${d.clans.map(c => `${medal(c.rank)}<span class="${c.you ? 'up' : ''}">${esc(c.name)}</span>`).join(' ')}</span>`).join('');
+        + d.clans.map(c => `<tr class="${c.you ? 'you-row' : ''}"><td>${medal(c.rank, `in the ${d.name} division this week`)}${c.rank}</td><td class="clan-name">${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></td><td>${Number(c.kills) || 0}</td><td>${fmt(Number(c.score) || 0)}</td></tr>`).join('')).join('');
+    const last = (ranking.last?.divisions || []).map(d => `<span class="last-crowns"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span> ${d.clans.map(c => `${medal(c.rank, `in the ${d.name} division last week`)}<span class="${c.you ? 'up' : ''}">${esc(c.name)}</span>`).join(' ')}</span>`).join('');
     return `<h3 class="section-title">This week's ranking</h3>
         ${rows ? `<div class="table-wrap"><table class="data-table clan-ranking"><thead><tr><th>#</th><th>Clan</th><th>Bosses</th><th>Depth</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted small">No clan has felled a boss yet this week.</p>'}
         ${last ? `<div class="small muted last-week">Last week: ${last}</div>` : ''}`;
@@ -2737,7 +2774,7 @@ export function renderPrestigeModal(game) {
         titanUnlocked(state) ? [sprite('titan/0', { scale: 1 }), 'Titans defeated'] : null,
         has('agility') ? [sprite('obstacle/rope_swing', { scale: 1 }), 'The agility course'] : null,
         has('farming') ? [sprite('farm/growing', { scale: 1 }), 'The farm'] : null
-    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
+    ].filter(Boolean).map(([art, name]) => `<span class="pg-keep-item" role="img" title="${esc(name)}" aria-label="${esc(name)}">${art}</span>`).join('');
     const nextSp = Math.ceil(BALANCE.prestige.fullRunFraction * state.combat.bestStage);
     const trials = activeTrials(state);
     return `<div class="modal-content about-card prestige-modal">
@@ -2840,8 +2877,16 @@ function welcomeBestFind(summary, i) {
  */
 export function renderWelcomeBack(summary, game) {
     const state = game.state;
-    const mins = Math.floor(summary.simulated / 60000);
-    const away = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+    // The time away, and past the cap the hours that counted (systems/offline.js: `elapsed` was all of it, `simulated` was
+    // replayed): "30h away, 24h counted", so the hours the cap cut are said, not lost without a word.
+    const span = ms => {
+        const mins = Math.floor(ms / 60000), h = Math.floor(mins / 60);
+        return h >= 48 ? `${Math.floor(h / 24)}d${h % 24 ? ` ${h % 24}h` : ''}` : h ? `${h}h${mins % 60 ? ` ${mins % 60}m` : ''}` : `${mins}m`;
+    };
+    const capTip = tipAttrs('Time away', `Your hero keeps at it for up to ${span(summary.simulated)} while you are away${seen(state, 'skill_points') ? '; the Endurance perk adds more' : ''}`);
+    const awayLine = summary.capped && summary.elapsed - summary.simulated >= 60000   // (a few seconds past the cap read as one figure)
+        ? `<b>${span(summary.elapsed)}</b> away, <b ${capTip}>${span(summary.simulated)}</b> counted`
+        : `You were away <b>${span(summary.simulated)}</b>`;
     const story = summary.mode === 'rest' ? 'Your hero rested at camp the whole time: nothing was under way when you left.'
         : summary.mode === 'skill' ? (summary.stalledReason ? `Work stopped early: ${esc(summary.stalledReason)}.` : 'Your hero kept working the whole time.')
         : `${fmt(summary.kills)} monsters defeated${summary.stages > 0 ? `, ${fmt(summary.stages)} stage${summary.stages === 1 ? '' : 's'} gained` : ''}${summary.deaths ? `; ${summary.startedInDungeon ? 'a dungeon run failed, ' : ''}${summary.deaths === 1 ? 'one fall' : `${fmt(summary.deaths)} falls`}, and up again each time` : ''}.`;
@@ -2898,7 +2943,7 @@ export function renderWelcomeBack(summary, game) {
     return `<div class="modal-content welcome-back ${painted('guildhall', 'center 45%')}">
         ${hero}
         <div class="modal-header">Welcome back</div>
-        <p class="wb-away">You were away <b>${away}</b>${summary.capped ? ' <span class="muted small">(offline time is capped; Endurance perks extend it)</span>' : ''}</p>
+        <p class="wb-away">${awayLine}</p>
         <p class="wb-story">${story}</p>
         ${wall}
         ${readyRow}
@@ -2924,7 +2969,7 @@ export function renderIntroModal(state, { signedIn = false } = {}) {
             <div class="intro-foe" aria-hidden="true">${sprite('mon/Slime', { scale: 4 })}</div>
         </div>
         <h1 id="intro-title" class="intro-logo">Fantasy Idle</h1>
-        <p class="intro-tag">Fight monsters, gather, forge your gear. Your hero keeps at it while you're away.</p>
+        <p class="intro-tag">Fight monsters, gather, upgrade your gear. Your hero keeps at it while you're away.</p>
         <input id="intro-name" class="text-input intro-name" maxlength="${HERO_NAME_MAX}" placeholder="Name your hero" aria-label="Your hero's name (optional; Settings can change it)" autocomplete="off" spellcheck="false" onkeydown="if (event.key === 'Enter') FI.beginAdventure()">
         <button class="modal-btn btn-confirm intro-go" data-autofocus onclick="FI.beginAdventure()">${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Begin your adventure</button>
         ${signedIn ? '' : '<button class="intro-login" onclick="FI.openAuth()">Have an account? Sign in</button>'}
@@ -2936,9 +2981,10 @@ export function renderIntroModal(state, { signedIn = false } = {}) {
  * a 6-digit code goes to the email, and the account plays once it is entered here); the code; a forgotten password (a
  * code to the email, then a new password). `ctx.mode` says which; `email` is the address as shown (part hidden).
  * `required`: the game waits behind it until the player signs in or plays as a guest; `register`: a new player from
- * the title card, so Register is the button Enter presses.
+ * the title card, so Register is the button Enter presses. `keep`: an iPhone or iPad not playing from its Home Screen,
+ * where Safari clears a guest's game after seven days away: the dialog that offers the guest's game says so (P-069).
  */
-export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '' } = {}) {
+export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '', keep = false } = {}) {
     const header = { login: required ? 'Sign in to play' : 'Sign in', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
     const error = `<div class="auth-error" id="auth-error">${esc(message)}</div>`;
     const back = `<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode('login')">Back to log in</a></p>`;
@@ -2972,7 +3018,8 @@ export function renderAuthModal(message = '', { required = false, register = fal
                 <input type="password" id="auth-pass" placeholder="Password" autocomplete="${first === 'register' ? 'new-password' : 'current-password'}" class="text-input">
                 <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.authMode('${other}')">${first === 'register' ? 'Log in instead' : label[other]}</button></div>
             </form>
-            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}`;
+            ${first === 'login' ? '<p class="auth-links small"><a href="#" onclick="event.preventDefault(); FI.authMode(\'forgot\')">Forgot your password?</a></p>' : ''}
+            ${keep ? '<p class="muted small auth-keep">On an iPhone or iPad, Safari clears a guest\'s game after seven days away, unless the game is on your Home Screen.</p>' : ''}`;
     }
     return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
         <div class="modal-header">${header}</div>

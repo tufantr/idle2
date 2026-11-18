@@ -67,6 +67,7 @@ function spread(values) {
     return { median: pct(got, 0.5), p10: pct(got, 0.1), p90: pct(got, 0.9), reached: got.length, of: values.length };
 }
 const cell = s => (s.reached ? `${fmt(s.median)} (${fmt(s.p10)}–${fmt(s.p90)})${s.reached < s.of ? ` ${s.reached}/${s.of}` : ''}` : `— 0/${s.of}`);
+const POOL_GROUPS = ['essence', 'bars', 'gems'];   // the pool check's groups (tools/simlib.mjs poolGroup)
 
 function summarise(runs) {
     const sum = { label, seeds: runs.map(r => r.seed), commit: runs[0]?.commit, args: pass, n: runs.length };
@@ -74,7 +75,7 @@ function summarise(runs) {
     sum.weaponTier = Object.fromEntries(Object.keys(runs[0].weaponTier).map(t => [t, spread(runs.map(r => r.weaponTier[t]))]));
     sum.firstPrestige = spread(runs.map(r => r.firstPrestige));
     sum.autoEarned = spread(runs.map(r => r.autoEarned));
-    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'seals', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) sum[k] = spread(runs.map(r => r.final[k]));
+    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'titanAttempts', 'seals', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) sum[k] = spread(runs.map(r => r.final[k]));
     sum.runHours = spread(runs.map(r => r.runs.medianHours));
     sum.goldSpentShare = spread(runs.map(r => (r.gold.earned > 0 ? r.gold.spent / r.gold.earned : 0)));
     sum.longestAwayFromFight = spread(runs.map(r => r.longestAwayFromFightHours));
@@ -92,6 +93,25 @@ function summarise(runs) {
         sum.returns = Object.fromEntries(['something', 'nothing', 'crate', 'titan', 'prestige', 'gear', 'newBest', 'medal', 'autoPrestige'].map(k => [k, spread(runs.map(r => r.returns[k] / Math.max(1, r.returns.n)))]));
         sum.offlineCappedHours = spread(runs.map(r => r.returns.offlineCappedHours));
     }
+    // The pool check (P-114, tools/simlib.mjs): the share of the essence, bars and gems that came in that went out again, the
+    // essence held at the end, the seeds in which each resource pooled (a 50-hour band that spent under a tenth of its income),
+    // and the most Armour Rack levels and worn affixes past their caps at any sample.
+    if (runs.every(r => r.pools)) {
+        const share = (r, g) => (r.pools.groups[g]?.got > 0 ? r.pools.groups[g].spent / r.pools.groups[g].got : null);
+        const most = (r, k) => Math.max(0, ...r.pools.caps.map(c => c[k]));
+        sum.pools = {
+            spentShare: Object.fromEntries(POOL_GROUPS.map(g => [g, spread(runs.map(r => share(r, g)))])),
+            essenceHeld: spread(runs.map(r => r.pools.resources.essence?.held ?? null)),
+            pooled: {},
+            rackPast: spread(runs.map(r => most(r, 'rackPast'))),
+            affixesPast: spread(runs.map(r => most(r, 'affixesPast')))
+        };
+        for (const r of runs) for (const id of new Set(r.pools.flags.map(f => f.id))) {
+            const p = sum.pools.pooled[id] ||= { seeds: 0, bands: {} };
+            p.seeds++;
+            for (const f of r.pools.flags.filter(x => x.id === id)) p.bands[f.band] = (p.bands[f.band] || 0) + 1;
+        }
+    }
     return sum;
 }
 
@@ -105,7 +125,7 @@ function report(sum) {
     lines.push(`| First prestige (h) | ${cell(sum.firstPrestige)} |`);
     lines.push(`| Auto earned (h) | ${cell(sum.autoEarned)} |`);
     lines.push(`| Weapon tier 5 / 7 (h) | ${cell(sum.weaponTier[5])} / ${cell(sum.weaponTier[7])} |`);
-    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'seals', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) lines.push(`| ${k} at the end | ${cell(sum[k])} |`);
+    for (const k of ['bestStage', 'prestiges', 'records', 'deaths', 'titanKills', 'titanAttempts', 'seals', 'pityDrops', 'skillLevels', 'obstacles', 'medals', 'pets']) lines.push(`| ${k} at the end | ${cell(sum[k])} |`);
     lines.push(`| Median run (h) | ${cell(sum.runHours)} |`);
     lines.push(`| Gold spent / earned | ${cell(sum.goldSpentShare)} |`);
     lines.push(`| Longest away from a winnable fight (h) | ${cell(sum.longestAwayFromFight)} |`);
@@ -118,6 +138,16 @@ function report(sum) {
         lines.push('\n| Returns with… | Share |\n|---|---|');
         for (const [k, s] of Object.entries(sum.returns)) lines.push(`| ${k} | ${cell(s)} |`);
         lines.push(`| Hours past the offline cap, in all | ${cell(sum.offlineCappedHours)} |`);
+    }
+    if (sum.pools) {
+        const p = sum.pools;
+        lines.push('\n| Pools and caps | Value |\n|---|---|');
+        lines.push(`| Spent / got: ${POOL_GROUPS.join(', ')} | ${POOL_GROUPS.map(g => cell(p.spentShare[g])).join(' · ')} |`);
+        lines.push(`| Essence held at the end | ${cell(p.essenceHeld)} |`);
+        const pooled = Object.entries(p.pooled).sort((a, b) => b[1].seeds - a[1].seeds || a[0].localeCompare(b[0]));
+        lines.push(`| Pooled (seeds with a 50-hour band spending under a tenth of its income) | ${pooled.length ? pooled.map(([id, x]) => `${id} ${x.seeds}/${sum.n}`).join(', ') : 'none'} |`);
+        lines.push(`| Armour Rack levels past the mitigation cap (the most at a sample) | ${cell(p.rackPast)} |`);
+        lines.push(`| Worn affixes past their caps (the most at a sample) | ${cell(p.affixesPast)} |`);
     }
     return lines.join('\n');
 }

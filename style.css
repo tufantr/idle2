@@ -35,6 +35,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
+/* words a screen reader reads where the screen shows a glyph (a badge's ▲, the Menu's ☰ on a phone) */
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 body {
     font-family: var(--font-body);
@@ -108,6 +110,12 @@ body::before { /* the guild hall (assets/paint/guildhall.webp) behind everything
 }
 .painted .node-card.active { background: linear-gradient(180deg, rgba(33, 26, 19, 0.82) 0%, color-mix(in srgb, var(--accent, var(--verdigris)) 18%, rgba(18, 13, 9, 0.88)) 100%); }
 .painted .panel-header h2, .painted .dock-title { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95); }
+/* a skill's name, level and XP on a smoked plate: over a pale sky (the farm's, the river's, the course's) they read
+   at 1.4–2.6:1 */
+.skill-panel.painted > .panel-header {
+    padding: 0.5rem 0.75rem; margin: -0.4rem -0.5rem 1rem; border-radius: 12px; border: 1px solid rgba(214, 170, 92, 0.16); border-image: none;
+    background: linear-gradient(180deg, rgba(12, 9, 6, 0.8), rgba(12, 9, 6, 0.68)); box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.05);
+}
 .glass-panel::before { /* gilded corner brackets */
     content: ""; position: absolute; inset: 5px; pointer-events: none;
     background:
@@ -202,8 +210,8 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 .equip-btn { color: #bfdbfe; border-color: rgba(96, 165, 250, 0.45); }
 .equip-btn:hover { border-color: #93c5fd; box-shadow: 0 0 12px rgba(96, 165, 250, 0.3); }
 .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
-.toggle { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-main); cursor: pointer; }
-.toggle input { accent-color: var(--accent-color); }
+.toggle { display: flex; align-items: center; gap: 0.5rem; min-height: 2rem; font-size: 0.8rem; color: var(--text-main); cursor: pointer; }   /* a row a finger can't miss (WCAG 2.5.8) */
+.toggle input { flex: none; width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent-color); cursor: pointer; }
 
 /* ---------- fields ---------- */
 .material-select, .text-input {
@@ -588,8 +596,9 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 .pick.on { border-color: #f0c674; background: radial-gradient(circle at 50% 40%, #4a3818, #140e07 75%); box-shadow: 0 0 0 2px rgba(240, 198, 116, 0.3), 0 0 14px rgba(240, 198, 116, 0.3), inset 0 0 8px rgba(0, 0, 0, 0.5); }
 /* food Auto will eat from: lit softly, like the Auto it belongs to; food or potions that won't be used: dimmed */
 .pick.in-play { border-color: rgba(240, 198, 116, 0.62); box-shadow: 0 0 10px rgba(240, 198, 116, 0.22), inset 0 0 8px rgba(0, 0, 0, 0.5); }
-.pick.idle > .spr, .pick.idle > .pick-qty, .pick.idle > .pick-sub, .pick.idle > .pick-tier { opacity: 0.4; }
-.pick.idle:hover > .spr, .pick.idle:hover > .pick-qty, .pick.idle:hover > .pick-sub, .pick.idle:hover > .pick-tier { opacity: 0.85; }
+.pick.idle > .spr { opacity: 0.4; }
+.pick.idle > :is(.pick-qty, .pick-sub, .pick-tier) { opacity: 0.74; }   /* dimmed less than the picture: a tap picks it, so its words stay above 4.5:1 */
+.pick.idle:hover > :is(.spr, .pick-qty, .pick-sub, .pick-tier) { opacity: 0.85; }
 .pick .spr { margin-top: -6px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
 /* the tile that goes to where food or potions are made: dashed, like a slot waiting to be filled */
 .pick-go { border-style: dashed; border-color: rgba(214, 170, 92, 0.5); }
@@ -671,6 +680,8 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 .doll-label { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
 .doll-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 0.9rem; margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .doll-stats b { color: var(--text-main); }
+/* attack speed at its cap (render.js capMark): a small, quiet mark beside the speed, its rule in the tip */
+.cap-mark { display: inline-block; margin-left: 0.3rem; padding: 0 0.28rem; border: 1px solid var(--line); border-radius: 4px; font: 700 0.58rem/1.45 var(--font-body); font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 0.08em; color: var(--text-muted); cursor: help; }
 .tile {
     --r: #e2e8f0;
     position: relative; width: 100%; aspect-ratio: 1; padding: 0; border-radius: 10px;
@@ -690,6 +701,10 @@ body.reduced-motion .node-grid.boosted .node-card.active .action-progress-fill {
 .tile-up { position: absolute; right: 4px; bottom: 2px; font-size: 0.62rem; font-weight: 800; color: #fde68a; text-shadow: 0 1px 2px #000; }
 .tile-lock { position: absolute; left: 3px; top: 2px; font-size: 0.58rem; font-style: normal; }
 .tile-better { position: absolute; right: 4px; top: 1px; font-size: 0.72rem; font-style: normal; color: #4ade80; text-shadow: 0 0 6px rgba(74, 222, 128, 0.8); }
+/* rarity told twice (WCAG 1.4.1): a pip for each step above Common up the tile's left edge, beside its colour (to a
+   deuteranope Rare and Epic look the same) */
+.tile-pips { position: absolute; left: 3px; bottom: 3px; width: 6px; height: calc(var(--pips) * 5px); pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--r) 70%, #fff) 0 1.7px, rgba(8, 5, 3, 0.92) 1.9px 2.6px, transparent 2.8px) center top / 6px 5px repeat-y; }
 .bag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; margin-bottom: 0.8rem; }
 .bag-hint { margin: -0.3rem 0 0.8rem; }
 .detail { position: relative; display: flex; flex-direction: column; gap: 0.6rem; }
@@ -971,8 +986,9 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .clan-ranking .division-row td { padding-top: 0.7rem; border-bottom: none; }
 .clan-ranking td.clan-name { width: 100%; white-space: normal; overflow-wrap: anywhere; }   /* the name takes what is left, so the numbers fit a phone */
 .clan-crown { display: inline-flex; vertical-align: middle; margin-right: 0.2rem; }
-.clan-crown.rank-2 .spr { filter: grayscale(0.85) brightness(1.15); }   /* silver */
-.clan-crown.rank-3 .spr { filter: sepia(0.8) hue-rotate(-25deg) saturate(1.4) brightness(0.85); }   /* bronze */
+.clan-crown.rank-1 .spr { filter: grayscale(1) sepia(1) saturate(4) brightness(1.45); }   /* gold */
+.clan-crown.rank-2 .spr { filter: grayscale(1) brightness(1.35); }   /* silver */
+.clan-crown.rank-3 .spr { filter: grayscale(1) sepia(1) saturate(3) hue-rotate(-28deg) brightness(0.82); }   /* bronze */
 .last-week { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; margin-top: 0.5rem; }
 .last-crowns { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .clan-refill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-muted); }   /* when the next attacks come */
@@ -1084,6 +1100,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 /* ---------- tablets and phones: the sidebar becomes a scrolling tab strip ---------- */
 @media (max-width: 900px) {
     body { padding: 0.75rem 1rem; }
+    html { scroll-padding-top: 8.5rem; }   /* and clear of the sticky bar of places (WCAG 2.4.11) */
     #app.layout-sidebar { flex-direction: column; }
     #sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding: 0.5rem 0.6rem; border-radius: 14px; }
     /* the top bar: the seal and the name on one line, no rule */
@@ -1134,7 +1151,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
     .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */
     .pills .status-pill { display: none; }  /* the hotbar's Battle and work buttons already show what the hero is doing */
-    .chip span, .chip i:not(.spr) { display: none; }
+    .chip i:not(.spr) { display: none; }
+    .chip span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the coin and the number; its name for a screen reader */
     .chip { gap: 0.35rem; padding: 0.22rem 0.55rem 0.22rem 0.3rem; }
     .chip b { font-size: 0.9rem; }
     .brand-fantasy { font-size: 1.02rem; }
@@ -1373,7 +1391,9 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path b, .stage-path button {
     min-width: 22px; height: 22px; padding: 0 4px; border-radius: 11px;
     display: grid; place-items: center;
-    font: 800 0.6rem/1 inherit; font-variant-numeric: tabular-nums;
+    /* (longhands: `inherit` can't stand in the `font` shorthand, which dropped the whole rule, and a button's
+       numbers came out 15 px, a stage's own 10) */
+    font-family: inherit; font-weight: 800; font-size: 0.72rem; line-height: 1; font-variant-numeric: tabular-nums;
     color: #7c8799; background: rgba(15, 18, 28, 0.92); border: 1px solid rgba(214, 170, 92, 0.3);
     backdrop-filter: none; box-shadow: none;
 }
@@ -1382,7 +1402,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .stage-path button::after { display: none; }
 .stage-path button:hover { transform: scale(1.18); box-shadow: 0 0 10px rgba(251, 191, 36, 0.55); background: linear-gradient(180deg, #a8843f, #5c421a); border-color: #fde68a; }
 .stage-path button:focus-visible { outline: 2px solid #fde68a; outline-offset: 2px; }
-.stage-path .now b { min-width: 27px; height: 27px; border-radius: 14px; font-size: 0.66rem; color: #1a1205; background: radial-gradient(circle, #fcd34d, #b45309); border-color: #fde68a; animation: nodePulse 1.6s ease-in-out infinite; }
+.stage-path .now b { min-width: 27px; height: 27px; border-radius: 14px; font-size: 0.8rem; color: #1a1205; background: radial-gradient(circle, #fcd34d, #b45309); border-color: #fde68a; animation: nodePulse 1.6s ease-in-out infinite; }
 .stage-path .boss b, .stage-path .boss button { font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.65); }
 /* the bosses' due (src/ui/scene.js): eight marks round the boss's node, the earned ones gold */
 .stage-path li.pity::after {
@@ -1533,6 +1553,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .battle.slowmo .fighter-sprite *, .battle.slowmo .battle-particles i { animation-play-state: paused; }
 /* the monster that leaves a piece worth seeing flashes in its colour as it falls */
 .corpse.loot { animation-name: corpseLoot; }
+.corpse.calm { animation-name: corpseCalm; }   /* a fall too soon after the last flash: no light (src/ui/scene.js foeMayFlash) */
+.corpse.loot.calm { animation-name: corpseLootCalm; }
 .click-spark { font-size: 1.6rem; line-height: 1; color: #fde68a; text-shadow: 0 0 10px rgba(251, 191, 36, 0.9); animation: spark 0.45s ease-out forwards; }
 .flying-coin { position: fixed; z-index: 450; margin: -16px 0 0 -16px; font-size: 20px; line-height: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
 
@@ -1641,6 +1663,14 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
 @keyframes lootBob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
 @keyframes lootArrive { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.85); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); } }
 @keyframes lootFlash { 0% { opacity: 0; } 14% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes corpseCalm {
+    0% { opacity: 1; transform: translate(-50%, -50%); }
+    55% { opacity: 0.4; }
+    100% { opacity: 0; transform: translate(12%, -100%) rotate(60deg) scale(0.68); filter: grayscale(0.8) brightness(0.7); } }
+@keyframes corpseLootCalm {
+    0% { opacity: 1; transform: translate(-50%, -50%); filter: drop-shadow(0 0 16px var(--loot)); }
+    55% { opacity: 0.45; }
+    100% { opacity: 0; transform: translate(12%, -100%) rotate(60deg) scale(0.68); filter: grayscale(0.8) brightness(0.7) drop-shadow(0 0 0 transparent); } }
 @keyframes corpseLoot {
     0% { opacity: 1; transform: translate(-50%, -50%); filter: brightness(2.4) drop-shadow(0 0 16px var(--loot)); }
     35% { filter: brightness(1.7) drop-shadow(0 0 24px var(--loot)); }
@@ -1655,10 +1685,11 @@ body.reduced-motion .foe.gilded .fighter-sprite::after, body.reduced-motion .foe
     .battle-sub { font-size: 0.72rem; }
     .stage-path { gap: 3px; padding: 3px 6px; }
     .stage-path li + li::before { width: 3px; }
-    .stage-path b, .stage-path button { min-width: 19px; height: 19px; padding: 0 3px; font-size: 0.55rem; }
-    .stage-path .now b { min-width: 23px; height: 23px; }
-    .stage-path .portrait b { width: 22px; min-width: 22px; height: 22px; }
-    .stage-path .portrait.now b { width: 26px; min-width: 26px; height: 26px; }
+    /* a finger's target: 24 px at least (WCAG 2.5.8), its number 11 px */
+    .stage-path b, .stage-path button { min-width: 24px; height: 24px; padding: 0 2px; border-radius: 12px; font-size: 0.6875rem; }
+    .stage-path .now b { min-width: 27px; height: 27px; font-size: 0.75rem; }
+    .stage-path .portrait b { width: 24px; min-width: 24px; height: 24px; }
+    .stage-path .portrait.now b { width: 28px; min-width: 28px; height: 28px; }
     .stage-path .portrait .spr { --k: 0.625 !important; }
     .battle-field { gap: 0.4rem; padding: 0 0.5rem 0.55rem; }
     .fighter-stand { height: 88px; }
@@ -1819,9 +1850,26 @@ body.reduced-motion .nav-ready { animation: none; }
         border-top: 1px solid var(--line-strong); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
     }
     body { padding-bottom: calc(4.8rem + env(safe-area-inset-bottom, 0px)); }
+    html { scroll-padding-bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px)); }   /* a control the keys reach scrolls clear of the hotbar (WCAG 2.4.11) */
     #header .daily-btn { display: none; } /* the hotbar holds the crate here */
     #toast-area { bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); }
     .detail-panel.has-item { bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); max-height: 56vh; }
+}
+
+/* ===== Words on a phone: 11 px at least (Apple's floor) =====
+   At 390 px a third to three-fifths of the words were under 12 px, a supply's count 9.9 px and a doll's slot 9.
+   These raise each that was under 11 px there (the stage path's are in its own rule). `html` before each lets it win
+   over the rule it raises, wherever that stands in this file. */
+@media (max-width: 600px) {
+    html .pick-qty, html .pick-sub, html .pick-tier, html .doll-label, html .tile-up, html .inv-type, html .affix, html .badge-upgrade,
+    html .medal-count, html .boss-clock span, html .battle-combo span, html .battle-combo em, html .fighter-meta, html body.battle-full .fighter-meta,
+    html .cel-kicker, html .cel-go, html .nav-new, html .nav-next-kicker, html .hot-btn, html .hot-badge, html .wb-tile span, html .wb-used .wb-tile span,
+    html .talent-rank, html .trial-rungs, html .trial-heat, html .trial-week, html .pg-row h4, html .perks-modal .shop-item-name .muted,
+    html .perks-modal .shop-item-desc, html .hall-chip, html .brand-idle { font-size: 0.6875rem; }
+    html .doll-label { letter-spacing: 0.05em; }   /* "Earring" still fits under its slot */
+    html .brand-idle { letter-spacing: 0.42em; text-indent: 0.42em; }   /* the mark keeps its width */
+    html .hot-badge { min-width: 18px; height: 18px; line-height: 18px; top: 2px; right: 6px; }
+    html .boss-clock { height: 14px; }
 }
 
 /* ===== Sprites (assets/sprites.png, cut by src/ui/sprites.js) =====
@@ -2172,6 +2220,9 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .wb-ready { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-bottom: 0.9rem; }
 .wb-ready-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.65rem; border-radius: 999px; font-size: 0.82rem; border-color: rgba(252, 211, 77, 0.55); box-shadow: 0 0 10px rgba(252, 211, 77, 0.18); }
 .wb-ready-btn .spr { margin: -6px 0; }
+/* Settings' foot: how the game was made */
+.made-list { display: flex; flex-direction: column; gap: 0.35rem; padding-left: 1.1rem; color: var(--text-main); }
+.made-list li::marker { color: var(--accent-color); }
 /* Settings: the playtest log's count and its export */
 .playtest-row { display: flex; align-items: center; gap: 0.6rem; margin: -0.2rem 0 0.6rem 1.8rem; }
 .wb-find { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.7rem; border-radius: 10px; background: var(--well); border: 1px solid rgba(214, 170, 92, 0.2); font-size: 0.9rem; }
@@ -2230,6 +2281,12 @@ body:has(#modal-root .modal-overlay.active) :is(#toast-area, #celebrate, #work-f
 .about-points { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; padding: 0; font-size: 0.9rem; color: var(--text-main); }
 .about-points li { position: relative; padding-left: 1.1rem; }
 .about-points li::before { content: "◆"; position: absolute; left: 0; top: 0.4em; font-size: 0.55rem; color: var(--accent-color); }
+/* the card's page on the wiki (features.js WIKI_PAGES): one small line at its foot */
+.about-wiki { margin: 0.6rem 0 -0.7rem; text-align: center; font-size: 0.8rem; }
+.about-wiki a { display: inline-block; padding: 0.35rem 0.5rem; color: var(--accent-color); text-decoration: underline; text-decoration-color: rgba(214, 170, 92, 0.4); text-underline-offset: 3px; }   /* a tap target of 24 px and more */
+.about-wiki a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
+.about-wiki a:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
+.about-wiki a::after { content: " ↗"; font-size: 0.85em; }
 
 /* a new place, with its picture (src/ui/rewards.js) */
 .celebration.clickable { pointer-events: auto; cursor: pointer; }
@@ -2511,6 +2568,7 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 }
 
 /* a tap's bubble on a touch screen: what a picture's title says */
+@media (hover: none) { button, [role="button"], label, .chip { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }   /* a long press shows a tip (main.js), not a selection */
 .tap-tip { position: fixed; z-index: 400; max-width: min(260px, calc(100vw - 16px)); padding: 0.4rem 0.65rem; border-radius: 9px; font-size: 0.8rem; line-height: 1.3; color: var(--text-main); background: rgba(14, 10, 7, 0.96); border: 1px solid rgba(214, 170, 92, 0.55); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); pointer-events: none; animation: fadeIn 0.15s ease-out; }
 .tap-tip .tip-title { display: block; margin-bottom: 0.1rem; font-family: var(--font-display); font-size: 0.86rem; font-weight: 700; color: var(--heading); }
 
@@ -2711,6 +2769,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .talent.ready .talent-rank { color: #bbf7d0; border-color: #166534; }
 .talent.part { border-color: #b08a45; }
 .talent.full { border-color: #fcd34d; box-shadow: 0 0 10px rgba(252, 211, 77, 0.4); }
+.talent-plus { position: absolute; left: -7px; top: -7px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; font-size: 0.8rem; font-weight: 800; font-style: normal; line-height: 1; color: #052e16; background: #86efac; box-shadow: 0 0 0 1px #14532d, 0 0 8px rgba(74, 222, 128, 0.6); pointer-events: none; }   /* a point can go here: said by a mark too */
 .talent.full .talent-rank { color: #fde68a; border-color: #a16207; }
 .talent.shut > .spr { filter: grayscale(1) brightness(0.5); }
 .talent.shut { border-color: #2a2015; }
@@ -2758,7 +2817,7 @@ body.reduced-motion .talent:hover { transform: none; }
     body.battle-full #tab { max-height: 46dvh; padding: 0.5rem 0.6rem 0.6rem; }
     body.battle-full .zone-facts { display: none; } /* the map's zone card has the drops */
     body.battle-full .dock-main:not(:has(.combat-controls)) { display: none; } /* a new player's first fights: no food or potions yet, so nothing to show */
-    .menu-word { display: none; }
+    .menu-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* ☰ alone, "Menu" still read */
     .perks-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
     .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }
     /* on a phone the dock is a column: what a run uses most comes first */
@@ -2774,7 +2833,8 @@ body.reduced-motion .talent:hover { transform: none; }
     body.battle-full .cloud-word, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
     body.battle-full .pills:empty { display: none; }
     body.battle-full #header .daily-btn { display: inline-flex; } /* the hotbar is out of sight here, so the crate keeps its button */
-    body.battle-full .daily-word, body.battle-full .update-word { display: none; }
+    body.battle-full .update-word { display: none; }
+    body.battle-full .daily-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the crate alone, its name still read */
     body.battle-full #toast-area { top: 3.2rem; }
     body.battle-full:has(#celebrate .celebration:not(.leaving)) #toast-area { z-index: 470; }   /* a card at the top goes over the toasts (they covered a new land's card) */
     .camp-buy { flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.25rem; text-align: center; }

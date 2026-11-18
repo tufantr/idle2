@@ -127,6 +127,73 @@ test("the account's own game is the one this device last saw on its server, for 
     }
 });
 
+test('the cloud keeps until when the account is flagged, as its last save or load said (Settings tells the player); another account starts with none', async () => {
+    const realFetch = globalThis.fetch;
+    let answer = { flaggedUntil: 5000 };
+    globalThis.fetch = async url => new Response(JSON.stringify(url.endsWith('/load') ? { state: null, serverNow: 5, ...answer } : { success: true, timestamp: 6, ...answer }),
+        { status: 200, headers: { 'content-type': 'application/json' } });
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        assert.equal(cloud.flaggedUntil, 0);
+        await cloud.pull(10);
+        assert.equal(cloud.flaggedUntil, 5000);
+        answer = { flaggedUntil: 0 };
+        await cloud.push({ version: 3 });
+        assert.equal(cloud.flaggedUntil, 0, 'lapsed: the next answer says so');
+        answer = { flaggedUntil: 7000 };
+        await cloud.push({ version: 3 });
+        answer = {};   // a server from before says nothing of it: an upload changes nothing
+        await cloud.push({ version: 3 });
+        assert.equal(cloud.flaggedUntil, 7000);
+        cloud.setToken('a.eyJ1c2VybmFtZSI6InNvbWVvbmUifQ.b');
+        assert.equal(cloud.flaggedUntil, 0, 'another account');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test('"Sign out everywhere" keeps this device signed in, on a fresh token, with what it has seen of its cloud', async () => {
+    const realFetch = globalThis.fetch;
+    const calls = [];
+    globalThis.fetch = async (url, init) => {
+        calls.push({ url, init });
+        const body = url.endsWith('/account/signout-all') ? { token: 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c', message: 'Signed out everywhere else' } : { success: true, timestamp: 9, flaggedUntil: 0 };
+        return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        await cloud.push({ version: 3 });
+        await cloud.signOutEverywhere();
+        assert.equal(calls.at(-1).init.method, 'POST');
+        assert.equal(calls.at(-1).init.headers.Authorization, 'Bearer a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b', 'asked with the token it had');
+        assert.equal(cloud.token, 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c');
+        assert.equal(localStorage.getItem(TOKEN_KEY), cloud.token, 'kept for the next visit');
+        assert.deepEqual([cloud.username, cloud.base], ['hero', 9], 'the same account, its cloud as this page saw it');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test("a sign-up sends the listing's tag it was given, and none without one", async () => {
+    const realFetch = globalThis.fetch;
+    const bodies = [];
+    globalThis.fetch = async (url, init) => {
+        bodies.push(JSON.parse(init.body));
+        return new Response(JSON.stringify({ pending: true, username: 'hero', email: 'he***@example.test' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        await cloud.register('hero', 'correct horse', 'hero@example.test', 'reddit1');
+        await cloud.register('hero', 'correct horse', 'hero@example.test');
+        assert.equal(bodies[0].src, 'reddit1');
+        assert.equal('src' in bodies[1], false);
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
 test("a guest's game put aside at sign-in is listed among the backups and outlasts a reset", () => {
     const game = new Game(null, 1);
     game.state.gold = 77;

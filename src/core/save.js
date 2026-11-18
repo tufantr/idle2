@@ -119,6 +119,7 @@ export class CloudClient {
         this.username = this.token ? decodeUsername(this.token) : null;
         this.available = null; // unknown until the first request
         this.base = null;      // the cloud save this page has seen (pull or push), as the server's lastSaved
+        this.flaggedUntil = 0; // the account is flagged until then, as the last save or load said (Settings tells the player)
     }
 
     /** The cloud save this device saw last time, for this account ({ at, savedAt, game } or null). */
@@ -173,6 +174,7 @@ export class CloudClient {
         this.token = token;
         this.username = token ? decodeUsername(token) : null;
         this.base = null;   // another account (or none): nothing seen of its cloud yet
+        this.flaggedUntil = 0;
         const store = storage();
         if (!store) return;
         if (token) store.setItem(TOKEN_KEY, token); else store.removeItem(TOKEN_KEY);
@@ -184,9 +186,12 @@ export class CloudClient {
         return data;
     }
 
-    /** An account with an email: the server mails a code, and the account plays once it is given (verify). */
-    async register(username, password, email) {
-        const data = await this.request('/register', { method: 'POST', body: { username, password, email }, auth: false });
+    /**
+     * An account with an email: the server mails a code, and the account plays once it is given (verify). `src`: the tag of
+     * the listing's link the player came by (main.js keeps it), which the server counts with the account made.
+     */
+    async register(username, password, email, src = null) {
+        const data = await this.request('/register', { method: 'POST', body: { username, password, email, ...(src ? { src } : {}) }, auth: false });
         if (data.token) this.setToken(data.token);   // (a server from before codes signs in at once)
         return data;
     }
@@ -209,6 +214,17 @@ export class CloudClient {
 
     logout() { this.setToken(null); }
 
+    /** "Sign out everywhere": every other device signed in to this account is signed out; this one keeps a fresh token. */
+    async signOutEverywhere() {
+        const data = await this.request('/account/signout-all', { method: 'POST', body: {} });
+        if (data.token) {
+            const { base, flaggedUntil } = this;
+            this.setToken(data.token);
+            Object.assign(this, { base, flaggedUntil });   // the same account: what this page has seen of its cloud stays
+        }
+        return data;
+    }
+
     /**
      * Returns { state, lastSaved } (state may be null for a fresh account). Time away is measured on
      * the server's clock: the save's timestamp is moved so that now − savedAt equals the time the
@@ -223,6 +239,7 @@ export class CloudClient {
             state.meta.lastInputAt = Math.min(state.meta.lastInputAt ?? state.meta.savedAt, state.meta.savedAt);
         }
         this.noteBase(data.lastSaved || 0, state?.meta.savedAt ?? null, state?.meta.createdAt ?? null);
+        this.flaggedUntil = Number(data.flaggedUntil) || 0;
         return { state, lastSaved: data.lastSaved || 0, optIn: !!data.optIn, gifts: Number(data.gifts) || 0, banner: data.banner ?? null,
             hall: data.hall ?? null, hallGifts: Array.isArray(data.hallGifts) ? data.hallGifts : [] };   // the clan's hall, and its gifts the save has yet to give
     }
@@ -235,6 +252,7 @@ export class CloudClient {
     async push(stateObject, { keepalive = false } = {}) {
         const answer = await this.request('/save', { method: 'POST', body: { state: stateObject, ...(this.base === null ? {} : { base: this.base }) }, keepalive });
         if (Number.isFinite(answer?.timestamp)) this.noteBase(answer.timestamp, stateObject?.meta?.savedAt ?? null, stateObject?.meta?.createdAt ?? null);
+        if (answer && 'flaggedUntil' in answer) this.flaggedUntil = Number(answer.flaggedUntil) || 0;
         return answer;
     }
 

@@ -5,6 +5,7 @@ import { PERKS, perkLevelCost } from '../data/perks.js';
 import { spawnEnemy, leaveCombat, enterCombat } from './combat.js';
 import { resetCamp } from './camp.js';
 import { log, bumpStat } from './progress.js';
+import { fmt } from '../ui/format.js';   // (pure: the log's numbers as the game writes them, 1.23M rather than long digits)
 
 /** Milliseconds until this run may be prestiged (0 when it may). The first prestige, which teaches the loop, need not wait. */
 export function prestigeWaitMs(state, now) {
@@ -85,7 +86,7 @@ export function doPrestige(game, { auto = false, trial = null, ascend = false } 
     game.recompute();
     state.combat.hp = game.derived.maxHp;
     spawnEnemy(game);
-    log(game, `✨ Prestige ${state.prestige.count}: +${preview.tokens} tokens, +${preview.skillPoints} skill point${preview.skillPoints === 1 ? '' : 's'}. Starting at stage ${preview.startStage}.`, 'prestige');
+    log(game, `✨ Prestige ${state.prestige.count}: +${fmt(preview.tokens)} tokens, +${preview.skillPoints} skill point${preview.skillPoints === 1 ? '' : 's'}. Starting at stage ${preview.startStage}.`, 'prestige');
     game.emit({ type: 'prestige', ...preview, auto, reached, trial, ascend });   // (an Ascension has its own card: systems/ascension.js)
     game.markDirty();
     return true;

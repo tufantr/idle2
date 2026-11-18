@@ -135,6 +135,8 @@ export function createSound(isOn, volume = () => 1) {
         boss() { tone({ type: 'sine', f0: 72, f1: 38, ms: 1400, gain: 0.7, attack: 0.02 }); tone({ type: 'sawtooth', f0: 110, f1: 55, ms: 700, gain: 0.08 }); noise({ ms: 900, gain: 0.25, filter: 'lowpass', f0: 500, f1: 80 }); },
         victory() { [0, 4, 7, 12, 7, 12].forEach((n, i) => tone({ type: 'square', f0: NOTE(72 + n), ms: 220, gain: 0.07, at: i * 0.09 })); [0, 4, 7, 12].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(60 + n), ms: 800, gain: 0.12, at: 0.5 + i * 0.02 })); },
         defeat() { tone({ type: 'triangle', f0: NOTE(64), f1: NOTE(57), ms: 500, gain: 0.2 }); tone({ type: 'triangle', f0: NOTE(60), f1: NOTE(52), ms: 900, gain: 0.2, at: 0.25 }); noise({ ms: 600, gain: 0.1, filter: 'lowpass', f0: 600, f1: 120 }); },
+        // the same wall again (systems/walls.js): one soft falling note where the defeat's jingle was
+        again() { tone({ type: 'triangle', f0: NOTE(57), f1: NOTE(52), ms: 320, gain: 0.07 }); },
         chest() { noise({ ms: 260, gain: 0.2, filter: 'bandpass', f0: 300, f1: 1400, q: 3 }); [0, 4, 7, 12, 16].forEach((n, i) => tone({ type: 'sine', f0: NOTE(76 + n), ms: 260, gain: 0.13, at: 0.3 + i * 0.07 })); },
         prestige() { tone({ type: 'sawtooth', f0: 110, f1: 1760, ms: 900, gain: 0.08, curve: 'exp' }); [0, 4, 7, 11, 14].forEach((n, i) => tone({ type: 'triangle', f0: NOTE(60 + n), ms: 1400, gain: 0.12, at: 0.8 + i * 0.03 })); noise({ ms: 1200, gain: 0.08, filter: 'highpass', f0: 4000, at: 0.8 }); },
         pet() { [0, 3, 7, 10, 12].forEach((n, i) => tone({ type: 'sine', f0: NOTE(84 + n), ms: 160, gain: 0.12, at: i * 0.06 })); },

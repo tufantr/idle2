@@ -25,7 +25,7 @@ Medals for parts of the game you meet late, such as {{ACHIEVEMENTS.find(a => a.i
 
 ## Secret medals
 
-{{ACHIEVEMENTS.filter(a => a.secret).length}} medals are secret: the Hall neither shows nor counts them until you earn one. They are for little things you find by playing, and earning one brings a card that says "A secret medal". The table below lists them anyway, marked as secret, so skip those rows if you would rather find them yourself.
+{{ACHIEVEMENTS.filter(a => a.secret).length}} medals are secret: the Hall neither shows nor counts them until you earn one, and your completion never needs them (its medals are the {{ACHIEVEMENTS.filter(a => !a.secret).length}} open ones, though a secret one you hold counts toward them). They are for little things you find by playing, and earning one brings a card that says "A secret medal". The table below lists them anyway, marked as secret, so skip those rows if you would rather find them yourself.
 
 ## Looks earned with medals
 

@@ -62,4 +62,13 @@ are DCSS plant tiles (the scrub nettle and a starflower, CC0); their cards were 
 `og-image.jpg`, the picture beside a link to the game, is the game's own fight (the Ember Volcano's Gemini
 painting and the DCSS sprites above) with its title, rendered by `tools/preview.mjs`.
 
+## Type
+
+`fonts/` holds the game's two typefaces, served by the game and the wiki from their own server since November 2026 (until
+then they came from Google Fonts): **Cinzel**, Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel),
+and **Outfit**, Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts), both under the **SIL
+Open Font License 1.1** (https://scripts.sil.org/OFL, as each file names it in its metadata beside its copyright). The four
+files are Google Fonts' own cuts, unchanged: each family as a variable font in woff2, its Latin and its Latin Extended
+letters; `fonts/fonts.css` names their weights as Google's stylesheet did.
+
 Everything else in the interface (scenery drawn in CSS, icons) is original to this project.

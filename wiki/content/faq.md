@@ -6,7 +6,7 @@ sectionPath: /guides
 icon: perk/scholar
 order: 90
 summary: Short answers to the questions players ask most: offline progress, saves, coal and gems, bosses, prestige, gear, pets, mastery, dungeons and more.
-keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion
+keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, flagged, flag, keyboard, keys, shortcuts
 aliases: Frequently asked questions, Questions, Help
 ---
 Short answers, each with a link to the page that tells the whole story. New to the game? Start with [[/guides/getting-started|Getting started]].
@@ -23,11 +23,19 @@ With an account, on the game's server, as in any online game: any device you sig
 
 ### Can I play without an account?
 
-Yes: press **Play as guest** on the sign-in. Your game is then kept in that browser only, with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
+Yes: press **Play as guest** on the sign-in, or open the game from a link ending in `?play` (fantasyidle.com/?play), which starts you as a guest at once. Your game is then kept in that browser only (on an iPhone or iPad, Safari clears it after seven days away unless the game is on your Home Screen), with backups in Settings, and [[/clans|clans and leaderboards]] wait for an account. An account made or signed into later plays its own game, a new one from the title card or the one already on the server: a guest's progress does not move to it.
+
+### How do I sign out on a device I no longer use?
+
+In **Settings**, under Account, press **Sign out everywhere**: every other device signed in to your account is signed out, and this one stays signed in. Setting a new password (**Forgot your password?** on the sign-in) does the same, and a mail to your address says it was changed.
+
+### Settings says my account is flagged. What does that mean?
+
+One of your saves showed numbers the game's check doesn't allow: numbers no save can reach. For 30 days from that save, each of your [[/clans|clan]] attacks counts for at most 1% of the boss, your fights at the Endless Hydra stay out of the clan ranking, and you are left off the leaderboards. Your game itself plays and saves as always, and nothing is taken away. A save that only grew faster than the check allows is looked at by the team first, never flagged by itself. Think it's a mistake? Tell the team on the Discord (the link is in Settings), with your username.
 
 ### Can I play on my phone, or install it like an app?
 
-Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Sign in there with the same account to play the same hero.
+Yes. The game fits a phone's screen, with a bar of shortcuts along the bottom (the fight, your work, the Inventory and the daily crate). It can also be added to your home screen: in Safari use **Share**, then **Add to Home Screen**; in Chrome use the menu's **Install app** or **Add to Home screen**. It then opens in a window of its own, like an app. Sign in there with the same account to play the same hero. On a touch screen, tap a coin, a number or a stat to see what it is, and press and hold a button to read what it does without pressing it.
 
 ### How do I get the newest version?
 
@@ -35,7 +43,7 @@ When a new version of the game is out, a glowing green **New version** button ap
 
 ### How do I turn off motion or sound?
 
-In **Settings**, under Options: **Sound and vibration** switches all sound off, with a volume slider beside it, and **Reduce motion** stills the floating numbers and effects. The game also follows your device's own reduce-motion setting.
+In **Settings**, under Options: **Sound and vibration** switches all sound off, with a volume slider beside it, and **Reduce motion** stills the floating numbers and effects. The game also follows your device's own reduce-motion setting. **Keyboard shortcuts** turns off the fight's two keys (Space strikes, M opens the map) on that device.
 
 ### How do I change my hero's name or look?
 
@@ -64,7 +72,7 @@ Every {{STAGES_PER_ZONE}}th stage is a boss, and it must fall within {{BALANCE.c
 There are three reasons.
 
 - **A boss held out.** Your hero steps back one stage and fights there for {{BALANCE.combat.regroupMs / 1000}} seconds, then tries the boss again. To try at once, tap the boss's skull on the stage path.
-- **Your hero fell.** Your hero goes back to the first stage of the place (or, when already there, to the stage before the previous boss), rests at the campfire until healed, then fights on.
+- **Your hero fell.** Your hero goes back to the first stage of the place (or, when already there, to the stage before the previous boss), rests at the campfire until healed, then fights on. The first fall at a place sounds its defeat; falls there in the ten minutes after it are quiet, counted in one note ("Fell again ×4").
 - **You prestiged.** A new run starts at {{pct(BALANCE.prestige.startStageFraction, 0)}} of your best stage.
 
 ### What are gilded monsters?

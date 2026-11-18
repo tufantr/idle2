@@ -3,7 +3,7 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [] };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map() };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
@@ -17,7 +17,7 @@ function createMemoryStore() {
         async createUser(username, hash, email = null) {
             if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) throw unique('users_username_lower');
             if (email && db.users.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) throw unique('users_email_lower');
-            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null };
+            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0 };
             db.users.push(row);
             return row.id;
         },
@@ -25,14 +25,29 @@ function createMemoryStore() {
             const same = db.users.filter(x => x.username.toLowerCase() === username.toLowerCase())
                 .sort((a, b) => (b.username === username) - (a.username === username) || a.id - b.id);
             const u = same[0];
-            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0 } : null;
+            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0, tokenVersion: u.token_version || 0 } : null;
         },
         async findUserByEmail(email) {
             const u = db.users.find(x => (x.email || '').toLowerCase() === String(email).toLowerCase());
-            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0 } : null;
+            return u ? { id: u.id, username: u.username, password_hash: u.password_hash, email: u.email || null, emailVerifiedAt: u.email_verified_at || 0, tokenVersion: u.token_version || 0 } : null;
         },
         async setEmailVerified(userId, now) { const u = db.users.find(x => x.id === userId); if (u) u.email_verified_at = now; },
-        async setPassword(userId, hash) { const u = db.users.find(x => x.id === userId); if (u) u.password_hash = hash; },
+        async setPassword(userId, hash) {
+            const u = db.users.find(x => x.id === userId);
+            if (!u) return 0;
+            Object.assign(u, { password_hash: hash, token_version: (u.token_version || 0) + 1 });
+            return u.token_version;
+        },
+        async tokenAccount(userId) {
+            const u = db.users.find(x => x.id === userId);
+            return u ? { username: u.username, tokenVersion: u.token_version || 0 } : null;
+        },
+        async bumpTokenVersion(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if (!u) return null;
+            u.token_version = (u.token_version || 0) + 1;
+            return { username: u.username, tokenVersion: u.token_version };
+        },
         async putEmailCode(userId, purpose, codeHash, expiresAt, now) {
             db.codes = db.codes.filter(c => !(c.userId === userId && c.purpose === purpose));
             db.codes.push({ id: ++seq.codes, userId, purpose, codeHash, expiresAt, attempts: 0, createdAt: now });
@@ -68,6 +83,23 @@ function createMemoryStore() {
             }));
         },
 
+        async countSignupSource(tag) { db.sources.set(tag, (db.sources.get(tag) || 0) + 1); },
+        async signupSources() {
+            return [...db.sources].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || (a.tag < b.tag ? -1 : 1));
+        },
+        async addReview({ userId, day, metric, value, from, allowed, share, now, check }) {
+            const row = db.reviews.find(r => r.userId === userId && r.day === day && r.metric === metric);
+            if (!row) { db.reviews.push({ userId, day, metric, value, from, allowed, share, uploads: 1, firstAt: now, lastAt: now, check }); return; }
+            if (share > row.share) Object.assign(row, { value, from, allowed, share });
+            Object.assign(row, { uploads: row.uploads + 1, lastAt: Math.max(row.lastAt, now), check: Math.max(row.check, check) });
+        },
+        async reviewsSince(since) {
+            return db.reviews.filter(r => r.lastAt >= since)
+                .map(r => ({ ...r, username: db.users.find(u => u.id === r.userId)?.username }))
+                .filter(r => r.username !== undefined)   // (a join: an account gone takes its rows with it)
+                .sort((a, b) => (a.username < b.username ? -1 : a.username > b.username ? 1 : 0) || a.metric.localeCompare(b.metric) || a.day.localeCompare(b.day));
+        },
+
         async getSnapshot(userId, week) {
             return db.snapshots.find(s => s.userId === userId && s.week === week)?.metrics || null;
         },
@@ -75,12 +107,16 @@ function createMemoryStore() {
             if (!db.snapshots.some(s => s.userId === userId && s.week === week)) db.snapshots.push({ userId, week, metrics: metricsJson });
         },
 
-        async listClans(search, limit) {
+        async listClans(search, limit, activeSince = 0) {
             const q = (search || '').toLowerCase();
+            const played = m => (db.users.find(u => u.id === m.userId)?.last_saved || 0) > activeSince;
             return db.clans
                 .filter(c => c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q))
-                .map(c => ({ id: c.id, name: c.name, tag: c.tag, description: c.description, lookingFor: c.lookingFor, members: db.members.filter(m => m.clanId === c.id).length, hall: hallOf(c.id) }))
-                .sort((a, b) => b.members - a.members || a.id - b.id)
+                .map(c => {
+                    const members = db.members.filter(m => m.clanId === c.id);
+                    return { id: c.id, name: c.name, tag: c.tag, description: c.description, lookingFor: c.lookingFor, members: members.length, active: members.filter(played).length, hall: hallOf(c.id) };
+                })
+                .sort((a, b) => b.active - a.active || b.members - a.members || a.id - b.id)
                 .slice(0, limit);
         },
         async createClan({ name, tag, description, lookingFor, ownerId, now }) {

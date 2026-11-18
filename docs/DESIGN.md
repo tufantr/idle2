@@ -246,7 +246,9 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   legendary is worth about a tier (×2.2): it beats a common piece of the tier above and about matches an
   uncommon one, a rare one beats it, and **nothing reaches two tiers up** (a test enforces this); in the Abyss it
   is worth nearly three depths of the drops' ×1.45. The prototype multiplied stats by up to 64× and let
-  legendary copper beat runite.
+  legendary copper beat runite. A tile tells its rarity twice (WCAG 1.4.1; to a deuteranope Rare and Epic look the
+  same): its colour, and a pip for each step above Common up its left edge, as many as its rarity's bonuses. The War
+  Tree marks a talent a point can go to with a + beside its green frame (green and gold look alike to a deuteranope).
 - **Affixes** (8 kinds): crit chance, crit damage, attack speed, dodge, lifesteal, gold find, combat
   XP, max HP. Values roll once and scale +8% per tier. Totals are capped in the pipeline (§4).
 - **Upgrades:** +5% base stats per level to +10, then ×1.05 a level with no top (§3.31). Weapons and armour are
@@ -776,7 +778,15 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   the first 20 Titans, the Trials' tiers, the agility course's slots and the festival cloaks. The whole
   counts every part from the start, so it only rises (a unique the player unlocks and sells away is the
   one thing that lowers it); Records names only the parts the player has met. A cape for 100% is still
-  to come.
+  to come. **100% is everything in the game on 12 November 2026, and new content never lowers it** (the
+  owner): each part's whole is fixed at that day's count (`COMPLETION_WHOLE`: 1,089 levels, 9,408 mastery
+  levels, 549 stars, 70 pages, 51 medals, 12 pets, 8 uniques, 20 Titans, 40 Trial tiers, 6 slots, 6 cloaks),
+  and new medals, pets, uniques, monsters, actions, Trials or festivals fill a part, capped at its whole, without
+  raising it (a seventh festival used to take 1.3 points from a hero who had everything). The three secret medals
+  keep their power and are never needed: the medals' whole is the 51 open ones, and a secret one held counts toward
+  it. The Trials' part counts each Trial's five tiers: their ladders' rungs are records, and counted here they filled
+  the part for a deep hero with Trials never cleared (a hero three Trials up their ladders read 9.2% where he has done
+  3.5%).
 - **Unlocks** (`src/data/unlocks.js`): tabs appear when a predicate on the state becomes true, each
   when it is of use (`docs/research_notes/robust-and-fun/A_onboarding_pacing.md` §5.4) — by work:
   Smithing after mining 5 times (ore that monsters drop no longer opens it for a hero who only
@@ -873,12 +883,13 @@ boss's clock runs out, so the step size never changes the result. Capped at
 **24 hours** (+2 h per Endurance perk, up to 36 h, and +1 h per level of the Zipline, up to +5 h at
 level 5; it was 12 until the check-in research found a once-a-day player losing 11 hours a day to it,
 `docs/research_notes/robust-and-fun/C_sessions_players.md`). Absences under a minute
-are ignored. The "Welcome back" summary lists gains, materials used, levels, dungeon clears, pets,
-plots ready to harvest, how often the hero fell and got up, and why work stopped early. Since the
-check-in research it leads with where the run stopped ("climbed to stage 57, then held there for
-1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
-a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better
-gear to wear; a place that waited opens on the return and is named there too.
+are ignored. The "Welcome back" summary says the time away and, past the cap, the hours that counted ("30h away,
+24h counted": the hours the cap cut are said, as Melvor and Cookie Clicker say them); it lists gains, materials
+used, levels, dungeon clears, pets, plots ready to harvest, how often the hero fell and got up, and why work
+stopped early. Since the check-in research it leads with where the run stopped ("climbed to stage 57, then held
+there for 1h 44m", with a bar of climbing against time at the wall) and a row of what is ready, each a tap away:
+a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better gear to
+wear; a place that waited opens on the return and is named there too.
 
 **A replay a slice at a time, behind a bar** (November 2026, the research loop's R20). A day away deep in the climb with
 Auto prestige is seconds of work: the boot replayed it in one task with only the sidebar's title drawn, 6.8–7.4 s at
@@ -948,7 +959,13 @@ signed in the time away is replayed once, for the game the sync chooses (§3.17)
   chosen. Inside another site's frame (`EMBEDDED` in `src/main.js`: galaxy.click shows its games in one, and
   its players shy away from sign-up forms) a new player is a guest at once and Begin goes straight into the
   fight; the account is one click away (the Guest pill), and the frame's game is stored apart from the site's
-  own (browsers keep a framed page's storage per host site). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
+  own (browsers keep a framed page's storage per host site). So does a guest's link, `?play` among the address's
+  parameters (`src/core/door.js`, for posts and listings: the first post's top comment was "Instant downvote for
+  needing an account"): not signed in, the page starts as a guest and remembers it, as Play as guest does; signed in,
+  it plays the account's game. The bare address keeps the sign-in first. A guest's game is kept by asking the
+  browser, quietly, to keep its storage (`navigator.storage.persist()`, once a load until it does; not in Firefox,
+  which would ask its player), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a
+  guest's game says Safari clears it after seven days away unless the game is on the Home Screen (P-069). Logging out uploads the game first and leaves a fresh one in the browser, so an account registered
   there next starts its own game, not a copy of the last one. A local development host (`DEV_HOST` in
   `src/main.js`: the tools, the screenshots) plays as a guest without asking.
 - **Sign-up by email** (the owner, 18 October 2026, once the game had its own server): an account is made with a
@@ -956,12 +973,24 @@ signed in the time away is replayed once, for the game the sync chooses (§3.17)
   not a link: on a phone a link opens in another browser than the game's). The same kind of code sets a new password
   ("Forgot your password?"). A code lives 15 minutes and takes 5 tries, and is kept only as a hash keyed with the
   server's secret; a new one can go once a minute, 5 an hour to an account and 20 an hour from an address; one account
-  an email, whatever its case, and no address is shown to another player. A login with the right password but the
+  an email, whatever its case, and no address is shown to another player. A sign-up with an address that has an account
+  gets the same answer as a new one (the research loop's P-103, November 2026), makes none, and mails that address's
+  owner one line instead, once a day: someone tried, and they may sign in or reset. A listing's link may carry a tag
+  (`?src=reddit1`, `[a-z0-9-]{1,32}`; the research loop's P-067): the game keeps the first one seen (`fantasyIdle.src`)
+  until an account is made and sends it with the sign-up, and the server counts it with the account (`signup_sources`:
+  a tag and a count, nothing tying it to the account). A login with the right password but the
   address not confirmed answers 409 with `pending` (a 403 is the game's word for a session gone, which would sign the
   player out). Mail goes through Resend from noreply@fantasyidle.com (`api/mail.js`, README "The server").
 - **Cloud:** signing in uses the real API (`api/index.js`):
-  bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords, 1 MB body cap,
-  version-checked saves. The client uploads **every minute while the page is open**, in the background
+  bcrypt passwords, JWTs that expire after 30 days, validated usernames and passwords (8 to 72 characters, and at sign-up
+  and reset not too easy to guess: not among the 377 most common, `api/common-passwords.js`, not one character or a short
+  run repeated, not a run of letters, digits or keys in a row, not the username; the research loop's P-101, November 2026;
+  a reset says the username only once its code is right), 1 MB body cap,
+  version-checked saves. A token carries its account's token version (`v`, the research loop's P-096, November 2026: a
+  30-day token outlived a password reset); one below the account's is refused, and tokens from before versions count as 0.
+  A password reset and Settings' **Sign out everywhere** (`POST /api/account/signout-all`) raise it, so every session made
+  before ends at once (the instance's 10-minute memory of names learns the new version with the bump); the device that
+  asked gets a fresh token, and a reset mails the account's own address one line. The client uploads **every minute while the page is open**, in the background
   too, and once on leaving the page (hidden or closed: a keepalive request, under the 64 KB browsers allow),
   unless it uploaded seconds before; the local save stays current every 15 s. That is since the game moved to
   its own server (October 2026, the owner: "traffic is not an issue"). On Vercel's free Neon database, which
@@ -1014,12 +1043,15 @@ signed in the time away is replayed once, for the game the sync chooses (§3.17)
   prestige as a player would, the climb came to 76% of it from stage 300 over 43 hours (430 stages) and 72%
   from 1,200 (28 runs of 400 hours, every window of 1 to 48 hours from the best at its start); the rates an hour
   went up from 150 to 1,500 (the bursts stayed: a day's climb was what came close), and the worst is now 49%.
-  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). Trial tiers
+  The ceilings went up with it: best stage 6,000 (3,000), tokens 10^12 (10^9). In November 2026 the best stage's became the
+  save's own wall, `MAX_STAGE` (10,000, where a load clamps it; mirrored in `api/index.js`, a test checks the two agree): the
+  deepest live hero was climbing 460 stages a week, about eight weeks short of 6,000, and the medals at 7,500 and 10,000 lay
+  past it. Total XP's counts the game's 11 skills each stopped at twice level 99's (it counted 13). Trial tiers
   a save's best stage could not have cleared are flagged (§3.26). Attack beyond what the best stage allows (`plausibleAttackDamage` in `src/core/power.js`: felling a
   boss 40 stages further in 5 s; honest play stays under ~12% of it) is flagged too. Going back, as
   when restoring a backup, and coming forward again are not flagged. Nothing is rejected (the save
   belongs to the player), but flagged accounts are left out of leaderboards and of clan boss sizing
-  for 30 days. **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
+  for 30 days (growth past the allowance only lists since November 2026, below). **Before the game opened to strangers** (the owner's beta, 22 October 2026) two holes were closed:
   each upload was measured only from the one before, so the burst allowed at each could be chained a minute apart
   (a made-up save reached stage 6,000 in 22 minutes, never flagged), and an account's first upload was checked
   against the ceilings alone. Now each number is also measured from where the day's window began (`peaks.day`,
@@ -1034,6 +1066,20 @@ signed in the time away is replayed once, for the game the sync chooses (§3.17)
   anvil pays up to 34,161 XP a click before XP bonuses, the bench pays in bursts), and 3 million an hour stays. Stars come all at once: 90 (what the tokens' ceiling would pay; 100 million tokens pay 50), 4 an hour on top,
   and a ceiling of 100,000, for one Ascension a day for years outgrew 2,000 in weeks. Laurels are counted by the Trial's own
   weeks, Monday to Monday, not by the save's age: an account begun on a Sunday had two by the Monday, and a limit of one.
+  **Flags list before they act** (the research loop's R1, the owner's pick, November 2026): only what no save can hold flags
+  at once: a ceiling passed, numbers at odds with each other (an attack beyond what its best stage allows, Trial tiers, the
+  week's Trial or laurels past what it allows), the developer switches, a save the server can't read. A number that grew
+  faster than play allows, inside the ceilings, goes on a list for the owner instead (`flag_reviews`: one row a player, day
+  and number, with its worst upload's figures and the share of its allowance it took), mailed each week by `api/review.js`;
+  the owner flags by hand what deserves it (README "Flags"). Limits set too tight had capped 6 of 43 accounts for days on 4
+  November, unseen. The cost: a forger who stays inside the ceilings plays on, on the boards too, until the owner looks.
+  Each flag carries the check's version (`FLAG_CHECK`: 2 from then; flags from before carry none and count as 1), and
+  flags of an older version lapse, so a check made looser clears what it flagged by itself (five were cleared by hand on 4
+  November); the owner's own (`by: owner`) last their 30 days whatever the version. **A flagged player is told** (P-025: in
+  November the one word in the game, "Capped", was misread and false flags sat for days): every save and load answer says
+  until when the account is flagged (`flaggedUntil`, 0 when it isn't), Settings' account panel shows one line while it is,
+  "Flagged until 12 December: a save showed numbers the game's check doesn't allow.", with a "?" for what a flag does, why,
+  how long, and to tell the team on the Discord (`FEATURES.flagged`); a held-back clan attack's card says so too (§3.18).
 - **Rate limits:** ten tries for a name from one address (a hundred from all of them, fifty from an
   address) in 15 minutes and logins wait; an address makes at most three accounts a day (ten an hour until the
   beta: each is a mail out of the day's hundred, and a pile of fresh accounts is how a clan is carried). Each try is
@@ -1043,6 +1089,13 @@ signed in the time away is replayed once, for the game the sync chooses (§3.17)
   whether the name exists. A token is checked against its account's name, and a body that isn't JSON
   gets a JSON answer. A business-rule refusal
   answers 409, never 403, which the client reads as a lost session.
+- **Guards** (the research loop's R12, November 2026): browsers may call the API from the game's own pages only
+  (https://fantasyidle.com, its www name, https://staging.fantasyidle.com, and a local development host on any port); another
+  site's page gets no CORS headers, and a request with no Origin is answered as before. Express no longer names itself
+  (`X-Powered-By`). Every mail is counted in its day (UTC, `sendCounted` in `api/mail.js`): the mail plan sends 100 a day,
+  and the 80th tells the owner (`OWNER_ALERT_EMAIL`), once that day. HSTS and a `Content-Security-Policy` of
+  `frame-ancestors` (the game's origins and the listings that frame it) and `connect-src 'self'` are nginx's to send; the
+  rest of a CSP waits for the screens' inline handlers to go.
 
 ### 3.18 Clans and leaderboards
 
@@ -1052,7 +1105,9 @@ with the game's own stat code; the client never submits damage or scores.
 
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
   member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
-  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member.
+  places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member. The list of clans to
+  find shows on each row the members who played (uploaded) this past week, and puts the clans with the most of them first,
+  then the biggest (the research loop's P-035, November 2026: by members alone, a big clan gone quiet led the list).
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
@@ -1080,8 +1135,9 @@ with the game's own stat code; the client never submits damage or scores.
   midnight, then comes back as the next level with a fifth more health (`CLAN_BOSS.growth`, ×1.2; it was ×2, and
   level 7 had 64 times level 1's health, beyond any clan: the owner asked that twenty members who use all their
   attacks fell all seven), full; at most seven a week. One not felled stays as it is, damage and all; Monday brings
-  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack, and
-  with strikes Combat Potion I ×2.4, IV ×4.8, VI ×6.4. With every member's three attacks a day and the unused kept
+  a new boss at level 1. Measured attacks (`clanAttackFromSave` on a saved hero): striking ×1.33 a plain attack (at attack
+  speed's cap: `strikeWorth`, `src/core/power.js`; more for a slower hero), and with strikes Combat Potion I ×2.4, IV ×4.8,
+  VI ×6.4. The Clan's "?" gives each level's attacks (20, 24, 29, 35, 41, 50 and 60) and striking's ×1.33. With every member's three attacks a day and the unused kept
   (`tools/clanpower.mjs`): just watching, 20 members fell all seven, 10 six, 5 three, 2 one, one alone one; striking,
   10 seven, 5 four, 2 two; with Potion IV, 3 seven, 2 five, alone three; with VI, 2 six, alone four. Level 1 was 30
   until 26 October 2026: counted by the fight alone, an attack no longer carries the hero's growth through the day,
@@ -1111,7 +1167,8 @@ with the game's own stat code; the client never submits damage or scores.
   (`clanDepthScore`); accounts flagged for impossible numbers are left out. The standings are worked out on request
   (at most once a minute, cleared by an Endless attack or a kill); a finished week's are kept once (`clan_rankings`,
   with the clan's name and tag) by the first look after it ends, and give its top three of each division a crown for
-  the next week, on the clan list and the clan's header, and the clan its best week (its record). On screen
+  the next week, on the clan list and the clan's header, and the clan its best week (its record). A crown is gold for
+  the 1st, silver for the 2nd and bronze for the 3rd, and says its place in a tip a phone opens (`clanCrown`). On screen
   (`endlessPanel`, `clanStandings` in `src/ui/render.js`): the Hydra's card under the week's boss (asleep, when it
   wakes; awake, the fight and two pips), the clan's division, place and depth, the week's table by division and last
   week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
@@ -1139,8 +1196,9 @@ with the game's own stat code; the client never submits damage or scores.
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real
-  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`,
-  the card why). A card shows the damage and the member's place in the clan that week; a felled boss
+  damage, so it was lifted the same day and only flagged accounts are held back (the answer says `capped`;
+  the card says "Flagged: at most 1% of the boss", why, and to tell the team on the Discord, and a tap opens Settings,
+  §3.17). A card shows the damage and the member's place in the clan that week; a felled boss
   shows which level comes back and when ("Level 2 in 5h 12m", or a new boss on Monday). A fight in progress never survives a reload (the
   attack isn't spent); the hero goes back to what he was doing (`src/systems/resume.js`, shared with the
   Titan). Attacks: **three a day, banked up to six** (`clan_charges`, refilled each UTC day and spent
@@ -1153,7 +1211,10 @@ with the game's own stat code; the client never submits damage or scores.
   Clan tab (`/api/rewards`), once each.
 - **Leaderboards** are opt-in with a plain-language consent line: username plus best stage, total
   level, Titans or dungeon clears, all time or this week (from where each player stood when the week
-  began: the numbers stored before their first upload of the week, not that upload's).
+  began: the numbers stored before their first upload of the week, not that upload's). They open on this week,
+  so a newcomer meets a board a week of play can climb, not the beta's head start (P-129), and on all time while
+  the week's board holds fewer than `BOARD_WEEK_MIN` (5) names: decided at the first look, kept once the player
+  taps the period (`boardOpensOn`, `src/data/social.js`; `openingBoard`, `src/main.js`).
   The numbers are computed once per upload and stored, so a board is one query.
 - **Polling:** the Clan tab refreshes on opening and then at most once a minute, only while it is open
   and in view.
@@ -1243,7 +1304,18 @@ keeps:
   one-shot moves (lunge, knockback, entrances, the fall) are Web Animations on the outer one, ranked
   so a monster's entrance isn't interrupted by the first hit.
 - **Bounded.** At most 8 effects per frame and 14 coins in flight, nothing while the tab is hidden, and
-  no floating effects under reduced motion (the setting or the system preference).
+  no floating effects under reduced motion (the setting or the system preference). The monster flashes at most
+  three times a second (WCAG 2.3.1, `FLASH_GAP_MS`): a hit, a crit, a boss's entrance or a fall that comes sooner
+  than 340 ms after the last flash moves without the light, and keeps its number and its sound.
+- **A wall that repeats goes quiet** (P-081; `src/systems/walls.js`). At a wall a hero fell about twice a minute, or a
+  boss held out every 90 seconds, each time with the defeat jingle, the banner and the red edge. The first fall or
+  timeout at a wall (a kind, in a zone of ten stages) keeps all three and its toast; for ten minutes after it the next
+  ones there play one soft note, show no banner or edge (the hero still falls), and fold into one toast that counts
+  them ("Fell again ×4"). Then the next is loud again. Only the stage ladder: a fall in a dungeon, at the Titan or the
+  clan boss stays loud.
+- **Two keys.** M opens the map (and closes it), Space strikes; Esc folds the full-screen fight. Settings turns M and
+  Space off (WCAG 2.1.4: speech input types letters), on that device only (`ui.shortcuts`, kept in the browser as
+  `fantasyIdle.keys`, not in the save); Enter or Space on a focused control still presses it.
 - **Clicks on the real clock.** A strike first runs the game up to the current time, so the
   auto-clicker guard (120 ms) measures real time rather than the last 100 ms tick; the first input
   after a long absence gets its welcome-back report the same way.
@@ -1324,7 +1396,11 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   the base), the double chance (what doubles, and how much comes from tools and from mastery), the
   keep chance and the mastery bar. Anything with
   a `data-tip` gets that tooltip at once on a mouse (`tipAttrs` in render.js, main.js), and holds
-  back the browser's slower one of the card beneath.
+  back the browser's slower one of the card beneath. A touch screen has no hover, so a tap opens the same bubble
+  (`TIP_TARGETS` in main.js): on the purse's coins, the header's pills, the hero's and the monster's numbers in
+  the fight (the monster's without a strike) and the hero's stats by his doll, as on the codex and the bestiary.
+  A button presses on a tap, so its title (or a badge's inside it) shows on a long press of half a second, and that
+  press does nothing else; not on the monster, nor in a mini-game, where holding is the game.
 - **Every action card has its own picture.** A small painting runs across the card's top, the
   medallion set on its lower edge: the vein, the tree, the fish leaping, the animal, the herb, the
   potion, the ingot, the piece on the anvil, the dish (ninety in all, `assets/paint/cards/`).
@@ -1339,20 +1415,29 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   fight's supply table and war table) cover the rest. A shade lighter at the top keeps titles on the
   painting and cards readable; cards let a little of it through. The sidebar stands on the hall's
   own painting (its red banner behind the mark, its trophy cabinet behind the places); only the
-  header is smoked glass over the guild hall. In the sidebar each place is a medallion ringed in its
+  header is smoked glass over the guild hall. A skill's name, level and XP stand on a smoked plate of their own, so
+  they read over a pale sky (4.5:1 at least, WCAG 1.4.3). In the sidebar each place is a medallion ringed in its
   skill's colour (gold for the rest) with its XP bar in that colour and its level on a gold-rimmed
   badge (solid gold at 99); the place being worked breathes, its tool bobs and its bar shines.
 - **Places have pictures; rules live behind a "?".** `src/ui/features.js` holds, for every place,
   its painting, one line and the rules in a few short points. That one entry is the card shown when
   the place opens, the banner on tabs without a scene or a skill stage (shop, achievements, events,
   clan, dungeons) and the About card behind every "?", which is where the "How it works"
-  paragraphs went.
+  paragraphs went. Each About card with a page of its own on the player wiki ends with a small "More on the
+  wiki" (`WIKI_PAGES` in `src/ui/features.js`; the wiki's test checks each lands), and Settings links the
+  wiki beside the Discord (`WIKI_URL`, `src/data/social.js`): the card keeps to a few lines, the page has all
+  the rules and numbers.
 - **Pictures, not emoji.** Everything the player handles has a sprite: perks are DCSS spell and god
   icons in a gold frame, the tools are items (two from DCSS, four drawn in its manner), each agility
   obstacle has its own picture, the daily crate is a DCSS chest and Settings a cog (`build_icons` in
   `tools/resource_art.py`). Controls that are switches rather than things (sound, cloud save, the
   map, retreat, resting, full screen) are drawn line icons in `src/ui/render.js`. Toasts take a
   sprite beside their text.
+- **Said how it was made.** Settings ends with "How it was made": the paintings made with Google Gemini, an AI, and
+  how they were edited (their count, `PAINTINGS` in `src/ui/render.js`, is the files under `assets/paint/`, a test
+  keeps it so); the sprites drawn by Dungeon Crawl Stone Soup's artists (CC0) and the pictures the game's code draws;
+  the sounds made in code; the code and the words written with an AI, Claude; the type. A disclosure that understates
+  draws anger (P-020 in the research loop); `assets/CREDITS.md` names every source.
 - **One card per moment.** Places that open together share a card (the first boss opens five), so
   nothing queues up. A card is a button: it goes to the place.
 - **Dialogs on a phone are cards, not screens** (October 2026: the owner found every popup took a phone
@@ -1363,6 +1448,9 @@ screen from the first second. Now the same rule holds inside the screens. The ru
   390 × 664, Prestige covers 73% of the screen (it was taller than the screen), the perks 84%, an About
   card 81%, the crate about 70%; at 390 × 844, 57%, 68%, 64% and about 55% (92%, 96% and scrolling,
   96% and 79% before).
+- **Words on a phone are 11 px at least** (Apple's floor; P-019 in the research loop): at 390 px a third to
+  three-fifths of the words were under 12 px, the stage numbers 8.8 px, a supply's count 9.9 and a doll's slot 9. One
+  block in `style.css` (after the hotbar's) raises every one that was under 11 px there; a new rule keeps to it.
 - **Cards on a phone are banners.** The celebration cards (a medal, a level-up, a new land, a place, a
   rank, a pet) were columns over the middle of the fight: at 390 × 664 a new land covered 45% of the
   screen and the top of both fighters' bars, a level-up 36%, a medal 30%. Under 600 px each is now a
@@ -1408,7 +1496,10 @@ needs another screen: fight, spend, prestige and fight on.
   it does and what the next level costs (Learn 1 SP, then Upgrade 2 SP), lit only while there are
   points enough.
 - **Dialogs stay on top.** The map, the prestige confirmation, perks and About cards open over the
-  fight; toasts move under the top bar so they never cover the dock.
+  fight; toasts move under the top bar so they never cover the dock. A dialog holds the keys (WCAG 2.4.3): the
+  page behind it is inert, Tab and Shift+Tab go round the dialog on top (a question over a dialog, the one under
+  it inert too), each is named by its title, and once the last closes the focus goes back to the control a key
+  opened it from; after a click or a tap it is let go, as after any button, so Space strikes again.
 - **A dungeon run and the Titan are fought on the Dungeons tab** (`fightTab` in `src/ui/features.js`;
   the owner, October 2026: mid-run the Dungeons tab showed the list as if no run were on, the fight had
   to be found under Combat, and a Titan felled took the screen to the stages' fight). While one lasts,
@@ -1472,7 +1563,11 @@ time. One who struck reached stage 30 in two minutes and had ten places open in 
   with a ring where it presses: the monster until the player has struck three times, the sword's
   Equip, the cheapest camp upgrade the first time one is affordable, the boss's skull on the stage
   path while the hero regroups after it held out (a tap fights it again at once; the skull pulses
-  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. No
+  then for everyone), and on the Mining tab, before any skill has been worked, the first vein. At a first
+  wall (after a fall or a boss that held out, the hero back below the run's highest stage: `atWall`) it points
+  again, before the skull: at the dock's Equip for any piece that beats what he wears, then at the cheapest camp
+  level while the gold allows (P-079: a player who pressed only where it pointed fell at the stage-20 boss with
+  658-679 gold unspent and better armour waiting); resting after a fall too. No
   words. It comes only after a pause in which a player who would do the thing anyway has done it
   (3 s on the monster, 4 s on the camp, about a second elsewhere), never takes a click, hides under
   dialogs and cards (all but the two below), points down from above where there is no room below,
@@ -2073,7 +2168,9 @@ Rules:
    source that grows with depth, so health from armour is what keeps a deep hero from falling to
    every hit (§5.3).
 3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.75 s),
-   damage mitigation 90%, action interval ≥ 250 ms.
+   damage mitigation 90%, action interval ≥ 250 ms. Attack speed's bonuses together are kept before the cap
+   (`derived.attackSpeedBonus`): from the cap on, the Inventory marks the hero's swing "cap", and a piece's speed
+   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.
 
@@ -2137,13 +2234,20 @@ fights about a third of the time, so a player who mostly fights gets there soone
 
 `node tools/simulate.mjs --hours=150 --seed=N` plays the game through the same `Game` API as the UI,
 with a "sensible player" policy: wear what beats what it wears and salvage the commons, keep food
-stocked, fight until stalled; when stalled, alternate between farming the deepest dungeon it clears
+stocked, fight until stalled (15 minutes on the game's own stall clock, `combat.stallMs`; until November
+2026 it was 15 minutes since its last new best or the last fight it began, and deciding again every 10
+minutes it fired 0 times in 31 runs: past stage 700 it waited out an hour at each wall, and the always-on
+bot's deep figures from before are 210–220 stages low at hours 300 and 600, research-loop 039;
+`--set=POLICY.stallFix:0` plays it so); when stalled, alternate between farming the deepest dungeon it clears
 comfortably (while its chests or unique still help — otherwise it keeps fighting at the wall for half
 an hour) and training a skill (Mining and Smithing first while they can't yet make the bars for the
 weapon it wears; once Crafting is open, every third turn goes to it, with a gem pouch from the shop
 when it has no gem to cut: until October 2026 Crafting never got a turn); put bars and essence into its
-worn gear at the anvil; challenge the Titan whenever
-it wakes; tend the farm; build and upgrade the agility course (training agility, and gathering its
+worn gear at the anvil; challenge the Titan when the dungeons tab's badge says it can win (the game's own
+preview), and see the fight out before a visit ends (until November 2026 it tried every Titan whenever one
+was awake and left in the middle of one, the hero then working all the time away: with bigger banks, 24
+for the daily visit and 8 or 24 for three a day, its heroes stuck at stage 40 in 12 of 18 runs,
+research-loop 040; `--set=POLICY.titanFix:0` plays it so); tend the farm; build and upgrade the agility course (training agility, and gathering its
 materials, up to a quarter of the time); prestige when a run stalls and adds a fair share of the tokens
 it holds (15% early, ~2% at 7,000 tokens), or when it has gone an hour without a new best in the run
 (its own stall clock: until October 2026 a fresh fight restarted it, so at the wall near stage 310 the
@@ -2152,9 +2256,13 @@ Trial (§3.26; `--trials=0` never, as every figure before them); claim the daily
 the dock's Auto switch once earned; `--player=<schedule>` plays a login schedule (online, tab16,
 evening, checkin5, checkin3, checkin2, daily1, alt2) with the offline replay between sessions;
 `--set=ROOT.path:value` changes a constant; `--json` writes the run, with a log of big moments by band
-of hours. `node tools/batch.mjs --seeds=30` runs many seeds in parallel (about 7 runs of 150 h a
-minute on 8 cores) and reports medians with the 10th and 90th percentiles; `node tools/audit.mjs`
-checks the batches against the research's thresholds (the report card, §5.7). A real player's rhythm can be
+of hours. Its report books essence, bars and gems by source and sink, in bands of 50 hours, as it books
+gold by sink, and names each band in which one of them spent under a tenth of what came in (a pool), and
+the most Armour Rack levels and worn affixes past their caps (the pool check, P-114: `tools/simlib.mjs`;
+`tools/batch.mjs` summarises it and the report card checks it, E12). `node tools/batch.mjs --seeds=30`
+runs many seeds in parallel (about 7 runs of 150 h a minute on 8 cores) and reports medians with the
+10th and 90th percentiles; `node tools/audit.mjs` checks the batches against the research's thresholds
+(the report card, §5.7). A real player's rhythm can be
 set beside it: Settings' **playtest log** (off unless turned on; `src/systems/playtest.js`) keeps a
 timeline of the moments of play in the save, exported as a file that `node tools/playtest.mjs` reads.
 Three seeds, 150 hours each:
@@ -2537,6 +2645,7 @@ src/version.js        the version this copy of the game is (empty here; a deploy
 src/game.js           Game facade: state + tick + every player action (no DOM)
 src/core/             xp · rng · state (defaults, migration) · modifiers · formulas · save (backups, the
                       cloud client, which save is played) · power (server-side numbers) · text (articles for names)
+                      · door (who meets the sign-in first: the bare address, a guest's link, a frame)
 src/data/             resources · skills · workshop · items · zones · camp · perks · achievements · unlocks
                       · dungeons (dungeons, their tiers and rules, uniques, the Titan) · pets · farming (plots, crops) · agility
                       · events (weekend events, milestones, shop) · mastery (rules, actions) · social (clan settings)
@@ -2551,6 +2660,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · disclosure (which pieces of the screens have opened for the player)
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
+                      · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
@@ -2560,13 +2670,16 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       finished action makes, popping off its target) · update.js (when an open page looks for a
                       newer version) · reentry.js (the bar time away is replayed behind) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
-                      parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · CREDITS.md
+                      parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
+                      and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,
+                      no request leaves for Google) · CREDITS.md
 wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki.vercel.app): build.mjs makes a
                       static site from src/ and assets/ (pages/*.mjs: tables, infoboxes and cross-links from the
                       data; content/**/*.md: the written explanations, with {{ }} numbers read from the game;
                       lib/: Markdown, layout, search, link check). test/wiki.test.mjs keeps it building
 api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
                       clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
+                      · mail.js (Resend) · review.js (the growth check's list, mailed to the owner each week)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·
