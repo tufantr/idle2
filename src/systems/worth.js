@@ -14,17 +14,20 @@
 //    (core/formulas.js enemyDamage), health while it threatens;
 // whichever moves more. Once a boss's blow is under a tenth of his health only the clock counts: deep, defence and health
 // are numbers there and nothing more (research loop 047: from stage 1,300 no food, no defence ×0.1 to ×10 and no health
-// ×0.5 to ×2 changed a stage reached). In Glass Hero, where the first blow that lands fells him, they count for nothing.
+// ×0.5 to ×2 changed a stage reached). That is the deep ladder's rule: until its bosses have come down to their monsters'
+// blow (BALANCE.enemy.stageBoss.to, stage 150) defence and health count whatever the share, since a new hero falls to
+// blows of 3 to 8% of his health, worn down on the climb to them. In Glass Hero, where the first blow that lands fells
+// him, they count for nothing.
 
 import { collectModifiers, deriveStats, potionEffects, BASE } from '../core/modifiers.js';
-import { enemyForStage, MAX_MITIGATION } from '../core/formulas.js';
+import { enemyForStage, MAX_MITIGATION, BALANCE } from '../core/formulas.js';
 import { CAMP_UPGRADES, campMultiplier } from '../data/camp.js';
 import { SMITHING_TYPES, TYPE_SLOTS } from '../data/items.js';
 import { forgeMult } from '../data/workshop.js';
 import { trialBite } from '../data/trials.js';
 import { STAGES_PER_ZONE } from '../data/zones.js';
 
-/** A boss's blow under this share of the hero's health doesn't threaten him: defence and health count for nothing there. */
+/** A boss's blow under this share of the hero's health doesn't threaten him: defence and health count for nothing there (from the deep ladder on: stageBoss.to). */
 export const THREAT_SHARE = 0.1;
 
 /** The boss at the wall for a best stage: the first stage boss at or past it (bosses stand every STAGES_PER_ZONE stages). */
@@ -155,7 +158,7 @@ function wallBase(state, given, camp) {
     const bossAtk = boss.atk * (bite.enemyAtk || 1);
     const soften = 1 - (fx.fortress || 0);
     const threat = bite.oneBlow ? 0 : blowOf(bossAtk, def) * soften / Math.max(1, hp);
-    const survival = !bite.oneBlow && threat >= THREAT_SHARE;
+    const survival = !bite.oneBlow && (threat >= THREAT_SHARE || stage < BALANCE.enemy.stageBoss.to);
     const hpBase = BASE.baseHp + BASE.hpPerCombatLevel * ((d.combatLevel || 1) - 1);
     const atk0 = BASE.unarmedAtk + mods.gearAtk;
 

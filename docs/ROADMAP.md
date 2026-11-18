@@ -1595,6 +1595,9 @@ Keeping it running:
       clicking paid. Focus's speed now comes last, and its part past the cap adds as much damage: ×1.15 for a hero
       already at the cap, about four stages at a deep wall. The Focus pill's tip says which it gives; the server, which
       counts no Focus, reads a hero as before
+- [x] **Armour still counts at the first walls** (a fix on the one measure for gear, November 2026; DESIGN §3.31): below
+      stage 150, where a new hero falls to blows of 3 to 8% of his health, defence and health count whatever a blow's
+      share, so a better plate keeps its ▲ and the guide's hand, and Weaker leaves it
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

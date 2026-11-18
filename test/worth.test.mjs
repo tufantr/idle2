@@ -172,6 +172,32 @@ test('where a boss\'s blow threatens, defence and health still count, and defenc
     s.trials.active = null;
 });
 
+test('before the deep ladder armour counts whatever share a blow takes: first walls fell heroes with small blows', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.combat.xp = xpForLevel(20);
+    Object.assign(s.combat, { stage: 20, maxStage: 20, bestStage: 20 });
+    const piece = (def, id) => ({ id, type: 'Body', tier: 1, name: 'Plate', rarity: 'common', atk: 0, def, affixes: [], upgrade: 0, reforges: 0, locked: false, value: 1, source: 'drop', materials: null });
+    s.equipped.Body = piece(15, 1);
+    game.recompute();
+    const better = piece(32, 2);
+    s.inventory.push(better);
+    const judge = judgeOf(game);
+    assert.ok(judge.wall.threat < THREAT_SHARE, `a blow is ${(100 * judge.wall.threat).toFixed(1)}% of his health`);
+    assert.equal(judge.wall.survival, true, 'stage 20: his blows count');
+    assert.ok(judge.worth(better) > 0 && isUpgrade(s, better, judge));
+    assert.equal(findUpgrade(s, judge)?.item, better, 'the Equip is offered');
+    assert.ok(!weakerInBag(s, judge).includes(better), 'and Weaker leaves it');
+    // from stage 150 on the blow's share decides again: a boss at 150 that hardly scratches him
+    s.combat.bestStage = s.combat.maxStage = 150;
+    s.equipped.Body = piece(1e7, 1);
+    game.recompute();
+    const deep = judgeOf(game);
+    assert.equal(deep.wall.stage, 150);
+    assert.ok(deep.wall.threat < THREAT_SHARE);
+    assert.equal(deep.wall.survival, false);
+});
+
 test('the old ratios still read: gainStages counts the wall that binds', () => {
     const game = new Game(null, T0);
     const s = game.state;

@@ -2014,7 +2014,10 @@ forge is shown agreed first (the owner asked how a player would know it):
   a stage), crits and swing time counted (Weak Spot's and Flurry's too); and at its blow, while the blow threatens (a
   tenth of his health or more, `THREAT_SHARE`), how much harder the boss could hit for the same share of his health, over
   ln(its attack growth a stage), defence counting only below the 90% cap; whichever moves more. Under a tenth only the
-  clock counts, and in Glass Hero defence and health count for nothing. It was the attack's ratio at the boss and
+  clock counts, from stage 150 (`BALANCE.enemy.stageBoss.to`, where the ladder's bosses have come down to their monsters'
+  blow): before it defence and health always count, since first walls fell heroes with blows of 3 to 8% of their health
+  (the climb wears them down), and armour there must keep its ▲, the guide's hand and its place past Weaker.
+  In Glass Hero defence and health count for nothing. It was the attack's ratio at the boss and
   defence and health at the blow with no cap and no threat (the exchange rate of the research, §1.1): past about stage
   700 a legendary plate said +19 stages at 1,000 and gave none, and the dock offered it before a sword. Now, on heroes
   built from the game's own drops at 700, 1,300 and 2,000 (`test/worth.test.mjs`), a frontier shield, helm, plate or
