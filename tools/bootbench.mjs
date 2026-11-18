@@ -8,15 +8,14 @@
 //   node tools/bootbench.mjs runs/hero-1300.json [<game folder> ...] [--runs=3] [--rates=1,4] [--away=24] [--auto=on|off]
 //
 // Each run, in ms from navigation: first paint; modules in (the last /src/ module fetched); the bar (the catch-up's dialog
-// first drawn, src/main.js catchUp); the game drawn (the first frame after the sidebar fills); interactive (the first of the
-// mouse moves sent every 50 ms after that which the page handled within 50 ms); the longest task and the count over 50 ms;
-// the frames drawn before the game was, and the longest gap between two of them. Then the medians and ranges.
-// Needs Playwright, as tools/shots.mjs does.
-import { createServer } from 'node:http';
+// first drawn, src/main.js catchUp), how many times it moved and the longest it stood still while up; the game drawn (the
+// first frame after the sidebar fills); interactive (the first of the mouse moves sent every 50 ms after that which the page
+// handled within 50 ms); the longest task and the count over 50 ms; the frames drawn before the game was, and the longest
+// gap between two of them. Then the medians and ranges. Needs Playwright, as tools/shots.mjs does.
 import { readFile } from 'node:fs/promises';
-import { extname, join, normalize, sep, resolve, dirname } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
+import { chromiumOrExit, serve, shifted } from './bootlib.mjs';
 
 const args = process.argv.slice(2);
 const opt = Object.fromEntries(args.filter(a => a.startsWith('--')).map(a => { const [k, v] = a.slice(2).split('='); return [k, v ?? true]; }));
@@ -27,52 +26,20 @@ if (!savePath) { console.error('Usage: node tools/bootbench.mjs <save.json> [<ga
 const RUNS = Number(opt.runs || 3);
 const RATES = String(opt.rates || '1,4').split(',').map(Number);
 const AWAY_H = Number(opt.away || 24);
-let chromium;
-try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
-    console.error('Playwright is missing. Once: npm i --no-save playwright && npx playwright install chromium');
-    process.exit(2);
-}
-
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
-    '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg' };
-function serve(root) {
-    const server = createServer(async (req, res) => {
-        const path = normalize(decodeURIComponent(new URL(req.url, 'http://local').pathname)).replace(/^[/\\]+/, '');
-        const file = join(root, path || 'index.html');
-        if (file !== root && !file.startsWith(root + sep)) { res.writeHead(403).end(); return; }
-        try { res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' }).end(await readFile(file)); }
-        catch { res.writeHead(404).end(); }
-    });
-    return new Promise(ok => server.listen(0, '127.0.0.1', () => ok({ server, url: `http://127.0.0.1:${server.address().port}/` })));
-}
-
-/** Every clock in the save moved by the same amount, so that it was saved at `savedAt`. */
-function shifted(raw, savedAt) {
-    const s = structuredClone(raw);
-    const delta = savedAt - s.meta.savedAt;
-    const walk = o => {
-        for (const [k, v] of Object.entries(o)) {
-            if (v && typeof v === 'object') walk(v);
-            else if (typeof v === 'number' && v > 0 && (/(At|Until)$/.test(k) || k === 'until' || k === 't')) o[k] = v + delta;
-        }
-    };
-    walk(s);
-    if (opt.auto === 'on') s.settings.autoPrestige = true;
-    if (opt.auto === 'off') s.settings.autoPrestige = false;
-    return s;
-}
+const chromium = chromiumOrExit();
+const auto = opt.auto === 'on' ? true : opt.auto === 'off' ? false : undefined;
 
 const raw = JSON.parse(await readFile(savePath, 'utf8'));
-const servers = await Promise.all(roots.map(serve));
+const servers = await Promise.all(roots.map(root => serve(root)));
 const browser = await chromium.launch();
 
 async function run(url, rate) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
-    const save = JSON.stringify(shifted(raw, Date.now() - AWAY_H * 3600000));
+    const save = JSON.stringify(shifted(raw, Date.now() - AWAY_H * 3600000, { auto }));
     await ctx.addInitScript(([text]) => {
         try { localStorage.setItem('fantasyIdle.save.v2', text); localStorage.setItem('fantasyIdle.introSeen', '1'); } catch { /* */ }
-        const m = (window.__bench = { frames: [], moves: [], longTasks: [], drawn: null, bar: null, slices: 0, sliceMs: 0 });
+        const m = (window.__bench = { frames: [], moves: [], longTasks: [], drawn: null, bar: null, barMoves: [], slices: 0, sliceMs: 0 });
         // the catch-up's slices (src/main.js pump, on a MessageChannel): how many, and the time spent in them
         const port = Object.getOwnPropertyDescriptor(MessagePort.prototype, 'onmessage');
         Object.defineProperty(MessagePort.prototype, 'onmessage', {
@@ -85,7 +52,10 @@ async function run(url, rate) {
             const t = Math.round(performance.now());
             if (m.drawn === null) {
                 m.frames.push(t);
-                if (m.bar === null && document.querySelector('.cu-bar')) m.bar = t;
+                const bar = document.querySelector('.cu-bar');
+                if (m.bar === null && bar) m.bar = t;
+                const shown = bar && !bar.classList.contains('waiting') ? Number(bar.getAttribute('aria-valuenow')) : null;
+                if (shown !== null && shown !== m.barMoves[m.barMoves.length - 1]?.[1]) m.barMoves.push([t, shown]);   // [when, its percent]
                 if (document.querySelector('#nav')?.children.length) m.drawn = t;
             }
             requestAnimationFrame(tick);
@@ -122,7 +92,9 @@ async function run(url, rate) {
     const interactive = m.moves.find(([at, seen]) => at > m.drawn && seen - at < 50)?.[1] ?? null;
     const longest = m.longTasks.reduce((a, [, d]) => Math.max(a, d), 0);
     const gaps = m.frames.slice(1).map((t, i) => t - m.frames[i]);
-    return { firstPaint: m.firstPaint, modulesIn: m.modulesIn, bar: m.bar, drawn: m.drawn, interactive, longestTask: longest, longTasks: m.longTasks.length,
+    const stills = m.barMoves.slice(1).map(([t], i) => t - m.barMoves[i][0]);
+    return { firstPaint: m.firstPaint, modulesIn: m.modulesIn, bar: m.bar, barMoves: m.barMoves.length, barStill: stills.length ? Math.max(...stills) : null,
+        barEnd: m.barMoves.length ? m.barMoves[m.barMoves.length - 1][1] : null, drawn: m.drawn, interactive, longestTask: longest, longTasks: m.longTasks.length,
         slices: m.slices, sliceMs: Math.round(m.sliceMs),
         framesBefore: m.frames.length, longestFrameGap: gaps.length ? Math.max(...gaps) : null, report: m.report, away: m.away, story: m.story, errors };
 }
@@ -144,5 +116,5 @@ const med = xs => { const v = xs.filter(x => x !== null).sort((a, b) => a - b); 
 for (const rate of RATES) for (const root of roots.map(r => r.split('/').pop())) {
     const rs = results.filter(x => x.rate === rate && x.root === root);
     const cell = k => `${med(rs.map(x => x[k]))} (${Math.min(...rs.map(x => x[k] ?? Infinity))}–${Math.max(...rs.map(x => x[k] ?? -Infinity))})`;
-    console.log(`${rate}× ${root}: first paint ${cell('firstPaint')} · modules ${cell('modulesIn')} · bar ${cell('bar')} · longest task ${cell('longestTask')} · long tasks ${cell('longTasks')} · drawn ${cell('drawn')} · interactive ${cell('interactive')} · frames before ${cell('framesBefore')} · longest frame gap ${cell('longestFrameGap')} · slices ${cell('slices')} in ${cell('sliceMs')}`);
+    console.log(`${rate}× ${root}: first paint ${cell('firstPaint')} · modules ${cell('modulesIn')} · bar ${cell('bar')}, moved ${cell('barMoves')} times, still at most ${cell('barStill')} · longest task ${cell('longestTask')} · long tasks ${cell('longTasks')} · drawn ${cell('drawn')} · interactive ${cell('interactive')} · frames before ${cell('framesBefore')} · longest frame gap ${cell('longestFrameGap')} · slices ${cell('slices')} in ${cell('sliceMs')}`);
 }
