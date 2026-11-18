@@ -888,6 +888,13 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 - **Focus** (Clicker Heroes' idle ancients): after **60 seconds without a click or key press** the hero
   settles in — +15% skill speed and +15% attack speed until the next input. It also applies to offline
   progress, so leaving the game alone is never strictly worse than clicking.
+  Its attack speed comes after every other bonus, and the part of it past attack speed's cap of +100% becomes
+  damage, a point for a point (`BASE.focusCapDamage`; `derived.focusSpeed` and `derived.focusDamage`, which the
+  Focus pill's tip reads): at the cap it added nothing to a fight, every deep hero the simulator made sat past the
+  cap, and a deep hero gained from clicking alone (a player's point, November 2026). A hero already at the cap hits
+  ×1.15 while focused, about four stages at a deep wall (monster health grows 3.5% a stage from stage 700); below the
+  cap nothing changed. The server counts no Focus (`core/power.js` stableState), so the boards, the clan fight and
+  the growth check read a hero as before.
 
 ### 3.16 Offline progress
 
@@ -2213,7 +2220,9 @@ Rules:
 3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.75 s),
    damage mitigation 90%, action interval ≥ 250 ms. Attack speed's bonuses together are kept before the cap
    (`derived.attackSpeedBonus`): from the cap on, the Inventory marks the hero's swing "cap", and a piece's speed
-   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip.
+   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip. Focus's speed is
+   left out of it: counted last, its part past the cap becomes damage (§3.15), so the marks say what more speed does,
+   focused or not.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.
 

@@ -68,6 +68,11 @@ export const BASE = {
     focusAfterMs: 60000,
     focusSkillSpeed: 0.15,
     focusAttackSpeed: 0.15,
+    // Focus's attack speed is counted after every other bonus, and what of it the cap leaves unused becomes damage, a
+    // point of speed for a point of damage (×1.15 for a hero already at the cap): at the cap Focus added nothing to a
+    // fight, so a deep hero gained by clicking alone (a player's point, November 2026). 0 turns it off for a measurement
+    // (tools/simulate.mjs --set=BASE.focusCapDamage:0).
+    focusCapDamage: 1,
     // Bonfire: every log burnt adds time; while it burns, all skills (combat too) earn more XP, and every
     // gathering and production action may make two (the owner, October 2026: XP alone went unnoticed).
     bonfireXp: 0.05,            // at firemaking level 1 ...
@@ -285,7 +290,10 @@ export function collectModifiers(state) {
     mods.focused = isFocused(state, now);
     if (mods.focused) {
         for (const id of Object.keys(mods.skillSpeed)) if (id !== 'farming') mods.skillSpeed[id] += BASE.focusSkillSpeed;
-        if (state.combat.mode !== 'clan') mods.attackSpeed += BASE.focusAttackSpeed;   // (the clan fight is watched, and the server counts no Focus)
+        if (state.combat.mode !== 'clan') {   // (the clan fight is watched, and the server counts no Focus)
+            mods.attackSpeed += BASE.focusAttackSpeed;
+            mods.focusSpeed = BASE.focusAttackSpeed;   // (counted last: what the cap leaves of it becomes damage, deriveStats)
+        }
     }
 
     return mods;
@@ -349,7 +357,11 @@ export function deriveStats(state, mods = collectModifiers(state)) {
     const brew = mods.potions || potionEffects(state);
     const banner = state.combat.mode === 'clan' ? 1 : clanBannerMult(state);   // (not in the clan boss's own fight: the server leaves it out too)
     const legacy = legacyMult(state) * banner;
-    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * Math.exp(mods.atkLog) * tokenLayerAtk * camp.atk * brew.atk * legacy;
+    // Focus's attack speed comes on top of every other bonus: the part of it past the cap adds damage instead (BASE.focusCapDamage)
+    const focusPool = mods.focusSpeed || 0;
+    const focusUnused = Math.min(focusPool, Math.max(0, mods.attackSpeed - BASE.caps.attackSpeed));
+    const focusDamage = BASE.focusCapDamage * focusUnused;
+    const atk = (BASE.unarmedAtk + mods.gearAtk) * (1 + mods.atkMult) * Math.exp(mods.atkLog) * tokenLayerAtk * camp.atk * brew.atk * legacy * (1 + focusDamage);
     const def = mods.gearDef * (1 + mods.defMult) * Math.exp(mods.defLog) * tokenLayerDef * camp.def * brew.def * legacy;
     const maxHp = (BASE.baseHp + BASE.hpPerCombatLevel * (combatLevel - 1) + BASE.hpPerDef * mods.gearDef) * (1 + mods.hpMult) * Math.exp(mods.hpLog) * tokenLayerHp * camp.hp * brew.hp * (bite.heroHp ?? 1) * legacy;
     // nothing makes the hero slower than his base (a hand-made affix below nothing made him never swing, or swing at the cap)
@@ -363,7 +375,11 @@ export function deriveStats(state, mods = collectModifiers(state)) {
         critChance: Math.min(BASE.caps.critChance, BASE.baseCritChance + mods.critChance),
         critDmg: BASE.baseCritDmg + mods.critDmg,
         attackInterval: Math.max(BASE.minAttackInterval, Math.round(BASE.baseAttackInterval / (1 + attackSpeed))),
-        attackSpeedBonus: mods.attackSpeed,   // every attack speed bonus together, before its cap: from the cap on, more adds nothing (the hero's panel says so)
+        // every attack speed bonus together but Focus's, before its cap: from the cap on, more adds nothing, Focus or not (the
+        // hero's panel says so); Focus's own past the cap is damage
+        attackSpeedBonus: mods.attackSpeed - focusPool,
+        focusSpeed: focusPool - focusUnused,   // the attack speed Focus adds now (none in the clan fight) ...
+        focusDamage,                           // ... and the damage its speed past the cap adds instead (attack ×(1 + this))
         dodge: Math.min(BASE.caps.dodge, mods.dodge),
         lifesteal: Math.min(BASE.caps.lifesteal, mods.lifesteal),
         goldMult: 1 + mods.goldMult,
