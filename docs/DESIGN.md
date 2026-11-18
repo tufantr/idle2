@@ -2133,6 +2133,12 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
   signed in, the tool answering the API.
 
+### 3.36 Settings: how the game looks, sounds and reads
+
+The Options panel of Settings stands in groups (`optionGroups` in `src/ui/render.js`), each a `fieldset` with a name a screen
+reader says: a row shows only for what the player has met, and the rules go behind the panel's "?". Choices that change how
+the game looks, sounds or reads never change how it plays.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat

@@ -2367,17 +2367,35 @@ export function renderSettings(game, ui, cloud) {
         <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
         <div class="look-picks" role="group" aria-label="Your hero's look">${lookPicks(state)}</div>
         ${capePicks(state)}
-        <label class="toggle"><input type="checkbox" onchange="FI.setSetting('sound', this.checked)" ${state.settings.sound !== false ? 'checked' : ''}> Sound and vibration</label>
-        ${state.settings.sound !== false ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(state.settings.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : ''}
-        <label class="toggle"><input type="checkbox" onchange="FI.setSetting('reducedMotion', this.checked)" ${state.settings.reducedMotion ? 'checked' : ''}> Reduce motion</label>
-        <label class="toggle" title="On this device only"><input type="checkbox" onchange="FI.setShortcuts(this.checked)" ${ui?.shortcuts !== false ? 'checked' : ''}> Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}</label>
-        ${seen(state, 'minigames') ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('minigameChime', this.checked)" ${state.settings.minigameChime !== false ? 'checked' : ''}> Chime when a mini-game chance appears</label>` : ''}
-        ${state.settings.devUnlockAll ? `<label class="toggle"><input type="checkbox" onchange="FI.setSetting('devUnlockAll', this.checked)" checked> Developer mode: unlock every tab and mini-game</label>` : ''}
-        <label class="toggle" title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"><input type="checkbox" onchange="FI.setPlaytestLog(this.checked)" ${state.settings.playtestLog ? 'checked' : ''}> Keep a playtest log</label>
-        ${state.settings.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : ''}
+        <div class="opt-groups">${optionGroups(game, ui)}</div>
         <p class="muted small">${VERSION ? `Game version ${esc(VERSION)} · save` : 'Save'} version ${state.version}</p>
     </section>
     ${madeWith()}`;
+}
+
+// Settings' options, in groups: a row for each thing the player has met, the rules behind the "?".
+const optSwitch = (label, onchange, on, attrs = '') => `<label class="toggle"${attrs}><input type="checkbox" onchange="${onchange}" ${on ? 'checked' : ''}> ${label}</label>`;
+const optGroup = (name, rows) => `<fieldset class="opt-group"><legend>${name}</legend>${rows.filter(Boolean).join('')}</fieldset>`;
+function optionGroups(game, ui) {
+    const state = game.state;
+    const s = state.settings;
+    const soundOn = s.sound !== false;
+    return [
+        optGroup('Sound', [
+            optSwitch('Sound and vibration', "FI.setSetting('sound', this.checked)", soundOn),
+            soundOn ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(s.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : '',
+            seen(state, 'minigames') ? optSwitch('Chime when a mini-game chance appears', "FI.setSetting('minigameChime', this.checked)", s.minigameChime !== false) : ''
+        ]),
+        optGroup('Motion', [
+            optSwitch('Reduce motion', "FI.setSetting('reducedMotion', this.checked)", s.reducedMotion)
+        ]),
+        optGroup('Keys and log', [
+            optSwitch(`Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}`, 'FI.setShortcuts(this.checked)', ui?.shortcuts !== false, ' title="On this device only"'),
+            optSwitch('Keep a playtest log', 'FI.setPlaytestLog(this.checked)', s.playtestLog, ` title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"`),
+            s.playtestLog ? `<div class="playtest-row"><span class="muted small">${fmt((state.playtest || []).length)} moments noted</span><button class="mini-btn" onclick="FI.exportPlaytest()">Export the log</button></div>` : '',
+            s.devUnlockAll ? optSwitch('Developer mode: unlock every tab and mini-game', "FI.setSetting('devUnlockAll', this.checked)", true) : ''
+        ])
+    ].join('');
 }
 
 // How the game was made, said in full at the foot of Settings (P-020 in the research loop: a disclosure that
