@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, syncFacts, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -80,6 +80,31 @@ test("signed in, the server's save is the game: this device's is kept only when 
     assert.equal(syncChoice(here, server, 500, null), 'local');
     assert.equal(aheadOf(here, server), true);
     assert.equal(aheadOf(server, here), false);
+});
+
+test('what the choice reads of a game can be kept aside: the same answer, whatever the game does next', () => {
+    const server = createDefaultState(1);
+    server.stats.kills = 50; server.meta.playtimeMs = 3_600_000; server.combat.bestStage = 20; server.skills.mining.xp = 400;
+    const here = structuredClone(server);
+    here.stats.kills = 60; here.meta.playtimeMs = 3_700_000;
+    const elsewhere = structuredClone(server);
+    elsewhere.stats.kills = 70; elsewhere.combat.bestStage = 25;
+    const other = createDefaultState(2);
+    other.stats.kills = 999;
+    const fresh = createDefaultState(1);
+    for (const live of [here, server, elsewhere, other, fresh]) {
+        for (const remote of [null, server, here, elsewhere, other]) {
+            for (const [lastSaved, known] of [[500, 500], [900, 500], [500, null]]) {
+                assert.equal(syncChoice(syncFacts(live), remote, lastSaved, known), syncChoice(live, remote, lastSaved, known));
+            }
+        }
+    }
+    // kept aside before a replay (main.js playPending): the game then climbing past the server's doesn't change the answer
+    const saved = syncFacts(here);
+    const replayed = structuredClone(here);
+    replayed.stats.kills = 5000; replayed.combat.bestStage = 90; replayed.skills.mining.xp = 90000;
+    assert.equal(syncChoice(replayed, elsewhere, 900, 500), 'local', "played on past the other device's save, it would pass for ahead");
+    assert.equal(syncChoice(saved, elsewhere, 900, 500), 'cloud', 'as it was saved, it is behind');
 });
 
 test("signing in never takes a guest's game: the account starts over, unless the game is its own", () => {

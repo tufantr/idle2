@@ -2,7 +2,7 @@
 
 import { Game } from './game.js';
 import {
-    loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, startsOver, progressed,
+    loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, syncFacts, startsOver, progressed,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, renderHallGive, renderBannerPicker, workTime, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
@@ -314,7 +314,8 @@ function playPending(news = null) {
     if (!p) return caughtUp().then(() => null);
     pending = null;
     clearTimeout(slowTimer);
-    return catchUp(p.start(), summary => { news?.(); return p.after(summary); });
+    const saved = syncFacts(game.state);   // (the game as it stands now is what a server's answer is weighed against: syncFromCloud)
+    return catchUp(p.start(), summary => { news?.(); return p.after(summary); }, saved);
 }
 
 /**
@@ -333,12 +334,20 @@ function holdForServer(showIn = CATCH_UP_SHOW_MS) {
  * Replay `run` (a Game.beginResume or beginGap) a slice at a time, behind the bar once it has taken CATCH_UP_SHOW_MS; then
  * `after(summary)`, a report's HTML or null, takes the bar's place. Resolves with the summary.
  */
-function catchUp(run, after) {
+function catchUp(run, after, saved = null) {
     return new Promise(resolve => {
         if (!run) { settle(); resolve(null); return; }
-        catching = { run, after, resolve, at: performance.now() };
+        catching = { run, after, resolve, saved, at: performance.now() };
         pump();
     });
+}
+/** The replay under way given up, its game not to be played (the server's is): the bar stays for the replay that follows. */
+function dropCatchUp() {
+    const c = catching;
+    if (!c) return;
+    catching = null;
+    for (const resolve of caughtUpWaits.splice(0)) resolve();
+    c.resolve(null);
 }
 function pump() {
     const c = catching;
@@ -1734,15 +1743,18 @@ async function syncFromCloud() {
     try {
         const { state: remote, lastSaved, gifts, banner, hall, hallGifts } = await cloud.pull(Date.now());
         clearTimeout(slowTimer);
-        await caughtUp();   // (the server was slow and this game's time away is being replayed: the choice waits for its end)
         // the clan's banner this week, as the server says it, and its hall: for the game played, its time away replayed
         const news = () => { game.setClanBanner(banner); hallNews({ hall, hallGifts }); };
-        if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
+        // The server was slow and this game's time away is being replayed: the answer is weighed against the game as it
+        // was saved, as it would have been in time, so that a game the server's replaces is not replayed to the end first.
+        if (syncChoice(catching?.saved || game.state, remote, lastSaved, known) === 'cloud') {
+            dropCatchUp();
             pending = null;   // this game's time away is never replayed: the server's game is played
             cloudReady = true;
             await adoptState(remote, news);
             if (before) toast('Your game was played on another device: carrying on from there', 'info');
         } else {
+            await caughtUp();
             if (pending) await playPending(news); else news();
             cloudReady = true;
             await cloudSave(false, { sync: true });

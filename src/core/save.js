@@ -329,3 +329,18 @@ export function syncChoice(live, remote, lastSaved, known = null) {
     if (known !== null && known === lastSaved && live.meta?.createdAt === remote.meta?.createdAt) return 'local';
     return aheadOf(live, remote) ? 'local' : 'cloud';
 }
+
+/**
+ * All syncChoice reads of a game, as it stands now: to weigh the game as it was saved once its time away is being replayed
+ * (main.js syncFromCloud: a server that answers late, the replay of this copy already under way).
+ */
+export function syncFacts(state) {
+    return {
+        meta: { createdAt: state.meta?.createdAt, playtimeMs: state.meta?.playtimeMs },
+        stats: { kills: state.stats?.kills },
+        combat: { bestStage: state.combat?.bestStage },
+        prestige: { count: state.prestige?.count },
+        ascension: { count: state.ascension?.count },
+        skills: Object.fromEntries(Object.entries(state.skills || {}).map(([id, skill]) => [id, { xp: skill?.xp }]))
+    };
+}
