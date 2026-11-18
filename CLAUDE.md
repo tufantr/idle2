@@ -33,6 +33,11 @@ for another, a slot emptied): `node tools/gearbench.mjs <save.json>` (DESIGN §3
 worth in stages, and where a climb's stages came from: `node tools/ledger.mjs <save.json>` and `--flow <dir>`
 (docs/research_notes/endless-late-game.md).
 
+## Backups of the project
+
+`tools/backup-library.sh make`, then `uploaded <name>` and `prove <name>`: a new dated folder in the owner's Google Drive
+(through CloudMounter), never changing an older one. Run it before and after each landing.
+
 ## Where things are
 
 - `docs/DESIGN.md`: decisions, formulas and the code map. `docs/ROADMAP.md`: what is done, by phase
