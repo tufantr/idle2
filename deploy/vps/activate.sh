@@ -53,13 +53,15 @@ if [ $STAGING = 0 ]; then
     runuser -u fantasyidle -- env HOME=/srv/fantasyidle WIKI_VERSION="$SHA" node wiki/build.mjs --out "$WIKI" >/dev/null
     chown -R root:root "$WIKI"
     # the web server's and the API's settings travel with the code
-    install -m 0644 deploy/vps/fantasyidle-api.service deploy/vps/fantasyidle-review.service deploy/vps/fantasyidle-review.timer /etc/systemd/system/
+    install -m 0644 deploy/vps/fantasyidle-api.service deploy/vps/fantasyidle-review.service deploy/vps/fantasyidle-review.timer \
+        deploy/vps/fantasyidle-probe.service deploy/vps/fantasyidle-probe.timer /etc/systemd/system/
     install -m 0644 deploy/vps/nginx.conf /etc/nginx/sites-available/fantasyidle
     ln -sfn /etc/nginx/sites-available/fantasyidle /etc/nginx/sites-enabled/fantasyidle
     rm -f /etc/nginx/sites-enabled/default
     systemctl daemon-reload
     systemctl enable fantasyidle-api >/dev/null 2>&1
     systemctl enable --now fantasyidle-review.timer >/dev/null 2>&1
+    systemctl enable --now fantasyidle-probe.timer >/dev/null 2>&1
 fi
 [ -f /etc/ssl/fantasyidle/origin.pem ] || { echo "no origin certificate yet: run node deploy/vps/cloudflare.mjs first"; exit 1; }
 nginx -t -q
@@ -88,3 +90,9 @@ systemctl reload nginx
 ls -1dt $ROOT/releases/*/ | tail -n +6 | xargs -r rm -rf
 [ $STAGING = 1 ] || ls -1dt $ROOT/wiki/releases/*/ | tail -n +6 | xargs -r rm -rf
 echo "live: $SHA$([ $STAGING = 1 ] && echo ' (staging)') ($(curl -fsS http://127.0.0.1:$PORT/api/health))"
+# and the game as a player comes in, through nginx: the page, the API and an upload as big as a save (deploy/vps/probe.sh).
+# A failure here is nginx's or the machine's more often than the release's, so the release stays: the deploy says so.
+if ! bash "$REL/deploy/vps/probe.sh" $([ $STAGING = 1 ] && echo --staging || echo --quiet); then
+    echo "the release is live, but the look through nginx failed (above): see /var/log/nginx/error.log"
+    exit 1
+fi

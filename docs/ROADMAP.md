@@ -1686,6 +1686,7 @@ Keeping it running:
 - [x] **The rules and privacy pages** (R15, drafts for the owner's OK): `/rules` and `/privacy` on the wiki, in the footer and the
       Reference menu, and a line each where it matters: what the email is for, under the sign-up's field, and who reads a clan's
       words, above Create clan. Both say what the server really keeps, for how long and what deleting an account does
+- [x] **An hourly look at the live game** (19 November 2026): `deploy/vps/probe.sh` loads the page, asks the API and sends an upload as big as a save through nginx, reads nginx's log, and mails the owner when one fails, after a test of nginx's settings broke every cloud save for eight hours unnoticed
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

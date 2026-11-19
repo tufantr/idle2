@@ -61,7 +61,7 @@ make_entry() {
 
     say "the git history"
     git -C "$REPO" bundle create "$out/idle2-git-all-branches.bundle" --all 2>/dev/null || die "bundle failed"
-    git bundle verify "$out/idle2-git-all-branches.bundle" >/dev/null 2>&1 || die "bundle does not verify"
+    git -C "$REPO" bundle verify "$out/idle2-git-all-branches.bundle" >/dev/null 2>&1 || die "bundle does not verify"   # (inside a repository: run from anywhere else it always failed)
     rm -rf "$base/mirror"; git clone -q --mirror "$out/idle2-git-all-branches.bundle" "$base/mirror" || die "bundle does not restore"
     local want got; want=$(git -C "$REPO" for-each-ref | wc -l | tr -d ' '); got=$(git -C "$base/mirror" for-each-ref | wc -l | tr -d ' ')
     [ "$want" = "$got" ] || die "bundle restored $got refs of $want"
