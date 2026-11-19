@@ -1336,6 +1336,44 @@ test("the team's tool can leave a copy of what it clears out of its log: what mu
     assert.match(lines.at(-1), /kept no copy/);
 });
 
+test("the team's tool changes a player's name and closes an account, with a log and a word to them", async () => {
+    const { team } = require('../api/team.js');
+    const data = memory || require('../api/store.js');
+    const run = async (...argv) => {
+        const lines = [];
+        const sent = [];
+        const code = await team(argv, { store: data, send: async m => { sent.push(m); }, now: clock, print: l => lines.push(l) });
+        return { code, out: lines.join('\n'), sent };
+    };
+    const rude = await register('rude_handle');
+    await register('taken_handle');
+    const { id } = await data.findUserByName('rude_handle');
+    const entries = async () => (await data.teamLog(1000)).filter(e => e.kind === 'player' && e.subject === id);
+    assert.equal((await run('rename-player', 'rude_handle', '--name', 'plain_handle')).code, 1, 'no reason');
+    assert.equal((await run('rename-player', 'rude_handle', '--name', 'bad name!', '--reason', 'r')).code, 1, 'no such name');
+    assert.equal((await run('rename-player', 'rude_handle', '--name', 'TAKEN_handle', '--reason', 'r')).code, 1, 'taken, in any case');
+    assert.equal((await run('rename-player', 'nobody_here', '--name', 'plain_handle', '--reason', 'r')).code, 1);
+    const renamed = await run('rename-player', 'RUDE_handle', '--name', 'plain_handle', '--reason', 'a slur');
+    assert.equal(renamed.code, 0, renamed.out);
+    assert.equal(renamed.sent[0].to, emailOf('rude_handle'));
+    assert.match(renamed.sent[0].text, /We changed your username from rude_handle to plain_handle\.[\s\S]*Why: a slur/);
+    assert.equal((await post('/login', { username: 'plain_handle', password: 'correct horse' })).status, 200);
+    assert.equal((await post('/login', { username: 'rude_handle', password: 'correct horse' })).status, 400);
+    clock += 11 * 60 * 1000;
+    assert.equal((await get('/load', rude)).status, 401, "a token in the old name is no one's now");
+    const fresh = (await (await post('/login', { username: 'plain_handle', password: 'correct horse' })).json()).token;
+    assert.deepEqual((await entries()).map(e => [e.action, JSON.parse(e.oldWords).username, JSON.parse(e.newWords).username]), [['rename', 'rude_handle', 'plain_handle']]);
+
+    const closed = await run('close-account', 'plain_handle', '--reason', 'it broke the rules badly');
+    assert.equal(closed.code, 0, closed.out);
+    assert.match(closed.sent[0].text, /We closed your Fantasy Idle account\.[\s\S]*Why: it broke the rules badly[\s\S]*look at it again/);
+    assert.ok(!/put it back/.test(closed.sent[0].text), 'nothing to put back');
+    assert.equal((await get('/load', fresh)).status, 401);
+    assert.deepEqual(await peek.tied(id, 'plain_handle'), {});
+    assert.deepEqual((await entries()).map(e => [e.action, JSON.parse(e.oldWords).username]), [['close', 'plain_handle']], 'only the record of its closing');
+    assert.equal((await run('close-account', 'plain_handle', '--reason', 'again')).code, 1, 'gone');
+});
+
 test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {
     const { CLAN_BOSS } = await import('../src/core/power.js');
     const t = await register('patient_slayer');
@@ -2016,6 +2054,7 @@ test('Delete my account: with the password, every row tied to it goes at once; i
     assert.equal(done.status, 200);
     assert.deepEqual(await done.json(), { deleted: true });
     assert.deepEqual(await peek.tied(id, 'leaver_owner'), {}, 'nothing left under its id or name');
+    assert.ok(!(await data.teamLog(1000)).some(e => e.kind === 'player' && e.subject === id), 'nor in the team\'s log');
     assert.equal((await get('/load', leaver)).status, 401, 'its sessions ended with it');
     assert.equal((await post('/login', { username: 'leaver_owner', password: 'correct horse' })).status, 400);
 

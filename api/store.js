@@ -379,6 +379,7 @@ async function deleteAccount(userId, username, { keepDepths = false, fromWeek = 
         snapshots AS (DELETE FROM weekly_snapshots WHERE user_id = ${userId}::int),
         codes AS (DELETE FROM email_codes WHERE user_id = ${userId}::int),
         reviews AS (DELETE FROM flag_reviews WHERE user_id = ${userId}::int),
+        team_entries AS (DELETE FROM team_log WHERE kind = 'player' AND subject = ${userId}::int),
         counters AS (
             DELETE FROM auth_attempts
             WHERE key IN (${`mail:user:${userId}`}::varchar, ${`taken:user:${userId}`}::varchar, ${`delete:user:${userId}`}::varchar, ${`login:name:${name}`}::varchar)
@@ -1031,6 +1032,31 @@ async function teamEditClan({ clanId, name, tag, description, lookingFor, action
     return { id: rows[0].id, clans: int(rows[0].clans), rankings: int(rows[0].rankings) };
 }
 
+/** A player's name changed by the team, with its log entry, in one statement (a name taken: 23505). Returns the entry's number, or null without such a player. */
+async function teamRenamePlayer({ userId, name, reason, oldWords, newWords, now }) {
+    const { rows } = await sql`
+        WITH u AS (
+            UPDATE users SET username = ${name}::varchar WHERE id = ${userId}::int RETURNING id
+        ), l AS (
+            INSERT INTO team_log (at, kind, subject, action, reason, old_words, new_words)
+            SELECT ${now}::bigint, 'player', u.id, 'rename', ${reason}::text, ${oldWords}::text, ${newWords}::text FROM u
+            RETURNING id
+        )
+        SELECT (SELECT id FROM l) AS id
+    `;
+    return rows[0] && rows[0].id !== null ? rows[0].id : null;
+}
+
+/** An entry for the log alone (an account closed: the account has gone, so the entry follows it). Returns its number. */
+async function teamLogAdd({ kind, subject, action, reason, oldWords, newWords, now }) {
+    const { rows } = await sql`
+        INSERT INTO team_log (at, kind, subject, action, reason, old_words, new_words)
+        VALUES (${now}::bigint, ${kind}::varchar, ${subject}::int, ${action}::varchar, ${reason}::text, ${oldWords}::text, ${newWords}::text)
+        RETURNING id
+    `;
+    return rows[0].id;
+}
+
 const logRow = r => ({ id: r.id, at: int(r.at), kind: r.kind, subject: r.subject, action: r.action, reason: r.reason, oldWords: r.old_words, newWords: r.new_words });
 
 /** The log, the newest first. */
@@ -1142,7 +1168,7 @@ module.exports = {
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
     hallRooms, addGift, giftTotals, giftsAfter, hallBuilders, recentGifts, setClanBanner,
-    teamClans, teamClan, teamEditClan, teamLog, teamLogEntry,
+    teamClans, teamClan, teamEditClan, teamRenamePlayer, teamLogAdd, teamLog, teamLogEntry,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts

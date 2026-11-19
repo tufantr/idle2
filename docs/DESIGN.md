@@ -1118,8 +1118,10 @@ with the game's own stat code; the client never submits damage or scores.
   `fantasyidle-team`; P-113) reads every clan, clears or rewrites its words, renames it and puts either back. A rename rewrites
   the clan and every stored `clan_rankings` row, which otherwise keep the name for good, in one statement with its `team_log`
   entry (what it did, why, the words before and after); the clan's owner gets a mail saying what, why and how to ask again. A
-  closed clan is known by the rankings it left, so its name can still be changed. It is a command, not a route: no new secret,
-  nothing to reach from outside.
+  closed clan is known by the rankings it left, so its name can still be changed. It also changes a player's name and closes an
+  account (`closeAccount`, as Delete my account does; a closed account's name may be taken again, and its address too). The
+  log's words can be left out (`--no-copy`), for what must not be kept. It is a command, not a route: no new secret, nothing to
+  reach from outside.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).

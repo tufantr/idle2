@@ -9,13 +9,15 @@
 //   fantasyidle-team rename <clan> --reason "why" [--name "New Name"] [--tag NEW]     (neither: "Clan 12" [CC])
 //   fantasyidle-team restore <log number> --reason "why"     puts a clan back as that entry found it
 //   fantasyidle-team log [how many]                    what the team did, the newest first
+//   fantasyidle-team rename-player <username> --name NewName --reason "why"     (they sign in with the new name)
+//   fantasyidle-team close-account <username> --reason "why"     deletes it as "Delete my account" does, for what breaks the rules badly
 //
 // <clan> is its number (from `list`) or its exact name; a closed clan still shows in the weeks' rankings it left, so it can be
 // renamed too. Each action writes the log, in the same statement as the change, with the words it found (so it can be put back)
 // and mails the clan's owner what was done, why and how to ask again. --no-mail: where the law says not to tell them. --no-copy:
 // the old words stay out of the log, for what must not be kept (docs/safety's incident steps); such an entry can't be put back.
 
-const { clanRules } = require('./index.js');
+const { clanRules, accountRules } = require('./index.js');
 const { teamNoticeMail } = require('./mail.js');
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -45,6 +47,19 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
 
     const findClan = ref => (/^\d{1,9}$/.test(String(ref)) ? store.teamClan(Number(ref), null) : store.teamClan(null, String(ref)));
 
+    /** The word to the one concerned, unless asked not to, or there is no address. */
+    async function tell(to, username, subject, what, again) {
+        if (options.noMail) print('no mail, as asked');
+        else if (!to) print('no mail: nobody to tell');
+        else {
+            try {
+                await send({ to, ...teamNoticeMail({ username, subject, what, why: reason, again }) });
+                print(`${username} was told`);
+            } catch (err) { print(`the mail to ${username} failed: ${err && err.message}`); }
+        }
+        return 0;
+    }
+
     /** The change, its log entry and the owner's mail. `next`: the clan's name, tag and words after it. */
     async function apply(action, clan, next, what) {
         let done;
@@ -55,15 +70,7 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
             throw err;
         }
         print(`${action}: clan ${clan.id}, ${next.name} [${next.tag}]; ${done.rankings} kept week${done.rankings === 1 ? '' : 's'} rewritten; log #${done.id}`);
-        if (options.noMail) print('no mail, as asked');
-        else if (!clan.ownerEmail) print('no mail: nobody to tell');
-        else {
-            try {
-                await send({ to: clan.ownerEmail, ...teamNoticeMail({ username: clan.owner, subject: 'About your Fantasy Idle clan', what, why: reason }) });
-                print(`the owner, ${clan.owner}, was told`);
-            } catch (err) { print(`the mail to the owner failed: ${err && err.message}`); }
-        }
-        return 0;
+        return tell(clan.ownerEmail, clan.owner, 'About your Fantasy Idle clan', what);
     }
 
     if (command === 'list') {
@@ -80,8 +87,31 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
         for (const e of await store.teamLog(Math.min(1000, Number(target) || 50))) print(`#${e.id} ${new Date(e.at).toISOString().slice(0, 16)} ${e.action} ${e.kind} ${e.subject}: ${e.reason}\n    was ${e.oldWords}\n    now ${e.newWords}`);
         return 0;
     }
-    if (!['clear', 'rename', 'restore'].includes(command) || !target) return fail(`Usage: list [search] | clear <clan> | rename <clan> | restore <log number> | log [how many], each change with --reason "why"`);
+    if (!['clear', 'rename', 'restore', 'rename-player', 'close-account'].includes(command) || !target) return fail(`Usage: list [search] | clear <clan> | rename <clan> | restore <log number> | log [how many] | rename-player <username> --name NewName | close-account <username>, each change with --reason "why"`);
     if (!reason) return fail('Say why, with --reason "...": it goes in the log and to the clan\'s owner.');
+
+    if (command === 'rename-player' || command === 'close-account') {
+        const user = await store.findUserByName(target);
+        if (!user) return fail(`No player ${target}.`);
+        const was = options.noCopy ? '{}' : JSON.stringify({ username: user.username });
+        if (command === 'close-account') {
+            await accountRules.closeAccount(user, now);
+            const entry = await store.teamLogAdd({ kind: 'player', subject: user.id, action: 'close', reason, oldWords: was, newWords: '{}', now });
+            print(`closed: the account of ${user.username} and all it held; log #${entry}`);
+            return tell(user.email, user.username, 'About your Fantasy Idle account', 'We closed your Fantasy Idle account. The account and its game are deleted.', 'We will look at it again.');
+        }
+        const name = String(options.name || '').trim();
+        if (!accountRules.USERNAME_RE.test(name)) return fail('Usernames are 3-24 letters, numbers, _ or -.');
+        const other = await store.findUserByName(name);
+        if (other && other.id !== user.id) return fail(`${name} is taken: nothing changed.`);
+        let entry;
+        try { entry = await store.teamRenamePlayer({ userId: user.id, name, reason, oldWords: was, newWords: JSON.stringify({ username: name }), now }); } catch (err) {
+            if (err.code === '23505') return fail(`${name} is taken: nothing changed.`);
+            throw err;
+        }
+        print(`renamed: ${user.username} is now ${name}; log #${entry}`);
+        return tell(user.email, name, 'About your Fantasy Idle account', `We changed your username from ${user.username} to ${name}. Sign in with the new one.`);
+    }
 
     if (command === 'restore') {
         const entry = /^\d{1,9}$/.test(target) ? await store.teamLogEntry(Number(target)) : null;

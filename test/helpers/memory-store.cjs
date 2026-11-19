@@ -43,6 +43,7 @@ function createMemoryStore() {
             for (const b of db.bosses) if (b.lastHitUser === userId) b.lastHitUser = null;
             for (const table of ['attacks', 'shares', 'members', 'rewards', 'snapshots', 'codes', 'reviews']) db[table] = db[table].filter(r => r.userId !== userId);
             db.charges.delete(userId);
+            db.teamLog = db.teamLog.filter(e => !(e.kind === 'player' && e.subject === userId));
             const name = String(username).toLowerCase().slice(0, 64);
             for (const key of [...db.auth.keys()]) {
                 if ([`mail:user:${userId}`, `taken:user:${userId}`, `delete:user:${userId}`, `login:name:${name}`].includes(key) || key.startsWith(`login:name:${name}:`)) db.auth.delete(key);
@@ -434,6 +435,18 @@ function createMemoryStore() {
             const entry = { id: ++seq.teamLog, at: now, kind: 'clan', subject: clanId, action, reason, oldWords, newWords };
             db.teamLog.push(entry);
             return { id: entry.id, clans: clan ? 1 : 0, rankings: kept.length };
+        },
+        async teamRenamePlayer({ userId, name, reason, oldWords, newWords, now }) {
+            const user = db.users.find(u => u.id === userId);
+            if (!user) return null;
+            if (db.users.some(u => u.id !== userId && u.username.toLowerCase() === name.toLowerCase())) throw unique('users_username_lower');
+            user.username = name;
+            return store.teamLogAdd({ kind: 'player', subject: userId, action: 'rename', reason, oldWords, newWords, now });
+        },
+        async teamLogAdd({ kind, subject, action, reason, oldWords, newWords, now }) {
+            const entry = { id: ++seq.teamLog, at: now, kind, subject, action, reason, oldWords, newWords };
+            db.teamLog.push(entry);
+            return entry.id;
         },
         async teamLog(limit) { return [...db.teamLog].sort((a, b) => b.id - a.id).slice(0, limit).map(e => ({ ...e })); },
         async teamLogEntry(id) { const e = db.teamLog.find(x => x.id === id); return e ? { ...e } : null; },

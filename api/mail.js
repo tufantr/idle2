@@ -114,8 +114,8 @@ function signUpTakenMail({ username }) {
 }
 
 /** What the team did (api/team.js), to the player it concerns: what, why, and how to ask again (a reply reaches the team). */
-function teamNoticeMail({ username, subject, what, why }) {
-    return noticeMail({ username, subject, lines: [what, `Why: ${why}`, 'If you think we got this wrong, reply to this mail and tell us why. We will look at it again, and if we were wrong we will put it back as it was.'] });
+function teamNoticeMail({ username, subject, what, why, again = 'We will look at it again, and if we were wrong we will put it back as it was.' }) {
+    return noticeMail({ username, subject, lines: [what, `Why: ${why}`, `If you think we got this wrong, reply to this mail and tell us why. ${again}`] });
 }
 
 module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, signUpTakenMail, teamNoticeMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };

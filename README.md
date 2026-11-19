@@ -146,7 +146,8 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   "why" [--name] [--tag]` renames it and rewrites every week's stored ranking row, which keep a clan's name; `restore <log
   number> --reason "why"` puts it back as that entry found it; `log` shows what was done. Each change writes `team_log` in the
   same statement, with the words it found, and mails the clan's owner what was done, why and how to ask again (`--no-mail`
-  where the law says not to; `--no-copy` keeps the old words out of the log, for what must not be kept).
+  where the law says not to; `--no-copy` keeps the old words out of the log, for what must not be kept). `rename-player
+  <username> --name NewName` and `close-account <username>` (it deletes the account as "Delete my account" does) work the same way.
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
