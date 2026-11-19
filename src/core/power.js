@@ -7,9 +7,9 @@ import { deriveStats, BASE } from './modifiers.js';
 import { levelForXp, combatLevelForXp, XP_FOR_MAX_LEVEL, MAX_LEVEL } from './xp.js';
 import { enemyBaseStats, BALANCE, supplyMult } from './formulas.js';
 import { TRIALS, WEEK_MS, WEEKLY_FROM, PACT_MAX, trialTarget, trialTier, laurelsOf, weeklyTrialAt } from '../data/trials.js';
-import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf } from '../data/social.js';
+import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, CLAN_TABLE, rankedAsTable, clanTable, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf } from '../data/social.js';
 
-export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf };   // the server reads them here
+export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, CLAN_TABLE, rankedAsTable, clanTable, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf };   // the server reads them here
 
 /** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
 export { LEADER_AWAY_DAYS } from '../data/social.js';

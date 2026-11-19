@@ -112,7 +112,8 @@ export const clanBossHealth = level => Math.round(1000 * CLAN_BOSS.first * Math.
 // counts, as depth: how many levels deep the hit reaches into a stack of levels each a fifth tougher than the last
 // (`growth`), the first as tough as a new hero's whole fight (`base`). So a hero a thousand times stronger goes about
 // 38 levels deeper, not a thousand times as far, and the whole clan counts: its score is its best `counted` members'
-// depths together. The top three of each division wear a crown through the next week.
+// depths together. The top three of each division wear a crown through the next week; from CLAN_TABLE.from, the top
+// three of one table.
 export const ENDLESS = { name: 'The Endless Hydra', look: 'Abyssal Hydra', zone: 'abyss', base: 100, growth: 1.2, attacks: 2, counted: 15, opensOnDay: 5 };
 export const CLAN_DIVISIONS = [
     { id: 'champion', name: 'Champion', min: 7 },
@@ -120,6 +121,23 @@ export const CLAN_DIVISIONS = [
     { id: 'silver', name: 'Silver', min: 3 },
     { id: 'bronze', name: 'Bronze', min: 0 }
 ];
+// One table and three crowns (P-010, the November patch's decision 14). With a handful of clans four divisions crowned
+// nearly every one of them, so from the week below there is one table: most levels felled first, the Hydra's depth between
+// clans that felled as many, and the crowns go to its 1st, 2nd and 3rd.
+// THE DATE IS SET AT THE LANDING: the Monday (UTC) after it, written as YYYY-MM-DD. A week is ranked by the rule of its own id,
+// never by today's: a finished week is worked out and kept by the first look after it ends (api/index.js settledRanking), which
+// for the last week of divisions is a look in the first week of the table. So the week under way when this lands stays as it
+// began, its crowns are the divisions' and are worn through the first table week, and every week kept before stays as kept.
+export const CLAN_TABLE = { from: '2026-11-30' };
+/** The first week ranked as one table ('2026-W49'). */
+export const clanTableWeek = () => isoWeek(Date.parse(`${CLAN_TABLE.from}T00:00:00Z`));
+/** Is this week ('2026-W49': week ids sort as strings) ranked as one table? */
+export const rankedAsTable = week => week >= clanTableWeek();
+/** The day the table begins, in words: '30 November 2026'. */
+export const clanTableDay = () => new Date(`${CLAN_TABLE.from}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+/** A week's clans ({ kills, score, name }) as the one table: in its order, each with its `place` from 1. */
+export const clanTable = rows => [...rows].sort((a, b) => b.kills - a.kills || b.score - a.score || a.name.localeCompare(b.name)).map((r, i) => ({ ...r, place: i + 1 }));
+
 /** The division of a clan that felled `kills` levels of the week's boss. */
 export const divisionOf = kills => CLAN_DIVISIONS.find(d => (Number(kills) || 0) >= d.min) || CLAN_DIVISIONS[CLAN_DIVISIONS.length - 1];
 /** The damage it takes to reach `depth` into the Endless Hydra: its first `depth` levels together. */

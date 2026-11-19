@@ -1233,10 +1233,22 @@ with the game's own stat code; the client never submits damage or scores.
   the next week, on the clan list and the clan's header, and the clan its best week (its record). A crown is gold for
   the 1st, silver for the 2nd and bronze for the 3rd, and says its place in a tip a phone opens (`clanCrown`). On screen
   (`endlessPanel`, `clanStandings` in `src/ui/render.js`): the Hydra's card under the week's boss (asleep, when it
-  wakes; awake, the fight and two pips), the clan's division, place and depth, the week's table by division and last
-  week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
+  wakes; awake, the fight and two pips), the clan's place and depth (and division, before the one table below), the
+  week's table and last week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
   the level being broken through and its label the depth (`src/ui/scene.js`), in the Abyss. Rewards are for show only:
   the banner already pays for the kills, and power for a rank would make forging a save worth it.
+- **One table and three crowns** (P-010, the November 2026 patch's decision 14; `CLAN_TABLE`, `clanTable`, `rankedAsTable` in
+  `src/data/social.js`). With a handful of clans the four divisions crowned nearly every one of them, so from the Monday after
+  the patch's second landing (`CLAN_TABLE.from`, the one date to set, at the landing) all clans stand in one table: most levels
+  felled first, the Hydra's depth between clans that felled as many, then the name. Its 1st, 2nd and 3rd wear the crowns.
+  A finished week is worked out and kept by the first look after it ends, so **the rule goes by the week's own id**, never
+  by today: the week under way at the landing and the last one before `from` keep their divisions and their crowns even
+  though they are settled after the switch (those crowns are worn through the first table week). A kept week says which it
+  was (`clan_rankings.place`, a new column, empty before), so its crowns stay as given whatever the date is later set to.
+  **Older pages:** `rank` stays the place in the division in every week, and the answers keep `divisions`, `last.divisions`,
+  `crown` and the standing's division and rank as they were. New beside them: `table` and `last.table`, `crowned` (the crown
+  to show; it names a `division` only for a week before the table) and `standing.table` (`{ rank, of }`, on a Hydra attack's
+  answer too). An older server sends none of them and the game goes on showing divisions.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
   (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen on the Clan tab like the Titan's on the Dungeons tab (`state.combat.mode` =
@@ -2264,6 +2276,37 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
   signed in, the tool answering the API.
 
+### 3.37 Readouts: sources of power, and the pace of the work
+
+Two readouts that change no number of the game (R17 of the research loop's ranking; P-022, P-002).
+
+- **Sources of power** (`src/systems/powerledger.js`; `renderPowerModal` in `src/ui/render.js`). From the first prestige
+  (disclosure `power_sources`) the hero's panel in Inventory has a small **Sources** button beside his attack, defence and
+  health. It opens a dialog on the armory's painting: each source at work on him now, biggest first, with its share and a
+  bar; the row's tip (a tap on a phone) says what it multiplies and what that comes to in stages. Its rules are behind the
+  dialog's "?" (`FEATURES.power`), and a "?" pressed in a dialog now stands over it (`standOver` in `src/main.js`, as a
+  question asked inside a dialog does) instead of waiting behind it.
+- **What a share is.** `powerLedger(state)` is the reckoning of `docs/research_notes/endless-late-game.md`: for each source
+  the hero's attack, defence and health over what they would be without it, in stages at the two walls (attack at the
+  boss's clock: `ln(x attack) / ln(monster health growth)`; defence and health at the blow:
+  `ln(x defence × x health) / (2 ln(monster attack growth))`, both at his best stage; gear counted from nothing, its defence
+  from one point). A source's share is its stages at both walls over all the sources' together; a part of a source (the
+  weapon, the forge's levels, records) is listed by the tool and counted inside its source. It is worked out when the
+  dialog opens, on copies of the few fields each source touches, and only what works on him now is listed: no potion
+  without a dose running, no camp after a prestige. Crits, attack speed, dodge and lifesteal are outside it, as in the tool.
+- **The same arithmetic in the tool.** `tools/ledger.mjs` calls `powerLedger`. By default it first makes the hero a fresh
+  run at his wall, as it always did; `--now` leaves him as saved, which is what the panel shows, and every line now has a
+  share. The ledger gained the two sources the tool lacked, the War Tree and the clan banner (Combat's cape is inside the
+  combat level). `test/powerledger.test.mjs` checks that all the sources together are all of his power (without them he has
+  his bare hands), and that the panel's rows equal the tool's on a hero with everything and on one the simulator played.
+- **The pace of the work** (`src/systems/rates.js`). While the hero works at a skill, its header shows XP an hour and the
+  time to the next level (`skillPace`); the card being worked shows how long the materials he holds last and which runs out
+  first (`materialsLast`). They use the numbers the work itself runs on (`intervalFor`, `actionXp`), every bonus at work now
+  counted (a potion, the bonfire, Focus) but a mini-game's burst, which lasts seconds; a log burnt twice pays twice; mastery's
+  kept ingredients and the Furnace Bellows' charges make materials last longer. Where nothing true can be said they say
+  nothing: no work in that skill, work stalled for materials, Farming (it grows on the clock) and the anvil and the bench
+  (they go by the click). `test/rates.test.mjs` plays the work and compares.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -2781,6 +2824,8 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
                       · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
+                      · powerledger (each source's share of the hero's strength, for the panel and tools/ledger.mjs, §3.37)
+                      · rates (XP an hour, the time to the next level, how long the materials last, §3.37)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·

@@ -40,6 +40,7 @@ export const DISCLOSURES = [
     { id: 'stars',        when: s => (s.ascension?.stars || 0) > 0 },   // the purse's Stars
     { id: 'trials',       when: s => s.combat.bestStage >= TRIALS_FROM || !!s.trials?.active || Object.keys(s.trials?.cleared || {}).length > 0 },   // the prestige dialog's Trials
     { id: 'legacy',       when: s => s.prestige.count >= 1 },   // Legacy (core/modifiers.js legacyMult): from the second prestige, in its dialog
+    { id: 'power_sources', when: s => s.prestige.count >= 1 },  // the hero's panel's Sources of power (systems/powerledger.js): a prestige in, there is more than gear to tell apart
     { id: 'skill_points', when: s => s.prestige.skillPoints > 0 || s.prestige.count > 0 || Object.values(s.perks).some(level => level > 0) },
     { id: 'talents',      when: s => combatLevelForXp(s.skills.combat.xp) > MAX_LEVEL },   // the War Tree (data/talents.js): Combat past 99
     { id: 'charms',       when: s => CHARMS.some(c => c.opens(s, id => levelForXp(s.skills[id]?.xp || 0)) || (s.charms?.[c.id] || 0) > 0) },   // the Shop's Charms (data/charms.js)

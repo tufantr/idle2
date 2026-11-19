@@ -913,10 +913,13 @@ async function closeAccount(user, now) {
 // their deepest counts (endlessDepth: how many levels deep the hit reaches). A clan's score is its best ENDLESS.counted
 // members' depths together; accounts flagged for impossible numbers are left out. A finished week's standings are kept
 // once (clan_rankings), and its top three of each division wear a crown through the next week.
+// From CLAN_TABLE.from (data/social.js) a week is ranked as one table, and the crowns are its top three. That is decided by
+// the week's own id, and a week's kept rows say which it was (`place`), so nothing already played or kept is rewritten. The
+// answers keep every field of the divisions, worked out as ever, for pages still running the older game.
 
 const RANKING_CACHE_MS = 60 * 1000;
 let rankingCache = null;   // this week's standings, worked out at most once a minute (an Endless attack or a kill clears it)
-const crownCache = new Map();   // a finished week's crowns: { clanId → { division, rank } }
+const crownCache = new Map();   // a finished week's crowns: { clanId → { crown, crowned } } (crownsFor)
 
 /** Monday 00:00 UTC of the week holding `ms`. */
 const weekStartOf = ms => ms + msToWeekEnd(ms) - 7 * DAY;
@@ -925,9 +928,9 @@ const endlessOpen = (ms, opensOnDay) => ms >= weekStartOf(ms) + opensOnDay * DAY
 /** Time until it wakes this week (0 while it is awake). */
 const msToEndlessOpen = (ms, opensOnDay) => Math.max(0, weekStartOf(ms) + opensOnDay * DAY - ms);
 
-/** A week's standings: every clan that felled a level or fought the Endless Hydra, division by division, best score first. */
+/** A week's standings: every clan that felled a level or fought the Endless Hydra, division by division, best score first, and the one table if the week has one. */
 async function computeRanking(week, now) {
-    const { CLAN_BOSS, CLAN_DIVISIONS, divisionOf, clanDepthScore } = await engine();
+    const { CLAN_BOSS, CLAN_DIVISIONS, divisionOf, clanDepthScore, rankedAsTable, clanTable } = await engine();
     const [bosses, hits, clans] = await Promise.all([store.weekBosses(week), store.endlessWeek(week), store.allClans()]);
     const names = new Map(clans.map(c => [c.id, c]));
     const byClan = new Map();
@@ -939,7 +942,9 @@ async function computeRanking(week, now) {
         return { clanId: e.clanId, name, tag, kills: e.kills, division: divisionOf(e.kills).id, ...clanDepthScore(e.depths) };
     });
     const order = (a, b) => b.score - a.score || b.kills - a.kills || a.name.localeCompare(b.name);
-    return { week, divisions: CLAN_DIVISIONS.map(d => ({ id: d.id, name: d.name, clans: rows.filter(r => r.division === d.id).sort(order).map((r, i) => ({ ...r, rank: i + 1 })) })) };
+    const table = rankedAsTable(week) ? clanTable(rows) : null;
+    const placeOf = new Map((table || []).map(r => [r.clanId, r.place]));
+    return { week, table, divisions: CLAN_DIVISIONS.map(d => ({ id: d.id, name: d.name, clans: rows.filter(r => r.division === d.id).sort(order).map((r, i) => ({ ...r, rank: i + 1, place: placeOf.get(r.clanId) || 0 })) })) };
 }
 
 /** This week's standings, as of at most a minute ago. */
@@ -961,24 +966,35 @@ async function settledRanking(week, now) {
     return rows;
 }
 
-/** Last week's crowns: the top three of each division, by clan. */
+/**
+ * Last week's crowns, by clan: { crown, crowned }. `crowned` is the one the clan wears: its place in the week's one table if the
+ * week had one, else in its division. `crown` is always the top three of each division, for pages running the older game.
+ */
 async function crownsFor(now) {
     const week = isoWeek(now - 7 * DAY);
     if (crownCache.has(week)) return crownCache.get(week);
-    const crowns = new Map((await settledRanking(week, now)).filter(r => r.rank <= 3).map(r => [r.clanId, { division: r.division, rank: r.rank, week }]));
+    const rows = await settledRanking(week, now);
+    const table = rows.some(r => r.place > 0);
+    const crowns = new Map();
+    for (const r of rows) {
+        const crown = r.rank <= 3 ? { division: r.division, rank: r.rank, week } : null;
+        const crowned = table ? (r.place > 0 && r.place <= 3 ? { rank: r.place, week } : null) : crown;
+        if (crown || crowned) crowns.set(r.clanId, { crown, crowned });
+    }
     if (crowns.size) crownCache.set(week, crowns);   // (kept: a finished week's standings never move)
     return crowns;
 }
 
-/** A clan's place this week: its division, rank among how many, score and the members counted in it. */
+/** A clan's place this week: its division, rank among how many, score and the members counted in it; in a week of one table, `table`: its place there. */
 async function standingOf(ranking, clanId, kills) {
     const { divisionOf } = await engine();
+    const table = ranking.table ? { table: { rank: ranking.table.find(c => c.clanId === clanId)?.place || 0, of: ranking.table.length } } : {};
     for (const d of ranking.divisions) {
         const row = d.clans.find(c => c.clanId === clanId);
-        if (row) return { division: d.id, divisionName: d.name, rank: row.rank, of: d.clans.length, score: row.score, counted: row.counted, kills: row.kills };
+        if (row) return { division: d.id, divisionName: d.name, rank: row.rank, of: d.clans.length, score: row.score, counted: row.counted, kills: row.kills, ...table };
     }
     const d = divisionOf(kills);
-    return { division: d.id, divisionName: d.name, rank: 0, of: ranking.divisions.find(x => x.id === d.id)?.clans.length || 0, score: 0, counted: 0, kills };
+    return { division: d.id, divisionName: d.name, rank: 0, of: ranking.divisions.find(x => x.id === d.id)?.clans.length || 0, score: 0, counted: 0, kills, ...table };
 }
 
 // The clans to find: by name or tag, those whose members play first (`active`: who uploaded this past week, as a clan's
@@ -988,7 +1004,7 @@ app.get('/api/clans', authenticateToken, route('clans', async (req, res) => {
     const now = Date.now();
     const crowns = await crownsFor(now);
     const { hallStage, hallLevels } = await engine();
-    res.json({ clans: (await store.listClans(search, 50, now - ACTIVE_WITHIN)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id) || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
+    res.json({ clans: (await store.listClans(search, 50, now - ACTIVE_WITHIN)).map(({ hall, ...c }) => ({ ...c, crown: crowns.get(c.id)?.crown || null, crowned: crowns.get(c.id)?.crowned || null, stage: hallStage(hallLevels(Object.fromEntries(Object.entries(hall).map(([room, work]) => [room, work / TENTHS])))) })), maxMembers: MAX_MEMBERS });
 }));
 
 app.get('/api/clans/ranking', authenticateToken, route('clan ranking', async (req, res) => {
@@ -1000,11 +1016,15 @@ app.get('/api/clans/ranking', authenticateToken, route('clan ranking', async (re
     const live = await liveRanking(week, now);
     const lastWeek = isoWeek(now - 7 * DAY);
     const last = await settledRanking(lastWeek, now);
+    const lastTable = last.some(r => r.place > 0) ? last.filter(r => r.place > 0 && r.place <= 3).sort((a, b) => a.place - b.place) : null;
     res.json({
         week, endsInMs: msToWeekEnd(now),
         endless: { open: endlessOpen(now, ENDLESS.opensOnDay), opensInMs: msToEndlessOpen(now, ENDLESS.opensOnDay) },
+        // a week of one table (data/social.js CLAN_TABLE): its clans in order. `divisions` and `last.divisions` stay for older pages.
+        ...(live.table ? { table: live.table.slice(0, 50).map(c => ({ rank: c.place, name: c.name, tag: c.tag, kills: c.kills, score: c.score, counted: c.counted, you: c.clanId === clanId })) } : {}),
         divisions: live.divisions.map(d => ({ id: d.id, name: d.name, clans: d.clans.slice(0, 50).map(c => ({ rank: c.rank, name: c.name, tag: c.tag, kills: c.kills, score: c.score, counted: c.counted, you: c.clanId === clanId })) })),
-        last: { week: lastWeek, divisions: CLAN_DIVISIONS.map(d => ({ id: d.id, name: d.name, clans: last.filter(r => r.division === d.id && r.rank <= 3).sort((a, b) => a.rank - b.rank).map(r => ({ rank: r.rank, name: r.name, tag: r.tag, kills: r.kills, score: r.score, you: r.clanId === clanId })) })).filter(d => d.clans.length) }
+        last: { week: lastWeek, divisions: CLAN_DIVISIONS.map(d => ({ id: d.id, name: d.name, clans: last.filter(r => r.division === d.id && r.rank <= 3).sort((a, b) => a.rank - b.rank).map(r => ({ rank: r.rank, name: r.name, tag: r.tag, kills: r.kills, score: r.score, you: r.clanId === clanId })) })).filter(d => d.clans.length),
+            ...(lastTable ? { table: lastTable.map(r => ({ rank: r.place, name: r.name, tag: r.tag, kills: r.kills, score: r.score, you: r.clanId === clanId })) } : {}) }
     });
 }));
 
@@ -1118,7 +1138,7 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
         liveRanking(boss.week, now).then(r => standingOf(r, clanId, kills)), store.clanBestScore(clanId), store.endlessOf(req.user.id, boss.week),
         hallOf(clan, req.user.id, now), hallBuildersOf(clanId, rawMembers, now), store.recentGifts(clanId, 8)]);
     res.json({
-        clan: { ...clan, isOwner: clan.ownerId === req.user.id, crown: crowns.get(clanId) || null },
+        clan: { ...clan, isOwner: clan.ownerId === req.user.id, crown: crowns.get(clanId)?.crown || null, crowned: crowns.get(clanId)?.crowned || null },
         // a member's attack: their best of the past week (what an attack deals before its strikes and potion)
         members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: bestAttack(m.power, now),
             seenDays: seenDays(m.lastSaved, now), built: built.byMember.get(m.userId) || { week: 0, total: 0 } })),
@@ -1233,7 +1253,7 @@ async function endlessAttack(req, res, { now, eng, mine, body, fightAt }) {
         const boss = await store.getBoss(row.clanId, row.week);
         const standing = await standingOf(ranking, row.clanId, killsOf(boss, eng.CLAN_BOSS.levels));
         return res.json({ endless: true, damage: row.damage, depth: row.depth, best: used.best, attacksLeft: Math.max(0, ENDLESS.attacks - used.used), week: row.week,
-            division: standing.division, divisionName: standing.divisionName, rank: standing.rank, of: standing.of, score: standing.score, ...extra });
+            division: standing.division, divisionName: standing.divisionName, rank: standing.rank, of: standing.of, score: standing.score, ...(standing.table ? { table: standing.table } : {}), ...extra });
     };
     if (fightAt) { const earlier = await store.endlessByFight(req.user.id, fightAt); if (earlier) return answer(earlier, { again: true }); }
     if (!endlessOpen(now, ENDLESS.opensOnDay)) return res.status(400).json({ error: `${ENDLESS.name} wakes on Saturday at 00:00 UTC.` });

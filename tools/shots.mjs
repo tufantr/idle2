@@ -6,7 +6,8 @@
 //   node tools/shots.mjs                          # the default tabs
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
 //                                                 # 'battle' is the fight filling the screen; 'map' and
-//                                                 # 'prestige' are those dialogs over the game; 'anvil'
+//                                                 # 'prestige' are those dialogs over the game, 'power'
+//                                                 # the hero's Sources of power; 'anvil'
 //                                                 # is Smithing's anvil step; 'trials' is the prestige
 //                                                 # dialog with Trials cleared and one picked, 'pact'
 //                                                 # the same deep, rungs cleared and a Pact of two
@@ -15,6 +16,9 @@
 //                                                 # dialog's Ascend row; 'refit' a new piece in the
 //                                                 # bag compared with the reinforced one it would replace;
 //                                                 # 'banner' the fight under a clan banner of ×2;
+//                                                 # 'clantable' the Clan tab's one table and its
+//                                                 # crowns, 'clanswitch' its first week, last week's
+//                                                 # crowns still the divisions';
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker, 'clanwords'
@@ -45,6 +49,8 @@ const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cookin
 // A step inside a tab, shot like a tab.
 const STEPS = {
     anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
+    // work with materials under way: the header's XP an hour and time to the next level, and how long the materials last
+    smelting: () => { FI.switchTab('smithing'); FI.smithView('smelt'); FI.smelt('iron_bar'); document.querySelector('.node-card.active')?.scrollIntoView({ block: 'center' }); },
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
@@ -84,6 +90,14 @@ const STEPS = {
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
     map: () => { FI.switchTab('combat'); FI.openMap(); },
+    // Sources of power (the hero's panel in Inventory), with a potion, a camp and a clan banner at work
+    power: async () => {
+        const { isoWeek } = await import('/src/data/social.js');
+        const g = FI.game(); const s = g.state;
+        s.camp = { whetstone: 22, armory: 20, hearth: 18 }; s.combat.potion = 'combat_potion_3'; s.combat.potionMs = 60000;
+        g.setClanBanner({ week: isoWeek(Date.now()), kills: 3 }); g.recompute();
+        FI.switchTab('inventory'); FI.openPower();
+    },
     prestige: () => { FI.game().state.prestige.runStartedAt = 0; FI.openPrestige(); },
     ascend: () => {
         const g = FI.game(); const s = g.state;
@@ -127,6 +141,20 @@ const DIALOGS = {
 const CLAN_SHOTS = {
     clanhall: null,
     clanmembers: () => document.querySelector('.clan-members')?.scrollIntoView({ block: 'center' }),
+    // the week's one table (data/social.js CLAN_TABLE), last week's three crowns over it
+    clantable: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'later' }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
+    },
+    // the first week of the table: last week's crowns are still the divisions', as they were given
+    clanswitch: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'first' }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
+    },
     hallgive: () => { FI.openHallGive('forge'); FI.hallGivePick('runite_bar'); },
     bannerpick: () => { FI.openBannerPicker(); FI.bannerPick('colour', 'gold'); },
     clanwords: () => FI.openClanWords(),
@@ -201,7 +229,7 @@ function clanApi() {
         boss: { week, level: 2, maxHp: 9.6e8, hp: 4.1e8, killed: false, lastHit: null, endsInMs: 3 * 864e5, nextInMs: 5e7, kills: 1, levels: 7 },
         banner: { week, kills: 1 }, board: [{ username: 'Yarraksalih', share: 0.46, damage: 4.4e8, attacks: 5, you: false }, { username: 'Tufan', share: 0.38, damage: 3.6e8, attacks: 4, you: true }],
         attackScale: 1, attacksLeft: 2, attacksPerDay: 3, attackBank: 6, fightSeconds: 30, maxMembers: 20,
-        standing: { division: 'bronze', divisionName: 'Bronze', rank: 3, of: 9, score: 0, counted: 0, kills: 1, record: 14.2 },
+        standing: { division: 'bronze', divisionName: 'Bronze', rank: 3, of: 9, score: 0, counted: 0, kills: 1, record: 14.2, ...(shotMode.table ? { table: { rank: 2, of: 6 } } : {}) },
         endless: { open: false, opensInMs: 2 * 864e5, endsInMs: 3 * 864e5, attacks: 2, attacksLeft: 2, best: 0, eligible: true }
     });
     return async route => {
@@ -213,7 +241,11 @@ function clanApi() {
         if (path === '/__shots') { shotMode = JSON.parse(request.postData() || '{}'); return json({}); }
         if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, flaggedUntil, ...news() });
         if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, flaggedUntil, gifts: 0, ...news() });
-        if (path === '/clan') return json(shotMode.noClan ? { clan: null } : answer());
+        if (path === '/clan') {
+            const mine = answer();
+            if (shotMode.table === 'later') mine.clan.crowned = { rank: 2, week };   // (second in last week's table)
+            return json(shotMode.noClan ? { clan: null } : mine);
+        }
         if (path === '/clans') {   // (api/index.js's list: the clans that play first)
             return json({ maxMembers: 20, clans: [
                 { id: 3, name: 'Night Watch', tag: 'NW', description: 'Daily players, EU evenings', lookingFor: 'anyone past stage 300', members: 12, active: 11, stage: 2, crown: { division: 'gold', rank: 1, week } },
@@ -226,7 +258,16 @@ function clanApi() {
         }
         if (path === '/rewards') return json({ rewards: [] });
         if (path === '/leaderboard') return json({ entries: [], optIn: false, label: 'Best stage', period: 'all' });
-        if (path === '/clans/ranking') return json({ week, divisions: [], last: { week, divisions: [] } });
+        if (path === '/clans/ranking') {
+            if (!shotMode.table) return json({ week, divisions: [], last: { week, divisions: [] } });
+            // a week of one table (api/index.js), with the fields older pages read beside it
+            const clan = (rank, name, tag, kills, score, you = false) => ({ rank, name, tag, kills, score, counted: Math.min(15, Math.round(score / 60)), you });
+            const table = [clan(1, 'Night Watch', 'NW', 7, 1204.5), clan(2, 'Iron Wolves', 'IWF', 6, 642.1, true), clan(3, 'Ember Court', 'EMB', 6, 610.8), clan(4, 'Deep Divers', 'DEEP', 4, 955.2), clan(5, 'Slow Burn', 'SLO', 2, 88.4), clan(6, 'Quiet Ones', 'QUI', 1, 0)];
+            const last = shotMode.table === 'first'
+                ? { week, divisions: [{ id: 'gold', name: 'Gold', clans: [clan(1, 'Night Watch', 'NW', 6, 980), clan(2, 'Ember Court', 'EMB', 5, 455)] }, { id: 'bronze', name: 'Bronze', clans: [clan(1, 'Iron Wolves', 'IWF', 2, 310, true), clan(2, 'Slow Burn', 'SLO', 1, 40)] }] }
+                : { week, divisions: [], table: table.slice(0, 3) };
+            return json({ week, endsInMs: 3 * 864e5, endless: { open: false, opensInMs: 2 * 864e5 }, divisions: [], table, last });
+        }
         if (path === '/clan/hall/give') {
             const { room, resource, qty } = JSON.parse(request.postData() || '{}');
             const { giftWorth } = await import('../src/data/clanhall.js');

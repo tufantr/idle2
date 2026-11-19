@@ -1,6 +1,6 @@
 ---
 path: /combat
-keywords: fight, fighting, battle, stage, stages, boss, boss timer, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
+keywords: fight, fighting, battle, stage, stages, boss, boss timer, sources of power, power, strength, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
 aliases: Fighting, Battle, Combo, Strikes, Gilded monsters, Boss timer, Bosses' due
 ---
 Your hero fights by himself. He and the monster in front of him attack on their own timers, and when the monster falls the next one steps up. You can simply watch, help with strikes, and spend what the fight brings. The same fight runs the stage ladder, [[Dungeons|dungeon runs]] and [[The Titan]], and it goes on while you are away ([[/offline|offline progress]]).
@@ -44,6 +44,15 @@ Attack is {{BASE.unarmedAtk}} (his fists) plus what his [[Equipment|gear]] gives
 Each of your hero's hits deals his attack, give or take a little, and a critical hit more. Monsters have no defence. A monster's hit is softened by your defence: it deals its attack × its attack ÷ (its attack + your defence), at least 1. Defence equal to the monster's attack halves its hits, and no amount of defence takes off more than {{pct(MAX_MITIGATION, 0)}}:
 
 {{table(['Your defence', 'Of its hit you take #'], [['none', 0], ['half its attack', 0.5], ['equal to its attack', 1], ['three times its attack', 3], [`${fmt(MAX_MITIGATION / (1 - MAX_MITIGATION))} times its attack or more`, MAX_MITIGATION / (1 - MAX_MITIGATION)]].map(([label, k]) => [label, pct(enemyDamage(1e6, k * 1e6) / 1e6, 0)]), { sort: false })}}
+
+## Sources of power
+
+From your first [[Prestige|prestige]] the hero's panel on the Inventory tab has a **Sources** button beside his attack, defence and health. It lists what makes him as strong as he is right now, the biggest first, each with its share of his strength:
+
+- **A share counts stages:** how many stages the source's attack is worth against a boss's clock, and its defence and health against a boss's blow, at the monsters' growth where his best stage is.
+- **Sources multiply one another,** so a share is not a share of the numbers themselves: gear at 40% can be a hundred times his attack.
+- **Only what works on him now is listed:** a potion while a dose runs, the [[Camp|camp]] until your next prestige, the clan banner until Monday.
+- Tap a row (or point at it) to see what it multiplies. Crits, attack speed, dodge and lifesteal are left out: they shape a fight, not these three numbers.
 
 ## Attack speed
 

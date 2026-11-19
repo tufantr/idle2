@@ -1,6 +1,6 @@
 ---
 path: /skills
-keywords: skills, skill, levels, level 99, XP, experience, training, gathering, production, workshop, idle, offline training, pace, Melvor pace, speed
+keywords: skills, skill, levels, level 99, XP, XP an hour, XP per hour, time to level, materials, experience, training, gathering, production, workshop, idle, offline training, pace, Melvor pace, speed
 ---
 Besides fighting, your hero has {{SKILL_IDS.length - 1}} skills to train, each from level 1 to {{MAX_LEVEL}}. They feed each other and the fight: ore becomes bars, bars become tools and reinforce your gear, raw meat and fish become food, herbs become potions. Every level you gain is yours for good: no [[Prestige|prestige]] takes it away.
 
@@ -28,6 +28,10 @@ An action takes its base time divided by one plus all your speed bonuses togethe
 - **Focus:** leave the game alone for {{BASE.focusAfterMs / 1000}} seconds and your hero settles in, with +{{pct(BASE.focusSkillSpeed, 0)}} speed in every skill but Farming until your next click or key. It counts while you are away too.
 
 More on the last two in [[Mini-games and Focus]].
+
+## Your pace
+
+While your hero works at a skill, its header shows the **XP an hour** and the **time to the next level** at his pace right now, with every bonus at work counted (a potion, the bonfire, Focus) but a mini-game's short burst. The card being worked shows how long **the materials you hold** last, with the one that runs out first. A skill with no steady pace shows none of this: [[/skills/farming|Farming]] grows on the clock, and the anvil and the jeweller's bench go by the click.
 
 ## Melvor pace
 

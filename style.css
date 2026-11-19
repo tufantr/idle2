@@ -502,7 +502,7 @@ body.reduced-motion .update-pill { animation: none; box-shadow: 0 0 10px rgba(74
 .potion-tray { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; gap: 6px; padding: 7px; border-radius: 12px; background: linear-gradient(180deg, #1e1810, #120d07); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); }
 .potion-tray .pick { width: 40px; height: 40px; }
 .potion-tray-empty { align-self: center; padding: 0 0.4rem; font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
-.skill-info { display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; }
+.skill-info { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.4rem 1rem; min-width: 0; font-size: 0.85rem; }
 .skill-level { padding: 0.2rem 0.65rem; border-radius: 999px; font-weight: 800; color: #1f1406; background: linear-gradient(180deg, #f0cb72, #b08233); box-shadow: 0 0 10px rgba(214, 170, 92, 0.3); }
 .xp-bar-container { width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(214, 170, 92, 0.25); }
 .xp-bar-fill {
@@ -511,6 +511,10 @@ body.reduced-motion .update-pill { animation: none; box-shadow: 0 0 10px rgba(74
     background-size: 42px 100%, 100% 100%; animation: progressFlow 1.1s linear infinite;
 }
 .skill-xp { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* the pace of the work under way (render.js paceChips, systems/rates.js) */
+.skill-pace { display: inline-flex; align-items: center; gap: 0.7rem; color: var(--text-muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.skill-pace span { display: inline-flex; align-items: center; gap: 0.2rem; cursor: help; }
+.skill-pace b { color: var(--text-main); font-weight: 700; }
 
 /* mini-games */
 .minigame-panel {
@@ -1150,7 +1154,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .combat-controls { flex-direction: column; align-items: stretch; }
     .loadout { flex: 0 0 auto; } /* in a column a flex-basis is a height: without this each row stood 300px tall */
     .panel-header { flex-wrap: wrap; gap: 0.5rem; }
-    .skill-info { flex-wrap: wrap; }
+    .skill-info { justify-content: flex-start; }
     .header-row .chips { gap: 0.3rem; }
     .chip { padding: 0.25rem 0.55rem 0.25rem 0.35rem; }
     .node-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; }
@@ -2476,6 +2480,25 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 
 /* the armory's second line of numbers; shop goods with their picture; drawers */
 .doll-stats.minor { margin-top: 0.45rem; padding-top: 0; border-top: 0; font-size: 0.74rem; }
+/* where the power comes from (render.js renderPowerModal): its door beside the hero's numbers, and each source's share */
+.power-open { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 24px; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; color: var(--heading); }
+.power-modal .modal-header { margin-bottom: 0.7rem; padding-bottom: 0.6rem; }
+.power-totals { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1rem; margin-bottom: 0.8rem; font-size: 0.85rem; color: var(--text-muted); }
+.power-totals b { color: var(--text-main); font-variant-numeric: tabular-nums; }
+.power-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem; list-style: none; }
+.power-row { grid-column: 1 / -1; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-rows: auto 6px; column-gap: 0.55rem; row-gap: 0.15rem; align-items: center; padding: 0.3rem 0.55rem 0.4rem 0.3rem; border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(33, 26, 19, 0.82), rgba(18, 13, 9, 0.88)); cursor: help; }
+.power-row:hover { border-color: var(--line-strong); }
+.power-row.small { grid-column: auto; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-rows: auto; column-gap: 0.35rem; padding: 0.2rem 0.4rem 0.2rem 0.25rem; }
+.power-row.small .power-art { grid-row: auto; width: 24px; height: 24px; }
+.power-row.small .power-art .coin-dot { width: 16px; height: 16px; }
+.power-row.small .power-name, .power-row.small .power-share { font-size: 0.72rem; font-weight: 600; }
+.power-art { grid-row: 1 / 3; display: grid; place-items: center; width: 36px; height: 36px; overflow: hidden; }
+.power-art .spr { flex: none; }
+.power-art .coin-dot { width: 24px; height: 24px; }
+.power-name { min-width: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-main); overflow-wrap: anywhere; }
+.power-share { font-size: 0.85rem; color: var(--heading); font-variant-numeric: tabular-nums; }
+.power-bar { grid-column: 2 / 4; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
+.power-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #b8862e, #fcd34d); }
 .shop-item { justify-content: flex-start; }
 .shop-item-info { flex: 1; min-width: 0; }
 .shop-art { flex: 0 0 48px; height: 48px; border-radius: 12px; }
@@ -2760,7 +2783,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .perks-modal { max-width: 780px; }
 .perks-modal .shop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 0.5rem; }
 .perks-modal .shop-item { padding: 0.6rem 0.7rem; }
-.perks-modal .modal-footer { position: sticky; z-index: 3; bottom: -2rem; margin: 1rem -2rem -2rem; padding: 0.8rem 2rem 1.2rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 35%); }
+.perks-modal .modal-footer, .power-modal .modal-footer { position: sticky; z-index: 3; bottom: -2rem; margin: 1rem -2rem -2rem; padding: 0.8rem 2rem 1.2rem; background: linear-gradient(180deg, rgba(17, 12, 8, 0), #110c08 35%); }
 .perks-modal .modal-header { margin-bottom: 0.7rem; padding-bottom: 0.6rem; }
 .perks-modal .about-blurb { margin-bottom: 0.9rem; }
 .perks-modal .seg { margin-bottom: 0.8rem; }
@@ -2837,7 +2860,7 @@ body.reduced-motion .talent:hover { transform: none; }
     body.battle-full .zone-facts { display: none; } /* the map's zone card has the drops */
     body.battle-full .dock-main:not(:has(.combat-controls)) { display: none; } /* a new player's first fights: no food or potions yet, so nothing to show */
     .menu-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* ☰ alone, "Menu" still read */
-    .perks-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
+    .perks-modal .modal-footer, .power-modal .modal-footer { bottom: -1.2rem; margin: 0.8rem -1.2rem -1.2rem; padding: 0.7rem 1.2rem 1rem; }
     .dock-group { flex-basis: 100%; padding: 0.5rem 0.6rem; }
     /* on a phone the dock is a column: what a run uses most comes first */
     .dock-loop { order: 1; display: grid; grid-template-columns: 1fr 1fr; }
@@ -3014,7 +3037,7 @@ body.reduced-motion .trial-card:has(input:checked) { transform: none; }
     .perks-modal .shop-item-name .muted { font-size: 0.64rem; }
     .perks-modal .shop-item-desc { font-size: 0.66rem; line-height: 1.25; }
     .perks-modal .shop-btn, .perks-modal .perk-max { width: 100%; min-width: 0; margin-top: auto; padding: 0.3rem 0.2rem; font-size: 0.78rem; }
-    .perks-modal .modal-footer { bottom: -1rem; margin: 0.7rem -0.95rem -1rem; padding: 0.6rem 0.95rem 0.95rem; }
+    .perks-modal .modal-footer, .power-modal .modal-footer { bottom: -1rem; margin: 0.7rem -0.95rem -1rem; padding: 0.6rem 0.95rem 0.95rem; }
     /* the daily crate: a smaller chest, the haul two across */
     .crate-stage { height: 84px; }
     .crate-box .spr { --k: 2 !important; }

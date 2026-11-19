@@ -5,7 +5,7 @@ import {
     loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, startsOver, progressed,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
-import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, renderHallGive, renderBannerPicker, workTime, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
+import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderPowerModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, renderHallGive, renderBannerPicker, workTime, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
 import { choosingAfterClear } from './systems/dungeon.js';
 import { droppingIn } from './systems/combat.js';
 import { achievementById } from './data/achievements.js';
@@ -683,7 +683,7 @@ const ARRIVALS = {
     essence: '.chip.essence', tokens: '.chip.tokens', skill_points: '.chip.sp', camp: '.camp-panel, .dock-camp', stage_nav: '.stay-toggle', world_map: '.map-btn',
     food: '.combat-controls', potions: '.combat-controls', gear: '.fact-text', jewellery: '.doll', bag_tools: '.bag-panel .btn-row',
     auto_salvage: '.auto-salvage', mastery: '.mastery-total', minigames: '.minigame-panel, .minigame-line', anvil: '.seg-btn[onclick*="anvil"]', auto_prestige: '.dock-auto', trials: '.pg-trials', ascension: '.pg-ascend', stars: '.chip.stars',
-    talents: '.chip.tp', charms: '.charms-panel'
+    talents: '.chip.tp', charms: '.charms-panel', power_sources: '.power-open'
 };
 const arrivals = new Set();
 
@@ -1322,15 +1322,18 @@ function askConfirm(title, text, confirmLabel, onYes) {
     pendingConfirm = onYes;
     const html = renderConfirmModal(title, text, confirmLabel);
     if (!ui.modalOpen || ui.modalOpen === 'confirm') { openModal(html, 'confirm'); return; }
-    // Asked from inside a dialog, the question stands over it: queued, it waited behind until that dialog was closed
-    // (the owner's report: the War Tree's Unlearn all). The dialog under it stays as it is, and closeModal goes back to it.
+    standOver(html, 'confirm');
+}
+// Asked from inside a dialog, a question or a "?" card stands over it: queued, it waited behind until that dialog was closed
+// (the owner's report: the War Tree's Unlearn all). The dialog under it stays as it is, and closeModal goes back to it.
+function standOver(html, key) {
     const over = Object.assign(document.createElement('div'), { className: 'modal-overlay active', innerHTML: html });
     over.setAttribute('role', 'dialog');
     over.setAttribute('aria-modal', 'true');
     underFocus = noteFocus(document.activeElement);   // the control in the dialog under it: the focus goes back there
     document.getElementById('modal-root').appendChild(over);
     ui.modalUnder = ui.modalOpen;
-    ui.modalOpen = 'confirm';
+    ui.modalOpen = key;
     nameDialog(over);
     holdPage(true);
     focusDialog(over);
@@ -1473,10 +1476,11 @@ async function sendClanResult(now = false) {
 function endlessAnswered(answer) {
     const e = ui.social.endless;
     if (e) Object.assign(e, { attacksLeft: answer.attacksLeft, best: answer.best });
-    if (ui.social.standing && answer.rank) Object.assign(ui.social.standing, { rank: answer.rank, of: answer.of, score: answer.score, division: answer.division, divisionName: answer.divisionName });
+    const place = answer.table || answer;   // in the one table (data/social.js CLAN_TABLE), or in its division
+    if (ui.social.standing && place.rank) Object.assign(ui.social.standing, { rank: answer.rank, of: answer.of, score: answer.score, division: answer.division, divisionName: answer.divisionName, table: answer.table });
     ui.social.fetchedAt = 0;   // the Clan tab brings the ranking up to date when it is next shown
     const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
-        answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
+        place.rank ? `Your clan: #${place.rank} of ${place.of}${answer.table ? '' : ` in ${answer.divisionName}`}, ${fmt(answer.score)} deep` : '',
         answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
         answer.counted === false ? 'Flagged: not counted in the ranking' : ''].filter(Boolean);
     const flagged = answer.counted === false;
@@ -2002,7 +2006,13 @@ window.FI = {
         render();
     },
     /** The "?" on a panel: what this place is, with its picture. */
-    about(id) { openModal(renderAboutCard(id), 'about'); },
+    about(id) {
+        const card = renderAboutCard(id);
+        if (ui.modalOpen && !ui.modalUnder) standOver(card, 'about');
+        else openModal(card, 'about');
+    },
+    /** Where the hero's power comes from, worked out now (the hero's panel, Inventory). */
+    openPower() { openModal(renderPowerModal(game), 'power'); },
     // the clan's hall (data/clanhall.js): giving to a room, and the banner its owner picks
     openHallGive(room) {
         if (!hallRoom(room) || !ui.social?.hall) return;
