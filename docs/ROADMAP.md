@@ -1462,15 +1462,20 @@ Keeping it running:
 - [x] **The API on patched packages** (11 November 2026, found by the research loop's security read): its web framework's
       packages moved to their patched releases, and a compressed request body is refused before it is unpacked
 - [x] **Back after a day: a bar, and the time away replayed once** (the research loop's R20, P-123; DESIGN §3.16, §3.17): the
-      boot replayed up to a day in one task with only the sidebar's title drawn (6.8–7.4 s at Chrome's 4× CPU throttle for a
-      stage-1,300 hero with Auto prestige, research-loop/047), and a second time for a signed-in player whose server save won.
-      Now it replays a slice at a time behind a bar of the time replayed, the stage and the gold climbing, and the
-      welcome-back takes its place; signed in it waits for the server's save (at most 4 s) and replays only the game played;
-      a tab back from sleep takes the same path; the outcome is the replay in one go, bit for bit. Timed with
-      `tools/bootbench.mjs` (the stage-1,300 hero a day away, three runs each, a machine at load 150–280): plain, one task of
-      2.2 s and the game drawn at 4.1 s before; after, the bar at 1.9 s, no task over 0.1 s, the game drawn at 3.7 s. At 4×,
-      one task of 7.8 s and the game drawn at 9.6 s before; after, the bar at 2.0 s, a frame at least every 0.28 s (the
-      longest task, 0.26 s, is the first drawing of the game), the game drawn at 11.5 s: the slices cost about a tenth more
+      boot replayed up to a day in one task with only the sidebar's title drawn (research-loop/047: 7 to 11 s at Chrome's 4× CPU
+      throttle for heroes at stages 1,300 and 2,000 with Auto prestige), and a second time for a signed-in player whose server
+      save won. Now it replays a slice at a time behind a bar of the time replayed, the stage and the gold climbing, and the
+      welcome-back takes its place. Signed in it waits for the server's save (at most 4 s) and replays only the game played; a
+      late answer that wins stops the replay of this copy. Behind the sign-in it waits for the player's choice, the game drawn
+      as it was left. A tab back from sleep takes the same path, the page is held from the replay's first slice, and a reload in
+      the middle costs nothing: the save is untouched until it ends. The outcome is the replay in one go, field by field
+      (`test/catchup.test.mjs`; `tools/bootcheck.mjs --against` in Chromium, against the code before it: a guest's boot, a gap
+      in a running tab, both outcomes of a signed-in sync). Timed with `tools/bootbench.mjs` (a day away, three runs each, a shared
+      machine at load 30–170). At 4×, the stage-1,300 hero: one frozen task of 9.5–9.8 s and the game drawn at 10.8–11.4 s
+      before; now the bar is up at 2.5–4.0 s, moves 85–94 times and stands still at most 0.22–0.32 s, no task over 0.54 s, the
+      game drawn at 11.2–16.0 s. The stage-2,000 hero: 11.0–12.2 s frozen, drawn at 11.8–13.9 s before; now the bar at
+      0.9–2.0 s, 95–98 moves, still at most 0.28–0.58 s, no task over 0.46 s, drawn at 13.1–16.1 s. Without the throttle the frozen
+      2.2–3.3 s become tasks of at most 0.16 s. The slices cost about 15% more time at 4×, nothing that shows without it
 - [x] **Tokens in the game's own numbers** (the research loop's small fixes, 12 November 2026): a deep run's tokens showed
       as long digits on the Combat tab's prestige strip, the dock's Prestige, the Shop and the battle log; they read 1.6M
       now, and the Shop's line says the highest stage this run, where it said "best stage"
