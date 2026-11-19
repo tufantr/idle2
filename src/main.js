@@ -424,11 +424,9 @@ function closeCatchUp(html) {
     }
 }
 
-/** What the new version changed, for the welcome-back's strip (systems/reentry.js): nothing yet, until a changelog fills it. */
-const whatsNew = () => [];
 /** The welcome-back report of `summary`, with its strip of what the world did meanwhile after a day or more away. */
 function welcomeBack(summary) {
-    const facts = reentryFacts(game.state, game.now, summary, { changes: whatsNew() });
+    const facts = reentryFacts(game.state, game.now, summary);
     return renderWelcomeBack(summary, game, { strip: ready => renderReentry(facts, { ready, now: game.now }) });
 }
 

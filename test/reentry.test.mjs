@@ -11,6 +11,7 @@ import { eventStatus } from '../src/systems/events.js';
 import { weeklyTrialAt } from '../src/data/trials.js';
 import { isoWeek, CLAN_BANNER } from '../src/data/social.js';
 import { renderReentry, backgroundLine } from '../src/ui/reentry.js';
+import { gapTelling, BACKGROUND_REPORT_MS } from '../src/systems/reentry.js';
 
 rng.setSource(seededRandom(21));
 const HOUR = 3600 * 1000;
@@ -65,11 +66,10 @@ test('the weekend event: running now, or ran while away; one line however long t
     assert.equal(ran[0].running, false);
     assert.equal(ran[0].name, eventStatus(later.state, SATURDAY).event.name);
     assert.equal(reentryFacts(later.state, WEDNESDAY, away(DAY)).find(f => f.kind === 'event'), undefined, 'over before the player left');
-    // a month away: the latest event alone, and the strip stays four lines at most
-    const month = reentryFacts(later.state, WEDNESDAY, away(30 * DAY), { changes: ['a', 'b', 'c', 'd', 'e'] });
+    // a month away: the latest event alone, and the strip stays three lines at most
+    const month = reentryFacts(later.state, WEDNESDAY, away(30 * DAY));
     assert.equal(month.filter(f => f.kind === 'event').length, 1);
-    assert.ok(month.length <= 4, `${month.length} lines`);
-    assert.deepEqual(month.find(f => f.kind === 'changes').lines, ['a', 'b', 'c'], "the new version's news, capped");
+    assert.ok(month.length <= 3, `${month.length} lines`);
 });
 
 test("the week's Trial: open once the Trials are met, its laurel to win or won", () => {
@@ -96,7 +96,6 @@ test('the strip in words: a line each; one line when nothing waits, and none whe
     assert.match(renderReentry([], { ready: 0 }), /Nothing is waiting for you/);
     assert.equal(renderReentry([], { ready: 2 }), '', 'the taps on the report are what waits');
     assert.equal(renderReentry(null), '', 'no strip');
-    assert.doesNotMatch(renderReentry([{ kind: 'changes', lines: ['<b>x</b>'] }]), /<b>x<\/b>/, 'news is text, not markup');
 });
 
 test("the strip sits under the report's haul, and a hidden tab's toast names the time and the haul", async () => {
@@ -126,4 +125,18 @@ test('a day away fighting through a weekend event: the report counts its Festiva
     const summary = back.resumeFromSave(SATURDAY);
     assert.ok(summary.festival > 0, `${summary.festival} tokens`);
     assert.equal(summary.festival, back.state.events.tokens - raw.events.tokens);
+});
+
+test('a gap told: the report in view, a toast for a short one in a tab that was hidden as it began, nothing at rest', () => {
+    const away = (elapsed, mode = 'combat') => ({ elapsed, simulated: elapsed, mode });
+    const half = BACKGROUND_REPORT_MS / 2;
+    assert.equal(gapTelling(null), null, 'no replay: nothing to tell');
+    assert.equal(gapTelling(away(half, 'rest')), null, 'nothing was under way');
+    assert.equal(gapTelling(away(half, 'rest'), { background: true }), null);
+    assert.equal(gapTelling(away(half)), 'report', 'the machine slept with the game in front: the report, as ever');
+    assert.equal(gapTelling(away(half, 'skill')), 'report');
+    assert.equal(gapTelling(away(half), { background: true }), 'toast', 'a tab the player had left: one line once back');
+    assert.equal(gapTelling(away(BACKGROUND_REPORT_MS - 1), { background: true }), 'toast');
+    assert.equal(gapTelling(away(BACKGROUND_REPORT_MS), { background: true }), 'report', 'an hour or more: the report after all');
+    assert.equal(gapTelling(away(3 * BACKGROUND_REPORT_MS), { background: true }), 'report');
 });

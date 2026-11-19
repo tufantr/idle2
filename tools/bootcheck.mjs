@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 // Coming back, checked in Chromium (DESIGN §3.16): what a unit test can't reach of the replay of time away (src/main.js
-// catchUp). A guest back after a day; a signed-in player whose server answers fast, late, or with another device's game; a
-// page reloaded in the middle of the replay. Each check prints ok or FAIL, and the tool exits 1 on any FAIL.
+// catchUp) and of what follows it. A guest back after a day; a signed-in player whose server answers fast, late, or with another
+// device's game; a page reloaded in the middle of the replay; a tab hidden for a gap; the report's strip of the world. Each
+// check prints ok or FAIL, and the tool exits 1 on any FAIL.
 //
 //   node tools/bootcheck.mjs runs/hero-1300.json [--against=<an older game folder>] [--only=guest,slow,...] [--rate=4]
 //
 // The hero comes from tools/simulate.mjs --save-at: deep, with Auto prestige, so that his replay lasts. The flows: guest, fast,
-// slow, server, lateserver, reload, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
+// slow, server, lateserver, reload, hidden, strip, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
 // in with this copy kept or with the server's game) in both folders from one save, one clock and one seed, the games they
 // end in compared field by field. The dice are seeded as each replay begins, so a replay made first and thrown away
 // (the older boot's, signed in) changes nothing. Needs Playwright, as tools/shots.mjs does.
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromiumOrExit, serve, shifted } from './bootlib.mjs';
 
 const args = process.argv.slice(2);
@@ -253,6 +254,64 @@ const FLOWS = {
         const back = await page.evaluate(() => ({ kills: FI.game().state.stats.kills, report: !!document.querySelector('.welcome-back'), bar: !!document.querySelector('.cu-bar') }));
         note('reload: once over, a reload keeps the game and replays nothing', back.kills >= kills && !back.report && !back.bar, JSON.stringify(back));
         noErrors('reload', errors);
+        await ctx.close();
+    },
+
+    /** A tab hidden while the browser paused it: nothing opens unseen; once in view a line, or from an hour on the report. */
+    async hidden() {
+        const setHidden = (page, on) => page.evaluate(v => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => v }); document.dispatchEvent(new Event('visibilitychange')); }, on);
+        const toasts = page => page.evaluate(() => [...document.querySelectorAll('#toast-area .toast')].map(t => t.textContent).join(' | '));
+        for (const [name, minutes, hide, told] of [['a hidden tab paused 37 minutes', 37, true, 'toast'], ['a hidden tab paused 2 hours', 120, true, 'report'],
+            ['a page in view, the machine asleep 37 minutes', 37, false, 'report']]) {
+            const T = Date.now();
+            const { page, ctx, errors } = await open(mine, { save: shifted(raw, T), clock: T });
+            await page.waitForFunction(() => window.FI?.game && document.querySelector('#nav')?.children.length > 0, null, { timeout: WAIT_MS, polling: 200 });
+            if (hide) await setHidden(page, true);
+            await page.evaluate(ms => window.__clock.add(ms), minutes * 60000);
+            await page.waitForFunction(() => (window.__replays || []).some(r => r.done), null, { timeout: WAIT_MS, polling: 200 });
+            await page.waitForTimeout(800);
+            const unseen = await seen(page);
+            if (hide) {
+                note(`${name}: nothing opens while it is hidden`, !unseen.report && !(await toasts(page)).includes('in the background'), JSON.stringify({ report: unseen.report }));
+                await setHidden(page, false);
+                await page.waitForTimeout(700);
+            }
+            const s = await seen(page);
+            const line = await toasts(page);
+            if (told === 'toast') note(`${name}: a line in view, no report`, !s.report && /in the background/.test(line), line);
+            else note(`${name}: the report`, s.report && s.reports === 1 && !/in the background/.test(line), JSON.stringify({ reports: s.reports, away: s.away }));
+            note(`${name}: one replay`, s.replays.length === 1);
+            noErrors(name, errors);
+            await ctx.close();
+        }
+    },
+
+    /** The report after a day: the strip names the clan's week, what else the hero has met; a tap on the clan's goes there. */
+    async strip() {
+        const { isoWeek } = await import(pathToFileURL(join(ROOT, 'src/data/social.js')));
+        const save = aged(24);
+        Object.assign(save.unlocks, { clan: true, events: true });
+        const api = async path => {
+            if (path === '/load') return { delay: 300, body: { state: null, lastSaved: 0, serverNow: Date.now(), gifts: 0, banner: { week: isoWeek(Date.now()), kills: 3 },
+                hall: { clan: 7, rooms: { forge: 30500 }, stage: 1, colour: 'forest', emblem: 'troll', cloak: false }, hallGifts: [] } };
+            if (path === '/save') return { body: { success: true, timestamp: Date.now(), gifts: 0 } };
+            if (path === '/leaderboard') return { body: { entries: [], optIn: false, label: 'Best stage', period: 'all' } };
+            if (path === '/rewards') return { body: { rewards: [] } };
+            return { body: { clan: null, clans: [] } };
+        };
+        const { page, ctx, errors } = await open(mine, { save, api });
+        const got = await reportUp(page);
+        await page.waitForTimeout(600);
+        const lines = await page.evaluate(() => [...document.querySelectorAll('.welcome-back .wb-world-line')].map(l => l.textContent.replace(/\s+/g, ' ').trim()));
+        note('the strip: under the report, the clan\'s week as the server says it', got && lines.some(l => /Your clan felled 3 of 7 levels/.test(l)), lines.join(' / '));
+        note('the strip: the week\'s Trial, the hero having met the Trials', lines.some(l => /This week's Trial/.test(l)));
+        const order = await page.evaluate(() => { const b = document.querySelector('.welcome-back'); return { world: !!b.querySelector('.wb-world'), last: b.querySelector('.modal-footer')?.previousElementSibling?.className || '' }; });
+        note('the strip: last before Collect', order.world && /wb-world/.test(order.last), order.last);
+        await page.evaluate(() => [...document.querySelectorAll('.welcome-back button.wb-world-line')].find(b => /clan/i.test(b.textContent))?.click());
+        await page.waitForTimeout(400);
+        const after = await page.evaluate(() => ({ report: !!document.querySelector('.welcome-back'), active: document.querySelector('#nav .nav-btn.active')?.textContent || '' }));
+        note('the strip: a tap on the clan\'s line goes to the Clan tab', !after.report && /clan/i.test(after.active), JSON.stringify(after));
+        noErrors('the strip', errors);
         await ctx.close();
     },
 

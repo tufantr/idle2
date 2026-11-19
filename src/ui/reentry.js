@@ -3,7 +3,7 @@
 // (systems/reentry.js). Presentation only: main.js puts them on the page.
 
 import { fmt, escapeHtml as esc, duration } from './format.js';
-import { sprite, resIcon, heroSprite, glyph } from './sprites.js';
+import { sprite, resIcon, heroSprite } from './sprites.js';
 import { FEATURES, EVENT_ART, paintStyle } from './features.js';
 import { resolveAction } from '../systems/skilling.js';
 import { levelForXp } from '../core/xp.js';
@@ -65,8 +65,6 @@ const plural = (n, one, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`
 function reentryLine(fact, now) {
     const tap = (tab, body) => `<button class="wb-world-line" onclick="FI.collectOffline(); FI.switchTab('${tab}')">${body}</button>`;
     switch (fact.kind) {
-        case 'changes':
-            return `<p class="wb-world-line">${glyph('spark', { scale: 0.75 })}<span>New in this version: ${fact.lines.map(esc).join('; ')}</span></p>`;
         case 'clan':
             return tap('clan', `${small(FEATURES.clan.icon)}<span>${fact.kills > 0
                 ? `Your clan felled <b>${fact.kills} of ${fact.levels}</b> levels of this week's boss: its banner <b>×${fact.mult}</b>`
