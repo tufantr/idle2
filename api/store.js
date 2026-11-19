@@ -481,6 +481,11 @@ async function getClan(clanId) {
     return r ? { id: r.id, name: r.name, tag: r.tag, description: r.description, lookingFor: r.looking_for, ownerId: r.owner_id, createdAt: int(r.created_at), colour: r.banner_colour || null, emblem: r.banner_emblem || null } : null;
 }
 
+/** The clan's description and "looking for" line, as its owner writes them. */
+async function setClanWords(clanId, description, lookingFor) {
+    await sql`UPDATE clans SET description = ${description}::varchar, looking_for = ${lookingFor}::varchar WHERE id = ${clanId}::int`;
+}
+
 async function setClanOwner(clanId, ownerId) {
     await sql`UPDATE clans SET owner_id = ${ownerId} WHERE id = ${clanId}`;
 }
@@ -982,7 +987,7 @@ module.exports = {
     userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
     addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
-    listClans, createClan, getClan, setClanOwner, passClan, deleteClan, membershipOf, addMember, removeMember, clanMembers,
+    listClans, createClan, getClan, setClanWords, setClanOwner, passClan, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,

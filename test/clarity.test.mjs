@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
 import { fmt, seenWords } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan, renderClanWords } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
@@ -250,6 +250,16 @@ test('the crowns read 1st, 2nd and 3rd: gold, silver and bronze, the place in a 
     assert.match(list, literal('<span class="clan-crown rank-3" data-tip-title="3rd" data-tip="in the Bronze division last week"'), 'on the clan list');
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     for (const [rank, metal] of [[1, 'gold'], [2, 'silver'], [3, 'bronze']]) assert.match(css, new RegExp(`\\.clan-crown\\.rank-${rank} \\.spr \\{ filter: [^}]+\\}\\s+/\\* ${metal} \\*/`), metal);
+});
+
+test("a clan's owner has a dialog for its words, filled with them; a member has none (P-113)", () => {
+    const view = isOwner => renderClan(new Game(null, T0), { social: { loaded: true, clan: { id: 7, name: 'Wolves', tag: 'WLF', isOwner }, members: [] } }, { loggedIn: true });
+    assert.match(view(true), /onclick="FI\.openClanWords\(\)"/);
+    assert.doesNotMatch(view(false), /openClanWords/);
+    const dialog = renderClanWords({ description: 'We "hunt" <at dawn>', lookingFor: 'Anyone' });
+    assert.match(dialog, /id="clan-words-desc"[^>]*value="We &quot;hunt&quot; &lt;at dawn&gt;"/, 'escaped');
+    assert.match(dialog, /id="clan-words-looking"[^>]*value="Anyone"/);
+    assert.match(dialog, /FI\.saveClanWords\(\)/);
 });
 
 test("the Clan tab says when each other member last played, in whole days (P-009)", () => {

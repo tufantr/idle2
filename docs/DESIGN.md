@@ -1100,7 +1100,9 @@ with the game's own stat code; the client never submits damage or scores.
   no finer, so clanmates can tell who still plays but not when anyone does).
   **A clan's words** (description, "looking for") hold no way to reach anyone elsewhere: `clanWordsOk` (`src/data/social.js`,
   the owner's decision, P-125) refuses web addresses, "@" handles, invite codes and contact details, spelled out or spaced out
-  too; the game's own Discord may be named or linked. A sieve for the plain cases: the team reads every new clan.
+  too; the game's own Discord may be named or linked. A sieve for the plain cases: the team reads every new clan. The owner
+  changes them at any time (`POST /api/clan/words`, by the same rule; P-113: one who took a clan over kept its founder's words
+  for good); the name and tag stay as they were made.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).

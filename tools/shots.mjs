@@ -17,7 +17,8 @@
 //                                                 # 'banner' the fight under a clan banner of ×2;
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
-//                                                 # and 'bannerpick' its banner picker; 'account'
+//                                                 # and 'bannerpick' its banner picker, 'clanwords'
+//                                                 # its owner's dialog for its words; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
 //                                                 # clans to find: the API is answered by the
@@ -128,6 +129,7 @@ const CLAN_SHOTS = {
     clanmembers: () => document.querySelector('.clan-members')?.scrollIntoView({ block: 'center' }),
     hallgive: () => { FI.openHallGive('forge'); FI.hallGivePick('runite_bar'); },
     bannerpick: () => { FI.openBannerPicker(); FI.bannerPick('colour', 'gold'); },
+    clanwords: () => FI.openClanWords(),
     // the hall at the Great Hall and the clan's cloak earned: the hero wears it, azure, in Settings' cloaks and in the fight
     clancloak: () => {
         FI.game().setClanHall({ clan: 7, rooms: { forge: 82800, stores: 82800, kitchen: 28800, apothecary: 28800, garden: 7200, library: 82800 }, stage: 2, colour: 'azure', emblem: 'griffin', cloak: true });

@@ -1571,6 +1571,8 @@ Keeping it running:
       when a member next opens the clan; an owner who leaves hands it to the same one. The clan's "?" and the wiki say so
 - [x] **No links or handles in clan words** (R14, P-125): a clan's description and "looking for" line refuse web addresses,
       "@" handles, invite codes and contact details; clans keep the game's Discord
+- [x] **A clan's owner edits its words** (R14, P-113): an Edit words dialog on the Clan tab for the description and the
+      "looking for" line; the name and tag stay
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

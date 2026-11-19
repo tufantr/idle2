@@ -2465,7 +2465,7 @@ export function renderClan(game, ui, cloud) {
         const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}${lastSeen(m)}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${built(m)}</td></tr>`).join('');
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
             <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span>${crownMark(c.crown)}</h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
-                <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
+                <div class="btn-row">${discord}${c.isOwner ? '<button class="mini-btn" onclick="FI.openClanWords()">Edit words</button>' : ''}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? clanBossPanel(game, social, boss, pct) : ''}
             ${boss ? endlessPanel(game, social) : ''}
             ${boss && seen(game.state, 'potions') ? potionPicker(game, 'combat', 'clan-potion') : ''}
@@ -2595,6 +2595,20 @@ export function renderHallGive(game, ui) {
         ${goods.length ? `<div class="give-items" role="group" aria-label="What to give">${tiles}</div>` : ''}
         ${amount}
         <div class="modal-footer"><button class="modal-btn" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.hallGive()" ${qty > 0 && weekLeft > 0 ? '' : 'disabled'}>Give<span id="give-label">${qty > 0 && weekLeft > 0 ? ` ${fmt(qty, { short: false })} · ${workTime(qty * worth)}` : ''}</span></button></div>
+    </div>`;
+}
+
+/** The clan's words, for its owner (FI.openClanWords): what the Start a clan form asks, as they stand now. */
+export function renderClanWords(clan) {
+    return `<div class="modal-content narrow ${painted('clanhall', 'center 40%')}">
+        <div class="modal-header">Your clan's words</div>
+        <div class="modal-body"><div class="auth-error" id="clan-words-error"></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.saveClanWords()">
+                <label class="small">Description <input id="clan-words-desc" class="text-input" maxlength="200" value="${esc(clan?.description || '')}" data-autofocus></label>
+                <label class="small">Looking for <input id="clan-words-looking" class="text-input" maxlength="100" value="${esc(clan?.lookingFor || '')}"></label>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Save</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button></div>
+            </form>
+        </div>
     </div>`;
 }
 

@@ -491,6 +491,30 @@ test("a clan's words hold no links, handles or invite codes; the game's own Disc
     assert.equal((await post('/clans', { name: 'Linked Up', tag: 'LNK', description: "We talk on the game's Discord", lookingFor: 'Stage 1.5k, active' }, founder)).status, 200);
 });
 
+test("a clan's owner changes its words, by the same rule as at its start; nobody else can", async () => {
+    const owner = await register('scribe_owner');
+    const mate = await register('scribe_mate');
+    const { clanId } = await (await post('/clans', { name: 'Quill Bearers', tag: 'QUIL', description: 'Old words', lookingFor: 'Old wish' }, owner)).json();
+    await post('/clans/join', { clanId }, mate);
+    const edit = (token, words) => post('/clan/words', words, token);
+    assert.equal((await edit(mate, { description: 'Mine now' })).status, 409, 'a member');
+    assert.equal((await edit(await register('scribe_stranger'), { description: 'Mine now' })).status, 400, 'no clan');
+    const refused = await edit(owner, { description: 'New words', lookingFor: 'see t.me/somewhere' });
+    assert.equal(refused.status, 400);
+    assert.match((await refused.json()).error, /links, handles or invite codes/);
+    const seen = async () => { const { clan } = await (await get('/clan', mate)).json(); return [clan.description, clan.lookingFor, clan.name, clan.tag]; };
+    assert.deepEqual(await seen(), ['Old words', 'Old wish', 'Quill Bearers', 'QUIL'], 'nothing changed');
+
+    const saved = await edit(owner, { description: 'New <words>', lookingFor: '', name: 'Stolen Name', tag: 'STOL' });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(await saved.json(), { description: 'New words', lookingFor: '' });
+    assert.deepEqual(await seen(), ['New words', '', 'Quill Bearers', 'QUIL'], 'the name and tag stay');
+    const { clans } = await (await get('/clans?search=quill', mate)).json();
+    assert.equal(clans[0].description, 'New words', 'on the list of clans too');
+    await post('/clans/leave', {}, owner);
+    assert.equal((await edit(mate, { description: 'The heir writes' })).status, 200, 'and one who takes the clan over');
+});
+
 test("a clan's members are shown when they last played, in whole days and no finer", async () => {
     const lead = await register('seen_lead');
     const mate = await register('seen_mate');

@@ -129,6 +129,10 @@ function createMemoryStore() {
             const c = db.clans.find(x => x.id === clanId);
             return c ? { ...c } : null;
         },
+        async setClanWords(clanId, description, lookingFor) {
+            const c = db.clans.find(x => x.id === clanId);
+            if (c) Object.assign(c, { description, lookingFor });
+        },
         async setClanOwner(clanId, ownerId) {
             const c = db.clans.find(x => x.id === clanId);
             if (c) c.ownerId = ownerId;

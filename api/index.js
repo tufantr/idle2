@@ -1023,6 +1023,20 @@ app.post('/api/clan/kick', authenticateToken, route('kick', async (req, res) => 
     res.json({ removed: username });
 }));
 
+// The owner changes the clan's words (the research loop's P-113, November 2026: one who took a clan over kept its founder's
+// for good). Its name and tag stay as they were made.
+app.post('/api/clan/words', authenticateToken, route('clan words', async (req, res) => {
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
+    if (mine.clan.ownerId !== req.user.id) return res.status(409).json({ error: "Only the clan owner can change the clan's words." });   // 409: see the kick
+    const description = cleanText((req.body || {}).description, 200);
+    const lookingFor = cleanText((req.body || {}).lookingFor, 100);
+    const { clanWordsOk, CLAN_WORDS_REFUSED } = await engine();
+    if (!clanWordsOk(description) || !clanWordsOk(lookingFor)) return res.status(400).json({ error: CLAN_WORDS_REFUSED });
+    await store.setClanWords(mine.clan.id, description, lookingFor);
+    res.json({ description, lookingFor });
+}));
+
 app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, res) => {
     const mine = await clanOf(req.user.id);
     if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });

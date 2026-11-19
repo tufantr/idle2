@@ -43,6 +43,7 @@ import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { talentById, respecPrice } from './data/talents.js';
 import { charmById } from './data/charms.js';
 import { HALL, HALL_STAGES, hallRoom } from './data/clanhall.js';
+import { renderClanWords } from './ui/render.js';
 import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
@@ -1653,6 +1654,24 @@ window.FI = {
     kickMember(username) {
         askConfirm('Remove this member?', `${username} leaves the clan. Their damage this week stays on the board.`, 'Remove',
             () => socialAction(() => cloud.kickMember(username), `Removed ${username}`));
+    },
+    /** The clan's description and "looking for" line, for its owner: a word the server refuses stays in the dialog, with why. */
+    openClanWords() {
+        if (ui.social?.clan?.isOwner) openModal(renderClanWords(ui.social.clan), 'clanWords');
+    },
+    async saveClanWords() {
+        const description = document.getElementById('clan-words-desc')?.value || '';
+        const lookingFor = document.getElementById('clan-words-looking')?.value || '';
+        try {
+            const saved = await cloud.setClanWords(description, lookingFor);
+            if (ui.social?.clan) Object.assign(ui.social.clan, saved);
+            closeModal();
+            toast('Clan words saved', 'info');
+            render();
+        } catch (err) {
+            const box = document.getElementById('clan-words-error');
+            if (box) box.textContent = err.message; else toast(err.message, 'error');
+        }
     },
     joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
     leaveClan() { askConfirm('Leave your clan?', 'Your damage this week stays on its board.', 'Leave clan', () => socialAction(() => cloud.leaveClan(), 'You left the clan')); },
