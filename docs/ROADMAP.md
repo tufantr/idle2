@@ -1575,6 +1575,11 @@ Keeping it running:
       seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
       the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
       prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
+- [x] **What the world did while you were away** (the research loop's R20, P-127; DESIGN §3.16): after a day or more, the
+      welcome-back ends with a line each for what the player has met: the clan's week and its banner, the weekend event that
+      runs or ran (with the Festival Tokens won), the week's Trial and its laurel; a month away reads as short as a day
+- [x] **A tab you never left says nothing unseen** (R20; research-loop/040): a gap that began with the page hidden opens no
+      dialog while it stays hidden. Back in view, under an hour it is one line in a toast, from an hour on the welcome-back
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

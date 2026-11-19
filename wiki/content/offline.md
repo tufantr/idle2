@@ -3,7 +3,7 @@ path: /offline
 keywords: offline, offline progress, away, idle, afk, welcome back, cap, endurance, zipline, background, background tab, phone, save, saving, autosave, backup, backups, restore, cloud, cloud save, server, server save, account, sign in, log in, register, guest, play as guest, without an account, local storage, hard reset, wipe, saves
 aliases: Offline progress, Saves, Cloud save, Backups, Welcome back
 ---
-Fantasy Idle keeps playing while you are away. When you come back, the game works through the time you were gone with the same rules as play, and a welcome-back report tells you what happened. This page also explains how your game is saved.
+Fantasy Idle keeps playing while you are away. When you come back, the game works through the time you were gone with the same rules as play, behind a bar that shows it climbing, and a welcome-back report tells you what happened. This page also explains how your game is saved.
 
 ## What runs while you are away
 
@@ -32,9 +32,13 @@ Back after a while, a report greets you. It says how long you were away and, whe
 
 Below it is a row of what is ready, each a tap away: a prestige and what it pays, crates to open, the Titan awake, skill points to spend and better gear to wear. A place that was waiting for its turn opens as you come back, and the report names it (see [[Places and unlocks]]).
 
+After a day or more away, the report ends with what the world did meanwhile, a line each and only for what you have met: how far your [[/clans|clan]] has got with this week's boss and the banner that raises, the [[Weekend events|weekend event]] that is running or ran while you were gone (with the Festival Tokens you won), and this week's [[Trials|Trial]] with its laurel.
+
+A long absence takes a moment to play through, so a bar comes first, with the time gone by, the stage and the gold climbing as it fills. If you close or reload the page while it runs, nothing is lost: the time away is simply worked through again the next time. With an account the game first looks at the save on the server, so only the game you will play is worked through.
+
 ## Background tabs and phones
 
-A tab left in the background keeps playing. Browsers slow such a tab down, and the game makes up the time it missed as ordinary play. After a gap of more than a few minutes (a laptop asleep, a phone that set the page aside) the game replays the time as offline progress, with its report.
+A tab left in the background keeps playing. Browsers slow such a tab down, and the game makes up the time it missed as ordinary play. After a gap of more than a few minutes (a laptop asleep, a phone that set the page aside) the game replays the time as offline progress, with its report. If the page was already out of sight when the gap began, nothing opens while you are elsewhere: when you come back, a gap under an hour is one short line ("37m in the background: 354 monsters, 2 prestiges"), and a longer one is the report.
 
 Time with the page out of sight does not count toward the breaks between new places ([[Places and unlocks]]). On a phone you can add the game to your home screen to play it like an app.
 
