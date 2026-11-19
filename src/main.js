@@ -2538,7 +2538,7 @@ window.FI = {
         // gone from the server: this browser's copy of its game goes too, and nothing more is uploaded
         cloudReady = false;
         synced = false;
-        heldReport = null;
+        heldGap = null;
         game.clearClanResult();
         ui.cloudStatus = '';
         ui.social = freshSocial();
