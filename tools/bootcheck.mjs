@@ -8,7 +8,7 @@
 // (--browser=firefox or webkit: no CPU throttle there, and no sign-in flow, which needs Chromium's host mapping.)
 //
 // The hero comes from tools/simulate.mjs --save-at: deep, with Auto prestige, so that his replay lasts. The flows: guest, fast,
-// firsttap, signin, slow, server, lateserver, reload, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
+// gap, firsttap, signin, slow, server, lateserver, reload, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
 // in with this copy kept or with the server's game) in both folders from one save, one clock and one seed, the games they
 // end in compared field by field. The dice are seeded as each replay begins, so a replay made first and thrown away
 // (the older boot's, signed in) changes nothing. Needs Playwright, as tools/shots.mjs does.
@@ -78,7 +78,10 @@ async function open(server, { save, api = null, rate = 1, clock = null, host = n
             if (token) localStorage.setItem('fantasyIdle.jwt', token);
         }
         if (at !== null) { let t = at; Date.now = () => t; window.__clock = { add: ms => { t += ms; return t; }, now: () => t }; }
-        const seen = (window.__seen = { bars: 0, reports: 0, waiting: 0, values: [], away: '' });
+        const seen = (window.__seen = { bars: 0, reports: 0, waiting: 0, values: [], away: '', stall: 0 });
+        let last = performance.now();
+        const beat = () => { const t = performance.now(); seen.stall = Math.max(seen.stall, t - last); last = t; requestAnimationFrame(beat); };   // the longest the page drew nothing
+        requestAnimationFrame(beat);
         let barUp = false, reportUp = false;
         new MutationObserver(() => {
             const bar = document.querySelector('.cu-bar');
@@ -165,6 +168,21 @@ const FLOWS = {
         note('guest: Collect, and the game is there', await gameDrawn(page));
         note('guest: and it plays', await plays(page));
         noErrors('guest', errors);
+        await ctx.close();
+    },
+
+    /** A gap the page's own clock finds (the machine slept, the tab was paused): a bar that moves, never a frozen page. */
+    async gap() {
+        const T = Date.now();
+        const { page, ctx, errors } = await open(mine, { save: shifted(raw, T), clock: T, rate: RATE });
+        await page.waitForFunction(() => window.FI?.game && document.querySelector('#nav')?.children.length > 0, null, { timeout: WAIT_MS, polling: 200 });
+        await page.waitForTimeout(500);
+        await page.evaluate(() => { window.__seen.stall = 0; window.__clock.add(24 * 3600000); });
+        const got = await reportUp(page);
+        const s = await seen(page);
+        note('a gap the clock finds: the bar moves, the report comes once', got && s.values >= 3 && s.bars === 1 && s.reports === 1 && s.replays.length === 1, JSON.stringify({ values: s.values, bars: s.bars, reports: s.reports, replays: s.replays.length }));
+        note('a gap the clock finds: the page is never frozen for long', s.stall < 3000, `drew nothing for ${Math.round(s.stall)} ms at most`);
+        noErrors('a gap', errors);
         await ctx.close();
     },
 
