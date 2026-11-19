@@ -25,6 +25,7 @@ import { CHARMS } from '../data/charms.js';
 import { HALL, HALL_ROOMS, HALL_STAGES, HALL_LEVELS, CLOAK_STAGE, giftWorth } from '../data/clanhall.js';
 import { ASCEND_FROM, STAR_BASE, STARS_PER_DECADE, STAR_TOKEN_GAIN, ASCEND_REST_MS } from '../data/ascension.js';
 import { CAMP_GOLD } from '../data/camp.js';
+import { REST_AFTER_MS } from './saver.js';
 import { escapeHtml as esc, shareInWords } from './format.js';
 
 const pc = (value, digits = 0) => `${(value * 100).toFixed(digits).replace(/\.0+$/, '')}%`;
@@ -151,6 +152,15 @@ export const FEATURES = {
             'Only what works on him right now is listed: a potion while a dose runs, the camp until your next prestige, the clan banner until Monday.',
             'Crits, attack speed, dodge and lifesteal are left out: they shape a fight, not these three numbers. Tap a row to see what it multiplies.'] },
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
+    // behind the "?" of Settings' options: what the game offers, said in one place (GAG: players don't look for options)
+    accessibility: { name: 'Accessibility', art: 'study', focus: 'center 45%', icon: 'gear', blurb: 'Ways to make the game fit you, all in these options.',
+        points: ["Motion: Reduce motion stills the fight, the numbers and the cards, and your device's own setting counts too. Effects, under it, turns them off one by one.",
+            `Battery saver: left alone for ${REST_AFTER_MS / 1000} seconds, the game draws fewer frames and its glows stand still. On by default on phones, for each device.`,
+            'Sound: Sound and, on a phone with a motor, Vibration have a switch each. Blows heard plays every hit, or only crits and kills.',
+            'Reading: Text size goes to 150% on each device, and pinch zoom works. Big numbers, once you have them: letters (1.23B), Mixed (letters up to No, then 1.23e33) or Scientific (1.23e9).',
+            'Keys: Tab moves between controls, Enter or Space presses one, Esc closes a dialog or folds the fight. In the fight Space strikes and M opens the map; Keyboard shortcuts turns those two off.',
+            'Screen readers: every control is named, the fight has a summary under the heading "The fight in words", and what the screen tells in passing is read out one polite line at a time.',
+            'On a phone a tap on a number or a picture shows its tip, and a long press a button\'s. Rarity is told by pips as well as colour.'] },
     // behind the "?" of Settings' line while the account is flagged (the server's check, api/index.js; the 1% is its FLAGGED_ATTACK_SHARE)
     flagged: { name: 'A flagged account', icon: 'gear', blurb: "One of your saves showed numbers the game's check doesn't allow.",
         points: ['While your account is flagged, each clan attack counts for at most 1% of the boss, your fights at the Endless Hydra stay out of the clan ranking, and you are left off the leaderboards.',
@@ -207,6 +217,7 @@ export const WIKI_PAGES = {
     prestige: '/prestige', ascension: '/ascension', trials: '/trials', talents: '/talents', mastery: '/mastery', achievements: '/medals', power: '/combat#sources-of-power',
     events: '/events', clan: '/clans', clanhall: '/clans#the-clan-hall', minigames: '/mini-games',
     flagged: '/faq#settings-says-my-account-is-flagged-what-does-that-mean',
+    accessibility: '/accessibility',
     ...Object.fromEntries(Object.keys(SKILLS).filter(id => id !== 'combat').map(id => [id, `/skills/${id}`]))
 };
 /** The wiki page behind a "?" card, as an address, or '' where it has none. */

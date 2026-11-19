@@ -2276,6 +2276,67 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
   signed in, the tool answering the API.
 
+### 3.36 Settings: how the game looks, sounds and reads
+
+The Options panel of Settings stands in groups (`optionGroups` in `src/ui/render.js`), each a `fieldset` with a name a screen
+reader says: a row shows only for what the player has met, and the rules go behind the panel's "?". Choices that change how
+the game looks, sounds or reads never change how it plays. Those kept in the save are optional fields (`src/data/settings.js`,
+`cleanOptions` on every load): a save without them is today's game, and an older game passes over them.
+
+- **The note.** The "?" on Options opens the Accessibility card (`FEATURES.accessibility`): the switches and keys in one place, as players
+  don't go looking for options; `/accessibility` on the wiki says the same at length.
+- **Vibration apart from sound.** On a phone with a motor (not iPhones: Safari gives pages none) Vibration is a switch of its
+  own. Until it is used it goes with the sound, as when one switch held both, so nobody who muted the game starts to buzz.
+- **Blows heard.** A watched fight made 83-92 sounds a minute, nearly all plain blows. "Crits and kills" (`settings.blows` `'big'`,
+  `blowSound` and `hurtHeard`) keeps the hero's plain blows and the monster's on him silent, and without their taps of the motor; crits and
+  the War Tree's big swings, kills, and the player's own strikes are heard as ever. Every hit is the default.
+- **Battery saver** (`src/ui/saver.js`). In view the game's cost is its frame (research 040). Once the page has gone 30 s without a
+  press, a key, the mouse moving, the wheel or a scroll, and no mini-game or clock fight wants every frame, it rests: `requestAnimationFrame`
+  runs ten times a second (one frame per game step), the tab is drawn again once a second, every CSS animation that loops for ever
+  is paused where it stands (`document.getAnimations()`, again after each draw), and `body.at-rest` drops transitions. What ends by
+  itself finishes, so blows, numbers and bars still show. The first sign of the player ends it. It is on by default where the
+  main pointer is a finger, off elsewhere; the choice is kept per device (`fantasyIdle.saver`), never in the save, and nothing ever
+  pops up about it. Out of sight the page isn't drawn at all, saver or not: it is drawn as it comes back.
+  Measured by research 040's method (Chromium, its late-game save, the fight on the whole screen, untouched; medians of six 10 s windows
+  over two rounds, the machine under a load of 19-103, so the counts are firmer than the shares of a core):
+
+  | Screen, CPU | Main thread busy: before / saver off / at rest | Frames a second | Layouts per 10 s | Style recalculations per 10 s |
+  | --- | --- | --- | --- | --- |
+  | 1280 px | 15.1% / 14.5% / 6.2% | 60 / 60 / 8.7 | 603 / 601 / 144 | 676 / 673 / 420 |
+  | 390 px, touch | 18.0% / 18.7% / 7.4% | 60 / 60 / 8.7 | 606 / 598 / 148 | 674 / 677 / 445 |
+  | 1280 px, CPU 4× slower | 39.4% / 45.2% / 16.4% | 59 / 60 / 8.7 | 594 / 598 / 146 | 667 / 675 / 431 |
+  | 390 px, CPU 4× slower | 53.6% / 47.7% / 17.8% | 59 / 60 / 8.8 | 597 / 600 / 146 | 666 / 674 / 458 |
+
+  With the saver off nothing changes. At rest the renderer's CPU falls from 24% to 10% of a core and the GPU process's from 27% to 13%
+  (1280 px). A real phone's battery is yet to be measured.
+- **Big numbers** (`settings.numberFormat`, in every save since the first but read by nothing until now: `short`, `mixed`, `scientific`).
+  Every figure goes through `fmt` (`src/ui/format.js`), which holds the choice (`setNotation`, set by `render()`): letters as ever and the
+  default, old saves included; mixed keeps them up to No and writes 1.23e33 from where they would turn to Dc; scientific writes 1.23e6 from a
+  million. Below a million nothing changes. It changes no stored value: what is stored in words (the log) is written in letters
+  (`letters`), and `numbersIn` rewrites the big figures of such words as they are shown. The row opens with the first million (`big_numbers`).
+- **Text size** (100, 115, 130 or 150%, `fantasyIdle.textSize`, per device and not in the save): a share of the root's font size, so all
+  the game's rem type grows and a size set in the browser still counts. The sidebar grows with it (`15.625rem`, 250 px at 100%). At
+  1280 and 390 px, at every size, the main screens have no sideways scroll and lose no word they had (one gear name in the fight's
+  dock is shortened at 150% on a wide screen).
+- **Landmarks on phones.** A phone's fight shows the middle 56-76% of a painting's width, and fourteen paintings keep their landmark near an
+  edge (the meadow's windmill, the ruins' temple, the lair's dragon). `LANDMARK` in `tools/paint.py` gives each its place in % of the width,
+  written into the generated paint block as `background-position-x` for narrow screens, which keeps that spot in the frame however the painting is
+  cut. The skill stages and the title card show a painting's whole width on a phone, so they need none.
+- **A voice per skill.** A finished action on its own tab no longer makes the one shared sound: `work` plays the skill's voice (`VOICES` in
+  `src/ui/sound.js`: a clink, a chop, a bowstring, a plop at the river, a sizzle, a crackle, bubbles, metal on metal, a jeweller's tap, footfalls),
+  levelled within about 2 dB of the sound it replaces and made from the same tones and noise; `double` adds its bright note to the same voice.
+- **Screen readers** (`src/ui/announce.js`). The fight's numbers are never read out as they change: a hidden paragraph at the head of
+  the battle scene, under the heading "The fight in words", holds the stage, both healths, the monster and what is going on, rewritten every
+  second and a half at most, for when the player goes to it. What a sighted player is told in passing (toasts, cards, the fight's banners)
+  reaches one polite live region at the foot of the page: one line every 2.5 s at most, routine lines (a rare find, a note) only 8 s after the last
+  line, what matters (a boss, a fall, a level, a card) first, the same words not twice within 20 s, three lines waiting at most
+  and the oldest dropped. Errors stay an alert; a wall's repeats ("Fell again ×4") say nothing. Toasts, cards and the banner no longer
+  carry a live role of their own, which could not be rate-limited and were missed when a region came with its text.
+- **Effects one by one.** Under Reduce motion, which stills them all and hides the switches, a folded **Effects** holds one
+  switch per effect once it has been met (`EFFECTS`, `fx_*` in `src/systems/disclosure.js`): floating numbers (the fight's and the
+  work's; not the clan boss's "Strike now!", which tells when to strike), coins flying to the purse, the cards' confetti, a boss's shake.
+  `settings.effects` holds only the ones turned off.
+
 ### 3.37 Readouts: sources of power, and the pace of the work
 
 Two readouts that change no number of the game (R17 of the research loop's ranking; P-022, P-002).
@@ -2814,6 +2875,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
                       · capes (skill capes at 99) · trials (the Trials: rules, first tiers)
                       · clanhall (the Clan Hall's rooms, stages, banner colours, what a gift is worth)
+                      · settings (Settings' choices of look, sound and reading, optional in the save)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, uniques found, the Seal, Titan) · inventory (bag, salvage, reforge)
                       · worth (what a piece or a camp level is worth in stages at the wall that binds: the one measure)
@@ -2833,7 +2895,8 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       sprites.js (atlas cells for monsters, items, perks, tools, glyphs and the hero's layers, in the look picked) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · update.js (when an open page looks for a
-                      newer version) · format.js
+                      newer version) · saver.js (the battery saver: a page left alone draws less) · announce.js (the
+                      polite lines for screen readers, the fight in words) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
                       and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,

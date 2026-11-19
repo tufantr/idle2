@@ -230,7 +230,7 @@ button[disabled] { opacity: 0.45; cursor: not-allowed; transform: none !importan
 
 /* ---------- sidebar ---------- */
 #sidebar {
-    width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.5rem;
+    width: max(250px, 15.625rem); flex-shrink: 0;   /* (250 px at the usual text size, and it grows with Settings' Text size) */ display: flex; flex-direction: column; gap: 0.5rem;
     overflow-y: auto; height: calc(100vh - 4rem); position: sticky; top: 2rem; padding: 1.4rem 0.9rem;
     scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent;
 }
@@ -2115,6 +2115,22 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .battle[data-scene="rot"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/rot.webp); }
 .battle[data-scene="rift"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/rift.webp); }
 .battle[data-scene="pandemonium"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/pandemonium.webp); }
+@media (max-width: 600px) {
+    .battle[data-scene="meadow"] .battle-sky { background-position-x: 88%; }
+    .battle[data-scene="caves"] .battle-sky { background-position-x: 78%; }
+    .battle[data-scene="ruins"] .battle-sky { background-position-x: 82%; }
+    .battle[data-scene="frost"] .battle-sky { background-position-x: 76%; }
+    .battle[data-scene="lair"] .battle-sky { background-position-x: 84%; }
+    .battle[data-scene="maw"] .battle-sky { background-position-x: 85%; }
+    .battle[data-scene="necropolis"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="hellforge"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="weeping"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="bone"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="frozen"] .battle-sky { background-position-x: 82%; }
+    .battle[data-scene="starless"] .battle-sky { background-position-x: 18%; }
+    .battle[data-scene="glass"] .battle-sky { background-position-x: 78%; }
+    .battle[data-scene="rot"] .battle-sky { background-position-x: 70%; }
+}
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 50s ease-in-out infinite alternate; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-far { display: none; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-ground { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }
@@ -2160,9 +2176,26 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 /* the looks in Settings: a portrait each, the worn one lit */
 .look-picks { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
 /* the volume: a gold slider beside the speaker */
+/* The battery saver, the page left alone (src/ui/saver.js): bars and the like step with its slower frames, no easing between them */
+body.at-rest, body.at-rest *, body.at-rest *::before, body.at-rest *::after { transition: none !important; }
+
+/* Settings' Text size makes every word bigger: these keep their words whole */
+.mastery-total { flex: none; }
+.camp-max { min-width: max-content; }
+
+/* Settings' options, in groups (render.js optionGroups): two or three side by side where there is room, one under another on a phone */
+.opt-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem 2rem; margin: 0.5rem 0 0.9rem; }
+.opt-group { min-width: 0; border: 0; }
+.opt-group legend { margin-bottom: 0.3rem; font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-color); }
+.opt-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 0.6rem; margin: 0.15rem 0 0.35rem; font-size: 0.8rem; }
+.seg.opt-seg { margin: 0; padding: 3px; flex-wrap: wrap; }
+.opt-seg .seg-btn { flex: 1 0 auto; padding: 0.28rem 0.6rem; font-size: 0.76rem; min-height: 1.6rem; }
+.drawer.opt-drawer { margin: 0.1rem 0 0.2rem 1.65rem; }
+.opt-drawer summary { padding: 0.35rem 0.3rem 0.35rem 0; }   /* a finger's target, 24 px at least */
+.drawer.opt-drawer[open] summary { margin-bottom: 0; }
 .volume-row { display: flex; align-items: center; gap: 0.6rem; max-width: 300px; margin: 0.1rem 0 0.6rem 1.7rem; color: var(--text-muted); }
 .volume-row .ico { width: 18px; height: 18px; flex: 0 0 auto; }
-.volume-row input[type="range"] { flex: 1; accent-color: var(--gold-color); cursor: pointer; }
+.volume-row input[type="range"] { flex: 1; height: 1.5rem; accent-color: var(--gold-color); cursor: pointer; }   /* a finger's target, 24 px at least */
 .look-pick { width: 64px; height: 64px; padding: 0; display: grid; place-items: start center; border-radius: 12px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #3a2c1c, #120d08 75%); border: 1px solid var(--line); box-shadow: none; }
 .look-pick .hero-doll { margin-top: 4px; }  /* head and shoulders: what differs between the looks */
 .look-pick:hover { border-color: rgba(240, 198, 116, 0.75); transform: translateY(-2px); }

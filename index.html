@@ -47,6 +47,8 @@
     </div>
     <div id="toast-area"></div>
     <div id="modal-root"></div>
+    <!-- what happens, for screen readers: one polite line at a time (src/ui/announce.js) -->
+    <div id="sr-say" class="sr-only" aria-live="polite" aria-atomic="true"></div>
     <script>
         // If the game can't start because the browser kept an old copy of one of its files (a plain
         // local server lets it; a hosted game revalidates), offer a reload that fetches each file fresh.

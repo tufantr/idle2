@@ -22,6 +22,7 @@ import { sprite, heroSprite, heroLayers, monsterSpriteKey, itemSpriteKey, resIco
 import { DUNGEON_ART, fightTab } from './features.js';
 import { activeTrials, nextTrialTarget } from '../systems/trials.js';
 import { combatLevelForXp } from '../core/xp.js';
+import { fightSummary } from './announce.js';
 
 const STRIKE_SHARE = shareInWords(BALANCE.combat.manualHitMult);   // a strike's share of an attack, in words
 
@@ -105,6 +106,7 @@ function chestLoot(ev, state) {
 
 // What stands in the monster's place while the hero waits at a cleared dungeon's chest.
 const CHEST = Object.freeze({ chest: true, name: 'The chest', hp: 1, maxHp: 1, interval: 1000 });
+const SUMMARY_MS = 1500;      // the fight in words, for screen readers, is written anew this often at most
 
 // Deterministic scatter for the ambient particles (positions, delays, sizes), so the markup is stable.
 const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
@@ -117,7 +119,9 @@ const PARTICLE_HTML = Array.from({ length: PARTICLE_COUNT }, (_, i) =>
  */
 export function createScene(root, actions) {
     root.innerHTML = `
-    <section class="battle" data-scene="meadow" data-particles="motes">
+    <section class="battle" data-scene="meadow" data-particles="motes" aria-label="The fight">
+        <h2 class="sr-only">The fight in words</h2>
+        <p class="sr-only battle-words"></p>
         <div class="battle-sky"></div>
         <div class="battle-far"></div>
         <div class="battle-near"></div>
@@ -147,14 +151,14 @@ export function createScene(root, actions) {
             </div>
             <div class="fx-layer" aria-hidden="true"></div>
         </div>
-        <div class="battle-banner" aria-live="polite"></div>
+        <div class="battle-banner"></div>
         <div class="battle-combo" hidden><b></b><span>Combo</span><em></em></div>
         <button class="battle-cta" type="button" hidden>${sprite('item/Weapon/3', { scale: 0.75, cls: 'soft' })} Enter combat</button>
     </section>`;
 
     const $ = sel => root.querySelector(sel);
     const el = {
-        battle: $('.battle'), zone: $('.battle-zone'), stage: $('.battle-stage'), trial: $('.battle-trial'), regroup: $('.battle-regroup'), path: $('.stage-path'),
+        battle: $('.battle'), words: $('.battle-words'), zone: $('.battle-zone'), stage: $('.battle-stage'), trial: $('.battle-trial'), regroup: $('.battle-regroup'), path: $('.stage-path'),
         hero: $('.hero'), heroStand: $('.hero .fighter-stand'), heroSprite: $('.hero .fighter-sprite'), petFigure: $('.hero .pet-figure'), heroFigure: $('.hero-figure'), heroBar: $('.hero .fill'), heroTrail: $('.hero .trail'), heroText: $('.hero .fbar-text'),
         heroName: $('.hero .fighter-name'), heroMeta: $('.hero .fighter-meta'), heroAtk: $('.hero .attack-bar i'),
         foe: $('.foe'), foeStand: $('.foe .fighter-stand'), foeSprite: $('.foe .fighter-sprite'), foeBar: $('.foe .fill'), foeTrail: $('.foe .trail'), foeText: $('.foe .fbar-text'),
@@ -180,6 +184,7 @@ export function createScene(root, actions) {
     const running = new WeakMap();
     const reduced = () => document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const quietNow = () => document.hidden || reduced();
+    const wanted = id => actions.effect?.(id) !== false;   // an effect Settings hasn't turned off (data/settings.js EFFECTS)
 
     // Text and markup writes only when something changed, so a frame costs next to nothing.
     const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
@@ -254,6 +259,8 @@ export function createScene(root, actions) {
 
     function spawnFx(className, html, x, y, ms = 900) {
         if (quietNow() || fxBudget <= 0) return null;
+        // the numbers and words that float up (not the clan boss's "Strike now!", which tells when to strike)
+        if (/^(dmg|drop-pop)\b/.test(className) && !className.includes('guard-cue') && !wanted('numbers')) return null;
         fxBudget--;
         const node = document.createElement('div');
         node.className = className;
@@ -266,6 +273,7 @@ export function createScene(root, actions) {
     }
 
     function banner(html, kind = '', ms = 1800) {
+        actions.say?.(html);   // (and in words, for a screen reader: main.js's announcer)
         el.banner.innerHTML = html;
         el.banner.className = `battle-banner ${kind}`;
         void el.banner.offsetWidth; // restart the entrance when a banner replaces another
@@ -276,7 +284,7 @@ export function createScene(root, actions) {
 
     /** Coins from the monster to the gold counter in the header. */
     function coinBurst(count) {
-        if (quietNow()) return;
+        if (quietNow() || !wanted('coins')) return;
         const target = document.querySelector('.chip.gold b');
         if (!target) return;
         const from = el.foeSprite.getBoundingClientRect();
@@ -478,6 +486,7 @@ export function createScene(root, actions) {
         setTimeout(() => ring.remove(), 750);
     }
 
+    let wordsAt = -Infinity;  // when the fight in words was last written
     let sceneDrawn = false;   // the first draw sets the place without fading it in
     let lastTick = 0;         // the boss clock's last second ticked
     let lastGuard = false;    // the clan boss's guard was down at the last frame
@@ -632,7 +641,7 @@ export function createScene(root, actions) {
             const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.endless ? 'The week\'s ranking' : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : enemy.lord ? `A Lord · stage ${c.stage}` : `Boss · stage ${c.stage}`;
             const due = enemy.lord && c.mode === 'stages' && enemy.stage > (c.lordsBeaten || 0) ? '<span>Its first fall leaves a sure piece of top gear</span>' : '';
             banner(`<small>${label}</small><strong>${esc(bossName(enemy.name))}</strong>${due}`, 'boss', due ? 2800 : 2200);
-            move(el.battle, 'shake');
+            if (wanted('shake')) move(el.battle, 'shake');
             actions.sound?.('boss');
         }
     }
@@ -683,6 +692,7 @@ export function createScene(root, actions) {
             const state = game.state;
             const c = state.combat;
             const d = game.derived;
+            if (performance.now() - wordsAt >= SUMMARY_MS) { wordsAt = performance.now(); setText(el.words, fightSummary(game)); }
             const scene = sceneFor(state);
             const hue = c.mode === 'stages' ? landHue(zoneForStage(c.stage)) : c.mode === 'dungeon' ? dungeonTierInfo(c.dungeon?.tier).hue : 0;   // a deeper tier's dungeons (data/dungeons.js)
             if (el.battle.style.getPropertyValue('--land-hue') !== `${hue}deg`) el.battle.style.setProperty('--land-hue', `${hue}deg`);

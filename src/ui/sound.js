@@ -1,13 +1,13 @@
 // Sound and touch: every action answers with a short synthesized sound (Web Audio, no files) and,
 // on a phone, a tap of the motor. Nothing plays until the player has interacted once (browsers
-// insist), and one setting mutes it all. Sounds are built from oscillators and filtered noise, so
+// insist), and each has its own setting. Sounds are built from oscillators and filtered noise, so
 // they are tiny, instant and never out of tune with each other.
 
 const MAX_PER_WINDOW = 5;     // a background tab catching up can fire hundreds of events at once
 const WINDOW_MS = 120;
 const MASTER_VOLUME = 0.42;
 
-export function createSound(isOn, volume = () => 1) {
+export function createSound(isOn, volume = () => 1, canBuzz = () => false) {
     let ctx = null;
     let master = null;
     let noiseBuffer = null;
@@ -42,15 +42,24 @@ export function createSound(isOn, volume = () => 1) {
         if (c && c.state === 'suspended' && !resuming) resuming = c.resume().catch(() => {}).finally(() => { resuming = null; });
     }
 
-    function allowed() {
-        if (!unlocked || !isOn() || document.hidden) return false;
-        const c = ensure();
-        if (!c || c.state !== 'running') return false;
+    /** Room for one more answer in this moment? Never before the first gesture or out of sight. */
+    function roomNow() {
+        if (!unlocked || document.hidden) return false;
         const now = performance.now();
         recent = recent.filter(t => now - t < WINDOW_MS);
         if (recent.length >= MAX_PER_WINDOW) return false;
         recent.push(now);
         return true;
+    }
+    function audible() {
+        if (!isOn()) return false;
+        const c = ensure();
+        return !!c && c.state === 'running';
+    }
+    /** A tap of the motor, on a device that has one. */
+    function buzz(name) {
+        const pattern = HAPTICS[name];
+        if (pattern && canBuzz() && navigator.vibrate && window.matchMedia?.('(hover: none)').matches) { try { navigator.vibrate(pattern); } catch { /* not supported */ } }
     }
 
     // ----- building blocks -----
@@ -97,11 +106,27 @@ export function createSound(isOn, volume = () => 1) {
 
     // ----- the sounds -----
 
+    // A finished action, in each skill's own voice (a clink, a chop, a bubble), about as loud as the plain one they replace.
+    const VOICES = {
+        action() { noise({ ms: 60, gain: 0.14, filter: 'bandpass', f0: vary(1400, 120), q: 2 }); tone({ type: 'triangle', f0: vary(520, 90), f1: 380, ms: 70, gain: 0.1 }); },
+        mining() { noise({ ms: 30, gain: 0.12, filter: 'highpass', f0: 3200 }); tone({ type: 'triangle', f0: vary(2200, 70), f1: 1900, ms: 110, gain: 0.05 }); tone({ type: 'sine', f0: vary(3300, 70), ms: 70, gain: 0.03 }); tone({ type: 'sine', f0: 150, f1: 90, ms: 60, gain: 0.09 }); },
+        woodcutting() { noise({ ms: 70, gain: 0.14, filter: 'bandpass', f0: vary(520, 100), f1: 240, q: 1.6 }); tone({ type: 'triangle', f0: vary(210, 60), f1: 120, ms: 90, gain: 0.11 }); },
+        hunting() { tone({ type: 'triangle', f0: vary(330, 60), f1: 240, ms: 110, gain: 0.11 }); noise({ ms: 120, gain: 0.07, filter: 'bandpass', f0: 3000, f1: 1200, q: 1 }); },   // a bowstring, and the arrow
+        fishing() { tone({ type: 'sine', f0: vary(240, 60), f1: 620, ms: 90, gain: 0.13 }); noise({ ms: 130, gain: 0.06, filter: 'lowpass', f0: 1200, f1: 300, at: 0.03 }); },   // a plop, and the water closing
+        cooking() { noise({ ms: 170, gain: 0.15, filter: 'highpass', f0: 4200, f1: 6000 }); noise({ ms: 60, gain: 0.1, filter: 'bandpass', f0: 2200, q: 3, at: 0.05 }); },   // a sizzle
+        firemaking() { for (const at of [0, 0.05, 0.11]) noise({ ms: 28, gain: 0.16, filter: 'bandpass', f0: vary(2600, 300), q: 2.5, at }); tone({ type: 'sine', f0: 90, f1: 70, ms: 140, gain: 0.09 }); },   // the logs crackle
+        alchemy() { tone({ type: 'sine', f0: vary(340, 80), f1: 760, ms: 90, gain: 0.11 }); tone({ type: 'sine', f0: vary(520, 80), f1: 1100, ms: 70, gain: 0.08, at: 0.07 }); },   // bubbles rising
+        smithing() { noise({ ms: 40, gain: 0.16, filter: 'highpass', f0: 2400 }); tone({ type: 'triangle', f0: vary(880, 40), ms: 160, gain: 0.08 }); tone({ type: 'sine', f0: vary(1320, 40), ms: 110, gain: 0.05 }); },   // metal on metal
+        crafting() { tone({ type: 'triangle', f0: vary(2600, 60), f1: 2100, ms: 50, gain: 0.13 }); tone({ type: 'sine', f0: vary(3900, 60), ms: 60, gain: 0.08, at: 0.06 }); noise({ ms: 20, gain: 0.12, filter: 'highpass', f0: 5000 }); },   // a jeweller's tap
+        agility() { for (const at of [0, 0.09]) { noise({ ms: 45, gain: 0.14, filter: 'lowpass', f0: 700, f1: 200, at }); tone({ type: 'sine', f0: vary(130, 60), f1: 80, ms: 60, gain: 0.1, at }); } }   // two footfalls
+    };
+
     const SOUNDS = {
         click() { tone({ type: 'triangle', f0: vary(1800, 40), f1: 1200, ms: 45, gain: 0.12 }); noise({ ms: 25, gain: 0.08, filter: 'highpass', f0: 3000 }); },
         tick() { tone({ type: 'sine', f0: vary(900, 80), ms: 40, gain: 0.08 }); },
-        action() { noise({ ms: 60, gain: 0.14, filter: 'bandpass', f0: vary(1400, 120), q: 2 }); tone({ type: 'triangle', f0: vary(520, 90), f1: 380, ms: 70, gain: 0.1 }); },
-        double() { SOUNDS.action(); tone({ type: 'sine', f0: 1320, f1: 1760, ms: 120, gain: 0.14, at: 0.05 }); },
+        // a finished action, in `voice`'s voice; `double`: two came of it, and a bright note says so
+        work(voice) { (VOICES[voice] || VOICES.action)(); },
+        double(voice) { SOUNDS.work(voice); tone({ type: 'sine', f0: 1320, f1: 1760, ms: 120, gain: 0.14, at: 0.05 }); },
         hit() { tone({ type: 'sine', f0: vary(190), f1: 55, ms: 110, gain: 0.5 }); noise({ ms: 50, gain: 0.22, filter: 'lowpass', f0: 1800, f1: 300 }); },
         crit() { tone({ type: 'sine', f0: vary(240), f1: 50, ms: 160, gain: 0.6 }); tone({ type: 'sawtooth', f0: 900, f1: 180, ms: 90, gain: 0.12 }); noise({ ms: 110, gain: 0.3, filter: 'bandpass', f0: 2600, f1: 500, q: 1.2 }); },
         hurt() { tone({ type: 'sine', f0: vary(140), f1: 45, ms: 150, gain: 0.45 }); noise({ ms: 90, gain: 0.18, filter: 'lowpass', f0: 900, f1: 200 }); },
@@ -152,15 +177,19 @@ export function createSound(isOn, volume = () => 1) {
 
     return {
         unlock,
-        /** Play a named sound (and buzz, where there is a pattern for it). Unknown names are ignored. */
+        /** Play a named sound and buzz, where there is a pattern for it, each by its own switch. Unknown names are ignored. */
         play(name, arg) {
             const fn = SOUNDS[name];
-            if (!fn || !allowed()) return;
-            master.gain.value = MASTER_VOLUME * Math.max(0, Math.min(1, volume()));   // the Settings slider
-            try { fn(arg); } catch { /* an odd browser state is not worth a crash */ }
-            const pattern = HAPTICS[name];
-            if (pattern && navigator.vibrate && window.matchMedia?.('(hover: none)').matches) { try { navigator.vibrate(pattern); } catch { /* not supported */ } }
+            if (!fn || (!isOn() && !(canBuzz() && HAPTICS[name])) || !roomNow()) return;
+            if (audible()) {
+                master.gain.value = MASTER_VOLUME * Math.max(0, Math.min(1, volume()));   // the Settings slider
+                try { fn(arg); } catch { /* an odd browser state is not worth a crash */ }
+            }
+            buzz(name);
         },
-        names: Object.keys(SOUNDS)
+        /** The motor alone: the answer to its own switch turned on. */
+        buzz,
+        names: Object.keys(SOUNDS),
+        voices: Object.keys(VOICES)
     };
 }

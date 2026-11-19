@@ -1631,6 +1631,27 @@ Keeping it running:
       (`CLAN_TABLE.from` in `src/data/social.js`, set at the landing) the clans stand in one table, most levels felled first and
       the Hydra's depth between equals, and its 1st, 2nd and 3rd wear the crowns; the week under way and every kept week stay as
       they were, and the API keeps its old fields for pages still open
+- [x] **Settings' options in groups** (R23 of the research loop's ranking): Sound, Motion, and Keys and log, side by side on a
+      wide screen and one under another on a phone, each row still there
+- [x] **Vibration apart from sound** (R21, P-082): a switch of its own on phones with a motor, going with the sound until it is
+      used, so that a muted game doesn't start to buzz
+- [x] **Effects that turn off one by one** (R21, P-082): under Reduce motion, a folded Effects with a switch each for floating
+      numbers, coins flying to the purse, confetti and a boss's shake, each shown once it has been met
+- [x] **Blows heard** (R21, P-082): at every hit, as ever, or only at crits and kills; the player's own strikes always answer
+- [x] **A battery saver** (R21, P-037): after half a minute untouched the page draws ten frames a second, the tab once a second, and
+      its endless glows and drifts stand still, while the fight goes on; on by default on phones, kept per device, never a pop-up. A
+      page out of sight is no longer drawn at all. At rest the main thread's work falls from 15% to 6% of a core (18% to 7% on a phone's
+      screen, 54% to 18% on a CPU four times slower: DESIGN §3.36)
+- [x] **How big numbers are written** (R23, P-018): letters by default and for every old save, or mixed (letters up to No, then
+      1.23e33), or scientific (1.23e6 from a million), for every figure on screen, once the player has a million of something
+- [x] **Text size** (R23, P-019): 100 to 150% in Settings, kept per device; the sidebar grows with it, and no screen scrolls sideways
+- [x] **The fight for screen readers** (R23, P-090): a hidden summary of the stage, both healths and the monster, and what is shown in
+      passing (bosses, falls, levels, finds, cards) read out one polite line at a time, never in a flood. VoiceOver is the owner's check
+- [x] **An accessibility note** (R23, P-089): a "?" on Settings' options lists the switches and keys, and the wiki has an Accessibility page
+- [x] **Landmarks in view on phones** (R23, P-083): fourteen fights' paintings, cut narrow on a phone, now keep their landmark in the
+      frame (the meadow's windmill, the ruins' temple, the bone fields' skull): a focal point per painting in `tools/paint.py`
+- [x] **A work sound per skill** (R23, P-083): a clink for Mining, a chop for Woodcutting, a bubble for Alchemy and so on, in place of the
+      one shared sound, as loud as it was
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

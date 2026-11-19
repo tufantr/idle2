@@ -17,15 +17,19 @@ import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
+import { vibrationOn, effectOn, blowSound, hurtHeard, textSizeOf } from './data/settings.js';
+import { SAVER_KEY, REST_FRAME_MS, REST_RENDER_MS, saverOn, atRest, stillLoops, wakeLoops } from './ui/saver.js';
+import { createAnnouncer } from './ui/announce.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
-import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
+import { fmt, fixed, numbersIn, setNotation, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, findGear, gainedText, UNDO_MS } from './systems/inventory.js';
 import { judgeOf } from './systems/worth.js';
+import { resolveAction } from './systems/skilling.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor, ENDLESS, boardOpensOn } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -113,6 +117,19 @@ const ui = {
 // them): a switch for this device, kept in the browser, not the save.
 const SHORTCUTS_KEY = 'fantasyIdle.keys';
 ui.shortcuts = prefs.get(SHORTCUTS_KEY) !== '0';
+// A phone with a motor (iPhones have none a page can reach): only there does Settings offer the vibration's switch.
+ui.canVibrate = !!navigator.vibrate && !!window.matchMedia?.('(hover: none)').matches;
+// The battery saver (src/ui/saver.js): this device's choice, on by default on a phone.
+ui.saver = saverOn(prefs.get(SAVER_KEY), !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches);
+let resting = false;   // the page left alone, drawing less (setResting)
+// The text size, this device's: a share of the root's size, so a size set in the browser or the phone still counts.
+const TEXT_KEY = 'fantasyIdle.textSize';
+ui.textSize = textSizeOf(prefs.get(TEXT_KEY));
+function applyTextSize() {
+    if (ui.textSize === 100) document.documentElement.style.removeProperty('font-size');
+    else document.documentElement.style.fontSize = `${ui.textSize}%`;
+}
+applyTextSize();
 
 function loadFresh() {
     try {
@@ -240,20 +257,30 @@ const scene = createScene(document.getElementById('scene'), {
     map: () => window.FI.openMap(),
     sound: name => sound.play(name),
     pat: () => game.patPet(),
-    chest: () => window.FI.openRunChoice()
+    chest: () => window.FI.openRunChoice(),
+    effect: id => effectOn(game.state.settings, id),
+    say: html => speak(html)
 });
+
+// What happens, for screen readers: one polite line at a time (src/ui/announce.js). Toggling the last space makes the same words,
+// said again later, a change a screen reader notices.
+const srSay = document.getElementById('sr-say');
+let srFlip = false;
+const announcer = createAnnouncer(line => { srFlip = !srFlip; srSay.textContent = srFlip ? line : `${line}\u00a0`; });
+const speak = (text, important = true) => announcer.say(text, { important });
+const TOAST_MATTERS = new Set(['death', 'boss', 'achievement', 'level', 'prestige']);   // (the others are routine: they wait their turn)
 
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
 // skill cards (src/ui/actionfx.js), and the phone hotbar.
 const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
 // A boss fight in view: its clock and its health are what the player watches, so cards wait until it ends.
 const bossOnScreen = () => { const c = game.state.combat; return ui.tab === fightTab(game, ui) && c.active && !!c.enemy?.boss && !c.farmMode; };
-const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs and boss fights
-const actionFx = createActionFx(layer('div', 'work-fx'));
+const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab), confetti: () => effectOn(game.state.settings, 'confetti'), say: speak }); // cards wait behind dialogs and boss fights
+const actionFx = createActionFx(layer('div', 'work-fx'), { numbers: () => effectOn(game.state.settings, 'numbers') });
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
-// Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
-const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1);
+// Sound and haptics (src/ui/sound.js): a setting each, unlocked by the first click or key.
+const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1, () => vibrationOn(game.state.settings));
 // The sprite atlas (its versioned URL and its size), for the CSS that cuts cells out of it.
 document.documentElement.style.setProperty('--atlas', `url(${ATLAS.url})`); // versioned, so a new layout never meets an old cached sheet
 document.documentElement.style.setProperty('--atlas-w', `${ATLAS.cell * ATLAS.cols}px`);
@@ -315,10 +342,25 @@ function advance(now) {
     if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
 }
 
+// The page at rest (the battery saver, src/ui/saver.js): left alone, with nothing under way that wants every frame.
+function setResting(on) {
+    if (on === resting) return;
+    resting = on;
+    document.body.classList.toggle('at-rest', on);
+    if (on) stillLoops(); else wakeLoops();
+}
+const wantsFrames = () => pointer.down || ['titan', 'clan'].includes(game.state.combat.mode) || Object.values(game.state.minigame).some(m => m?.challenge);
+/** A sign of the player that isn't a press (the mouse moving, the wheel, a finger scrolling). */
+function stillHere() {
+    lastPresenceAt = Date.now();
+    setResting(false);
+}
+
 let tickErrorShown = false;
 setInterval(() => {
     if (passive) return;   // the game plays in another tab now
     const now = Date.now();
+    setResting(atRest({ on: ui.saver && !document.hidden, now, touchedAt: lastPresenceAt, busy: wantsFrames() }));
     // The clock turned back: the save clocks start again from now (they waited for it to catch up).
     if (now < lastSave - 5000) lastSave = lastBackup = lastCloudSave = now;
     // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
@@ -331,6 +373,7 @@ setInterval(() => {
     }
     try { handleEvents(game.drainEvents()); } catch (err) { console.error('Events failed', err); }   // never at the cost of the save below
     if (game.state.clanResult && cloud.loggedIn && cloudReady) sendClanResult();   // a clan attack fought, not yet sent
+    if (document.hidden) announcer.clear(); else announcer.pump(now);   // the next line for a screen reader, if one waits
     if (needsSignIn() && !ui.modalOpen) openSignIn();   // signed out, or a session that expired: the game waits for an account
     if (now - lastSave > AUTOSAVE_MS) save(now);
     // (not while a save that couldn't be read waits to be restored: these would write over its backups)
@@ -343,14 +386,15 @@ setInterval(() => {
     if (!document.hidden) updates.tick(now);   // a newer version of the game, looked for now and then
     const changed = game.revision !== ui.renderedRevision;
     const pressing = pointer.down && now - pointer.downAt < 1000;
-    if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
+    // (out of sight nothing is drawn: the page is drawn again as it comes back, below)
+    if (!document.hidden && !pressing && ((changed && now - ui.lastRender > (resting ? REST_RENDER_MS : MIN_RENDER_GAP_MS)) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
         try { render(); } catch (err) { console.error('Render failed', err); }
     }
 }, TICK_MS);
 
 function frame(now) {
-    // (the next frame is asked for first: a frame that throws must not stop the scene for the session)
-    requestAnimationFrame(frame);
+    // (the next frame is asked for first: a frame that throws must not stop the scene for the session; at rest, it waits a while)
+    if (resting) setTimeout(requestAnimationFrame, REST_FRAME_MS, frame); else requestAnimationFrame(frame);
     try {
         patchLive(game, ui);
         scene.frame(game, { frozen: endHeld() });
@@ -383,7 +427,8 @@ document.addEventListener('visibilitychange', () => {
     if (passive) return;
     game.setAttending(!document.hidden);
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
-    lastPresenceAt = Date.now();
+    stillHere();
+    try { render(); } catch (err) { console.error('Render failed', err); }   // (nothing was drawn while it was out of sight)
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
     updates.back(Date.now());   // a newer version of the game may have come out meanwhile
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
@@ -410,6 +455,7 @@ document.addEventListener('pointerdown', event => {
     if (button && !button.disabled && !button.closest('.foe')) sound.play('click');
 }, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
+for (const type of ['pointermove', 'wheel', 'touchmove']) document.addEventListener(type, stillHere, { capture: true, passive: true });
 // A button clicked with the mouse or a finger lets the focus go once its click is done: kept, Space (the
 // fight's strike key) and Enter pressed it again, and a click on a camp upgrade bought three more. A
 // press from the keyboard (a click with no count) keeps the focus where the keys are.
@@ -527,6 +573,7 @@ let lastInputNote = 0;
 const noteInput = event => {
     const now = Date.now();
     lastPresenceAt = now;
+    setResting(false);
     if (event?.target?.closest?.('.minigame-panel')) return;
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
@@ -619,6 +666,8 @@ function bumpPurse() {
 }
 
 function render() {
+    setNotation(game.state.settings.numberFormat);   // (ui/format.js: every figure goes through it, this frame's too)
+    ui.systemStill = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;   // (the device's own setting: Settings' Effects can add nothing to it)
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
@@ -642,6 +691,7 @@ function render() {
     stage.sync(game, ui);
     guide.sync(game, { battle: ui.tab === fightTab(game, ui), tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
     rewards.resume();   // cards held back by a boss fight show once it is over
+    if (resting) stillLoops();   // (what was just drawn may have brought new ones)
     paintGold();
     paintBrand();
     glowArrivals();
@@ -752,16 +802,25 @@ function findWords(find) {
 
 function soundFor(ev, onCombat) {
     switch (ev.type) {
-        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit || ev.deathblow || ev.opening || ev.executed ? 'crit' : 'hit'];
+        case 'hit': {
+            if (ev.manual) return ['combo', Math.floor(game.state.combat.combo || 0)];
+            const blow = blowSound(game.state.settings, ev);   // (Settings can keep plain blows quiet)
+            return blow ? [blow] : null;
+        }
         case 'secondWind': return onCombat ? ['unlock'] : null;
         case 'talentPoint': return ['levelUp'];
-        case 'enemyHit': return onCombat ? ['hurt'] : null;
+        case 'enemyHit': return onCombat && hurtHeard(game.state.settings) ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;
         case 'kill': return [ev.enemy.boss ? 'victory' : ev.enemy.gilded ? 'gold' : 'kill'];
         case 'itemDropped': return [lootSound(ev.item)];
         case 'itemCrafted': return [['rare', 'epic', 'legendary'].includes(ev.item.rarity) ? ev.item.rarity : 'craft'];
-        case 'actionComplete': return ui.tab === ev.skill ? [ev.made?.gem ? 'gem' : ev.made?.item ? 'craft' : (ev.made?.qty || 1) > 1 ? 'double' : 'action'] : null;
+        case 'actionComplete': {   // heard on the skill's own tab, in its own voice (Hunting at a river spot: the water's)
+            if (ui.tab !== ev.skill) return null;
+            if (ev.made?.gem) return ['gem'];
+            if (ev.made?.item) return ['craft'];
+            return [(ev.made?.qty || 1) > 1 ? 'double' : 'work', ev.skill === 'hunting' && resolveAction(game.state)?.fish ? 'fishing' : ev.skill];
+        }
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
         case 'unlock': case 'zoneReached': return ['unlock'];
@@ -1033,7 +1092,7 @@ function handleEvents(events) {
                 const first = dungeonAt('goblin_warren', ev.next);
                 rewards.celebrate({ key: `seal:${ev.tier}`, kind: 'legend', art: paintStyle('dungeon') + `;filter:hue-rotate(${next.hue}deg)`, icon: sprite('crown', { scale: 2, fallback: '🔱' }),
                     kicker: `The Seal of tier ${dungeonTierInfo(ev.tier).numeral || 'I'}`, title: `The dungeons, tier ${next.numeral}`,
-                    lines: [`${DUNGEON_TIER_STAGES} stages deeper: from stage ${fmt(first.stage)}`, next.rule ? `${next.rule.name}: ${next.rule.desc.toLowerCase()}` : '', `A Seal: your tokens are ×${(BASE_RECORD_MULT ** SEAL_RECORDS).toFixed(2)} stronger`].filter(Boolean), ms: 6000 });
+                    lines: [`${DUNGEON_TIER_STAGES} stages deeper: from stage ${fmt(first.stage)}`, next.rule ? `${next.rule.name}: ${next.rule.desc.toLowerCase()}` : '', `A Seal: your tokens are ×${fixed(BASE_RECORD_MULT ** SEAL_RECORDS)} stronger`].filter(Boolean), ms: 6000 });
                 break;
             }
             case 'titan': {
@@ -1052,7 +1111,7 @@ function handleEvents(events) {
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'ascend':   // tokens given up for Stars: the biggest card there is
                 rewards.celebrate({ key: `ascend:${ev.count}`, kind: 'legend', icon: '<i class="coin-dot stars big" aria-hidden="true"></i>', kicker: `Ascension ${ev.count}`, title: `+${fmt(ev.stars)} Stars`,
-                    lines: [`Every prestige pays ×${ev.gain.toFixed(2)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
+                    lines: [`Every prestige pays ×${fixed(ev.gain)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
                 save(Date.now());
                 break;
             case 'festivalCloak': {   // a weekend event's cloak bought (data/capes.js): the hero in it
@@ -1071,7 +1130,7 @@ function handleEvents(events) {
                 if (!trial) break;
                 const n = Math.max(1, ev.count || 1);   // a Pact with the week's Trial in it: one for each Trial it holds
                 rewards.celebrate({ key: `laurel:${ev.laurels}`, kind: 'legend', icon: sprite(trial.icon, { scale: 2 }), kicker: "This week's Trial", title: n > 1 ? `${n} laurels` : 'A laurel',
-                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, n > 1 ? `${n} records: your tokens are ×${(BASE_RECORD_MULT ** n).toFixed(2)} stronger` : `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
+                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, n > 1 ? `${n} records: your tokens are ×${fixed(BASE_RECORD_MULT ** n)} stronger` : `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
                 break;
             }
             case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
@@ -1089,12 +1148,12 @@ function handleEvents(events) {
                 const opens = ev.stage === MYTHIC.from ? 'From here a boss near your best can leave Mythic gear'
                     : ev.stage === PRIMAL.from ? 'From here a Mythic piece can come Primal' : '';
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `record:${ev.stage}`, kind: 'legend', icon: sprite('token', { scale: 2, fallback: '✨' }), kicker: 'A new record', title: `Stage ${fmt(ev.stage)}`,
-                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`, opens].filter(Boolean), ms: opens ? 5200 : undefined });
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${fixed(ev.records.mult)} from ${ev.records.count} records`, opens].filter(Boolean), ms: opens ? 5200 : undefined });
                 break;
             }
             case 'skillRecord':   // every 50 levels of the skills together: the tokens grow stronger too (core/modifiers.js recordsOf)
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `skillRecord:${ev.levels}`, kind: 'legend', icon: sprite('perk/scholar', { scale: 2, fallback: '📜' }), kicker: 'A new record', title: `${fmt(ev.levels)} skill levels`,
-                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${fixed(ev.records.mult)} from ${ev.records.count} records`] });
                 break;
             case 'unique':
                 if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.record && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
@@ -1124,9 +1183,11 @@ function toast(text, kind = 'info', icon = '', act = null) {
     if (!area) return;
     const el = document.createElement('div');
     el.className = `toast ${kind}${act ? ' has-act' : ''}`;
-    el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    // a screen reader hears an error at once, and the rest in turn, the ones that matter first (announce.js)
+    if (kind === 'error') el.setAttribute('role', 'alert');
+    else speak(numbersIn(text), TOAST_MATTERS.has(kind));
     if (icon) el.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>`;
-    el.append(text);
+    el.append(numbersIn(text));   // (a rule's message may hold a figure in full)
     if (act) {
         const btn = document.createElement('button');
         btn.className = 'toast-act';
@@ -1154,8 +1215,7 @@ function countedToast(key, text, kind = 'info') {
     if (!area) return;
     let t = countedToasts.get(key);
     if (!t?.el.isConnected) {
-        t = { el: Object.assign(document.createElement('div'), { className: `toast ${kind}` }) };
-        t.el.setAttribute('role', 'status');
+        t = { el: Object.assign(document.createElement('div'), { className: `toast ${kind}` }) };   // (a count that ticks up: nothing said)
         area.appendChild(t.el);
         while (area.children.length > 5) area.removeChild(area.firstChild);
         countedToasts.set(key, t);
@@ -1949,7 +2009,7 @@ window.FI = {
         const a = game.ascendPreview();
         if (!a.allowed) return;
         closeModal();
-        askConfirm('Ascend?', `Your ${fmt(a.tokens)} tokens become ${fmt(a.stars)} Stars, and the tokens start again from nothing. Every prestige after pays ×${a.gainAfter.toFixed(2)} tokens. Your best stage, gear, skills and perks stay.`, 'Ascend', () => {
+        askConfirm('Ascend?', `Your ${fmt(a.tokens)} tokens become ${fmt(a.stars)} Stars, and the tokens start again from nothing. Every prestige after pays ×${fixed(a.gainAfter)} tokens. Your best stage, gear, skills and perks stay.`, 'Ascend', () => {
             writeBackup(game.serialize(Date.now()), 'prestige', `Before Ascension ${game.state.ascension.count + 1}`);
             game.ascend();
             render();
@@ -2081,6 +2141,23 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** An effect's switch, under Reduce motion. */
+    setEffect(id, on) { game.setEffect(id, on); render(); },
+    /** One of Settings' choices of how the game looks, sounds and reads (data/settings.js). */
+    setOption(key, value) {
+        game.setOption(key, value);
+        if (key === 'vibration' && value) { sound.unlock(); sound.buzz('crit'); }   // turned on: felt at once
+        render();
+    },
+    /** The battery saver's switch, on this device only (src/ui/saver.js). */
+    setSaver(on) { ui.saver = !!on; prefs.set(SAVER_KEY, on ? '1' : '0'); render(); },
+    /** The text size, on this device only. */
+    setTextSize(size) {
+        ui.textSize = textSizeOf(size);
+        if (ui.textSize === 100) prefs.remove(TEXT_KEY); else prefs.set(TEXT_KEY, String(ui.textSize));
+        applyTextSize();
+        render();
+    },
     /** Settings' switch for the M and Space keys, on this device only. */
     setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },

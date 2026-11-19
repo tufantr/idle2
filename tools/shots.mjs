@@ -8,7 +8,8 @@
 //                                                 # 'battle' is the fight filling the screen; 'map' and
 //                                                 # 'prestige' are those dialogs over the game, 'power'
 //                                                 # the hero's Sources of power; 'anvil'
-//                                                 # is Smithing's anvil step; 'trials' is the prestige
+//                                                 # is Smithing's anvil step; 'options' Settings' options;
+//                                                 # 'trials' is the prestige
 //                                                 # dialog with Trials cleared and one picked, 'pact'
 //                                                 # the same deep, rungs cleared and a Pact of two
 //                                                 # with the week's picked, and 'trialfight' a fight
@@ -51,6 +52,7 @@ const STEPS = {
     anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
     // work with materials under way: the header's XP an hour and time to the next level, and how long the materials last
     smelting: () => { FI.switchTab('smithing'); FI.smithView('smelt'); FI.smelt('iron_bar'); document.querySelector('.node-card.active')?.scrollIntoView({ block: 'center' }); },
+    options: () => { FI.switchTab('settings'); document.querySelector('.opt-groups')?.scrollIntoView({ block: 'center' }); },   // Settings' options, in their groups
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
