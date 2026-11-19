@@ -9,7 +9,7 @@ import { Game } from '../src/game.js';
 import { rng, seededRandom } from '../src/core/rng.js';
 import { xpForLevel } from '../src/core/xp.js';
 import { deriveStats, collectModifiers } from '../src/core/modifiers.js';
-import { generateDrop, enemyForStage, enemyBaseStats, enemyDamage, goldPerKillAtStage } from '../src/core/formulas.js';
+import { generateDrop, enemyForStage, enemyBaseStats, enemyDamage, goldPerKillAtStage, BALANCE } from '../src/core/formulas.js';
 import { zoneForStage } from '../src/data/zones.js';
 import { EQUIP_SLOTS, TYPE_SLOTS, SMITHING_TYPES } from '../src/data/items.js';
 import { CAMP_GOLD } from '../src/data/camp.js';
@@ -196,6 +196,31 @@ test('before the deep ladder armour counts whatever share a blow takes: first wa
     assert.equal(deep.wall.stage, 150);
     assert.ok(deep.wall.threat < THREAT_SHARE);
     assert.equal(deep.wall.survival, false);
+});
+
+test('with BALANCE.rewards.keepByWorth at 0 the bag judges by score, as before the measure', () => {
+    const game = deepHero(1300);
+    const s = game.state;
+    s.settings.autoSalvage = 'weaker';
+    s.inventory = [];
+    rng.setSource(seededRandom(11));
+    const plate = frontier(game, 'Body', 'legendary', 62001);
+    plate.affixes = [];
+    plate.def = 10 * s.equipped.Body.def + 1000;   // far past the worn one by score, and nothing at the wall
+    plate.atk = 0;
+    assert.ok(!(judgeOf(game).worth(plate) > 0) && itemScore(plate) > itemScore(s.equipped.Body));
+    assert.equal(isUpgrade(s, plate, judgeOf(game)), false, 'by what it adds: no');
+    assert.equal(addItem(game, { ...plate }).kept, false, 'Weaker takes it as it lands');
+    const was = BALANCE.rewards.keepByWorth;
+    try {
+        BALANCE.rewards.keepByWorth = 0;
+        assert.equal(isUpgrade(s, plate, judgeOf(game)), true, 'by score: yes');
+        assert.equal(addItem(game, { ...plate }).kept, true, 'and the bag keeps it');
+        assert.deepEqual(weakerInBag(s, judgeOf(game)), [], 'nor does Salvage weaker take it');
+    } finally {
+        BALANCE.rewards.keepByWorth = was;
+    }
+    s.inventory = [];
 });
 
 test('the old ratios still read: gainStages counts the wall that binds', () => {

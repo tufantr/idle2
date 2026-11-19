@@ -2025,7 +2025,9 @@ forge is shown agreed first (the owner asked how a player would know it):
   +8 to +22; the weapon, gloves and jewellery say within 0.2 of what they are worth. Where blows still threaten (a
   hero at 300 takes about half his health a blow) the plate's defence counts as before. The bosses' due still wipes its
   marks on an upgrade by score (`outscores`), so the sure pieces come as they did. It reads and changes nothing, and for
-  a game it works from the stats the game has (`judgeOf`), the bag's every piece in a few sums.
+  a game it works from the stats the game has (`judgeOf`), the bag's every piece in a few sums. What the bag calls an upgrade
+  and keeps follows it (`isUpgrade`, `neededInBag`, the full bag's pick); `BALANCE.rewards.keepByWorth` at 0 turns those back
+  to `itemScore` for a measurement: a different piece kept is a different run (a bot's 50 hours differ from the first full bag on).
 
 Numbers (median of 7 seeds, with Auto; part one alone → with this): the best stage at 100 h 420 → 470, 300 h 1,010 →
 1,130, 600 h 1,410 → 1,590, 1,000 h 1,660 → 1,850, 1,200 h 1,830 → 2,010 (stage 2,000 at hour 1,161). The forge reaches

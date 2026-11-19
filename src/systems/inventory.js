@@ -123,7 +123,7 @@ const UPGRADE_EPS = 1e-9;
  * worn (systems/worth.js). `judge` is the wall's (judgeOf for a Game); without one it is made for this state on first need.
  */
 export function isUpgrade(state, item, judge = wallJudge(state)) {
-    return judge.place(item).stages > UPGRADE_EPS;
+    return BALANCE.rewards.keepByWorth ? judge.place(item).stages > UPGRADE_EPS : outscores(state, item);
 }
 
 /** The slot an Equip puts an item in: its kind's one, or an empty one, else where it is worth the most (systems/worth.js). */
@@ -186,6 +186,14 @@ export function bagByWorth(state, judge = wallJudge(state), items = state.invent
 function neededInBag(state, judge = wallJudge(state)) {
     const needed = new Set();
     const byType = {};
+    if (!BALANCE.rewards.keepByWorth) {   // (the switch at 0: by score, as before the measure)
+        for (const item of state.inventory) (byType[item.type] ||= []).push(item);
+        for (const [type, items] of Object.entries(byType)) {
+            const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
+            for (const item of best) if (outscores(state, item)) needed.add(item);
+        }
+        return needed;
+    }
     for (const entry of bagByWorth(state, judge)) (byType[entry.item.type] ||= []).push(entry);
     for (const [type, entries] of Object.entries(byType)) {
         for (const { item, stages } of entries.slice(0, (TYPE_SLOTS[type] || []).length)) if (stages > UPGRADE_EPS) needed.add(item);
@@ -302,7 +310,7 @@ export function addItem(game, item) {
     if (!candidates.length) return { kept: true, salvaged: null };
     let low = null;   // (the first of the least worth: ties go by itemScore, then by the bag's order, as before)
     for (const item of candidates) {
-        const stages = judge.place(item).stages;
+        const stages = BALANCE.rewards.keepByWorth ? judge.place(item).stages : itemScore(item);   // (the switch at 0: the lowest score)
         if (!low || stages < low.stages || (stages === low.stages && itemScore(item) < itemScore(low.item))) low = { item, stages };
     }
     const worst = low.item;

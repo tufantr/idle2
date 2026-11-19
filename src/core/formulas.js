@@ -83,7 +83,12 @@ export const BALANCE = {
         // stages at the hero's wall (systems/worth.js): deep, the weapon, where the lagging armour's mythic was worth
         // 0.4-3.7 stages and a mythic weapon 15-29 (research loop 047). A switch for the measurement (tools/simulate.mjs
         // --set=BALANCE.rewards.dueByWorth:1), off until the owner decides: it moves balance.
-        dueByWorth: 0
+        dueByWorth: 0,
+        // What the bag calls an upgrade, keeps and lets go when full (systems/inventory.js): 1, what a piece adds at the
+        // hero's wall (systems/worth.js, the research loop's P-075); 0, by score, as before it. A switch for the measurement
+        // (tools/simulate.mjs --set=BALANCE.rewards.keepByWorth:0): no number in the fight moves, but a different piece
+        // kept is a different run.
+        keepByWorth: 1
     },
     prestige: {
         minStage: 10,
