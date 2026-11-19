@@ -108,6 +108,8 @@ peek.hallWork = async (username, rooms) => {   // a clan's hall with each room a
     await pool.query(`DELETE FROM clan_hall WHERE clan_id = ${clan}`, [username]);
     for (const [room, secs] of Object.entries(rooms)) await pool.query(`INSERT INTO clan_hall (clan_id, room, given) VALUES (${clan}, $2, $3)`, [username, room, secs * 10]);
 };
+/** Two figures alike to a part in a thousand (the boss is kept in thousandths of an attack). */
+const near = (a, b, why = '') => assert.ok(Math.abs(a - b) <= 1e-3 * Math.max(Math.abs(a), Math.abs(b), 1), `${a} vs ${b} ${why}`);
 /** When an account was made (0: a date it never had), set as if then, or read. */
 peek.createdAt = async (username, at = undefined) => {
     if (memory) { const u = memory.db.users.find(x => x.username === username); if (at !== undefined) u.created_at = at; return u.created_at; }
@@ -140,8 +142,6 @@ peek.tied = async (id, username) => {
     }
     return Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0));
 };
-/** Two figures alike to a part in a thousand (the boss is kept in thousandths of an attack). */
-const near = (a, b, why = '') => assert.ok(Math.abs(a - b) <= 1e-3 * Math.max(Math.abs(a), Math.abs(b), 1), `${a} vs ${b} ${why}`);
 
 // The server reads Date.now(); tests move the clock to cross days and weeks.
 const realNow = Date.now;
@@ -151,7 +151,8 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_charges, clan_endless, clan_endless_kept, clan_rankings, clan_hall, clan_gifts, clan_gift_totals, flag_reviews, signup_sources, team_log');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews, signup_sources');
+    if (pool) await pool.query('DROP TABLE IF EXISTS clan_charges, team_log, clan_gift_totals, clan_endless_kept');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -512,43 +513,6 @@ test("the clan list says who plays: each clan's members who played this past wee
     assert.deepEqual((await (await get('/clans?search=pulse', few[1])).json()).clans.map(c => c.name), ['Pulse Giants', 'Pulse Few']);
 });
 
-test("a clan's words hold no links, handles or invite codes; the game's own Discord may be named", async () => {
-    const founder = await register('words_founder');
-    for (const words of [{ description: 'Join us at discord.gg/abc123' }, { lookingFor: 'add me: @someone' }, { description: 'see https://example.com' }]) {
-        const refused = await post('/clans', { name: 'Linked Up', tag: 'LNK', ...words }, founder);
-        assert.equal(refused.status, 400, JSON.stringify(words));
-        assert.match((await refused.json()).error, /links, handles or invite codes/);
-    }
-    assert.equal((await (await get('/clan', founder)).json()).clan, null, 'none was made');
-    assert.equal((await post('/clans', { name: 'Linked Up', tag: 'LNK', description: "We talk on the game's Discord", lookingFor: 'Stage 1.5k, active' }, founder)).status, 200);
-});
-
-test("a clan's owner changes its words, by the same rule as at its start; nobody else can", async () => {
-    const owner = await register('scribe_owner');
-    const mate = await register('scribe_mate');
-    const { clanId } = await (await post('/clans', { name: 'Quill Bearers', tag: 'QUIL', description: 'Old words', lookingFor: 'Old wish' }, owner)).json();
-    await post('/clans/join', { clanId }, mate);
-    const edit = (token, words) => post('/clan/words', words, token);
-    assert.equal((await edit(mate, { description: 'Mine now' })).status, 409, 'a member');
-    assert.equal((await edit(await register('scribe_stranger'), { description: 'Mine now' })).status, 400, 'no clan');
-    const refused = await edit(owner, { description: 'New words', lookingFor: 'see t.me/somewhere' });
-    assert.equal(refused.status, 400);
-    assert.match((await refused.json()).error, /links, handles or invite codes/);
-    const seen = async () => { const { clan } = await (await get('/clan', mate)).json(); return [clan.description, clan.lookingFor, clan.name, clan.tag]; };
-    assert.deepEqual(await seen(), ['Old words', 'Old wish', 'Quill Bearers', 'QUIL'], 'nothing changed');
-
-    const saved = await edit(owner, { description: 'New <words>', lookingFor: '', name: 'Stolen Name', tag: 'STOL' });
-    assert.equal(saved.status, 200);
-    assert.deepEqual(await saved.json(), { description: 'New words', lookingFor: '' });
-    assert.deepEqual(await seen(), ['New words', '', 'Quill Bearers', 'QUIL'], 'the name and tag stay');
-    const { clans } = await (await get('/clans?search=quill', mate)).json();
-    assert.equal(clans[0].description, 'New words', 'on the list of clans too');
-    await edit(owner, { lookingFor: 'Anyone' });
-    assert.deepEqual((await seen()).slice(0, 2), ['New words', 'Anyone'], 'a line not sent stays as it was');
-    await post('/clans/leave', {}, owner);
-    assert.equal((await edit(mate, { description: 'The heir writes' })).status, 200, 'and one who takes the clan over');
-});
-
 test("a clan's members are shown when they last played, in whole days and no finer", async () => {
     const lead = await register('seen_lead');
     const mate = await register('seen_mate');
@@ -755,6 +719,17 @@ test('an absurd save cannot break its clan', async () => {
     assert.equal((await post('/clan/kick', { username: 'giant' }, owner)).status, 200);
     assert.equal((await (await get('/clan', owner)).json()).members.length, 1);
     assert.equal((await (await get('/clan', giant)).json()).clan, null);
+});
+
+test("a clan's words hold no links, handles or invite codes; the game's own Discord may be named", async () => {
+    const founder = await register('words_founder');
+    for (const words of [{ description: 'Join us at discord.gg/abc123' }, { lookingFor: 'add me: @someone' }, { description: 'see https://example.com' }]) {
+        const refused = await post('/clans', { name: 'Linked Up', tag: 'LNK', ...words }, founder);
+        assert.equal(refused.status, 400, JSON.stringify(words));
+        assert.match((await refused.json()).error, /links, handles or invite codes/);
+    }
+    assert.equal((await (await get('/clan', founder)).json()).clan, null, 'none was made');
+    assert.equal((await post('/clans', { name: 'Linked Up', tag: 'LNK', description: "We talk on the game's Discord", lookingFor: 'Stage 1.5k, active' }, founder)).status, 200);
 });
 
 test('clan races: parallel creates leave no empty clan, parallel joins respect the cap', async () => {
@@ -1122,6 +1097,32 @@ test('password guesses sent all at once are counted before they are checked: ten
     clock += 25 * 60 * 60 * 1000;
 });
 
+test("a clan's owner changes its words, by the same rule as at its start; nobody else can", async () => {
+    const owner = await register('scribe_owner');
+    const mate = await register('scribe_mate');
+    const { clanId } = await (await post('/clans', { name: 'Quill Bearers', tag: 'QUIL', description: 'Old words', lookingFor: 'Old wish' }, owner)).json();
+    await post('/clans/join', { clanId }, mate);
+    const edit = (token, words) => post('/clan/words', words, token);
+    assert.equal((await edit(mate, { description: 'Mine now' })).status, 409, 'a member');
+    assert.equal((await edit(await register('scribe_stranger'), { description: 'Mine now' })).status, 400, 'no clan');
+    const refused = await edit(owner, { description: 'New words', lookingFor: 'see t.me/somewhere' });
+    assert.equal(refused.status, 400);
+    assert.match((await refused.json()).error, /links, handles or invite codes/);
+    const seen = async () => { const { clan } = await (await get('/clan', mate)).json(); return [clan.description, clan.lookingFor, clan.name, clan.tag]; };
+    assert.deepEqual(await seen(), ['Old words', 'Old wish', 'Quill Bearers', 'QUIL'], 'nothing changed');
+
+    const saved = await edit(owner, { description: 'New <words>', lookingFor: '', name: 'Stolen Name', tag: 'STOL' });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(await saved.json(), { description: 'New words', lookingFor: '' });
+    assert.deepEqual(await seen(), ['New words', '', 'Quill Bearers', 'QUIL'], 'the name and tag stay');
+    const { clans } = await (await get('/clans?search=quill', mate)).json();
+    assert.equal(clans[0].description, 'New words', 'on the list of clans too');
+    await edit(owner, { lookingFor: 'Anyone' });
+    assert.deepEqual((await seen()).slice(0, 2), ['New words', 'Anyone'], 'a line not sent stays as it was');
+    await post('/clans/leave', {}, owner);
+    assert.equal((await edit(mate, { description: 'The heir writes' })).status, 200, 'and one who takes the clan over');
+});
+
 test("leaving and coming back leaves the week's boss as it was; a strong stranger's hits count, and leaving takes nothing back", async () => {
     const owner = await register('steady_owner');
     const friend = await register('steady_friend');
@@ -1230,6 +1231,80 @@ test("an owner away 30 days hands the clan to the longest-serving member who pla
     assert.equal(await ownerSeenBy(second), 'away_first');
 });
 
+test("an owner who leaves hands the clan to the longest-serving member who plays, or the longest-serving of all", async () => {
+    const lead = await register('heir_lead');
+    const old = await register('heir_old');
+    const young = await register('heir_young');
+    const { clanId } = await (await post('/clans', { name: 'Next In Line', tag: 'NXT' }, lead)).json();
+    await post('/clans/join', { clanId }, old);
+    clock += 1000;
+    await post('/clans/join', { clanId }, young);
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, young);
+    await post('/clans/leave', {}, lead);
+    assert.equal((await (await get('/clan', young)).json()).clan.isOwner, true, 'the one who plays, though newer');
+    await post('/clans/leave', {}, young);
+    assert.equal((await (await get('/clan', old)).json()).clan.isOwner, true, 'nobody plays: the one left');
+});
+
+test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {
+    const { CLAN_BOSS } = await import('../src/core/power.js');
+    const t = await register('patient_slayer');
+    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
+    await post('/clans', { name: 'Patient Ones', tag: 'PAT' }, t);
+    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, t)).json();
+    await peek.bossBigger('patient_slayer', 1.5);   // as a level 1 of thirty attacks was, before 26 October 2026
+    const moved = await (await get('/clan', t)).json();
+    near(moved.boss.maxHp, CLAN_BOSS.first * moved.members[0].attackDamage, 'its size now');
+    near(moved.boss.hp / moved.boss.maxHp, hit.hp / hit.maxHp, 'as far down as it was');
+    near(moved.board[0].damage, hit.damage, 'the attack scaled with it');
+    const again = (await (await get('/clan', t)).json()).boss;
+    near(again.hp, moved.boss.hp, 'once');
+});
+
+test('a token whose name is no longer its account\'s is refused', async () => {
+    const t = await register('renamed_one');
+    assert.equal((await get('/load', t)).status, 200);
+    if (memory) memory.db.users.find(u => u.username === 'renamed_one').username = 'someone_else';
+    else await pool.query("UPDATE users SET username = 'someone_else' WHERE username = 'renamed_one'");
+    clock += 11 * 60 * 1000;   // past the instance's memory of names
+    assert.equal((await get('/load', t)).status, 401);
+});
+
+test('tokens can be revoked: "Sign out everywhere" and a password reset end every session before them; a token from before versions still plays', async () => {
+    const jwt = require('../api/node_modules/jsonwebtoken');
+    const phone = await register('many_devices');
+    const laptop = (await (await post('/login', { username: 'many_devices', password: 'correct horse' })).json()).token;
+    assert.equal(jwt.decode(phone).v, 0);
+    // a token signed before tokens carried a version counts as version 0, as every account began
+    const old = jwt.sign({ id: jwt.decode(phone).id, username: 'many_devices' }, 'test-secret', { expiresIn: '30d', algorithm: 'HS256' });
+    for (const t of [old, phone, laptop]) assert.equal((await get('/load', t)).status, 200);   // (each checked, and kept in the instance's memory)
+    // from the phone: every other session ends at once, the instance's memory too; the phone plays on with a fresh token
+    const out = await post('/account/signout-all', {}, phone);
+    assert.equal(out.status, 200);
+    const fresh = (await out.json()).token;
+    assert.equal(jwt.decode(fresh).v, 1);
+    assert.equal((await get('/load', laptop)).status, 401, 'the other device');
+    assert.equal((await get('/load', phone)).status, 401, "this device's old token");
+    assert.equal((await get('/load', old)).status, 401, 'one from before versions');
+    assert.equal((await get('/load', fresh)).status, 200, 'the fresh one plays');
+    assert.equal((await post('/account/signout-all', {}, laptop)).status, 401, 'a device signed out signs no one out');
+    assert.equal((await post('/account/signout-all', {})).status, 401, 'nor does nobody');
+    // a password reset ends them too, and the account's own address hears of it in a line
+    const from = { 'X-Forwarded-For': '192.0.2.40' };
+    await post('/password/forgot', { email: emailOf('many_devices') }, null, from);
+    const reset = await post('/password/reset', { email: emailOf('many_devices'), code: codeFor(emailOf('many_devices')), password: 'a whole new phrase' }, null, from);
+    assert.equal(reset.status, 200);
+    const afterReset = (await reset.json()).token;
+    assert.equal((await get('/load', fresh)).status, 401, 'the session before the reset');
+    assert.equal((await get('/load', afterReset)).status, 200, 'the device that reset it');
+    const told = mailbox.at(-1);
+    assert.deepEqual([told.to, told.subject], [emailOf('many_devices'), 'Your Fantasy Idle password was changed']);
+    assert.match(told.text, /was just changed.*Forgot your password/s);
+    const again = (await (await post('/login', { username: 'many_devices', password: 'a whole new phrase' })).json()).token;
+    assert.equal(jwt.decode(again).v, 2, 'a login signs at the version now');
+    assert.equal((await get('/load', again)).status, 200);
+});
+
 test("the team's tool says which clans are due to pass on, and can do it", async () => {
     const { team } = require('../api/team.js');
     const data = memory || require('../api/store.js');
@@ -1250,21 +1325,6 @@ test("the team's tool says which clans are due to pass on, and can do it", async
     assert.equal(await run('handovers', '--apply'), 0);
     assert.equal(await ownerNow(), (await data.findUserByName('due_heir')).id);
     assert.ok(lines.includes(`#${clanId} Due To Pass: due_lead handed it to due_heir`));
-});
-
-test("an owner who leaves hands the clan to the longest-serving member who plays, or the longest-serving of all", async () => {
-    const lead = await register('heir_lead');
-    const old = await register('heir_old');
-    const young = await register('heir_young');
-    const { clanId } = await (await post('/clans', { name: 'Next In Line', tag: 'NXT' }, lead)).json();
-    await post('/clans/join', { clanId }, old);
-    clock += 1000;
-    await post('/clans/join', { clanId }, young);
-    await post('/save', { state: heroSave({ bestStage: 30 }) }, young);
-    await post('/clans/leave', {}, lead);
-    assert.equal((await (await get('/clan', young)).json()).clan.isOwner, true, 'the one who plays, though newer');
-    await post('/clans/leave', {}, young);
-    assert.equal((await (await get('/clan', old)).json()).clan.isOwner, true, 'nobody plays: the one left');
 });
 
 test("the team's tool clears and renames a clan, its kept rankings too, with a log and a word to its owner, and can put it back", async () => {
@@ -1417,65 +1477,6 @@ test("the team's tool changes a player's name and closes an account, with a log 
     assert.deepEqual(await peek.tied(id, 'plain_handle'), {});
     assert.deepEqual((await entries()).map(e => [e.action, JSON.parse(e.oldWords).username]), [['close', 'plain_handle']], 'only the record of its closing');
     assert.equal((await run('close-account', 'plain_handle', '--reason', 'again')).code, 1, 'gone');
-});
-
-test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {
-    const { CLAN_BOSS } = await import('../src/core/power.js');
-    const t = await register('patient_slayer');
-    await post('/save', { state: heroSave({ tokens: 50, bestStage: 30 }) }, t);
-    await post('/clans', { name: 'Patient Ones', tag: 'PAT' }, t);
-    const hit = await (await post('/clan/attack', { strikes: [], ms: 30000 }, t)).json();
-    await peek.bossBigger('patient_slayer', 1.5);   // as a level 1 of thirty attacks was, before 26 October 2026
-    const moved = await (await get('/clan', t)).json();
-    near(moved.boss.maxHp, CLAN_BOSS.first * moved.members[0].attackDamage, 'its size now');
-    near(moved.boss.hp / moved.boss.maxHp, hit.hp / hit.maxHp, 'as far down as it was');
-    near(moved.board[0].damage, hit.damage, 'the attack scaled with it');
-    const again = (await (await get('/clan', t)).json()).boss;
-    near(again.hp, moved.boss.hp, 'once');
-});
-
-test('a token whose name is no longer its account\'s is refused', async () => {
-    const t = await register('renamed_one');
-    assert.equal((await get('/load', t)).status, 200);
-    if (memory) memory.db.users.find(u => u.username === 'renamed_one').username = 'someone_else';
-    else await pool.query("UPDATE users SET username = 'someone_else' WHERE username = 'renamed_one'");
-    clock += 11 * 60 * 1000;   // past the instance's memory of names
-    assert.equal((await get('/load', t)).status, 401);
-});
-
-test('tokens can be revoked: "Sign out everywhere" and a password reset end every session before them; a token from before versions still plays', async () => {
-    const jwt = require('../api/node_modules/jsonwebtoken');
-    const phone = await register('many_devices');
-    const laptop = (await (await post('/login', { username: 'many_devices', password: 'correct horse' })).json()).token;
-    assert.equal(jwt.decode(phone).v, 0);
-    // a token signed before tokens carried a version counts as version 0, as every account began
-    const old = jwt.sign({ id: jwt.decode(phone).id, username: 'many_devices' }, 'test-secret', { expiresIn: '30d', algorithm: 'HS256' });
-    for (const t of [old, phone, laptop]) assert.equal((await get('/load', t)).status, 200);   // (each checked, and kept in the instance's memory)
-    // from the phone: every other session ends at once, the instance's memory too; the phone plays on with a fresh token
-    const out = await post('/account/signout-all', {}, phone);
-    assert.equal(out.status, 200);
-    const fresh = (await out.json()).token;
-    assert.equal(jwt.decode(fresh).v, 1);
-    assert.equal((await get('/load', laptop)).status, 401, 'the other device');
-    assert.equal((await get('/load', phone)).status, 401, "this device's old token");
-    assert.equal((await get('/load', old)).status, 401, 'one from before versions');
-    assert.equal((await get('/load', fresh)).status, 200, 'the fresh one plays');
-    assert.equal((await post('/account/signout-all', {}, laptop)).status, 401, 'a device signed out signs no one out');
-    assert.equal((await post('/account/signout-all', {})).status, 401, 'nor does nobody');
-    // a password reset ends them too, and the account's own address hears of it in a line
-    const from = { 'X-Forwarded-For': '192.0.2.40' };
-    await post('/password/forgot', { email: emailOf('many_devices') }, null, from);
-    const reset = await post('/password/reset', { email: emailOf('many_devices'), code: codeFor(emailOf('many_devices')), password: 'a whole new phrase' }, null, from);
-    assert.equal(reset.status, 200);
-    const afterReset = (await reset.json()).token;
-    assert.equal((await get('/load', fresh)).status, 401, 'the session before the reset');
-    assert.equal((await get('/load', afterReset)).status, 200, 'the device that reset it');
-    const told = mailbox.at(-1);
-    assert.deepEqual([told.to, told.subject], [emailOf('many_devices'), 'Your Fantasy Idle password was changed']);
-    assert.match(told.text, /was just changed.*Forgot your password/s);
-    const again = (await (await post('/login', { username: 'many_devices', password: 'a whole new phrase' })).json()).token;
-    assert.equal(jwt.decode(again).v, 2, 'a login signs at the version now');
-    assert.equal((await get('/load', again)).status, 200);
 });
 
 test('the health check asks the database every time, and a body that is not JSON gets a JSON answer', async () => {
@@ -2039,21 +2040,6 @@ test('gifts sent at once each take their own number: the bank gives each thing o
     assert.ok(answers.every(r => r.status === 200 || r.status === 400));
 });
 
-test("the week's last gift may run a little past its hours: no scraps of a week left that nothing fits (the owner's first gift)", async () => {
-    const { HALL, giftWorth } = await import('../src/data/clanhall.js');
-    toMonday();
-    const p = await register('hall_scraps');
-    await post('/clans', { name: 'Scrap Makers', tag: 'SCRAP' }, p);
-    await post('/save', { state: { ...heroSave(), resources: { runite_bar: 1000, essence: 50 } } }, p);
-    const all = await (await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 1e9 }, p)).json();
-    const week = HALL.weeklyHours * 3600;
-    assert.equal(all.gift.qty, Math.ceil(week / giftWorth('runite_bar')), '684 bars, not 683 and 9 seconds over');
-    assert.ok(all.hall.given.week >= week && all.hall.given.week < week + giftWorth('runite_bar'));
-    const more = await post('/clan/hall/give', { room: 'library', resource: 'essence', qty: 1 }, p);
-    assert.equal(more.status, 400);
-    assert.match((await more.json()).error, /more on Monday/);
-});
-
 test('Delete my account: with the password, every row tied to it goes at once; its clan passes on and keeps what it was given', async () => {
     const data = memory || require('../api/store.js');
     toMonday();
@@ -2165,6 +2151,21 @@ test('every table with a row for a player is emptied of it when the account goes
     const tables = [...source.matchAll(/CREATE TABLE IF NOT EXISTS (\w+) \(([\s\S]*?)\n\s*\)\s*;?\s*`/g)].filter(([, , columns]) => /\buser_id\b/.test(columns)).map(([, table]) => table);
     assert.ok(tables.length >= 10, tables.join());
     for (const table of tables) assert.match(statement, new RegExp(`DELETE FROM ${table} WHERE user_id`), `${table} is not emptied by deleteAccount`);
+});
+
+test("the week's last gift may run a little past its hours: no scraps of a week left that nothing fits (the owner's first gift)", async () => {
+    const { HALL, giftWorth } = await import('../src/data/clanhall.js');
+    toMonday();
+    const p = await register('hall_scraps');
+    await post('/clans', { name: 'Scrap Makers', tag: 'SCRAP' }, p);
+    await post('/save', { state: { ...heroSave(), resources: { runite_bar: 1000, essence: 50 } } }, p);
+    const all = await (await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 1e9 }, p)).json();
+    const week = HALL.weeklyHours * 3600;
+    assert.equal(all.gift.qty, Math.ceil(week / giftWorth('runite_bar')), '684 bars, not 683 and 9 seconds over');
+    assert.ok(all.hall.given.week >= week && all.hall.given.week < week + giftWorth('runite_bar'));
+    const more = await post('/clan/hall/give', { room: 'library', resource: 'essence', qty: 1 }, p);
+    assert.equal(more.status, 400);
+    assert.match((await more.json()).error, /more on Monday/);
 });
 
 // ---------- the night's cleanup (api/cleanup.js): last in this file, for it clears what the tests above leave behind ----------

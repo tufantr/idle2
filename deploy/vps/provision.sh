@@ -128,6 +128,8 @@ install -d /etc/systemd/journald.conf.d
 printf '[Journal]\nMaxRetentionSec=30day\nMaxFileSec=1day\n' > /etc/systemd/journald.conf.d/fantasyidle.conf
 systemctl restart systemd-journald
 
+# (what the team runs by hand)
+
 # --- the team's tool for clans (api/team.js, README "The server"): fantasyidle-team list, clear, rename, restore, log
 install -m 0755 "$HERE/team.sh" /usr/local/bin/fantasyidle-team
 

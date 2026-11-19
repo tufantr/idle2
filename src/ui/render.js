@@ -2600,22 +2600,6 @@ export function renderHallGive(game, ui) {
     </div>`;
 }
 
-/** "Delete my account" (Settings): what goes, what stays with the clan, and the password. */
-export function renderDeleteAccount() {
-    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
-        <div class="modal-header">Delete my account</div>
-        <div class="modal-body">
-            <p>This deletes your account and your game from the server, for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts.</p>
-            <p class="muted small">What you gave your clan stays with it. If you lead it, it passes to another member. The server's backups lose your account as they age out, within a year.</p>
-            <div class="auth-error" id="delete-error"></div>
-            <form class="auth-form" onsubmit="event.preventDefault(); FI.deleteAccount()">
-                <input type="password" id="delete-pass" placeholder="Your password" aria-label="Your password" autocomplete="current-password" class="text-input" data-autofocus>
-                <div class="btn-row"><button type="submit" class="modal-btn btn-danger">Delete it for good</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Keep it</button></div>
-            </form>
-        </div>
-    </div>`;
-}
-
 /** The clan's words, for its owner (FI.openClanWords): what the Start a clan form asks, as they stand now. */
 export function renderClanWords(clan) {
     return `<div class="modal-content narrow ${painted('clanhall', 'center 40%')}">
@@ -2889,6 +2873,22 @@ export function renderConfirmModal(title, text, confirmLabel) {
         <div class="modal-header">${esc(title)}</div>
         <div class="modal-body"><p>${esc(text)}</p></div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmYes()">${esc(confirmLabel)}</button></div>
+    </div>`;
+}
+
+/** "Delete my account" (Settings): what goes, what stays with the clan, and the password. */
+export function renderDeleteAccount() {
+    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
+        <div class="modal-header">Delete my account</div>
+        <div class="modal-body">
+            <p>This deletes your account and your game from the server, for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts.</p>
+            <p class="muted small">What you gave your clan stays with it. If you lead it, it passes to another member. The server's backups lose your account as they age out, within a year.</p>
+            <div class="auth-error" id="delete-error"></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.deleteAccount()">
+                <input type="password" id="delete-pass" placeholder="Your password" aria-label="Your password" autocomplete="current-password" class="text-input" data-autofocus>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-danger">Delete it for good</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Keep it</button></div>
+            </form>
+        </div>
     </div>`;
 }
 

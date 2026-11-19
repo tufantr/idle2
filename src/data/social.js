@@ -4,9 +4,29 @@ import { ZONES } from './zones.js';
 // The game's Discord (the owner's, made for the beta, 22 October 2026): feedback of any kind, bug reports, the clans'
 // talk. Shown on the Clan tab, in Settings and on the wiki's front page. It never expires and opens on #general.
 export const DISCORD_INVITE = 'https://discord.gg/Pxa2bHYcDg';
+// The one address that reaches the team, for anyone, with an account or without (the research loop's P-110): shown in Settings
+// and on the wiki, behind each clan's Report link, and where a reply to the game's mail goes (api/mail.js). It is the owner's to
+// confirm (Cloudflare's Email Routing delivers it). This is its only place in the game: change it here. Empty hides it.
+export const CONTACT_EMAIL = 'contact@fantasyidle.com';
+/** A clan's Report link: a mail to the team naming the clan, with what a report needs (which clan, what is wrong, and that it is true). */
+export function clanReportHref({ id, name, tag }) {
+    const subject = `Report: clan ${name} [${tag}]`;
+    const body = `Clan: ${name} [${tag}], number ${id}\n\nWhat is wrong:\n\n\nWhat I say here is true as far as I know.\n`;
+    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 // The player wiki (wiki/, built from the game's own data; README "The server"): linked in Settings beside the Discord, and
 // at the foot of each "?" card that has a page of its own there (src/ui/features.js WIKI_PAGES).
 export const WIKI_URL = 'https://wiki.fantasyidle.com';
+export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
+// The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board
+// a week of play can climb rather than the beta's head start (P-129); while the week's board holds fewer than BOARD_WEEK_MIN
+// names they open on All time. Decided at the first look; a tap on the period chooses for good (main.js).
+export const BOARD_WEEK_MIN = 5;
+/** The period the boards open on, from the week's board as the server sent it ({ entries }): 'week' or 'all'. */
+export const boardOpensOn = weekBoard => ((weekBoard?.entries?.length || 0) >= BOARD_WEEK_MIN ? 'week' : 'all');
+
+export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
+
 // What a clan's words (its description and "looking for" line) may not hold: a way to reach anyone elsewhere (the owner's
 // decision, November 2026; the research loop's P-125, against grooming and steering players to other apps). No web addresses,
 // "@" handles, invite codes or contact details; a clan's talk has the game's Discord, which may be named or linked. A sieve
@@ -36,24 +56,6 @@ export function clanWordsOk(text) {
     if (NO_CONTACT.some(rule => rule.test(plain))) return false;
     return !(plain.match(/\+?\d[\d\s().-]{7,}\d/g) || []).some(run => run.replace(/\D/g, '').length >= 9);
 }
-// The one address that reaches the team, for anyone, with an account or without (the research loop's P-110): shown in Settings
-// and on the wiki, behind each clan's Report link, and where a reply to the game's mail goes (api/mail.js). It is the owner's to
-// confirm (Cloudflare's Email Routing delivers it). This is its only place in the game: change it here. Empty hides it.
-export const CONTACT_EMAIL = 'contact@fantasyidle.com';
-/** A clan's Report link: a mail to the team naming the clan, with what a report needs (which clan, what is wrong, and that it is true). */
-export function clanReportHref({ id, name, tag }) {
-    const subject = `Report: clan ${name} [${tag}]`;
-    const body = `Clan: ${name} [${tag}], number ${id}\n\nWhat is wrong:\n\n\nWhat I say here is true as far as I know.\n`;
-    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
-export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
-// The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board
-// a week of play can climb rather than the beta's head start (P-129); while the week's board holds fewer than BOARD_WEEK_MIN
-// names they open on All time. Decided at the first look; a tap on the period chooses for good (main.js).
-export const BOARD_WEEK_MIN = 5;
-/** The period the boards open on, from the week's board as the server sent it ({ entries }): 'week' or 'all'. */
-export const boardOpensOn = weekBoard => ((weekBoard?.entries?.length || 0) >= BOARD_WEEK_MIN ? 'week' : 'all');
 
 // Clan attacks (api/index.js): three a day, and those not used wait, up to six. An attack is a fight of
 // CLAN_ATTACK_SECONDS against the week's clan boss (systems/clanfight.js); the boss's health is sized

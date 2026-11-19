@@ -18,8 +18,7 @@
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker, 'clanwords'
-//                                                 # its owner's dialog for its words; 'deleteaccount'
-//                                                 # Settings' dialog to delete the account; 'account'
+//                                                 # its owner's dialog for its words; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
 //                                                 # clans to find: the API is answered by the
