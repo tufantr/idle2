@@ -70,3 +70,28 @@ They agree with the runs they were to be held to:
 Commands, for a later run: `nice -n 10 node tools/batch.mjs --jobs=1 --seeds=1-3 --hours=300 --trials=5 --pacts --charms --ascend=1`
 (with `--auto` for the second), `nice -n 10 node tools/simulate.mjs --hours=336 --seed=1 --player=checkin3 --auto --json=runs/checkin3-auto-336h/1.json`,
 then `node tools/audit.mjs`. With three simulators side by side on a busy machine, these took about an hour.
+
+## The measuring round (19 November)
+
+The patch's balance changes on one copy of the code (caf719b), the bot with Auto, 300 hours, seeds 1–12, the same seeds in every
+row (`--trials=5 --pacts --charms --ascend=1 --auto`). "Against off" is each seed's own difference, so the seed's luck cancels.
+"Worst climb" is the largest gain of the best stage in any 1, 4 or 24 hours as a share of what the growth check allows
+(`honestClimb`, its margin of 3 included).
+
+| Setup | Best stage at 300 h, median (lowest–highest) | Against off, median (lowest..highest) | Prestiges | Worst climb |
+|---|---|---|---|---|
+| All switches off | 1,880 (1,870–1,920) | | 545 | 44% |
+| R16's keep rule alone (`keepByWorth`) | 1,900 (1,860–1,940) | +20 (−20..+50) | 539 | 49% |
+| The sure piece alone (`dueByWorth`) | 1,895 (1,870–1,900) | +15 (−30..+30) | 535 | 49% |
+| Focus at the cap alone (`focusCapDamage`) | 1,910 (1,870–1,950) | +25 (−10..+70) | 542 | 46% |
+| **As it ships** (keep rule, Focus, Second Chance, Berserker) | **1,935 (1,890–1,960)** | **+45 (+10..+70)** | 535 | 51% |
+| As it ships, with the sure piece too | 1,940 (1,900–1,980) | +60 (0..+100) | 530 | 50% |
+
+- **The growth check holds:** the fastest honest climb stays near half of what it allows (from about stage 1,300, +250 in a day).
+- **Focus:** at a wall it is worth about four stages (×1.15, monster health +3.5% a stage). Over a whole climb the bot, which never
+  clicks and so always has it, stands about 25 stages higher at hour 300.
+- **Second Chance and Berserker** change nothing here: the bot doesn't reach those talents within 300 hours. They were measured on
+  benches (Berserker: 1.45–1.68 stages for its 2 points, on 66 heroes; `tools/talents.mjs --clock`).
+- **The sure piece** (decision 13) is worth little on its own, about +15 at hour 300, and costs nothing the check can see. It waits
+  for the owner's word.
+

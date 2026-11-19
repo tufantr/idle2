@@ -897,8 +897,9 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
   damage, a point for a point (`BASE.focusCapDamage`; `derived.focusSpeed` and `derived.focusDamage`, which the
   Focus pill's tip reads): at the cap it added nothing to a fight, every deep hero the simulator made sat past the
   cap, and a deep hero gained from clicking alone (a player's point, November 2026). A hero already at the cap hits
-  ×1.15 while focused, about four stages at a deep wall (monster health grows 3.5% a stage from stage 700); below the
-  cap nothing changed. The server counts no Focus (`core/power.js` stableState), so the boards, the clan fight and
+  ×1.15 while focused, about four stages at a deep wall (monster health grows 3.5% a stage from stage 700), and the
+  simulator's Auto hero, who never clicks, stands about 25 stages higher after 300 hours (+25 on 12 seeds, the growth
+  check untouched: docs/research_notes/balance-baselines-2026-11.md); below the cap nothing changed. The server counts no Focus (`core/power.js` stableState), so the boards, the clan fight and
   the growth check read a hero as before.
 
 ### 3.16 Offline progress

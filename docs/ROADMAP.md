@@ -1608,7 +1608,7 @@ Keeping it running:
 - [x] **Focus pays at the cap** (a player's point, 16 November 2026): Focus's +15% attack speed joined the other bonuses
       under the cap of +100%, so a deep hero at the cap got nothing in a fight from leaving the game alone, and only
       clicking paid. Focus's speed now comes last, and its part past the cap adds as much damage: ×1.15 for a hero
-      already at the cap, about four stages at a deep wall. The Focus pill's tip says which it gives; the server, which
+      already at the cap, about four stages at a deep wall (about 25 higher after 300 simulated hours for a hero who never clicks). The Focus pill's tip says which it gives; the server, which
       counts no Focus, reads a hero as before
 - [x] **Armour still counts at the first walls** (a fix on the one measure for gear, November 2026; DESIGN §3.31): below
       stage 150, where a new hero falls to blows of 3 to 8% of his health, defence and health count whatever a blow's
