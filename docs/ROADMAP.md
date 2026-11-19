@@ -1601,8 +1601,8 @@ Keeping it running:
 - [x] **Berserker counts at a boss's clock too** (a player's report, D5, 19 November 2026; DESIGN §3.33): its +10/+20%
       damage counted only under half his health, which Gourmet's auto-eat stops from level 5 and a deep hero's health
       never reaches; it now also counts once a boss's clock is under a quarter (ladder and dungeons, not the Titan's
-      minute or the clan's fight): 0 stages at the wall before, about 1.5 now (a half clock would have been worth all
-      of Giant Slayer for two points)
+      minute or the clan's fight): 0 to 0.4 stages at the wall before, 1.5 to 1.7 now (half the clock would have been worth
+      all of Giant Slayer for two points)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

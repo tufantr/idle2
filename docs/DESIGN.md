@@ -2122,11 +2122,11 @@ the forge is: a page running the older game drops a field it doesn't know).
   damage (as Execute's rule and `bossCanFall` already treat it: there the clock would only be a surer score), nor the clan's
   fight, where the talents' rules stay out; 0 is the old rule exactly. Sized on the boss bench beside `tools/talents.mjs`
   (`--clock`, 015's method: each talent alone on each hero, the damage it adds in his wall boss's clock as stages, on 45 heroes
-  built at 800 to 2,400 and seven the simulator saved at 700 to 1,300): the first idea, half the clock, gave 2.85 stages for
-  two points, all of Giant Slayer's (2.77 for five) for two points, so it came down to a quarter: 1.45 stages (1.6 on the
-  simulated heroes), 0.7 to 0.8 a point against 0.25 to 0.60 for the Blade's others (Execute 1.80 for three, Giant Slayer 2.77
-  for five, Opening Blow 1.4 to 1.6 and Flurry 1.1 to 1.4 for three, Deathblow 2.4 to 2.5 for its one). The old rule alone is
-  0.0 on the built heroes and 0.3 on the simulated ones, the most on a hero still falling under half at his wall.
+  built at 800 to 2,400 and 21 the simulator saved at 700 to 1,300, seeds 1 to 3): the first idea, half the clock, gave 2.85 to
+  2.91 stages for two points, all of Giant Slayer's (2.77 for five) for two points, so it came down to a quarter: 1.45 stages
+  on the built heroes, 1.68 on the simulated, 0.7 to 0.85 a point against 0.3 to 0.6 for the Blade's others (Execute 1.80 for
+  three, Giant Slayer 2.77 for five, Opening Blow 1.4 to 1.6 and Flurry 0.9 to 1.4 for three, Deathblow 2.4 to 2.6 for its one).
+  The old rule alone is 0.0 on the built heroes and 0.4 on the simulated ones, where a shallower hero still drops under half.
 - **Pace** (`tools/batch.mjs --seeds=7 --hours=600 --auto`): the first point at hour 108–114, the old cap's seven at
   147–153, level 120 at 274–281 (five days after the cap), the first capstone (level 130) at 446–465 (thirteen days
   after it), 35 points at hour 600; the best stage at hour 600 is 2,380 (2,370–2,400) against 2,300 (2,280–2,310) without
