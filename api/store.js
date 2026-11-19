@@ -485,6 +485,12 @@ async function setClanOwner(clanId, ownerId) {
     await sql`UPDATE clans SET owner_id = ${ownerId} WHERE id = ${clanId}`;
 }
 
+/** The clan passes from one owner to another, if `fromId` still has it (of several at once, one moves it): did this one? */
+async function passClan(clanId, fromId, toId) {
+    const { rows } = await sql`UPDATE clans SET owner_id = ${toId}::int WHERE id = ${clanId}::int AND owner_id = ${fromId}::int RETURNING id`;
+    return rows.length > 0;
+}
+
 async function deleteClan(clanId) {
     await sql`DELETE FROM clan_bosses WHERE clan_id = ${clanId}`;
     await sql`DELETE FROM clan_boss_shares WHERE clan_id = ${clanId}`;
@@ -976,7 +982,7 @@ module.exports = {
     userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
     addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
-    listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
+    listClans, createClan, getClan, setClanOwner, passClan, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,

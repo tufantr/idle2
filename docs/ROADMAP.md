@@ -1567,6 +1567,8 @@ Keeping it running:
       prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
 - [x] **When a clan's members last played** (R14, P-009): the member list says "Seen 3 days ago" under each of the others,
       in whole days and no finer
+- [x] **An owner away 30 days hands the clan over** (R14, P-009): to the longest-serving member who played this past week,
+      when a member next opens the clan; an owner who leaves hands it to the same one. The clan's "?" and the wiki say so
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

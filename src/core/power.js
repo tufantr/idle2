@@ -12,6 +12,7 @@ import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, C
 export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf };   // the server reads them here
 
 /** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
+export { LEADER_AWAY_DAYS } from '../data/social.js';
 export const trialWeekStart = now => weeklyTrialAt(now).start;
 export { supplyMult };   // the server sizes the clan boss by it (api/index.js shareOf)
 export { HALL, HALL_ROOMS, HALL_STAGES, ROOM_SECONDS, WEEKLY_SECONDS, CLOAK_STAGE, BANNER_COLOURS, BANNER_EMBLEMS, roomLevel, hallLevels, hallStage, hallRoom, giftWorth, roomTakes } from '../data/clanhall.js';   // the Clan Hall's (api/index.js)

@@ -689,6 +689,25 @@ async function clanOf(userId) {
 }
 const validId = id => Number.isInteger(id) && id > 0 && id < 2 ** 31;   // a Postgres integer (a bigger one was a 500)
 
+/** Who takes a clan on (`members` from store.clanMembers, the longest-serving first): the first who played this past week and isn't flagged, or null. */
+const heirOf = (members, now, leaving = null) => members.find(m => m.userId !== leaving && now - (m.lastSaved || 0) < ACTIVE_WITHIN && !recentlyFlagged(m.flags, now)) || null;
+
+/**
+ * An owner away LEADER_AWAY_DAYS (src/data/social.js) hands the clan to the longest-serving member who plays (the research loop's P-009, November
+ * 2026: an absent owner stayed for good, with the only hand on its words, its banner and who is in it). Settled when a member
+ * looks at the clan, once however many look at the same time; with nobody playing it waits. Away is since the owner's last
+ * upload, or since they joined (one who has just started a clan hasn't uploaded yet). Returns the clan as it is now.
+ */
+async function handOverIfAway(clan, members, now) {
+    const { LEADER_AWAY_DAYS } = await engine();
+    const owner = members.find(m => m.userId === clan.ownerId);
+    if (owner && now - Math.max(owner.lastSaved || 0, owner.joinedAt || 0) < LEADER_AWAY_DAYS * DAY) return clan;
+    const heir = heirOf(members, now, clan.ownerId);
+    if (!heir) return clan;
+    await store.passClan(clan.id, clan.ownerId, heir.userId);
+    return (await store.getClan(clan.id)) || clan;
+}
+
 /** This week's boss of a clan: made the first time it is looked at, moved to its next level the day after a kill. */
 async function currentBoss(clanId, now) {
     const week = isoWeek(now);
@@ -1007,7 +1026,7 @@ app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, 
     await store.removeMember(req.user.id);
     const rest = await store.clanMembers(membership.clanId);
     if (!rest.length) await store.deleteClan(membership.clanId);
-    else if (clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, rest[0].userId); // the longest-serving member
+    else if (clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, (heirOf(rest, Date.now()) || rest[0]).userId);   // the longest-serving member who plays (of all, if none does)
     res.json({ left: true });
 }));
 
@@ -1015,9 +1034,10 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     const now = Date.now();
     const mine = await clanOf(req.user.id);
     if (!mine) return res.json({ clan: null });
-    const { clan, membership } = mine;
-    const clanId = clan.id;
+    const { membership } = mine;
+    const clanId = mine.clan.id;
     const [rawMembers, boss] = await Promise.all([store.clanMembers(clanId), currentBoss(clanId, now)]);
+    const clan = await handOverIfAway(mine.clan, rawMembers, now);
     const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = boardOf(await store.weeklyDamage(clanId, boss.week));
     const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds, CLAN_BOSS, ENDLESS, clanAttackScale } = await engine();

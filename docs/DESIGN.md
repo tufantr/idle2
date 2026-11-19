@@ -1089,7 +1089,10 @@ asynchronous and **every number another player sees is computed on the server fr
 with the game's own stat code; the client never submits damage or scores.
 
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
-  member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
+  member who played this past week and isn't flagged takes over if the owner leaves (the longest-serving of all if nobody
+  has), and the last one out closes the clan. An owner away `LEADER_AWAY_DAYS` (30, since their last upload or their joining)
+  hands the clan over the same way, settled when a member opens the clan (`handOverIfAway`; the research loop's P-009,
+  November 2026), once however many look at once; with nobody playing it waits. Members hold numbered
   places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member. The list of clans to
   find shows on each row the members who played (uploaded) this past week, and puts the clans with the most of them first,
   then the biggest (the research loop's P-035, November 2026: by members alone, a big clan gone quiet led the list).

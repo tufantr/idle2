@@ -71,6 +71,11 @@ const peek = {
         if (memory) { memory.db.users.find(u => u.username === username).last_saved = at; return; }
         await pool.query('UPDATE users SET last_saved = $1 WHERE username = $2', [at, username]);
     },
+    /** When a player joined their clan, as if then. */
+    async joinedAt(username, at) {
+        if (memory) { const user = memory.db.users.find(u => u.username === username); memory.db.members.find(m => m.userId === user.id).joinedAt = at; return; }
+        await pool.query('UPDATE clan_members SET joined_at = $1 WHERE user_id = (SELECT id FROM users WHERE username = $2)', [at, username]);
+    },
     /** A player's stored flags, as an older server or the owner wrote them. */
     async setFlags(username, flags) {
         if (memory) { memory.db.users.find(u => u.username === username).flags = JSON.stringify(flags); return; }
@@ -1115,6 +1120,60 @@ test('a member left in a clan deleted under them is let out of it', async () => 
     assert.equal(view.status, 200);
     assert.equal((await view.json()).clan, null);
     assert.equal((await post('/clans', { name: 'Found Again', tag: 'FND' }, t)).status, 200, 'free to start another');
+});
+
+test("an owner away 30 days hands the clan to the longest-serving member who plays, once; with nobody playing it waits", async () => {
+    const DAYS = n => n * 24 * 3600 * 1000;
+    const lead = await register('away_lead');
+    const first = await register('away_first');
+    const second = await register('away_second');
+    const third = await register('away_third');
+    const { clanId } = await (await post('/clans', { name: 'Absent Lords', tag: 'ABS' }, lead)).json();
+    assert.equal((await (await get('/clan', lead)).json()).clan.isOwner, true, 'one who has just started a clan, with no upload yet, is not away');
+    await post('/clans/join', { clanId }, first);
+    clock += 1000;
+    await post('/clans/join', { clanId }, second);
+    clock += 1000;
+    await post('/clans/join', { clanId }, third);
+    for (const t of [lead, first, second, third]) await post('/save', { state: heroSave({ bestStage: 30 }) }, t);
+    for (const [i, name] of ['away_lead', 'away_first', 'away_second', 'away_third'].entries()) await peek.joinedAt(name, clock - DAYS(50) + i);
+    const ownerSeenBy = async t => (await (await get('/clan', t)).json()).members.find(m => m.owner)?.username;
+
+    await peek.lastSaved('away_lead', clock - DAYS(30) + 60000);
+    assert.equal(await ownerSeenBy(second), 'away_lead', 'a minute short of thirty days');
+    await peek.lastSaved('away_lead', clock - DAYS(30));
+    await peek.lastSaved('away_first', clock - DAYS(8));   // the longest-serving hasn't played this past week,
+    await peek.setFlags('away_second', [{ at: clock, reason: 'flagged by the owner after review', by: 'owner' }]);   // the next is flagged
+    const looks = await Promise.all([get('/clan', third), get('/clan', first), get('/clan', lead)].map(p => p.then(r => r.json())));
+    for (const view of looks) assert.equal(view.members.find(m => m.owner).username, 'away_third', 'whoever looks, at the same moment');
+    assert.deepEqual(looks.map(v => v.clan.isOwner), [true, false, false]);
+    assert.equal((await post('/clan/kick', { username: 'away_first' }, lead)).status, 409, 'the one who left it has no say now');
+
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, lead);
+    assert.equal(await ownerSeenBy(lead), 'away_third', 'coming back, a member like any other');
+
+    // the new owner goes too, and nobody plays: it waits, and the first to play takes it
+    for (const [name, days] of [['away_third', 40], ['away_lead', 9], ['away_first', 9]]) await peek.lastSaved(name, clock - DAYS(days));
+    await peek.setFlags('away_second', []);
+    await peek.lastSaved('away_second', clock - DAYS(9));
+    assert.equal(await ownerSeenBy(first), 'away_third', 'no one to take it');
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, first);
+    assert.equal(await ownerSeenBy(second), 'away_first');
+});
+
+test("an owner who leaves hands the clan to the longest-serving member who plays, or the longest-serving of all", async () => {
+    const lead = await register('heir_lead');
+    const old = await register('heir_old');
+    const young = await register('heir_young');
+    const { clanId } = await (await post('/clans', { name: 'Next In Line', tag: 'NXT' }, lead)).json();
+    await post('/clans/join', { clanId }, old);
+    clock += 1000;
+    await post('/clans/join', { clanId }, young);
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, young);
+    await post('/clans/leave', {}, lead);
+    assert.equal((await (await get('/clan', young)).json()).clan.isOwner, true, 'the one who plays, though newer');
+    await post('/clans/leave', {}, young);
+    assert.equal((await (await get('/clan', old)).json()).clan.isOwner, true, 'nobody plays: the one left');
 });
 
 test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {

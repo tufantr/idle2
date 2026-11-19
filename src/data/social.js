@@ -8,6 +8,7 @@ export const DISCORD_INVITE = 'https://discord.gg/Pxa2bHYcDg';
 // at the foot of each "?" card that has a page of its own there (src/ui/features.js WIKI_PAGES).
 export const WIKI_URL = 'https://wiki.fantasyidle.com';
 export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
+export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
 // The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board
 // a week of play can climb rather than the beta's head start (P-129); while the week's board holds fewer than BOARD_WEEK_MIN
 // names they open on All time. Decided at the first look; a tap on the period chooses for good (main.js).

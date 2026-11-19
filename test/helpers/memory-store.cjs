@@ -133,6 +133,11 @@ function createMemoryStore() {
             const c = db.clans.find(x => x.id === clanId);
             if (c) c.ownerId = ownerId;
         },
+        async passClan(clanId, fromId, toId) {
+            const c = db.clans.find(x => x.id === clanId && x.ownerId === fromId);
+            if (c) c.ownerId = toId;
+            return !!c;
+        },
         async deleteClan(clanId) {
             db.bosses = db.bosses.filter(b => b.clanId !== clanId);
             db.shares = db.shares.filter(s => s.clanId !== clanId);
