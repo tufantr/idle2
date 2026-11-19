@@ -125,7 +125,13 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
 - **Staging:** a private copy of the game at `staging.fantasyidle.com` (its own API on port 3001, its own database
   `fantasyidle_staging` restored from a dump, its own token secret, no mail), where each change is rehearsed before it
   goes live: `deploy/vps/stage.sh` deploys a commit there, and on the server `deploy/vps/staging-setup.sh data`
-  refreshes its data and `staging-setup.sh link` prints the private link that lets a browser in.
+  refreshes its data and `staging-setup.sh link` prints the private link that lets a browser in. Before a landing,
+  `bash /srv/fantasyidle-staging/current/deploy/vps/rehearse.sh` (as root; `--no-data` keeps the data as it is) runs the
+  rehearsal over a fresh copy of the live data: every save through the new code and back into the old one (the release in
+  `/srv/fantasyidle/saved/`), the growth check and flags, completion and the server's numbers, old against new, and the API
+  tests, this version's and the old version's against this server (the ones a landing means to change are listed in
+  `deploy/vps/rehearse-expected.txt`), in databases it makes and drops. It prints numbers and test names, nothing of
+  any account. `node tools/rehearse-browsers.mjs` on the Mac plays staging in Chromium, WebKit and Firefox.
 - **Cloudflare:** a token for fantasyidle.com only (DNS, SSL and Certificates, Zone Settings), made by the owner, in
   `~/.config/fantasyidle/cloudflare-token` on the owner's Mac; never print it or commit it.
 - **Mail:** sign-up codes and password resets go out through Resend (`api/mail.js`) from `noreply@fantasyidle.com`:
