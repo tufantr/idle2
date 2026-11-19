@@ -1321,6 +1321,21 @@ test("the team's tool clears and renames a clan, its kept rankings too, with a l
     assert.deepEqual((await data.getRanking('2026-W01')).filter(r => r.clanId === clanId).map(r => r.name), ['Closed Clan']);
 });
 
+test("the team's tool can leave a copy of what it clears out of its log: what must not be kept", async () => {
+    const { team } = require('../api/team.js');
+    const data = memory || require('../api/store.js');
+    const lines = [];
+    const run = (...argv) => team(argv, { store: data, send: async () => {}, now: clock, print: l => lines.push(l) });
+    const owner = await register('nocopy_owner');
+    const { clanId } = await (await post('/clans', { name: 'Unkeepable', tag: 'NOPE', description: 'Words not to keep' }, owner)).json();
+    assert.equal(await run('clear', String(clanId), '--reason', 'see the steps', '--no-copy', '--no-mail'), 0);
+    const [entry] = await data.teamLog(1);
+    assert.equal(entry.oldWords, '{}');
+    assert.ok(!JSON.stringify(entry).includes('Words not to keep'));
+    assert.equal(await run('restore', String(entry.id), '--reason', 'r'), 1, 'nothing to put back');
+    assert.match(lines.at(-1), /kept no copy/);
+});
+
 test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {
     const { CLAN_BOSS } = await import('../src/core/power.js');
     const t = await register('patient_slayer');

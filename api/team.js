@@ -11,8 +11,9 @@
 //   fantasyidle-team log [how many]                    what the team did, the newest first
 //
 // <clan> is its number (from `list`) or its exact name; a closed clan still shows in the weeks' rankings it left, so it can be
-// renamed too. Each action writes the log, in the same statement as the change, and mails the clan's owner what was done, why
-// and how to ask again (--no-mail: where the law says not to tell them).
+// renamed too. Each action writes the log, in the same statement as the change, with the words it found (so it can be put back)
+// and mails the clan's owner what was done, why and how to ask again. --no-mail: where the law says not to tell them. --no-copy:
+// the old words stay out of the log, for what must not be kept (docs/safety's incident steps); such an entry can't be put back.
 
 const { clanRules } = require('./index.js');
 const { teamNoticeMail } = require('./mail.js');
@@ -21,13 +22,14 @@ const DAY_MS = 24 * 3600 * 1000;
 const dateOf = ms => (ms > 0 ? new Date(ms).toISOString().slice(0, 10) : 'never');
 const wordsOf = clan => ({ name: clan.name, tag: clan.tag, description: clan.description, lookingFor: clan.lookingFor });
 
-/** The words on a command line: positional ones, and each --option's value (--no-mail takes none). */
+/** The words on a command line: positional ones, and each --option's value (--no-mail and --no-copy take none). */
 function parseArgs(argv) {
     const args = [];
     const options = {};
     for (let i = 0; i < argv.length; i++) {
         const word = argv[i];
         if (word === '--no-mail') options.noMail = true;
+        else if (word === '--no-copy') options.noCopy = true;
         else if (word.startsWith('--')) options[word.slice(2)] = argv[++i] ?? '';
         else args.push(word);
     }
@@ -47,7 +49,7 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
     async function apply(action, clan, next, what) {
         let done;
         try {
-            done = await store.teamEditClan({ clanId: clan.id, ...next, action, reason, oldWords: JSON.stringify(wordsOf(clan)), newWords: JSON.stringify(next), now });
+            done = await store.teamEditClan({ clanId: clan.id, ...next, action, reason, oldWords: options.noCopy ? '{}' : JSON.stringify(wordsOf(clan)), newWords: JSON.stringify(next), now });
         } catch (err) {
             if (err.code === '23505') return fail(`Another clan is called ${next.name}: nothing changed.`);
             throw err;
@@ -87,6 +89,7 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
         const clan = await store.teamClan(entry.subject, null);
         if (!clan) return fail(`Clan ${entry.subject} has left no trace.`);
         const was = JSON.parse(entry.oldWords);
+        if (!was.name) return fail(`Entry #${target} kept no copy of what it changed.`);
         return apply('restore', clan, { name: was.name, tag: was.tag, description: was.description, lookingFor: was.lookingFor }, `We put your clan back as it was: ${was.name} [${was.tag}].`);
     }
 

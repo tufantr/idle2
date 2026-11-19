@@ -145,7 +145,8 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   empties its description and "looking for" line (or sets them, `--description`, `--looking-for`); `rename <clan> --reason
   "why" [--name] [--tag]` renames it and rewrites every week's stored ranking row, which keep a clan's name; `restore <log
   number> --reason "why"` puts it back as that entry found it; `log` shows what was done. Each change writes `team_log` in the
-  same statement and mails the clan's owner what was done, why and how to ask again (`--no-mail` where the law says not to).
+  same statement, with the words it found, and mails the clan's owner what was done, why and how to ask again (`--no-mail`
+  where the law says not to; `--no-copy` keeps the old words out of the log, for what must not be kept).
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
