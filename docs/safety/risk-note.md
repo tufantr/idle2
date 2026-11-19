@@ -11,7 +11,7 @@ that it changes when the game does. It follows 038 §4, "A minimum plan for one 
 | Service | Fantasy Idle: the game at fantasyidle.com and its API. The wiki at wiki.fantasyidle.com has no user content |
 | Provider | The Fantasy Idle developer team |
 | Named person (ICU A2, PCU A2) | The Fantasy Idle developer team (§6) |
-| Written | 12 November 2026, against the code at 004babc |
+| Written | 12 November 2026, against the code at 004babc; brought up to date with Landing 2 (`build/l2`) on 19 November 2026 |
 | Next review | November 2027, or before any change in §10, whichever comes first |
 | Ofcom's regulation checker | §9, filled in by the owner |
 
@@ -30,17 +30,20 @@ that it changes when the game does. It follows 038 §4, "A minimum plan for one 
 
 | What | Limits (the code) | Who reads it |
 |---|---|---|
-| Username | 3–24 letters, digits, _ or - (`api/index.js:19`) | Their clan's members; every signed-in player on the boards, which are opt-in |
-| Clan name | 3–32 letters, digits, spaces, ' _ or - (`api/index.js:489`) | Every signed-in player: the clan list and the ranking |
-| Clan tag | 2–5 letters or digits (`api/index.js:490`) | The same |
-| Clan description | Up to 200 characters of any text, with control characters and `<` `>` taken out (`api/index.js:500, 832`) | Every signed-in player: the clan list and the clan's header |
+| Username | 3–24 letters, digits, _ or - (`USERNAME_RE`, `api/index.js`) | Their clan's members; every signed-in player on the boards, which are opt-in |
+| Clan name | 3–32 letters, digits, spaces, ' _ or - (`CLAN_NAME_RE`) | Every signed-in player: the clan list and the ranking |
+| Clan tag | 2–5 letters or digits (`CLAN_TAG_RE`) | The same |
+| Clan description | Up to 200 characters, with control characters and `<` `>` taken out (`cleanText`). The game refuses links, @ handles, invite codes and contact details, spelled out or spaced out too (`clanWordsOk`, `src/data/social.js`) | Every signed-in player: the clan list and the clan's header |
 | "Looking for" line | Up to 100 characters, cleaned the same way | The same |
 | The hero's name | Kept in the save | The player only: it is never sent to anyone else |
 
 - **Not in the game:** chat, private messages, images, uploads, avatars, written profiles, friend lists, voice,
-  livestreams, matchmaking, and links that open (an address typed into clan words shows as plain text). Players meet only in
-  clans: anyone may join a clan that has room, its owner may remove a member, and anyone may leave.
-- **Clan words are fixed** when the clan is made. Only the team can change them, today by editing the database.
+  livestreams, matchmaking, and links (clan words refuse them, and an address that slips past shows as plain text). Players
+  meet only in clans: anyone may join a clan that has room, its owner may remove a member, and anyone may leave.
+- **A clan's owner can change its description and "looking for" line at any time** (`POST /api/clan/words`), by the same
+  rules; the name and tag stay as they were made. A change doesn't reach the team by itself: the team sees the words as they
+  stand in `fantasyidle-team list`, which marks any that break the rule on links, and through reports. The team can change
+  all four with that tool, which keeps a log (`team_log`). An owner away 30 days hands the clan to a member who plays.
 - **Size:** 45 accounts, five clans and about 15 players active in a week, in November 2026 (027, 030).
 - **Off the game:** the game's Discord server, linked from the Clan tab, Settings and the wiki, is Discord's own service
   under Discord's rules. The team moderates it there.
@@ -56,14 +59,14 @@ table gives what applies beyond them:
 - **(a)** The only text other players meet is a clan name of up to 32 characters, a tag of up to 5, a description of up to
   200, a "looking for" line of up to 100, and usernames.
 - **(b)** No chat, private messages, images, uploads, links that open or matchmaking.
-- **(c)** Five clans, and the team reads every new clan's words.
+- **(c)** Five clans, and the team reads every new clan's words (and can read them as they stand at any time: §2).
 - **(d)** The team can clear any clan's words and close any account.
 - **(e)** The rules page bans each kind and says how to report it.
 
 | # | Kind of illegal harm | Risk | Why, beyond (a)–(e) |
 |---|---|---|---|
 | 1 | Terrorism | Low | Clan words could praise or name a proscribed group, but there is nothing to share or recruit with beyond them |
-| 2a | Child sexual exploitation and abuse: grooming | Low | No way to message a player in the game. What is left is clan words that invite players elsewhere, which the rules ban (contact details, handles, links). Ofcom's gaming guidance counts grooming among games' raised risks, through voice and text chat (046); P-125 would refuse links and handles outright |
+| 2a | Child sexual exploitation and abuse: grooming | Low | No way to message a player in the game. What is left is clan words that invite players elsewhere, which the rules ban (contact details, handles, links) and the game refuses as they are typed (P-125, `clanWordsOk`). Ofcom's gaming guidance counts grooming among games' raised risks, through voice and text chat (046) |
 | 2b | Child sexual exploitation and abuse: abuse material | Low | No images or uploads; an address typed as text doesn't open |
 | 3 | Hate | Low | Names and words could hold slurs: banned, read and cleared |
 | 4 | Harassment, stalking, threats and abuse | Low | Clan words could name a player. There are no messages, usernames show only inside a clan and on the opt-in boards, an owner can remove a member, and anyone can leave |
@@ -129,10 +132,10 @@ code recommends them where such content is the service's purpose, is allowed, ca
 | The week's Trial | One Trial a week; beating your best stage in it wins a laurel (`src/data/trials.js:97-103`) |
 | The Endless Hydra | 2 fights each, from Saturday 00:00 to Monday 00:00 UTC (`src/data/social.js`, `ENDLESS`) |
 | Weekend events | Friday 00:00 to Monday 00:00 UTC, every weekend (`src/data/events.js:17-18`) |
-| Offline progress | Up to 24 hours replayed on return, more with perks (`src/core/modifiers.js:62`) |
+| Offline progress | Up to 24 hours replayed on return, more with perks (`BASE.baseOfflineHours`, `src/core/modifiers.js`) |
 
 No clock sends a notification: the game can't reach a player who has closed it. While it is open, its tab's title shows a ★
-when a crate waits or a plot or dungeon is ready (`src/ui/render.js:319-325`), and it plays sounds (Settings can turn the
+when a crate waits or a plot or dungeon is ready (`pageTitle`, `src/ui/render.js`), and it plays sounds (Settings can turn the
 mini-game chime off). Nothing is sold, and there are no ads. The banks soften a missed window, and missing one takes nothing
 away but what it would have paid. **Rated low.** The EU's proposals would reach such clocks later (the KIDS Act's
 art. 15(1)(a), the Digital Fairness Act's art. 17(1)(c): 038 §3, P-115).
@@ -146,23 +149,23 @@ measures, G1 and G3, each met as the line of the same letter below.
 | Measure | What it asks | How Fantasy Idle meets it | Status |
 |---|---|---|---|
 | ICU A2 | A named person accountable for the illegal content, reporting and complaints duties | The Fantasy Idle developer team. The codes speak of one individual: if the lawyer confirms that, the team names that person in its own records, not here (lawyer question 3) | Named here |
-| ICU C1 | A way to review suspected illegal content | A person on the team reads every new clan and every report; nothing is scanned by a program | Met |
-| ICU C2 | Swift takedown | The team clears or renames a clan's words, or closes an account, as soon as it knows. Today that is an edit to the database; P-113's route for the team would make it one step, with a log | Met by hand; P-113 planned |
-| ICU D1 | Complaints can be made, by users and by people who aren't | contact@fantasyidle.com and the Discord; no account needed (the rules page) | When the address works |
-| ICU D2 | Complaints easy to find and to make | The rules page on the wiki, in its footer and its Reference menu, and linked at sign-up and at clan creation (the just-in-time lines); the address in Settings beside the Discord (P-110) | When placed |
+| ICU C1 | A way to review suspected illegal content | A person on the team reads every new clan and every report. The only automatic check on words refuses links, handles, invite codes and contact details as clan words are typed (§2); it takes nothing down and judges nothing else | Met |
+| ICU C2 | Swift takedown | The team clears or rewrites a clan's words, renames a clan or a player, or closes an account, as soon as it knows: one command on the server (`fantasyidle-team`), with a log and a mail to the one concerned | Met with Landing 2 |
+| ICU D1 | Complaints can be made, by users and by people who aren't | The team's address (`CONTACT_EMAIL`, `src/data/social.js`) and the Discord; no account needed (the rules page). The address is also the reply-to of every game mail | When the address works |
+| ICU D2 | Complaints easy to find and to make | The rules page on the wiki, in its footer and its Reference menu, and linked at sign-up and at clan creation (the just-in-time lines); a **Report** link on each clan's row, which starts the mail with the clan named; the address in Settings beside the Discord (P-110) | With Landing 2 |
 | ICU D7 | Action on complaints about suspected illegal content | Read by a person, taken down if illegal, answered with the decision | Met |
 | ICU D9 | Appeals decided (a service neither large nor multi-risk) | A reply to the team's email is an appeal: the team looks again and answers | Met |
 | ICU D10 | Action after an appeal | What was wrongly taken down or changed is put back | Met |
-| ICU D11 | Complaints about proactive technology | None is used on what players write; such a complaint is answered as any other | Met |
+| ICU D11 | Complaints about proactive technology | The one automatic check on what players write is the refusal of links and handles (§2; whether it counts is lawyer question 18). A complaint about it is answered as any other | Met |
 | ICU D12 | Action on every other complaint | Answered by a person, with the decision | Met |
 | ICU D13 | Manifestly unfounded complaints may be set aside | The rules page says so | Met |
-| ICU G1 | Terms say how users are protected, what proactive technology is used, and how complaints are handled | The rules page: the rules, "no program scans what players write", reports and appeals | When published |
+| ICU G1 | Terms say how users are protected, what proactive technology is used, and how complaints are handled | The rules page: the rules, what the one automatic check does, reports and appeals | When published |
 | ICU G3 | Terms clear and easy to reach | Plain words for a 13-year-old, on the wiki, linked from the game | When published |
 | ICU H1 | Removing accounts of proscribed organisations | Terrorism is banned under "anything against the law"; such an account is closed | Met by hand |
 
-**Records (s.23).** This note is the record of the assessments and the measures. A log of each report, edit and removal
-(the date, what, why and the reply) is kept by the team privately, not in this repository, since it names players and the
-people who report.
+**Records (s.23).** This note is the record of the assessments and the measures. The team's tool logs each edit and removal
+itself (`team_log`: the date, what, why, and the words before and after). A log of each report and reply is kept by the team
+privately, not in this repository, since it names players and the people who report.
 
 ## 7. Reports to the National Crime Agency (s.66)
 
@@ -171,7 +174,8 @@ the National Crime Agency (038 §1, 046). The game hosts no images, so such cont
 name pointing to abuse material, or soliciting a child. If the team finds it:
 
 1. Don't copy, forward or keep the material itself.
-2. Clear it from view at once (the clan's words or the name), and close the account.
+2. Clear it from view at once (the clan's words or the name) and close the account, with `fantasyidle-team` and its
+   `--no-copy`, so that the log doesn't keep the words; `--no-mail` where the law says not to tell the player.
 3. Write down what was found, where, when, and the account it came from.
 4. Report it to the National Crime Agency in the way the regulations set, and keep the record as they say.
 
@@ -198,12 +202,14 @@ minutes, and asks about the service's UK links, its kind and what users can meet
 ## 10. Reviews
 
 - **Every year**, in November.
-- **Before any change that lets players write more, or meet more:** chat, a feed, clan owners editing their words (P-113),
-  links in clan words, profiles, uploads, private messages, or a build in another store. The Act asks for this before a
-  significant change (s.9(4)).
+- **Before any change that lets players write more, or meet more:** chat, a feed, links in clan words, profiles, uploads,
+  private messages, or a build in another store. The Act asks for this before a significant change (s.9(4)).
+- **Done for Landing 2 (for the owner to confirm):** clan owners editing their words (P-113). It is the same short text under
+  the same rules and the same limits, now refused if it holds a link or handle, and any player can report it, so every rating
+  above stays low. What changes is that words can differ from what the team read when the clan was new (§2).
 - **When the law or Ofcom's codes change:** the new offences (§8), the Additional Safety Measures statement, and the UK's
   ban on social media for under-16s, whose regulations are due by the end of 2026 (046).
 - **After any serious incident.**
 
 Sources: 038 (the Act, the codes as laid, IFTAS and Bristows), 045 §9 (the ICO's children's code), 046 (Ofcom's own pages,
-read in a real browser on 12 November 2026), and the code at 004babc.
+read in a real browser on 12 November 2026), and the code at 004babc, then at `build/l2` on 19 November 2026.

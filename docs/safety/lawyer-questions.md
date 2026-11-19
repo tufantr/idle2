@@ -11,9 +11,11 @@ pages (`wiki/content/rules.md`, `wiki/content/privacy.md`).
 - About 45 accounts and five clans (November 2026). An account needs an email, and the server keeps no country or age.
 - Players write clan names, tags, descriptions of up to 200 characters and "looking for" lines of up to 100, which every
   signed-in player can read. There is no chat, no private messaging and no images.
-- The leaderboards are opt-in. An automatic growth check flags saves that grow faster than play allows; for 30 days a flagged
-  account's clan attacks are capped, and it is left off the boards and out of the clan ranking.
-- The server is rented from RackNerd in the United States, behind Cloudflare; Resend sends the mail.
+- The leaderboards are opt-in. An automatic check flags saves that hold numbers no save can reach; for 30 days a flagged
+  account's clan attacks are capped, and it is left off the boards and out of the clan ranking. A save that only grew faster
+  than play allows goes on a list for a person, who may flag it after a look.
+- The server is rented from RackNerd in the United States, behind Cloudflare; Resend sends the mail. Encrypted backups are
+  kept on Google Drive: a year of them on a schedule, and some in an archive with no end date yet.
 
 ## The UK
 
@@ -33,7 +35,7 @@ pages (`wiki/content/rules.md`, `wiki/content/privacy.md`).
 | 7 | Is a free game with no ads and nothing sold an information society service (Directive 2015/1535 art. 1(1)(b)), and its owner an enterprise (Recommendation 2003/361); does that change at the first sale, or when a plan to sell is announced? | [038, Q5](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
 | 8 | Is clan text a "minor and purely ancillary feature" (Digital Services Act art. 3(i), recital 13), making the game a hosting service but not an online platform? | [038, Q6](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
 | 9 | Without an EU establishment, does the game offer services in the Union (DSA art. 3(d)–(e)), so that art. 13 asks for a legal representative, and does the KIDS Act (art. 2(2)) use the same test? | [038, Q7](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
-| 10 | Is a growth-check flag a restriction under DSA art. 17(1)(c) or (d), needing a statement of reasons? | [038, Q8](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
+| 10 | Is the save check's flag a restriction under DSA art. 17(1)(c) or (d), needing a statement of reasons? | [038, Q8](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
 | 11 | Would the daily crate, clan attacks, the Titan's bank, the weekly laurel and the weekend Hydra count as a loss of benefits for missing regular times (KIDS Act art. 15(1)(a), Digital Fairness Act art. 17(1)(c)), and what would switching a reward clock off mean? | [038, Q9](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
 | 12 | When does a free game's owner become a trader (DFA art. 3(2)), and would a capped, optional power purchase be "presented as necessary" (art. 3(19))? | [038, Q10](../research_notes/research-loop/038-online-safety-law.md#questions-for-a-lawyer) |
 | 13 | Once something is sold, does "free" in the game's description (`index.html`) stay accurate under DFA Annex I item 29 for a game with optional purchases? | [045, Q6](../research_notes/research-loop/045-leftover-leads.md) |
@@ -46,6 +48,14 @@ pages (`wiki/content/rules.md`, `wiki/content/privacy.md`).
 | 15 | If it is a platform, what must an unrated game show before BTK's rating regulation exists: the highest age class now? | [045, Q2](../research_notes/research-loop/045-leftover-leads.md) |
 | 16 | Does player-written clan text make the game a "social network provider" (art. 2(1)(s)), so that the 10 October 2026 regulation's under-15 bar and e-Devlet age check apply, Ek Madde 4(7) having no threshold? | [045, Q3](../research_notes/research-loop/045-leftover-leads.md) |
 | 17 | After Law 7590, who issues the game-platform regulation: BTK, as the consolidated text reads, or the Cyber Security Presidency, as Abion reads it? | [045, Q4](../research_notes/research-loop/045-leftover-leads.md) |
+
+## From what was built (November 2026)
+
+| # | Question | From |
+|---|---|---|
+| 18 | Is the automatic refusal of links, handles and invite codes in clan words "proactive technology" under Ofcom's codes (ICU D11, G1), and how fully must the rules describe it? | `clanWordsOk`, `src/data/social.js` |
+| 19 | After a player deletes their account, may encrypted copies of the database stay for a year, or in an archive with no end date, and what limit should the archive have (GDPR art. 5(1)(e), 17)? | `deploy/vps/backup.sh`, the project's backup library |
+| 20 | May those backups sit in a personal Google Drive, and do they then need a data processing agreement with Google? | `deploy/vps/backup.sh` |
 
 Not in this count: [023 §3](../research_notes/research-loop/023-trust-and-safety.md#3-privacy) holds five privacy questions
 of its own (the GDPR's reach and an EU representative, KVKK and VERBİS, transfers to US processors, flags as automated
