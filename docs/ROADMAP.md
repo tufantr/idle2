@@ -1683,6 +1683,9 @@ Keeping it running:
 - [x] **Trial bests and the last runs on Records** (D4, a player's report): the Hall's Records shows each Trial tried with
       its best stage (saved all along, but no screen read it), and a list of the last 20 runs: when, the stage reached, the
       tokens, how long it took, and its Trial or Pact. A new optional save field (`prestige.runs`), empty in old saves
+- [x] **The rules and privacy pages** (R15, drafts for the owner's OK): `/rules` and `/privacy` on the wiki, in the footer and the
+      Reference menu, and a line each where it matters: what the email is for, under the sign-up's field, and who reads a clan's
+      words, above Create clan. Both say what the server really keeps, for how long and what deleting an account does
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

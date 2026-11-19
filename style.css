@@ -992,8 +992,9 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .data-table td.wrap { white-space: normal; min-width: 12rem; overflow-wrap: anywhere; }
 .data-table .you-row { background: rgba(214, 170, 92, 0.12); }
 /* a way to reach the team: Settings' address, and the Report link on a clan's row */
-.contact-line a, .clan-report { color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; }
-.contact-line a:hover, .clan-report:hover { color: var(--heading); }
+.contact-line a, .clan-report, .just-in-time a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; }
+.contact-line a:hover, .clan-report:hover, .just-in-time a:hover { color: var(--heading); }
+.just-in-time { margin: 0.45rem 0 0.7rem; line-height: 1.45; }
 .clan-report { display: inline-block; min-height: 24px; padding-top: 0.2rem; }
 /* a clan's own words, however long a word in them: they wrap instead of pushing the page wide */
 .clan-head { min-width: 0; overflow-wrap: anywhere; }

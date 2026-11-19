@@ -2646,6 +2646,7 @@ export function renderClan(game, ui, cloud) {
                 <label class="small">Tag <input id="clan-tag" class="text-input" maxlength="5" placeholder="IWF" value="${esc(form.tag)}" oninput="FI.clanForm('tag', this.value)"></label>
                 <label class="small">Description <input id="clan-desc" class="text-input" maxlength="200" placeholder="Casual, EU evenings" value="${esc(form.description)}" oninput="FI.clanForm('description', this.value)"></label>
                 <label class="small">Looking for <input id="clan-looking" class="text-input" maxlength="100" placeholder="Anyone past stage 50" value="${esc(form.lookingFor)}" oninput="FI.clanForm('lookingFor', this.value)"></label>
+                ${CLAN_WORDS_LINE()}
                 <div class="btn-row"><button class="prestige-btn" onclick="FI.createClan()">Create clan</button></div>
             </section>
         </div>`;
@@ -3229,6 +3230,12 @@ export function renderIntroModal(state, { signedIn = false } = {}) {
  * the title card, so Register is the button Enter presses. `keep`: an iPhone or iPad not playing from its Home Screen,
  * where Safari clears a guest's game after seven days away: the dialog that offers the guest's game says so (P-069).
  */
+// What is done with what a player gives, said where it is given (docs/safety/just-in-time-lines.md; wording for the owner's OK).
+// The links open a new tab, so a half-filled form isn't lost.
+const wikiPage = (path, text) => `<a href="${esc(WIKI_URL)}${path}" target="_blank" rel="noopener">${text}</a>`;
+const EMAIL_LINE = () => `<p class="muted small just-in-time">Your <b>email</b> gets a 6-digit code to start playing, another if you forget your password, and a short note if something happens to your account. No other player sees it, and we send no news or ads. ${wikiPage('/rules', 'Rules')} · ${wikiPage('/privacy', 'Privacy')}</p>`;
+const CLAN_WORDS_LINE = () => `<p class="muted small just-in-time">Every signed-in player can read your clan's <b>name, tag, description and "looking for" line</b>. They follow the ${wikiPage('/rules', 'rules')}, and we read every new clan.</p>`;
+
 export function renderAuthModal(message = '', { required = false, register = false, mode = register ? 'register' : 'login', username = '', email = '', keep = false } = {}) {
     const header = { login: required ? 'Sign in to play' : 'Sign in', register: 'Make your account', verify: 'Check your email', forgot: 'Forgot your password?', reset: 'Set a new password' }[mode] || 'Sign in to play';
     const error = `<div class="auth-error" id="auth-error">${esc(message)}</div>`;
@@ -3259,7 +3266,7 @@ export function renderAuthModal(message = '', { required = false, register = fal
         body = `<p class="muted small">${required ? 'Your game is kept on the server, and any device you sign in on plays it. A guest plays in this browser only, and an account made later starts a new game.' : 'An account plays a game of its own, kept on the server for any device. A new one starts from the beginning: this guest game isn\'t moved to it.'}</p>${error}
             <form class="auth-form" onsubmit="event.preventDefault(); FI.auth('${first}')">
                 <input type="text" id="auth-user" placeholder="Username" autocomplete="username" class="text-input" value="${esc(username)}">
-                ${first === 'register' ? '<input type="email" id="auth-email" placeholder="Email (for your code)" autocomplete="email" class="text-input">' : ''}
+                ${first === 'register' ? `<input type="email" id="auth-email" placeholder="Email (for your code)" autocomplete="email" class="text-input">${EMAIL_LINE()}` : ''}
                 <input type="password" id="auth-pass" placeholder="Password" autocomplete="${first === 'register' ? 'new-password' : 'current-password'}" class="text-input">
                 <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">${label[first]}</button><button type="button" class="modal-btn btn-${other}" onclick="FI.authMode('${other}')">${first === 'register' ? 'Log in instead' : label[other]}</button></div>
             </form>

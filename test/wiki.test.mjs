@@ -4,7 +4,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +15,7 @@ import { RESOURCES } from '../src/data/resources.js';
 import { BESTIARY } from '../src/data/bestiary.js';
 import { CROPS } from '../src/data/farming.js';
 import { WIKI_PAGES } from '../src/ui/features.js';
+import { CONTACT_EMAIL } from '../src/data/social.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let out = null;
@@ -69,6 +70,13 @@ test('a crop\'s XP an hour on the Farming page is a plot\'s: the crop\'s XP × t
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
         assert.equal(cells.at(-1), fmt(Math.round(c.xp * (c.yield[0] + c.yield[1]) / 2 * 3600000 / c.growMs)), c.name);
     }
+});
+
+test("the rules and privacy pages give the team's address from the game's one place, and no written page types it", () => {
+    for (const path of ['/rules', '/privacy', '/faq']) assert.ok(site.html.get(path).includes(`<a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>`), path);
+    const typed = readdirSync(join(ROOT, 'wiki', 'content'), { recursive: true }).filter(f => f.endsWith('.md'))
+        .filter(f => readFileSync(join(ROOT, 'wiki', 'content', f), 'utf8').includes(CONTACT_EMAIL));
+    assert.deepEqual(typed, []);
 });
 
 test('every page is in the search box\'s index, once', async () => {

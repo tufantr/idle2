@@ -1210,6 +1210,10 @@ with the game's own stat code; the client never submits damage or scores.
   account (`closeAccount`, as Delete my account does; a closed account's name may be taken again, and its address too). The
   log's words can be left out (`--no-copy`), for what must not be kept. It is a command, not a route: no new secret, nothing to
   reach from outside.
+  **The rules and privacy pages** (`wiki/content/rules.md`, `privacy.md`; R15, drafts for the owner's OK) say what this section
+  and the night's cleanup do; two short lines say it where it is given (`docs/safety/just-in-time-lines.md`): under the sign-up's
+  email field what the address is for (`EMAIL_LINE`), and above Create clan who reads a clan's words (`CLAN_WORDS_LINE`), each with
+  links that open the wiki in a new tab so a half-filled form isn't lost.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).

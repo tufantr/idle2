@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 import { Game } from '../src/game.js';
 import { fmt, seenWords } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan, renderAuthModal } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
@@ -160,6 +160,22 @@ test("one address reaches the team: in Settings, behind each clan's Report link,
     const inCode = dir => readdirSync(new URL(`../${dir}/`, import.meta.url), { recursive: true, withFileTypes: true }).filter(f => f.isFile() && /\.(m?js|cjs)$/.test(f.name) && !f.parentPath.includes('node_modules'))
         .filter(f => readFileSync(join(f.parentPath, f.name), 'utf8').includes(CONTACT_EMAIL)).map(f => f.name);
     assert.deepEqual([...inCode('src'), ...inCode('api')], ['social.js'], 'its one place');
+});
+
+test("the sign-up says what the email is for and the clan form who reads its words, each where it is given (R15's two lines)", () => {
+    const rules = `<a href="${WIKI_URL}/rules" target="_blank" rel="noopener">`;
+    const privacy = `<a href="${WIKI_URL}/privacy" target="_blank" rel="noopener">`;
+    const signup = renderAuthModal('', { required: true, register: true });
+    const line = /<input type="email" id="auth-email"[^>]*>\s*<p class="muted small just-in-time">(.*?)<\/p>/s.exec(signup)?.[1] || '';
+    assert.match(line, /<b>email<\/b> gets a 6-digit code/, 'right under the email field');
+    assert.match(line, /No other player sees it/);
+    assert.doesNotMatch(line, /nothing else/, 'the game sends notes too (api/mail.js)');
+    for (const link of [rules, privacy]) assert.ok(line.includes(link), link);
+    for (const other of [renderAuthModal('', { required: true }), ...['verify', 'forgot', 'reset'].map(mode => renderAuthModal('', { mode }))]) assert.doesNotMatch(other, /just-in-time/, 'only while an account is made');
+    const form = renderClan(new Game(null, T0), { social: { loaded: true, clan: null, clans: [] } }, { loggedIn: true });
+    const words = /<p class="muted small just-in-time">([^]*?)<\/p>\s*<div class="btn-row"><button class="prestige-btn" onclick="FI\.createClan\(\)">/.exec(form)?.[1] || '';
+    assert.match(words, /Every signed-in player can read your clan's <b>name, tag, description and "looking for" line<\/b>/, 'just above Create clan');
+    assert.ok(words.includes(rules));
 });
 
 test('the game links its wiki: in Settings beside the Discord, and at the foot of every "?" card with a page there (P-074)', () => {
