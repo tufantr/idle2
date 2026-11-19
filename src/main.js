@@ -2369,6 +2369,7 @@ window.FI = {
     /** One of Settings' choices of how the game looks, sounds and reads (data/settings.js). */
     setOption(key, value) {
         game.setOption(key, value);
+        if (key === 'numberFormat') barHold.forget();   // (the purse's figures change width)
         if (key === 'vibration' && value) { sound.unlock(); sound.buzz('crit'); }   // turned on: felt at once
         render();
     },
@@ -2379,6 +2380,7 @@ window.FI = {
         ui.textSize = textSizeOf(size);
         if (ui.textSize === 100) prefs.remove(TEXT_KEY); else prefs.set(TEXT_KEY, String(ui.textSize));
         applyTextSize();
+        barHold.forget();   // (the top bar's words are another size: it is laid out again, up or down)
         render();
     },
     /** Settings' switch for the M and Space keys, on this device only. */
