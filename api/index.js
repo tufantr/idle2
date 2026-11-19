@@ -366,6 +366,21 @@ app.post('/api/account/signout-all', authenticateToken, route('sign out everywhe
     res.json({ token: signToken({ id: req.user.id, ...account }), message: 'Signed out everywhere else' });
 }));
 
+// "Delete my account" (Settings; the research loop's P-070, November 2026), with the password asked again, the tries counted as
+// a login's are: everything tied to the account goes at once, its clan passes on or closes, and what it gave the clan stays the
+// clan's (closeAccount). Its sessions end with it; other players see it gone from the boards and the clan at their next look.
+app.post('/api/account/delete', authenticateToken, route('delete account', async (req, res) => {
+    const password = (req.body || {}).password;
+    if (typeof password !== 'string' || !password) return res.status(400).json({ error: 'Enter your password.' });
+    const now = Date.now();
+    if (await store.takeAttempt(`delete:user:${req.user.id}`, now, AUTH_WINDOW_MS) > MAX_NAME_FAILURES) return res.status(429).json(TOO_MANY);
+    const user = await store.findUserByName(req.user.username);
+    if (!user || user.id !== req.user.id) return res.sendStatus(401);
+    if (!await bcrypt.compare(password, user.password_hash)) return res.status(400).json({ error: "That password isn't right." });
+    await closeAccount(user, now);
+    res.json({ deleted: true });
+}));
+
 app.post('/api/login', route('login', async (req, res) => {
     if (!requireSecret(res)) return;
     const { username, password } = req.body || {};
@@ -647,6 +662,12 @@ function bestAttack(metrics, now) {
     return best;
 }
 
+/**
+ * Whole days since a member last played (uploaded), which their clan is shown (the research loop's P-009, November 2026): days
+ * and no finer, so clanmates can tell who still plays but not when anyone does. null: no upload yet.
+ */
+const seenDays = (lastSaved, now) => (lastSaved > 0 ? Math.max(0, Math.floor((now - lastSaved) / DAY)) : null);
+
 /** The week's board: each member's share of what the clan dealt (in its attacks), highest first. */
 function boardOf(rows) {
     const total = rows.reduce((sum, r) => sum + Math.max(0, r.damage), 0);
@@ -718,6 +739,29 @@ async function clanNews(userId, now, state) {
     const week = isoWeek(now);
     const { CLAN_BOSS } = await engine();
     return { banner: { week, kills: killsOf(await store.getBoss(mine.clan.id, week), CLAN_BOSS.levels) }, hall: await hallOf(mine.clan, userId, now), hallGifts };
+}
+
+/** Who takes a clan on (`members` from store.clanMembers, the longest-serving first): the first who played this past week and isn't flagged, or null. */
+const heirOf = (members, now, leaving = null) => members.find(m => m.userId !== leaving && now - (m.lastSaved || 0) < ACTIVE_WITHIN && !recentlyFlagged(m.flags, now)) || null;
+
+/**
+ * An owner away LEADER_AWAY_DAYS (src/data/social.js) hands the clan to the longest-serving member who plays (the research loop's P-009, November
+ * 2026: an absent owner stayed for good, with the only hand on its words, its banner and who is in it). Settled when a member
+ * looks at the clan, once however many look at the same time; with nobody playing it waits. Away is since the owner's last
+ * upload, or since they joined (one who has just started a clan hasn't uploaded yet). Returns the clan as it is now.
+ */
+async function handOverIfAway(clan, members, now) {
+    const heir = await dueHeir(clan, members, now);
+    if (!heir) return clan;
+    await store.passClan(clan.id, clan.ownerId, heir.userId);
+    return (await store.getClan(clan.id)) || clan;
+}
+/** Who an away owner's clan is due to pass to now, or null: its owner is here, or nobody plays. */
+async function dueHeir(clan, members, now) {
+    const { LEADER_AWAY_DAYS } = await engine();
+    const owner = members.find(m => m.userId === clan.ownerId);
+    if (owner && now - Math.max(owner.lastSaved || 0, owner.joinedAt || 0) < LEADER_AWAY_DAYS * DAY) return null;
+    return heirOf(members, now, clan.ownerId);
 }
 
 // ---------- the clan hall ----------
@@ -835,6 +879,32 @@ app.post('/api/clan/banner', authenticateToken, route('clan banner', async (req,
     res.json({ hall: await hallOf({ ...mine.clan, colour: colour.id, emblem: emblem.id }, req.user.id, now) });
 }));
 
+/** A clan losing its owner passes to the longest-serving member who plays (of all, if none does); the last one out closes it. */
+async function passOnClan(clanId, ownerLeft, now) {
+    const rest = await store.clanMembers(clanId);
+    if (!rest.length) await store.deleteClan(clanId);
+    else if (ownerLeft) await store.setClanOwner(clanId, (heirOf(rest, now) || rest[0]).userId);
+}
+
+/**
+ * An account closes for good (`user`: { id, username }): it leaves its clan as anyone would, which passes on or closes, then
+ * every row tied to it goes (store.deleteAccount), with its deepest Hydra fight of the week kept for its clan unless it is flagged.
+ */
+async function closeAccount(user, now) {
+    const mine = await clanOf(user.id);
+    if (mine) {
+        await store.removeMember(user.id);
+        await passOnClan(mine.membership.clanId, mine.clan.ownerId === user.id, now);
+    }
+    for (const clanId of await store.clansOwnedBy(user.id)) await passOnClan(clanId, true, now);   // (one it owns without being in it: an old mishap)
+    const save = await store.getSave(user.id);
+    const closed = await store.deleteAccount(user.id, user.username, { keepDepths: !recentlyFlagged(save && save.flags, now), fromWeek: isoWeek(now - 7 * DAY) });
+    namesSeen.delete(user.id);   // its tokens are refused from now on (the next look finds no account)
+    boardCache.clear();
+    rankingCache = null;
+    return closed;
+}
+
 // ---------- the week's clan ranking ----------
 // Clans are put in divisions by the levels of the week's boss they felled (src/data/social.js CLAN_DIVISIONS) and ranked
 // inside each by the Endless Hydra (ENDLESS), an eighth boss with no end to its health, awake for every clan from
@@ -944,11 +1014,15 @@ app.post('/api/clans', authenticateToken, route('create clan', async (req, res) 
     const tag = cleanText(body.tag, 5).toUpperCase();
     if (!CLAN_NAME_RE.test(name)) return res.status(400).json({ error: 'Clan names are 3-32 letters, numbers, spaces, \' _ or -.' });
     if (!CLAN_TAG_RE.test(tag)) return res.status(400).json({ error: 'Tags are 2-5 letters or numbers.' });
+    const description = cleanText(body.description, 200);
+    const lookingFor = cleanText(body.lookingFor, 100);
+    const { clanWordsOk, CLAN_WORDS_REFUSED } = await engine();
+    if (!clanWordsOk(description) || !clanWordsOk(lookingFor)) return res.status(400).json({ error: CLAN_WORDS_REFUSED });
     if (await clanOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
     const now = Date.now();
     let clanId;
     try {
-        clanId = await store.createClan({ name, tag, description: cleanText(body.description, 200), lookingFor: cleanText(body.lookingFor, 100), ownerId: req.user.id, now });
+        clanId = await store.createClan({ name, tag, description, lookingFor, ownerId: req.user.id, now });
     } catch (err) {
         if (err.code === '23505') return res.status(400).json({ error: 'That clan name is taken.' });
         throw err;
@@ -994,6 +1068,21 @@ app.post('/api/clan/kick', authenticateToken, route('kick', async (req, res) => 
     res.json({ removed: username });
 }));
 
+// The owner changes the clan's words (the research loop's P-113, November 2026: one who took a clan over kept its founder's
+// for good). Its name and tag stay as they were made.
+app.post('/api/clan/words', authenticateToken, route('clan words', async (req, res) => {
+    const mine = await clanOf(req.user.id);
+    if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
+    if (mine.clan.ownerId !== req.user.id) return res.status(409).json({ error: "Only the clan owner can change the clan's words." });   // 409: see the kick
+    const body = req.body || {};   // (a line not sent stays as it is)
+    const description = body.description === undefined ? mine.clan.description : cleanText(body.description, 200);
+    const lookingFor = body.lookingFor === undefined ? mine.clan.lookingFor : cleanText(body.lookingFor, 100);
+    const { clanWordsOk, CLAN_WORDS_REFUSED } = await engine();
+    if (!clanWordsOk(description) || !clanWordsOk(lookingFor)) return res.status(400).json({ error: CLAN_WORDS_REFUSED });
+    await store.setClanWords(mine.clan.id, description, lookingFor);
+    res.json({ description, lookingFor });
+}));
+
 app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, res) => {
     const mine = await clanOf(req.user.id);
     if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
@@ -1001,7 +1090,7 @@ app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, 
     await store.removeMember(req.user.id);
     const rest = await store.clanMembers(membership.clanId);
     if (!rest.length) await store.deleteClan(membership.clanId);
-    else if (clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, rest[0].userId); // the longest-serving member
+    else if (clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, (heirOf(rest, Date.now()) || rest[0]).userId);   // the longest-serving member who plays (of all, if none does)
     res.json({ left: true });
 }));
 
@@ -1009,9 +1098,10 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     const now = Date.now();
     const mine = await clanOf(req.user.id);
     if (!mine) return res.json({ clan: null });
-    const { clan, membership } = mine;
-    const clanId = clan.id;
+    const { membership } = mine;
+    const clanId = mine.clan.id;
     const [rawMembers, boss] = await Promise.all([store.clanMembers(clanId), currentBoss(clanId, now)]);
+    const clan = await handOverIfAway(mine.clan, rawMembers, now);
     const members = rawMembers.map(m => ({ ...m, power: parseMetrics(m.metrics) }));
     const board = boardOf(await store.weeklyDamage(clanId, boss.week));
     const { CLAN_ATTACKS_PER_DAY: perDay, CLAN_ATTACK_BANK: bank, CLAN_ATTACK_SECONDS: seconds, CLAN_BOSS, ENDLESS, clanAttackScale } = await engine();
@@ -1031,7 +1121,7 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
         clan: { ...clan, isOwner: clan.ownerId === req.user.id, crown: crowns.get(clanId) || null },
         // a member's attack: their best of the past week (what an attack deals before its strikes and potion)
         members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: bestAttack(m.power, now),
-            built: built.byMember.get(m.userId) || { week: 0, total: 0 } })),
+            seenDays: seenDays(m.lastSaved, now), built: built.byMember.get(m.userId) || { week: 0, total: 0 } })),
         // the hall: its rooms, stage and banner, each room's builders, and its latest gifts
         hall: { ...hall, builders: built.builders, feed },
         // health as damage in the player's figures (the screen's); the server keeps it in the clan's attacks
@@ -1258,6 +1348,9 @@ app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
 
 // VERY IMPORTANT FOR VERCEL
 module.exports = app;
+module.exports.clanRules = { CLAN_NAME_RE, CLAN_TAG_RE, cleanText, dueHeir };   // what a clan's name, tag and words may be, and who is due to take it on (api/team.js)
+module.exports.accountRules = { USERNAME_RE, closeAccount };            // what a username may be, and an account closing (api/team.js)
+module.exports.cleanupRules = { FLAG_MEMORY_MS, CODE_GAP_MS: RESEND_GAP_MS, giftsTaken };   // what the night's cleanup goes by (api/cleanup.js)
 module.exports.plausibilityFlags = plausibilityFlags;
 module.exports.RANKED = RANKED;
 module.exports.firstPeaks = firstPeaks;

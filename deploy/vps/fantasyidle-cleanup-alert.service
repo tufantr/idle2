@@ -1,0 +1,7 @@
+# Mails the owner that the night's cleanup failed (deploy/vps/backup-alert.sh, as for the backups).
+[Unit]
+Description=Fantasy Idle: mail the owner that the cleanup failed
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/fantasyidle/backup-alert.sh cleanup

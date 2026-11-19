@@ -6,18 +6,29 @@ function createMemoryStore() {
     const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map() };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
+    // the team's log, and what a clan keeps of the rows that go (api/store.js)
+    Object.assign(db, { teamLog: [], giftTotals: [], endlessKept: [] });
+    seq.teamLog = 0;
+    /** Gifts leaving the table add to their clan's totals. */
+    const foldGifts = gifts => {
+        for (const g of gifts) {
+            let row = db.giftTotals.find(t => t.clanId === g.clanId && t.room === g.room);
+            if (!row) db.giftTotals.push(row = { clanId: g.clanId, room: g.room, work: 0, gifts: 0 });
+            row.work += g.work;
+            row.gifts += 1;
+        }
+    };
 
     const hallOf = clanId => Object.fromEntries(db.hall.filter(h => h.clanId === clanId).map(h => [h.room, h.given]));
-
     const store = {
         db,
         async ensureSchema() {},
         async ping() {},
 
-        async createUser(username, hash, email = null) {
+        async createUser(username, hash, email = null, now = Date.now()) {
             if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) throw unique('users_username_lower');
             if (email && db.users.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) throw unique('users_email_lower');
-            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0 };
+            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0, created_at: now };
             db.users.push(row);
             return row.id;
         },
@@ -132,6 +143,11 @@ function createMemoryStore() {
         async setClanOwner(clanId, ownerId) {
             const c = db.clans.find(x => x.id === clanId);
             if (c) c.ownerId = ownerId;
+        },
+        async passClan(clanId, fromId, toId) {
+            const c = db.clans.find(x => x.id === clanId && x.ownerId === fromId);
+            if (c) c.ownerId = toId;
+            return !!c;
         },
         async deleteClan(clanId) {
             db.bosses = db.bosses.filter(b => b.clanId !== clanId);
@@ -310,7 +326,8 @@ function createMemoryStore() {
                 const key = `${e.clanId}:${e.userId}`;
                 if (!best.has(key) || e.depth > best.get(key).depth) best.set(key, { clanId: e.clanId, userId: e.userId, depth: e.depth });
             }
-            return [...best.values()].map(r => ({ ...r, flags: db.users.find(u => u.id === r.userId)?.flags || '[]' }));
+            return [...best.values()].filter(r => db.users.some(u => u.id === r.userId)).map(r => ({ ...r, flags: db.users.find(u => u.id === r.userId).flags || '[]' }))
+                .concat(db.endlessKept.filter(k => k.week === week).map(k => ({ clanId: k.clanId, userId: null, depth: k.depth, flags: '[]' })));
         },
         async weekBosses(week) {
             return db.bosses.filter(b => b.week === week).map(b => ({ ...b }));
@@ -385,6 +402,137 @@ function createMemoryStore() {
         async unclaimedGiftCount(userId) {
             return db.rewards.filter(r => r.userId === userId && r.kind === 'gift' && !r.claimedAt).length;
         },
+        async deleteAccount(userId, username, { keepDepths = false, fromWeek = '' } = {}) {
+            foldGifts(db.gifts.filter(g => g.userId === userId));
+            db.gifts = db.gifts.filter(g => g.userId !== userId);
+            const best = new Map();
+            for (const e of db.endless.filter(x => x.userId === userId && x.week >= fromWeek)) {
+                const key = `${e.week}:${e.clanId}`;
+                if (!best.has(key) || e.depth > best.get(key).depth) best.set(key, { week: e.week, clanId: e.clanId, depth: e.depth });
+            }
+            if (keepDepths) db.endlessKept.push(...best.values());
+            db.endless = db.endless.filter(e => e.userId !== userId);
+            for (const b of db.bosses) if (b.lastHitUser === userId) b.lastHitUser = null;
+            for (const table of ['attacks', 'shares', 'members', 'rewards', 'snapshots', 'codes', 'reviews']) db[table] = db[table].filter(r => r.userId !== userId);
+            db.charges.delete(userId);
+            db.teamLog = db.teamLog.filter(e => !(e.kind === 'player' && e.subject === userId));
+            const name = String(username).toLowerCase().slice(0, 64);
+            for (const key of [...db.auth.keys()]) {
+                if ([`mail:user:${userId}`, `taken:user:${userId}`, `delete:user:${userId}`, `login:name:${name}`].includes(key) || key.startsWith(`login:name:${name}:`)) db.auth.delete(key);
+            }
+            const had = db.users.some(u => u.id === userId);
+            db.users = db.users.filter(u => u.id !== userId);
+            return had;
+        },
+        async setClanWords(clanId, description, lookingFor) {
+            const c = db.clans.find(x => x.id === clanId);
+            if (c) Object.assign(c, { description, lookingFor });
+        },
+        async clansOwnedBy(userId) { return db.clans.filter(c => c.ownerId === userId).map(c => c.id); },
+        async teamClans(search = '') {
+            const q = String(search || '').toLowerCase();
+            return db.clans.filter(c => c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q)).sort((a, b) => b.createdAt - a.createdAt || b.id - a.id).map(c => {
+                const owner = db.users.find(u => u.id === c.ownerId);
+                return { id: c.id, name: c.name, tag: c.tag, description: c.description || '', lookingFor: c.lookingFor || '', createdAt: c.createdAt, owner: owner?.username || null, ownerSaved: owner?.last_saved || 0, members: db.members.filter(m => m.clanId === c.id).length };
+            });
+        },
+        async teamClan(id, name) {
+            const same = n => name !== null && n.toLowerCase() === String(name).toLowerCase();
+            const c = db.clans.filter(x => x.id === id || same(x.name)).sort((a, b) => (b.name === name) - (a.name === name) || a.id - b.id)[0];
+            if (c) {
+                const owner = db.users.find(u => u.id === c.ownerId);
+                return { id: c.id, name: c.name, tag: c.tag, description: c.description || '', lookingFor: c.lookingFor || '', open: true, owner: owner?.username || null, ownerEmail: owner?.email || null };
+            }
+            const k = db.rankings.filter(r => r.clanId === id || same(r.name)).sort((a, b) => (b.name === name) - (a.name === name) || (a.week < b.week ? 1 : a.week > b.week ? -1 : 0) || a.clanId - b.clanId)[0];
+            return k ? { id: k.clanId, name: k.name, tag: k.tag, description: '', lookingFor: '', open: false, owner: null, ownerEmail: null } : null;
+        },
+        async teamEditClan({ clanId, name, tag, description, lookingFor, action, reason, oldWords, newWords, now }) {
+            const clan = db.clans.find(c => c.id === clanId);
+            if (clan && db.clans.some(c => c.id !== clanId && c.name === name)) throw unique('clans_name_key');
+            if (clan) Object.assign(clan, { name, tag, description, lookingFor });
+            const kept = db.rankings.filter(r => r.clanId === clanId);
+            for (const r of kept) Object.assign(r, { name, tag });
+            const entry = { id: ++seq.teamLog, at: now, kind: 'clan', subject: clanId, action, reason, oldWords, newWords };
+            db.teamLog.push(entry);
+            return { id: entry.id, clans: clan ? 1 : 0, rankings: kept.length };
+        },
+        async teamRenamePlayer({ userId, name, reason, oldWords, newWords, now }) {
+            const user = db.users.find(u => u.id === userId);
+            if (!user) return null;
+            if (db.users.some(u => u.id !== userId && u.username.toLowerCase() === name.toLowerCase())) throw unique('users_username_lower');
+            user.username = name;
+            return store.teamLogAdd({ kind: 'player', subject: userId, action: 'rename', reason, oldWords, newWords, now });
+        },
+        async teamLogAdd({ kind, subject, action, reason, oldWords, newWords, now }) {
+            const entry = { id: ++seq.teamLog, at: now, kind, subject, action, reason, oldWords, newWords };
+            db.teamLog.push(entry);
+            return entry.id;
+        },
+        async teamLog(limit) { return [...db.teamLog].sort((a, b) => b.id - a.id).slice(0, limit).map(e => ({ ...e })); },
+        async teamLogEntry(id) { const e = db.teamLog.find(x => x.id === id); return e ? { ...e } : null; },
+
+        async sweepAttempts(before, apply) {
+            const doomed = [...db.auth].filter(([, r]) => r.since < before).map(([key]) => key);
+            if (apply) for (const key of doomed) db.auth.delete(key);
+            return doomed.length;
+        },
+        async sweepEmailCodes(before, apply) {
+            const doomed = c => c.expiresAt < before && c.createdAt < before;
+            const n = db.codes.filter(doomed).length;
+            if (apply) db.codes = db.codes.filter(c => !doomed(c));
+            return n;
+        },
+        async dateUnconfirmed(now) {
+            for (const u of db.users) if (u.email && !u.email_verified_at && !u.created_at) u.created_at = now;
+        },
+        async staleSignups(before) {
+            return db.users.filter(u => u.email && !u.email_verified_at && u.created_at > 0 && u.created_at < before && u.game_state === null && !u.last_saved && !db.members.some(m => m.userId === u.id))
+                .map(u => ({ id: u.id, username: u.username }));
+        },
+        async deleteStaleSignup(userId, username, before) {
+            const u = db.users.find(x => x.id === userId && x.email && !x.email_verified_at && x.created_at > 0 && x.created_at < before && x.game_state === null && !x.last_saved && !db.members.some(m => m.userId === x.id));
+            if (!u) return false;
+            db.users = db.users.filter(x => x !== u);
+            db.codes = db.codes.filter(c => c.userId !== userId);
+            const name = String(username).toLowerCase().slice(0, 64);
+            for (const key of [...db.auth.keys()]) if ([`mail:user:${userId}`, `taken:user:${userId}`, `login:name:${name}`].includes(key) || key.startsWith(`login:name:${name}:`)) db.auth.delete(key);
+            return true;
+        },
+        async flaggedAccounts() {
+            return db.users.filter(u => u.flags && u.flags !== '[]').map(u => ({ id: u.id, flags: u.flags }));
+        },
+        async setFlagsIf(userId, was, flagsJson) {
+            const u = db.users.find(x => x.id === userId && x.flags === was);
+            if (u) u.flags = flagsJson;
+            return !!u;
+        },
+        async sweepSnapshots(week, apply) {
+            const n = db.snapshots.filter(r => r.week < week).length;
+            if (apply) db.snapshots = db.snapshots.filter(r => !(r.week < week));
+            return n;
+        },
+        async sweepAttacks(week, lapsed, apply) {
+            const doomed = r => r.week < week && (r.week < lapsed || db.rankings.some(x => x.week === r.week));
+            const n = db.attacks.filter(doomed).length;
+            if (apply) db.attacks = db.attacks.filter(r => !doomed(r));
+            return n;
+        },
+        async sweepEndless(week, lapsed, apply) {
+            const doomed = r => r.week < week && (r.week < lapsed || db.rankings.some(x => x.week === r.week));
+            const n = db.endless.filter(doomed).length;
+            if (apply) { db.endless = db.endless.filter(r => !doomed(r)); db.endlessKept = db.endlessKept.filter(r => !doomed(r)); }
+            return n;
+        },
+        async closedClanGivers(week) {
+            return [...new Set(db.gifts.filter(g => g.week < week && !db.clans.some(c => c.id === g.clanId)).map(g => g.userId))];
+        },
+        async foldClosedGifts(userId, taken, week, apply) {
+            const last = Math.max(0, ...db.gifts.filter(g => g.userId === userId).map(g => g.seq));
+            const doomed = db.gifts.filter(g => g.userId === userId && g.week < week && g.seq <= taken && g.seq < last && !db.clans.some(c => c.id === g.clanId));
+            if (apply) { foldGifts(doomed); db.gifts = db.gifts.filter(g => !doomed.includes(g)); }
+            return doomed.length;
+        },
+
         async claimGifts(userId, now) {
             const waiting = db.rewards.filter(r => r.userId === userId && r.kind === 'gift' && !r.claimedAt);
             for (const r of waiting) r.claimedAt = now;

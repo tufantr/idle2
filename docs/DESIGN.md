@@ -1032,6 +1032,35 @@ wear; a place that waited opens on the return and is named there too.
   The boot's welcome-back waits for the sync, so it never acts on the other game. A hard reset while
   signed in resets the cloud save too. On a static host without the API, sign-in says cloud saves are
   unavailable instead of failing.
+- **Delete my account** (Settings, `POST /api/account/delete`; the research loop's P-070, the owner's decision 11, November
+  2026): with the password asked again, its tries counted as a login's. The account leaves its clan as anyone would (it passes
+  to the longest-serving member who plays, or closes with its last member), then one statement (`store.deleteAccount`) takes
+  every row tied to it: the account, clan membership and attacks, Hydra fights, boss shares, gifts, charges, rewards, weekly
+  snapshots, email codes, the growth check's list, and its login counters by id and name; a boss it last struck forgets it. A test
+  keeps the list whole: every table with a `user_id` must be in that statement. **A clan's totals stay:** the boss's health and
+  the hall's work were never the account's rows, its gifts fold into `clan_gift_totals` (a clan and room's work and count, no
+  names), and the depth it reached at the Hydra this week or last stays in the clan's score (`clan_endless_kept`, no names; not
+  a flagged account's, which never counted). Its name and email are free again. The device that asked forgets the account and
+  its local game; others find their token refused. Backups lose it as they age out: the server's dumps in 14 days, the
+  encrypted copies on the owner's Drive in 30 days, the first of each month in a year.
+- **The night's cleanup** (`api/cleanup.js`, `fantasyidle-cleanup.timer` at 04:30 UTC, an hour after the backup; the research
+  loop's P-097, November 2026): rows the game no longer reads go, so what the server keeps about people has an end. `--dry-run`
+  counts by the same queries and takes nothing; each step stands alone, and a failed one mails the owner. It takes only rows no
+  answer reads, and `test/api.test.cjs` runs every read route before and after it, on a live week, the Monday after and a
+  fortnight on, and finds the same answers:
+
+  | What goes | When | What reads it, and why that is safe |
+  | --- | --- | --- |
+  | `auth_attempts` | a day after the count began | The limits; the longest window is a day, and a window that has passed counts from one anyway |
+  | `email_codes` | a minute past their time, and a minute old | The check says "run out" with or without the row. A code used up by its tries has `expires_at` 0, and still holds the next one back for its first minute |
+  | Sign-ups never confirmed (`users` with an address, not confirmed, nothing saved, in no clan) | 30 days after `created_at` | No token was ever given for one. Those made before `created_at` are dated at the first run and wait from then; accounts from before addresses have none and are never touched |
+  | `users.flags` past their 30 days | at once, but for the account's last flag | A flag past 30 days no longer acts (`standing`); the last stays to show what happened |
+  | `weekly_snapshots` | older than this week and last | The boards read this week's alone |
+  | `clan_attacks`, `clan_endless`, `clan_endless_kept` | older than this week and last, once a ranking of that week is stored, or four weeks on (it can't be stored after the week following) | The boards and the Hydra read the week running; last week's ranking is worked out from its rows at the first look after it ends, and kept. Last week's stay also so that a fight sent again after a lost answer is known for the same one |
+  | `clan_gifts` to closed clans, folded into `clan_gift_totals` | older than this week and last | The week's allowance counts this week's. Each player's highest number stays (the next gift counts on from it), and any their stored save has yet to take from its bank |
+
+  Nothing else is touched: `clan_bosses`, `clan_rankings` (crowns and each clan's best week), `clan_hall`, `rewards`, `flag_reviews`.
+  The server's journal, the API's log with it, is kept 30 days (a drop-in that `deploy/vps/provision.sh` writes).
 - **Server secret:** `JWT_SECRET` must be set outside local development (`NODE_ENV=development`);
   tokens are HS256 only. The owner sets it and adds the database (README "The API"); neither is in the
   repository. `GET /api/health` says whether the database, the secret and the game's stat code are
@@ -1119,10 +1148,29 @@ asynchronous and **every number another player sees is computed on the server fr
 with the game's own stat code; the client never submits damage or scores.
 
 - **Clans** of up to 20, with a name, tag, description and "looking for" line; the longest-serving
-  member takes over if the owner leaves, and the last one out closes the clan. Members hold numbered
+  member who played this past week and isn't flagged takes over if the owner leaves (the longest-serving of all if nobody
+  has), and the last one out closes the clan. An owner away `LEADER_AWAY_DAYS` (30, since their last upload or their joining)
+  hands the clan over the same way, settled when a member opens the clan (`handOverIfAway`; the research loop's P-009,
+  November 2026), once however many look at once; with nobody playing it waits. Members hold numbered
   places (unique per clan), so parallel joins can't overfill a clan. The owner can remove a member. The list of clans to
   find shows on each row the members who played (uploaded) this past week, and puts the clans with the most of them first,
   then the biggest (the research loop's P-035, November 2026: by members alone, a big clan gone quiet led the list).
+  A clan's members are shown when each last played (`seenDays`, whole days since their last upload: P-009, the same month;
+  no finer, so clanmates can tell who still plays but not when anyone does).
+  **A clan's words** (description, "looking for") hold no way to reach anyone elsewhere: `clanWordsOk` (`src/data/social.js`,
+  the owner's decision, P-125) refuses web addresses, "@" handles, invite codes and contact details, spelled out or spaced out
+  too; the game's own Discord may be named or linked. A sieve for the plain cases: the team reads every new clan. The owner
+  changes them at any time (`POST /api/clan/words`, by the same rule; P-113: one who took a clan over kept its founder's words
+  for good); the name and tag stay as they were made. Each clan's row has a **Report** link: a mail to the team's one address
+  (`CONTACT_EMAIL`, `src/data/social.js`, its only place: Settings and the wiki show it, and it is the Reply-To of the game's
+  mail; P-110, the owner confirms it), starting with the clan named. **The team's tool** (`api/team.js`, run on the server as
+  `fantasyidle-team`; P-113) reads every clan, clears or rewrites its words, renames it and puts either back. A rename rewrites
+  the clan and every stored `clan_rankings` row, which otherwise keep the name for good, in one statement with its `team_log`
+  entry (what it did, why, the words before and after); the clan's owner gets a mail saying what, why and how to ask again. A
+  closed clan is known by the rankings it left, so its name can still be changed. It also changes a player's name and closes an
+  account (`closeAccount`, as Delete my account does; a closed account's name may be taken again, and its address too). The
+  log's words can be left out (`--no-copy`), for what must not be kept. It is a command, not a route: no new secret, nothing to
+  reach from outside.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
@@ -2752,6 +2800,7 @@ wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki
 api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
                       clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
                       · mail.js (Resend) · review.js (the growth check's list, mailed to the owner each week)
+                      · team.js (the team's tool for clans, run on the server) · cleanup.js (the night's cleanup of old rows)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·

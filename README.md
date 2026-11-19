@@ -90,9 +90,11 @@ save. It needs Node 20.19+ or 22+.
 | `POST /api/verify`, `POST /api/verify/resend` | the sign-up code (6 digits, 15 minutes, 5 tries), and another one (once a minute, 5 an hour) |
 | `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not); a new password ends every session before it, and the address hears of it |
 | `POST /api/account/signout-all` | "Sign out everywhere": every session of the account ends (its tokens' version goes up) but the asking device's, which gets a fresh token |
+| `POST /api/account/delete` | "Delete my account", with the password: every row tied to the account goes, and its clan keeps what it was given |
 | `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected; both say the clan's banner |
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
 | `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss, board and banner, its place in the week's ranking and your fights at the Endless Hydra; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6; with `endless: true` one of the 2 a week at the Hydra, at the weekend); the owner removes a member |
+| `POST /api/clan/words` | the clan's description and "looking for" line, changed by its owner (no links, handles or invite codes) |
 | `GET /api/clans/ranking` | the week's clan ranking: every clan in its division by the levels felled, by the Hydra's depth, and last week's crowns |
 | `GET /api/rewards`, `POST /api/rewards/claim` | clan rewards paid before October 2026 (the clan banner took their place), claimed once |
 | `POST /api/gifts/claim` | the owner's gifts to a player (below), claimed by the game when a save or load says some wait |
@@ -143,6 +145,25 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
   game's mails reach 80 of the plan's 100 (every mail is counted in its UTC day).
 
+- **The night's cleanup:** `fantasyidle-cleanup.timer` (04:30 UTC, an hour after the backup; a failure mails the owner) runs
+  `node api/cleanup.js` as the API's user: sign-in counters a day old, email codes a minute past their time, sign-ups never
+  confirmed after 30 days, flags past their 30 days (an account's last one stays), the boards' weekly copies older than this
+  week and last, clan attacks and Hydra fights older than that once their week's ranking is stored, and old gifts to closed
+  clans (folded into `clan_gift_totals`). DESIGN §3.17 says why each is safe. `node api/cleanup.js --dry-run` (with the API's
+  settings, on staging first) says how much it would take, and takes nothing. `journalctl -u fantasyidle-cleanup` shows each
+  night's counts. The journal itself, the API's log with it, is kept 30 days (`/etc/systemd/journald.conf.d/fantasyidle.conf`).
+- **The team's tool:** `fantasyidle-team` on the server, as root (`api/team.js` run by `deploy/vps/team.sh`, which
+  `provision.sh` installs; no web route, so nothing about it can be reached from outside). `list [search]` shows every clan,
+  the newest first, with its words and owner, and marks words that break the rule on links; `clear <clan> --reason "why"`
+  empties its description and "looking for" line (or sets them, `--description`, `--looking-for`); `rename <clan> --reason
+  "why" [--name] [--tag]` renames it and rewrites every week's stored ranking row, which keep a clan's name; `restore <log
+  number> --reason "why"` puts it back as that entry found it; `log` shows what was done. Each change writes `team_log` in the
+  same statement, with the words it found, and mails the clan's owner what was done, why and how to ask again (`--no-mail`
+  where the law says not to; `--no-copy` keeps the old words out of the log, for what must not be kept). `rename-player
+  <username> --name NewName` and `close-account <username>` (it deletes the account as "Delete my account" does) work the same way.
+  `handovers` says which clans are due to pass from an owner away 30 days, and to whom (`--apply` does it now; the game does it
+  when a member opens the clan).
+
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
 ```bash
@@ -156,7 +177,7 @@ A release writes its commit into `version.json` beside the page and into `src/ve
 first now and then, and when it differs from its own, its top bar offers a reload (`src/ui/update.js`). Settings shows
 the version a player runs.
 
-Set up from nothing: `deploy/vps/provision.sh` on the server (packages, firewall, user, database, backups), then
+Set up from nothing: `deploy/vps/provision.sh` on the server (packages, firewall, user, database, backups, the night's cleanup, the team's tool), then
 `node deploy/vps/cloudflare.mjs` here (DNS records, the origin certificate, SSL "Full (strict)"), then the deploy.
 On the server, `journalctl -u fantasyidle-api` shows the API's log and `runuser -u fantasyidle -- psql` opens the
 database (a gift, below, is the same SQL there).

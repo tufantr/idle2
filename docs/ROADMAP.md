@@ -1603,6 +1603,24 @@ Keeping it running:
       never reaches; it now also counts once a boss's clock is under a quarter (ladder and dungeons, not the Titan's
       minute or the clan's fight): 0 to 0.4 stages at the wall before, 1.5 to 1.7 now (half the clock would have been worth
       all of Giant Slayer for two points)
+- [x] **When a clan's members last played** (R14, P-009): the member list says "Seen 3 days ago" under each of the others,
+      in whole days and no finer
+- [x] **An owner away 30 days hands the clan over** (R14, P-009): to the longest-serving member who played this past week,
+      when a member next opens the clan; an owner who leaves hands it to the same one. The clan's "?" and the wiki say so
+- [x] **No links or handles in clan words** (R14, P-125): a clan's description and "looking for" line refuse web addresses,
+      "@" handles, invite codes and contact details; clans keep the game's Discord
+- [x] **A clan's owner edits its words** (R14, P-113): an Edit words dialog on the Clan tab for the description and the
+      "looking for" line; the name and tag stay
+- [x] **One address that reaches the team** (R14, P-110): shown in Settings and the wiki's FAQ, the Reply-To of the game's
+      mail, and a Report link on each clan's row that starts a mail naming the clan; the address is one setting
+- [x] **The team's tool for clans** (R14, P-113): `fantasyidle-team` on the server lists every clan, clears or rewrites its
+      words, renames it (the stored week's rankings too) and puts either back, each with a logged reason and a mail to its owner
+- [x] **Delete my account** (R19, P-070): in Settings, with the password; every row tied to the account goes in one statement,
+      its clan passes on or closes and keeps what it was given (the hall, the boss, the week's Hydra depth, the gifts' totals);
+      the wiki's FAQ says how
+- [x] **The night's cleanup** (R15, P-097): old sign-in counters and codes, sign-ups never confirmed, flags past their time, and
+      weekly copies, clan fights and closed clans' gifts no answer reads any more go each night after the backup; every read
+      route answers the same before and after it. The server's journal is kept 30 days
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

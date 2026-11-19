@@ -3,13 +3,14 @@
 // where it bites.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { Game } from '../src/game.js';
-import { fmt } from '../src/ui/format.js';
+import { fmt, seenWords } from '../src/ui/format.js';
 import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
-import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
+import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
 import { actionXp } from '../src/systems/skilling.js';
 import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
@@ -19,6 +20,7 @@ import { ZONES } from '../src/data/zones.js';
 import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
 import { BASE } from '../src/core/modifiers.js';
 import { trialById } from '../src/data/trials.js';
+import { renderClanWords, renderDeleteAccount } from '../src/ui/render.js';
 import { BALANCE, generateEquipment } from '../src/core/formulas.js';
 
 const T0 = 1_760_000_000_000;
@@ -142,6 +144,24 @@ test('back after more than the cap, the report says the hours away and the hours
     assert.doesNotMatch(short, /counted/);
 });
 
+test("one address reaches the team: in Settings, behind each clan's Report link, and nowhere else in the code (P-110)", () => {
+    assert.match(CONTACT_EMAIL, /^[^@\s]+@[^@\s]+\.[a-z]+$/);
+    const settings = renderSettings(new Game(null, T0), {}, null);
+    assert.ok(settings.includes(`<a href="mailto:${CONTACT_EMAIL}" target="_blank" rel="noopener">${CONTACT_EMAIL}</a>`), 'in Settings');
+    const clan = { id: 3, name: "Hawk's Rest", tag: 'HWK', members: 4 };
+    const url = new URL(clanReportHref(clan));
+    assert.equal(url.protocol + url.pathname, `mailto:${CONTACT_EMAIL}`);
+    assert.equal(url.searchParams.get('subject'), "Report: clan Hawk's Rest [HWK]");
+    assert.match(url.searchParams.get('body'), /^Clan: Hawk's Rest \[HWK\], number 3\n\nWhat is wrong:[\s\S]*true as far as I know/);
+    const list = renderClan(new Game(null, T0), { social: { loaded: true, clan: null, clans: [clan] } }, { loggedIn: true });
+    const link = /<a class="clan-report small" href="([^"]+)"[^>]*>Report<\/a>/.exec(list);
+    assert.ok(link, 'on the clan\'s row');
+    assert.equal(link[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'"), clanReportHref(clan), 'escaped for the page');
+    const inCode = dir => readdirSync(new URL(`../${dir}/`, import.meta.url), { recursive: true, withFileTypes: true }).filter(f => f.isFile() && /\.(m?js|cjs)$/.test(f.name) && !f.parentPath.includes('node_modules'))
+        .filter(f => readFileSync(join(f.parentPath, f.name), 'utf8').includes(CONTACT_EMAIL)).map(f => f.name);
+    assert.deepEqual([...inCode('src'), ...inCode('api')], ['social.js'], 'its one place');
+});
+
 test('the game links its wiki: in Settings beside the Discord, and at the foot of every "?" card with a page there (P-074)', () => {
     assert.equal(WIKI_URL, 'https://wiki.fantasyidle.com');
     const settings = renderSettings(new Game(null, T0), {}, null);
@@ -156,6 +176,16 @@ test('the game links its wiki: in Settings beside the Discord, and at the foot o
     assert.equal(WIKI_PAGES.mining, '/skills/mining');
     assert.equal(WIKI_PAGES.achievements, '/medals');
     assert.doesNotMatch(renderAboutCard('settings'), /More on the wiki/);
+});
+
+test('Settings offers Delete my account to one signed in, and its dialog asks for the password (P-070)', () => {
+    const settings = cloud => renderSettings(new Game(null, T0), {}, cloud);
+    assert.match(settings({ loggedIn: true, username: 'hero' }), /onclick="FI\.openDeleteAccount\(\)">Delete my account</);
+    assert.doesNotMatch(settings(null), /openDeleteAccount/, 'a guest has no account');
+    const dialog = renderDeleteAccount();
+    assert.match(dialog, /type="password" id="delete-pass"/);
+    assert.match(dialog, /FI\.deleteAccount\(\)/);
+    assert.match(dialog, /for good/);
 });
 
 test('attack speed at its cap: a quiet mark on the hero\'s swing, and on a piece whose speed adds nothing (P-074)', () => {
@@ -185,6 +215,16 @@ test('attack speed at its cap: a quiet mark on the hero\'s swing, and on a piece
     assert.match(renderItemDetail(game, 902), /class="cap-mark"/, 'the gloves\' too');
     // a pair in the bag is judged in place of the pair worn: +115% without them, so theirs adds nothing either
     assert.match(renderItemDetail(game, 904), /class="cap-mark"/);
+});
+
+test("a clan's owner has a dialog for its words, filled with them; a member has none (P-113)", () => {
+    const view = isOwner => renderClan(new Game(null, T0), { social: { loaded: true, clan: { id: 7, name: 'Wolves', tag: 'WLF', isOwner }, members: [] } }, { loggedIn: true });
+    assert.match(view(true), /onclick="FI\.openClanWords\(\)"/);
+    assert.doesNotMatch(view(false), /openClanWords/);
+    const dialog = renderClanWords({ description: 'We "hunt" <at dawn>', lookingFor: 'Anyone' });
+    assert.match(dialog, /id="clan-words-desc"[^>]*value="We &quot;hunt&quot; &lt;at dawn&gt;"/, 'escaped');
+    assert.match(dialog, /id="clan-words-looking"[^>]*value="Anyone"/);
+    assert.match(dialog, /FI\.saveClanWords\(\)/);
 });
 
 test('Faithless\'s card says its tokens count again from the next prestige, and they do (P-007)', () => {
@@ -250,6 +290,14 @@ test('the crowns read 1st, 2nd and 3rd: gold, silver and bronze, the place in a 
     assert.match(list, literal('<span class="clan-crown rank-3" data-tip-title="3rd" data-tip="in the Bronze division last week"'), 'on the clan list');
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     for (const [rank, metal] of [[1, 'gold'], [2, 'silver'], [3, 'bronze']]) assert.match(css, new RegExp(`\\.clan-crown\\.rank-${rank} \\.spr \\{ filter: [^}]+\\}\\s+/\\* ${metal} \\*/`), metal);
+});
+
+test("the Clan tab says when each other member last played, in whole days (P-009)", () => {
+    assert.deepEqual([0, 1, 3, 30, 31].map(seenWords), ['Seen today', 'Seen 1 day ago', 'Seen 3 days ago', 'Seen 30 days ago', 'Seen over 30 days ago']);
+    const members = [{ username: 'Me', you: true, owner: true, seenDays: 0 }, { username: 'Ann', seenDays: 3 }, { username: 'New', seenDays: null }];
+    const html = renderClan(new Game(null, T0), { social: { loaded: true, clan: { id: 7, name: 'Wolves', tag: 'WLF' }, members } }, { loggedIn: true });
+    assert.equal((html.match(/member-seen/g) || []).length, 1, 'not for you, nor for one who has not played yet');
+    assert.match(html, /Ann[\s\S]*?<div class="muted small member-seen">Seen 3 days ago<\/div>/);
 });
 
 test('the boards open on This week, and on All time while the week\'s board holds fewer than five names (P-129)', () => {

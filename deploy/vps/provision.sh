@@ -118,4 +118,19 @@ unit fantasyidle-restore-drill.timer '[Unit]\nDescription=Fantasy Idle backup: t
 systemctl daemon-reload
 systemctl enable --now fantasyidle-backup-check.timer fantasyidle-restore-drill.timer >/dev/null
 
+# --- the night's cleanup of old rows (api/cleanup.js; DESIGN §3.17 says what goes), after the backup: fantasyidle-cleanup.timer
+install -m 0644 "$HERE/fantasyidle-cleanup.service" "$HERE/fantasyidle-cleanup.timer" "$HERE/fantasyidle-cleanup-alert.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now fantasyidle-cleanup.timer >/dev/null
+
+# --- the server's own log (the journal, with the API's) kept 30 days: its files turn over daily, so nothing outstays that by more than a day
+install -d /etc/systemd/journald.conf.d
+printf '[Journal]\nMaxRetentionSec=30day\nMaxFileSec=1day\n' > /etc/systemd/journald.conf.d/fantasyidle.conf
+systemctl restart systemd-journald
+
+# (what the team runs by hand)
+
+# --- the team's tool for clans (api/team.js, README "The server"): fantasyidle-team list, clear, rename, restore, log
+install -m 0755 "$HERE/team.sh" /usr/local/bin/fantasyidle-team
+
 echo "provisioned: $(node -v), $(nginx -v 2>&1 | cut -d/ -f2), $(psql --version | cut -d' ' -f3), ufw $(ufw status | head -1 | cut -d: -f2 | xargs)"

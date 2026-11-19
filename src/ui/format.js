@@ -45,6 +45,9 @@ export function stagesWords(n) {
     return `${n > 0 ? '+' : '−'}${k} stage${k === 1 ? '' : 's'}`;
 }
 
+/** When a clan's member last played, from the whole days the server gives (api/index.js seenDays). */
+export const seenWords = days => (days < 1 ? 'Seen today' : days > 30 ? 'Seen over 30 days ago' : `Seen ${days} day${days === 1 ? '' : 's'} ago`);
+
 export function seconds(ms) {
     return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`;
 }

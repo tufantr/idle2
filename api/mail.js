@@ -10,14 +10,19 @@ let override = null;
 /** Swap the sender (the tests catch every mail; null puts Resend back). */
 function setMailer(fn) { override = fn; }
 
+// A reply to the game's mail goes to the team's one address (CONTACT_EMAIL in src/data/social.js, an ES module, loaded once).
+let contact = null;
+const contactAddress = () => (contact ||= import('../src/data/social.js').then(m => m.CONTACT_EMAIL || '', () => ''));
+
 async function sendMail({ to, subject, text, html }) {
-    if (override) return override({ to, subject, text, html });
+    const replyTo = await contactAddress();
+    if (override) return override({ to, subject, text, html, replyTo });
     const key = process.env.RESEND_API_KEY;
     if (!key) throw new Error('No mail service: RESEND_API_KEY is not set');
     const res = await fetch(RESEND_URL, {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: FROM(), to: [to], subject, text, html })
+        body: JSON.stringify({ from: FROM(), to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}) })
     });
     if (!res.ok) {
         const detail = await res.text().catch(() => '');
@@ -108,4 +113,9 @@ function signUpTakenMail({ username }) {
         lines: [`Someone just tried to make a new Fantasy Idle account with this email address. It already has one: yours, ${username}. You can sign in, or set a new password with "Forgot your password?" on the sign-in. If it wasn't you, nothing has changed.`] });
 }
 
-module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, signUpTakenMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };
+/** What the team did (api/team.js), to the player it concerns: what, why, and how to ask again (a reply reaches the team). */
+function teamNoticeMail({ username, subject, what, why, again = 'We will look at it again, and if we were wrong we will put it back as it was.' }) {
+    return noticeMail({ username, subject, lines: [what, `Why: ${why}`, `If you think we got this wrong, reply to this mail and tell us why. ${again}`] });
+}
+
+module.exports = { sendMail, sendCounted, setMailer, codeMail, noticeMail, passwordChangedMail, signUpTakenMail, teamNoticeMail, DAILY_MAIL_CAP, MAIL_ALERT_AT };

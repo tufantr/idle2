@@ -4,10 +4,50 @@ import { ZONES } from './zones.js';
 // The game's Discord (the owner's, made for the beta, 22 October 2026): feedback of any kind, bug reports, the clans'
 // talk. Shown on the Clan tab, in Settings and on the wiki's front page. It never expires and opens on #general.
 export const DISCORD_INVITE = 'https://discord.gg/Pxa2bHYcDg';
+// The one address that reaches the team, for anyone, with an account or without (the research loop's P-110): shown in Settings
+// and on the wiki, behind each clan's Report link, and where a reply to the game's mail goes (api/mail.js). It is the owner's to
+// confirm (Cloudflare's Email Routing delivers it). This is its only place in the game: change it here. Empty hides it.
+export const CONTACT_EMAIL = 'contact@fantasyidle.com';
+/** A clan's Report link: a mail to the team naming the clan, with what a report needs (which clan, what is wrong, and that it is true). */
+export function clanReportHref({ id, name, tag }) {
+    const subject = `Report: clan ${name} [${tag}]`;
+    const body = `Clan: ${name} [${tag}], number ${id}\n\nWhat is wrong:\n\n\nWhat I say here is true as far as I know.\n`;
+    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 // The player wiki (wiki/, built from the game's own data; README "The server"): linked in Settings beside the Discord, and
 // at the foot of each "?" card that has a page of its own there (src/ui/features.js WIKI_PAGES).
 export const WIKI_URL = 'https://wiki.fantasyidle.com';
+// What a clan's words (its description and "looking for" line) may not hold: a way to reach anyone elsewhere (the owner's
+// decision, November 2026; the research loop's P-125, against grooming and steering players to other apps). No web addresses,
+// "@" handles, invite codes or contact details; a clan's talk has the game's Discord, which may be named or linked. A sieve
+// for the plain cases, not a guarantee: the team reads every new clan. The server applies it (api/index.js).
+export const CLAN_WORDS_REFUSED = "Clan words can't hold links, handles or invite codes: your clan has the game's Discord.";
+const CONTACT_APPS = 'discord|telegram|tg|whats ?app|wa|snap(?:chat)?|insta(?:gram)?|ig|kik|tik ?tok|twitter|fb|facebook|messenger|wechat|skype|steam|reddit|roblox|youtube|twitch|e-?mail|gmail|mail';
+const NO_CONTACT = [
+    /\b[a-z][a-z0-9+.-]*:\/\//,                                 // http://, hxxp://
+    /\bwww\b/,
+    /\b[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.[a-z]{2,}\b/,          // example.com, t.me, discord.gg ("e.g." and "1.5k" pass)
+    /@[a-z0-9_.-]/,                                              // @someone, an email address
+    /[a-z0-9_.-]#\d{4}\b/,                                      // someone#1234
+    new RegExp(`\\b(?:${CONTACT_APPS})(?:\\s+(?:id|name|tag|handle|user(?:name)?))?\\s*[:=]\\s*\\S`),   // snap: someone
+    /\b(?:dm|pm|message|msg|text|whisper)\s+(?:me|us)\b/,
+    /\b(?:add|contact|find|follow|reach)\s+(?:me|us)\s+(?:on|at|via)\b/,
+    /\b(?:invite|join|server)\s+(?:code|link)\b/,
+    /\bcode\s*[:=]\s*\S/
+];
+/** May these words stand as a clan's? (Spelled-out and spaced-out addresses count as addresses; so do nine digits in a row, a phone number.) */
+export function clanWordsOk(text) {
+    const plain = String(text || '').replaceAll(DISCORD_INVITE, '').replaceAll(DISCORD_INVITE.replace(/^https?:\/\//, ''), '')
+        .normalize('NFKC').toLowerCase().replace(/[\u00ad\u200b-\u200f\u2060\ufeff]/g, '')
+        .replace(/[[({]\s*(?:\.|dot)\s*[\])}]/g, '.')                       // example[.]com, example (dot) com
+        .replace(/\s+dot\s+(?=(?:com|net|org|gg|io|me)\b)/g, '.')            // example dot com
+        .replace(/\s*[.,]\s*(?=(?:com|net|org|io)\b)/g, '.')                 // example . com
+        .replace(/\bdiscord\s*[,.]?\s*gg\b/g, 'discord.gg');
+    if (NO_CONTACT.some(rule => rule.test(plain))) return false;
+    return !(plain.match(/\+?\d[\d\s().-]{7,}\d/g) || []).some(run => run.replace(/\D/g, '').length >= 9);
+}
 export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
+export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
 // The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board
 // a week of play can climb rather than the beta's head start (P-129); while the week's board holds fewer than BOARD_WEEK_MIN
 // names they open on All time. Decided at the first look; a tap on the period chooses for good (main.js).

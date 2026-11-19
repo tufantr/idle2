@@ -219,6 +219,43 @@ async function ensureSchema() {
     `;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS clan_gifts_seq ON clan_gifts (user_id, seq)`;
     await sql`CREATE INDEX IF NOT EXISTS clan_gifts_clan ON clan_gifts (clan_id, id)`;
+    // What the team did and why (November 2026, api/team.js; the research loop's P-113): one row an action, with the words it
+    // found and the words it left (JSON), so that it can be put back. `kind` says what `subject` numbers ('clan': a clan's id).
+    await sql`
+        CREATE TABLE IF NOT EXISTS team_log (
+            id SERIAL PRIMARY KEY,
+            at BIGINT NOT NULL,
+            kind VARCHAR(10) NOT NULL,
+            subject INTEGER NOT NULL,
+            action VARCHAR(16) NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            old_words TEXT NOT NULL DEFAULT '{}',
+            new_words TEXT NOT NULL DEFAULT '{}'
+        )
+    `;
+    // What a clan keeps of rows that go (November 2026; the research loop's P-070, the owner's decision that a deleted account
+    // leaves its clan's totals): hall gifts folded into one total a clan and room (their work, and how many), and the depth a
+    // member reached at the Endless Hydra this week, so the week's score stands. Neither says whose it was.
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_gift_totals (
+            clan_id INTEGER NOT NULL,
+            room VARCHAR(16) NOT NULL,
+            work BIGINT NOT NULL DEFAULT 0,
+            gifts BIGINT NOT NULL DEFAULT 0,
+            PRIMARY KEY (clan_id, room)
+        )
+    `;
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_endless_kept (
+            week VARCHAR(10) NOT NULL,
+            clan_id INTEGER NOT NULL,
+            depth DOUBLE PRECISION NOT NULL
+        )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS clan_endless_kept_week ON clan_endless_kept (week)`;
+    // When an account was made (November 2026, the research loop's P-097): what the cleanup job (api/cleanup.js) ages a sign-up
+    // never confirmed by. 0: made before this, or by an older server (the job dates an unconfirmed one when it first sees it).
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at BIGINT DEFAULT 0`;
     await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_colour VARCHAR(16)`;
     await sql`ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_emblem VARCHAR(16)`;
     // The growth check's list for the owner (November 2026, api/index.js plausibilityFlags; mailed each week by api/review.js):
@@ -264,14 +301,14 @@ async function ping() {
 
 /** Throws a unique violation (23505) for a name taken in any case. */
 /** A new account; `email` (lowercase) is checked for confirmation afterwards. A name or an address taken: a 23505, its `constraint` saying which. */
-async function createUser(username, hash, email = null) {
+async function createUser(username, hash, email = null, now = Date.now()) {
     const { rows: taken } = await sql`SELECT 1 FROM users WHERE lower(username) = lower(${username}) LIMIT 1`;
     if (taken.length) throw Object.assign(new Error('Username already exists'), { code: '23505', constraint: 'users_username_lower' });
     if (email) {
         const { rows: used } = await sql`SELECT 1 FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
         if (used.length) throw Object.assign(new Error('Email already used'), { code: '23505', constraint: 'users_email_lower' });
     }
-    const { rows } = await sql`INSERT INTO users (username, password_hash, email) VALUES (${username}, ${hash}, ${email}) RETURNING id`;
+    const { rows } = await sql`INSERT INTO users (username, password_hash, email, created_at) VALUES (${username}, ${hash}, ${email}, ${now}::bigint) RETURNING id`;
     return rows[0].id;
 }
 
@@ -385,6 +422,48 @@ async function leaderboardRows(week) {
     return rows.map(r => ({ userId: r.id, username: r.username, flags: r.flags || '[]', metrics: r.metrics, weekMetrics: r.week_metrics || null }));
 }
 
+/**
+ * An account, gone for good, in one statement: every row tied to it, or none (the research loop's P-070; decision 11 of the
+ * patch). What it gave its clan stays the clan's without its name: the hall's work (clan_hall) and the boss's health were never
+ * its rows, its gifts fold into the clan's totals, and with `keepDepths` (it isn't flagged) its deepest fight of each week from
+ * `fromWeek` on stays in the clan's score (clan_endless_kept). The caller has taken it out of its clan (closeAccount in
+ * api/index.js). Returns whether there was such an account.
+ */
+async function deleteAccount(userId, username, { keepDepths = false, fromWeek = '' } = {}) {
+    const name = String(username).toLowerCase().slice(0, 64);
+    const { rows } = await sql`
+        WITH gifts AS (
+            DELETE FROM clan_gifts WHERE user_id = ${userId}::int RETURNING clan_id, room, work
+        ), gift_totals AS (
+            INSERT INTO clan_gift_totals (clan_id, room, work, gifts)
+            SELECT clan_id, room, SUM(work)::bigint, COUNT(*)::bigint FROM gifts GROUP BY clan_id, room
+            ON CONFLICT (clan_id, room) DO UPDATE SET work = clan_gift_totals.work + EXCLUDED.work, gifts = clan_gift_totals.gifts + EXCLUDED.gifts
+        ), fights AS (
+            DELETE FROM clan_endless WHERE user_id = ${userId}::int RETURNING week, clan_id, depth
+        ), depths AS (
+            INSERT INTO clan_endless_kept (week, clan_id, depth)
+            SELECT week, clan_id, MAX(depth) FROM fights WHERE ${keepDepths}::boolean AND week >= ${fromWeek}::varchar GROUP BY week, clan_id
+        ), last_hits AS (
+            UPDATE clan_bosses SET last_hit_user = NULL WHERE last_hit_user = ${userId}::int
+        ), attacks AS (DELETE FROM clan_attacks WHERE user_id = ${userId}::int),
+        shares AS (DELETE FROM clan_boss_shares WHERE user_id = ${userId}::int),
+        members AS (DELETE FROM clan_members WHERE user_id = ${userId}::int),
+        charges AS (DELETE FROM clan_charges WHERE user_id = ${userId}::int),
+        paid AS (DELETE FROM rewards WHERE user_id = ${userId}::int),
+        snapshots AS (DELETE FROM weekly_snapshots WHERE user_id = ${userId}::int),
+        codes AS (DELETE FROM email_codes WHERE user_id = ${userId}::int),
+        reviews AS (DELETE FROM flag_reviews WHERE user_id = ${userId}::int),
+        team_entries AS (DELETE FROM team_log WHERE kind = 'player' AND subject = ${userId}::int),
+        counters AS (
+            DELETE FROM auth_attempts
+            WHERE key IN (${`mail:user:${userId}`}::varchar, ${`taken:user:${userId}`}::varchar, ${`delete:user:${userId}`}::varchar, ${`login:name:${name}`}::varchar)
+               OR key LIKE ${`login:name:${name.replace(/[\\%_]/g, '\\$&')}:%`}::varchar
+        )
+        DELETE FROM users WHERE id = ${userId}::int RETURNING id
+    `;
+    return rows.length > 0;
+}
+
 // ---------- where accounts come from ----------
 
 /** One more account made from a listing's link with this tag. */
@@ -485,6 +564,12 @@ async function setClanOwner(clanId, ownerId) {
     await sql`UPDATE clans SET owner_id = ${ownerId} WHERE id = ${clanId}`;
 }
 
+/** The clan passes from one owner to another, if `fromId` still has it (of several at once, one moves it): did this one? */
+async function passClan(clanId, fromId, toId) {
+    const { rows } = await sql`UPDATE clans SET owner_id = ${toId}::int WHERE id = ${clanId}::int AND owner_id = ${fromId}::int RETURNING id`;
+    return rows.length > 0;
+}
+
 async function deleteClan(clanId) {
     await sql`DELETE FROM clan_bosses WHERE clan_id = ${clanId}`;
     await sql`DELETE FROM clan_boss_shares WHERE clan_id = ${clanId}`;
@@ -535,6 +620,12 @@ async function clanMembers(clanId) {
         WHERE m.clan_id = ${clanId} ORDER BY m.joined_at ASC, u.id ASC
     `;
     return rows.map(r => ({ userId: r.id, username: r.username, metrics: r.metrics || null, flags: r.flags || '[]', lastSaved: int(r.last_saved), joinedAt: int(r.joined_at) }));
+}
+
+/** The clans an account owns (normally the one it is in). */
+async function clansOwnedBy(userId) {
+    const { rows } = await sql`SELECT id FROM clans WHERE owner_id = ${userId}::int`;
+    return rows.map(r => r.id);
 }
 
 // ---------- the weekly clan boss ----------
@@ -770,13 +861,15 @@ async function endlessOf(userId, week) {
     return { used: int(rows[0] && rows[0].used), best: Number(rows[0] && rows[0].best) || 0 };
 }
 
-/** Each player's deepest attack of a week at the Endless Hydra, for each clan they made one for, with their flags. */
+/** Each player's deepest attack of a week at the Endless Hydra, for each clan they made one for, with their flags; and those a deleted account left its clan. */
 async function endlessWeek(week) {
     const { rows } = await sql`
         SELECT e.clan_id, e.user_id, MAX(e.depth) AS depth, u.flags
         FROM clan_endless e JOIN users u ON u.id = e.user_id
-        WHERE e.week = ${week}
+        WHERE e.week = ${week}::varchar
         GROUP BY e.clan_id, e.user_id, u.flags
+        UNION ALL
+        SELECT k.clan_id, NULL::int, k.depth, '[]'::text FROM clan_endless_kept k WHERE k.week = ${week}::varchar
     `;
     return rows.map(r => ({ clanId: r.clan_id, userId: r.user_id, depth: Number(r.depth) || 0, flags: r.flags || '[]' }));
 }
@@ -883,6 +976,11 @@ async function setClanBanner(clanId, colour, emblem) {
     await sql`UPDATE clans SET banner_colour = ${colour}, banner_emblem = ${emblem} WHERE id = ${clanId}`;
 }
 
+/** The clan's description and "looking for" line, as its owner writes them. */
+async function setClanWords(clanId, description, lookingFor) {
+    await sql`UPDATE clans SET description = ${description}::varchar, looking_for = ${lookingFor}::varchar WHERE id = ${clanId}::int`;
+}
+
 // ---------- rate limiting ----------
 
 /**
@@ -923,6 +1021,253 @@ async function noteAuthFailure(key, now, windowMs) {
 
 async function clearAuthFailures(key) {
     await sql`DELETE FROM auth_attempts WHERE key = ${key}`;
+}
+
+// ---------- the team's tool (api/team.js) ----------
+
+/** Clans by name or tag, the newest first, as the team reads them: their words, owner, and how many members. */
+async function teamClans(search = '') {
+    const pattern = `%${String(search || '').replace(/[\\%_]/g, '\\$&')}%`;
+    const { rows } = await sql`
+        SELECT c.id, c.name, c.tag, c.description, c.looking_for, c.created_at, o.username AS owner, o.last_saved AS owner_saved,
+            (SELECT COUNT(*) FROM clan_members m WHERE m.clan_id = c.id) AS members
+        FROM clans c LEFT JOIN users o ON o.id = c.owner_id
+        WHERE c.name ILIKE ${pattern} OR c.tag ILIKE ${pattern}
+        ORDER BY c.created_at DESC, c.id DESC
+    `;
+    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description || '', lookingFor: r.looking_for || '', createdAt: int(r.created_at), owner: r.owner || null, ownerSaved: int(r.owner_saved), members: int(r.members) }));
+}
+
+/**
+ * One clan, by its number or by its name in any case (the one spelled exactly so first: names differing in case are two clans):
+ * { id, name, tag, description, lookingFor, open, owner, ownerEmail }.
+ * A closed clan is known by the weeks' rankings it left (`open` false, no words, no owner). Null if neither knows it.
+ */
+async function teamClan(id, name) {
+    const { rows } = await sql`
+        SELECT c.id, c.name, c.tag, c.description, c.looking_for, o.username AS owner, o.email AS owner_email
+        FROM clans c LEFT JOIN users o ON o.id = c.owner_id
+        WHERE c.id = ${id}::int OR lower(c.name) = lower(${name}::text)
+        ORDER BY (c.name = ${name}::text) IS TRUE DESC, c.id LIMIT 1
+    `;
+    const r = rows[0];
+    if (r) return { id: r.id, name: r.name, tag: r.tag, description: r.description || '', lookingFor: r.looking_for || '', open: true, owner: r.owner || null, ownerEmail: r.owner_email || null };
+    const kept = await sql`
+        SELECT clan_id, name, tag FROM clan_rankings WHERE clan_id = ${id}::int OR lower(name) = lower(${name}::text)
+        ORDER BY (name = ${name}::text) IS TRUE DESC, week DESC, clan_id LIMIT 1
+    `;
+    const k = kept.rows[0];
+    return k ? { id: k.clan_id, name: k.name, tag: k.tag, description: '', lookingFor: '', open: false, owner: null, ownerEmail: null } : null;
+}
+
+/**
+ * A clan's name, tag and words set by the team, in one statement with what it touches: the clan, every week's ranking kept with
+ * its name and tag (they stay as they were otherwise, and last week's are on show), and the log. Throws a unique violation (23505)
+ * for a name another clan has, with nothing changed. Returns { id: the log's number, clans: 1 or 0 (closed), rankings: weeks rewritten }.
+ */
+async function teamEditClan({ clanId, name, tag, description, lookingFor, action, reason, oldWords, newWords, now }) {
+    const { rows } = await sql`
+        WITH c AS (
+            UPDATE clans SET name = ${name}::varchar, tag = ${tag}::varchar, description = ${description}::varchar, looking_for = ${lookingFor}::varchar
+            WHERE id = ${clanId}::int RETURNING id
+        ), r AS (
+            UPDATE clan_rankings SET name = ${name}::varchar, tag = ${tag}::varchar WHERE clan_id = ${clanId}::int RETURNING week
+        ), l AS (
+            INSERT INTO team_log (at, kind, subject, action, reason, old_words, new_words)
+            VALUES (${now}::bigint, 'clan', ${clanId}::int, ${action}::varchar, ${reason}::text, ${oldWords}::text, ${newWords}::text)
+            RETURNING id
+        )
+        SELECT (SELECT id FROM l) AS id, (SELECT COUNT(*) FROM c) AS clans, (SELECT COUNT(*) FROM r) AS rankings
+    `;
+    return { id: rows[0].id, clans: int(rows[0].clans), rankings: int(rows[0].rankings) };
+}
+
+/** A player's name changed by the team, with its log entry, in one statement (a name taken: 23505). Returns the entry's number, or null without such a player. */
+async function teamRenamePlayer({ userId, name, reason, oldWords, newWords, now }) {
+    const { rows } = await sql`
+        WITH u AS (
+            UPDATE users SET username = ${name}::varchar WHERE id = ${userId}::int RETURNING id
+        ), l AS (
+            INSERT INTO team_log (at, kind, subject, action, reason, old_words, new_words)
+            SELECT ${now}::bigint, 'player', u.id, 'rename', ${reason}::text, ${oldWords}::text, ${newWords}::text FROM u
+            RETURNING id
+        )
+        SELECT (SELECT id FROM l) AS id
+    `;
+    return rows[0] && rows[0].id !== null ? rows[0].id : null;
+}
+
+/** An entry for the log alone (an account closed: the account has gone, so the entry follows it). Returns its number. */
+async function teamLogAdd({ kind, subject, action, reason, oldWords, newWords, now }) {
+    const { rows } = await sql`
+        INSERT INTO team_log (at, kind, subject, action, reason, old_words, new_words)
+        VALUES (${now}::bigint, ${kind}::varchar, ${subject}::int, ${action}::varchar, ${reason}::text, ${oldWords}::text, ${newWords}::text)
+        RETURNING id
+    `;
+    return rows[0].id;
+}
+
+const logRow = r => ({ id: r.id, at: int(r.at), kind: r.kind, subject: r.subject, action: r.action, reason: r.reason, oldWords: r.old_words, newWords: r.new_words });
+
+/** The log, the newest first. */
+async function teamLog(limit) {
+    const { rows } = await sql`SELECT id, at, kind, subject, action, reason, old_words, new_words FROM team_log ORDER BY id DESC LIMIT ${limit}::int`;
+    return rows.map(logRow);
+}
+
+async function teamLogEntry(id) {
+    const { rows } = await sql`SELECT id, at, kind, subject, action, reason, old_words, new_words FROM team_log WHERE id = ${id}::int`;
+    return rows[0] ? logRow(rows[0]) : null;
+}
+
+// ---------- the nightly cleanup (api/cleanup.js, which says why each of these takes only what nothing reads) ----------
+// A sweep returns how many rows its rule takes; with `apply` false it takes none, by the very same conditions (a dry run).
+
+/** Sign-in and mail counters last begun before `before` (their windows, a day at most, are over). */
+async function sweepAttempts(before, apply) {
+    const { rows } = await sql`
+        WITH gone AS (DELETE FROM auth_attempts WHERE ${apply}::boolean AND since < ${before}::bigint RETURNING 1)
+        SELECT COUNT(*) AS n FROM auth_attempts WHERE since < ${before}::bigint
+    `;
+    return int(rows[0].n);
+}
+
+/** Email codes past their time and made before `before` (a code used up by its tries still holds the next one back its minute). */
+async function sweepEmailCodes(before, apply) {
+    const { rows } = await sql`
+        WITH gone AS (DELETE FROM email_codes WHERE ${apply}::boolean AND expires_at < ${before}::bigint AND created_at < ${before}::bigint RETURNING 1)
+        SELECT COUNT(*) AS n FROM email_codes WHERE expires_at < ${before}::bigint AND created_at < ${before}::bigint
+    `;
+    return int(rows[0].n);
+}
+
+/** Sign-ups not confirmed that carry no date (made before accounts had one, or by an older server) are dated now. */
+async function dateUnconfirmed(now) {
+    await sql`UPDATE users SET created_at = ${now}::bigint WHERE email IS NOT NULL AND COALESCE(email_verified_at, 0) = 0 AND COALESCE(created_at, 0) = 0`;
+}
+
+/** Sign-ups made before `before` and never confirmed, that have played nothing and are in no clan: [{ id, username }]. */
+async function staleSignups(before) {
+    const { rows } = await sql`
+        SELECT u.id, u.username FROM users u
+        WHERE u.email IS NOT NULL AND COALESCE(u.email_verified_at, 0) = 0
+          AND u.created_at > 0 AND u.created_at < ${before}::bigint
+          AND u.game_state IS NULL AND COALESCE(u.last_saved, 0) = 0
+          AND NOT EXISTS (SELECT 1 FROM clan_members m WHERE m.user_id = u.id)
+    `;
+    return rows.map(r => ({ id: r.id, username: r.username }));
+}
+
+/**
+ * A sign-up never confirmed goes, its codes and counters with it (nothing else can be tied to one: it never had a token), and only
+ * if it still is one as this runs: one confirmed a moment ago stays. Returns whether it went.
+ */
+async function deleteStaleSignup(userId, username, before) {
+    const name = String(username).toLowerCase().slice(0, 64);
+    const { rows } = await sql`
+        WITH gone AS (
+            DELETE FROM users u
+            WHERE u.id = ${userId}::int AND u.email IS NOT NULL AND COALESCE(u.email_verified_at, 0) = 0
+              AND u.created_at > 0 AND u.created_at < ${before}::bigint
+              AND u.game_state IS NULL AND COALESCE(u.last_saved, 0) = 0
+              AND NOT EXISTS (SELECT 1 FROM clan_members m WHERE m.user_id = u.id)
+            RETURNING u.id
+        ), codes AS (
+            DELETE FROM email_codes WHERE user_id IN (SELECT id FROM gone)
+        ), counters AS (
+            DELETE FROM auth_attempts
+            WHERE EXISTS (SELECT 1 FROM gone)
+              AND (key IN (${`mail:user:${userId}`}::varchar, ${`taken:user:${userId}`}::varchar, ${`login:name:${name}`}::varchar)
+                   OR key LIKE ${`login:name:${name.replace(/[\\%_]/g, '\\$&')}:%`}::varchar)
+        )
+        SELECT COUNT(*) AS n FROM gone
+    `;
+    return int(rows[0].n) > 0;
+}
+
+/** Accounts with any flag stored: [{ id, flags }] (the JSON as it stands). */
+async function flaggedAccounts() {
+    const { rows } = await sql`SELECT id, flags FROM users WHERE flags IS NOT NULL AND flags NOT IN ('', '[]')`;
+    return rows.map(r => ({ id: r.id, flags: r.flags }));
+}
+
+/** Store an account's flags, unless an upload has changed them since `was` was read. */
+async function setFlagsIf(userId, was, flagsJson) {
+    const { rows } = await sql`UPDATE users SET flags = ${flagsJson}::text WHERE id = ${userId}::int AND flags = ${was}::text RETURNING id`;
+    return rows.length > 0;
+}
+
+/** The boards' weekly copies of weeks before `week`. */
+async function sweepSnapshots(week, apply) {
+    const { rows } = await sql`
+        WITH gone AS (DELETE FROM weekly_snapshots WHERE ${apply}::boolean AND week < ${week}::varchar RETURNING 1)
+        SELECT COUNT(*) AS n FROM weekly_snapshots WHERE week < ${week}::varchar
+    `;
+    return int(rows[0].n);
+}
+
+/** Clan attacks of weeks before `week` whose ranking is stored, or from before `lapsed`, when it can no longer come to be. */
+async function sweepAttacks(week, lapsed, apply) {
+    const { rows } = await sql`
+        WITH doomed AS (
+            SELECT id FROM clan_attacks
+            WHERE week < ${week}::varchar AND (week < ${lapsed}::varchar OR week IN (SELECT r.week FROM clan_rankings r))
+        ), gone AS (
+            DELETE FROM clan_attacks WHERE ${apply}::boolean AND id IN (SELECT id FROM doomed) RETURNING 1
+        )
+        SELECT COUNT(*) AS n FROM doomed
+    `;
+    return int(rows[0].n);
+}
+
+/** The same for the Endless Hydra's fights, and the depths deleted accounts left their clans. */
+async function sweepEndless(week, lapsed, apply) {
+    const { rows } = await sql`
+        WITH doomed AS (
+            SELECT user_id, week, slot FROM clan_endless
+            WHERE week < ${week}::varchar AND (week < ${lapsed}::varchar OR week IN (SELECT r.week FROM clan_rankings r))
+        ), gone AS (
+            DELETE FROM clan_endless WHERE ${apply}::boolean AND (user_id, week, slot) IN (SELECT user_id, week, slot FROM doomed) RETURNING 1
+        ), kept AS (
+            DELETE FROM clan_endless_kept
+            WHERE ${apply}::boolean AND week < ${week}::varchar AND (week < ${lapsed}::varchar OR week IN (SELECT r.week FROM clan_rankings r))
+            RETURNING 1
+        )
+        SELECT COUNT(*) AS n FROM doomed
+    `;
+    return int(rows[0].n);
+}
+
+/** The players with gifts from before `week` to clans that have closed. */
+async function closedClanGivers(week) {
+    const { rows } = await sql`
+        SELECT DISTINCT g.user_id FROM clan_gifts g
+        WHERE g.week < ${week}::varchar AND NOT EXISTS (SELECT 1 FROM clans c WHERE c.id = g.clan_id)
+    `;
+    return rows.map(r => r.user_id);
+}
+
+/**
+ * A player's gifts from before `week` to closed clans fold into those clans' totals, but for the ones still needed: their highest
+ * number (the next gift counts on from it) and any their save has not taken from its bank yet (numbered past `taken`).
+ */
+async function foldClosedGifts(userId, taken, week, apply) {
+    const { rows } = await sql`
+        WITH doomed AS (
+            SELECT g.id FROM clan_gifts g
+            WHERE g.user_id = ${userId}::int AND g.week < ${week}::varchar AND g.seq <= ${taken}::int
+              AND g.seq < (SELECT MAX(x.seq) FROM clan_gifts x WHERE x.user_id = ${userId}::int)
+              AND NOT EXISTS (SELECT 1 FROM clans c WHERE c.id = g.clan_id)
+        ), gone AS (
+            DELETE FROM clan_gifts WHERE ${apply}::boolean AND id IN (SELECT id FROM doomed) RETURNING clan_id, room, work
+        ), totals AS (
+            INSERT INTO clan_gift_totals (clan_id, room, work, gifts)
+            SELECT clan_id, room, SUM(work)::bigint, COUNT(*)::bigint FROM gone GROUP BY clan_id, room
+            ON CONFLICT (clan_id, room) DO UPDATE SET work = clan_gift_totals.work + EXCLUDED.work, gifts = clan_gift_totals.gifts + EXCLUDED.gifts
+        )
+        SELECT COUNT(*) AS n FROM doomed
+    `;
+    return int(rows[0].n);
 }
 
 // ---------- rewards ----------
@@ -972,11 +1317,14 @@ async function claimGifts(userId, now) {
 
 module.exports = {
     ensureSchema, ping,
+    deleteAccount, clansOwnedBy, setClanWords,
+    teamClans, teamClan, teamEditClan, teamRenamePlayer, teamLogAdd, teamLog, teamLogEntry,
+    sweepAttempts, sweepEmailCodes, dateUnconfirmed, staleSignups, deleteStaleSignup, flaggedAccounts, setFlagsIf, sweepSnapshots, sweepAttacks, sweepEndless, closedClanGivers, foldClosedGifts,
     createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
     userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
     addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
-    listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
+    listClans, createClan, getClan, setClanOwner, passClan, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,

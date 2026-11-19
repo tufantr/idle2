@@ -35,13 +35,13 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE, WIKI_URL, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
+import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
-import { fmt, pct, seconds, duration, escapeHtml as esc, gainWords, gainMarkup, stagesWords } from './format.js';
+import { fmt, pct, seconds, duration, escapeHtml as esc, gainWords, gainMarkup, stagesWords, seenWords } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey, glyph, coinIcon, clanCloakKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
@@ -2387,6 +2387,7 @@ export function renderSettings(game, ui, cloud) {
             ${signedIn && cloud.flaggedUntil > Date.now() ? `<p class="warn small flag-line">Flagged until ${esc(new Date(cloud.flaggedUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }))}: a save showed numbers the game's check doesn't allow. ${aboutButton('flagged')}</p>` : ''}
             ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button><button class="mini-btn" onclick="FI.signOutEverywhere()">Sign out everywhere</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
+            ${signedIn ? '<div class="btn-row"><button class="mini-btn danger" onclick="FI.openDeleteAccount()">Delete my account</button></div>' : ''}
         </section>
         <section class="glass-panel ${painted('study', 'right 45%')}">
             <div class="panel-header"><h2>Your save</h2><span class="muted small">Played ${played}</span></div>
@@ -2398,6 +2399,7 @@ export function renderSettings(game, ui, cloud) {
         <div class="panel-header"><h2>The beta</h2><span class="muted small">Tell us anything</span></div>
         <p class="muted small">Fantasy Idle is in beta. What's fun, what's confusing, what's too slow, any bug: every word helps.</p>
         <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a><a class="btn-link" href="${esc(WIKI_URL)}" target="_blank" rel="noopener">Read the wiki</a></div>
+        ${CONTACT_EMAIL ? `<p class="muted small contact-line">Or write to us: <a href="mailto:${esc(CONTACT_EMAIL)}" target="_blank" rel="noopener">${esc(CONTACT_EMAIL)}</a></p>` : ''}
     </section>` : ''}
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
@@ -2471,7 +2473,7 @@ export function renderClan(game, ui, cloud) {
     // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
-        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div>${CONTACT_EMAIL ? `<a class="clan-report small" href="${esc(clanReportHref(c))}" target="_blank" rel="noopener" aria-label="${esc(`Report ${c.name} to the team`)}">Report</a>` : ''}</td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}${c.active !== undefined ? `<div class="muted small" title="Members who played this past week">${Number(c.active) || 0} this week</div>` : ''}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
@@ -2497,10 +2499,12 @@ export function renderClan(game, ui, cloud) {
         const canKick = !!c.isOwner;
         // (and what each gave the hall: in all, and this week on hover)
         const built = m => { const b = m.built || {}; return Number(b.total) > 0 ? `<span title="${esc(`${workTime(Number(b.week) || 0)} this week`)}">${workTime(Number(b.total))}</span>` : '<span class="muted">·</span>'; };
-        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${built(m)}</td></tr>`).join('');
+        // (and when each of the others last played, in whole days)
+        const lastSeen = m => (!m.you && Number.isFinite(m.seenDays) ? `<div class="muted small member-seen">${esc(seenWords(m.seenDays))}</div>` : '');
+        const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}${lastSeen(m)}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${built(m)}</td></tr>`).join('');
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
             <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span>${crownMark(c.crown)}</h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
-                <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
+                <div class="btn-row">${discord}${c.isOwner ? '<button class="mini-btn" onclick="FI.openClanWords()">Edit words</button>' : ''}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? clanBossPanel(game, social, boss, pct) : ''}
             ${boss ? endlessPanel(game, social) : ''}
             ${boss && seen(game.state, 'potions') ? potionPicker(game, 'combat', 'clan-potion') : ''}
@@ -2892,6 +2896,36 @@ export function renderConfirmModal(title, text, confirmLabel) {
         <div class="modal-header">${esc(title)}</div>
         <div class="modal-body"><p>${esc(text)}</p></div>
         <div class="modal-footer"><button class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.confirmYes()">${esc(confirmLabel)}</button></div>
+    </div>`;
+}
+
+/** "Delete my account" (Settings): what goes, what stays with the clan, and the password. */
+export function renderDeleteAccount() {
+    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
+        <div class="modal-header">Delete my account</div>
+        <div class="modal-body">
+            <p>This deletes your account and your game from the server, for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts.</p>
+            <p class="muted small">What you gave your clan stays with it. If you lead it, it passes to another member. The server's backups lose your account as they age out, within a year.</p>
+            <div class="auth-error" id="delete-error"></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.deleteAccount()">
+                <input type="password" id="delete-pass" placeholder="Your password" aria-label="Your password" autocomplete="current-password" class="text-input" data-autofocus>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-danger">Delete it for good</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Keep it</button></div>
+            </form>
+        </div>
+    </div>`;
+}
+
+/** The clan's words, for its owner (FI.openClanWords): what the Start a clan form asks, as they stand now. */
+export function renderClanWords(clan) {
+    return `<div class="modal-content narrow ${painted('clanhall', 'center 40%')}">
+        <div class="modal-header">Your clan's words</div>
+        <div class="modal-body"><div class="auth-error" id="clan-words-error"></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.saveClanWords()">
+                <label class="small">Description <input id="clan-words-desc" class="text-input" maxlength="200" value="${esc(clan?.description || '')}" data-autofocus></label>
+                <label class="small">Looking for <input id="clan-words-looking" class="text-input" maxlength="100" value="${esc(clan?.lookingFor || '')}"></label>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Save</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button></div>
+            </form>
+        </div>
     </div>`;
 }
 

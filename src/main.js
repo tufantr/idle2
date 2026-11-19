@@ -40,10 +40,12 @@ import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
 import { RESOURCES } from './data/resources.js';
 import { RARITIES, MYTHIC, PRIMAL } from './data/items.js';
 import { playtestExport } from './systems/playtest.js';
+import { renderDeleteAccount } from './ui/render.js';
 import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { talentById, respecPrice } from './data/talents.js';
 import { charmById } from './data/charms.js';
 import { HALL, HALL_STAGES, hallRoom } from './data/clanhall.js';
+import { renderClanWords } from './ui/render.js';
 import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
@@ -1677,6 +1679,24 @@ window.FI = {
         askConfirm('Remove this member?', `${username} leaves the clan. Their damage this week stays on the board.`, 'Remove',
             () => socialAction(() => cloud.kickMember(username), `Removed ${username}`));
     },
+    /** The clan's description and "looking for" line, for its owner: a word the server refuses stays in the dialog, with why. */
+    openClanWords() {
+        if (ui.social?.clan?.isOwner) openModal(renderClanWords(ui.social.clan), 'clanWords');
+    },
+    async saveClanWords() {
+        const description = document.getElementById('clan-words-desc')?.value || '';
+        const lookingFor = document.getElementById('clan-words-looking')?.value || '';
+        try {
+            const saved = await cloud.setClanWords(description, lookingFor);
+            if (ui.social?.clan) Object.assign(ui.social.clan, saved);
+            closeModal();
+            toast('Clan words saved', 'info');
+            render();
+        } catch (err) {
+            const box = document.getElementById('clan-words-error');
+            if (box) box.textContent = err.message; else toast(err.message, 'error');
+        }
+    },
     joinClan(id) { socialAction(() => cloud.joinClan(id), 'Joined the clan'); },
     leaveClan() { askConfirm('Leave your clan?', 'Your damage this week stays on its board.', 'Leave clan', () => socialAction(() => cloud.leaveClan(), 'You left the clan')); },
     /**
@@ -2205,6 +2225,28 @@ window.FI = {
             freshGame();
             openSignIn();
         } else toast('Logged out — playing locally', 'info');
+        render();
+    },
+    /** Settings' "Delete my account": the dialog asks for the password, and a wrong one stays in it, with why. */
+    openDeleteAccount() {
+        if (cloud.loggedIn) openModal(renderDeleteAccount(), 'deleteAccount');
+    },
+    async deleteAccount() {
+        const say = text => { const box = document.getElementById('delete-error'); if (box) box.textContent = text; };
+        const password = document.getElementById('delete-pass')?.value || '';
+        if (!password) return say('Enter your password.');
+        try { await cloud.deleteAccount(password); } catch (err) { return say(err.message); }
+        // gone from the server: this browser's copy of its game goes too, and nothing more is uploaded
+        cloudReady = false;
+        synced = false;
+        heldReport = null;
+        game.clearClanResult();
+        ui.cloudStatus = '';
+        ui.social = freshSocial();
+        closeModal();
+        freshGame();
+        if (SIGN_IN_REQUIRED) openSignIn();
+        toast('Your account was deleted', 'info');
         render();
     },
     /** Settings' "Sign out everywhere": every other device signed in to this account is signed out; this one stays. */

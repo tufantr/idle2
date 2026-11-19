@@ -1,0 +1,30 @@
+# The night's cleanup of old rows on the fantasyidle.com server (api/cleanup.js; DESIGN §3.17 says what goes and why it is safe).
+# Installed by deploy/vps/provision.sh; started by fantasyidle-cleanup.timer. A release from before the job has no such file: the
+# run is then skipped, not failed. A failure mails the owner.
+[Unit]
+Description=Fantasy Idle: the cleanup of old rows
+After=postgresql.service
+Wants=postgresql.service
+ConditionPathExists=/srv/fantasyidle/current/api/cleanup.js
+OnFailure=fantasyidle-cleanup-alert.service
+
+[Service]
+Type=oneshot
+User=fantasyidle
+Group=fantasyidle
+EnvironmentFile=/etc/fantasyidle/api.env
+WorkingDirectory=/srv/fantasyidle/current
+ExecStart=/usr/bin/node api/cleanup.js
+Nice=10
+# as the API's own service: it reads its release, talks to the database, and writes nothing to disk
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=400M

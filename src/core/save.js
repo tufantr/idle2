@@ -225,6 +225,14 @@ export class CloudClient {
         return data;
     }
 
+    /** "Delete my account": the password asked again, then everything goes on the server; this device is signed out and forgets the account. */
+    async deleteAccount(password) {
+        const data = await this.request('/account/delete', { method: 'POST', body: { password } });
+        this.setToken(null);
+        try { storage()?.removeItem(CLOUD_BASE_KEY); } catch { /* storage unavailable */ }
+        return data;
+    }
+
     /**
      * Returns { state, lastSaved } (state may be null for a fresh account). Time away is measured on
      * the server's clock: the save's timestamp is moved so that now − savedAt equals the time the
@@ -270,6 +278,8 @@ export class CloudClient {
     hallGive(room, resource, qty) { return this.request('/clan/hall/give', { method: 'POST', body: { room, resource, qty } }); }
     /** The clan's banner, its owner's to pick: a colour and an emblem its hall's stage has. */
     setClanBanner(colour, emblem) { return this.request('/clan/banner', { method: 'POST', body: { colour, emblem } }); }
+    /** The clan's description and "looking for" line, its owner's to write. */
+    setClanWords(description, lookingFor) { return this.request('/clan/words', { method: 'POST', body: { description, lookingFor } }); }
     /** A clan attack as it was fought: when the player struck (ms into the fight) and how long it lasted. */
     clanAttack({ strikes = [], ms, at, endless = false } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms, fightAt: at, ...(endless ? { endless: true } : {}) } }); }   // `at`: the fight's own mark, so a resend is never a second attack; `endless`: at the Endless Hydra
     /** The week's clan ranking: every clan in its division, and last week's crowns. */

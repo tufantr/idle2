@@ -17,7 +17,8 @@
 //                                                 # 'banner' the fight under a clan banner of ×2;
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
-//                                                 # and 'bannerpick' its banner picker; 'account'
+//                                                 # and 'bannerpick' its banner picker, 'clanwords'
+//                                                 # its owner's dialog for its words; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
 //                                                 # clans to find: the API is answered by the
@@ -128,6 +129,7 @@ const CLAN_SHOTS = {
     clanmembers: () => document.querySelector('.clan-members')?.scrollIntoView({ block: 'center' }),
     hallgive: () => { FI.openHallGive('forge'); FI.hallGivePick('runite_bar'); },
     bannerpick: () => { FI.openBannerPicker(); FI.bannerPick('colour', 'gold'); },
+    clanwords: () => FI.openClanWords(),
     // the hall at the Great Hall and the clan's cloak earned: the hero wears it, azure, in Settings' cloaks and in the fight
     clancloak: () => {
         FI.game().setClanHall({ clan: 7, rooms: { forge: 82800, stores: 82800, kitchen: 28800, apothecary: 28800, garden: 7200, library: 82800 }, stage: 2, colour: 'azure', emblem: 'griffin', cloak: true });
@@ -162,6 +164,8 @@ const CLAN_SHOTS = {
         FI.refreshSocial();
         await new Promise(resolve => setTimeout(resolve, 900));
     },
+    // Settings' "Delete my account": its dialog
+    deleteaccount: async () => { FI.switchTab('settings'); FI.openDeleteAccount(); },
     // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
     clancapped: async () => {
         document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
@@ -187,10 +191,10 @@ function clanApi() {
         given: { week: 4200, total: 26000 }, weekly: 10800, endsInMs: 3 * 864e5, cloak: false };
     let seq = 0;
     let shotMode = {};   // a shot's own answers (CLAN_SHOTS: `flagged` the account flagged), set by the shot and reset before each one
-    const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
+    const members = [['Tufan', true, 412, 1180, 26000, 4200, 0], ['Yarraksalih', false, 388, 1104, 31000, 10800, 0], ['Shadeofnight', false, 251, 870, 9800, 0, 3], ['Brightmoor', false, 96, 512, 0, 0, 34]];
     const answer = () => ({
         clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
-        members: members.map(([username, owner, bestStage, totalLevel, total, w]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, built: { total, week: w } })),
+        members: members.map(([username, owner, bestStage, totalLevel, total, w, seenDays]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, seenDays, built: { total, week: w } })),
         hall: { ...hall, builders: { forge: [{ username: 'Yarraksalih', work: 18000 }, { username: 'Tufan', work: 12500 }], library: [{ username: 'Tufan', work: 41000 }] },
             feed: [{ username: 'Yarraksalih', room: 'forge', resource: 'runite_bar', qty: 240, at: Date.now() - 36e5 }, { username: 'Tufan', room: 'library', resource: 'essence', qty: 4200, at: Date.now() - 72e5 },
                 { username: 'Shadeofnight', room: 'kitchen', resource: 'cooked_shark', qty: 180, at: Date.now() - 864e5 }] },
@@ -359,7 +363,7 @@ for (const viewport of VIEWPORTS) {
             await page.waitForTimeout(900);
             if (CLAN_SHOTS[tab]) { await page.evaluate(CLAN_SHOTS[tab]); await page.waitForTimeout(700); }
             else await page.evaluate(() => { document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' }); if (innerWidth < 900) window.scrollBy(0, -(document.querySelector('#sidebar')?.offsetHeight || 0) - 8); });
-            if (!['clancloak', 'clanfight', 'account', 'clanlist'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (!['clancloak', 'clanfight', 'account', 'deleteaccount', 'clanlist'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
             if (tab === 'clanlist' && !(await page.$('#clan-search'))) problems.push(`no list of clans at ${viewport.width}px`);
             if (tab === 'account' && !(await page.$('.flag-line'))) problems.push(`no flagged line in Settings at ${viewport.width}px`);
             if (tab === 'clancapped' && !(await page.$('.celebration .cel-note'))) problems.push(`no card for a held-back attack at ${viewport.width}px`);
