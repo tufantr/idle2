@@ -418,12 +418,12 @@ function createMemoryStore() {
         },
         async teamClan(id, name) {
             const same = n => name !== null && n.toLowerCase() === String(name).toLowerCase();
-            const c = db.clans.filter(x => x.id === id || same(x.name)).sort((a, b) => a.id - b.id)[0];
+            const c = db.clans.filter(x => x.id === id || same(x.name)).sort((a, b) => (b.name === name) - (a.name === name) || a.id - b.id)[0];
             if (c) {
                 const owner = db.users.find(u => u.id === c.ownerId);
                 return { id: c.id, name: c.name, tag: c.tag, description: c.description || '', lookingFor: c.lookingFor || '', open: true, owner: owner?.username || null, ownerEmail: owner?.email || null };
             }
-            const k = db.rankings.filter(r => r.clanId === id || same(r.name)).sort((a, b) => (a.week < b.week ? 1 : a.week > b.week ? -1 : 0))[0];
+            const k = db.rankings.filter(r => r.clanId === id || same(r.name)).sort((a, b) => (b.name === name) - (a.name === name) || (a.week < b.week ? 1 : a.week > b.week ? -1 : 0) || a.clanId - b.clanId)[0];
             return k ? { id: k.clanId, name: k.name, tag: k.tag, description: '', lookingFor: '', open: false, owner: null, ownerEmail: null } : null;
         },
         async teamEditClan({ clanId, name, tag, description, lookingFor, action, reason, oldWords, newWords, now }) {

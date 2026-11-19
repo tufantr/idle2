@@ -87,7 +87,8 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
         return 0;
     }
     if (command === 'log') {
-        for (const e of await store.teamLog(Math.min(1000, Number(target) || 50))) print(`#${e.id} ${new Date(e.at).toISOString().slice(0, 16)} ${e.action} ${e.kind} ${e.subject}: ${e.reason}\n    was ${e.oldWords}\n    now ${e.newWords}`);
+        const asked = Math.floor(Number(target));
+        for (const e of await store.teamLog(asked > 0 ? Math.min(1000, asked) : 50)) print(`#${e.id} ${new Date(e.at).toISOString().slice(0, 16)} ${e.action} ${e.kind} ${e.subject}: ${e.reason}\n    was ${e.oldWords}\n    now ${e.newWords}`);
         return 0;
     }
     if (command === 'handovers') {

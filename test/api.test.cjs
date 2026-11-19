@@ -1349,6 +1349,21 @@ test("the team's tool clears and renames a clan, its kept rankings too, with a l
     assert.deepEqual((await data.getRanking('2026-W01')).filter(r => r.clanId === clanId).map(r => r.name), ['Closed Clan']);
 });
 
+test("the team's tool takes a clan named exactly so before one that differs in case; its log takes any count", async () => {
+    const { team } = require('../api/team.js');
+    const data = memory || require('../api/store.js');
+    const lines = [];
+    const run = (...argv) => team(argv, { store: data, send: async () => {}, now: clock, print: l => lines.push(l) });
+    const first = await (await post('/clans', { name: 'Twin Band', tag: 'TWN', description: 'the first' }, await register('twin_first'))).json();
+    const second = await (await post('/clans', { name: 'TWIN BAND', tag: 'TWB', description: 'the second' }, await register('twin_second'))).json();
+    const wordsOf = async id => (await data.getClan(id)).description;
+    assert.equal(await run('clear', 'TWIN BAND', '--reason', 'r', '--no-mail'), 0);
+    assert.deepEqual([await wordsOf(first.clanId), await wordsOf(second.clanId)], ['the first', ''], 'the one spelled so');
+    assert.equal(await run('clear', 'twin band', '--reason', 'r', '--no-mail'), 0);
+    assert.equal(await wordsOf(first.clanId), '', 'neither spelled so: the older');
+    for (const count of ['2.5', '-1', 'many']) assert.equal(await run('log', count), 0, count);
+});
+
 test("the team's tool can leave a copy of what it clears out of its log: what must not be kept", async () => {
     const { team } = require('../api/team.js');
     const data = memory || require('../api/store.js');

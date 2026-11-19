@@ -997,18 +997,23 @@ async function teamClans(search = '') {
 }
 
 /**
- * One clan, by its number or by its exact name in any case: { id, name, tag, description, lookingFor, open, owner, ownerEmail }.
+ * One clan, by its number or by its name in any case (the one spelled exactly so first: names differing in case are two clans):
+ * { id, name, tag, description, lookingFor, open, owner, ownerEmail }.
  * A closed clan is known by the weeks' rankings it left (`open` false, no words, no owner). Null if neither knows it.
  */
 async function teamClan(id, name) {
     const { rows } = await sql`
         SELECT c.id, c.name, c.tag, c.description, c.looking_for, o.username AS owner, o.email AS owner_email
         FROM clans c LEFT JOIN users o ON o.id = c.owner_id
-        WHERE c.id = ${id}::int OR lower(c.name) = lower(${name}::text) ORDER BY c.id LIMIT 1
+        WHERE c.id = ${id}::int OR lower(c.name) = lower(${name}::text)
+        ORDER BY (c.name = ${name}::text) IS TRUE DESC, c.id LIMIT 1
     `;
     const r = rows[0];
     if (r) return { id: r.id, name: r.name, tag: r.tag, description: r.description || '', lookingFor: r.looking_for || '', open: true, owner: r.owner || null, ownerEmail: r.owner_email || null };
-    const kept = await sql`SELECT clan_id, name, tag FROM clan_rankings WHERE clan_id = ${id}::int OR lower(name) = lower(${name}::text) ORDER BY week DESC LIMIT 1`;
+    const kept = await sql`
+        SELECT clan_id, name, tag FROM clan_rankings WHERE clan_id = ${id}::int OR lower(name) = lower(${name}::text)
+        ORDER BY (name = ${name}::text) IS TRUE DESC, week DESC, clan_id LIMIT 1
+    `;
     const k = kept.rows[0];
     return k ? { id: k.clan_id, name: k.name, tag: k.tag, description: '', lookingFor: '', open: false, owner: null, ownerEmail: null } : null;
 }
