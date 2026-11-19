@@ -4,7 +4,7 @@
 #   bash /srv/fantasyidle-staging/current/deploy/vps/rehearse.sh
 #   ... --no-data                  over the data staging holds now, no refresh
 #   ... --allow-number-changes     a landing meant to move the server's numbers: they are reported, not failed
-#   ... --old <dir>                the version to compare with (default: the game live before the patch)
+#   ... --old <dir>                the version to compare with (default: the release live now)
 # On a development machine, made-up accounts (test/helpers/rehearse-fixtures.mjs) and the API tests on their in-memory store:
 #   bash deploy/vps/rehearse.sh --fixtures <dir> --memory --old <checkout of the old version>
 # (The browsers' part runs on the owner's Mac, against the same staged release: node tools/rehearse-browsers.mjs.)
@@ -15,7 +15,7 @@
 set -uo pipefail
 HERE=$(dirname "$(readlink -f "$0")")
 REL=$(dirname "$(dirname "$HERE")")
-OLD=/srv/fantasyidle/saved/8a53d4d
+OLD=$(readlink -f /srv/fantasyidle/current 2>/dev/null || echo /srv/fantasyidle/current)
 ENV_FILE=/etc/fantasyidle/api-staging.env
 REFRESH=1 MEMORY=0 FIXTURES='' NUMBERS=''
 usage() { echo "usage: rehearse.sh [--no-data] [--allow-number-changes] [--old <dir>] [--env-file <file>] [--fixtures <dir>] [--memory]"; exit 2; }

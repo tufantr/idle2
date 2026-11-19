@@ -169,6 +169,8 @@ function switchesOn(save) {
     return s.devUnlockAll === true || (typeof s.forceEvent === 'string' && !!s.forceEvent) ? ['developer switches on'] : [];
 }
 
+const FROM_THE_SAVE = /laurels than weeks|Trial tiers beyond|Trial past the best stage|attack beyond/;
+
 /**
  * The new rules over one account, for the account's stored numbers as they stand (`stored`: the last upload again, whose
  * growth the day's window still shows) and for its save uploaded again now (`next`).
@@ -180,7 +182,9 @@ export function flagCheck(account, tree, rules, now, seed = 1) {
     const out = { reasons: new Set(), storedReview: [], nextReview: [], unreadable: false };
     if (metrics) {
         const stored = check(metrics.peaks, metrics, account.lastSaved);
-        stored.flags.forEach(r => out.reasons.add(r));
+        // (only growth is judged from the stored numbers: a figure the save itself decides, such as its laurels against its
+        // weeks, is worked out again from the save below, since a stored one can date from before a fix to its sum)
+        stored.flags.filter(r => account.saveText === null || !FROM_THE_SAVE.test(r)).forEach(r => out.reasons.add(r));
         out.storedReview = stored.review.map(g => g.key);
     }
     const save = account.saveText === null ? {} : parseJson(account.saveText);

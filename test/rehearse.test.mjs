@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 import { FIXTURE_NOW, identitiesOf, writeFixtures } from './helpers/rehearse-fixtures.mjs';
 import { bothWays, databaseUrlFrom, figureOf, FIGURE_NAMES, formatChecks, loadServerRules, loadTree, lostPaths, parseExpected, readDatabaseAccounts, readFixtureAccounts, runChecks, suiteResult } from '../deploy/vps/rehearse.mjs';
 
+import { flagCheck, readFixtureAccounts } from '../deploy/vps/rehearse.mjs';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const OLD_VERSION = 'pre-patch-8a53d4d';
@@ -83,6 +85,18 @@ test('an account the new rules would newly flag fails the rehearsal, and is coun
     assert.deepEqual(flags.newReasons, { 'total XP beyond any possible save': 1 });
     assert.ok(verdict.includes('accounts newly flagged'));
     assertNoIdentity(r.stdout, accounts);
+});
+
+test('a figure the save itself decides is judged from the save: a stale stored one flags nobody', async () => {
+    // (on the real data: one account's stored laurel figure dated from before a fix to its sum, and its save was fine)
+    const dir = join(work, 'stale');
+    writeFixtures(dir, FIXTURE_NOW);
+    const account = readFixtureAccounts(dir).find(a => a.saveText && a.metricsText);
+    const stale = { ...account, metricsText: JSON.stringify({ ...JSON.parse(account.metricsText), laurelsBeyondWeeks: 1 }) };
+    const [tree, rules] = [await loadTree(ROOT), loadServerRules(ROOT)];
+    const reason = 'more laurels than weeks played';
+    assert.equal(flagCheck(stale, tree, rules, FIXTURE_NOW).reasons.has(reason), false);
+    assert.equal(flagCheck({ ...stale, saveText: null }, tree, rules, FIXTURE_NOW).reasons.has(reason), true, 'with no save, the stored figure is all there is');
 });
 
 test('a save whose figures the new code changes or drops on its way back is caught', needsOld, () => {
