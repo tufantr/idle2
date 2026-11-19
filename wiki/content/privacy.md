@@ -78,12 +78,12 @@ The game doesn't ask your age, and our server doesn't record your country or whe
 
 ### Kept outside the database
 
-- **Backups.** Every night at 03:30 UTC a copy of the whole database is made on the same server, readable only by the database's own system account, and kept for 14 days. An encrypted copy then goes to our Google Drive, which keeps the last 30 nights and the first copy of each month for a year. We also keep backups of the whole project, with encrypted copies of the database in them, on the same Drive and on our own computer. Those have no end date yet.
+- **Backups.** Every night at 03:30 UTC a copy of the whole database is made on the same server, readable only by the database's own system account, and kept for 14 days. An encrypted copy then goes to our Google Drive, which keeps the last 30 nights and the first copy of each month for a year. We also keep backups of the whole project on the same Drive, with encrypted copies of the database in them, and an encrypted copy of the database on our own computer. Those have no end date yet.
 - **A test copy.** To try changes before they reach you, we run a private copy of the site on the same server, behind a private link, with a copy of the database from a night's backup. It sends no mail, and it is replaced when we refresh it.
 - **The web server's log.** Each visit to the game or this wiki is logged with your internet address, the time, the page and your browser's name. The log is cleared after about two weeks.
 - **The game server's own log** holds error messages and each night's cleanup counts, not a record of each visit. It is kept for 30 days.
 - **Cloudflare** carries everything between your browser and our server, so it handles your internet address and what your browser sends and receives. Mail to our address passes through it too. Cloudflare's own privacy policy covers what it keeps.
-- **Resend** gets your email address, your username (each mail greets you by name) and the mail's words, the code or the note, for each mail it sends, and keeps a log of each mail for 30 days.
+- **Resend** gets your email address, your username (each mail greets you by name) and the mail's words, the code or the note, for each mail it sends, and keeps a log of each mail for 30 days. It also carries the weekly review list to our team, with the usernames on it.
 - **Mail you send us** reaches our team's mailbox, with your address and what you wrote, and stays there as long as we need it to answer you and to keep a record of what we decided.
 
 ### Kept in your browser
