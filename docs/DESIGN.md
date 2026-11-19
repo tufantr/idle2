@@ -2133,6 +2133,30 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
   signed in, the tool answering the API.
 
+### 3.36 Readouts: sources of power
+
+A readout that changes no number of the game (R17 of the research loop's ranking; P-022).
+
+- **Sources of power** (`src/systems/powerledger.js`; `renderPowerModal` in `src/ui/render.js`). From the first prestige
+  (disclosure `power_sources`) the hero's panel in Inventory has a small **Sources** button beside his attack, defence and
+  health. It opens a dialog on the armory's painting: each source at work on him now, biggest first, with its share and a
+  bar; the row's tip (a tap on a phone) says what it multiplies and what that comes to in stages. Its rules are behind the
+  dialog's "?" (`FEATURES.power`), and a "?" pressed in a dialog now stands over it (`standOver` in `src/main.js`, as a
+  question asked inside a dialog does) instead of waiting behind it.
+- **What a share is.** `powerLedger(state)` is the reckoning of `docs/research_notes/endless-late-game.md`: for each source
+  the hero's attack, defence and health over what they would be without it, in stages at the two walls (attack at the
+  boss's clock: `ln(x attack) / ln(monster health growth)`; defence and health at the blow:
+  `ln(x defence × x health) / (2 ln(monster attack growth))`, both at his best stage; gear counted from nothing, its defence
+  from one point). A source's share is its stages at both walls over all the sources' together; a part of a source (the
+  weapon, the forge's levels, records) is listed by the tool and counted inside its source. It is worked out when the
+  dialog opens, on copies of the few fields each source touches, and only what works on him now is listed: no potion
+  without a dose running, no camp after a prestige. Crits, attack speed, dodge and lifesteal are outside it, as in the tool.
+- **The same arithmetic in the tool.** `tools/ledger.mjs` calls `powerLedger`. By default it first makes the hero a fresh
+  run at his wall, as it always did; `--now` leaves him as saved, which is what the panel shows, and every line now has a
+  share. The ledger gained the two sources the tool lacked, the War Tree and the clan banner (Combat's cape is inside the
+  combat level). `test/powerledger.test.mjs` checks that all the sources together are all of his power (without them he has
+  his bare hands), and that the panel's rows equal the tool's on a hero with everything and on one the simulator played.
+
 ## 4. The modifier pipeline
 
 `collectModifiers(state)` in `src/core/modifiers.js` gathers every bonus — gear and affixes, combat
@@ -2646,6 +2670,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
                       · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
+                      · powerledger (each source's share of the hero's strength, for the panel and tools/ledger.mjs, §3.36)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·

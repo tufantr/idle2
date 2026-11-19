@@ -6,7 +6,8 @@
 //   node tools/shots.mjs                          # the default tabs
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
 //                                                 # 'battle' is the fight filling the screen; 'map' and
-//                                                 # 'prestige' are those dialogs over the game; 'anvil'
+//                                                 # 'prestige' are those dialogs over the game, 'power'
+//                                                 # the hero's Sources of power; 'anvil'
 //                                                 # is Smithing's anvil step; 'trials' is the prestige
 //                                                 # dialog with Trials cleared and one picked, 'pact'
 //                                                 # the same deep, rungs cleared and a Pact of two
@@ -83,6 +84,14 @@ const STEPS = {
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
     map: () => { FI.switchTab('combat'); FI.openMap(); },
+    // Sources of power (the hero's panel in Inventory), with a potion, a camp and a clan banner at work
+    power: async () => {
+        const { isoWeek } = await import('/src/data/social.js');
+        const g = FI.game(); const s = g.state;
+        s.camp = { whetstone: 22, armory: 20, hearth: 18 }; s.combat.potion = 'combat_potion_3'; s.combat.potionMs = 60000;
+        g.setClanBanner({ week: isoWeek(Date.now()), kills: 3 }); g.recompute();
+        FI.switchTab('inventory'); FI.openPower();
+    },
     prestige: () => { FI.game().state.prestige.runStartedAt = 0; FI.openPrestige(); },
     ascend: () => {
         const g = FI.game(); const s = g.state;

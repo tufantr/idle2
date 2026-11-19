@@ -2453,6 +2453,21 @@ button.mastery-total { font: inherit; font-size: 0.75rem; font-weight: 700; box-
 
 /* the armory's second line of numbers; shop goods with their picture; drawers */
 .doll-stats.minor { margin-top: 0.45rem; padding-top: 0; border-top: 0; font-size: 0.74rem; }
+/* where the power comes from (render.js renderPowerModal): its door beside the hero's numbers, and each source's share */
+.power-open { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 24px; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; color: var(--heading); }
+.power-modal .modal-header { margin-bottom: 0.7rem; padding-bottom: 0.6rem; }
+.power-totals { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1rem; margin-bottom: 0.8rem; font-size: 0.85rem; color: var(--text-muted); }
+.power-totals b { color: var(--text-main); font-variant-numeric: tabular-nums; }
+.power-list { display: flex; flex-direction: column; gap: 0.3rem; list-style: none; }
+.power-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-rows: auto 6px; column-gap: 0.55rem; row-gap: 0.15rem; align-items: center; padding: 0.3rem 0.55rem 0.4rem 0.3rem; border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(33, 26, 19, 0.82), rgba(18, 13, 9, 0.88)); cursor: help; }
+.power-row:hover { border-color: var(--line-strong); }
+.power-art { grid-row: 1 / 3; display: grid; place-items: center; width: 36px; height: 36px; overflow: hidden; }
+.power-art .spr { flex: none; }
+.power-art .coin-dot { width: 24px; height: 24px; }
+.power-name { min-width: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-main); overflow-wrap: anywhere; }
+.power-share { font-size: 0.85rem; color: var(--heading); font-variant-numeric: tabular-nums; }
+.power-bar { grid-column: 2 / 4; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(0, 0, 0, 0.55); }
+.power-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #b8862e, #fcd34d); }
 .shop-item { justify-content: flex-start; }
 .shop-item-info { flex: 1; min-width: 0; }
 .shop-art { flex: 0 0 48px; height: 48px; border-radius: 12px; }

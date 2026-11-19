@@ -131,6 +131,12 @@ export const FEATURES = {
             `Each level felled raises the clan banner for every member, fought or not, until the week ends: ×${CLAN_BANNER[1]} attack, defence and health at the first, ×${CLAN_BANNER[CLAN_BANNER.length - 1]} at the last. The more members fight, the further it goes.`,
             `Every week the clans are ranked. The levels felled put a clan in its division (${CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below'}`).join(', ')}), and ${ENDLESS.name.replace(/^The /, 'the ')} decides inside it: awake from Saturday 00:00 UTC to the Monday reset, its heads grow back, so it never falls.`,
             `Each member who was in the clan when the week began has ${ENDLESS.attacks} fights at it, and the deepest counts: how many of its levels the hit breaks through, each a fifth tougher than the last, so a far stronger hero goes only somewhat deeper. A clan's depth is its best ${ENDLESS.counted} members' together, and the top three of each division wear a crown through the next week.`] },
+    // behind the "?" of the hero's power panel (ui/render.js renderPowerModal; systems/powerledger.js)
+    power: { name: 'Sources of power', art: 'armory', focus: 'center 62%', icon: 'item/Weapon/6', blurb: "What each source adds to your hero's attack, defence and health, right now.",
+        points: ["Each share is that source's part of how far your hero can climb: its attack counted in the stages it is worth against a boss's clock, its defence and health in the stages they are worth against a boss's blow.",
+            'Sources multiply one another, so a share is not a share of the numbers on top: gear at 40% can be a hundred times your attack.',
+            'Only what works on him right now is listed: a potion while a dose runs, the camp until your next prestige, the clan banner until Monday.',
+            'Crits, attack speed, dodge and lifesteal are left out: they shape a fight, not these three numbers. Tap a row to see what it multiplies.'] },
     settings: { name: 'Settings', icon: 'gear', blurb: 'Saves, sound and motion.', points: [] },
     // behind the "?" of Settings' line while the account is flagged (the server's check, api/index.js; the 1% is its FLAGGED_ATTACK_SHARE)
     flagged: { name: 'A flagged account', icon: 'gear', blurb: "One of your saves showed numbers the game's check doesn't allow.",
@@ -185,7 +191,7 @@ export const paintStyle = (name, focus = 'center 70%') => `--art:url(assets/pain
 // rules in a few lines, the page says all of them, with the numbers (test/wiki.test.mjs checks every one lands).
 export const WIKI_PAGES = {
     combat: '/combat', camp: '/camp', dungeons: '/dungeons', titan: '/titan', inventory: '/equipment', shop: '/shop', charms: '/shop#charms',
-    prestige: '/prestige', ascension: '/ascension', trials: '/trials', talents: '/talents', mastery: '/mastery', achievements: '/medals',
+    prestige: '/prestige', ascension: '/ascension', trials: '/trials', talents: '/talents', mastery: '/mastery', achievements: '/medals', power: '/combat#sources-of-power',
     events: '/events', clan: '/clans', clanhall: '/clans#the-clan-hall', minigames: '/mini-games',
     flagged: '/faq#settings-says-my-account-is-flagged-what-does-that-mean',
     ...Object.fromEntries(Object.keys(SKILLS).filter(id => id !== 'combat').map(id => [id, `/skills/${id}`]))

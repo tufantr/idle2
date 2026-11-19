@@ -45,6 +45,15 @@ Each of your hero's hits deals his attack, give or take a little, and a critical
 
 {{table(['Your defence', 'Of its hit you take #'], [['none', 0], ['half its attack', 0.5], ['equal to its attack', 1], ['three times its attack', 3], [`${fmt(MAX_MITIGATION / (1 - MAX_MITIGATION))} times its attack or more`, MAX_MITIGATION / (1 - MAX_MITIGATION)]].map(([label, k]) => [label, pct(enemyDamage(1e6, k * 1e6) / 1e6, 0)]), { sort: false })}}
 
+## Sources of power
+
+From your first [[Prestige|prestige]] the hero's panel on the Inventory tab has a **Sources** button beside his attack, defence and health. It lists what makes him as strong as he is right now, the biggest first, each with its share of his strength:
+
+- **A share counts stages:** how many stages the source's attack is worth against a boss's clock, and its defence and health against a boss's blow, at the monsters' growth where his best stage is.
+- **Sources multiply one another,** so a share is not a share of the numbers themselves: gear at 40% can be a hundred times his attack.
+- **Only what works on him now is listed:** a potion while a dose runs, the [[Camp|camp]] until your next prestige, the clan banner until Monday.
+- Tap a row (or point at it) to see what it multiplies. Crits, attack speed, dodge and lifesteal are left out: they shape a fight, not these three numbers.
+
 ## Attack speed
 
 Your hero attacks every {{fmt(BASE.baseAttackInterval / 1000)}} seconds. Attack speed bonuses divide that time: the Rogue perk, gear bonuses, unique items, the Waterfall obstacle of [[/skills/agility|Agility]] and Focus. The bonus stops at +{{pct(BASE.caps.attackSpeed, 0)}}, an attack every {{fmt(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed) / 1000)}} seconds: past it more speed adds nothing. Once your hero is there, the Inventory marks the time between his attacks "cap", and a piece of gear whose speed adds nothing gets the same mark beside its bonus.

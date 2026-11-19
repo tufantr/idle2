@@ -57,6 +57,7 @@ import { trialBoard, trialsOpen, activeTrials, pactSize } from '../systems/trial
 import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
+import { powerLedger, powerShares } from '../systems/powerledger.js';
 import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
@@ -1466,6 +1467,7 @@ export function renderInventory(game, ui) {
                 ${stat(ATK_ICON, fmt(d.atk), 'attack', 'Attack: the damage of a hit, before the monster\'s defence')}
                 ${stat(DEF_ICON, fmt(d.def), 'defence', 'Defence: taken off every hit you receive')}
                 ${stat(glyph('heart'), fmt(d.maxHp), 'health', `Health: from your level, your armour (one for every ${Math.round(1 / BASE.hpPerDef)} defence) and your health bonuses`)}
+                ${seen(state, 'power_sources') ? `<button class="power-open" onclick="FI.openPower()" title="Where your hero's power comes from">${glyph('spark')} Sources</button>` : ''}
             </div>
             <div class="doll-stats minor">
                 <span title="Critical hits: how often, and how much harder they hit">${glyph('crit')} ${pct(d.critChance, 1)} crit × ${d.critDmg.toFixed(2)}</span>
@@ -1553,6 +1555,62 @@ function perkPurse(state) {
  * Perks in a window, opened from the SP chip on any screen, the prestige strip or the fight's dock; once Combat has passed
  * 99, the War Tree beside them (`view` 'talents': data/talents.js), with the talent `pick`ed and, on a phone, the `tree` shown.
  */
+/** A multiplier in few digits: ×1.32, ×12.4, ×457, ×1.20M. */
+const timesWord = x => `×${x >= 1000 ? fmt(x) : x >= 100 ? Math.round(x) : x.toFixed(x >= 10 ? 1 : 2)}`;
+/** A source's picture in the power panel. */
+function powerArt(state, id) {
+    const pic = key => sprite(key, { scale: 1 });
+    switch (id) {
+        case 'gear': return pic(itemSpriteKey(state.equipped.Body || state.equipped.Weapon) || 'item/Body/1');
+        case 'tokens': return '<i class="coin-dot tokens" aria-hidden="true"></i>';
+        case 'legacy': return '<i class="coin-dot legacy" aria-hidden="true"></i>';
+        case 'camp': return pic('campfire');
+        case 'banner': return pic(FEATURES.clan.icon);
+        case 'potion': return pic(`res/${state.combat.mode === 'dungeon' ? state.combat.dungeonPotion : state.combat.potion}`);
+        case 'level': return pic(FEATURES.combat.icon);
+        case 'perks': return pic('perk/knight');
+        case 'talents': return pic(FEATURES.talents.icon);
+        case 'medals': return pic('crown');
+        case 'pets': return pic('pet/fang');
+        case 'titans': return pic(FEATURES.titan.icon);
+        case 'dungeons': return pic(FEATURES.dungeons.icon);
+        case 'seals': return pic(FEATURES.achievements.icon);
+        default: return pic('obstacle/rope_swing');
+    }
+}
+/** What a source does, in the tip of its row: what it multiplies, what it comes to in stages, and what it is made of. */
+function powerTip(p, ledger) {
+    const gear = p.id === 'gear';
+    const what = [p.atk >= 1.005 && `${timesWord(p.atk)} attack`, (gear ? p.def > 1 : p.def >= 1.005) && (gear ? 'all of your defence' : `${timesWord(p.def)} defence`), p.hp >= 1.005 && `${timesWord(p.hp)} health`].filter(Boolean).join(', ');
+    const stages = n => `${fmt(n)} stage${n === 1 ? '' : 's'}`;
+    const [boss, blow] = [Math.round(p.boss), Math.round(p.blow)];
+    const walls = boss > 0 && blow > 0 ? `About ${stages(boss)} at a boss's clock and ${fmt(blow)} at its blow`
+        : boss > 0 ? `About ${stages(boss)} at a boss's clock` : blow > 0 ? `About ${stages(blow)} at a boss's blow` : 'Under a stage';
+    const facts = { tokens: `${fmt(ledger.tokens)} tokens, each worth ${timesWord(ledger.records.mult)} by your ${fmt(ledger.records.count)} records` }[p.id]
+        || (['camp', 'legacy', 'banner', 'level', 'talents', 'medals', 'titans'].includes(p.id) ? p.note : '');
+    return `${what}. ${walls}${facts ? `. ${facts.charAt(0).toUpperCase()}${facts.slice(1)}` : ''}.`;
+}
+/**
+ * Where the hero's power comes from: each source at work on him with its share of his strength (systems/powerledger.js, the
+ * reckoning tools/ledger.mjs prints), biggest first, what it multiplies in a tip. Worked out as the panel opens.
+ */
+export function renderPowerModal(game) {
+    const state = game.state;
+    const ledger = powerLedger(state);
+    const shares = powerShares(ledger);
+    const percent = x => (x < 0.01 ? '&lt;1%' : `${Math.round(x * 100)}%`);
+    const rows = shares.map(p => {
+        const name = p.id === 'potion' ? p.note : p.name;
+        return `<li class="power-row" ${tipAttrs(name, powerTip(p, ledger))}><span class="power-art">${powerArt(state, p.id)}</span><span class="power-name">${esc(name)}</span><b class="power-share">${percent(p.share)}</b><span class="power-bar" aria-hidden="true"><i style="width:${(p.share * 100).toFixed(1)}%"></i></span></li>`;
+    }).join('');
+    return `<div class="modal-content narrow power-modal ${painted('armory', 'center 62%')}">
+        <div class="modal-header">Sources of power ${aboutButton('power')}</div>
+        <div class="power-totals"><span>${ATK_ICON} <b>${fmt(ledger.total.atk)}</b></span><span>${DEF_ICON} <b>${fmt(ledger.total.def)}</b></span><span>${glyph('heart')} <b>${fmt(ledger.total.hp)}</b></span></div>
+        ${rows ? `<ul class="power-list">${rows}</ul>` : '<p class="about-blurb">Only his own two hands, so far.</p>'}
+        <div class="modal-footer"><button class="modal-btn btn-confirm" data-autofocus onclick="FI.closeModal()">Done</button></div>
+    </div>`;
+}
+
 export function renderPerksModal(game, { view = 'perks', pick = null, tree = null } = {}) {
     const state = game.state;
     const war = view === 'talents' && seen(state, 'talents');
