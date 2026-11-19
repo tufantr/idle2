@@ -2168,7 +2168,7 @@ body.at-rest, body.at-rest *, body.at-rest *::before, body.at-rest *::after { tr
 .opt-group { min-width: 0; border: 0; }
 .opt-group legend { margin-bottom: 0.3rem; font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-color); }
 .opt-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 0.6rem; margin: 0.15rem 0 0.35rem; font-size: 0.8rem; }
-.opt-seg { margin: 0; padding: 3px; flex-wrap: wrap; }
+.seg.opt-seg { margin: 0; padding: 3px; flex-wrap: wrap; }
 .opt-seg .seg-btn { flex: 1 0 auto; padding: 0.28rem 0.6rem; font-size: 0.76rem; min-height: 1.6rem; }
 .drawer.opt-drawer { margin: 0.1rem 0 0.2rem 1.65rem; }
 .opt-drawer summary { padding: 0.35rem 0.3rem 0.35rem 0; }   /* a finger's target, 24 px at least */
