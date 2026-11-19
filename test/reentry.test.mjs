@@ -10,7 +10,7 @@ import { seen, evaluateDisclosures } from '../src/systems/disclosure.js';
 import { eventStatus } from '../src/systems/events.js';
 import { weeklyTrialAt } from '../src/data/trials.js';
 import { isoWeek, CLAN_BANNER } from '../src/data/social.js';
-import { renderReentry, backgroundLine } from '../src/ui/reentry.js';
+import { renderReentry, backgroundLine, renderCatchUp } from '../src/ui/reentry.js';
 import { gapTelling, BACKGROUND_REPORT_MS } from '../src/systems/reentry.js';
 
 rng.setSource(seededRandom(21));
@@ -139,4 +139,16 @@ test('a gap told: the report in view, a toast for a short one in a tab that was 
     assert.equal(gapTelling(away(BACKGROUND_REPORT_MS - 1), { background: true }), 'toast');
     assert.equal(gapTelling(away(BACKGROUND_REPORT_MS), { background: true }), 'report', 'an hour or more: the report after all');
     assert.equal(gapTelling(away(3 * BACKGROUND_REPORT_MS), { background: true }), 'report');
+});
+
+test('the bar a day away is replayed behind says what it is, and that the save is on its way when it is', () => {
+    const { state } = new Game(null, SATURDAY);
+    const bar = renderCatchUp(state);
+    assert.match(bar, /role="progressbar"/);
+    assert.match(bar, /aria-label="Time away replayed"/);
+    assert.match(bar, /Catching up/);
+    assert.doesNotMatch(bar, /Loading your save/);
+    const waiting = renderCatchUp(state, { waiting: true });
+    assert.match(waiting, /cu-bar waiting/);
+    assert.match(waiting, /Loading your save/);
 });
