@@ -266,14 +266,14 @@ export function renderHeader(game, ui, cloud) {
     const greatNext = cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1;   // the crate waiting is a great one
     const daily = banked > 0
         ? `<button class="daily-btn ready${greatNext ? ' great' : ''}" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">${greatNext ? 'Great crate' : 'Daily crate'}</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
-        : '';
+        : `<button class="daily-btn" hidden aria-hidden="true" tabindex="-1">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">Daily crate</span></button>`;   // its place in the bar, kept for when one ripens (ui/topbar.js)
     const fireLevel = skillLevel(state, 'firemaking');
     const bonfirePill = bonfireLit(state, game.now)
         ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(fireLevel) * 100)}% XP in every skill, and a ${Math.round(bonfireDouble(fireLevel) * 100)}% chance of a double in every one that makes something, for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} <span class="pill-long">+${Math.round(bonfireBonus(fireLevel) * 100)}% XP · ${Math.round(bonfireDouble(fireLevel) * 100)}% doubles · </span>${duration(state.bonfire.until - game.now)}</span>`   // on a phone, the time it has left (as the event's pill), the bonus in its title
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')
-        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></button>`
+        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-text"><span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></span></button>`
         : '';
     const focusPill = game.derived.focused
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
@@ -282,13 +282,13 @@ export function renderHeader(game, ui, cloud) {
     const here = ui.tab === fightTab(game, ui) || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
     let status = '';
     if (action) {
-        if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</button>`;
+        if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} <span class="pill-text">${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</span></button>`;
     } else if (state.combat.active) {
-        if (ui.tab !== fightTab(game, ui)) status = `<button class="status-pill fighting" onclick="FI.switchTab('${fightTab(game, ui)}')">${tabIcon(fightTab(game, ui), 0.625)} ${esc(fightingWhere(state))}</button>`;
+        if (ui.tab !== fightTab(game, ui)) status = `<button class="status-pill fighting" onclick="FI.switchTab('${fightTab(game, ui)}')">${tabIcon(fightTab(game, ui), 0.625)} <span class="pill-text">${esc(fightingWhere(state))}</span></button>`;
     } else if (!here) {
         status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }
-    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} ${esc(cloud.username || 'signed in')}</span>`
+    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} <span class="cloud-name">${esc(cloud.username || 'signed in')}</span></span>`
         : `<button class="cloud-pill local" onclick="FI.openAuth()" aria-label="Guest: sign in or make an account" title="Playing as a guest: this game is kept in this browser only">${ICON_CLOUD_UP}<span class="cloud-word">Guest</span></button>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>`;
@@ -305,8 +305,10 @@ export function renderHeader(game, ui, cloud) {
     return `
         <div class="header-row">
             ${menu}
-            <div class="chips">${chips.join('')}</div>
-            <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
+            <div class="header-main">
+                <div class="chips">${chips.join('')}</div>
+                <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
+            </div>
             <div class="header-right">${update}${daily}${screen}${mute}${user}</div>
         </div>`;
 }

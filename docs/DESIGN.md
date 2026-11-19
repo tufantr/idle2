@@ -1483,6 +1483,16 @@ needs another screen: fight, spend, prestige and fight on.
   the mode. "Full screen" means the game fills the browser's window. It does not ask the browser
   for its own full screen: that was tried and taken out, because its button read as the way *out*
   of the full-screen fight, and on a Mac the system menu bar slides over the top bar there.
+- **The top bar keeps its height while the game is played** (November 2026, a player's report: a nearly full row flipped
+  between one line and two as the bonfire's countdown ticked, and the page moved about 38 px). The pills have a slot of their
+  own (`.pills`: one line, its long words folding away first, then the status pill when others need the room), so what comes
+  and goes in it moves nothing; a slot that doesn't fit beside the purse goes under it with its line kept. The rest is
+  `src/ui/topbar.js`: for each window width and each way the bar is shown, once the page has settled, it lays the bar out as
+  it will be at its fullest (the gold wider than it reads for long, another figure two digits longer, the crate in its place
+  if none is ripe), takes the first of its layouts with the fewest lines (`LAYOUTS`: the buttons' words folded, then the
+  purse's names, then the purse across the bar with the pills beside the buttons), and holds that height (`min-height`)
+  until the window's width changes. `tools/topbar.mjs` sweeps 700 to 2,000 px in Chromium, Firefox and WebKit and fails on any
+  change of height, a cut-off buff pill or sideways scroll.
 - **The perks window is everywhere skill points are.** The SP chip in the header opens it on any
   screen, and so do Perks buttons beside Prestige (the fight's dock, the combat tab's prestige strip);
   the Shop shows the same list. A level costs more as the perk climbs, so each row's button says what

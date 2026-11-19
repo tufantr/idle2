@@ -375,10 +375,28 @@ body.reduced-motion #sidebar .nav-btn .nav-icon, body.reduced-motion #sidebar .n
 
 /* ---------- header: purse, status, stats ---------- */
 #header { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.7rem 1rem; }
-.header-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
-.pills { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; flex: 1 1 auto; min-width: 0; }
-.header-right { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-left: auto; }
-.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* The bar keeps its height while the game is played (src/ui/topbar.js): the purse and the pills share the room left of the
+   buttons, and the pills have a slot of their own, so what comes and goes there moves nothing. Its long words fold away first,
+   then the slot's status pill; a slot that doesn't fit beside the purse goes under it, its line kept. */
+.header-row { display: flex; align-items: flex-start; gap: 0.5rem 0.8rem; }
+.header-main { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; flex: 1 1 0; min-width: 0; }
+.pills { --pill-h: calc(1.76rem + 2px); display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4rem; flex: 1 1 240px; min-width: 240px; min-height: calc(var(--pill-h) + 6px); overflow: hidden; container-type: inline-size; padding: 3px; margin: -3px; }   /* (the 3px: a keyboard's focus ring stays inside the clipping) */
+.pills > * { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.3em; height: var(--pill-h); white-space: nowrap; }
+.pills > .status-pill, .pills > .event-pill { flex: 0 1 auto; min-width: 44px; overflow: hidden; }
+.pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bonfire-pill, .focus-pill, .event-pill { font-variant-numeric: tabular-nums; }
+@container (max-width: 430px) { .pill-long { display: none; } }
+@container (max-width: 279px) { .pills > .status-pill:not(:only-child) { display: none; } }
+.header-right { display: flex; flex: 0 0 auto; gap: 0.5rem; align-items: center; min-height: 35px; margin-left: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+/* a narrow bar (src/ui/topbar.js says when): the purse across it, the pills and the buttons under it */
+#header[data-flat="1"] .header-row { flex-wrap: wrap; align-items: center; }
+#header[data-flat="1"] .header-main { display: contents; }
+#header[data-flat="1"] .header-right { flex: 0 1 auto; flex-wrap: wrap; }
+/* words the bar folds away when that saves it a line (src/ui/topbar.js); still read by a screen reader */
+#header:is([data-fold="1"], [data-fold="2"]) :is(.daily-word, .cloud-word, .cloud-name, .update-word), #header[data-fold="2"] .chip span {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
 .chip {
     --coin: #fcd34d; --coin-dark: #7a5410;
     display: flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.8rem 0.3rem 0.4rem;
@@ -1147,7 +1165,13 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 @media (max-width: 600px) {
     .glass-panel { padding: 1.1rem; }
     #header { padding: 0.75rem 0.85rem; }
-    .header-row { gap: 0.4rem; }
+    /* the purse across the bar; under it, the pills' slot beside the buttons (no line of its own) */
+    .header-row { flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+    .header-main { display: contents; }
+    body:not(.battle-full) .chips { flex: 1 1 100%; }
+    body.battle-full .chips { flex: 1 1 0; min-width: 60%; }   /* beside the ☰ */
+    .pills { --pill-h: calc(1.61rem + 2px); flex: 1 1 140px; min-width: 140px; }
+    .header-right { flex: 0 1 auto; flex-wrap: wrap; min-height: 0; }
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
     .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */
     .pills .status-pill { display: none; }  /* the hotbar's Battle and work buttons already show what the hero is doing */
@@ -2816,8 +2840,7 @@ body.reduced-motion .talent:hover { transform: none; }
     .dock-main { order: 3; }
     .dock-orders { order: 4; }
     /* and the top bar keeps to one line: icons only */
-    body.battle-full .cloud-word, body.battle-full .event-pill, body.battle-full .focus-pill, body.battle-full .bonfire-pill { display: none; }
-    body.battle-full .pills:empty { display: none; }
+    body.battle-full .cloud-word, body.battle-full .pills { display: none; }
     body.battle-full #header .daily-btn { display: inline-flex; } /* the hotbar is out of sight here, so the crate keeps its button */
     body.battle-full .update-word { display: none; }
     body.battle-full .daily-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the crate alone, its name still read */

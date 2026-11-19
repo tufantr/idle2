@@ -1569,6 +1569,10 @@ Keeping it running:
       the server counts expected values, so the bar could empty while the boss stood, or the boss fall on the server with
       health left. Now it falls only when the server's own sum fells it: a bar run out too soon holds a sliver and the
       fight goes on, so late strikes count and can finish it, and a boss the sum fells falls as the clock ends
+- [x] **The top bar keeps its height** (D3, a player's report): the bonfire's countdown, the buff and Focus pills coming and
+      going, a figure gaining a digit and the crate ripening no longer move the page. The pills have their own slot, the bar is
+      laid out for the window at its fullest and held there until the window's width changes, folding words away where that
+      saves a line. `node tools/topbar.mjs` checks it from 700 to 2,000 px in Chromium, Firefox and WebKit
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
