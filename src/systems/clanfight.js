@@ -3,9 +3,11 @@
 // boss's guard is down (core/power.js CLAN_GUARD). The boss doesn't hit back. The game shows the fight
 // and keeps what the player did (the strike times); the server reckons the damage from the stored save,
 // raised to the hero's best plain attack of the past week, and those times (core/power.js clanAttackFromSave),
-// so the page never says how much was dealt. The hero hits as hard on screen (`scale`, the server's).
+// so the page never says how much was dealt. The hero hits as hard on screen (`scale`, the server's), with the
+// fight's dice; the boss falls only when the server's own sum says the attack fells it (clanFightFells).
 
-import { clanGuardDown } from '../core/power.js';
+import { clanGuardDown, clanFightDamage, cleanStrikes } from '../core/power.js';
+import { deriveStats } from '../core/modifiers.js';
 import { clanBossFor, CLAN_FIGHT_MS, CLAN_BANNER, ENDLESS } from '../data/social.js';
 import { spawnEnemy, enterCombat } from './combat.js';
 import { failDungeon, returnToStages } from './dungeon.js';
@@ -24,6 +26,20 @@ export function clanFightElapsed(state) {
 /** Is the clan boss's guard down now? Strikes land only then. */
 export function clanGuardOpen(state) {
     return state.combat.mode === 'clan' && clanGuardDown(clanFightElapsed(state));
+}
+
+/**
+ * Does this attack fell the boss, by the server's own sum (core/power.js clanAttackFromSave)? The hero as he went up to
+ * the server when the fight began, the strikes so far, the whole fight (a boss that falls counts as one: endClanFight),
+ * at his best of the week. The screen rolls crits and ±10% a hit and the server counts expected values, so the bar alone
+ * can't tell: it is asked when the bar would empty (systems/combat.js playerAttack) and when the clock ends. The Endless
+ * Hydra never falls. (A flagged account's cap is the server's alone.)
+ */
+export function clanFightFells(game) {
+    const fight = game.state.clanFight;
+    if (!fight || fight.endless) return false;
+    const { damage } = clanFightDamage(fight.hero, cleanStrikes(fight.strikes, CLAN_FIGHT_MS), CLAN_FIGHT_MS);
+    return Math.floor(damage * (fight.scale || 1)) >= fight.hp;
 }
 
 /**
@@ -64,9 +80,11 @@ export function startClanFight(game, boss) {
     const before = doingNow(state);
     if (c.mode === 'dungeon') failDungeon(game, 'you left for the clan boss');
     const scale = Number(boss.scale);
-    state.clanFight = { week: String(boss.week || ''), hp: endless ? 1 : Math.floor(Number(boss.hp)), maxHp: endless ? 1 : Math.floor(Number(boss.maxHp) || Number(boss.hp)), strikes: [], before,
-        scale: Number.isFinite(scale) && scale > 1 ? Math.min(scale, 1e6) : 1, ...(endless ? { endless: true, dealt: 0 } : {}) };
     c.mode = 'clan';
+    // the hero the server will reckon (stored just before this fight): what he buys or drinks up during it isn't counted there
+    const { atk, critChance, critDmg, attackInterval } = deriveStats(state);
+    state.clanFight = { week: String(boss.week || ''), hp: endless ? 1 : Math.floor(Number(boss.hp)), maxHp: endless ? 1 : Math.floor(Number(boss.maxHp) || Number(boss.hp)), strikes: [], before,
+        hero: { atk, critChance, critDmg, attackInterval }, scale: Number.isFinite(scale) && scale > 1 ? Math.min(scale, 1e6) : 1, ...(endless ? { endless: true, dealt: 0 } : {}) };
     c.dungeon = null;
     c.regroupLeft = 0;
     spawnEnemy(game);
@@ -86,8 +104,8 @@ export function noteClanStrike(state) {
 }
 
 /**
- * The clan fight is over: `reason` 'time' (its clock ran out), 'felled' (the boss's health ran out
- * here) or 'left' (Give up, or other work). What the player did waits in state.clanResult until the
+ * The clan fight is over: `reason` 'time' (its clock ran out), 'felled' (the boss fell, by the server's
+ * sum: clanFightFells) or 'left' (Give up, or other work). What the player did waits in state.clanResult until the
  * game has sent it (main.js), even across a reload; the hero goes back to what he was doing. Returns
  * whether he fights on.
  *
@@ -108,6 +126,11 @@ export function endClanFight(game, reason = 'time') {
     game.emit({ type: 'clanFight', reason, dealt, strikes: fight?.strikes.length || 0, endless: !!fight?.endless });
     game.markDirty();
     return fightsOn;
+}
+
+/** The clan fight's clock ran out: a boss the attack fells falls now, whatever its bar showed. */
+export function clanFightTimeUp(game) {
+    return endClanFight(game, clanFightFells(game) ? 'felled' : 'time');
 }
 
 /** Give up the clan fight: it ends now, and what was done so far is the attack. */

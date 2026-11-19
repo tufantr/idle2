@@ -57,7 +57,7 @@ import { trialBoard, trialsOpen, activeTrials, pactSize } from '../systems/trial
 import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
-import { TRIAL_TIERS, trialBite } from '../data/trials.js';
+import { TRIALS, TRIAL_TIERS, trialBite, trialById } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
@@ -266,14 +266,14 @@ export function renderHeader(game, ui, cloud) {
     const greatNext = cratesTowardGreat(state) === GREAT_CRATE_EVERY - 1;   // the crate waiting is a great one
     const daily = banked > 0
         ? `<button class="daily-btn ready${greatNext ? ' great' : ''}" onclick="FI.claimDaily()" title="A crate ripens every 20 hours; up to ${DAILY_MAX_BANKED} wait for you. ${banked >= DAILY_MAX_BANKED ? 'The bank is full.' : `Next in ${duration(state.daily.nextAt - game.now)}.`}">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">${greatNext ? 'Great crate' : 'Daily crate'}</span>${banked > 1 ? ` <b>×${banked}</b>` : ''}</button>`
-        : '';
+        : `<button class="daily-btn" hidden aria-hidden="true" tabindex="-1">${sprite('crate', { scale: 0.75, cls: 'soft', fallback: '📦' })}<span class="daily-word">Daily crate</span></button>`;   // its place in the bar, kept for when one ripens (ui/topbar.js)
     const fireLevel = skillLevel(state, 'firemaking');
     const bonfirePill = bonfireLit(state, game.now)
         ? `<span class="bonfire-pill" title="The bonfire: +${Math.round(bonfireBonus(fireLevel) * 100)}% XP in every skill, and a ${Math.round(bonfireDouble(fireLevel) * 100)}% chance of a double in every one that makes something, for ${duration(state.bonfire.until - game.now)} more. Burning logs in Firemaking keeps it going (up to ${BASE.bonfireMaxMs / 3600000} h)">${sprite(FEATURES.firemaking.icon, { scale: 0.5, cls: 'soft res-spr' })} <span class="pill-long">+${Math.round(bonfireBonus(fireLevel) * 100)}% XP · ${Math.round(bonfireDouble(fireLevel) * 100)}% doubles · </span>${duration(state.bonfire.until - game.now)}</span>`   // on a phone, the time it has left (as the event's pill), the bonus in its title
         : '';
     const ev = eventStatus(state, game.now);
     const eventPill = ev.active && isUnlocked(state, 'events')
-        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></button>`
+        ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-text"><span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></span></button>`
         : '';
     const focusPill = game.derived.focused
         ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
@@ -282,13 +282,13 @@ export function renderHeader(game, ui, cloud) {
     const here = ui.tab === fightTab(game, ui) || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
     let status = '';
     if (action) {
-        if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} ${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</button>`;
+        if (ui.tab !== action.skill) status = `<button class="status-pill working" onclick="FI.switchTab('${action.skill}')">${tabIcon(action.skill, 0.625)} <span class="pill-text">${esc(action.label)}${state.action?.stalled ? ' — <b class="warn">waiting for materials</b>' : ''}</span></button>`;
     } else if (state.combat.active) {
-        if (ui.tab !== fightTab(game, ui)) status = `<button class="status-pill fighting" onclick="FI.switchTab('${fightTab(game, ui)}')">${tabIcon(fightTab(game, ui), 0.625)} ${esc(fightingWhere(state))}</button>`;
+        if (ui.tab !== fightTab(game, ui)) status = `<button class="status-pill fighting" onclick="FI.switchTab('${fightTab(game, ui)}')">${tabIcon(fightTab(game, ui), 0.625)} <span class="pill-text">${esc(fightingWhere(state))}</span></button>`;
     } else if (!here) {
         status = `<button class="status-pill idle" onclick="FI.switchTab('combat')">${ICON_MOON} Resting</button>`;
     }
-    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} ${esc(cloud.username || 'signed in')}</span>`
+    const user = cloud?.loggedIn ? `<span class="cloud-pill" title="Cloud save">${ICON_CLOUD_OK} <span class="cloud-name">${esc(cloud.username || 'signed in')}</span></span>`
         : `<button class="cloud-pill local" onclick="FI.openAuth()" aria-label="Guest: sign in or make an account" title="Playing as a guest: this game is kept in this browser only">${ICON_CLOUD_UP}<span class="cloud-word">Guest</span></button>`;
     const soundOn = state.settings.sound !== false;
     const mute = `<button class="mini-btn icon-btn" onclick="FI.toggleSound()" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Mute sound' : 'Unmute sound'}" title="${soundOn ? 'Sound and vibration on' : 'Sound off'}">${soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>`;
@@ -305,8 +305,10 @@ export function renderHeader(game, ui, cloud) {
     return `
         <div class="header-row">
             ${menu}
-            <div class="chips">${chips.join('')}</div>
-            <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
+            <div class="header-main">
+                <div class="chips">${chips.join('')}</div>
+                <div class="pills">${status}${focusPill}${bonfirePill}${eventPill}</div>
+            </div>
             <div class="header-right">${update}${daily}${screen}${mute}${user}</div>
         </div>`;
 }
@@ -1857,7 +1859,45 @@ function renderRecords(game) {
             <span class="record-label">${esc(label)}</span>
         </div>`).join('')}</div>
     </section>
-    ${renderChronicle(state)}`;
+    ${renderTrialBests(state)}${renderRunLog(game)}${renderChronicle(state)}`;
+}
+
+/** Each Trial the hero has tried, with the best stage reached in it (nothing before the first). */
+function renderTrialBests(state) {
+    const tried = TRIALS.filter(t => state.trials.best[t.id] > 0);
+    if (!tried.length) return '';
+    return `<section class="glass-panel ${painted('citadel', 'center 40%')}">
+        <div class="panel-header"><h2>Trials ${aboutButton('trials')}</h2><span class="muted small">Best stage in each</span></div>
+        <div class="record-grid">${tried.map(t => `<div class="record" title="${esc(t.rule)}">
+            <span class="record-art">${sprite(t.icon, { scale: 1.5 })}</span>
+            <b class="record-value">${fmt(state.trials.best[t.id])}</b>
+            <span class="record-label">${esc(t.name)}</span>
+        </div>`).join('')}</div>
+    </section>`;
+}
+
+/** The last runs, newest first (systems/prestige.js doPrestige; nothing before the first prestige that kept one). */
+function renderRunLog(game) {
+    const runs = game.state.prestige.runs;
+    if (!runs.length) return '';
+    const now = new Date(game.now);
+    const small = { scale: 0.5, cls: 'soft res-spr' };
+    const rows = [...runs].reverse().map(r => {
+        const d = new Date(r.at);
+        const when = d.toDateString() === now.toDateString() ? TIME_OF_DAY.format(d) : (d.getFullYear() === now.getFullYear() ? DAY_MONTH : DAY_MONTH_YEAR).format(d);
+        const trials = (r.trials || []).map(trialById).filter(Boolean);
+        return `<li>
+            <time datetime="${d.toISOString()}" title="${esc(FULL_DATE.format(d))}">${esc(when)}</time>
+            <span class="run-stage">Stage <b>${fmt(r.stage)}</b></span>
+            <span class="run-tokens" title="Tokens earned"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(r.tokens)}</b><span class="sr-only"> tokens</span></span>
+            <span class="run-took" title="How long the run took">${r.ms > 0 ? `${glyph('time')}<span class="sr-only">took </span>${duration(r.ms)}` : ''}</span>
+            ${trials.length ? `<span class="run-rule">${trials.map(t => sprite(t.icon, small)).join('')}<span>${trials.length > 1 ? 'Pact' : 'Trial'}: ${esc(trials.map(t => t.name).join(', '))}</span></span>` : ''}
+        </li>`;
+    }).join('');
+    return `<section class="glass-panel ${painted('wartable', 'center 40%')}">
+        <div class="panel-header"><h2>Last runs</h2></div>
+        <ol class="run-log">${rows}</ol>
+    </section>`;
 }
 
 /** What a chronicle entry (systems/chronicle.js) shows: [sprite key, line], or null for one no longer known. */
@@ -1883,6 +1923,8 @@ function chronicleLine(e) {
 /** The hero's story, newest first: a date, a picture and a line for each first. */
 // (made once: a formatter built for every line made the Records slow to draw with many firsts)
 const DAY_MONTH = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const TIME_OF_DAY = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const FULL_DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 const DAY_MONTH_YEAR = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 function renderChronicle(state) {
     const year = new Date().getFullYear();

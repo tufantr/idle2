@@ -793,7 +793,7 @@ export function createScene(root, actions) {
             const depth = enemy.endless ? endlessDepth(state.clanFight?.dealt || 0) : 0;
             const level = Math.floor(depth);
             const foePct = enemy.endless ? Math.max(0, Math.min(100, (1 - ((state.clanFight?.dealt || 0) - endlessDamageAt(level)) / Math.max(1, endlessDamageAt(level + 1) - endlessDamageAt(level))) * 100))
-                : Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));
+                : Math.max(enemy.clan && enemy.hp > 0 ? 1 : 0, Math.min(100, enemy.hp / enemy.maxHp * 100));   // (a clan boss holding on keeps a sliver: systems/combat.js)
             el.foeBar.style.width = `${foePct}%`;
             el.foeTrail.style.width = `${trailFor(trails.foe, foePct, now, dt)}%`;
             setText(el.foeText, enemy.endless ? `Depth ${depth.toFixed(1)}` : `${fmt(Math.max(0, enemy.hp))} / ${fmt(enemy.maxHp)}`);

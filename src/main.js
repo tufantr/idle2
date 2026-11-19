@@ -49,6 +49,7 @@ import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
 import { BASE } from './core/modifiers.js';
 import { VERSION } from './version.js';
 import { createUpdateCheck } from './ui/update.js';
+import { createBarHold } from './ui/topbar.js';
 
 const BASE_RECORD_MULT = BASE.recordMult;
 
@@ -248,6 +249,7 @@ const bossOnScreen = () => { const c = game.state.combat; return ui.tab === figh
 const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs and boss fights
 const actionFx = createActionFx(layer('div', 'work-fx'));
 const hotbar = layer('nav', 'hotbar');
+const barHold = createBarHold(document.getElementById('header'));
 hotbar.setAttribute('aria-label', 'Shortcuts');
 // Sound and haptics (src/ui/sound.js): one setting, unlocked by the first click or key.
 const sound = createSound(() => game.state.settings.sound !== false, () => game.state.settings.volume ?? 1);
@@ -389,10 +391,15 @@ document.addEventListener('visibilitychange', () => {
 // The full-screen fight sizes its fighters by the room it has: a resized window draws them again.
 let resizeQueued = false;
 window.addEventListener('resize', () => {
-    if (resizeQueued || !document.body.classList.contains('battle-full')) return;
+    if (resizeQueued) return;
     resizeQueued = true;
-    requestAnimationFrame(() => { resizeQueued = false; render(); });
+    requestAnimationFrame(() => {
+        resizeQueued = false;
+        if (document.body.classList.contains('battle-full')) render();
+        else barHold.sync({ drawn: false });   // the top bar is measured for the new width (ui/topbar.js)
+    });
 });
+document.fonts?.addEventListener?.('loadingdone', () => { barHold.forget(); barHold.sync(); });
 window.addEventListener('pagehide', () => { save(Date.now()); cloudSaveOnLeave(); });
 window.addEventListener('beforeunload', () => save(Date.now()));
 
@@ -565,9 +572,10 @@ document.addEventListener('keydown', event => {
 
 /** Replace an element's HTML only when it changed (keeps focus, hover and scroll where nothing moved). */
 function setHtml(el, html) {
-    if (el.__html === html) return;
+    if (el.__html === html) return false;
     el.innerHTML = html;
     el.__html = html;
+    return true;
 }
 
 /** Is the player in the middle of typing, dragging or choosing inside the tab? Then leave it alone. */
@@ -627,7 +635,7 @@ function render() {
     setHtml(document.getElementById('nav'), renderNav(game, ui));
     if (ui.tab !== navShownTab) { navShownTab = ui.tab; revealNavTab(); }
     setHtml(document.getElementById('nav-next'), renderNavNext(game));
-    setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
+    const barDrawn = setHtml(document.getElementById('header'), renderHeader(game, ui, cloud));
     bumpPurse();
     setHtml(hotbar, renderHotbar(game, ui));
     const title = pageTitle(game);
@@ -640,6 +648,7 @@ function render() {
     guide.sync(game, { battle: ui.tab === fightTab(game, ui), tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
     rewards.resume();   // cards held back by a boss fight show once it is over
     paintGold();
+    barHold.sync({ drawn: barDrawn });   // (the gold is painted: the bar is as it will be seen)
     paintBrand();
     glowArrivals();
     refreshPerks();

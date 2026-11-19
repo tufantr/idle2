@@ -79,6 +79,10 @@ Later on, the prestige dialog offers two more ways to prestige:
 - From best stage {{TRIALS_FROM}}, **[[Trials]]**: prestige into a run under one hard rule. Each tier you clear in it is a record.
 - From best stage {{ASCEND_FROM}}, **[[Ascension]]**: a prestige that also gives up every token for Stars, which make every later prestige pay more.
 
+## Your last runs
+
+The Records page in the [[Medals|Hall]] lists your last 20 runs, newest first: when each ended, the stage it reached, the tokens it paid, how long it took, and its Trial or Pact if it had one. Older runs drop off the list, and it starts with your next prestige.
+
 ## Ranks and more
 
 Every prestige counts toward your hero's [[Ranks|rank]], worn as the colour of the cloak; the dialog says when a prestige earns a new one. Prestiges also earn the medal {{ACHIEVEMENTS.find(a => a.id === 'eternity').name}} ({{ACHIEVEMENTS.find(a => a.id === 'eternity').desc.replace(/^./, c => c.toLowerCase())}}: {{ACHIEVEMENTS.find(a => a.id === 'eternity').reward.replace(/^./, c => c.toLowerCase())}}), and your first one starts the way to the [[/clans|Clan]] and the [[/events|weekend events]] (see [[Places and unlocks]]).

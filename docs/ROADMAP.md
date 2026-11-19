@@ -1565,6 +1565,17 @@ Keeping it running:
       seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
       the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
       prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
+- [x] **The clan boss falls on screen when it really falls** (D2, a player's report): the fight on screen rolls its dice and
+      the server counts expected values, so the bar could empty while the boss stood, or the boss fall on the server with
+      health left. Now it falls only when the server's own sum fells it: a bar run out too soon holds a sliver and the
+      fight goes on, so late strikes count and can finish it, and a boss the sum fells falls as the clock ends
+- [x] **The top bar keeps its height** (D3, a player's report): the bonfire's countdown, the buff and Focus pills coming and
+      going, a figure gaining a digit and the crate ripening no longer move the page. The pills have their own slot, the bar is
+      laid out for the window at its fullest and held there until the window's width changes, folding words away where that
+      saves a line. `node tools/topbar.mjs` checks it from 700 to 2,000 px in Chromium, Firefox and WebKit
+- [x] **Trial bests and the last runs on Records** (D4, a player's report): the Hall's Records shows each Trial tried with
+      its best stage (saved all along, but no screen read it), and a list of the last 20 runs: when, the stage reached, the
+      tokens, how long it took, and its Trial or Pact. A new optional save field (`prestige.runs`), empty in old saves
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
