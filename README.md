@@ -138,6 +138,14 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
   game's mails reach 80 of the plan's 100 (every mail is counted in its UTC day).
 
+- **The team's tool:** `fantasyidle-team` on the server, as root (`api/team.js` run by `deploy/vps/team.sh`, which
+  `provision.sh` installs; no web route, so nothing about it can be reached from outside). `list [search]` shows every clan,
+  the newest first, with its words and owner, and marks words that break the rule on links; `clear <clan> --reason "why"`
+  empties its description and "looking for" line (or sets them, `--description`, `--looking-for`); `rename <clan> --reason
+  "why" [--name] [--tag]` renames it and rewrites every week's stored ranking row, which keep a clan's name; `restore <log
+  number> --reason "why"` puts it back as that entry found it; `log` shows what was done. Each change writes `team_log` in the
+  same statement and mails the clan's owner what was done, why and how to ask again (`--no-mail` where the law says not to).
+
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
 ```bash

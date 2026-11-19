@@ -119,7 +119,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews, signup_sources');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_charges, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews, signup_sources, team_log');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -1209,6 +1209,90 @@ test("an owner who leaves hands the clan to the longest-serving member who plays
     assert.equal((await (await get('/clan', young)).json()).clan.isOwner, true, 'the one who plays, though newer');
     await post('/clans/leave', {}, young);
     assert.equal((await (await get('/clan', old)).json()).clan.isOwner, true, 'nobody plays: the one left');
+});
+
+test("the team's tool clears and renames a clan, its kept rankings too, with a log and a word to its owner, and can put it back", async () => {
+    const { team } = require('../api/team.js');
+    const data = memory || require('../api/store.js');
+    const run = async (...argv) => {
+        const lines = [];
+        const sent = [];
+        const code = await team(argv, { store: data, send: async m => { sent.push(m); }, now: clock, print: l => lines.push(l) });
+        return { code, out: lines.join('\n'), sent };
+    };
+    const owner = await register('takedown_owner');
+    const mate = await register('takedown_mate');
+    const { clanId } = await (await post('/clans', { name: 'Rude Words', tag: 'RUDE', description: 'Something rude', lookingFor: 'More rudeness' }, owner)).json();
+    await post('/clans/join', { clanId }, mate);
+    const lastWeek = app.isoWeek(clock - 7 * 24 * 3600 * 1000);
+    const kept = { clanId, name: 'Rude Words', tag: 'RUDE', division: 'bronze', rank: 1, kills: 1, score: 5, counted: 1 };
+    await data.putRanking(lastWeek, [kept]);
+    await data.putRanking('2026-W01', [kept]);
+    const seen = async () => {
+        const { clan } = await (await get('/clan', mate)).json();
+        const shown = (await (await get('/clans/ranking', mate)).json()).last.divisions.flatMap(d => d.clans).filter(c => c.you).map(c => `${c.name} [${c.tag}]`);
+        const old = (await data.getRanking('2026-W01')).filter(r => r.clanId === clanId).map(r => `${r.name} [${r.tag}]`);
+        return { name: clan.name, tag: clan.tag, description: clan.description, lookingFor: clan.lookingFor, shown, old };
+    };
+    const logged = async () => (await data.teamLog(1000)).filter(e => e.subject === clanId && e.kind === 'clan');
+
+    const listed = await run('list', 'rude words');
+    assert.equal(listed.code, 0);
+    assert.match(listed.out, new RegExp(`#${clanId} Rude Words \\[RUDE\\], 2 members, .*owner takedown_owner`));
+    assert.match(listed.out, /description: Something rude/);
+    assert.ok(!/@example\.test/.test(listed.out), 'never an address');
+    assert.equal((await run('clear', String(clanId))).code, 1, 'no reason, no change');
+    assert.equal((await run('clear', 'No Such Clan', '--reason', 'x')).code, 1);
+    assert.equal((await seen()).description, 'Something rude');
+
+    const cleared = await run('clear', 'RUDE WORDS', '--reason', 'it was rude');
+    assert.equal(cleared.code, 0, cleared.out);
+    assert.deepEqual([cleared.sent.length, cleared.sent[0].to], [1, 'takedown_owner@example.test'], 'its owner hears of it');
+    assert.match(cleared.sent[0].text, /We cleared the description[\s\S]*Why: it was rude[\s\S]*reply to this mail/);
+    assert.deepEqual([(await seen()).description, (await seen()).lookingFor, (await seen()).name], ['', '', 'Rude Words']);
+
+    assert.equal((await run('clear', String(clanId), '--reason', 'r', '--description', 'see example.com')).code, 1, 'the words rule holds for the team too');
+    const put = await run('clear', String(clanId), '--reason', 'kinder words', '--description', 'A kinder line', '--no-mail');
+    assert.deepEqual([put.code, put.sent.length, (await seen()).description], [0, 0, 'A kinder line']);
+
+    await post('/clans', { name: 'Taken Name', tag: 'TKN' }, await register('takedown_other'));
+    const before = (await logged()).length;
+    const taken = await run('rename', String(clanId), '--reason', 'r', '--name', 'Taken Name');
+    assert.equal(taken.code, 1);
+    assert.match(taken.out, /Another clan is called Taken Name/);
+    assert.equal((await logged()).length, before, 'nothing logged');
+    assert.equal((await seen()).name, 'Rude Words', 'nothing changed');
+    assert.equal((await run('rename', String(clanId), '--reason', 'r', '--name', 'x')).code, 1, 'a name as any clan must have');
+
+    const renamed = await run('rename', String(clanId), '--reason', 'a slur', '--name', 'Polite Words', '--tag', 'pol');
+    assert.equal(renamed.code, 0, renamed.out);
+    assert.match(renamed.out, /2 kept weeks rewritten/);
+    assert.match(renamed.sent[0].text, /We renamed your clan Rude Words \[RUDE\]\. It is now Polite Words \[POL\]/);
+    assert.deepEqual(await seen(), { name: 'Polite Words', tag: 'POL', description: 'A kinder line', lookingFor: '', shown: ['Polite Words [POL]'], old: ['Polite Words [POL]'] });
+
+    const neutral = await run('rename', String(clanId), '--reason', 'again');
+    assert.equal(neutral.code, 0, neutral.out);
+    assert.equal((await seen()).name, `Clan ${clanId}`, 'no name given: a plain one');
+
+    // an appeal: the log's entries put it back, each to what it found
+    const log = await logged();
+    assert.deepEqual(log.slice(0, 4).map(e => e.action), ['rename', 'rename', 'clear', 'clear'], 'the newest first');
+    assert.deepEqual(JSON.parse(log[1].oldWords), { name: 'Rude Words', tag: 'RUDE', description: 'A kinder line', lookingFor: '' });
+    assert.equal((await run('restore', String(log[1].id), '--reason', 'the appeal was right')).code, 0);
+    assert.deepEqual(await seen(), { name: 'Rude Words', tag: 'RUDE', description: 'A kinder line', lookingFor: '', shown: ['Rude Words [RUDE]'], old: ['Rude Words [RUDE]'] });
+    assert.equal((await run('restore', String(log[3].id), '--reason', 'all of it')).code, 0);
+    assert.equal((await seen()).description, 'Something rude');
+    assert.equal((await run('restore', '999999', '--reason', 'r')).code, 1);
+    assert.match((await run('log', '3')).out, /restore clan \d+: all of it\n {4}was \{.*\n {4}now \{.*"Something rude"/);
+
+    // a closed clan keeps its name in the rankings it left: that can still be changed
+    await post('/clans/leave', {}, mate);
+    await post('/clans/leave', {}, owner);
+    assert.equal((await run('clear', String(clanId), '--reason', 'r')).code, 1, 'it has no words left');
+    const gone = await run('rename', 'Rude Words', '--reason', 'even closed', '--name', 'Closed Clan', '--tag', 'CLO');
+    assert.equal(gone.code, 0, gone.out);
+    assert.match(gone.out, /no mail: nobody to tell/);
+    assert.deepEqual((await data.getRanking('2026-W01')).filter(r => r.clanId === clanId).map(r => r.name), ['Closed Clan']);
 });
 
 test("a boss made at another size for its level moves to its size once: the same share of its health left, its attacks scaled with it", async () => {

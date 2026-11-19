@@ -1575,6 +1575,8 @@ Keeping it running:
       "looking for" line; the name and tag stay
 - [x] **One address that reaches the team** (R14, P-110): shown in Settings and the wiki's FAQ, the Reply-To of the game's
       mail, and a Report link on each clan's row that starts a mail naming the clan; the address is one setting
+- [x] **The team's tool for clans** (R14, P-113): `fantasyidle-team` on the server lists every clan, clears or rewrites its
+      words, renames it (the stored week's rankings too) and puts either back, each with a logged reason and a mail to its owner
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

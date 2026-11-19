@@ -3,8 +3,8 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map() };
-    let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0 };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map(), teamLog: [] };
+    let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0, teamLog: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
     const hallOf = clanId => Object.fromEntries(db.hall.filter(h => h.clanId === clanId).map(h => [h.room, h.given]));
@@ -375,6 +375,36 @@ function createMemoryStore() {
             const c = db.clans.find(x => x.id === clanId);
             if (c) Object.assign(c, { colour, emblem });
         },
+
+        async teamClans(search = '') {
+            const q = String(search || '').toLowerCase();
+            return db.clans.filter(c => c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q)).sort((a, b) => b.createdAt - a.createdAt || b.id - a.id).map(c => {
+                const owner = db.users.find(u => u.id === c.ownerId);
+                return { id: c.id, name: c.name, tag: c.tag, description: c.description || '', lookingFor: c.lookingFor || '', createdAt: c.createdAt, owner: owner?.username || null, ownerSaved: owner?.last_saved || 0, members: db.members.filter(m => m.clanId === c.id).length };
+            });
+        },
+        async teamClan(id, name) {
+            const same = n => name !== null && n.toLowerCase() === String(name).toLowerCase();
+            const c = db.clans.filter(x => x.id === id || same(x.name)).sort((a, b) => a.id - b.id)[0];
+            if (c) {
+                const owner = db.users.find(u => u.id === c.ownerId);
+                return { id: c.id, name: c.name, tag: c.tag, description: c.description || '', lookingFor: c.lookingFor || '', open: true, owner: owner?.username || null, ownerEmail: owner?.email || null };
+            }
+            const k = db.rankings.filter(r => r.clanId === id || same(r.name)).sort((a, b) => (a.week < b.week ? 1 : a.week > b.week ? -1 : 0))[0];
+            return k ? { id: k.clanId, name: k.name, tag: k.tag, description: '', lookingFor: '', open: false, owner: null, ownerEmail: null } : null;
+        },
+        async teamEditClan({ clanId, name, tag, description, lookingFor, action, reason, oldWords, newWords, now }) {
+            const clan = db.clans.find(c => c.id === clanId);
+            if (clan && db.clans.some(c => c.id !== clanId && c.name === name)) throw unique('clans_name_key');
+            if (clan) Object.assign(clan, { name, tag, description, lookingFor });
+            const kept = db.rankings.filter(r => r.clanId === clanId);
+            for (const r of kept) Object.assign(r, { name, tag });
+            const entry = { id: ++seq.teamLog, at: now, kind: 'clan', subject: clanId, action, reason, oldWords, newWords };
+            db.teamLog.push(entry);
+            return { id: entry.id, clans: clan ? 1 : 0, rankings: kept.length };
+        },
+        async teamLog(limit) { return [...db.teamLog].sort((a, b) => b.id - a.id).slice(0, limit).map(e => ({ ...e })); },
+        async teamLogEntry(id) { const e = db.teamLog.find(x => x.id === id); return e ? { ...e } : null; },
 
         async addReward(userId, kind, payloadJson, now, dedupe = null) {
             if (dedupe && db.rewards.some(r => r.dedupe === dedupe)) return;

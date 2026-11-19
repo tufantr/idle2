@@ -253,6 +253,20 @@ async function ensureSchema() {
             count INTEGER NOT NULL DEFAULT 0
         )
     `;
+    // What the team did and why (November 2026, api/team.js; the research loop's P-113): one row an action, with the words it
+    // found and the words it left (JSON), so that it can be put back. `kind` says what `subject` numbers ('clan': a clan's id).
+    await sql`
+        CREATE TABLE IF NOT EXISTS team_log (
+            id SERIAL PRIMARY KEY,
+            at BIGINT NOT NULL,
+            kind VARCHAR(10) NOT NULL,
+            subject INTEGER NOT NULL,
+            action VARCHAR(16) NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            old_words TEXT NOT NULL DEFAULT '{}',
+            new_words TEXT NOT NULL DEFAULT '{}'
+        )
+    `;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -894,6 +908,73 @@ async function setClanBanner(clanId, colour, emblem) {
     await sql`UPDATE clans SET banner_colour = ${colour}, banner_emblem = ${emblem} WHERE id = ${clanId}`;
 }
 
+// ---------- the team's tool (api/team.js) ----------
+
+/** Clans by name or tag, the newest first, as the team reads them: their words, owner, and how many members. */
+async function teamClans(search = '') {
+    const pattern = `%${String(search || '').replace(/[\\%_]/g, '\\$&')}%`;
+    const { rows } = await sql`
+        SELECT c.id, c.name, c.tag, c.description, c.looking_for, c.created_at, o.username AS owner, o.last_saved AS owner_saved,
+            (SELECT COUNT(*) FROM clan_members m WHERE m.clan_id = c.id) AS members
+        FROM clans c LEFT JOIN users o ON o.id = c.owner_id
+        WHERE c.name ILIKE ${pattern} OR c.tag ILIKE ${pattern}
+        ORDER BY c.created_at DESC, c.id DESC
+    `;
+    return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag, description: r.description || '', lookingFor: r.looking_for || '', createdAt: int(r.created_at), owner: r.owner || null, ownerSaved: int(r.owner_saved), members: int(r.members) }));
+}
+
+/**
+ * One clan, by its number or by its exact name in any case: { id, name, tag, description, lookingFor, open, owner, ownerEmail }.
+ * A closed clan is known by the weeks' rankings it left (`open` false, no words, no owner). Null if neither knows it.
+ */
+async function teamClan(id, name) {
+    const { rows } = await sql`
+        SELECT c.id, c.name, c.tag, c.description, c.looking_for, o.username AS owner, o.email AS owner_email
+        FROM clans c LEFT JOIN users o ON o.id = c.owner_id
+        WHERE c.id = ${id}::int OR lower(c.name) = lower(${name}::text) ORDER BY c.id LIMIT 1
+    `;
+    const r = rows[0];
+    if (r) return { id: r.id, name: r.name, tag: r.tag, description: r.description || '', lookingFor: r.looking_for || '', open: true, owner: r.owner || null, ownerEmail: r.owner_email || null };
+    const kept = await sql`SELECT clan_id, name, tag FROM clan_rankings WHERE clan_id = ${id}::int OR lower(name) = lower(${name}::text) ORDER BY week DESC LIMIT 1`;
+    const k = kept.rows[0];
+    return k ? { id: k.clan_id, name: k.name, tag: k.tag, description: '', lookingFor: '', open: false, owner: null, ownerEmail: null } : null;
+}
+
+/**
+ * A clan's name, tag and words set by the team, in one statement with what it touches: the clan, every week's ranking kept with
+ * its name and tag (they stay as they were otherwise, and last week's are on show), and the log. Throws a unique violation (23505)
+ * for a name another clan has, with nothing changed. Returns { id: the log's number, clans: 1 or 0 (closed), rankings: weeks rewritten }.
+ */
+async function teamEditClan({ clanId, name, tag, description, lookingFor, action, reason, oldWords, newWords, now }) {
+    const { rows } = await sql`
+        WITH c AS (
+            UPDATE clans SET name = ${name}::varchar, tag = ${tag}::varchar, description = ${description}::varchar, looking_for = ${lookingFor}::varchar
+            WHERE id = ${clanId}::int RETURNING id
+        ), r AS (
+            UPDATE clan_rankings SET name = ${name}::varchar, tag = ${tag}::varchar WHERE clan_id = ${clanId}::int RETURNING week
+        ), l AS (
+            INSERT INTO team_log (at, kind, subject, action, reason, old_words, new_words)
+            VALUES (${now}::bigint, 'clan', ${clanId}::int, ${action}::varchar, ${reason}::text, ${oldWords}::text, ${newWords}::text)
+            RETURNING id
+        )
+        SELECT (SELECT id FROM l) AS id, (SELECT COUNT(*) FROM c) AS clans, (SELECT COUNT(*) FROM r) AS rankings
+    `;
+    return { id: rows[0].id, clans: int(rows[0].clans), rankings: int(rows[0].rankings) };
+}
+
+const logRow = r => ({ id: r.id, at: int(r.at), kind: r.kind, subject: r.subject, action: r.action, reason: r.reason, oldWords: r.old_words, newWords: r.new_words });
+
+/** The log, the newest first. */
+async function teamLog(limit) {
+    const { rows } = await sql`SELECT id, at, kind, subject, action, reason, old_words, new_words FROM team_log ORDER BY id DESC LIMIT ${limit}::int`;
+    return rows.map(logRow);
+}
+
+async function teamLogEntry(id) {
+    const { rows } = await sql`SELECT id, at, kind, subject, action, reason, old_words, new_words FROM team_log WHERE id = ${id}::int`;
+    return rows[0] ? logRow(rows[0]) : null;
+}
+
 // ---------- rate limiting ----------
 
 /**
@@ -992,6 +1073,7 @@ module.exports = {
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
     hallRooms, addGift, giftTotals, giftsAfter, hallBuilders, recentGifts, setClanBanner,
+    teamClans, teamClan, teamEditClan, teamLog, teamLogEntry,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts

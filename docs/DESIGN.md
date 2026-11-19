@@ -1104,7 +1104,12 @@ with the game's own stat code; the client never submits damage or scores.
   changes them at any time (`POST /api/clan/words`, by the same rule; P-113: one who took a clan over kept its founder's words
   for good); the name and tag stay as they were made. Each clan's row has a **Report** link: a mail to the team's one address
   (`CONTACT_EMAIL`, `src/data/social.js`, its only place: Settings and the wiki show it, and it is the Reply-To of the game's
-  mail; P-110, the owner confirms it), starting with the clan named.
+  mail; P-110, the owner confirms it), starting with the clan named. **The team's tool** (`api/team.js`, run on the server as
+  `fantasyidle-team`; P-113) reads every clan, clears or rewrites its words, renames it and puts either back. A rename rewrites
+  the clan and every stored `clan_rankings` row, which otherwise keep the name for good, in one statement with its `team_log`
+  entry (what it did, why, the words before and after); the clan's owner gets a mail saying what, why and how to ask again. A
+  closed clan is known by the rankings it left, so its name can still be changed. It is a command, not a route: no new secret,
+  nothing to reach from outside.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
@@ -2677,6 +2682,7 @@ wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki
 api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
                       clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
                       · mail.js (Resend) · review.js (the growth check's list, mailed to the owner each week)
+                      · team.js (the team's tool for clans, run on the server)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·

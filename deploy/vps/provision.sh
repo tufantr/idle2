@@ -118,4 +118,7 @@ unit fantasyidle-restore-drill.timer '[Unit]\nDescription=Fantasy Idle backup: t
 systemctl daemon-reload
 systemctl enable --now fantasyidle-backup-check.timer fantasyidle-restore-drill.timer >/dev/null
 
+# --- the team's tool for clans (api/team.js, README "The server"): fantasyidle-team list, clear, rename, restore, log
+install -m 0755 "$HERE/team.sh" /usr/local/bin/fantasyidle-team
+
 echo "provisioned: $(node -v), $(nginx -v 2>&1 | cut -d/ -f2), $(psql --version | cut -d' ' -f3), ufw $(ufw status | head -1 | cut -d: -f2 | xargs)"
