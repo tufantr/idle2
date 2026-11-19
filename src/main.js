@@ -369,6 +369,7 @@ function holdForServer(showIn = CATCH_UP_SHOW_MS) {
 function catchUp(run, after, saved = null) {
     return new Promise(resolve => {
         if (!run) { settle(); resolve(null); return; }
+        setNotation(game.state.settings.numberFormat);   // (the bar and the report can come before the first draw: render() sets it from then on)
         catching = { run, after, resolve, saved, at: performance.now() };
         // From now on nothing behind the replay can be reached (an action on the game would finish it, all at once), the bar or
         // no bar yet: the tap that found a gap may still be under way. A dialog that is open goes behind the bar at once.
@@ -427,6 +428,7 @@ function pump() {
 function openCatchUp(view = {}) {
     if (catchUpBox) return;
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);   // (before the first render)
+    setNotation(game.state.settings.numberFormat);   // (the bar waiting for the server shows the stage and the gold too)
     if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();   // (the keys go back where they were: showModal)
     const box = Object.assign(document.createElement('div'), { className: 'modal-overlay active catch-up-overlay', tabIndex: -1, innerHTML: renderCatchUp(game.state, view) });
     box.setAttribute('role', 'dialog');
