@@ -580,3 +580,146 @@ test('Second Chance\'s payout: the cut time\'s farming at the game\'s own payout
     assert.equal(s.gold, was);
     assert.equal(s.combat.regroupLeft, BALANCE.combat.regroupMs);
 });
+
+// ---------- Berserker (the player's report D5, November 2026): his health, or a boss's clock ----------
+
+/** A hero with these talents at the boss of stage 130, unkillable: `fight(ms)` steps until its clock ends, and gives what each swing dealt. */
+function bossFight(ranks, { seed = 7, step = 100 } = {}) {
+    const game = withTalents(hero(150), ranks);
+    rng.setSource(seededRandom(seed));
+    const c = game.state.combat;
+    Object.assign(c, { stage: 130, active: true, hp: game.derived.maxHp });
+    spawnEnemy(game);
+    const boss = c.enemy;
+    boss.hp = boss.maxHp = 1e18;
+    boss.atk = 1;   // (it must not fell him: the fight is its whole clock)
+    let now = T0;
+    const dealt = [];
+    for (let guard = 0; c.enemy === boss && guard < 100000; guard++) {
+        now += step;
+        game.now = now;
+        tickCombat(game, step);
+        for (const ev of game.drainEvents()) if (ev.type === 'hit') dealt.push(ev.dmg);
+    }
+    assert.notEqual(c.enemy, boss, 'its clock ran out');
+    return dealt;
+}
+const sum = xs => xs.reduce((a, b) => a + b, 0);
+
+test("Berserker counts under half his health or once a boss's clock is under its mark, one bonus however many hold", () => {
+    const share = BALANCE.combat.berserkerClock;
+    assert.ok(share > 0 && share < 1, 'on by default');
+    const game = withTalents(hero(150), { berserker: 2 });
+    const c = game.state.combat;
+    const d = game.derived;
+    fixed(0.5);   // no crits, no spread
+    Object.assign(c, { stage: 130, active: true, hp: d.maxHp });
+    spawnEnemy(game);
+    const clock = BALANCE.combat.bossTimeMs;
+    assert.equal(c.bossTimeLeft, clock);
+    const swing = () => { c.enemy.hp = c.enemy.maxHp = 1e15; return playerAttack(game); };
+    const plain = Math.round(d.atk);
+    const raging = Math.round(d.atk * 1.2);
+    assert.equal(swing(), plain, 'a fresh clock, full health: nothing');
+    c.bossTimeLeft = clock * share + 1;
+    assert.equal(swing(), plain, 'a moment over the mark');
+    c.bossTimeLeft = clock * share;
+    assert.equal(swing(), raging, 'at the mark: +20%');
+    c.bossTimeLeft = 1000;
+    assert.equal(swing(), raging);
+    c.hp = d.maxHp * 0.4;
+    assert.equal(swing(), raging, 'under half his health as well: still the one bonus');
+    c.bossTimeLeft = clock;
+    assert.equal(swing(), raging, 'under half his health alone, as ever');
+    c.hp = d.maxHp;
+    // a boss's own clock: more time from Patient Hunter (or a Trial's less) moves the mark with it
+    c.enemy.timeLimit = 40000;
+    c.bossTimeLeft = 40000 * share - 1;
+    assert.equal(swing(), raging);
+    c.bossTimeLeft = 40000 * share + 1;
+    assert.equal(swing(), plain);
+    // a monster that isn't a boss has no clock
+    c.stage = 131;
+    spawnEnemy(game);
+    assert.ok(!c.enemy.boss);
+    assert.equal(c.bossTimeLeft, 0);
+    assert.equal(swing(), plain, 'no boss, no clock');
+    // the first rank: +10%
+    withTalents(game, { berserker: 1 });
+    fixed(0.5);
+    c.stage = 130;
+    spawnEnemy(game);
+    c.bossTimeLeft = 1000;
+    assert.equal(swing(), Math.round(game.derived.atk * 1.1));
+});
+
+test("a dungeon's boss counts for Berserker's clock; the Titan's minute and the clan's fight don't", () => {
+    const game = withTalents(hero(150), { berserker: 2 });
+    const c = game.state.combat;
+    fixed(0.5);
+    c.hp = game.derived.maxHp;
+    const atk = Math.round(game.derived.atk);
+    const raging = Math.round(game.derived.atk * 1.2);
+    const onClock = (enemy, left) => { c.enemy = { name: 'x', stage: 130, atk: 1, interval: 2000, hp: 1e15, maxHp: 1e15, boss: true, ...enemy }; c.bossTimeLeft = left; return playerAttack(game); };
+    c.active = true;
+    c.mode = 'dungeon';
+    assert.equal(onClock({ timeLimit: 60000 }, 60000 * BALANCE.combat.berserkerClock + 1), atk);
+    assert.equal(onClock({ timeLimit: 60000 }, 60000 * BALANCE.combat.berserkerClock), raging, "a dungeon boss's clock counts");
+    c.mode = 'titan';
+    assert.equal(onClock({ titan: true, timeLimit: 60000 }, 1000), atk, "the Titan's minute doesn't: the race is scored by its damage");
+    c.hp = game.derived.maxHp * 0.4;
+    assert.equal(onClock({ titan: true, timeLimit: 60000 }, 50000), raging, 'though under half his health it counts there as ever');
+    c.hp = game.derived.maxHp;
+    // the clan's boss: the talents' rules stay out of its fight
+    c.mode = 'clan';
+    game.recompute();
+    assert.equal(game.derived.talents.berserker, undefined);
+    game.state.clanFight = { scale: 1 };
+    assert.equal(onClock({ timeLimit: 60000 }, 1000), Math.round(game.derived.atk));
+    c.mode = 'stages';
+    game.recompute();
+});
+
+test("Berserker's mark on the clock is exact in a step of any length, and only a hero who has it is touched", () => {
+    const fine = bossFight({ berserker: 2 });
+    const long = bossFight({ berserker: 2 }, { step: 7000 });
+    assert.deepEqual(long, fine, 'the same swings, the mark inside a 7 s step or not');
+    const without = bossFight({});
+    assert.ok(fine.length === without.length);
+    // up to the mark as it was, past it +20%: over the clock +20% of the share past the mark
+    const share = BALANCE.combat.berserkerClock;
+    const expected = 1 + 0.2 * share;
+    assert.ok(Math.abs(sum(fine) / sum(without) - expected) < 0.02, `${(sum(fine) / sum(without)).toFixed(3)} of the damage over the clock, about ${expected}`);
+    const before = Math.floor(fine.length * (1 - share)) - 1;
+    assert.equal(sum(fine.slice(0, before)), sum(without.slice(0, before)), 'the swings before the mark as they were');
+    assert.ok(sum(fine.slice(before + 2)) > sum(without.slice(before + 2)) * 1.15, 'the swings past it harder');
+});
+
+test('with BALANCE.combat.berserkerClock at 0 Berserker is the old rule: nothing changes but the words', () => {
+    const was = BALANCE.combat.berserkerClock;
+    try {
+        BALANCE.combat.berserkerClock = 0;
+        assert.deepEqual(bossFight({ berserker: 2 }), bossFight({}), 'at full health a whole fight is swing for swing the same as without the talent');
+        assert.equal(talentById('berserker').text(2), '+20% damage while under half his health');
+        const game = withTalents(hero(150), { berserker: 2 });
+        const c = game.state.combat;
+        fixed(0.5);
+        Object.assign(c, { stage: 130, active: true, hp: game.derived.maxHp });
+        spawnEnemy(game);
+        c.enemy.hp = c.enemy.maxHp = 1e15;
+        c.bossTimeLeft = 1;
+        assert.equal(playerAttack(game), Math.round(game.derived.atk), 'a clock nearly out: nothing');
+        c.bossTimeLeft = -5;
+        assert.equal(playerAttack(game), Math.round(game.derived.atk), 'not even past its end inside a step');
+        c.hp = game.derived.maxHp * 0.4;
+        assert.equal(playerAttack(game), Math.round(game.derived.atk * 1.2), 'under half his health it counts');
+        // and a hero without the talent fights the same with the switch on or off
+        BALANCE.combat.berserkerClock = 0.5;
+        const on = bossFight({});
+        BALANCE.combat.berserkerClock = 0;
+        assert.deepEqual(bossFight({}), on);
+    } finally {
+        BALANCE.combat.berserkerClock = was;
+    }
+    assert.match(talentById('berserker').text(2), /boss's clock is under/);
+});

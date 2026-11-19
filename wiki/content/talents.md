@@ -1,6 +1,6 @@
 ---
 path: /talents
-keywords: war tree, talents, talent, talent points, talent tree, combat level past 99, levels past 99, blade, bulwark, hunt, capstone, respec, unlearn, deathblow, execute, opening blow, patient hunter, relentless, unbreakable, second wind
+keywords: war tree, talents, talent, talent points, talent tree, combat level past 99, levels past 99, blade, bulwark, hunt, capstone, respec, unlearn, deathblow, execute, opening blow, berserker, patient hunter, relentless, unbreakable, second wind
 ---
 [[Combat]]'s levels don't stop at {{MAX_LEVEL}}. They go on along the same [[XP table]], each one slower to come than the last, and every combat level past {{MAX_LEVEL}} brings a **talent point** for the War Tree: three trees of talents, in the shape of the old talent trees of World of Warcraft. It is the long road of the late game: the first points come in hours, the thirty-first in a couple of weeks, and filling one tree takes months.
 
@@ -29,3 +29,5 @@ Tap a talent to see what it does now and at its next rank, then **Learn** to spe
 ## Where talents count
 
 Talents count in every fight: the stage ladder, [[Dungeons|dungeon runs]], [[The Titan]] and [[Trials]]. In the clan boss's fight ([[Clans and leaderboards|Clans]]) only their stats count, not their rules, since the server reckons that fight. A [[Trials|Trial]]'s rule still wins: under Glass Hero the first blow that lands fells your hero, whatever the Bulwark says.
+
+**{{talentById('berserker').name}}** counts while your hero is under half his health, and also once a boss's clock has {{pct(BALANCE.combat.berserkerClock, 0)}} of its time left or less, so it still pays when food or a big health bar keeps him high. That goes for the bosses of the stage ladder and of the dungeons. [[The Titan]]'s minute doesn't count for it (that fight is a race scored by the damage dealt), though his health still does.

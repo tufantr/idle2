@@ -1598,6 +1598,11 @@ Keeping it running:
 - [x] **Armour still counts at the first walls** (a fix on the one measure for gear, November 2026; DESIGN §3.31): below
       stage 150, where a new hero falls to blows of 3 to 8% of his health, defence and health count whatever a blow's
       share, so a better plate keeps its ▲ and the guide's hand, and Weaker leaves it
+- [x] **Berserker counts at a boss's clock too** (a player's report, D5, 19 November 2026; DESIGN §3.33): its +10/+20%
+      damage counted only under half his health, which Gourmet's auto-eat stops from level 5 and a deep hero's health
+      never reaches; it now also counts once a boss's clock is under a quarter (ladder and dungeons, not the Titan's
+      minute or the clan's fight): 0 stages at the wall before, about 1.5 now (a half clock would have been worth all
+      of Giant Slayer for two points)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

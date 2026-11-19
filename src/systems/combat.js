@@ -238,6 +238,19 @@ function comboMultiplier(combo) {
     return 1 + Math.min(BALANCE.combat.comboMax, combo) * BALANCE.combat.comboDmgPerStack;
 }
 
+/**
+ * Berserker's mark on a boss's clock (data/talents.js): the time left at which it starts to count,
+ * BALANCE.combat.berserkerClock of the clock. Null where the clock has no say: the switch at 0, no boss, the Titan
+ * (its minute is a race scored by the damage dealt, not a wall to break: there a clock's bonus would only be a surer
+ * score) and the clan's boss (talents' rules stay out of its fight, which the server reckons).
+ */
+function berserkerMark(c) {
+    const share = BALANCE.combat.berserkerClock;
+    const e = c.enemy;
+    if (!(share > 0) || !e?.boss || e.titan || c.mode === 'titan' || c.mode === 'clan') return null;
+    return (e.timeLimit || BALANCE.combat.bossTimeMs) * share;
+}
+
 /** One player attack. `manual`: a strike, a tenth of an attack (BALANCE.combat.manualHitMult). The combo raises every hit. */
 export function playerAttack(game, { manual = false } = {}) {
     const state = game.state;
@@ -265,7 +278,10 @@ export function playerAttack(game, { manual = false } = {}) {
         if (isCrit && fx.weakSpot) dmg *= 1 + fx.weakSpot;
     }
     if (!manual) enemy.opened = true;
-    if (fx.berserker && c.hp < d.maxHp / 2) dmg *= 1 + fx.berserker;
+    if (fx.berserker) {   // under half his health, or with the boss's clock at its mark or below (berserkerMark)
+        const mark = berserkerMark(c);
+        if (c.hp < d.maxHp / 2 || (mark !== null && c.bossTimeLeft <= mark)) dmg *= 1 + fx.berserker;
+    }
     if (!manual && c.vengeance) { dmg *= 1 + (fx.vengeance || 0); c.vengeance = false; }   // after a dodge
     dmg = Math.max(1, Math.round(dmg * rng.float(0.9, 1.1)));
     const hpBefore = enemy.hp;
@@ -721,6 +737,16 @@ export function tickCombat(game, dt) {
         tickCombat(game, first);
         tickCombat(game, dt - first);
         return;
+    }
+    // Likewise Berserker's mark on the clock, for a hero who has it: the swings past it count, in a step of any length.
+    if (c.active && game.derived.talents?.berserker && c.enemy?.boss && !choosingAfterClear(state)) {
+        const mark = berserkerMark(c);
+        if (mark !== null && c.bossTimeLeft > mark && dt > c.bossTimeLeft - mark) {
+            const first = c.bossTimeLeft - mark;
+            tickCombat(game, first);
+            tickCombat(game, dt - first);
+            return;
+        }
     }
     const d = game.derived;
     // The run's stall clock: time spent climbing the stage ladder (fighting, or resting to fight on)

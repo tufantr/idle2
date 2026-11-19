@@ -164,7 +164,13 @@ export const BALANCE = {
         // regroupPayout; the research loop's P-121): this share of the cut time × the try's ÷ (the try + the regroup),
         // which keeps the gold an hour at a boss's clock wall what it was with the whole regroup, the tries coming sooner.
         // 1 for that; (try + regroup) ÷ try would pay the whole cut minute each time, three times the gold an hour.
-        secondChancePay: 1
+        secondChancePay: 1,
+        // Berserker (data/talents.js) counts under half his health, which a deep hero rarely sees and one whose Gourmet
+        // eats at 50% or more never does; so it also counts once a boss's clock has this share of its time left, or less
+        // (the ladder's and the dungeons' bosses; not the Titan's minute, a race scored by its damage, nor the clan's
+        // fight, where talents' rules don't count). 0: his health alone, as before. A quarter: at half the clock it was
+        // worth as much as all of Giant Slayer for two points (tools/talents.mjs --clock, DESIGN §3.33).
+        berserkerClock: 0.25
     },
     minigame: {
         opportunityEveryMs: [180000, 360000], // a chance appears every 3-6 minutes of active skilling
