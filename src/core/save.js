@@ -272,7 +272,7 @@ export class CloudClient {
     setClanBanner(colour, emblem) { return this.request('/clan/banner', { method: 'POST', body: { colour, emblem } }); }
     /** A clan attack as it was fought: when the player struck (ms into the fight) and how long it lasted. */
     clanAttack({ strikes = [], ms, at, endless = false } = {}) { return this.request('/clan/attack', { method: 'POST', body: { strikes, ms, fightAt: at, ...(endless ? { endless: true } : {}) } }); }   // `at`: the fight's own mark, so a resend is never a second attack; `endless`: at the Endless Hydra
-    /** The week's clan ranking: every clan in its division, and last week's crowns. */
+    /** The week's clan ranking: the one table (or, in a week before it, every clan in its division), and last week's crowns. */
     clanRanking() { return this.request('/clans/ranking'); }
     rewards() { return this.request('/rewards'); }
     claimRewards(ids) { return this.request('/rewards/claim', { method: 'POST', body: { ids } }); }

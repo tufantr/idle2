@@ -1720,3 +1720,103 @@ test("the week's last gift may run a little past its hours: no scraps of a week 
     assert.equal(more.status, 400);
     assert.match((await more.json()).error, /more on Monday/);
 });
+
+test('one table and three crowns from the dated Monday: the week before stays as it was played, its crowns too, and the old fields stay for older pages', async () => {
+    const { CLAN_TABLE, isoWeek } = await import('../src/data/social.js');
+    const date = CLAN_TABLE.from;
+    const kept = async week => {   // a week's rows as the store keeps them, in both stores
+        const rows = memory ? memory.db.rankings.filter(r => r.week === week) : (await pool.query('SELECT name, division, rank, kills, score, place FROM clan_rankings WHERE week = $1', [week])).rows;
+        return rows.map(r => ({ name: r.name, division: r.division, rank: Number(r.rank), kills: Number(r.kills), score: Number(r.score), place: Number(r.place) || 0 })).sort((a, b) => a.name.localeCompare(b.name));
+    };
+    try {
+        toMonday();
+        const hero = { Alder: 400, Birch: 50, Cedar: 200, Dogwood: 100, Elm: 300 };   // what each one's Hydra fight will reach follows these tokens
+        const player = {};
+        for (const name of Object.keys(hero)) {
+            player[name] = await register(`table_${name.toLowerCase()}`);
+            assert.equal((await post('/clans', { name: `${name} Grove`, tag: name.slice(0, 4).toUpperCase() }, player[name])).status, 200);
+        }
+        const all = Object.values(player);
+        const { Alder: alder, Birch: birch, Cedar: cedar, Dogwood: dogwood, Elm: elm } = player;
+        const fell = async (...who) => {   // a level of each one's boss falls to their attack
+            for (const token of who) await get('/clan', token);
+            await peek.bossHpToOne();
+            for (const token of who) assert.equal((await (await post('/clan/attack', {}, token)).json()).killed, true);
+        };
+        const listed = async () => Object.fromEntries((await (await get('/clans?search=Grove', alder)).json()).clans.map(c => [c.name.split(' ')[0], c]));
+        const ranking = async () => (await get('/clans/ranking', alder)).json();
+        const noWeek = c => c && Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'week'));
+
+        // the last week of divisions: the table begins next Monday, set as the landing sets it
+        toMonday();
+        const week0 = isoWeek(clock);
+        CLAN_TABLE.from = new Date(clock + 7 * DAY_MS).toISOString().slice(0, 10);
+        for (const [name, tokens] of Object.entries(hero)) await post('/save', { state: heroSave({ tokens, bestStage: 60 }) }, player[name]);
+        await fell(...all);
+        clock += DAY_MS; await fell(alder);
+        clock += DAY_MS; await fell(alder);
+        const before = await ranking();
+        assert.equal('table' in before, false, 'a week before the table has none');
+        assert.deepEqual(before.divisions.find(d => d.id === 'silver').clans.map(c => [c.name, c.rank]), [['Alder Grove', 1]]);
+        assert.equal('table' in (await (await get('/clan', alder)).json()).standing, false);
+
+        // the first week of the table: the week before is settled now, after the switch, and by its own rule
+        toMonday();
+        const week1 = isoWeek(clock);
+        assert.equal(CLAN_TABLE.from, new Date(clock - 3600 * 1000).toISOString().slice(0, 10));
+        let clans = await listed();
+        assert.deepEqual(noWeek(clans.Alder.crowned), { division: 'silver', rank: 1 }, "last week's crowns are the divisions'");
+        assert.deepEqual(['Birch', 'Cedar', 'Dogwood', 'Elm'].map(n => clans[n].crowned?.rank ?? 0), [1, 2, 3, 0], "bronze's top three, by the name with nothing to tell them apart");
+        for (const c of Object.values(clans)) assert.deepEqual(c.crowned, c.crown, 'the old field says the same');
+        const firstLook = await ranking();
+        assert.deepEqual(firstLook.table, [], 'the new week has its table, empty so far');
+        assert.equal('table' in firstLook.last, false);
+        assert.deepEqual(firstLook.last.divisions.map(d => [d.id, d.clans.map(c => c.name)]), [['silver', ['Alder Grove']], ['bronze', ['Birch Grove', 'Cedar Grove', 'Dogwood Grove']]]);
+        const week0Rows = await kept(week0);
+        assert.deepEqual(week0Rows.map(r => [r.name, r.division, r.rank, r.place]), [['Alder Grove', 'silver', 1, 0], ['Birch Grove', 'bronze', 1, 0], ['Cedar Grove', 'bronze', 2, 0], ['Dogwood Grove', 'bronze', 3, 0], ['Elm Grove', 'bronze', 4, 0]]);
+
+        // the week's table: most levels felled first, the Hydra's depth between clans that felled as many
+        await fell(alder, birch, cedar, dogwood);
+        clock += DAY_MS; await fell(birch);
+        clock += 4 * DAY_MS;   // Saturday: the Hydra is awake
+        for (const token of all) {
+            const hit = await (await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, token)).json();
+            assert.equal(hit.endless, true);
+            assert.ok(hit.table.rank >= 1 && hit.table.of >= 1, 'the answer says the place in the table');
+            assert.ok(hit.rank >= 1 && hit.division, 'and the old fields');
+        }
+        const live = await ranking();
+        assert.deepEqual(live.table.map(c => [c.rank, c.name, c.kills, c.you]), [[1, 'Birch Grove', 2, false], [2, 'Alder Grove', 1, true], [3, 'Cedar Grove', 1, false], [4, 'Dogwood Grove', 1, false], [5, 'Elm Grove', 0, false]]);
+        assert.ok(live.table[1].score > live.table[2].score && live.table[2].score > live.table[3].score, 'depth decides between equals');
+        assert.ok(live.table[4].score > live.table[0].score, 'levels felled come before depth');
+        // what an older page reads is what it always was: each division's own order and ranks
+        const bronze = live.divisions.find(d => d.id === 'bronze').clans;
+        assert.deepEqual(bronze.map(c => [c.rank, c.name]), [[1, 'Alder Grove'], [2, 'Elm Grove'], [3, 'Cedar Grove'], [4, 'Dogwood Grove'], [5, 'Birch Grove']]);
+        assert.deepEqual(Object.keys(bronze[0]).sort(), ['counted', 'kills', 'name', 'rank', 'score', 'tag', 'you']);
+        const standing = (await (await get('/clan', alder)).json()).standing;
+        assert.deepEqual([standing.division, standing.divisionName, standing.rank, standing.of, standing.table], ['bronze', 'Bronze', 1, 5, { rank: 2, of: 5 }]);
+
+        // the next week: the table's top three wear the crowns; the old field still says each division's
+        toMonday();
+        const week2 = isoWeek(clock);
+        clans = await listed();
+        assert.deepEqual(['Birch', 'Alder', 'Cedar', 'Dogwood', 'Elm'].map(n => noWeek(clans[n].crowned)), [{ rank: 1 }, { rank: 2 }, { rank: 3 }, null, null]);
+        assert.equal(clans.Birch.crowned.week, week1);
+        assert.deepEqual(['Alder', 'Elm', 'Cedar', 'Birch'].map(n => noWeek(clans[n].crown)), [{ division: 'bronze', rank: 1 }, { division: 'bronze', rank: 2 }, { division: 'bronze', rank: 3 }, null]);
+        const mine = (await (await get('/clan', alder)).json()).clan;
+        assert.deepEqual([mine.crowned.rank, mine.crown.rank, mine.crown.division], [2, 1, 'bronze']);
+        const after = await ranking();
+        assert.deepEqual(after.last.table.map(c => [c.rank, c.name, c.you]), [[1, 'Birch Grove', false], [2, 'Alder Grove', true], [3, 'Cedar Grove', false]]);
+        assert.deepEqual(after.last.divisions.map(d => [d.id, d.clans.map(c => [c.rank, c.name])]), [['bronze', [[1, 'Alder Grove'], [2, 'Elm Grove'], [3, 'Cedar Grove']]]]);
+        assert.deepEqual(after.table, []);
+        assert.deepEqual((await kept(week1)).map(r => [r.name, r.rank, r.place]), [['Alder Grove', 1, 2], ['Birch Grove', 5, 1], ['Cedar Grove', 3, 3], ['Dogwood Grove', 4, 4], ['Elm Grove', 2, 5]]);
+
+        // what was kept stays as kept, whatever the date says afterwards
+        assert.deepEqual(await kept(week0), week0Rows);
+        CLAN_TABLE.from = '2099-01-05';
+        assert.equal((await ranking()).last.table.length, 3, "a kept table week doesn't turn back into divisions");
+        assert.equal(week2 > week1 && week1 > week0, true);
+    } finally {
+        CLAN_TABLE.from = date;
+    }
+});

@@ -1155,10 +1155,22 @@ with the game's own stat code; the client never submits damage or scores.
   the next week, on the clan list and the clan's header, and the clan its best week (its record). A crown is gold for
   the 1st, silver for the 2nd and bronze for the 3rd, and says its place in a tip a phone opens (`clanCrown`). On screen
   (`endlessPanel`, `clanStandings` in `src/ui/render.js`): the Hydra's card under the week's boss (asleep, when it
-  wakes; awake, the fight and two pips), the clan's division, place and depth, the week's table by division and last
-  week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
+  wakes; awake, the fight and two pips), the clan's place and depth (and division, before the one table below), the
+  week's table and last week's crowns; the fight is the clan fight's (`state.clanFight.endless`, its damage adding up in `dealt`), its bar
   the level being broken through and its label the depth (`src/ui/scene.js`), in the Abyss. Rewards are for show only:
   the banner already pays for the kills, and power for a rank would make forging a save worth it.
+- **One table and three crowns** (P-010, the November 2026 patch's decision 14; `CLAN_TABLE`, `clanTable`, `rankedAsTable` in
+  `src/data/social.js`). With a handful of clans the four divisions crowned nearly every one of them, so from the Monday after
+  the patch's second landing (`CLAN_TABLE.from`, the one date to set, at the landing) all clans stand in one table: most levels
+  felled first, the Hydra's depth between clans that felled as many, then the name. Its 1st, 2nd and 3rd wear the crowns.
+  A finished week is worked out and kept by the first look after it ends, so **the rule goes by the week's own id**, never
+  by today: the week under way at the landing and the last one before `from` keep their divisions and their crowns even
+  though they are settled after the switch (those crowns are worn through the first table week). A kept week says which it
+  was (`clan_rankings.place`, a new column, empty before), so its crowns stay as given whatever the date is later set to.
+  **Older pages:** `rank` stays the place in the division in every week, and the answers keep `divisions`, `last.divisions`,
+  `crown` and the standing's division and rank as they were. New beside them: `table` and `last.table`, `crowned` (the crown
+  to show; it names a `division` only for a week before the table) and `standing.table` (`{ rank, of }`, on a Hydra attack's
+  answer too). An older server sends none of them and the game goes on showing divisions.
 - **An attack is a fight on screen** (October 2026, the owner's ask after the Tap Titans 2 research;
   `src/systems/clanfight.js`): "Fight the boss" uploads the save and takes the hero into a 30-second fight
   (`CLAN_ATTACK_SECONDS`) against the week's boss, full screen on the Clan tab like the Titan's on the Dungeons tab (`state.combat.mode` =

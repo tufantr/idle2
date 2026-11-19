@@ -192,6 +192,9 @@ async function ensureSchema() {
             PRIMARY KEY (week, clan_id)
         )
     `;
+    // A week ranked as one table (src/data/social.js CLAN_TABLE): each clan's place in it. Empty in every earlier week: `rank` is
+    // always the place in the division, as an older server reads it.
+    await sql`ALTER TABLE clan_rankings ADD COLUMN IF NOT EXISTS place SMALLINT`;
     // The Clan Hall (October 2026, src/data/clanhall.js): the work each room has had, in tenths of a second, and every gift
     // a member made, numbered for each player (`seq`, unique: two gifts sent at once can't both pass the week's allowance;
     // a save says how many of them its bank has given: api/index.js). The banner's colour and emblem are the clan's.
@@ -793,18 +796,18 @@ async function allClans() {
     return rows.map(r => ({ id: r.id, name: r.name, tag: r.tag }));
 }
 
-/** A finished week's ranking as it was kept: [{ clanId, name, tag, division, rank, kills, score, counted }]. */
+/** A finished week's ranking as it was kept: [{ clanId, name, tag, division, rank, kills, score, counted, place }] (`place` 0: no one table that week). */
 async function getRanking(week) {
-    const { rows } = await sql`SELECT clan_id, name, tag, division, rank, kills, score, counted FROM clan_rankings WHERE week = ${week} ORDER BY division, rank`;
-    return rows.map(r => ({ clanId: r.clan_id, name: r.name, tag: r.tag, division: r.division, rank: int(r.rank), kills: int(r.kills), score: Number(r.score) || 0, counted: int(r.counted) }));
+    const { rows } = await sql`SELECT clan_id, name, tag, division, rank, kills, score, counted, place FROM clan_rankings WHERE week = ${week} ORDER BY division, rank`;
+    return rows.map(r => ({ clanId: r.clan_id, name: r.name, tag: r.tag, division: r.division, rank: int(r.rank), kills: int(r.kills), score: Number(r.score) || 0, counted: int(r.counted), place: int(r.place) }));
 }
 
 /** Keep a finished week's ranking (once: rows kept already stay as they are). */
 async function putRanking(week, rows) {
     for (const r of rows) {
         await sql`
-            INSERT INTO clan_rankings (week, clan_id, name, tag, division, rank, kills, score, counted)
-            VALUES (${week}, ${r.clanId}::int, ${r.name}, ${r.tag}, ${r.division}, ${r.rank}::smallint, ${r.kills}::smallint, ${r.score}::double precision, ${r.counted}::smallint)
+            INSERT INTO clan_rankings (week, clan_id, name, tag, division, rank, kills, score, counted, place)
+            VALUES (${week}, ${r.clanId}::int, ${r.name}, ${r.tag}, ${r.division}, ${r.rank}::smallint, ${r.kills}::smallint, ${r.score}::double precision, ${r.counted}::smallint, ${r.place || null}::smallint)
             ON CONFLICT (week, clan_id) DO NOTHING
         `;
     }

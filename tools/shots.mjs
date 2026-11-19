@@ -21,8 +21,10 @@
 //                                                 # and 'bannerpick' its banner picker; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
-//                                                 # clans to find: the API is answered by the
-//                                                 # tool, CLAN_API below)
+//                                                 # clans to find, 'clantable' the week's one table
+//                                                 # and its crowns, 'clanswitch' the first such week,
+//                                                 # last week's crowns still the divisions': the API
+//                                                 # is answered by the tool, CLAN_API below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -173,6 +175,20 @@ const CLAN_SHOTS = {
         FI.refreshSocial();
         await new Promise(resolve => setTimeout(resolve, 900));
     },
+    // the week's one table (data/social.js CLAN_TABLE), last week's three crowns over it
+    clantable: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'later' }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
+    },
+    // the first week of the table: last week's crowns are still the divisions', as they were given
+    clanswitch: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'first' }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
+    },
     // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
     clancapped: async () => {
         document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
@@ -200,7 +216,7 @@ function clanApi() {
     let shotMode = {};   // a shot's own answers (CLAN_SHOTS: `flagged` the account flagged), set by the shot and reset before each one
     const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
     const answer = () => ({
-        clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
+        clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null, ...(shotMode.table === 'later' ? { crowned: { rank: 2, week } } : {}) },
         members: members.map(([username, owner, bestStage, totalLevel, total, w]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, built: { total, week: w } })),
         hall: { ...hall, builders: { forge: [{ username: 'Yarraksalih', work: 18000 }, { username: 'Tufan', work: 12500 }], library: [{ username: 'Tufan', work: 41000 }] },
             feed: [{ username: 'Yarraksalih', room: 'forge', resource: 'runite_bar', qty: 240, at: Date.now() - 36e5 }, { username: 'Tufan', room: 'library', resource: 'essence', qty: 4200, at: Date.now() - 72e5 },
@@ -208,7 +224,7 @@ function clanApi() {
         boss: { week, level: 2, maxHp: 9.6e8, hp: 4.1e8, killed: false, lastHit: null, endsInMs: 3 * 864e5, nextInMs: 5e7, kills: 1, levels: 7 },
         banner: { week, kills: 1 }, board: [{ username: 'Yarraksalih', share: 0.46, damage: 4.4e8, attacks: 5, you: false }, { username: 'Tufan', share: 0.38, damage: 3.6e8, attacks: 4, you: true }],
         attackScale: 1, attacksLeft: 2, attacksPerDay: 3, attackBank: 6, fightSeconds: 30, maxMembers: 20,
-        standing: { division: 'bronze', divisionName: 'Bronze', rank: 3, of: 9, score: 0, counted: 0, kills: 1, record: 14.2 },
+        standing: { division: 'bronze', divisionName: 'Bronze', rank: 3, of: 9, score: 0, counted: 0, kills: 1, record: 14.2, ...(shotMode.table ? { table: { rank: 2, of: 6 } } : {}) },
         endless: { open: false, opensInMs: 2 * 864e5, endsInMs: 3 * 864e5, attacks: 2, attacksLeft: 2, best: 0, eligible: true }
     });
     return async route => {
@@ -233,7 +249,16 @@ function clanApi() {
         }
         if (path === '/rewards') return json({ rewards: [] });
         if (path === '/leaderboard') return json({ entries: [], optIn: false, label: 'Best stage', period: 'all' });
-        if (path === '/clans/ranking') return json({ week, divisions: [], last: { week, divisions: [] } });
+        if (path === '/clans/ranking') {
+            if (!shotMode.table) return json({ week, divisions: [], last: { week, divisions: [] } });
+            // a week of one table (api/index.js), with the fields older pages read beside it
+            const clan = (rank, name, tag, kills, score, you = false) => ({ rank, name, tag, kills, score, counted: Math.min(15, Math.round(score / 60)), you });
+            const table = [clan(1, 'Night Watch', 'NW', 7, 1204.5), clan(2, 'Iron Wolves', 'IWF', 6, 642.1, true), clan(3, 'Ember Court', 'EMB', 6, 610.8), clan(4, 'Deep Divers', 'DEEP', 4, 955.2), clan(5, 'Slow Burn', 'SLO', 2, 88.4), clan(6, 'Quiet Ones', 'QUI', 1, 0)];
+            const last = shotMode.table === 'first'
+                ? { week, divisions: [{ id: 'gold', name: 'Gold', clans: [clan(1, 'Night Watch', 'NW', 6, 980), clan(2, 'Ember Court', 'EMB', 5, 455)] }, { id: 'bronze', name: 'Bronze', clans: [clan(1, 'Iron Wolves', 'IWF', 2, 310, true), clan(2, 'Slow Burn', 'SLO', 1, 40)] }] }
+                : { week, divisions: [], table: table.slice(0, 3) };
+            return json({ week, endsInMs: 3 * 864e5, endless: { open: false, opensInMs: 2 * 864e5 }, divisions: [], table, last });
+        }
         if (path === '/clan/hall/give') {
             const { room, resource, qty } = JSON.parse(request.postData() || '{}');
             const { giftWorth } = await import('../src/data/clanhall.js');

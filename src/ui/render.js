@@ -2513,7 +2513,7 @@ export function renderClan(game, ui, cloud) {
     // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
-        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(wornCrown(c))}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}${c.active !== undefined ? `<div class="muted small" title="Members who played this past week">${Number(c.active) || 0} this week</div>` : ''}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>
@@ -2541,7 +2541,7 @@ export function renderClan(game, ui, cloud) {
         const built = m => { const b = m.built || {}; return Number(b.total) > 0 ? `<span title="${esc(`${workTime(Number(b.week) || 0)} this week`)}">${workTime(Number(b.total))}</span>` : '<span class="muted">·</span>'; };
         const members = (social.members || []).map(m => `<tr class="${m.you ? 'you-row' : ''}"><td>${m.owner ? `${sprite('crown', { scale: 0.5, cls: 'soft res-spr', title: 'Leader' })} ` : ''}${esc(m.username)}${canKick && !m.you ? ` <button class="mini-btn danger" data-username="${esc(m.username)}" onclick="FI.kickMember(this.dataset.username)" aria-label="Remove ${esc(m.username)} from the clan">Remove</button>` : ''}</td><td>${fmt(Number(m.bestStage) || 0)}</td><td>${fmt(Number(m.totalLevel) || 0)}</td><td>${built(m)}</td></tr>`).join('');
         body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}">
-            <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span>${crownMark(c.crown)}</h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
+            <div class="panel-header"><div class="clan-head"><h2>${DEF_ICON} ${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span>${crownMark(wornCrown(c))}</h2><div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></div>
                 <div class="btn-row">${discord}<button class="mini-btn danger" onclick="FI.leaveClan()">Leave clan</button></div></div>
             ${boss ? clanBossPanel(game, social, boss, pct) : ''}
             ${boss ? endlessPanel(game, social) : ''}
@@ -2755,17 +2755,22 @@ function clanBossPanel(game, social, boss, pct) {
  */
 const clanCrown = (rank, where) => `<span class="clan-crown rank-${Number(rank) || 0}" ${tipAttrs(['', '1st', '2nd', '3rd'][rank] || `#${rank}`, where)}>${sprite('crown', { scale: 0.5, cls: 'soft res-spr' })}</span>`;
 
-/** A crown for a clan in last week's top three of its division (data/social.js CLAN_DIVISIONS), or nothing. */
+/** The crown a clan wears (api/index.js crownsFor): `crowned`; a server from before the one table sends only `crown`. */
+const wornCrown = clan => (clan.crowned !== undefined ? clan.crowned : clan.crown);
+
+/** A crown for a clan in last week's top three: of the one table (data/social.js CLAN_TABLE), or of its division in the weeks before it. */
 function crownMark(crown) {
     if (!crown) return '';
+    if (!crown.division) return clanCrown(crown.rank, 'of all clans last week');
     const division = CLAN_DIVISIONS.find(d => d.id === crown.division);
     return clanCrown(crown.rank, `in the ${division?.name || crown.division} division last week`);
 }
 
 /**
  * The Endless Hydra (data/social.js ENDLESS), the week's ranking: awake at the weekend, two fights for each member who
- * was in the clan when the week began, the deepest counting; asleep, when it wakes. Beside it, the clan's place in its
- * division (the levels of the week's boss it felled) and its best week. The rules are behind the Clan's "?".
+ * was in the clan when the week began, the deepest counting; asleep, when it wakes. Beside it, the clan's place in the one
+ * table (in the weeks before it, in its division: the levels of the week's boss it felled) and its best week. The rules are
+ * behind the Clan's "?".
  */
 function endlessPanel(game, social) {
     const e = social.endless;
@@ -2785,27 +2790,35 @@ function endlessPanel(game, social) {
         : fighting ? '<span class="status-pill fighting">Fighting now</span>'
         : `<button class="prestige-btn" onclick="FI.clanFight(true)" ${ready ? '' : 'disabled'}>${ATK_ICON} ${pending ? 'Sending…' : left > 0 ? 'Fight the Hydra' : 'Both fights made'}</button>${open && e.eligible ? `<span class="clan-attacks" title="${left} fight${left === 1 ? '' : 's'} left this week: the deepest counts">${pips}</span>` : ''}`;
     const division = CLAN_DIVISIONS.find(d => d.id === standing.division) || CLAN_DIVISIONS[CLAN_DIVISIONS.length - 1];
-    const place = standing.rank ? `<b>#${standing.rank}</b> of ${standing.of}` : 'not ranked yet';
+    const where = standing.table || standing;
+    const place = where.rank ? `<b>#${where.rank}</b> of ${where.of}` : 'not ranked yet';
     const record = standing.record > standing.score ? ` · best week ${fmt(standing.record)}` : '';
     return `<div class="clan-boss endless${ready ? ' ready' : ''}">
         <span class="clan-boss-face">${sprite(`mon/${ENDLESS.look}`, { scale: 2, cls: 'soft', fallback: '🐉' })}</span>
         <div class="clan-boss-text">
             <div><b>${esc(ENDLESS.name)}</b> <span class="muted small">${open ? `the week's ranking · until the reset in ${duration(endsMs)}` : "the week's ranking · awake at the weekend"}</span></div>
-            <div class="clan-standing small"><span class="clan-division div-${esc(division.id)}">${esc(division.name)}</span> ${place}${standing.score > 0 ? ` · depth <b>${fmt(standing.score)}</b> (${standing.counted} counted)` : ''}${record}${e.best > 0 ? ` · your deepest ${Number(e.best).toFixed(1)}` : ''}</div>
+            <div class="clan-standing small">${standing.table ? '' : `<span class="clan-division div-${esc(division.id)}">${esc(division.name)}</span> `}${place}${standing.score > 0 ? ` · depth <b>${fmt(standing.score)}</b> (${standing.counted} counted)` : ''}${record}${e.best > 0 ? ` · your deepest ${Number(e.best).toFixed(1)}` : ''}</div>
             <div class="btn-row">${action}</div>
         </div>
     </div>`;
 }
 
-/** The week's standings (the server's): each division's clans by the Hydra's depth, the player's clan marked; last week's crowns. */
+/**
+ * The week's standings (the server's), the player's clan marked: one table with crowns for its top three (data/social.js
+ * CLAN_TABLE), or, in a week from before it, each division's clans by the Hydra's depth. Then last week's crowns, as they were given.
+ */
 function clanStandings(social) {
     const ranking = social.ranking;
     if (!ranking) return '';
     const medal = (rank, where) => (rank <= 3 ? clanCrown(rank, where) : '');
+    const row = (c, where) => `<tr class="${c.you ? 'you-row' : ''}"><td>${medal(c.rank, where)}${c.rank}</td><td class="clan-name">${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></td><td>${Number(c.kills) || 0}</td><td>${fmt(Number(c.score) || 0)}</td></tr>`;
+    const crowned = (c, where) => `${medal(c.rank, where)}<span class="${c.you ? 'up' : ''}">${esc(c.name)}</span>`;
     const divisions = (ranking.divisions || []).filter(d => d.clans.length);
-    const rows = divisions.map(d => `<tr class="division-row"><td colspan="4"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span></td></tr>`
-        + d.clans.map(c => `<tr class="${c.you ? 'you-row' : ''}"><td>${medal(c.rank, `in the ${d.name} division this week`)}${c.rank}</td><td class="clan-name">${esc(c.name)} <span class="muted">[${esc(c.tag)}]</span></td><td>${Number(c.kills) || 0}</td><td>${fmt(Number(c.score) || 0)}</td></tr>`).join('')).join('');
-    const last = (ranking.last?.divisions || []).map(d => `<span class="last-crowns"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span> ${d.clans.map(c => `${medal(c.rank, `in the ${d.name} division last week`)}<span class="${c.you ? 'up' : ''}">${esc(c.name)}</span>`).join(' ')}</span>`).join('');
+    const rows = ranking.table ? ranking.table.map(c => row(c, 'of all clans this week')).join('')
+        : divisions.map(d => `<tr class="division-row"><td colspan="4"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span></td></tr>`
+            + d.clans.map(c => row(c, `in the ${d.name} division this week`)).join('')).join('');
+    const last = ranking.last?.table ? (ranking.last.table.length ? `<span class="last-crowns">${ranking.last.table.map(c => crowned(c, 'of all clans last week')).join(' ')}</span>` : '')
+        : (ranking.last?.divisions || []).map(d => `<span class="last-crowns"><span class="clan-division div-${esc(d.id)}">${esc(d.name)}</span> ${d.clans.map(c => crowned(c, `in the ${d.name} division last week`)).join(' ')}</span>`).join('');
     return `<h3 class="section-title">This week's ranking</h3>
         ${rows ? `<div class="table-wrap"><table class="data-table clan-ranking"><thead><tr><th>#</th><th>Clan</th><th>Bosses</th><th>Depth</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted small">No clan has felled a boss yet this week.</p>'}
         ${last ? `<div class="small muted last-week">Last week: ${last}</div>` : ''}`;

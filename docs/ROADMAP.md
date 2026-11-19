@@ -1571,6 +1571,10 @@ Keeping it running:
       dialog now opens over it
 - [x] **The pace of the work** (R17, P-002): the skill screens show XP an hour and the time to the next level for the work
       under way, and the card being worked how long the materials last; nothing where there is no true figure
+- [x] **One table and three crowns** (R23 of the research loop's ranking, P-010): from the Monday after Landing 2
+      (`CLAN_TABLE.from` in `src/data/social.js`, set at the landing) the clans stand in one table, most levels felled first and
+      the Hydra's depth between equals, and its 1st, 2nd and 3rd wear the crowns; the week under way and every kept week stay as
+      they were, and the API keeps its old fields for pages still open
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

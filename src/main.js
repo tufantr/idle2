@@ -1451,10 +1451,11 @@ async function sendClanResult(now = false) {
 function endlessAnswered(answer) {
     const e = ui.social.endless;
     if (e) Object.assign(e, { attacksLeft: answer.attacksLeft, best: answer.best });
-    if (ui.social.standing && answer.rank) Object.assign(ui.social.standing, { rank: answer.rank, of: answer.of, score: answer.score, division: answer.division, divisionName: answer.divisionName });
+    const place = answer.table || answer;   // in the one table (data/social.js CLAN_TABLE), or in its division
+    if (ui.social.standing && place.rank) Object.assign(ui.social.standing, { rank: answer.rank, of: answer.of, score: answer.score, division: answer.division, divisionName: answer.divisionName, table: answer.table });
     ui.social.fetchedAt = 0;   // the Clan tab brings the ranking up to date when it is next shown
     const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
-        answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
+        place.rank ? `Your clan: #${place.rank} of ${place.of}${answer.table ? '' : ` in ${answer.divisionName}`}, ${fmt(answer.score)} deep` : '',
         answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
         answer.counted === false ? 'Flagged: not counted in the ranking' : ''].filter(Boolean);
     const flagged = answer.counted === false;

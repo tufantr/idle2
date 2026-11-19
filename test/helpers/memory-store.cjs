@@ -319,10 +319,10 @@ function createMemoryStore() {
             return db.clans.map(c => ({ id: c.id, name: c.name, tag: c.tag }));
         },
         async getRanking(week) {
-            return db.rankings.filter(r => r.week === week).map(r => ({ clanId: r.clanId, name: r.name, tag: r.tag, division: r.division, rank: r.rank, kills: r.kills, score: r.score, counted: r.counted }));
+            return db.rankings.filter(r => r.week === week).map(r => ({ clanId: r.clanId, name: r.name, tag: r.tag, division: r.division, rank: r.rank, kills: r.kills, score: r.score, counted: r.counted, place: r.place || 0 }));
         },
         async putRanking(week, rows) {
-            for (const r of rows) if (!db.rankings.some(x => x.week === week && x.clanId === r.clanId)) db.rankings.push({ week, clanId: r.clanId, name: r.name, tag: r.tag, division: r.division, rank: r.rank, kills: r.kills, score: r.score, counted: r.counted });
+            for (const r of rows) if (!db.rankings.some(x => x.week === week && x.clanId === r.clanId)) db.rankings.push({ week, clanId: r.clanId, name: r.name, tag: r.tag, division: r.division, rank: r.rank, kills: r.kills, score: r.score, counted: r.counted, place: r.place || null });
         },
         async clanBestScore(clanId) {
             return Math.max(0, ...db.rankings.filter(r => r.clanId === clanId).map(r => r.score));

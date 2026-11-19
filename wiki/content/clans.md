@@ -51,14 +51,15 @@ The clan's reward for its boss is its banner. Each level the clan fells raises i
 
 ## The week's ranking
 
-Every week the clans are ranked, and the top three of each division wear a crown through the next week, on the clan list and beside the clan's name: gold for the 1st, silver for the 2nd, bronze for the 3rd. Tap a crown (or point at it) to see its place.
+Every week the clans are ranked, and the top three wear a crown through the next week, on the clan list and beside the clan's name: gold for the 1st, silver for the 2nd, bronze for the 3rd. Tap a crown (or point at it) to see its place.
 
-- **Divisions.** The levels of the week's boss a clan fells put it in its division: {{CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below that'}`).join(', ')}}. So clans of a like size and activity meet.
-- **The Endless Hydra** decides inside each division. It wakes for every clan on Saturday at 00:00 UTC and stays until the Monday reset. Its heads grow back, so it never falls.
+- **One table.** From {{clanTableDay()}} all clans stand in one table: most levels of the week's boss felled first, and between clans that felled as many, the Endless Hydra decides.
+- **Before that,** the levels felled put a clan in a division ({{CLAN_DIVISIONS.map(d => `${d.name} ${d.min ? `from ${d.min}` : 'below that'}`).join(', ')}}), the Hydra decided inside it, and the top three of each were crowned. Those crowns stay as they were given.
+- **The Endless Hydra** wakes for every clan on Saturday at 00:00 UTC and stays until the Monday reset. Its heads grow back, so it never falls.
 - **{{ENDLESS.attacks}} fights each, the deepest counts.** Every member who was in the clan when the week began gets {{ENDLESS.attacks}} fights at it, besides the {{CLAN_ATTACKS_PER_DAY}} a day at the week's boss. A fight is the same {{CLAN_ATTACK_SECONDS}}-second fight as any clan attack, strikes and potion included.
 - **Depth.** A fight counts by how many of the Hydra's levels it breaks through. Each level is a fifth tougher than the last, and the first is about a new hero's whole fight, so a hero a thousand times stronger goes about 38 levels deeper, not a thousand times as far.
 - **The clan's depth** is its best {{ENDLESS.counted}} members' together. Accounts whose saves showed impossible numbers are left out.
-- The Clan tab shows the Hydra under the week's boss, your division, place and depth, the week's table by division, last week's crowns and your clan's best week.
+- The Clan tab shows the Hydra under the week's boss, your clan's place and depth, the week's table, last week's crowns and your clan's best week.
 
 ## The clan hall
 
