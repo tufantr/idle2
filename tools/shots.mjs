@@ -7,7 +7,8 @@
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
 //                                                 # 'battle' is the fight filling the screen; 'map' and
 //                                                 # 'prestige' are those dialogs over the game; 'anvil'
-//                                                 # is Smithing's anvil step; 'trials' is the prestige
+//                                                 # is Smithing's anvil step; 'options' Settings' options;
+//                                                 # 'trials' is the prestige
 //                                                 # dialog with Trials cleared and one picked, 'pact'
 //                                                 # the same deep, rungs cleared and a Pact of two
 //                                                 # with the week's picked, and 'trialfight' a fight
@@ -44,6 +45,7 @@ const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cookin
 // A step inside a tab, shot like a tab.
 const STEPS = {
     anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
+    options: () => { FI.switchTab('settings'); document.querySelector('.opt-groups')?.scrollIntoView({ block: 'center' }); },   // Settings' options, in their groups
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
