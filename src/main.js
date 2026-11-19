@@ -17,7 +17,7 @@ import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
-import { vibrationOn, effectOn, blowSound, hurtHeard } from './data/settings.js';
+import { vibrationOn, effectOn, blowSound, hurtHeard, textSizeOf } from './data/settings.js';
 import { SAVER_KEY, REST_FRAME_MS, REST_RENDER_MS, saverOn, atRest, stillLoops, wakeLoops } from './ui/saver.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
@@ -117,6 +117,14 @@ ui.canVibrate = !!navigator.vibrate && !!window.matchMedia?.('(hover: none)').ma
 // The battery saver (src/ui/saver.js): this device's choice, on by default on a phone.
 ui.saver = saverOn(prefs.get(SAVER_KEY), !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches);
 let resting = false;   // the page left alone, drawing less (setResting)
+// The text size, this device's: a share of the root's size, so a size set in the browser or the phone still counts.
+const TEXT_KEY = 'fantasyIdle.textSize';
+ui.textSize = textSizeOf(prefs.get(TEXT_KEY));
+function applyTextSize() {
+    if (ui.textSize === 100) document.documentElement.style.removeProperty('font-size');
+    else document.documentElement.style.fontSize = `${ui.textSize}%`;
+}
+applyTextSize();
 
 function loadFresh() {
     try {
@@ -2055,6 +2063,13 @@ window.FI = {
     },
     /** The battery saver's switch, on this device only (src/ui/saver.js). */
     setSaver(on) { ui.saver = !!on; prefs.set(SAVER_KEY, on ? '1' : '0'); render(); },
+    /** The text size, on this device only. */
+    setTextSize(size) {
+        ui.textSize = textSizeOf(size);
+        if (ui.textSize === 100) prefs.remove(TEXT_KEY); else prefs.set(TEXT_KEY, String(ui.textSize));
+        applyTextSize();
+        render();
+    },
     /** Settings' switch for the M and Space keys, on this device only. */
     setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },

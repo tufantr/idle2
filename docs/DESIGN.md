@@ -2157,6 +2157,10 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
   default, old saves included; mixed keeps them up to No and writes 1.23e33 from where they would turn to Dc; scientific writes 1.23e6 from a
   million. Below a million nothing changes. It changes no stored value: what is stored in words (the log) is written in letters
   (`letters`), and `numbersIn` rewrites the big figures of such words as they are shown. The row opens with the first million (`big_numbers`).
+- **Text size** (100, 115, 130 or 150%, `fantasyIdle.textSize`, per device and not in the save): a share of the root's font size, so all
+  the game's rem type grows and a size set in the browser still counts. The sidebar grows with it (`15.625rem`, 250 px at 100%). At
+  1280 and 390 px, at every size, the main screens have no sideways scroll and lose no word they had (one gear name in the fight's
+  dock is shortened at 150% on a wide screen).
 - **Effects one by one.** Under Reduce motion, which stills them all and hides the switches, a folded **Effects** holds one
   switch per effect once it has been met (`EFFECTS`, `fx_*` in `src/systems/disclosure.js`): floating numbers (the fight's and the
   work's; not the clan boss's "Strike now!", which tells when to strike), coins flying to the purse, the cards' confetti, a boss's shake.

@@ -61,7 +61,7 @@ import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
-import { vibrationOn, EFFECTS, effectOn, NOTATIONS } from '../data/settings.js';
+import { vibrationOn, EFFECTS, effectOn, NOTATIONS, TEXT_SIZES } from '../data/settings.js';
 import { charmsOnOffer, charmCharges } from '../systems/charms.js';
 import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
 import { VERSION } from '../version.js';
@@ -2405,9 +2405,10 @@ function optionGroups(game, ui) {
             s.reducedMotion ? '' : effectSwitches(state, ui),
             optSwitch('Battery saver', 'FI.setSaver(this.checked)', ui?.saver, ' title="On this device only: after half a minute untouched, the game draws less"')
         ]),
-        seen(state, 'big_numbers') ? optGroup('Reading', [
-            optChoice('Big numbers', NOTATIONS, s.numberFormat, "FI.setOption('numberFormat', ")
-        ]) : '',
+        optGroup('Reading', [
+            optChoice('Text size', TEXT_SIZES.map(n => [n, `${n}%`]), ui?.textSize ?? 100, 'FI.setTextSize('),
+            seen(state, 'big_numbers') ? optChoice('Big numbers', NOTATIONS, s.numberFormat, "FI.setOption('numberFormat', ") : ''
+        ]),
         optGroup('Keys and log', [
             optSwitch(`Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}`, 'FI.setShortcuts(this.checked)', ui?.shortcuts !== false, ' title="On this device only"'),
             optSwitch('Keep a playtest log', 'FI.setPlaytestLog(this.checked)', s.playtestLog, ` title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"`),

@@ -1577,6 +1577,7 @@ Keeping it running:
       page out of sight is no longer drawn at all
 - [x] **How big numbers are written** (R23, P-018): letters by default and for every old save, or mixed (letters up to No, then
       1.23e33), or scientific (1.23e6 from a million), for every figure on screen, once the player has a million of something
+- [x] **Text size** (R23, P-019): 100 to 150% in Settings, kept per device; the sidebar grows with it, and no screen scrolls sideways
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

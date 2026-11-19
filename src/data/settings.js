@@ -14,6 +14,10 @@ export const EFFECTS = [
 // letters as ever, letters up to No and then an exponent, or an exponent everywhere.
 export const NOTATIONS = [['short', 'Letters'], ['mixed', 'Mixed'], ['scientific', 'Scientific']];
 
+// Text size, per device (the browser's, not the save's: fantasyIdle.textSize): the root's size, which all the game's type follows.
+export const TEXT_SIZES = [100, 115, 130, 150];
+export const textSizeOf = stored => (TEXT_SIZES.includes(Number(stored)) ? Number(stored) : 100);
+
 /** What the game knows of these choices, kept; anything else in a loaded save dropped (core/state.js, game.js setOption). */
 export function cleanOptions(settings) {
     if (settings.numberFormat !== undefined && !NOTATIONS.some(([id]) => id === settings.numberFormat)) settings.numberFormat = 'short';

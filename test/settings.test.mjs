@@ -7,7 +7,7 @@ import { Game } from '../src/game.js';
 import { createDefaultState, migrateState } from '../src/core/state.js';
 import { renderSettings } from '../src/ui/render.js';
 import { createSound } from '../src/ui/sound.js';
-import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard } from '../src/data/settings.js';
+import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard, TEXT_SIZES, textSizeOf } from '../src/data/settings.js';
 import { DISCLOSURES } from '../src/systems/disclosure.js';
 import { fmt, letters, fixed, numbersIn, setNotation } from '../src/ui/format.js';
 import { saverOn, atRest, REST_AFTER_MS, REST_FRAME_MS } from '../src/ui/saver.js';
@@ -38,7 +38,7 @@ const groupsOf = html => [...html.matchAll(/<fieldset class="opt-group"><legend>
 test("Settings' options stand in groups, and every switch is still there", () => {
     const game = new Game(null, T0);
     const groups = groupsOf(renderSettings(game, {}, null));
-    assert.deepEqual(groups.map(g => g.name), ['Sound', 'Motion and battery', 'Keys and log']);
+    assert.deepEqual(groups.map(g => g.name), ['Sound', 'Motion and battery', 'Reading', 'Keys and log']);
     const body = name => groups.find(g => g.name === name).body;
     assert.match(body('Sound'), /FI\.setSetting\('sound', this\.checked\)/);
     assert.match(body('Sound'), /FI\.setVolume/);
@@ -262,7 +262,7 @@ test('old saves keep letters, a choice is kept, and the row opens once numbers p
     old.settings.numberFormat = 'scientific';
     assert.equal(migrateState(JSON.parse(JSON.stringify(old)), T0).settings.numberFormat, 'scientific');
     const game = new Game(null, T0);
-    assert.doesNotMatch(renderSettings(game, {}, null), /Big numbers/);
+    assert.doesNotMatch(renderSettings(game, {}, null), /Big numbers/, 'not before there is a big number');
     game.state.gold = 1e6;
     game.tick(T0 + 100);
     const html = groupsOf(renderSettings(game, {}, null)).find(g => g.name === 'Reading').body;
@@ -272,4 +272,17 @@ test('old saves keep letters, a choice is kept, and the row opens once numbers p
     assert.equal(game.state.settings.numberFormat, 'mixed');
     game.setOption('numberFormat', 'nope');
     assert.equal(game.state.settings.numberFormat, 'short');
+});
+
+test('the text size: four sizes, today\'s the default, kept per device and not in the save', () => {
+    assert.equal(textSizeOf(null), 100, 'nothing stored: today\'s size');
+    assert.equal(textSizeOf('130'), 130);
+    assert.equal(textSizeOf('9000'), 100, 'what the game does not offer is today\'s size');
+    assert.deepEqual(TEXT_SIZES, [100, 115, 130, 150]);
+    const game = new Game(null, T0);
+    const reading = ui => groupsOf(renderSettings(game, ui, null)).find(g => g.name === 'Reading').body;
+    assert.match(reading({}), /class="seg-btn on" onclick="FI\.setTextSize\('100'\)" aria-pressed="true">100%/);
+    assert.match(reading({ textSize: 150 }), /class="seg-btn on" onclick="FI\.setTextSize\('150'\)" aria-pressed="true">150%/);
+    assert.doesNotMatch(reading({}), /Big numbers/, 'the numbers\' row waits for the first million');
+    assert.doesNotMatch(JSON.stringify(game.state.settings), /text/i);
 });
