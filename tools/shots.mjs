@@ -16,15 +16,16 @@
 //                                                 # dialog's Ascend row; 'refit' a new piece in the
 //                                                 # bag compared with the reinforced one it would replace;
 //                                                 # 'banner' the fight under a clan banner of ×2;
+//                                                 # 'clantable' the Clan tab's one table and its
+//                                                 # crowns, 'clanswitch' its first week, last week's
+//                                                 # crowns still the divisions';
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
-//                                                 # clans to find, 'clantable' the week's one table
-//                                                 # and its crowns, 'clanswitch' the first such week,
-//                                                 # last week's crowns still the divisions': the API
-//                                                 # is answered by the tool, CLAN_API below)
+//                                                 # clans to find: the API is answered by the
+//                                                 # tool, CLAN_API below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
 //
@@ -139,6 +140,20 @@ const DIALOGS = {
 const CLAN_SHOTS = {
     clanhall: null,
     clanmembers: () => document.querySelector('.clan-members')?.scrollIntoView({ block: 'center' }),
+    // the week's one table (data/social.js CLAN_TABLE), last week's three crowns over it
+    clantable: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'later' }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
+    },
+    // the first week of the table: last week's crowns are still the divisions', as they were given
+    clanswitch: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'first' }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
+    },
     hallgive: () => { FI.openHallGive('forge'); FI.hallGivePick('runite_bar'); },
     bannerpick: () => { FI.openBannerPicker(); FI.bannerPick('colour', 'gold'); },
     // the hall at the Great Hall and the clan's cloak earned: the hero wears it, azure, in Settings' cloaks and in the fight
@@ -175,20 +190,6 @@ const CLAN_SHOTS = {
         FI.refreshSocial();
         await new Promise(resolve => setTimeout(resolve, 900));
     },
-    // the week's one table (data/social.js CLAN_TABLE), last week's three crowns over it
-    clantable: async () => {
-        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'later' }) });
-        FI.refreshSocial();
-        await new Promise(resolve => setTimeout(resolve, 900));
-        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
-    },
-    // the first week of the table: last week's crowns are still the divisions', as they were given
-    clanswitch: async () => {
-        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ table: 'first' }) });
-        FI.refreshSocial();
-        await new Promise(resolve => setTimeout(resolve, 900));
-        document.querySelector('.clan-ranking')?.scrollIntoView({ block: 'center' });
-    },
     // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
     clancapped: async () => {
         document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
@@ -216,7 +217,7 @@ function clanApi() {
     let shotMode = {};   // a shot's own answers (CLAN_SHOTS: `flagged` the account flagged), set by the shot and reset before each one
     const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
     const answer = () => ({
-        clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null, ...(shotMode.table === 'later' ? { crowned: { rank: 2, week } } : {}) },
+        clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
         members: members.map(([username, owner, bestStage, totalLevel, total, w]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, built: { total, week: w } })),
         hall: { ...hall, builders: { forge: [{ username: 'Yarraksalih', work: 18000 }, { username: 'Tufan', work: 12500 }], library: [{ username: 'Tufan', work: 41000 }] },
             feed: [{ username: 'Yarraksalih', room: 'forge', resource: 'runite_bar', qty: 240, at: Date.now() - 36e5 }, { username: 'Tufan', room: 'library', resource: 'essence', qty: 4200, at: Date.now() - 72e5 },
@@ -236,7 +237,11 @@ function clanApi() {
         if (path === '/__shots') { shotMode = JSON.parse(request.postData() || '{}'); return json({}); }
         if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, flaggedUntil, ...news() });
         if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, flaggedUntil, gifts: 0, ...news() });
-        if (path === '/clan') return json(shotMode.noClan ? { clan: null } : answer());
+        if (path === '/clan') {
+            const mine = answer();
+            if (shotMode.table === 'later') mine.clan.crowned = { rank: 2, week };   // (second in last week's table)
+            return json(shotMode.noClan ? { clan: null } : mine);
+        }
         if (path === '/clans') {   // (api/index.js's list: the clans that play first)
             return json({ maxMembers: 20, clans: [
                 { id: 3, name: 'Night Watch', tag: 'NW', description: 'Daily players, EU evenings', lookingFor: 'anyone past stage 300', members: 12, active: 11, stage: 2, crown: { division: 'gold', rank: 1, week } },

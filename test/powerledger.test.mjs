@@ -1,4 +1,4 @@
-// Sources of power (systems/powerledger.js, DESIGN §3.36): each source's part in the hero's strength, reckoned once for
+// Sources of power (systems/powerledger.js, DESIGN §3.37): each source's part in the hero's strength, reckoned once for
 // tools/ledger.mjs and for the panel in the game, so the two say the same of the same hero.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,4 +1,4 @@
-// The power ledger (docs/research_notes/endless-late-game.md §1; DESIGN §3.36): what each source gives the hero as he
+// The power ledger (docs/research_notes/endless-late-game.md §1; DESIGN §3.37): what each source gives the hero as he
 // stands, as multipliers on his attack, defence and health and as stages at the two walls a climb meets: the boss's
 // clock, which takes attack, and the one blow he must live through, which takes defence and health together. A source's
 // share is its stages over all the sources' together. tools/ledger.mjs prints this and the hero's panel shows it

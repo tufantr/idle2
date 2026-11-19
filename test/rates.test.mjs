@@ -1,4 +1,4 @@
-// The skill screens' readouts (systems/rates.js, DESIGN §3.36): XP an hour, the time to the next level and how long the
+// The skill screens' readouts (systems/rates.js, DESIGN §3.37): XP an hour, the time to the next level and how long the
 // materials last, measured against the game itself; nothing at all where there is no true figure to show.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

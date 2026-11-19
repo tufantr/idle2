@@ -1,4 +1,4 @@
-// The skill screens' readouts (P-002; DESIGN §3.36): XP an hour, the time to the next level and how long the materials
+// The skill screens' readouts (P-002; DESIGN §3.37): XP an hour, the time to the next level and how long the materials
 // last, for the work under way, from the same numbers the work itself runs on (systems/skilling.js). Pure: it reads the
 // state, and every answer is null where there is nothing true to say: no work in that skill, work stalled, a skill with no
 // steady pace (Farming grows on the clock, the anvil and the bench go by the click).

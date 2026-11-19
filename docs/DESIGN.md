@@ -2145,7 +2145,7 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
   signed in, the tool answering the API.
 
-### 3.36 Readouts: sources of power, and the pace of the work
+### 3.37 Readouts: sources of power, and the pace of the work
 
 Two readouts that change no number of the game (R17 of the research loop's ranking; P-022, P-002).
 
@@ -2689,8 +2689,8 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · trials (prestiging into a Trial, its tiers as the run climbs) · playtest (the playtest log)
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
                       · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
-                      · powerledger (each source's share of the hero's strength, for the panel and tools/ledger.mjs, §3.36)
-                      · rates (XP an hour, the time to the next level, how long the materials last, §3.36)
+                      · powerledger (each source's share of the hero's strength, for the panel and tools/ledger.mjs, §3.37)
+                      · rates (XP an hour, the time to the next level, how long the materials last, §3.37)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·

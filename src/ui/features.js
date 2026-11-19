@@ -11,7 +11,8 @@ import { DUNGEON_BOSS_TIME_MS, DUNGEON_CHOICE_MS, TITAN_TIME_MS, TITAN_BONUS, TI
 import { EVENT_ACTIONS_PER_TOKEN, EVENT_DAILY_CAP } from '../data/events.js';
 import { MAX_OBSTACLE_LEVEL } from '../data/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS, WIKI_URL, clanBossHealth, isoWeek, rankedAsTable, clanTableDay } from '../data/social.js';
+import { CLAN_ATTACK_SECONDS, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_GUARD, CLAN_BANNER, CLAN_BOSS, CLAN_POWER, ENDLESS, CLAN_DIVISIONS, WIKI_URL, clanBossHealth } from '../data/social.js';
+import { isoWeek, rankedAsTable, clanTableDay } from '../data/social.js';
 import { strikeWorth } from '../core/power.js';
 import { MASTERY_PER_LEVEL, MASTERY_CHECKPOINTS } from '../data/mastery.js';
 import { CAPES } from '../data/capes.js';
