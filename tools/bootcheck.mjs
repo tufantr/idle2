@@ -7,7 +7,7 @@
 //   node tools/bootcheck.mjs runs/hero-1300.json [--against=<an older game folder>] [--only=guest,slow,...] [--rate=4]
 //
 // The hero comes from tools/simulate.mjs --save-at: deep, with Auto prestige, so that his replay lasts. The flows: guest, fast,
-// firsttap, slow, server, lateserver, reload, hidden, strip, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
+// firsttap, signin, slow, server, lateserver, reload, hidden, strip, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
 // in with this copy kept or with the server's game) in both folders from one save, one clock and one seed, the games they
 // end in compared field by field. The dice are seeded as each replay begins, so a replay made first and thrown away
 // (the older boot's, signed in) changes nothing. Needs Playwright, as tools/shots.mjs does.
@@ -54,7 +54,8 @@ function patch(path, text) {
 const raw = JSON.parse(await readFile(savePath, 'utf8'));
 const aged = (hours, base = Date.now()) => shifted(raw, base - hours * HOUR);
 const chromium = chromiumOrExit();
-const browser = await chromium.launch();
+const HOST = 'play.example';   // (a host that is no local one: the sign-in stands in front of the game there)
+const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP ${HOST} 127.0.0.1`] });
 const mine = await serve(ROOT, patch);
 const older = opt.against ? await serve(resolve(String(opt.against)), patch) : null;
 
@@ -65,7 +66,7 @@ function note(name, ok, detail = '') {
 }
 
 /** A page of `server`, the save in its storage (once: a reload finds what the game left there), signed in when `api` answers. */
-async function open(server, { save, api = null, rate = 1, clock = null }) {
+async function open(server, { save, api = null, rate = 1, clock = null, host = null, token = !!api }) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     await ctx.addInitScript(([text, token, at]) => {
@@ -88,7 +89,7 @@ async function open(server, { save, api = null, rate = 1, clock = null }) {
             if (report && !reportUp) { seen.reports++; seen.away = report.querySelector('.wb-away')?.textContent || ''; }
             reportUp = !!report;
         }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-valuenow', 'class'] });
-    }, [JSON.stringify(save), api ? TOKEN : null, clock]);
+    }, [JSON.stringify(save), token ? TOKEN : null, clock]);
     const calls = [];
     if (api) await ctx.route('**/api/**', async route => {
         const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
@@ -103,7 +104,7 @@ async function open(server, { save, api = null, rate = 1, clock = null }) {
     page.on('console', m => { if (m.type() === 'error' && !/fonts|Failed to load resource/.test(m.text())) errors.push(m.text()); });
     const cdp = await ctx.newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate });
-    await page.goto(server.url, { waitUntil: 'commit' });
+    await page.goto(host ? server.url.replace('127.0.0.1', host) : server.url, { waitUntil: 'commit' });
     return { page, ctx, calls, errors, cdp };
 }
 const seen = page => page.evaluate(() => ({ ...window.__seen, values: window.__seen.values.length, last: window.__seen.values.at(-1) ?? null,
@@ -187,6 +188,43 @@ const FLOWS = {
         note('the first tap after a gap: the report, once', got && s.reports === 1 && s.replays.length === 1, JSON.stringify({ reports: s.reports, replays: s.replays.length }));
         noErrors('the first tap', errors);
         await ctx.close();
+    },
+
+    /** Behind the sign-in (a host that is no local one): the game stands as it was left, and nothing is replayed before the choice. */
+    async signin() {
+        const atSignIn = async page => {
+            await page.waitForSelector('#auth-user', { timeout: WAIT_MS });
+            await page.waitForFunction(() => document.querySelector('#nav')?.children.length > 0, null, { timeout: WAIT_MS, polling: 200 });
+            return seen(page);
+        };
+        {   // played as a guest
+            const { page, ctx, errors } = await open(mine, { save: aged(24), host: HOST, rate: RATE });
+            const s = await atSignIn(page);
+            note('behind the sign-in: the game is drawn, nothing replayed yet', s.replays.length === 0 && !s.bar && !s.report, JSON.stringify({ replays: s.replays.length }));
+            await page.evaluate(() => [...document.querySelectorAll('#modal-root .modal-footer button')].find(b => /guest/i.test(b.textContent))?.click());
+            const moved = await barAt(page, 5);
+            const got = await reportUp(page);
+            const after = await seen(page);
+            note('play as guest: then the bar, one replay, the report', moved && got && after.reports === 1 && after.replays.length === 1 && after.replays[0].done, JSON.stringify({ ...after, replays: after.replays.length }));
+            noErrors('play as guest', errors);
+            await ctx.close();
+        }
+        {   // an account, whose game is not the one in this browser: only its own is replayed
+            const remote = played(3);
+            const answers = serverApi({ remote, lastSaved: Date.now() - 3 * HOUR, delay: 300 });
+            const api = async (path, req) => (path === '/login' ? { body: { token: TOKEN } } : answers(path, req));
+            const { page, ctx, errors } = await open(mine, { save: aged(24), host: HOST, api, token: false });
+            await atSignIn(page);
+            await page.fill('#auth-user', 'Tester');
+            await page.fill('#auth-pass', 'not-a-password');
+            await page.press('#auth-pass', 'Enter');
+            const got = await reportUp(page);
+            await page.waitForTimeout(500);
+            const s = await seen(page);
+            note("signing in: only the account's game is replayed, once", got && s.replays.length === 1 && s.replays[0].kills === remote.stats.kills && s.reports === 1 && /3h/.test(s.away), JSON.stringify({ replays: s.replays, reports: s.reports, away: s.away }));
+            noErrors('signing in', errors);
+            await ctx.close();
+        }
     },
 
     /** Signed in, the server answers in a second and has no save: this copy is replayed once, then goes up. */
