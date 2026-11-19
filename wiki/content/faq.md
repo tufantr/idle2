@@ -31,7 +31,7 @@ In **Settings**, under Account, press **Sign out everywhere**: every other devic
 
 ### How do I delete my account?
 
-In **Settings**, under Account, press **Delete my account** and enter your password. Your account and your game leave the server for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts. It can't be undone, and the name and the email can then be used for a new account. Copies in the server's nightly backups go when those backups do, about two weeks later.
+In **Settings**, under Account, press **Delete my account** and enter your password. Your account and your game leave the server for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts. It can't be undone, and the name and the email can then be used for a new account. The server's encrypted backups lose your account as they age out, within a year.
 
 What you gave your [[/clans|clan]] stays with it: the hall's work, the boss's lost health, and your deepest fight at the Endless Hydra this week. If you lead the clan it passes to another member, and if you are its last member it closes.
 

@@ -2606,7 +2606,7 @@ export function renderDeleteAccount() {
         <div class="modal-header">Delete my account</div>
         <div class="modal-body">
             <p>This deletes your account and your game from the server, for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts.</p>
-            <p class="muted small">What you gave your clan stays with it. If you lead it, it passes to another member. Copies in the nightly backups go when those backups do, about two weeks later.</p>
+            <p class="muted small">What you gave your clan stays with it. If you lead it, it passes to another member. The server's backups lose your account as they age out, within a year.</p>
             <div class="auth-error" id="delete-error"></div>
             <form class="auth-form" onsubmit="event.preventDefault(); FI.deleteAccount()">
                 <input type="password" id="delete-pass" placeholder="Your password" aria-label="Your password" autocomplete="current-password" class="text-input" data-autofocus>
