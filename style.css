@@ -395,8 +395,9 @@ body.reduced-motion #sidebar .nav-btn .nav-icon, body.reduced-motion #sidebar .n
 #header[data-flat="1"] .header-right { flex: 0 1 auto; flex-wrap: wrap; }
 /* words the bar folds away when that saves it a line (src/ui/topbar.js); still read by a screen reader */
 #header:is([data-fold="1"], [data-fold="2"]) :is(.daily-word, .cloud-word, .cloud-name, .update-word), #header[data-fold="2"] .chip span {
-    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
+#header.measuring, #header.measuring * { transition: none !important; }   /* (reduced motion's near-zero transitions would show the layout before) */
 .chip {
     --coin: #fcd34d; --coin-dark: #7a5410;
     display: flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.8rem 0.3rem 0.4rem;
@@ -1165,12 +1166,14 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 @media (max-width: 600px) {
     .glass-panel { padding: 1.1rem; }
     #header { padding: 0.75rem 0.85rem; }
-    /* the purse across the bar; under it, the pills' slot beside the buttons (no line of its own) */
+    /* a purse of one coin shares its line with the pills' slot and the buttons; a fuller one has the bar's width, the slot and
+       the buttons under it (the slot never has a line of its own) */
     .header-row { flex-wrap: wrap; align-items: center; gap: 0.4rem; }
     .header-main { display: contents; }
-    body:not(.battle-full) .chips { flex: 1 1 100%; }
-    body.battle-full .chips { flex: 1 1 0; min-width: 60%; }   /* beside the ☰ */
-    .pills { --pill-h: calc(1.61rem + 2px); flex: 1 1 140px; min-width: 140px; }
+    body:not(.battle-full) .chips:has(> :nth-child(2)) { flex: 1 1 100%; }
+    body.battle-full .chips:has(> :nth-child(5)) { flex: 1 1 0; min-width: 60%; }   /* a full purse stays beside the ☰ */
+    .pills { --pill-h: calc(1.61rem + 2px); flex: 1 1 90px; min-width: 90px; }
+    .pills > .bonfire-pill { order: -1; }   /* the buff first: a tight slot cuts what comes last */
     .header-right { flex: 0 1 auto; flex-wrap: wrap; min-height: 0; }
     .pills > * { font-size: 0.74rem; padding: 0.25rem 0.55rem; }
     .pills .pill-long, .header-right .cloud-word { display: none; }  /* one row for the pills and the buttons */

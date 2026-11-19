@@ -23,7 +23,9 @@ function atFullest(bar, measure) {
     if (longest) longest.textContent = `${shown[1]}00`;   // (a digit, and the comma it may bring)
     const crate = bar.querySelector('.daily-btn[hidden]');
     crate?.removeAttribute('hidden');
+    bar.classList.add('measuring');
     const result = measure();
+    bar.classList.remove('measuring');
     crate?.setAttribute('hidden', '');
     [gold, longest].forEach((f, i) => { if (f) f.textContent = shown[i]; });
     return result;
@@ -57,12 +59,13 @@ export function createBarHold(bar) {
         bar.dataset.heldFor = shape;   // (tools/topbar.mjs waits for it)
     }
 
-    /** When the page has stopped moving (the same width two frames running: a resize can take a few to settle). */
-    function settle(forShape, width = -1) {
+    /** When the page has stopped moving (the same size two frames running: a resize or a change of view can take a few). */
+    function settle(forShape, size = '') {
         requestAnimationFrame(() => {
             if (shape !== forShape) return;
-            const now = bar.getBoundingClientRect().width;
-            if (now === width) layOut();
+            const { width, height } = bar.getBoundingClientRect();
+            const now = `${width}x${height}`;
+            if (now === size) layOut();
             else settle(forShape, now);
         });
     }
