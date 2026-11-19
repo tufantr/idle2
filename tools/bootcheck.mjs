@@ -3,7 +3,9 @@
 // catchUp). A guest back after a day; a signed-in player whose server answers fast, late, or with another device's game; a
 // page reloaded in the middle of the replay. Each check prints ok or FAIL, and the tool exits 1 on any FAIL.
 //
-//   node tools/bootcheck.mjs runs/hero-1300.json [--against=<an older game folder>] [--only=guest,slow,...] [--rate=4]
+//   node tools/bootcheck.mjs runs/hero-1300.json [--against=<an older game folder>] [--only=guest,slow,...] [--rate=4] [--browser=firefox]
+//
+// (--browser=firefox or webkit: no CPU throttle there, and no sign-in flow, which needs Chromium's host mapping.)
 //
 // The hero comes from tools/simulate.mjs --save-at: deep, with Auto prestige, so that his replay lasts. The flows: guest, fast,
 // firsttap, signin, slow, server, lateserver, reload, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
@@ -21,9 +23,11 @@ const opt = Object.fromEntries(args.filter(a => a.startsWith('--')).map(a => { c
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const [savePath] = args.filter(a => !a.startsWith('--')).map(p => resolve(p));
 if (!savePath) { console.error('Usage: node tools/bootcheck.mjs <save.json> [--against=<older game folder>] [--only=guest,fast,...] [--rate=4]'); process.exit(2); }
-const RATE = Number(opt.rate || 4);
+const ENGINE = String(opt.browser || 'chromium');
+const THROTTLES = ENGINE === 'chromium';   // (Chrome's CPU throttle, and its mapping of a host name)
+const RATE = THROTTLES ? Number(opt.rate || 4) : 1;
 const only = opt.only ? new Set(String(opt.only).split(',')) : null;
-const wanted = name => !only || only.has(name);
+const wanted = name => (!only || only.has(name)) && (THROTTLES || name !== 'signin');
 const HOUR = 3600000;
 const SEED = 20261119;
 const WAIT_MS = 180000;      // the slowest thing waited for: a deep hero's replay on a loaded machine, throttled
@@ -52,9 +56,8 @@ function patch(path, text) {
 
 const raw = JSON.parse(await readFile(savePath, 'utf8'));
 const aged = (hours, base = Date.now()) => shifted(raw, base - hours * HOUR);
-const chromium = chromiumOrExit();
 const HOST = 'play.example';   // (a host that is no local one: the sign-in stands in front of the game there)
-const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP ${HOST} 127.0.0.1`] });
+const browser = await chromiumOrExit(ENGINE).launch(THROTTLES ? { args: [`--host-resolver-rules=MAP ${HOST} 127.0.0.1`] } : {});
 const mine = await serve(ROOT, patch);
 const older = opt.against ? await serve(resolve(String(opt.against)), patch) : null;
 
@@ -101,10 +104,9 @@ async function open(server, { save, api = null, rate = 1, clock = null, host = n
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error' && !/fonts|Failed to load resource/.test(m.text())) errors.push(m.text()); });
-    const cdp = await ctx.newCDPSession(page);
-    await cdp.send('Emulation.setCPUThrottlingRate', { rate });
+    if (THROTTLES) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate });
     await page.goto(host ? server.url.replace('127.0.0.1', host) : server.url, { waitUntil: 'commit' });
-    return { page, ctx, calls, errors, cdp };
+    return { page, ctx, calls, errors };
 }
 const seen = page => page.evaluate(() => ({ ...window.__seen, values: window.__seen.values.length, last: window.__seen.values.at(-1) ?? null,
     replays: window.__replays || [], report: !!document.querySelector('.welcome-back'), bar: !!document.querySelector('.cu-bar') }));

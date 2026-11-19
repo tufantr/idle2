@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { createRequire } from 'node:module';
 
-/** Playwright's Chromium, or the way to get it. */
-export function chromiumOrExit() {
-    try { return createRequire(import.meta.url)('playwright').chromium; } catch {
+/** A browser of Playwright's (Chromium unless another is named), or the way to get it. */
+export function chromiumOrExit(name = 'chromium') {
+    try { return createRequire(import.meta.url)('playwright')[name]; } catch {
         console.error('Playwright is missing. Once: npm i --no-save playwright && npx playwright install chromium');
         process.exit(2);
     }
