@@ -14,7 +14,6 @@
 // end in compared field by field. The dice are seeded as each replay begins, so a replay made first and thrown away
 // (the older boot's, signed in) changes nothing. Needs Playwright, as tools/shots.mjs does.
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromiumOrExit, serve, shifted } from './bootlib.mjs';
@@ -93,10 +92,8 @@ async function open(server, { save, api = null, rate = 1, clock = null, host = n
             reportUp = !!report;
         }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-valuenow', 'class'] });
     }, [JSON.stringify(save), token ? TOKEN : null, clock]);
-    const calls = [];
     if (api) await ctx.route('**/api/**', async route => {
         const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
-        calls.push(path);
         const answer = await api(path, route.request());
         if (answer?.delay) await new Promise(r => setTimeout(r, answer.delay));
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer?.body ?? {}) }).catch(() => {});
@@ -107,7 +104,7 @@ async function open(server, { save, api = null, rate = 1, clock = null, host = n
     page.on('console', m => { if (m.type() === 'error' && !/fonts|Failed to load resource/.test(m.text())) errors.push(m.text()); });
     if (THROTTLES) await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate });
     await page.goto(host ? server.url.replace('127.0.0.1', host) : server.url, { waitUntil: 'commit' });
-    return { page, ctx, calls, errors };
+    return { page, ctx, errors };
 }
 const seen = page => page.evaluate(() => ({ ...window.__seen, values: window.__seen.values.length, last: window.__seen.values.at(-1) ?? null,
     replays: window.__replays || [], report: !!document.querySelector('.welcome-back'), bar: !!document.querySelector('.cu-bar') }));
