@@ -1573,6 +1573,8 @@ Keeping it running:
       "@" handles, invite codes and contact details; clans keep the game's Discord
 - [x] **A clan's owner edits its words** (R14, P-113): an Edit words dialog on the Clan tab for the description and the
       "looking for" line; the name and tag stay
+- [x] **One address that reaches the team** (R14, P-110): shown in Settings and the wiki's FAQ, the Reply-To of the game's
+      mail, and a Report link on each clan's row that starts a mail naming the clan; the address is one setting
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

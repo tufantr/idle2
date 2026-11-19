@@ -1601,6 +1601,14 @@ test('a forgotten password: a code to the address, then a new password; the same
     assert.equal((await post('/login', { username: 'never_confirmed', password: 'another new one' }, null, from)).status, 200);
 });
 
+test("a reply to the game's mail goes to the team's one address", async () => {
+    const { CONTACT_EMAIL } = await import('../src/data/social.js');
+    const before = mailbox.length;
+    await register('mail_replier');
+    assert.ok(mailbox.length > before);
+    assert.ok(mailbox.slice(before).every(m => m.replyTo === CONTACT_EMAIL));
+});
+
 test('when the mail service fails the account waits, and a new code can be asked for at once', async () => {
     const from = { 'X-Forwarded-For': '192.0.2.13' };
     mailDown = true;

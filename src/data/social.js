@@ -36,6 +36,16 @@ export function clanWordsOk(text) {
     if (NO_CONTACT.some(rule => rule.test(plain))) return false;
     return !(plain.match(/\+?\d[\d\s().-]{7,}\d/g) || []).some(run => run.replace(/\D/g, '').length >= 9);
 }
+// The one address that reaches the team, for anyone, with an account or without (the research loop's P-110): shown in Settings
+// and on the wiki, behind each clan's Report link, and where a reply to the game's mail goes (api/mail.js). It is the owner's to
+// confirm (Cloudflare's Email Routing delivers it). This is its only place in the game: change it here. Empty hides it.
+export const CONTACT_EMAIL = 'contact@fantasyidle.com';
+/** A clan's Report link: a mail to the team naming the clan, with what a report needs (which clan, what is wrong, and that it is true). */
+export function clanReportHref({ id, name, tag }) {
+    const subject = `Report: clan ${name} [${tag}]`;
+    const body = `Clan: ${name} [${tag}], number ${id}\n\nWhat is wrong:\n\n\nWhat I say here is true as far as I know.\n`;
+    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
 export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
 // The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board

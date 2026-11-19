@@ -29,6 +29,10 @@ Yes: press **Play as guest** on the sign-in, or open the game from a link ending
 
 In **Settings**, under Account, press **Sign out everywhere**: every other device signed in to your account is signed out, and this one stays signed in. Setting a new password (**Forgot your password?** on the sign-in) does the same, and a mail to your address says it was changed.
 
+### How do I reach the team, or report a clan?
+
+Write to {{link(`mailto:${CONTACT_EMAIL}`, CONTACT_EMAIL)}}: you don't need an account, or the Discord. To report a clan's name or words, press **Report** on its row in the Clan tab, which starts that mail with the clan named; say what is wrong.
+
 ### Settings says my account is flagged. What does that mean?
 
 One of your saves showed numbers the game's check doesn't allow: numbers no save can reach. For 30 days from that save, each of your [[/clans|clan]] attacks counts for at most 1% of the boss, your fights at the Endless Hydra stay out of the clan ranking, and you are left off the leaderboards. Your game itself plays and saves as always, and nothing is taken away. A save that only grew faster than the check allows is looked at by the team first, never flagged by itself. Think it's a mistake? Tell the team on the Discord (the link is in Settings), with your username.

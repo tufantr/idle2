@@ -963,6 +963,10 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .data-table .locked-row { opacity: 0.5; }
 .data-table td.wrap { white-space: normal; min-width: 12rem; overflow-wrap: anywhere; }
 .data-table .you-row { background: rgba(214, 170, 92, 0.12); }
+/* a way to reach the team: Settings' address, and the Report link on a clan's row */
+.contact-line a, .clan-report { color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; }
+.contact-line a:hover, .clan-report:hover { color: var(--heading); }
+.clan-report { display: inline-block; min-height: 24px; padding-top: 0.2rem; }
 /* a clan's own words, however long a word in them: they wrap instead of pushing the page wide */
 .clan-head { min-width: 0; overflow-wrap: anywhere; }
 .clan-boss { display: flex; gap: 0.8rem; align-items: center; margin-bottom: 0.9rem; padding: 0.8rem; border-radius: 14px; border-color: rgba(239, 68, 68, 0.4); }

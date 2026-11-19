@@ -34,7 +34,7 @@ import { AGILITY_SLOTS, obstacleById } from '../data/agility.js';
 import { plotUnlocked, seedCost, growTime, plotReady } from '../systems/farming.js';
 import { obstacleCost, courseDef, obstacleLevel, upgradeInfo } from '../systems/agility.js';
 import { BAIT_EXTRA_CHANCE } from '../systems/skilling.js';
-import { DISCORD_INVITE, WIKI_URL, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
+import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, clanBossFor, CLAN_BANNER, ENDLESS, CLAN_DIVISIONS } from '../data/social.js';
 import { EVENTS, EVENT_DAILY_CAP, EVENT_MILESTONES, EVENT_SHOP, FESTIVAL_CLOAK_COST } from '../data/events.js';
 import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
@@ -2361,6 +2361,7 @@ export function renderSettings(game, ui, cloud) {
         <div class="panel-header"><h2>The beta</h2><span class="muted small">Tell us anything</span></div>
         <p class="muted small">Fantasy Idle is in beta. What's fun, what's confusing, what's too slow, any bug: every word helps.</p>
         <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a><a class="btn-link" href="${esc(WIKI_URL)}" target="_blank" rel="noopener">Read the wiki</a></div>
+        ${CONTACT_EMAIL ? `<p class="muted small contact-line">Or write to us: <a href="mailto:${esc(CONTACT_EMAIL)}" target="_blank" rel="noopener">${esc(CONTACT_EMAIL)}</a></p>` : ''}
     </section>` : ''}
     <section class="glass-panel ${painted('study', 'center 70%')}">
         <div class="panel-header"><h2>Options</h2></div>
@@ -2434,7 +2435,7 @@ export function renderClan(game, ui, cloud) {
     // the first look at the server: not the forms to find or start a clan, which a member saw for a moment
     if (!social.loaded && !social.error) body = `<section class="glass-panel ${painted('clanhall', 'center 40%')}"><p class="muted small">Loading your clan…</p></section>`;
     else if (!social.clan) {
-        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div></td>
+        const rows = (social.clans || []).map(c => `<tr><td class="wrap">${crownMark(c.crown)}<b>${esc(c.name)}</b> <span class="muted">[${esc(c.tag)}]</span>${c.stage > 0 && HALL_STAGES[c.stage] ? ` <span class="hall-chip" title="Its hall">${esc(HALL_STAGES[c.stage].name)}</span>` : ''}<div class="muted small">${esc(c.description || '')}${c.lookingFor ? ` · looking for: ${esc(c.lookingFor)}` : ''}</div>${CONTACT_EMAIL ? `<a class="clan-report small" href="${esc(clanReportHref(c))}" target="_blank" rel="noopener" aria-label="${esc(`Report ${c.name} to the team`)}">Report</a>` : ''}</td>
             <td>${Number(c.members)}/${Number(social.maxMembers || 20)}${c.active !== undefined ? `<div class="muted small" title="Members who played this past week">${Number(c.active) || 0} this week</div>` : ''}</td><td><button class="mini-btn" onclick="FI.joinClan(${Number(c.id)})" ${c.members >= (social.maxMembers || 20) ? 'disabled' : ''}>Join</button></td></tr>`).join('');
         body = `<div class="two-col">
             <section class="glass-panel ${painted('clanhall', 'left 50%')}"><div class="panel-header"><h2>Find a clan</h2></div>

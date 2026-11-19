@@ -3,13 +3,14 @@
 // where it bites.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { Game } from '../src/game.js';
 import { fmt, seenWords } from '../src/ui/format.js';
 import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan, renderClanWords } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
-import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
+import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
 import { actionXp } from '../src/systems/skilling.js';
 import { SKILLS, SKILL_IDS } from '../src/data/skills.js';
@@ -250,6 +251,24 @@ test('the crowns read 1st, 2nd and 3rd: gold, silver and bronze, the place in a 
     assert.match(list, literal('<span class="clan-crown rank-3" data-tip-title="3rd" data-tip="in the Bronze division last week"'), 'on the clan list');
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     for (const [rank, metal] of [[1, 'gold'], [2, 'silver'], [3, 'bronze']]) assert.match(css, new RegExp(`\\.clan-crown\\.rank-${rank} \\.spr \\{ filter: [^}]+\\}\\s+/\\* ${metal} \\*/`), metal);
+});
+
+test("one address reaches the team: in Settings, behind each clan's Report link, and nowhere else in the code (P-110)", () => {
+    assert.match(CONTACT_EMAIL, /^[^@\s]+@[^@\s]+\.[a-z]+$/);
+    const settings = renderSettings(new Game(null, T0), {}, null);
+    assert.ok(settings.includes(`<a href="mailto:${CONTACT_EMAIL}" target="_blank" rel="noopener">${CONTACT_EMAIL}</a>`), 'in Settings');
+    const clan = { id: 3, name: "Hawk's Rest", tag: 'HWK', members: 4 };
+    const url = new URL(clanReportHref(clan));
+    assert.equal(url.protocol + url.pathname, `mailto:${CONTACT_EMAIL}`);
+    assert.equal(url.searchParams.get('subject'), "Report: clan Hawk's Rest [HWK]");
+    assert.match(url.searchParams.get('body'), /^Clan: Hawk's Rest \[HWK\], number 3\n\nWhat is wrong:[\s\S]*true as far as I know/);
+    const list = renderClan(new Game(null, T0), { social: { loaded: true, clan: null, clans: [clan] } }, { loggedIn: true });
+    const link = /<a class="clan-report small" href="([^"]+)"[^>]*>Report<\/a>/.exec(list);
+    assert.ok(link, 'on the clan\'s row');
+    assert.equal(link[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'"), clanReportHref(clan), 'escaped for the page');
+    const inCode = dir => readdirSync(new URL(`../${dir}/`, import.meta.url), { recursive: true, withFileTypes: true }).filter(f => f.isFile() && /\.(m?js|cjs)$/.test(f.name) && !f.parentPath.includes('node_modules'))
+        .filter(f => readFileSync(join(f.parentPath, f.name), 'utf8').includes(CONTACT_EMAIL)).map(f => f.name);
+    assert.deepEqual([...inCode('src'), ...inCode('api')], ['social.js'], 'its one place');
 });
 
 test("a clan's owner has a dialog for its words, filled with them; a member has none (P-113)", () => {
