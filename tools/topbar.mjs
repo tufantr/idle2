@@ -75,14 +75,15 @@ function install() {
     const fighting = () => s.combat.active;
     let hero = HEROES.late;
 
-    /** What the bar should stand for at this width: drawn, then laid out (ui/topbar.js waits for the page to settle). */
-    async function settle() {
-        draw();
-        for (let i = 0; i < 90; i++) {
+    /** The window has reached `width` and the bar is laid out for it (ui/topbar.js waits for the page to settle). */
+    async function settle(width) {
+        for (let i = 0; i < 600; i++) {
             await new Promise(requestAnimationFrame);
+            if (innerWidth !== width) continue;
+            draw();
             const shape = `${innerWidth}|${document.body.classList.contains('battle-full')}|${bar.querySelectorAll('.chip').length}`;
             if (bar.dataset.heldFor === shape) return true;
-            if (i === 3 && !('heldFor' in bar.dataset) && !bar.dataset.fold) return false;   // (a copy of the game from before the hold)
+            if (i > 3 && !bar.dataset.fold) return true;   // (a copy of the game from before the hold)
         }
         return false;
     }
@@ -199,28 +200,32 @@ for (const name of BROWSERS) {
     await page.addStyleTag({ content: '#celebrate, #toast-area { display: none !important; }' });
     await page.evaluate(install);
     console.log(`${name} ${browser.version()}`);
-    for (const view of VIEWS) for (const hero of HEROES) {
-        await page.evaluate(([h, v]) => { __bar.hero(h); __bar.view(v); }, [hero, view]);
-        const heights = new Map();
-        let widths = 0, pills = 0, wrong = 0;
-        const say = line => { if (wrong++ < 8) console.log(`    ${line}`); };
-        for (let width = FROM; width <= TO; width += STEP) {
-            await page.setViewportSize({ width, height: HEIGHT });
-            await page.evaluate(() => __bar.settle());
-            const r = await page.evaluate(() => __bar.run());
-            widths++;
-            pills += r.pills;
-            const tall = r.height.toFixed(1);
-            heights.set(tall, (heights.get(tall) || 0) + 1);
+    const tally = new Map();   // for each view and hero: the heights seen, the widths, the pills looked at, what went wrong
+    for (let width = FROM; width <= TO; width += STEP) {
+        await page.setViewportSize({ width, height: HEIGHT });   // (the slow part in Firefox: once a width)
+        for (const view of VIEWS) for (const hero of HEROES) {
+            const key = `${view.padEnd(5)} ${hero.padEnd(4)}`;
+            if (!tally.has(key)) tally.set(key, { heights: new Map(), widths: 0, pills: 0, wrong: 0, view, hero });
+            const t = tally.get(key);
+            const say = line => { if (t.wrong++ < 8) console.log(`    ${view}/${hero} ${line}`); };
             const fail = what => { failures.push(`${name} ${view}/${hero} at ${width}px: ${what}`); say(`${width}px: ${what}`); };
+            await page.evaluate(([h, v]) => { __bar.hero(h); __bar.view(v); }, [hero, view]);
+            if (!await page.evaluate(w => __bar.settle(w), width)) fail('the window or the bar never settled');
+            const r = await page.evaluate(() => __bar.run());
+            t.widths++;
+            t.pills += r.pills;
+            const tall = r.height.toFixed(1);
+            t.heights.set(tall, (t.heights.get(tall) || 0) + 1);
             if (r.moved.length) fail(`the bar moved: ${r.moved.slice(0, 3).join('; ')}${r.moved.length > 3 ? `; ${r.moved.length - 3} more` : ''}`);
             if (r.cut.length) fail(`cut off: ${r.cut.slice(0, 2).join('; ')}`);
             if (r.sideways > 0) fail(`the page scrolls sideways by ${r.sideways}px`);
             for (const m of r.misread) fail(m);
         }
-        if (!pills) failures.push(`${name} ${view}/${hero}: no pill was ever on screen, so nothing was checked`);
-        const shown = [...heights].sort((a, b) => a[0] - b[0]).map(([h, n]) => `${h}px ×${n}`).join(', ');
-        console.log(`  ${view.padEnd(5)} ${hero.padEnd(4)} ${widths} widths: ${wrong ? `${wrong} FAILED` : 'held'} (${shown})`);
+    }
+    for (const [key, t] of tally) {
+        if (!t.pills) failures.push(`${name} ${t.view}/${t.hero}: no pill was ever on screen, so nothing was checked`);
+        const shown = [...t.heights].sort((a, b) => a[0] - b[0]).map(([h, n]) => `${h}px ×${n}`).join(', ');
+        console.log(`  ${key} ${t.widths} widths: ${t.wrong ? `${t.wrong} FAILED` : 'held'} (${shown})`);
     }
     console.log(`  ${Math.round((Date.now() - started) / 1000)} s`);
     await browser.close();
