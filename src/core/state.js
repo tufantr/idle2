@@ -106,7 +106,7 @@ export function createDefaultState(now = Date.now()) {
         dungeonTier: 1,        // the dungeons' open tier: each Seal opens the next (data/dungeons.js; kept in `meta` too)
         uniques: {},           // "<unique>" or "<unique>@<tier>" -> true: every unique found, kept or not (a record; in `meta` too)
         titan: { kills: 0, readyAt: 0, attempts: 0, bestPct: 0, before: null },   // before: what the hero was doing when a fight with it began (systems/dungeon.js)
-        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before }, and { endless, dealt } at the Endless Hydra
+        clanFight: null,       // the clan boss fight under way (systems/clanfight.js): { week, hp, maxHp, strikes, before, hero, scale }, and { endless, dealt } at the Endless Hydra
         clanResult: null,      // a clan attack fought and not yet sent to the server: { week, strikes, ms, at, endless? }
         clanBanner: { week: '', kills: 0 },   // the clan's banner, as the server last said it: levels felled in that ISO week (data/social.js CLAN_BANNER)
         // the clan's hall, as the server last said it (systems/clanhall.js): each room's level, the stage, the banner's colour and
@@ -117,7 +117,7 @@ export function createDefaultState(now = Date.now()) {
         farming: { plots: [] },            // [{ crop, plantedAt, readyAt }] one per plot
         agility: { built: [], levels: [] }, // obstacle id per course slot (or null) and its level
         events: { tokens: 0, day: '', earnedToday: 0, progress: 0, instance: null, instanceEarned: 0, milestones: [], cloaks: {} },   // cloaks: the festival cloaks bought (data/capes.js)
-        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0, perkReset: PERK_RESET },   // firstAt: when the first prestige was
+        prestige: { tokens: 0, skillPoints: 0, count: 0, spClaimedStage: 0, runStartedAt: now, firstAt: 0, perkReset: PERK_RESET, runs: [] },   // firstAt: when the first prestige was; runs: the last ones, oldest first ({ at, stage, tokens, ms, trials? })
         camp: { whetstone: 0, armory: 0, hearth: 0 },
         forge: emptyForge(),
         bench: emptyBench(),
@@ -350,6 +350,7 @@ const text = v => (typeof v === 'string' ? v : typeof v === 'number' && Number.i
 // The deepest stage a save may hold: past about 10,000 a monster's health is more than a number holds,
 // and the fight would never end (core/formulas.js enemyForStage). No hero comes near it.
 export const MAX_STAGE = 10000;
+export const RUN_LOG_MAX = 20;   // the last runs kept for the Hall's Records (systems/prestige.js doPrestige)
 // Titans beaten: the next one stands at titanStage(kills + 1), which must stay below MAX_STAGE.
 const MAX_TITAN_KILLS = 1900;
 
@@ -795,6 +796,12 @@ function normalise(data, now) {
     p.skillPoints = Math.min(1e9, Math.max(0, Math.floor(p.skillPoints)));
     p.count = Math.min(1e7, Math.max(0, Math.floor(p.count)));
     p.spClaimedStage = Math.max(0, Math.min(state.combat.bestStage, Math.floor(p.spClaimedStage)));
+    // The last runs (systems/prestige.js doPrestige): those with a time and a stage, the numbers in range, known Trials only.
+    // (A save from before them has none; the game before them keeps the list untouched, as it does what it doesn't know.)
+    p.runs = (Array.isArray(p.runs) ? p.runs : []).filter(r => isPlainObject(r) && isDateTime(r.at) && finite(r.stage) >= 1).slice(-RUN_LOG_MAX).map(r => {
+        const trials = Array.isArray(r.trials) ? trialIds({ trials: { active: r.trials } }) : [];
+        return { at: Math.min(now, r.at), stage: intIn(r.stage, 1, MAX_STAGE, 1), tokens: Math.min(1e300, Math.max(0, finite(r.tokens))), ms: Math.max(0, finite(r.ms)), ...(trials.length ? { trials } : {}) };
+    });
     // A Titan or clan boss fight never survives a reload (a clan attack not finished is not spent): the
     // hero is back at what he was doing when it began (a save from before titan.before fights on at the
     // stages). A dungeon run does survive, if it still makes sense.

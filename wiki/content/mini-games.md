@@ -42,7 +42,7 @@ Your next click, tap or key press ends it, until you leave the game alone again,
 
 ## The bonfire
 
-Every log your hero burns in [[Firemaking]] feeds the bonfire: {{BASE.bonfireSecondsPerLogTier}} seconds for each tier of the log, so a better log burns longer, and a log that burns twice (the tinderbox's double, see [[Tools]]) counts twice. It holds at most {{time(BASE.bonfireMaxMs)}} of fire. Once lit it burns on the clock, whatever your hero does next and while you are away; a pill at the top of the screen shows the time left.
+Every log your hero burns in [[Firemaking]] feeds the bonfire: {{BASE.bonfireSecondsPerLogTier}} seconds for each tier of the log, so a better log burns longer, and a log that burns twice (the tinderbox's double, see [[Tools]]) counts twice. It holds at most {{time(BASE.bonfireMaxMs)}} of fire. Once lit it burns on the clock, whatever your hero does next and while you are away; a pill at the top of the screen shows the time left, with what it gives when there is room. Pills come and go there without moving the page.
 
 While it burns, every skill earns more XP, combat included, by your Firemaking level: +{{pct(bonfireBonus(1), 0)}} at level 1, +{{pct(bonfireBonus(50))}} at 50 and +{{pct(bonfireBonus(MAX_LEVEL), 0)}} at {{MAX_LEVEL}}.
 

@@ -548,6 +548,11 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   with its own card (`skillRecord`), and the Hall's Records shows how far the next is (the owner, October
   2026: players fought and never trained, as no skill level reached the fight; it came with lifesteal's
   ceiling, so the simulator's skilling player keeps his pace and one who never trains falls behind).
+- **The last runs** (November 2026, a player's report; `prestige.runs`, `RUN_LOG_MAX` = 20, oldest first): `doPrestige` notes
+  each run that ends, `{ at, stage, tokens, ms, trials? }` (`ms` 0 when a save kept no start time, `trials` only for a Trial's
+  or a Pact's). `migrateState` keeps the entries with a time and a stage, in range, known Trials only; an old save has none,
+  and the game before it passes the list through unread. The Hall's Records shows it (`renderRunLog`, from the first one kept)
+  and, once a Trial has been tried, each one's best stage (`renderTrialBests`, from `trials.best`).
 - **Auto** (`autoPrestigeIn`, `tickAutoPrestige`): after 5 prestiges, or 48 hours after the first one
   (`prestige.firstAt`), whichever comes first, the dock's Prestige button gets an Auto switch beside it
   (`settings.autoPrestige`, off until turned on). It took 20 prestiges until the check-in research
@@ -1292,7 +1297,7 @@ with the game's own stat code; the client never submits damage or scores.
   auto-clicker gets no more than a player clicking fast in the openings: ×1.3 to ×1.6 of a hero who only
   watches, by attack speed (`test/clanfight.test.mjs`). No cards, raid levels or dust: the hero is the
   deck (Tap Titans 2's raid system was weighed and left out). The page keeps only the strike times; when
-  the fight ends (time, Give up, or the boss's health running out on screen) they wait in
+  the fight ends (time, Give up, or the boss falling) they wait in
   `state.clanResult`, across a reload, until sent. **The server reckons the attack** from the stored save
   and those times (`clanAttackFromSave`, `src/core/power.js`: strikes cleaned to the game's quarter-second
   rule inside the fight, expected values, no dice, Focus or timed boosts; the combat potion picked counts,
@@ -1301,7 +1306,15 @@ with the game's own stat code; the client never submits damage or scores.
   best over his plain attack now (`clanAttackScale`, never below 1). The camp is packed up at every prestige and
   grows through a run, so the same hero hit seven times harder at a run's end than just after a prestige: the owner
   saw another member deal 24 times their damage (October 2026) and asked that the time of an attack not matter. The fight on
-  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`). Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
+  screen hits as hard (the Clan tab's `attackScale`, `state.clanFight.scale`). **The boss falls on screen when the server's
+  sum says so** (`clanFightFells`, November 2026, a player's report): the screen rolls crits and ±10% a hit and the server
+  counts expected values, so with the boss near one fight's health the two disagreed in 782 of 2,560 simulated fights.
+  When a hit would empty the bar, and when the clock ends, the game now works the server's sum: `clanFightDamage` of the
+  hero as he stood when the fight began (`state.clanFight.hero`: what he buys or drinks up during it isn't in the stored
+  save), the strikes so far and the whole fight's length, times `scale`. A boss it doesn't fell holds on at 1 health, a
+  sliver of its bar, and the fight goes on, so a late strike still counts and can finish it; a boss it fells falls, at the
+  clock's end if its bar outlasted the fight. The Endless Hydra never falls, and the server is unchanged (a flagged
+  account's cap stays its alone; `test/clanfight.test.mjs` plays the edge). Never more than twice what the save's best stage allows; a forged list deals no more than a perfect player. **An account flagged
   for impossible numbers deals at most 1% of the boss's health an attack** (`FLAGGED_ATTACK_SHARE`,
   October 2026: a forged save had felled a boss with one attack of the 100T ceiling). The owner chose a
   cap over bans. A cap of a seventh of the boss for every attack came first; it hid honest players' real
@@ -1608,6 +1621,16 @@ needs another screen: fight, spend, prestige and fight on.
   the mode. "Full screen" means the game fills the browser's window. It does not ask the browser
   for its own full screen: that was tried and taken out, because its button read as the way *out*
   of the full-screen fight, and on a Mac the system menu bar slides over the top bar there.
+- **The top bar keeps its height while the game is played** (November 2026, a player's report: a nearly full row flipped
+  between one line and two as the bonfire's countdown ticked, and the page moved about 38 px). The pills have a slot of their
+  own (`.pills`: one line, its long words folding away first, then the status pill when others need the room), so what comes
+  and goes in it moves nothing; a slot that doesn't fit beside the purse goes under it with its line kept. The rest is
+  `src/ui/topbar.js`: for each window width and each way the bar is shown, once the page has settled, it lays the bar out as
+  it will be at its fullest (the gold wider than it reads for long, another figure two digits longer, the crate in its place
+  if none is ripe), takes the first of its layouts with the fewest lines (`LAYOUTS`: the buttons' words folded, then the
+  purse's names, then the purse across the bar with the pills beside the buttons), and holds that height (`min-height`)
+  until the window's width changes. `tools/topbar.mjs` sweeps 700 to 2,000 px in Chromium, Firefox and WebKit and fails on any
+  change of height, a cut-off buff pill or sideways scroll.
 - **The perks window is everywhere skill points are.** The SP chip in the header opens it on any
   screen, and so do Perks buttons beside Prestige (the fight's dock, the combat tab's prestige strip);
   the Shop shows the same list. A level costs more as the perk climbs, so each row's button says what

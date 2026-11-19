@@ -24,6 +24,8 @@ Past the {{TRIAL_TIERS}} tiers the ladder goes on: a **rung** at stage {{fmt(TRI
 
 Each tier or rung cleared is a record: every token you hold becomes ×{{BASE.recordMult}} stronger, for good, just as for {{BASE.recordStages}} more stages of best stage or a new [[Unique items|unique item]]. The first five tiers of every Trial make {{TRIALS.length * TRIAL_TIERS}} records, worth ×{{(BASE.recordMult ** (TRIALS.length * TRIAL_TIERS)).toFixed(1)}} together, and every rung after them adds one more. Clearing {{ACHIEVEMENTS.find(a => a.id === 'trial_master').req.value}} of them also earns the medal {{ACHIEVEMENTS.find(a => a.id === 'trial_master').name}} ({{ACHIEVEMENTS.find(a => a.id === 'trial_master').reward}}).
 
+The Records page in the [[Medals|Hall]] shows your best stage in each Trial you have tried.
+
 ## The rules in practice
 
 Each rule is in the table below. A few of them in more detail:

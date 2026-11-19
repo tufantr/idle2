@@ -57,7 +57,15 @@ const STEPS = {
     // work with materials under way: the header's XP an hour and time to the next level, and how long the materials last
     smelting: () => { FI.switchTab('smithing'); FI.smithView('smelt'); FI.smelt('iron_bar'); document.querySelector('.node-card.active')?.scrollIntoView({ block: 'center' }); },
     options: () => { FI.switchTab('settings'); document.querySelector('.opt-groups')?.scrollIntoView({ block: 'center' }); },   // Settings' options, in their groups
-    records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
+    // the Hall's Records with Trials tried and runs behind it: a Trial's, a Pact's, one from a save that kept no start time
+    records: () => {
+        const g = FI.game(); const s = g.state; const HOUR = 3600000; const now = g.now;
+        s.trials.best = { brutes: 214, glass: 188, rusted: 231, faithless: 142 };
+        s.prestige.runs = [[50, 96, 0, 0], [30, 184, 5400000], [20, 201, 7200000, ['brutes']], [10, 236, 9300000], [5, 218, 4100000, ['glass', 'fasting']], [1, 241, 2400000]]
+            .map(([ago, stage, ms, trials]) => ({ at: now - ago * HOUR, stage, tokens: Math.round(stage ** 2 / 3), ms, ...(trials ? { trials } : {}) }));
+        FI.switchTab('achievements'); FI.hallView('records');
+        document.querySelector('.run-log')?.closest('section')?.scrollIntoView({ block: 'center' });
+    },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },
     // a hero past 99 back in the fight: the purse's talent points, the dock's Perks card and his level past 99

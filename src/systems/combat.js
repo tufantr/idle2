@@ -19,7 +19,7 @@ import { trialBite } from '../data/trials.js';
 import { SECOND_WIND_MS, RELENTLESS } from '../data/talents.js';
 import { stratumStartingAt } from '../data/strata.js';
 import { checkTrial } from './trials.js';
-import { clanBossEnemy, endClanFight, noteClanStrike, clanGuardOpen } from './clanfight.js';
+import { clanBossEnemy, endClanFight, noteClanStrike, clanGuardOpen, clanFightFells, clanFightTimeUp } from './clanfight.js';
 import { CLAN_GUARD } from '../data/social.js';
 
 const FIRST_GILDED_STAGE = 7;
@@ -289,6 +289,9 @@ export function playerAttack(game, { manual = false } = {}) {
     const dealt = endless ? dmg : Math.min(dmg, Math.max(0, enemy.hp));   // what the monster really lost (a killing blow's excess heals nothing)
     if (endless) state.clanFight.dealt = (state.clanFight.dealt || 0) + dmg;
     else enemy.hp -= dmg;
+    // the clan boss falls only when the server's own sum says this attack fells it: until then it holds on with its last
+    // sliver and the fight goes on, so a strike in the last seconds still counts, and can finish it
+    if (clan && !endless && enemy.hp <= 0 && !clanFightFells(game)) enemy.hp = 1;
 
     // lifesteal: a share of the damage dealt, out of the ceiling's room (BASE.lifestealPerSecond, refilled by
     // the second in tickCombat); none in Fasting
@@ -685,7 +688,7 @@ export function onBossTimeout(game) {
     const c = state.combat;
     if (c.mode === 'dungeon') { failDungeon(game, `${c.enemy.name} outlasted the ${Math.round((c.enemy.timeLimit || 0) / 1000)} s timer`, { lost: true }); return; }
     if (c.mode === 'titan') { endTitan(game, false, 'time'); return; }
-    if (c.mode === 'clan') { endClanFight(game, 'time'); return; }
+    if (c.mode === 'clan') { clanFightTimeUp(game); return; }
     bumpStat(game, 'bossEscapes');
     const back = Math.max(1, c.stage - 1);
     const tryMs = c.enemy.timeLimit || BALANCE.combat.bossTimeMs;
