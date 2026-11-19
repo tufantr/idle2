@@ -1572,6 +1572,9 @@ Keeping it running:
 - [x] **Effects that turn off one by one** (R21, P-082): under Reduce motion, a folded Effects with a switch each for floating
       numbers, coins flying to the purse, confetti and a boss's shake, each shown once it has been met
 - [x] **Blows heard** (R21, P-082): at every hit, as ever, or only at crits and kills; the player's own strikes always answer
+- [x] **A battery saver** (R21, P-037): after half a minute untouched the page draws ten frames a second, the tab once a second, and
+      its endless glows and drifts stand still, while the fight goes on; on by default on phones, kept per device, never a pop-up. A
+      page out of sight is no longer drawn at all
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

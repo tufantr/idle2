@@ -9,6 +9,7 @@ import { renderSettings } from '../src/ui/render.js';
 import { createSound } from '../src/ui/sound.js';
 import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard } from '../src/data/settings.js';
 import { DISCLOSURES } from '../src/systems/disclosure.js';
+import { saverOn, atRest, REST_AFTER_MS, REST_FRAME_MS } from '../src/ui/saver.js';
 
 const T0 = 1_760_000_000_000;
 // A browser's sound and motor, as far as src/ui/sound.js touches them: what was heard (nodes made) and felt (patterns).
@@ -36,11 +37,11 @@ const groupsOf = html => [...html.matchAll(/<fieldset class="opt-group"><legend>
 test("Settings' options stand in groups, and every switch is still there", () => {
     const game = new Game(null, T0);
     const groups = groupsOf(renderSettings(game, {}, null));
-    assert.deepEqual(groups.map(g => g.name), ['Sound', 'Motion', 'Keys and log']);
+    assert.deepEqual(groups.map(g => g.name), ['Sound', 'Motion and battery', 'Keys and log']);
     const body = name => groups.find(g => g.name === name).body;
     assert.match(body('Sound'), /FI\.setSetting\('sound', this\.checked\)/);
     assert.match(body('Sound'), /FI\.setVolume/);
-    assert.match(body('Motion'), /Reduce motion/);
+    assert.match(body('Motion and battery'), /Reduce motion/);
     assert.match(body('Keys and log'), /FI\.setShortcuts/);
     assert.match(body('Keys and log'), /FI\.setPlaytestLog/);
     assert.doesNotMatch(body('Sound'), /Chime/, 'the chime waits until a mini-game has been met');
@@ -103,7 +104,7 @@ test('a save from before these choices loads with none of them, and a broken one
 test("each effect has a switch under Reduce motion, once it has been met, and Reduce motion folds them away", () => {
     const game = new Game(null, T0);
     const s = game.state;
-    const motion = (ui = {}) => groupsOf(renderSettings(game, ui, null)).find(g => g.name === 'Motion').body;
+    const motion = (ui = {}) => groupsOf(renderSettings(game, ui, null)).find(g => g.name === 'Motion and battery').body;
     assert.doesNotMatch(motion(), /<details/, 'a new player has met none: no drawer');
     s.stats.kills = 1;
     game.tick(T0 + 100);
@@ -174,4 +175,21 @@ test('the blows row opens with the first kill, marks its choice, and goes when n
     assert.doesNotMatch(row(), /Blows heard/, 'muted, on a device with no motor');
     game.setOption('vibration', true);
     assert.match(row({ canVibrate: true }), /Blows heard/, 'the motor still answers to it');
+});
+
+test('the battery saver: on by default on a phone only, kept per device, and at rest only when left alone', () => {
+    assert.equal(saverOn(null, true), true, 'a phone starts with it on');
+    assert.equal(saverOn(null, false), false, 'anything else with it off');
+    assert.equal(saverOn('0', true), false, 'the choice made on this device wins');
+    assert.equal(saverOn('1', false), true);
+    const at = 1000000;
+    const rest = extra => atRest({ on: true, now: at, touchedAt: at - REST_AFTER_MS, ...extra });
+    assert.equal(rest(), true, 'left alone');
+    assert.equal(rest({ touchedAt: at - REST_AFTER_MS + 1 }), false, 'touched a moment ago');
+    assert.equal(rest({ on: false }), false, 'switched off');
+    assert.equal(rest({ busy: true }), false, 'a mini-game or a fight on the clock wants every frame');
+    assert.equal(REST_FRAME_MS, 100, 'one frame for each of the game\'s ten steps a second');
+    const html = renderSettings(new Game(null, T0), { saver: true }, null);
+    assert.match(html, /FI\.setSaver\(this\.checked\)" checked> Battery saver/);
+    assert.doesNotMatch(JSON.stringify(new Game(null, T0).state.settings), /saver/, 'it is not in the save');
 });

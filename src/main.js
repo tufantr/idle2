@@ -18,6 +18,7 @@ import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } 
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
 import { vibrationOn, effectOn, blowSound, hurtHeard } from './data/settings.js';
+import { SAVER_KEY, REST_FRAME_MS, REST_RENDER_MS, saverOn, atRest, stillLoops, wakeLoops } from './ui/saver.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
@@ -113,6 +114,9 @@ const SHORTCUTS_KEY = 'fantasyIdle.keys';
 ui.shortcuts = prefs.get(SHORTCUTS_KEY) !== '0';
 // A phone with a motor (iPhones have none a page can reach): only there does Settings offer the vibration's switch.
 ui.canVibrate = !!navigator.vibrate && !!window.matchMedia?.('(hover: none)').matches;
+// The battery saver (src/ui/saver.js): this device's choice, on by default on a phone.
+ui.saver = saverOn(prefs.get(SAVER_KEY), !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches);
+let resting = false;   // the page left alone, drawing less (setResting)
 
 function loadFresh() {
     try {
@@ -316,10 +320,25 @@ function advance(now) {
     if (summary && summary.mode !== 'rest') openModal(renderWelcomeBack(summary, game), 'offline');
 }
 
+// The page at rest (the battery saver, src/ui/saver.js): left alone, with nothing under way that wants every frame.
+function setResting(on) {
+    if (on === resting) return;
+    resting = on;
+    document.body.classList.toggle('at-rest', on);
+    if (on) stillLoops(); else wakeLoops();
+}
+const wantsFrames = () => pointer.down || ['titan', 'clan'].includes(game.state.combat.mode) || Object.values(game.state.minigame).some(m => m?.challenge);
+/** A sign of the player that isn't a press (the mouse moving, the wheel, a finger scrolling). */
+function stillHere() {
+    lastPresenceAt = Date.now();
+    setResting(false);
+}
+
 let tickErrorShown = false;
 setInterval(() => {
     if (passive) return;   // the game plays in another tab now
     const now = Date.now();
+    setResting(atRest({ on: ui.saver && !document.hidden, now, touchedAt: lastPresenceAt, busy: wantsFrames() }));
     // The clock turned back: the save clocks start again from now (they waited for it to catch up).
     if (now < lastSave - 5000) lastSave = lastBackup = lastCloudSave = now;
     // A bug in one system must not stop saving or rendering (the prototype lost whole ticks this way).
@@ -344,14 +363,15 @@ setInterval(() => {
     if (!document.hidden) updates.tick(now);   // a newer version of the game, looked for now and then
     const changed = game.revision !== ui.renderedRevision;
     const pressing = pointer.down && now - pointer.downAt < 1000;
-    if (!pressing && ((changed && now - ui.lastRender > MIN_RENDER_GAP_MS) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
+    // (out of sight nothing is drawn: the page is drawn again as it comes back, below)
+    if (!document.hidden && !pressing && ((changed && now - ui.lastRender > (resting ? REST_RENDER_MS : MIN_RENDER_GAP_MS)) || now - ui.lastRender > MAX_RENDER_GAP_MS)) {
         try { render(); } catch (err) { console.error('Render failed', err); }
     }
 }, TICK_MS);
 
 function frame(now) {
-    // (the next frame is asked for first: a frame that throws must not stop the scene for the session)
-    requestAnimationFrame(frame);
+    // (the next frame is asked for first: a frame that throws must not stop the scene for the session; at rest, it waits a while)
+    if (resting) setTimeout(requestAnimationFrame, REST_FRAME_MS, frame); else requestAnimationFrame(frame);
     try {
         patchLive(game, ui);
         scene.frame(game, { frozen: endHeld() });
@@ -384,7 +404,8 @@ document.addEventListener('visibilitychange', () => {
     if (passive) return;
     game.setAttending(!document.hidden);
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
-    lastPresenceAt = Date.now();
+    stillHere();
+    render();   // (nothing was drawn while it was out of sight)
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
     updates.back(Date.now());   // a newer version of the game may have come out meanwhile
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
@@ -411,6 +432,7 @@ document.addEventListener('pointerdown', event => {
     if (button && !button.disabled && !button.closest('.foe')) sound.play('click');
 }, { capture: true, passive: true });
 for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { pointer.down = false; }, { capture: true, passive: true });
+for (const type of ['pointermove', 'wheel', 'touchmove']) document.addEventListener(type, stillHere, { capture: true, passive: true });
 // A button clicked with the mouse or a finger lets the focus go once its click is done: kept, Space (the
 // fight's strike key) and Enter pressed it again, and a click on a camp upgrade bought three more. A
 // press from the keyboard (a click with no count) keeps the focus where the keys are.
@@ -528,6 +550,7 @@ let lastInputNote = 0;
 const noteInput = event => {
     const now = Date.now();
     lastPresenceAt = now;
+    setResting(false);
     if (event?.target?.closest?.('.minigame-panel')) return;
     if (now - lastInputNote > 1000 || game.derived.focused) {
         lastInputNote = now;
@@ -643,6 +666,7 @@ function render() {
     stage.sync(game, ui);
     guide.sync(game, { battle: ui.tab === fightTab(game, ui), tab: ui.tab, modal: ui.modalOpen || null, now: game.now });
     rewards.resume();   // cards held back by a boss fight show once it is over
+    if (resting) stillLoops();   // (what was just drawn may have brought new ones)
     paintGold();
     paintBrand();
     glowArrivals();
@@ -2028,6 +2052,8 @@ window.FI = {
         if (key === 'vibration' && value) { sound.unlock(); sound.buzz('crit'); }   // turned on: felt at once
         render();
     },
+    /** The battery saver's switch, on this device only (src/ui/saver.js). */
+    setSaver(on) { ui.saver = !!on; prefs.set(SAVER_KEY, on ? '1' : '0'); render(); },
     /** Settings' switch for the M and Space keys, on this device only. */
     setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },

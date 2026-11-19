@@ -2400,9 +2400,10 @@ function optionGroups(game, ui) {
                 ? optChoice('Blows heard', [['all', 'Every hit'], ['big', 'Crits and kills']], s.blows === 'big' ? 'big' : 'all', "FI.setOption('blows', ") : '',
             seen(state, 'minigames') ? optSwitch('Chime when a mini-game chance appears', "FI.setSetting('minigameChime', this.checked)", s.minigameChime !== false) : ''
         ]),
-        optGroup('Motion', [
+        optGroup('Motion and battery', [
             optSwitch('Reduce motion', "FI.setSetting('reducedMotion', this.checked)", s.reducedMotion),
-            s.reducedMotion ? '' : effectSwitches(state, ui)
+            s.reducedMotion ? '' : effectSwitches(state, ui),
+            optSwitch('Battery saver', 'FI.setSaver(this.checked)', ui?.saver, ' title="On this device only: after half a minute untouched, the game draws less"')
         ]),
         optGroup('Keys and log', [
             optSwitch(`Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}`, 'FI.setShortcuts(this.checked)', ui?.shortcuts !== false, ' title="On this device only"'),

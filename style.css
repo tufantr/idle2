@@ -2140,6 +2140,9 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 /* the looks in Settings: a portrait each, the worn one lit */
 .look-picks { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
 /* the volume: a gold slider beside the speaker */
+/* The battery saver, the page left alone (src/ui/saver.js): bars and the like step with its slower frames, no easing between them */
+body.at-rest, body.at-rest *, body.at-rest *::before, body.at-rest *::after { transition: none !important; }
+
 /* Settings' options, in groups (render.js optionGroups): two or three side by side where there is room, one under another on a phone */
 .opt-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem 2rem; margin: 0.5rem 0 0.9rem; }
 .opt-group { min-width: 0; border: 0; }

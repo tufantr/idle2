@@ -2145,6 +2145,13 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
 - **Blows heard.** A watched fight made 83-92 sounds a minute, nearly all plain blows. "Crits and kills" (`settings.blows` `'big'`,
   `blowSound` and `hurtHeard`) keeps the hero's plain blows and the monster's on him silent, and without their taps of the motor; crits and
   the War Tree's big swings, kills, and the player's own strikes are heard as ever. Every hit is the default.
+- **Battery saver** (`src/ui/saver.js`). In view the game's cost is its frame (research 040). Once the page has gone 30 s without a
+  press, a key, the mouse moving, the wheel or a scroll, and no mini-game or clock fight wants every frame, it rests: `requestAnimationFrame`
+  runs ten times a second (one frame per game step), the tab is drawn again once a second, every CSS animation that loops for ever
+  is paused where it stands (`document.getAnimations()`, again after each draw), and `body.at-rest` drops transitions. What ends by
+  itself finishes, so blows, numbers and bars still show. The first sign of the player ends it. It is on by default where the
+  main pointer is a finger, off elsewhere; the choice is kept per device (`fantasyIdle.saver`), never in the save, and nothing ever
+  pops up about it. Out of sight the page isn't drawn at all, saver or not: it is drawn as it comes back.
 - **Effects one by one.** Under Reduce motion, which stills them all and hides the switches, a folded **Effects** holds one
   switch per effect once it has been met (`EFFECTS`, `fx_*` in `src/systems/disclosure.js`): floating numbers (the fight's and the
   work's; not the clan boss's "Strike now!", which tells when to strike), coins flying to the purse, the cards' confetti, a boss's shake.
@@ -2654,6 +2661,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · bestiary (every kind of monster, its stars) · pace (Melvor pace: late actions' XP)
                       · capes (skill capes at 99) · trials (the Trials: rules, first tiers)
                       · clanhall (the Clan Hall's rooms, stages, banner colours, what a gift is worth)
+                      · settings (Settings' choices of look, sound and reading, optional in the save)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, uniques found, the Seal, Titan) · inventory (bag, salvage, reforge)
                       · anvil (reinforcing and rerolling worn gear with bars) · bench (the jeweller's bench: jewellery slots with gems)
@@ -2670,7 +2678,7 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       sprites.js (atlas cells for monsters, items, perks, tools, glyphs and the hero's layers, in the look picked) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · update.js (when an open page looks for a
-                      newer version) · format.js
+                      newer version) · saver.js (the battery saver: a page left alone draws less) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
                       and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,
