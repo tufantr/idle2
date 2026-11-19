@@ -312,6 +312,19 @@ const FLOWS = {
         note('reload: once over, a reload keeps the game and replays nothing', back.kills >= kills && !back.report && !back.bar, JSON.stringify(back));
         noErrors('reload', errors);
         await ctx.close();
+        {   // signed in: nothing goes up from a replay cut short; the whole time away goes up once it is over
+            const uploads = [];
+            const signedIn = await open(mine, { save: aged(24), api: serverApi({ delay: 200, uploads }), rate: RATE });
+            const cut = await barAt(signedIn.page, 20);
+            const early = uploads.length;
+            await signedIn.page.reload({ waitUntil: 'commit' });
+            const done = await reportUp(signedIn.page);
+            await signedIn.page.waitForTimeout(1500);
+            const savedAt = uploads[0]?.state?.meta?.savedAt;
+            note('reload, signed in: nothing went up mid-replay, the whole time away after it', cut && early === 0 && done && uploads.length >= 1 && Math.abs(Date.now() - savedAt) < 120000, `${early} uploads mid-replay, ${uploads.length} after`);
+            noErrors('reload, signed in', signedIn.errors);
+            await signedIn.ctx.close();
+        }
     },
 
     /** Both folders, the four ways back: the same save, clock and dice end in the same game, field by field. */
