@@ -18,8 +18,9 @@ else
     ROOT=/srv/fantasyidle; UNIT=fantasyidle-api; PORT=3000
 fi
 WIKI=$ROOT/wiki/releases/$SHA
-# the folders that hold releases are root's too, so the app user can't swap one (its npm cache, .npm, stays its own)
-for d in "$ROOT" "$ROOT/releases" "$ROOT/wiki" "$ROOT/wiki/releases"; do install -d -o root -g root -m 0755 "$d"; chown root:root "$d"; done
+# the folders that hold releases are root's too, so the app user can't swap one (its npm cache, .npm, stays its own). All but
+# wiki/releases: the app user builds the wiki there, and the script of an older release, deployed to go back, does too
+for d in "$ROOT" "$ROOT/releases" "$ROOT/wiki"; do install -d -o root -g root -m 0755 "$d"; chown root:root "$d"; done
 cd "$REL"
 chown -R root:root "$REL"
 chmod -R go-w "$REL"
