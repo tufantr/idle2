@@ -2402,7 +2402,7 @@ function optionGroups(game, ui) {
         ]),
         optGroup('Motion and battery', [
             optSwitch('Reduce motion', "FI.setSetting('reducedMotion', this.checked)", s.reducedMotion),
-            s.reducedMotion ? '' : effectSwitches(state, ui),
+            s.reducedMotion || ui?.systemStill ? '' : effectSwitches(state, ui),
             optSwitch('Battery saver', 'FI.setSaver(this.checked)', ui?.saver, ' title="On this device only: after half a minute untouched, the game draws less"')
         ]),
         optGroup('Reading', [

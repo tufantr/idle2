@@ -17,7 +17,7 @@ export const saverOn = (stored, phone) => (stored === '1' ? true : stored === '0
 export const atRest = ({ on, now, touchedAt, busy = false }) => !!on && !busy && now - touchedAt >= REST_AFTER_MS;
 
 // The CSS animations that never end. What ends by itself (a number rising, a card coming in) is left to finish.
-const loops = root => (root.getAnimations?.() || []).filter(a => a instanceof CSSAnimation && a.effect?.getComputedTiming().iterations === Infinity);
+const loops = root => (root.getAnimations && typeof CSSAnimation !== 'undefined' ? root.getAnimations() : []).filter(a => a instanceof CSSAnimation && a.effect?.getComputedTiming().iterations === Infinity);
 /** They stand still where they are (a glow stays lit); called again as the page is drawn anew. */
 export function stillLoops(root = document) { for (const a of loops(root)) if (a.playState === 'running') a.pause(); }
 export function wakeLoops(root = document) { for (const a of loops(root)) if (a.playState === 'paused') a.play(); }

@@ -425,7 +425,7 @@ document.addEventListener('visibilitychange', () => {
     game.setAttending(!document.hidden);
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
     stillHere();
-    render();   // (nothing was drawn while it was out of sight)
+    try { render(); } catch (err) { console.error('Render failed', err); }   // (nothing was drawn while it was out of sight)
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
     updates.back(Date.now());   // a newer version of the game may have come out meanwhile
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
@@ -664,6 +664,7 @@ function bumpPurse() {
 
 function render() {
     setNotation(game.state.settings.numberFormat);   // (ui/format.js: every figure goes through it, this frame's too)
+    ui.systemStill = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;   // (the device's own setting: Settings' Effects can add nothing to it)
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';

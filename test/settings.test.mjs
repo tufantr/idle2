@@ -130,6 +130,8 @@ test("each effect has a switch under Reduce motion, once it has been met, and Re
     assert.match(motion(), /FI\.setEffect\('shake', this\.checked\)" > A boss&#39;s shake/, 'and it shows off');
     s.settings.reducedMotion = true;
     assert.doesNotMatch(motion(), /<details|setEffect/, 'Reduce motion stills them all: no switches left to mean anything');
+    s.settings.reducedMotion = false;
+    assert.doesNotMatch(motion({ systemStill: true }), /<details|setEffect/, 'and so does the device\'s own setting');
 });
 
 test('the effects are kept as the ones turned off, and only those the game knows', () => {
