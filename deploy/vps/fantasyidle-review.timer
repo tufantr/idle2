@@ -1,0 +1,10 @@
+# Each Monday morning, after the week's clan reset and the night's backup.
+[Unit]
+Description=Fantasy Idle: the weekly review list
+
+[Timer]
+OnCalendar=Mon *-*-* 07:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

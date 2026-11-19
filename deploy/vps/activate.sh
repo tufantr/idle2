@@ -52,12 +52,13 @@ if [ $STAGING = 0 ]; then
     runuser -u fantasyidle -- env HOME=/srv/fantasyidle WIKI_VERSION="$SHA" node wiki/build.mjs --out "$WIKI" >/dev/null
     chown -R root:root "$WIKI"
     # the web server's and the API's settings travel with the code
-    install -m 0644 deploy/vps/fantasyidle-api.service /etc/systemd/system/fantasyidle-api.service
+    install -m 0644 deploy/vps/fantasyidle-api.service deploy/vps/fantasyidle-review.service deploy/vps/fantasyidle-review.timer /etc/systemd/system/
     install -m 0644 deploy/vps/nginx.conf /etc/nginx/sites-available/fantasyidle
     ln -sfn /etc/nginx/sites-available/fantasyidle /etc/nginx/sites-enabled/fantasyidle
     rm -f /etc/nginx/sites-enabled/default
     systemctl daemon-reload
     systemctl enable fantasyidle-api >/dev/null 2>&1
+    systemctl enable --now fantasyidle-review.timer >/dev/null 2>&1
 fi
 [ -f /etc/ssl/fantasyidle/origin.pem ] || { echo "no origin certificate yet: run node deploy/vps/cloudflare.mjs first"; exit 1; }
 nginx -t -q

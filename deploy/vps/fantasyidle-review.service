@@ -1,0 +1,25 @@
+# The growth check's weekly review list, mailed to the owner (api/review.js; deploy/vps/fantasyidle-review.timer).
+# Skipped by itself if the release in place is older than the list (a rollback).
+[Unit]
+Description=Fantasy Idle: mail the owner the growth check's review list
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+ConditionPathExists=/srv/fantasyidle/current/api/review.js
+
+[Service]
+Type=oneshot
+User=fantasyidle
+Group=fantasyidle
+EnvironmentFile=/etc/fantasyidle/api.env
+WorkingDirectory=/srv/fantasyidle/current
+ExecStart=/usr/bin/node api/review.js
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
