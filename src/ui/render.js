@@ -61,7 +61,7 @@ import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
-import { vibrationOn } from '../data/settings.js';
+import { vibrationOn, EFFECTS, effectOn } from '../data/settings.js';
 import { charmsOnOffer, charmCharges } from '../systems/charms.js';
 import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
 import { VERSION } from '../version.js';
@@ -2377,6 +2377,13 @@ export function renderSettings(game, ui, cloud) {
 // Settings' options, in groups: a row for each thing the player has met, the rules behind the "?".
 const optSwitch = (label, onchange, on, attrs = '') => `<label class="toggle"${attrs}><input type="checkbox" onchange="${onchange}" ${on ? 'checked' : ''}> ${label}</label>`;
 const optGroup = (name, rows) => `<fieldset class="opt-group"><legend>${name}</legend>${rows.filter(Boolean).join('')}</fieldset>`;
+/** One switch per effect, folded under Reduce motion (which stills them all, so it hides them), each once it has been met. */
+function effectSwitches(state, ui) {
+    const met = EFFECTS.filter(e => seen(state, e.met));
+    if (!met.length) return '';
+    return `<details class="drawer opt-drawer" ${ui?.open?.effects ? 'open' : ''} ontoggle="FI.setOpen('effects', this.open)"><summary>Effects</summary>
+        ${met.map(e => optSwitch(esc(e.name), `FI.setEffect('${e.id}', this.checked)`, effectOn(state.settings, e.id))).join('')}</details>`;
+}
 function optionGroups(game, ui) {
     const state = game.state;
     const s = state.settings;
@@ -2389,7 +2396,8 @@ function optionGroups(game, ui) {
             seen(state, 'minigames') ? optSwitch('Chime when a mini-game chance appears', "FI.setSetting('minigameChime', this.checked)", s.minigameChime !== false) : ''
         ]),
         optGroup('Motion', [
-            optSwitch('Reduce motion', "FI.setSetting('reducedMotion', this.checked)", s.reducedMotion)
+            optSwitch('Reduce motion', "FI.setSetting('reducedMotion', this.checked)", s.reducedMotion),
+            s.reducedMotion ? '' : effectSwitches(state, ui)
         ]),
         optGroup('Keys and log', [
             optSwitch(`Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}`, 'FI.setShortcuts(this.checked)', ui?.shortcuts !== false, ' title="On this device only"'),

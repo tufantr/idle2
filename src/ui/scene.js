@@ -180,6 +180,7 @@ export function createScene(root, actions) {
     const running = new WeakMap();
     const reduced = () => document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const quietNow = () => document.hidden || reduced();
+    const wanted = id => actions.effect?.(id) !== false;   // an effect Settings hasn't turned off (data/settings.js EFFECTS)
 
     // Text and markup writes only when something changed, so a frame costs next to nothing.
     const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
@@ -254,6 +255,8 @@ export function createScene(root, actions) {
 
     function spawnFx(className, html, x, y, ms = 900) {
         if (quietNow() || fxBudget <= 0) return null;
+        // the numbers and words that float up (not the clan boss's "Strike now!", which tells when to strike)
+        if (/^(dmg|drop-pop)\b/.test(className) && !className.includes('guard-cue') && !wanted('numbers')) return null;
         fxBudget--;
         const node = document.createElement('div');
         node.className = className;
@@ -276,7 +279,7 @@ export function createScene(root, actions) {
 
     /** Coins from the monster to the gold counter in the header. */
     function coinBurst(count) {
-        if (quietNow()) return;
+        if (quietNow() || !wanted('coins')) return;
         const target = document.querySelector('.chip.gold b');
         if (!target) return;
         const from = el.foeSprite.getBoundingClientRect();
@@ -632,7 +635,7 @@ export function createScene(root, actions) {
             const label = enemy.titan ? `Titan · level ${titanLevel(game.state)}` : enemy.endless ? 'The week\'s ranking' : enemy.clan ? 'Clan boss' : c.mode === 'dungeon' ? 'Dungeon boss' : enemy.lord ? `A Lord · stage ${c.stage}` : `Boss · stage ${c.stage}`;
             const due = enemy.lord && c.mode === 'stages' && enemy.stage > (c.lordsBeaten || 0) ? '<span>Its first fall leaves a sure piece of top gear</span>' : '';
             banner(`<small>${label}</small><strong>${esc(bossName(enemy.name))}</strong>${due}`, 'boss', due ? 2800 : 2200);
-            move(el.battle, 'shake');
+            if (wanted('shake')) move(el.battle, 'shake');
             actions.sound?.('boss');
         }
     }

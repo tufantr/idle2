@@ -2142,6 +2142,10 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
 
 - **Vibration apart from sound.** On a phone with a motor (not iPhones: Safari gives pages none) Vibration is a switch of its
   own. Until it is used it goes with the sound, as when one switch held both, so nobody who muted the game starts to buzz.
+- **Effects one by one.** Under Reduce motion, which stills them all and hides the switches, a folded **Effects** holds one
+  switch per effect once it has been met (`EFFECTS`, `fx_*` in `src/systems/disclosure.js`): floating numbers (the fight's and the
+  work's; not the clan boss's "Strike now!", which tells when to strike), coins flying to the purse, the cards' confetti, a boss's shake.
+  `settings.effects` holds only the ones turned off.
 
 ## 4. The modifier pipeline
 

@@ -93,6 +93,11 @@ export class Game {
         this.markDirty();
     }
 
+    /** One effect on or off, under Reduce motion (data/settings.js EFFECTS). */
+    setEffect(id, on) {
+        this.setOption('effects', { ...this.state.settings.effects, [id]: on ? undefined : false });
+    }
+
     // ----- infrastructure -----
     emit(event) {
         // (a card shown again for something noted as it happened while away is not noted twice)

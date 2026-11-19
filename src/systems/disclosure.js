@@ -67,7 +67,13 @@ export const DISCLOSURES = [
     // Hunting's river spots: once the kitchen has been used (as Fishing opened, before it joined Hunting)
     { id: 'river',        when: s => (s.stats.actionsBySkill.cooking || 0) >= 5 || (s.stats.fishCaught || 0) > 0 || RIVER_CATCH.some(id => s.resources[id] > 0) },
     { id: 'mastery',      when: s => s.stats.masteryLevels >= 20 },
-    { id: 'minigames',    when: s => s.stats.minigameWins > 0 || NON_COMBAT_SKILLS.some(id => s.minigame[id]?.opportunityUntil > 0 || !!s.minigame[id]?.challenge) }
+    { id: 'minigames',    when: s => s.stats.minigameWins > 0 || NON_COMBAT_SKILLS.some(id => s.minigame[id]?.opportunityUntil > 0 || !!s.minigame[id]?.challenge) },
+    // Settings' switch for each effect (data/settings.js EFFECTS), once it has been seen: numbers from the first blow or finished
+    // work, coins from the first kill, confetti with the first place opened, the shake with the first boss
+    { id: 'fx_numbers',   when: s => s.stats.kills > 0 || Object.values(s.stats.actionsBySkill).some(n => n > 0) },
+    { id: 'fx_coins',     when: s => s.stats.kills > 0 },
+    { id: 'fx_confetti',  when: s => Object.values(s.unlocks).some(Boolean) },
+    { id: 'fx_shake',     when: s => s.combat.bestStage >= STAGES_PER_ZONE || s.stats.bossKills > 0 }
 ];
 
 /** Has this piece of the interface opened for the player? (Developer mode opens everything.) */

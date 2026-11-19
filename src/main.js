@@ -17,7 +17,7 @@ import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
-import { vibrationOn } from './data/settings.js';
+import { vibrationOn, effectOn } from './data/settings.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
@@ -240,7 +240,8 @@ const scene = createScene(document.getElementById('scene'), {
     map: () => window.FI.openMap(),
     sound: name => sound.play(name),
     pat: () => game.patPet(),
-    chest: () => window.FI.openRunChoice()
+    chest: () => window.FI.openRunChoice(),
+    effect: id => effectOn(game.state.settings, id)
 });
 
 // Layers above the page: celebrations for the big moments (src/ui/rewards.js), the work popping off
@@ -248,8 +249,8 @@ const scene = createScene(document.getElementById('scene'), {
 const layer = (tag, id) => document.body.appendChild(Object.assign(document.createElement(tag), { id }));
 // A boss fight in view: its clock and its health are what the player watches, so cards wait until it ends.
 const bossOnScreen = () => { const c = game.state.combat; return ui.tab === fightTab(game, ui) && c.active && !!c.enemy?.boss && !c.farmMode; };
-const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab) }); // cards wait behind dialogs and boss fights
-const actionFx = createActionFx(layer('div', 'work-fx'));
+const rewards = createRewards(layer('div', 'celebrate'), { blocked: () => !!ui.modalOpen || bossOnScreen(), go: tab => window.FI.switchTab(tab), confetti: () => effectOn(game.state.settings, 'confetti') }); // cards wait behind dialogs and boss fights
+const actionFx = createActionFx(layer('div', 'work-fx'), { numbers: () => effectOn(game.state.settings, 'numbers') });
 const hotbar = layer('nav', 'hotbar');
 hotbar.setAttribute('aria-label', 'Shortcuts');
 // Sound and haptics (src/ui/sound.js): a setting each, unlocked by the first click or key.
@@ -2015,6 +2016,8 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** An effect's switch, under Reduce motion. */
+    setEffect(id, on) { game.setEffect(id, on); render(); },
     /** One of Settings' choices of how the game looks, sounds and reads (data/settings.js). */
     setOption(key, value) {
         game.setOption(key, value);

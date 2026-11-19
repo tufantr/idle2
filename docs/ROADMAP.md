@@ -1569,6 +1569,8 @@ Keeping it running:
       wide screen and one under another on a phone, each row still there
 - [x] **Vibration apart from sound** (R21, P-082): a switch of its own on phones with a motor, going with the sound until it is
       used, so that a muted game doesn't start to buzz
+- [x] **Effects that turn off one by one** (R21, P-082): under Reduce motion, a folded Effects with a switch each for floating
+      numbers, coins flying to the purse, confetti and a boss's shake, each shown once it has been met
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

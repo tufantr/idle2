@@ -7,7 +7,8 @@ import { Game } from '../src/game.js';
 import { createDefaultState, migrateState } from '../src/core/state.js';
 import { renderSettings } from '../src/ui/render.js';
 import { createSound } from '../src/ui/sound.js';
-import { vibrationOn } from '../src/data/settings.js';
+import { vibrationOn, EFFECTS, effectOn, cleanOptions } from '../src/data/settings.js';
+import { DISCLOSURES } from '../src/systems/disclosure.js';
 
 const T0 = 1_760_000_000_000;
 // A browser's sound and motor, as far as src/ui/sound.js touches them: what was heard (nodes made) and felt (patterns).
@@ -97,4 +98,50 @@ test('a save from before these choices loads with none of them, and a broken one
     assert.equal('vibration' in migrateState(JSON.parse(JSON.stringify(old)), T0).settings, false);
     old.settings.vibration = false;
     assert.equal(migrateState(JSON.parse(JSON.stringify(old)), T0).settings.vibration, false, 'a real choice stays');
+});
+
+test("each effect has a switch under Reduce motion, once it has been met, and Reduce motion folds them away", () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    const motion = (ui = {}) => groupsOf(renderSettings(game, ui, null)).find(g => g.name === 'Motion').body;
+    assert.doesNotMatch(motion(), /<details/, 'a new player has met none: no drawer');
+    s.stats.kills = 1;
+    game.tick(T0 + 100);
+    assert.ok(s.seen.fx_numbers && s.seen.fx_coins);
+    assert.equal(s.seen.fx_shake, undefined);
+    let html = motion();
+    assert.match(html, /<details class="drawer opt-drawer" {2}ontoggle="FI\.setOpen\('effects', this\.open\)"><summary>Effects<\/summary>/, 'folded at rest');
+    assert.match(html, /FI\.setEffect\('numbers', this\.checked\)" checked> Floating numbers/);
+    assert.match(html, /FI\.setEffect\('coins', this\.checked\)" checked>/);
+    assert.doesNotMatch(html, /'shake'|'confetti'/, 'the others wait');
+    assert.match(motion({ open: { effects: true } }), /<details class="drawer opt-drawer" open/);
+    s.combat.bestStage = 10; s.unlocks.smithing = true;
+    game.tick(T0 + 200);
+    assert.match(motion(), /FI\.setEffect\('shake'/);
+    assert.match(motion(), /FI\.setEffect\('confetti'/);
+    game.setEffect('shake', false);
+    assert.match(motion(), /FI\.setEffect\('shake', this\.checked\)" > A boss&#39;s shake/, 'and it shows off');
+    s.settings.reducedMotion = true;
+    assert.doesNotMatch(motion(), /<details|setEffect/, 'Reduce motion stills them all: no switches left to mean anything');
+});
+
+test('the effects are kept as the ones turned off, and only those the game knows', () => {
+    const game = new Game(null, T0);
+    const s = game.state.settings;
+    for (const e of EFFECTS) assert.equal(effectOn(s, e.id), true, e.id);
+    assert.equal('effects' in s, false);
+    game.setEffect('coins', false);
+    game.setEffect('confetti', false);
+    assert.deepEqual(s.effects, { coins: false, confetti: false });
+    assert.equal(effectOn(s, 'coins'), false);
+    game.setEffect('coins', true);
+    assert.deepEqual(s.effects, { confetti: false });
+    game.setEffect('confetti', true);
+    assert.equal('effects' in s, false, 'all on again: nothing to keep');
+    assert.deepEqual(cleanOptions({ effects: { numbers: false, shake: true, nonsense: false } }), { effects: { numbers: false } });
+    assert.deepEqual(cleanOptions({ effects: 'none' }), {});
+    const saved = createDefaultState(T0);
+    saved.settings.effects = { shake: false, '<b>': false };
+    assert.deepEqual(migrateState(JSON.parse(JSON.stringify(saved)), T0).settings.effects, { shake: false });
+    for (const e of EFFECTS) assert.ok(DISCLOSURES.some(d => d.id === e.met), `${e.id} opens through the disclosures`);
 });

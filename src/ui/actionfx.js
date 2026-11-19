@@ -9,12 +9,12 @@ import { resIcon, glyph, sprite, itemSpriteKey } from './sprites.js';
 const MAX_FLOATING = 12;
 const POP_MS = 1150;
 
-export function createActionFx(layer) {
+export function createActionFx(layer, { numbers = () => true } = {}) {
     let floating = 0;
     const reduced = () => document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     function pop(html, x, y, cls = '', delay = 0, color = '') {
-        if (floating >= MAX_FLOATING) return;
+        if (floating >= MAX_FLOATING || !numbers()) return;   // (Settings can turn them off: data/settings.js EFFECTS)
         floating++;
         const node = document.createElement('div');
         node.className = `work-pop ${cls}`;

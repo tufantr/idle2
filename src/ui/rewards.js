@@ -112,14 +112,14 @@ export function renderCrateModal(result, banked, toward = 0) {
  * The celebration layer in `root`: one card at a time, a short queue, confetti. While `blocked()`
  * (a dialog is open) cards wait in the queue; `resume()` shows them once it closes.
  */
-export function createRewards(root, { blocked = () => false, go = () => {} } = {}) {
+export function createRewards(root, { blocked = () => false, go = () => {}, confetti: wantConfetti = () => true } = {}) {
     const queue = [];
     let showing = null;
     let timer = 0;
     const reduced = () => document.body.classList.contains('reduced-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     function confetti(x, y) {
-        if (reduced() || !document.body.animate) return;
+        if (reduced() || !wantConfetti() || !document.body.animate) return;
         for (let i = 0; i < CONFETTI; i++) {
             const bit = document.createElement('i');
             bit.className = 'confetti';
