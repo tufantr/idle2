@@ -519,6 +519,7 @@ setInterval(() => {
         if (!tickErrorShown) { toast('Something went wrong in the game loop — details in the console.', 'error'); tickErrorShown = true; }
         game.now = now;
     }
+    if (catching) return;   // (a gap found just now: what follows, a backup above all, would finish its replay in one go)
     try { handleEvents(game.drainEvents()); } catch (err) { console.error('Events failed', err); }   // never at the cost of the save below
     if (game.state.clanResult && cloud.loggedIn && cloudReady) sendClanResult();   // a clan attack fought, not yet sent
     if (needsSignIn() && !ui.modalOpen) openSignIn();   // signed out, or a session that expired: the game waits for an account
