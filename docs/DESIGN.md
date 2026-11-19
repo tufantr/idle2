@@ -2133,9 +2133,9 @@ the routes in `api/index.js`, the tables `clan_hall` and `clan_gifts` in `api/st
   The rules sit behind the hall's "?". `tools/shots.mjs clanhall,hallgive,bannerpick,hallgiven,clancloak` shoots them
   signed in, the tool answering the API.
 
-### 3.36 Readouts: sources of power
+### 3.36 Readouts: sources of power, and the pace of the work
 
-A readout that changes no number of the game (R17 of the research loop's ranking; P-022).
+Two readouts that change no number of the game (R17 of the research loop's ranking; P-022, P-002).
 
 - **Sources of power** (`src/systems/powerledger.js`; `renderPowerModal` in `src/ui/render.js`). From the first prestige
   (disclosure `power_sources`) the hero's panel in Inventory has a small **Sources** button beside his attack, defence and
@@ -2156,6 +2156,13 @@ A readout that changes no number of the game (R17 of the research loop's ranking
   share. The ledger gained the two sources the tool lacked, the War Tree and the clan banner (Combat's cape is inside the
   combat level). `test/powerledger.test.mjs` checks that all the sources together are all of his power (without them he has
   his bare hands), and that the panel's rows equal the tool's on a hero with everything and on one the simulator played.
+- **The pace of the work** (`src/systems/rates.js`). While the hero works at a skill, its header shows XP an hour and the
+  time to the next level (`skillPace`); the card being worked shows how long the materials he holds last and which runs out
+  first (`materialsLast`). They use the numbers the work itself runs on (`intervalFor`, `actionXp`), every bonus at work now
+  counted (a potion, the bonfire, Focus) but a mini-game's burst, which lasts seconds; a log burnt twice pays twice; mastery's
+  kept ingredients and the Furnace Bellows' charges make materials last longer. Where nothing true can be said they say
+  nothing: no work in that skill, work stalled for materials, Farming (it grows on the clock) and the anvil and the bench
+  (they go by the click). `test/rates.test.mjs` plays the work and compares.
 
 ## 4. The modifier pipeline
 
@@ -2671,6 +2678,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · clanhall (the game's copy of the clan's hall, gifts leaving the bank)
                       · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
                       · powerledger (each source's share of the hero's strength, for the panel and tools/ledger.mjs, §3.36)
+                      · rates (XP an hour, the time to the next level, how long the materials last, §3.36)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·

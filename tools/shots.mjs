@@ -45,6 +45,8 @@ const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cookin
 // A step inside a tab, shot like a tab.
 const STEPS = {
     anvil: () => { FI.switchTab('smithing'); FI.smithView('anvil'); },
+    // work with materials under way: the header's XP an hour and time to the next level, and how long the materials last
+    smelting: () => { FI.switchTab('smithing'); FI.smithView('smelt'); FI.smelt('iron_bar'); document.querySelector('.node-card.active')?.scrollIntoView({ block: 'center' }); },
     records: () => { FI.switchTab('achievements'); FI.hallView('records'); },
     bestiary: () => { const c = FI.game().state.combat; c.bestStage = Math.max(c.bestStage, 190); FI.switchTab('achievements'); FI.hallView('bestiary'); },
     stratum: () => { const g = FI.game(); const c = g.state.combat; c.bestStage = Math.max(c.bestStage, 190); c.maxStage = 187; g.setStage(187); g.state.trials.active = null; g.recompute(); FI.switchTab('combat'); if (!c.active) FI.toggleCombat(); },

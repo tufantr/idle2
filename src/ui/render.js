@@ -58,6 +58,7 @@ import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
 import { powerLedger, powerShares } from '../systems/powerledger.js';
+import { skillPace, materialsLast } from '../systems/rates.js';
 import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
@@ -729,6 +730,21 @@ function banner(id, { title = null, sub = null, extra = '' } = {}) {
 
 // ---------- skills ----------
 
+/** The pace of the work under way in this skill (systems/rates.js): XP an hour and the time to the next level. Nothing when none is. */
+function paceChips(game, skillId) {
+    const pace = skillPace(game.state, game.derived, skillId);
+    if (!pace) return '';
+    const hour = `<span ${tipAttrs('XP an hour', `About ${fmt(pace.perHour)} ${SKILLS[skillId].name} XP an hour at this pace, with the bonuses at work now`)}>${glyph('xp')} <b>${fmt(pace.perHour)}</b>/h</span>`;
+    const next = pace.nextLevel ? `<span ${tipAttrs(`Level ${pace.nextLevel}`, `In about ${duration(pace.toNextMs)} at this pace`)}>${glyph('up')} <b>${duration(pace.toNextMs)}</b></span>` : '';
+    return `<span class="skill-pace">${hour}${next}</span>`;
+}
+
+/** On the card being worked: how long what the hero holds lasts, with the material that runs out first. Nothing for work that takes none. */
+function materialsChip(game, def) {
+    const left = materialsLast(game.state, game.derived, def, game.state.action?.progress || 0);
+    return left ? `<span ${tipAttrs('Materials', `${res(left.first).name} runs out first: what you hold lasts about ${duration(left.ms)} at this pace`)}>${resIcon(left.first, { scale: 0.5 })} ${duration(left.ms)}</span>` : '';
+}
+
 function xpHeader(game, skillId, extra = '') {
     const state = game.state;
     const skill = SKILLS[skillId];
@@ -751,6 +767,7 @@ function xpHeader(game, skillId, extra = '') {
             <span class="skill-level" style="color:color-mix(in srgb, ${skill.color} 62%, #fff); background:${skill.color}22">Level ${lp.level}${lp.level >= MAX_LEVEL ? ' ★' : ''}</span>
             <div class="xp-bar-container"><div class="xp-bar-fill" style="width:${(lp.fraction * 100).toFixed(1)}%; background:${skill.color}"></div></div>
             <span class="skill-xp">${lp.level >= MAX_LEVEL ? fmt(state.skills[skillId].xp) + ' XP' : `${fmt(lp.xpInto)} / ${fmt(lp.xpNeeded)} XP`}</span>
+            ${paceChips(game, skillId)}
         </div>
     </div>`;
 }
@@ -948,7 +965,7 @@ export function renderSkill(game, ui, skillId) {
                 tip: `${gives} · +${xp} XP · ${seconds(interval)}`,
                 active, stalled: active && (action.stalled || !check.ok), onclick: `FI.startNode('${skillId}','${node.id}')`,
                 have: node.produces ? state.resources[node.produces] : undefined, haveIcon: node.produces ? resIcon(node.produces) : '', haveName: node.produces ? res(node.produces).name : '',
-                stats: `${xpTimeStats(skillId, xp, node.xp, interval, node.interval)}${luckStats(d, def)}`,
+                stats: `${xpTimeStats(skillId, xp, node.xp, interval, node.interval)}${luckStats(d, def)}${active ? materialsChip(game, def) : ''}`,
                 mastery: masteryRow(state, skillId, def.mastery),
                 progressId: `progress-${skillId}-${node.id}`, progress: active ? Math.min(100, action.progress / interval * 100) : 0
             });
@@ -1051,11 +1068,12 @@ export function renderSmithing(game, ui) {
     if (view === 'smelt') {
         body = `<div class="node-grid">${withNext(SMELTING_RECIPES, r => r.levelReq, level).map(r => {
             const def = resolveAction(state, { kind: 'smelt', id: r.id });
+            const active = action?.kind === 'smelt' && action.id === r.id;
             return recipeCard({
                 title: r.name, icon: resIcon(r.produces, { scale: 1.5 }), pic: cardPic(r.id, 'smithy'), color: res(r.produces).color, inputs: Object.entries(r.consumes),
                 have: state.resources[r.produces], haveIcon: resIcon(r.produces), haveName: res(r.produces).name,
-                skill: 'smithing', xp: Math.round(actionXp(r.xp, d)), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def), mastery: masteryRow(state, 'smithing', def.mastery),
-                active: action?.kind === 'smelt' && action.id === r.id, stalled: action?.stalled,
+                skill: 'smithing', xp: Math.round(actionXp(r.xp, d)), baseXp: r.xp, interval: intervalFor(def, d), baseInterval: r.interval, luck: luckStats(d, def) + (active ? materialsChip(game, def) : ''), mastery: masteryRow(state, 'smithing', def.mastery),
+                active, stalled: action?.stalled,
                 onclick: `FI.smelt('${r.id}')`, disabled: level < r.levelReq, reqText: `Level ${r.levelReq}`
             }, state);
         }).join('')}</div>`;
@@ -1261,12 +1279,15 @@ function renderCraftStep(game, ui) {
     const gem = plain ? null : gems.find(g => g.gem === ui.craftGem) || [...gems].reverse().find(g => state.resources[g.gem] > 0) || gems[gems.length - 1] || GEM_TIERS[0];
     const gemId = plain ? PLAIN : gem.gem;
     const recipes = CRAFTING_TYPES.map(type => ({ type, recipe: resolveAction(state, { kind: 'craft', type, bar: bar.bar, gem: gemId }) }));
-    const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => recipeCard({
-        title: `${plain ? bar.name : res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${plain ? 1 : res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(plain ? bar.bar : gem.gem).color,
-        inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(actionXp(recipe.xp, d)), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe),
-        active: action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gemId, stalled: action?.stalled,
-        onclick: `FI.craft('${type}','${bar.bar}','${gemId}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
-    }, state)).join('');
+    const cards = withNext(recipes, r => r.recipe.levelReq, level).sort((a, b) => a.recipe.levelReq - b.recipe.levelReq).map(({ type, recipe }) => {
+        const active = action?.kind === 'craft' && action.type === type && action.bar === bar.bar && action.gem === gemId;
+        return recipeCard({
+            title: `${plain ? bar.name : res(gem.gem).name} ${TYPE_NAMES[type]}`, icon: sprite(`item/${type}/${plain ? 1 : res(gem.gem).tier}`, { scale: 1.5, fallback: TYPE_ICONS[type] }), pic: cardPic(`craft_${type}`, 'jeweller'), color: res(plain ? bar.bar : gem.gem).color,
+            inputs: Object.entries(recipe.consumes), skill: 'crafting', xp: Math.round(actionXp(recipe.xp, d)), baseXp: recipe.xp, interval: intervalFor(recipe, d), baseInterval: recipe.interval, luck: luckStats(d, recipe) + (active ? materialsChip(game, recipe) : ''),
+            active, stalled: action?.stalled,
+            onclick: `FI.craft('${type}','${bar.bar}','${gemId}')`, disabled: level < recipe.levelReq, reqText: `Level ${recipe.levelReq}`
+        }, state);
+    }).join('');
     const plainPick = { id: PLAIN, name: 'No gem', have: state.resources[bar.bar], icon: sprite('item/Ring/1', { scale: 1.25, fallback: TYPE_ICONS.Ring }), sub: 'plain',
         title: 'No gem: a plain piece, the setting alone, for less XP' };
     return `<div class="forge-bar">

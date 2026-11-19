@@ -29,6 +29,10 @@ An action takes its base time divided by one plus all your speed bonuses togethe
 
 More on the last two in [[Mini-games and Focus]].
 
+## Your pace
+
+While your hero works at a skill, its header shows the **XP an hour** and the **time to the next level** at his pace right now, with every bonus at work counted (a potion, the bonfire, Focus) but a mini-game's short burst. The card being worked shows how long **the materials you hold** last, with the one that runs out first. A skill with no steady pace shows none of this: [[/skills/farming|Farming]] grows on the clock, and the anvil and the jeweller's bench go by the click.
+
 ## Melvor pace
 
 As in Melvor Idle, the road to {{MAX_LEVEL}} is long, and the late actions are what make it so. An action that opens at level {{PACE_FROM}} or below gives all of its XP; one that opens at level {{PACE_TO}} or above gives its XP divided by its skill's factor, and in between the cut grows evenly. The factors are: {{Object.entries(PACE).filter(([, f]) => f > 1).sort((a, b) => a[1] - b[1]).map(([id, f]) => `${SKILLS[id].name} ÷${f}`).join(', ')}}; Farming has none. A newer action never gives less XP an hour than an older one of its kind, so moving up always pays, and the XP shown in this wiki's tables is the XP you really get. Combat has a pace of its own, by your Combat level (see [[Combat]]).

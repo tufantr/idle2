@@ -502,7 +502,7 @@ body.reduced-motion .update-pill { animation: none; box-shadow: 0 0 10px rgba(74
 .potion-tray { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; gap: 6px; padding: 7px; border-radius: 12px; background: linear-gradient(180deg, #1e1810, #120d07); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); }
 .potion-tray .pick { width: 40px; height: 40px; }
 .potion-tray-empty { align-self: center; padding: 0 0.4rem; font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
-.skill-info { display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; }
+.skill-info { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.4rem 1rem; min-width: 0; font-size: 0.85rem; }
 .skill-level { padding: 0.2rem 0.65rem; border-radius: 999px; font-weight: 800; color: #1f1406; background: linear-gradient(180deg, #f0cb72, #b08233); box-shadow: 0 0 10px rgba(214, 170, 92, 0.3); }
 .xp-bar-container { width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(214, 170, 92, 0.25); }
 .xp-bar-fill {
@@ -511,6 +511,10 @@ body.reduced-motion .update-pill { animation: none; box-shadow: 0 0 10px rgba(74
     background-size: 42px 100%, 100% 100%; animation: progressFlow 1.1s linear infinite;
 }
 .skill-xp { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* the pace of the work under way (render.js paceChips, systems/rates.js) */
+.skill-pace { display: inline-flex; align-items: center; gap: 0.7rem; color: var(--text-muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.skill-pace span { display: inline-flex; align-items: center; gap: 0.2rem; cursor: help; }
+.skill-pace b { color: var(--text-main); font-weight: 700; }
 
 /* mini-games */
 .minigame-panel {
@@ -1134,7 +1138,7 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
     .combat-controls { flex-direction: column; align-items: stretch; }
     .loadout { flex: 0 0 auto; } /* in a column a flex-basis is a height: without this each row stood 300px tall */
     .panel-header { flex-wrap: wrap; gap: 0.5rem; }
-    .skill-info { flex-wrap: wrap; }
+    .skill-info { justify-content: flex-start; }
     .header-row .chips { gap: 0.3rem; }
     .chip { padding: 0.25rem 0.55rem 0.25rem 0.35rem; }
     .node-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; }

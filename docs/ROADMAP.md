@@ -1569,6 +1569,8 @@ Keeping it running:
       and health (from the first prestige) opens each source's share of his strength, biggest first, with what it multiplies
       a tap away; the panel and `tools/ledger.mjs` share their arithmetic (`src/systems/powerledger.js`), and a "?" in a
       dialog now opens over it
+- [x] **The pace of the work** (R17, P-002): the skill screens show XP an hour and the time to the next level for the work
+      under way, and the card being worked how long the materials last; nothing where there is no true figure
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):
