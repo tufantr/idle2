@@ -368,6 +368,7 @@ const FLOWS = {
         for (const [name, way] of Object.entries(ways)) {
             const a = await end(older, way);
             const b = await end(mine, way);
+            delete a.save.seen?.reentry; delete b.save.seen?.reentry;   // (the strip's own disclosure, new here)
             const { fields, diffs } = compareFields(a.save, b.save);
             note(`same game, ${name}: ${fields} fields compared`, !diffs.length, diffs.slice(0, 5).join(' · '));
             note(`same report, ${name}`, a.report && a.report === b.report, a.report === b.report ? '' : `${a.report?.slice(0, 120)} // ${b.report?.slice(0, 120)}`);
