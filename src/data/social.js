@@ -17,16 +17,6 @@ export function clanReportHref({ id, name, tag }) {
 // The player wiki (wiki/, built from the game's own data; README "The server"): linked in Settings beside the Discord, and
 // at the foot of each "?" card that has a page of its own there (src/ui/features.js WIKI_PAGES).
 export const WIKI_URL = 'https://wiki.fantasyidle.com';
-export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
-// The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board
-// a week of play can climb rather than the beta's head start (P-129); while the week's board holds fewer than BOARD_WEEK_MIN
-// names they open on All time. Decided at the first look; a tap on the period chooses for good (main.js).
-export const BOARD_WEEK_MIN = 5;
-/** The period the boards open on, from the week's board as the server sent it ({ entries }): 'week' or 'all'. */
-export const boardOpensOn = weekBoard => ((weekBoard?.entries?.length || 0) >= BOARD_WEEK_MIN ? 'week' : 'all');
-
-export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
-
 // What a clan's words (its description and "looking for" line) may not hold: a way to reach anyone elsewhere (the owner's
 // decision, November 2026; the research loop's P-125, against grooming and steering players to other apps). No web addresses,
 // "@" handles, invite codes or contact details; a clan's talk has the game's Discord, which may be named or linked. A sieve
@@ -56,6 +46,14 @@ export function clanWordsOk(text) {
     if (NO_CONTACT.some(rule => rule.test(plain))) return false;
     return !(plain.match(/\+?\d[\d\s().-]{7,}\d/g) || []).some(run => run.replace(/\D/g, '').length >= 9);
 }
+export const CLAN_POLL_MS = 60 * 1000; // the Clan tab refreshes at most once a minute, and only while open and in view
+export const LEADER_AWAY_DAYS = 30;    // a clan's owner who hasn't played for this long hands it over (api/index.js handOverIfAway)
+// The leaderboards open on This week (each player counted from their first upload of the week), so a stranger meets a board
+// a week of play can climb rather than the beta's head start (P-129); while the week's board holds fewer than BOARD_WEEK_MIN
+// names they open on All time. Decided at the first look; a tap on the period chooses for good (main.js).
+export const BOARD_WEEK_MIN = 5;
+/** The period the boards open on, from the week's board as the server sent it ({ entries }): 'week' or 'all'. */
+export const boardOpensOn = weekBoard => ((weekBoard?.entries?.length || 0) >= BOARD_WEEK_MIN ? 'week' : 'all');
 
 // Clan attacks (api/index.js): three a day, and those not used wait, up to six. An attack is a fight of
 // CLAN_ATTACK_SECONDS against the week's clan boss (systems/clanfight.js); the boss's health is sized

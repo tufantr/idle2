@@ -10,11 +10,12 @@ import { TRIALS, WEEK_MS, WEEKLY_FROM, PACT_MAX, trialTarget, trialTier, laurels
 import { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf } from '../data/social.js';
 
 export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, CLAN_ATTACK_BANK, CLAN_BANNER, CLAN_BOSS, clanBossHealth, ENDLESS, CLAN_DIVISIONS, divisionOf, endlessDepth, clanDepthScore, CLAN_POWER, clanPowerOf };   // the server reads them here
-export { LEADER_AWAY_DAYS, clanWordsOk, CLAN_WORDS_REFUSED } from '../data/social.js';   // when a clan passes on, and what its words may hold (api/index.js)
 
 /** The start of the week holding `now`, as the week's Trial counts weeks (for the server's board). */
+export { LEADER_AWAY_DAYS } from '../data/social.js';
 export const trialWeekStart = now => weeklyTrialAt(now).start;
 export { supplyMult };   // the server sizes the clan boss by it (api/index.js shareOf)
+export { clanWordsOk, CLAN_WORDS_REFUSED } from '../data/social.js';   // what a clan's words may hold (api/index.js)
 export { HALL, HALL_ROOMS, HALL_STAGES, ROOM_SECONDS, WEEKLY_SECONDS, CLOAK_STAGE, BANNER_COLOURS, BANNER_EMBLEMS, roomLevel, hallLevels, hallStage, hallRoom, giftWorth, roomTakes } from '../data/clanhall.js';   // the Clan Hall's (api/index.js)
 
 /** Expected damage per second: attack × crit expectation ÷ interval. No dice. */

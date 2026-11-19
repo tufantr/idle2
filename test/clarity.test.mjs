@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 import { Game } from '../src/game.js';
 import { fmt, seenWords } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan, renderClanWords } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
@@ -20,7 +20,7 @@ import { ZONES } from '../src/data/zones.js';
 import { GEAR_TIERS, RARITIES } from '../src/data/items.js';
 import { BASE } from '../src/core/modifiers.js';
 import { trialById } from '../src/data/trials.js';
-import { renderDeleteAccount } from '../src/ui/render.js';
+import { renderClanWords, renderDeleteAccount } from '../src/ui/render.js';
 import { BALANCE, generateEquipment } from '../src/core/formulas.js';
 
 const T0 = 1_760_000_000_000;

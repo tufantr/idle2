@@ -2600,20 +2600,6 @@ export function renderHallGive(game, ui) {
     </div>`;
 }
 
-/** The clan's words, for its owner (FI.openClanWords): what the Start a clan form asks, as they stand now. */
-export function renderClanWords(clan) {
-    return `<div class="modal-content narrow ${painted('clanhall', 'center 40%')}">
-        <div class="modal-header">Your clan's words</div>
-        <div class="modal-body"><div class="auth-error" id="clan-words-error"></div>
-            <form class="auth-form" onsubmit="event.preventDefault(); FI.saveClanWords()">
-                <label class="small">Description <input id="clan-words-desc" class="text-input" maxlength="200" value="${esc(clan?.description || '')}" data-autofocus></label>
-                <label class="small">Looking for <input id="clan-words-looking" class="text-input" maxlength="100" value="${esc(clan?.lookingFor || '')}"></label>
-                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Save</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button></div>
-            </form>
-        </div>
-    </div>`;
-}
-
 /** The banner picker, for the clan's owner (FI.openBannerPicker): the colours and emblems its hall's stage has. */
 export function renderBannerPicker(game, ui) {
     const hall = ui.social?.hall;
@@ -2887,6 +2873,20 @@ export function renderDeleteAccount() {
             <form class="auth-form" onsubmit="event.preventDefault(); FI.deleteAccount()">
                 <input type="password" id="delete-pass" placeholder="Your password" aria-label="Your password" autocomplete="current-password" class="text-input" data-autofocus>
                 <div class="btn-row"><button type="submit" class="modal-btn btn-danger">Delete it for good</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Keep it</button></div>
+            </form>
+        </div>
+    </div>`;
+}
+
+/** The clan's words, for its owner (FI.openClanWords): what the Start a clan form asks, as they stand now. */
+export function renderClanWords(clan) {
+    return `<div class="modal-content narrow ${painted('clanhall', 'center 40%')}">
+        <div class="modal-header">Your clan's words</div>
+        <div class="modal-body"><div class="auth-error" id="clan-words-error"></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.saveClanWords()">
+                <label class="small">Description <input id="clan-words-desc" class="text-input" maxlength="200" value="${esc(clan?.description || '')}" data-autofocus></label>
+                <label class="small">Looking for <input id="clan-words-looking" class="text-input" maxlength="100" value="${esc(clan?.lookingFor || '')}"></label>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-confirm">Save</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Cancel</button></div>
             </form>
         </div>
     </div>`;

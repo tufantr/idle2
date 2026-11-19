@@ -564,6 +564,12 @@ async function setClanOwner(clanId, ownerId) {
     await sql`UPDATE clans SET owner_id = ${ownerId} WHERE id = ${clanId}`;
 }
 
+/** The clan passes from one owner to another, if `fromId` still has it (of several at once, one moves it): did this one? */
+async function passClan(clanId, fromId, toId) {
+    const { rows } = await sql`UPDATE clans SET owner_id = ${toId}::int WHERE id = ${clanId}::int AND owner_id = ${fromId}::int RETURNING id`;
+    return rows.length > 0;
+}
+
 async function deleteClan(clanId) {
     await sql`DELETE FROM clan_bosses WHERE clan_id = ${clanId}`;
     await sql`DELETE FROM clan_boss_shares WHERE clan_id = ${clanId}`;
@@ -614,12 +620,6 @@ async function clanMembers(clanId) {
         WHERE m.clan_id = ${clanId} ORDER BY m.joined_at ASC, u.id ASC
     `;
     return rows.map(r => ({ userId: r.id, username: r.username, metrics: r.metrics || null, flags: r.flags || '[]', lastSaved: int(r.last_saved), joinedAt: int(r.joined_at) }));
-}
-
-/** The clan passes from one owner to another, if `fromId` still has it (of several at once, one moves it): did this one? */
-async function passClan(clanId, fromId, toId) {
-    const { rows } = await sql`UPDATE clans SET owner_id = ${toId}::int WHERE id = ${clanId}::int AND owner_id = ${fromId}::int RETURNING id`;
-    return rows.length > 0;
 }
 
 /** The clans an account owns (normally the one it is in). */
@@ -1317,14 +1317,14 @@ async function claimGifts(userId, now) {
 
 module.exports = {
     ensureSchema, ping,
-    deleteAccount, clansOwnedBy, passClan, setClanWords,
+    deleteAccount, clansOwnedBy, setClanWords,
     teamClans, teamClan, teamEditClan, teamRenamePlayer, teamLogAdd, teamLog, teamLogEntry,
     sweepAttempts, sweepEmailCodes, dateUnconfirmed, staleSignups, deleteStaleSignup, flaggedAccounts, setFlagsIf, sweepSnapshots, sweepAttacks, sweepEndless, closedClanGivers, foldClosedGifts,
     createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
     userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
     addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
-    listClans, createClan, getClan, setClanOwner, deleteClan, membershipOf, addMember, removeMember, clanMembers,
+    listClans, createClan, getClan, setClanOwner, passClan, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
