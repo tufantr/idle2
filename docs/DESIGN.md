@@ -2152,6 +2152,11 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
   itself finishes, so blows, numbers and bars still show. The first sign of the player ends it. It is on by default where the
   main pointer is a finger, off elsewhere; the choice is kept per device (`fantasyIdle.saver`), never in the save, and nothing ever
   pops up about it. Out of sight the page isn't drawn at all, saver or not: it is drawn as it comes back.
+- **Big numbers** (`settings.numberFormat`, in every save since the first but read by nothing until now: `short`, `mixed`, `scientific`).
+  Every figure goes through `fmt` (`src/ui/format.js`), which holds the choice (`setNotation`, set by `render()`): letters as ever and the
+  default, old saves included; mixed keeps them up to No and writes 1.23e33 from where they would turn to Dc; scientific writes 1.23e6 from a
+  million. Below a million nothing changes. It changes no stored value: what is stored in words (the log) is written in letters
+  (`letters`), and `numbersIn` rewrites the big figures of such words as they are shown. The row opens with the first million (`big_numbers`).
 - **Effects one by one.** Under Reduce motion, which stills them all and hides the switches, a folded **Effects** holds one
   switch per effect once it has been met (`EFFECTS`, `fx_*` in `src/systems/disclosure.js`): floating numbers (the fight's and the
   work's; not the clan boss's "Strike now!", which tells when to strike), coins flying to the purse, the cards' confetti, a boss's shake.

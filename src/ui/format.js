@@ -7,17 +7,53 @@ const TENS = ['Dc', 'Vg', 'Tg', 'Qag', 'Qig', 'Sxg', 'Spg', 'Ocg', 'Nog'];
 const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No',
     ...Array.from({ length: 90 }, (_, i) => UNITS[i % 10] + TENS[Math.floor(i / 10)]), 'Ce', 'UCe'];
 
-/** 1234 -> "1,234"; 1234567 -> "1.23M" (full digits with separators below one million). */
-export function fmt(n, { short = true } = {}) {
+// How big numbers are written: settings.numberFormat (data/settings.js), set here by main.js at each draw, because every figure on
+// screen comes through fmt. Letters are the default, and all a test or a tool ever sees.
+let notation = 'short';
+export function setNotation(mode) { notation = mode === 'mixed' || mode === 'scientific' ? mode : 'short'; }
+
+/** 1.23e33: three figures and an exponent, for the notations that use one. */
+const scientific = n => n.toExponential(2).replace('e+', 'e');
+/** The name's place in SUFFIXES a number is shown under, after rounding (999.7M counts as a billion). */
+function tierOf(n) {
+    const abs = Math.abs(n);
+    const tier = Math.floor(Math.log10(abs) / 3);
+    return Math.abs(Number((n / Math.pow(10, tier * 3)).toPrecision(3))) >= 1000 ? tier + 1 : tier;
+}
+const FIRST_E_TIER = SUFFIXES.indexOf('Dc');   // mixed: letters up to No, and from where they would turn to Dc (10^33) an exponent
+
+/** In letters whatever the setting: 1234 -> "1,234"; 1234567 -> "1.23M" (full digits with separators below one million). For what is stored (the log). */
+export function letters(n, { short = true } = {}) {
     if (!Number.isFinite(n)) return '0';
     const abs = Math.abs(n);
     if (!short || abs < 1e6) return Math.round(n).toLocaleString('en-US');
-    let tier = Math.floor(Math.log10(abs) / 3);
-    let scaled = n / Math.pow(10, tier * 3);
-    if (Math.abs(Number(scaled.toPrecision(3))) >= 1000) { tier += 1; scaled /= 1000; }   // 999.7M reads 1.00B, not 1000M
+    const tier = tierOf(n);
     if (tier >= SUFFIXES.length) return n.toExponential(2);
+    const scaled = n / Math.pow(10, tier * 3);
     const shown = Math.abs(Number(scaled.toPrecision(3)));   // the digits after the point follow the rounded value: 99.97M reads 100M
     return `${scaled.toFixed(shown >= 100 ? 0 : shown >= 10 ? 1 : 2)}${SUFFIXES[tier]}`;
+}
+
+/** The one way a figure reaches the screen: letters as above, or the notation chosen in Settings from a million up. */
+export function fmt(n, options) {
+    if (notation === 'short' || !Number.isFinite(n) || Math.abs(n) < 1e6) return letters(n, options);
+    return notation === 'scientific' || tierOf(n) >= FIRST_E_TIER ? scientific(n) : letters(n, options);
+}
+
+/** A multiplier with its decimals; past a million it is a big number like any other. */
+export const fixed = (x, digits = 2) => (notation !== 'short' && Math.abs(x) >= 1e6 ? fmt(x) : x.toFixed(digits));
+
+// Words the game has already written (the log, a message from the rules: their figures are in letters or full digits, and the log is
+// saved as it is), with their big figures read and written again in the notation chosen.
+const NAMED = new Map(SUFFIXES.map((name, tier) => [name, tier]).slice(2));   // from M up
+const WRITTEN = new RegExp(`(?<![\\w.,])(\\d{1,3}(?:,\\d{3})+|\\d+(?:\\.\\d+)?)(${[...NAMED.keys()].sort((a, b) => b.length - a.length).join('|')})?(?!\\w)`, 'g');
+export function numbersIn(text) {
+    if (notation === 'short') return text;
+    return String(text).replace(WRITTEN, (all, digits, name) => {
+        const n = Number(digits.replace(/,/g, ''));
+        if (name) return fmt(n * Math.pow(10, 3 * NAMED.get(name)));
+        return n >= 1e6 ? fmt(n) : all;
+    });
 }
 
 export function pct(x, digits = 0) {

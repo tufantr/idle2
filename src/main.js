@@ -24,7 +24,7 @@ import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
 import { rankFor } from './data/ranks.js';
 import { isUnlocked } from './data/unlocks.js';
-import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
+import { fmt, fixed, numbersIn, setNotation, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
@@ -643,6 +643,7 @@ function bumpPurse() {
 }
 
 function render() {
+    setNotation(game.state.settings.numberFormat);   // (ui/format.js: every figure goes through it, this frame's too)
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
@@ -1057,7 +1058,7 @@ function handleEvents(events) {
                 const first = dungeonAt('goblin_warren', ev.next);
                 rewards.celebrate({ key: `seal:${ev.tier}`, kind: 'legend', art: paintStyle('dungeon') + `;filter:hue-rotate(${next.hue}deg)`, icon: sprite('crown', { scale: 2, fallback: '🔱' }),
                     kicker: `The Seal of tier ${dungeonTierInfo(ev.tier).numeral || 'I'}`, title: `The dungeons, tier ${next.numeral}`,
-                    lines: [`${DUNGEON_TIER_STAGES} stages deeper: from stage ${fmt(first.stage)}`, next.rule ? `${next.rule.name}: ${next.rule.desc.toLowerCase()}` : '', `A Seal: your tokens are ×${(BASE_RECORD_MULT ** SEAL_RECORDS).toFixed(2)} stronger`].filter(Boolean), ms: 6000 });
+                    lines: [`${DUNGEON_TIER_STAGES} stages deeper: from stage ${fmt(first.stage)}`, next.rule ? `${next.rule.name}: ${next.rule.desc.toLowerCase()}` : '', `A Seal: your tokens are ×${fixed(BASE_RECORD_MULT ** SEAL_RECORDS)} stronger`].filter(Boolean), ms: 6000 });
                 break;
             }
             case 'titan': {
@@ -1076,7 +1077,7 @@ function handleEvents(events) {
             case 'pet': rewards.celebrate({ key: `pet:${ev.pet.id}`, kind: 'pet', icon: sprite(`pet/${ev.pet.id}`, { scale: 2, fallback: ev.pet.icon }), kicker: 'A companion joins you', title: ev.pet.name, lines: [escapeHtml(ev.pet.desc)] }); break;
             case 'ascend':   // tokens given up for Stars: the biggest card there is
                 rewards.celebrate({ key: `ascend:${ev.count}`, kind: 'legend', icon: '<i class="coin-dot stars big" aria-hidden="true"></i>', kicker: `Ascension ${ev.count}`, title: `+${fmt(ev.stars)} Stars`,
-                    lines: [`Every prestige pays ×${ev.gain.toFixed(2)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
+                    lines: [`Every prestige pays ×${fixed(ev.gain)} tokens`, `${fmt(ev.tokensGiven)} tokens given up`] });
                 save(Date.now());
                 break;
             case 'festivalCloak': {   // a weekend event's cloak bought (data/capes.js): the hero in it
@@ -1095,7 +1096,7 @@ function handleEvents(events) {
                 if (!trial) break;
                 const n = Math.max(1, ev.count || 1);   // a Pact with the week's Trial in it: one for each Trial it holds
                 rewards.celebrate({ key: `laurel:${ev.laurels}`, kind: 'legend', icon: sprite(trial.icon, { scale: 2 }), kicker: "This week's Trial", title: n > 1 ? `${n} laurels` : 'A laurel',
-                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, n > 1 ? `${n} records: your tokens are ×${(BASE_RECORD_MULT ** n).toFixed(2)} stronger` : `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
+                    lines: [`${trial.name}: stage ${fmt(ev.stage)}, past your best`, n > 1 ? `${n} records: your tokens are ×${fixed(BASE_RECORD_MULT ** n)} stronger` : `A record: your tokens are ×${BASE_RECORD_MULT} stronger`] });
                 break;
             }
             case 'trialTier': {   // a Trial's tier cleared: a record, and the next rung
@@ -1113,12 +1114,12 @@ function handleEvents(events) {
                 const opens = ev.stage === MYTHIC.from ? 'From here a boss near your best can leave Mythic gear'
                     : ev.stage === PRIMAL.from ? 'From here a Mythic piece can come Primal' : '';
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `record:${ev.stage}`, kind: 'legend', icon: sprite('token', { scale: 2, fallback: '✨' }), kicker: 'A new record', title: `Stage ${fmt(ev.stage)}`,
-                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`, opens].filter(Boolean), ms: opens ? 5200 : undefined });
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${fixed(ev.records.mult)} from ${ev.records.count} records`, opens].filter(Boolean), ms: opens ? 5200 : undefined });
                 break;
             }
             case 'skillRecord':   // every 50 levels of the skills together: the tokens grow stronger too (core/modifiers.js recordsOf)
                 if (seen(game.state, 'tokens')) rewards.celebrate({ key: `skillRecord:${ev.levels}`, kind: 'legend', icon: sprite('perk/scholar', { scale: 2, fallback: '📜' }), kicker: 'A new record', title: `${fmt(ev.levels)} skill levels`,
-                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${ev.records.mult.toFixed(2)} from ${ev.records.count} records`] });
+                    lines: [`Your tokens are ×${BASE_RECORD_MULT} stronger`, `×${fixed(ev.records.mult)} from ${ev.records.count} records`] });
                 break;
             case 'unique':
                 if (ev.item.locked) rewards.celebrate({ kind: 'legend', icon: sprite(itemSpriteKey(ev.item), { scale: 2, fallback: '🌟' }), kicker: 'Unique item', title: ev.item.name, lines: ['In your bag: equip it from the Inventory', ...(ev.record && seen(game.state, 'tokens') ? [`A record: your tokens are ×${BASE_RECORD_MULT} stronger`] : [])] });
@@ -1147,7 +1148,7 @@ function toast(text, kind = 'info', icon = '') {
     el.className = `toast ${kind}`;
     el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
     if (icon) el.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>`;
-    el.append(text);
+    el.append(numbersIn(text));   // (a rule's message may hold a figure in full)
     area.appendChild(el);
     while (area.children.length > 5) area.removeChild(area.firstChild);
     setTimeout(() => el.classList.add('fade'), 3200);
@@ -1918,7 +1919,7 @@ window.FI = {
         const a = game.ascendPreview();
         if (!a.allowed) return;
         closeModal();
-        askConfirm('Ascend?', `Your ${fmt(a.tokens)} tokens become ${fmt(a.stars)} Stars, and the tokens start again from nothing. Every prestige after pays ×${a.gainAfter.toFixed(2)} tokens. Your best stage, gear, skills and perks stay.`, 'Ascend', () => {
+        askConfirm('Ascend?', `Your ${fmt(a.tokens)} tokens become ${fmt(a.stars)} Stars, and the tokens start again from nothing. Every prestige after pays ×${fixed(a.gainAfter)} tokens. Your best stage, gear, skills and perks stay.`, 'Ascend', () => {
             writeBackup(game.serialize(Date.now()), 'prestige', `Before Ascension ${game.state.ascension.count + 1}`);
             game.ascend();
             render();

@@ -40,7 +40,7 @@ import { eventStatus } from '../systems/events.js';
 import { DAILY_MAX_BANKED, GREAT_CRATE_EVERY, cratesTowardGreat } from '../systems/daily.js';
 import { listBackups } from '../core/save.js';
 import { BASE } from '../core/modifiers.js';
-import { fmt, pct, seconds, duration, escapeHtml as esc, gainWords, gainMarkup, stagesWords } from './format.js';
+import { fmt, fixed, numbersIn, pct, seconds, duration, escapeHtml as esc, gainWords, gainMarkup, stagesWords } from './format.js';
 import { sprite, heroSprite, itemSpriteKey, slotSpriteKey, resIcon, toolIcon, monsterSpriteKey, glyph, coinIcon, clanCloakKey } from './sprites.js';
 import { STAGE_SKILLS } from './stage.js';
 import { CARD_ART } from '../data/cardart.js';
@@ -61,7 +61,7 @@ import { TRIAL_TIERS, trialBite } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
-import { vibrationOn, EFFECTS, effectOn } from '../data/settings.js';
+import { vibrationOn, EFFECTS, effectOn, NOTATIONS } from '../data/settings.js';
 import { charmsOnOffer, charmCharges } from '../systems/charms.js';
 import { combatProgress, MAX_COMBAT_LEVEL } from '../core/xp.js';
 import { VERSION } from '../version.js';
@@ -257,8 +257,8 @@ export function renderHeader(game, ui, cloud) {
     const chips = [
         `<div class="chip gold" title="Gold: earned in combat, spent at the camp and the shop (a prestige starts it over)"><span>Gold</span><b id="hdr-gold"></b></div>`, // painted every frame by main.js (it rolls up)
         seen(state, 'essence') ? `<div class="chip essence" title="Monster essence: upgrades and reforges equipment"><span>Essence</span><b>${fmt(state.resources.essence)}</b></div>` : '',
-        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${d.records.mult.toFixed(2)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, every ${BASE.recordSkillLevels} skill levels, each dungeon unique found${d.records.seals ? ', each dungeon Seal' : ''}${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
-        seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${d.tokenMult.toFixed(2)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${starGain(d.stars).toFixed(1)}</i></div>` : '',
+        seen(state, 'tokens') ? `<div class="chip tokens" title="Prestige tokens: permanent +${BASE.tokenAtk * 100}% ATK/DEF each${d.records.count ? `, ×${fixed(d.records.mult)} from ${d.records.count} record${d.records.count === 1 ? '' : 's'} (every ${BASE.recordStages} stages of your best, every ${BASE.recordSkillLevels} skill levels, each dungeon unique found${d.records.seals ? ', each dungeon Seal' : ''}${d.records.trials ? ' and each Trial tier' : ''})` : ''}"><span>Tokens</span><b>${fmt(state.prestige.tokens)}</b><i>+${fmt(d.tokenPowerPct)}%</i></div>` : '',
+        seen(state, 'stars') ? `<div class="chip stars" title="Stars, from Ascensions: every prestige pays ×${fixed(d.tokenMult)} tokens"><span>Stars</span><b>${fmt(d.stars)}</b><i>×${fixed(starGain(d.stars), 1)}</i></div>` : '',
         seen(state, 'skill_points') ? `<button class="chip sp" onclick="FI.openPerks()" title="Skill points: tap to spend them on perks" aria-label="${state.prestige.skillPoints} skill point${state.prestige.skillPoints === 1 ? '' : 's'}: open the perks"><span>SP</span><b>${state.prestige.skillPoints}</b></button>` : '',
         // the War Tree's points (data/talents.js): one for each combat level past 99
         seen(state, 'talents') ? `<button class="chip tp" onclick="FI.openTalents()" title="Talent points: one for each combat level past 99; tap for the War Tree" aria-label="${talentPoints(state)} talent point${talentPoints(state) === 1 ? '' : 's'}: open the War Tree"><span>Talents</span><b>${talentPoints(state)}</b></button>` : ''
@@ -502,7 +502,7 @@ function renderPrestigeStrip(game) {
 // A log line's picture by its kind; the emoji its saved text may start with is left out.
 const LOG_ART = { combat: 'item/Weapon/3', death: 'mon/Skeleton', loot: 'crate', prestige: 'res/essence' };
 const LEADING_EMOJI = /^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D]+\s*)+/u;
-const logLine = (l, cls) => `<span class="${cls} ${l.type}">${sprite(LOG_ART[l.type] || 'item/Weapon/3', { scale: 0.5, cls: 'soft res-spr' })} ${esc(l.text.replace(LEADING_EMOJI, ''))}</span>`;
+const logLine = (l, cls) => `<span class="${cls} ${l.type}">${sprite(LOG_ART[l.type] || 'item/Weapon/3', { scale: 0.5, cls: 'soft res-spr' })} ${esc(numbersIn(l.text.replace(LEADING_EMOJI, '')))}</span>`;
 
 function renderBattleLog(state, ui) {
     const lines = [...state.log].reverse().filter(l => ['combat', 'death', 'loot', 'prestige'].includes(l.type)).slice(0, 8);
@@ -1828,7 +1828,7 @@ function renderRecords(game) {
         [`mon/${zone.boss}`, fmt(best), 'best stage'],
         ['perk/scholar', `${fmt(totalLevel)}/${fmt(SKILL_IDS.length * MAX_LEVEL)}`, 'total level'],
         ...(seen(state, 'tokens') ? [
-            ['token', fmt(game.derived.records.count), `records: tokens ×${game.derived.records.mult.toFixed(2)}`],
+            ['token', fmt(game.derived.records.count), `records: tokens ×${fixed(game.derived.records.mult)}`],
             ['perk/forager', `${fmt(skillLevelsTotal(state))}/${fmt((game.derived.records.skills + 1) * BASE.recordSkillLevels)}`, 'skill levels to the next record']
         ] : []),
         [`hero/capes/${capeWorn(state)?.skill || capes[0]?.skill || 'combat'}`, `${capes.length}/${CAPES.length}`, 'skill capes'],
@@ -1906,10 +1906,10 @@ export function renderAchievements(game) {
         const won = !!state.achievements[a.id];
         const { have, need } = achievementProgress(state, a.req);
         const pct = Math.min(100, (have / Math.max(1, need)) * 100);
-        return `<div class="medal${won ? ' won' : ''}" title="${esc(a.desc)}: ${esc(a.reward)}">
+        return `<div class="medal${won ? ' won' : ''}" title="${esc(numbersIn(a.desc))}: ${esc(a.reward)}">
             <div class="medal-disc">${medalArt(a)}${medalLook(state, a, won)}</div>
             <div class="medal-name">${esc(a.name)}</div>
-            <div class="medal-desc">${esc(a.desc)}</div>
+            <div class="medal-desc">${esc(numbersIn(a.desc))}</div>
             ${won ? `<div class="medal-reward">${esc(a.reward)}</div>`
                 : `<div class="medal-bar"><i style="--p:${pct.toFixed(1)}%"></i></div><div class="medal-count">${fmt(Math.min(have, need))} / ${fmt(need)}</div>`}
         </div>`;
@@ -2405,6 +2405,9 @@ function optionGroups(game, ui) {
             s.reducedMotion ? '' : effectSwitches(state, ui),
             optSwitch('Battery saver', 'FI.setSaver(this.checked)', ui?.saver, ' title="On this device only: after half a minute untouched, the game draws less"')
         ]),
+        seen(state, 'big_numbers') ? optGroup('Reading', [
+            optChoice('Big numbers', NOTATIONS, s.numberFormat, "FI.setOption('numberFormat', ")
+        ]) : '',
         optGroup('Keys and log', [
             optSwitch(`Keyboard shortcuts: Space strikes${seen(state, 'world_map') ? ', M opens the map' : ''}`, 'FI.setShortcuts(this.checked)', ui?.shortcuts !== false, ' title="On this device only"'),
             optSwitch('Keep a playtest log', 'FI.setPlaytestLog(this.checked)', s.playtestLog, ` title="A timeline of what happens in play, kept on this device, to send to the game's maker if you like"`),
@@ -2816,7 +2819,7 @@ export function renderPrestigeModal(game) {
         <div class="modal-header">Prestige</div>
         <div class="modal-body">
             <div class="pg-gain">
-                <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${fmt(Math.round(p.tokensAfter * BASE.tokenAtk * game.derived.records.mult * 100))}% attack and defence${game.derived.records.count ? ` (records ×${game.derived.records.mult.toFixed(2)})` : ''}</small></div>
+                <div class="pg-get"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(p.tokens)} <span>tokens</span></b><small>${fmt(p.tokensAfter)} in all: +${fmt(Math.round(p.tokensAfter * BASE.tokenAtk * game.derived.records.mult * 100))}% attack and defence${game.derived.records.count ? ` (records ×${fixed(game.derived.records.mult)})` : ''}</small></div>
                 ${seen(state, 'legacy') ? `<div class="pg-get legacy"><i class="coin-dot legacy" aria-hidden="true"></i><b>+${pct(BASE.legacyPerPrestige, 1)} <span>Legacy</span></b><small>×${fmt(legacyMult({ prestige: { count: count + 1 } }))} attack, defence and health from ${fmt(count + 1)} prestiges, for good</small></div>` : ''}
                 ${p.skillPoints > 0 ? `<div class="pg-get sp"><i class="coin-dot sp" aria-hidden="true"></i><b>+${p.skillPoints} <span>skill point${p.skillPoints === 1 ? '' : 's'}</span></b><small>for perks that last forever</small></div>` : ''}
                 ${newRank ? `<div class="pg-rank">${heroSprite({ ...state, prestige: { ...state.prestige, count: count + 1 }, hero: { ...state.hero, cape: '' } }, { scale: 2 })}<span><small>A new rank</small><b>${esc(rank.name)}</b><small>and a ${esc(rank.cloak)} cloak</small></span></div>` : ''}
@@ -2843,7 +2846,7 @@ export function renderPrestigeModal(game) {
 function renderAscendRow(game) {
     const a = game.ascendPreview();
     return `<div class="pg-row pg-ascend"><h4>Or ascend ${aboutButton('ascension')}</h4>
-        <div class="pg-get stars"><i class="coin-dot stars" aria-hidden="true"></i><b>+${fmt(a.stars)} <span>Stars</span></b><small>${fmt(a.tokens)} tokens back to nothing; every prestige then pays ×${a.gainAfter.toFixed(2)} tokens${a.gainNow > 1 ? ` (now ×${a.gainNow.toFixed(2)})` : ''}</small></div>
+        <div class="pg-get stars"><i class="coin-dot stars" aria-hidden="true"></i><b>+${fmt(a.stars)} <span>Stars</span></b><small>${fmt(a.tokens)} tokens back to nothing; every prestige then pays ×${fixed(a.gainAfter)} tokens${a.gainNow > 1 ? ` (now ×${fixed(a.gainNow)})` : ''}</small></div>
         <button class="modal-btn btn-ascend" onclick="FI.askAscend()"${a.allowed ? '' : ' disabled'}>${a.restMs > 0 ? `Rests ${duration(a.restMs)}` : 'Ascend…'}</button>
     </div>`;
 }

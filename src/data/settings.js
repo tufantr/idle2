@@ -10,8 +10,13 @@ export const EFFECTS = [
     { id: 'shake', name: "A boss's shake", met: 'fx_shake' }
 ];
 
+// How big numbers are written (settings.numberFormat, in every save since the first; ui/format.js does the writing). From a million up:
+// letters as ever, letters up to No and then an exponent, or an exponent everywhere.
+export const NOTATIONS = [['short', 'Letters'], ['mixed', 'Mixed'], ['scientific', 'Scientific']];
+
 /** What the game knows of these choices, kept; anything else in a loaded save dropped (core/state.js, game.js setOption). */
 export function cleanOptions(settings) {
+    if (settings.numberFormat !== undefined && !NOTATIONS.some(([id]) => id === settings.numberFormat)) settings.numberFormat = 'short';
     if (typeof settings.vibration !== 'boolean') delete settings.vibration;
     if (settings.blows !== 'big') delete settings.blows;
     const fx = settings.effects;

@@ -9,6 +9,7 @@ import { renderSettings } from '../src/ui/render.js';
 import { createSound } from '../src/ui/sound.js';
 import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard } from '../src/data/settings.js';
 import { DISCLOSURES } from '../src/systems/disclosure.js';
+import { fmt, letters, fixed, numbersIn, setNotation } from '../src/ui/format.js';
 import { saverOn, atRest, REST_AFTER_MS, REST_FRAME_MS } from '../src/ui/saver.js';
 
 const T0 = 1_760_000_000_000;
@@ -192,4 +193,83 @@ test('the battery saver: on by default on a phone only, kept per device, and at 
     const html = renderSettings(new Game(null, T0), { saver: true }, null);
     assert.match(html, /FI\.setSaver\(this\.checked\)" checked> Battery saver/);
     assert.doesNotMatch(JSON.stringify(new Game(null, T0).state.settings), /saver/, 'it is not in the save');
+});
+
+test('notation: letters by default, an exponent from 10^33 when mixed, from a million when scientific; small numbers as ever', t => {
+    t.after(() => setNotation('short'));
+    const samples = [0, 999, 1234, 999999, 1234567, 999.7e6, 2.5e9, 1.23e30, 9.994e32, 9.996e32, 1e33, 3.3e48, -2.5e9, 1.8e308, -1234567];
+    const lettered = samples.map(n => fmt(n));
+    assert.deepEqual(lettered.slice(0, 7), ['0', '999', '1,234', '999,999', '1.23M', '1.00B', '2.50B'], 'the default is today\'s');
+    setNotation('mixed');
+    assert.equal(fmt(1234567), '1.23M');
+    assert.equal(fmt(1.23e30), '1.23No');
+    assert.equal(fmt(9.994e32), '999No', 'letters to the last of the short names');
+    assert.equal(fmt(9.996e32), '1.00e33', 'where the letters would turn to Dc');
+    assert.equal(fmt(3.3e48), '3.30e48');
+    assert.equal(fmt(-3.3e48), '-3.30e48');
+    setNotation('scientific');
+    assert.equal(fmt(999999), '999,999', 'below a million nothing changes');
+    assert.equal(fmt(1234567), '1.23e6');
+    assert.equal(fmt(9.996e8), '1.00e9');
+    assert.equal(fmt(-2.5e9), '-2.50e9');
+    assert.equal(fmt(1234567, { short: false }), '1.23e6', 'a full count too');
+    assert.equal(fmt(Infinity), '0');
+    assert.equal(fmt(NaN), '0');
+    assert.equal(fixed(1.5), '1.50', 'a multiplier keeps its decimals');
+    assert.equal(fixed(2.5e7), '2.50e7', 'until it is a big number');
+    assert.deepEqual(samples.map(n => letters(n)), lettered, 'the letters themselves never change');
+    setNotation('anything else');
+    assert.deepEqual(samples.map(n => fmt(n)), lettered, 'an unknown choice is letters');
+    assert.equal(fixed(2.5e7), '25000000.00', 'and a multiplier as it was');
+});
+
+test('figures in words the game wrote follow the notation, and the words stay', t => {
+    t.after(() => setNotation('short'));
+    const line = 'Prestige 12: +1.23M tokens, 4,500 gold and 2,000,000 essence at stage 300; 3 pets; 1.5s; 295QaDc health';
+    assert.equal(numbersIn(line), line, 'letters: the line as it was written');
+    setNotation('scientific');
+    assert.equal(numbersIn(line), 'Prestige 12: +1.23e6 tokens, 4,500 gold and 2.00e6 essence at stage 300; 3 pets; 1.5s; 2.95e47 health');
+    setNotation('mixed');
+    assert.equal(numbersIn('+1.23M and 295QaDc'), '+1.23M and 2.95e47');
+});
+
+test('the notation changes nothing stored: the log is written in letters and a save is the same whatever the setting', t => {
+    t.after(() => setNotation('short'));
+    const play = mode => {
+        setNotation(mode);
+        const game = new Game(null, T0);
+        game.state.combat.bestStage = game.state.combat.maxStage = game.state.combat.stage = 900;
+        game.state.prestige.runStartedAt = 0;
+        game.recompute();
+        assert.ok(game.prestige(), 'a prestige was made');
+        return game;
+    };
+    const log = g => g.state.log.map(l => l.text).join('|');
+    const inLetters = play('short');
+    const inScience = play('scientific');
+    assert.match(log(inLetters), /Prestige 1/, 'the prestige was logged');
+    assert.equal(log(inScience), log(inLetters), 'the same words whatever the notation');
+    assert.match(log(inScience), /tokens/);
+    assert.doesNotMatch(log(inScience), /\d\.\d\de\d/);
+});
+
+test('old saves keep letters, a choice is kept, and the row opens once numbers pass a million', () => {
+    const old = createDefaultState(T0);
+    delete old.settings.numberFormat;
+    assert.equal(migrateState(JSON.parse(JSON.stringify(old)), T0).settings.numberFormat, 'short');
+    old.settings.numberFormat = 'roman';
+    assert.equal(migrateState(JSON.parse(JSON.stringify(old)), T0).settings.numberFormat, 'short', 'a broken one is letters');
+    old.settings.numberFormat = 'scientific';
+    assert.equal(migrateState(JSON.parse(JSON.stringify(old)), T0).settings.numberFormat, 'scientific');
+    const game = new Game(null, T0);
+    assert.doesNotMatch(renderSettings(game, {}, null), /Big numbers/);
+    game.state.gold = 1e6;
+    game.tick(T0 + 100);
+    const html = groupsOf(renderSettings(game, {}, null)).find(g => g.name === 'Reading').body;
+    assert.match(html, /aria-label="Big numbers"/);
+    assert.match(html, /class="seg-btn on" onclick="FI\.setOption\('numberFormat', 'short'\)" aria-pressed="true">Letters/);
+    game.setOption('numberFormat', 'mixed');
+    assert.equal(game.state.settings.numberFormat, 'mixed');
+    game.setOption('numberFormat', 'nope');
+    assert.equal(game.state.settings.numberFormat, 'short');
 });

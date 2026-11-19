@@ -73,7 +73,8 @@ export const DISCLOSURES = [
     { id: 'fx_numbers',   when: s => s.stats.kills > 0 || Object.values(s.stats.actionsBySkill).some(n => n > 0) },
     { id: 'fx_coins',     when: s => s.stats.kills > 0 },
     { id: 'fx_confetti',  when: s => Object.values(s.unlocks).some(Boolean) },
-    { id: 'fx_shake',     when: s => s.combat.bestStage >= STAGES_PER_ZONE || s.stats.bossKills > 0 }
+    { id: 'fx_shake',     when: s => s.combat.bestStage >= STAGES_PER_ZONE || s.stats.bossKills > 0 },
+    { id: 'big_numbers',  when: s => s.gold >= 1e6 || s.stats.goldEarned >= 1e6 }   // Settings' choice of how they are written, once there are any
 ];
 
 /** Has this piece of the interface opened for the player? (Developer mode opens everything.) */

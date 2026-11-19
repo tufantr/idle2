@@ -6,7 +6,7 @@ sectionPath: /guides
 icon: perk/scholar
 order: 90
 summary: Short answers to the questions players ask most: offline progress, saves, coal and gems, bosses, prestige, gear, pets, mastery, dungeons and more.
-keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, battery, flagged, flag, keyboard, keys, shortcuts
+keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, battery, notation, scientific, letters, flagged, flag, keyboard, keys, shortcuts
 aliases: Frequently asked questions, Questions, Help
 ---
 Short answers, each with a link to the page that tells the whole story. New to the game? Start with [[/guides/getting-started|Getting started]].
@@ -48,6 +48,10 @@ In **Settings**, under Options: **Sound** switches all sound off, with a volume 
 ### Does the game use a lot of battery?
 
 Less once you leave it alone. With **Battery saver** on (Settings; on by default on phones, kept per device), after half a minute without a touch the game draws fewer frames and its glows and drifting paintings stand still. The fight goes on as ever, and the first touch brings everything back.
+
+### What do the letters after big numbers mean? Can I change them?
+
+From a million up the game writes three figures and a letter: M, B, T, Qa, Qi, Sx, Sp, Oc, No, then Dc for 10^33 and names built on it. Once you hold a million gold, **Big numbers** in Settings offers two other ways: **Mixed** keeps the letters up to No and writes 1.23e33 after that, and **Scientific** writes 1.23e6 from a million on. It changes only how numbers are shown.
 
 ### How do I change my hero's name or look?
 
