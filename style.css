@@ -1072,6 +1072,8 @@ button.plot-card:hover { transform: translateY(-2px); border-color: rgba(240, 19
 .btn-cancel { color: var(--text-main); }
 .btn-confirm { color: #1f1406; border-color: #f7d88a; background: linear-gradient(180deg, #e2b95f, #9c7127); text-shadow: 0 1px 0 rgba(255, 240, 200, 0.35); }
 .btn-confirm:hover { color: #140d03; border-color: #fff1c9; background: linear-gradient(180deg, #f0cb72, #b08233); box-shadow: 0 0 20px rgba(252, 211, 77, 0.4); }
+.btn-danger { color: #fca5a5; border-color: rgba(239, 68, 68, 0.6); }
+.btn-danger:hover { color: #fecaca; border-color: #f87171; background: linear-gradient(180deg, #3a1512, #1f0b09); }
 .btn-register { color: #d1fae5; border-color: rgba(52, 211, 153, 0.7); background: linear-gradient(180deg, #14532d, #0a2e19); }
 
 /* ---------- toasts ---------- */

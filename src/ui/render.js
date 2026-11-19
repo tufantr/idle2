@@ -2350,6 +2350,7 @@ export function renderSettings(game, ui, cloud) {
             ${signedIn && cloud.flaggedUntil > Date.now() ? `<p class="warn small flag-line">Flagged until ${esc(new Date(cloud.flaggedUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }))}: a save showed numbers the game's check doesn't allow. ${aboutButton('flagged')}</p>` : ''}
             ${signedIn ? `<div class="btn-row"><button class="mini-btn" onclick="FI.cloudSaveNow()">Save now</button><button class="mini-btn danger" onclick="FI.logout()">Log out</button><button class="mini-btn" onclick="FI.signOutEverywhere()">Sign out everywhere</button></div>` : `<div class="btn-row"><button class="prestige-btn" onclick="FI.openAuth()">Log in / register</button></div>`}
             <div class="muted small" id="cloud-status">${esc(ui.cloudStatus || '')}</div>
+            ${signedIn ? '<div class="btn-row"><button class="mini-btn danger" onclick="FI.openDeleteAccount()">Delete my account</button></div>' : ''}
         </section>
         <section class="glass-panel ${painted('study', 'right 45%')}">
             <div class="panel-header"><h2>Your save</h2><span class="muted small">Played ${played}</span></div>
@@ -2596,6 +2597,22 @@ export function renderHallGive(game, ui) {
         ${goods.length ? `<div class="give-items" role="group" aria-label="What to give">${tiles}</div>` : ''}
         ${amount}
         <div class="modal-footer"><button class="modal-btn" onclick="FI.closeModal()">Cancel</button><button class="modal-btn btn-confirm" onclick="FI.hallGive()" ${qty > 0 && weekLeft > 0 ? '' : 'disabled'}>Give<span id="give-label">${qty > 0 && weekLeft > 0 ? ` ${fmt(qty, { short: false })} · ${workTime(qty * worth)}` : ''}</span></button></div>
+    </div>`;
+}
+
+/** "Delete my account" (Settings): what goes, what stays with the clan, and the password. */
+export function renderDeleteAccount() {
+    return `<div class="modal-content narrow ${painted('study', 'left 45%')}">
+        <div class="modal-header">Delete my account</div>
+        <div class="modal-body">
+            <p>This deletes your account and your game from the server, for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts.</p>
+            <p class="muted small">What you gave your clan stays with it. If you lead it, it passes to another member. Copies in the nightly backups go when those backups do, about two weeks later.</p>
+            <div class="auth-error" id="delete-error"></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); FI.deleteAccount()">
+                <input type="password" id="delete-pass" placeholder="Your password" aria-label="Your password" autocomplete="current-password" class="text-input" data-autofocus>
+                <div class="btn-row"><button type="submit" class="modal-btn btn-danger">Delete it for good</button><button type="button" class="modal-btn btn-cancel" onclick="FI.closeModal()">Keep it</button></div>
+            </form>
+        </div>
     </div>`;
 }
 

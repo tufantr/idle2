@@ -43,7 +43,7 @@ import { trialById, TRIAL_TIERS } from './data/trials.js';
 import { talentById, respecPrice } from './data/talents.js';
 import { charmById } from './data/charms.js';
 import { HALL, HALL_STAGES, hallRoom } from './data/clanhall.js';
-import { renderClanWords } from './ui/render.js';
+import { renderClanWords, renderDeleteAccount } from './ui/render.js';
 import { talentPoints } from './systems/talents.js';
 import { STRATUM_STAGES, stratumById } from './data/strata.js';
 import { nextTrialTarget, weeklyGoal } from './systems/trials.js';
@@ -2185,6 +2185,28 @@ window.FI = {
             freshGame();
             openSignIn();
         } else toast('Logged out — playing locally', 'info');
+        render();
+    },
+    /** Settings' "Delete my account": the dialog asks for the password, and a wrong one stays in it, with why. */
+    openDeleteAccount() {
+        if (cloud.loggedIn) openModal(renderDeleteAccount(), 'deleteAccount');
+    },
+    async deleteAccount() {
+        const say = text => { const box = document.getElementById('delete-error'); if (box) box.textContent = text; };
+        const password = document.getElementById('delete-pass')?.value || '';
+        if (!password) return say('Enter your password.');
+        try { await cloud.deleteAccount(password); } catch (err) { return say(err.message); }
+        // gone from the server: this browser's copy of its game goes too, and nothing more is uploaded
+        cloudReady = false;
+        synced = false;
+        heldReport = null;
+        game.clearClanResult();
+        ui.cloudStatus = '';
+        ui.social = freshSocial();
+        closeModal();
+        freshGame();
+        if (SIGN_IN_REQUIRED) openSignIn();
+        toast('Your account was deleted', 'info');
         render();
     },
     /** Settings' "Sign out everywhere": every other device signed in to this account is signed out; this one stays. */

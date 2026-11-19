@@ -366,6 +366,21 @@ app.post('/api/account/signout-all', authenticateToken, route('sign out everywhe
     res.json({ token: signToken({ id: req.user.id, ...account }), message: 'Signed out everywhere else' });
 }));
 
+// "Delete my account" (Settings; the research loop's P-070, November 2026), with the password asked again, the tries counted as
+// a login's are: everything tied to the account goes at once, its clan passes on or closes, and what it gave the clan stays the
+// clan's (closeAccount). Its sessions end with it; other players see it gone from the boards and the clan at their next look.
+app.post('/api/account/delete', authenticateToken, route('delete account', async (req, res) => {
+    const password = (req.body || {}).password;
+    if (typeof password !== 'string' || !password) return res.status(400).json({ error: 'Enter your password.' });
+    const now = Date.now();
+    if (await store.takeAttempt(`delete:user:${req.user.id}`, now, AUTH_WINDOW_MS) > MAX_NAME_FAILURES) return res.status(429).json(TOO_MANY);
+    const user = await store.findUserByName(req.user.username);
+    if (!user || user.id !== req.user.id) return res.sendStatus(401);
+    if (!await bcrypt.compare(password, user.password_hash)) return res.status(400).json({ error: "That password isn't right." });
+    await closeAccount(user, now);
+    res.json({ deleted: true });
+}));
+
 app.post('/api/login', route('login', async (req, res) => {
     if (!requireSecret(res)) return;
     const { username, password } = req.body || {};
@@ -1037,16 +1052,40 @@ app.post('/api/clan/words', authenticateToken, route('clan words', async (req, r
     res.json({ description, lookingFor });
 }));
 
+/** A clan losing its owner passes to the longest-serving member who plays (of all, if none does); the last one out closes it. */
+async function passOnClan(clanId, ownerLeft, now) {
+    const rest = await store.clanMembers(clanId);
+    if (!rest.length) await store.deleteClan(clanId);
+    else if (ownerLeft) await store.setClanOwner(clanId, (heirOf(rest, now) || rest[0]).userId);
+}
+
 app.post('/api/clans/leave', authenticateToken, route('leave clan', async (req, res) => {
     const mine = await clanOf(req.user.id);
     if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
     const { membership, clan } = mine;
     await store.removeMember(req.user.id);
-    const rest = await store.clanMembers(membership.clanId);
-    if (!rest.length) await store.deleteClan(membership.clanId);
-    else if (clan.ownerId === req.user.id) await store.setClanOwner(membership.clanId, (heirOf(rest, Date.now()) || rest[0]).userId);   // the longest-serving member who plays (of all, if none does)
+    await passOnClan(membership.clanId, clan.ownerId === req.user.id, Date.now());
     res.json({ left: true });
 }));
+
+/**
+ * An account closes for good (`user`: { id, username }): it leaves its clan as anyone would, which passes on or closes, then
+ * every row tied to it goes (store.deleteAccount), with its deepest Hydra fight of the week kept for its clan unless it is flagged.
+ */
+async function closeAccount(user, now) {
+    const mine = await clanOf(user.id);
+    if (mine) {
+        await store.removeMember(user.id);
+        await passOnClan(mine.membership.clanId, mine.clan.ownerId === user.id, now);
+    }
+    for (const clanId of await store.clansOwnedBy(user.id)) await passOnClan(clanId, true, now);   // (one it owns without being in it: an old mishap)
+    const save = await store.getSave(user.id);
+    const closed = await store.deleteAccount(user.id, user.username, { keepDepths: !recentlyFlagged(save && save.flags, now), fromWeek: isoWeek(now - 7 * DAY) });
+    namesSeen.delete(user.id);   // its tokens are refused from now on (the next look finds no account)
+    boardCache.clear();
+    rankingCache = null;
+    return closed;
+}
 
 app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
     const now = Date.now();

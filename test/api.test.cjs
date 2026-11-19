@@ -108,6 +108,32 @@ peek.hallWork = async (username, rooms) => {   // a clan's hall with each room a
     await pool.query(`DELETE FROM clan_hall WHERE clan_id = ${clan}`, [username]);
     for (const [room, secs] of Object.entries(rooms)) await pool.query(`INSERT INTO clan_hall (clan_id, room, given) VALUES (${clan}, $2, $3)`, [username, room, secs * 10]);
 };
+/** What a clan's gifts add up to where their rows have gone: { room: [work, gifts] }. */
+peek.giftTotals = async clanId => {
+    const rows = memory ? memory.db.giftTotals.filter(t => t.clanId === clanId) : (await pool.query('SELECT room, work, gifts FROM clan_gift_totals WHERE clan_id = $1', [clanId])).rows;
+    return Object.fromEntries(rows.map(r => [r.room, [Number(r.work), Number(r.gifts)]]));
+};
+/** How many rows are tied to an account, table by table (only those with any), its login counters and a boss it last struck too. */
+peek.tied = async (id, username) => {
+    const name = username.toLowerCase();
+    const isItsKey = key => [`mail:user:${id}`, `taken:user:${id}`, `delete:user:${id}`, `login:name:${name}`].includes(key) || key.startsWith(`login:name:${name}:`);
+    let counts;
+    if (memory) {
+        const { db } = memory;
+        const of = list => list.filter(r => r.userId === id).length;
+        counts = { users: db.users.filter(u => u.id === id).length, clan_members: of(db.members), clan_boss_shares: of(db.shares), clan_attacks: of(db.attacks), rewards: of(db.rewards), weekly_snapshots: of(db.snapshots),
+            email_codes: of(db.codes), clan_endless: of(db.endless), clan_gifts: of(db.gifts), flag_reviews: of(db.reviews), clan_charges: db.charges.has(id) ? 1 : 0,
+            auth_attempts: [...db.auth.keys()].filter(isItsKey).length, last_hit: db.bosses.filter(b => b.lastHitUser === id).length };
+    } else {
+        counts = { users: Number((await pool.query('SELECT COUNT(*) AS n FROM users WHERE id = $1', [id])).rows[0].n) };
+        for (const table of ['clan_members', 'clan_boss_shares', 'clan_attacks', 'rewards', 'weekly_snapshots', 'email_codes', 'clan_endless', 'clan_gifts', 'flag_reviews', 'clan_charges']) {
+            counts[table] = Number((await pool.query(`SELECT COUNT(*) AS n FROM ${table} WHERE user_id = $1`, [id])).rows[0].n);
+        }
+        counts.auth_attempts = (await pool.query('SELECT key FROM auth_attempts')).rows.filter(r => isItsKey(r.key)).length;
+        counts.last_hit = Number((await pool.query('SELECT COUNT(*) AS n FROM clan_bosses WHERE last_hit_user = $1', [id])).rows[0].n);
+    }
+    return Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0));
+};
 /** Two figures alike to a part in a thousand (the boss is kept in thousandths of an attack). */
 const near = (a, b, why = '') => assert.ok(Math.abs(a - b) <= 1e-3 * Math.max(Math.abs(a), Math.abs(b), 1), `${a} vs ${b} ${why}`);
 
@@ -119,7 +145,7 @@ Date.now = () => clock;
 let server;
 let base;
 before(async () => {
-    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_charges, clan_endless, clan_rankings, clan_hall, clan_gifts, flag_reviews, signup_sources, team_log');
+    if (pool) await pool.query('DROP TABLE IF EXISTS users, clans, clan_members, clan_bosses, clan_boss_shares, clan_attacks, rewards, weekly_snapshots, auth_attempts, email_codes, clan_charges, clan_endless, clan_endless_kept, clan_rankings, clan_hall, clan_gifts, clan_gift_totals, flag_reviews, signup_sources, team_log');
     server = app.listen(0);
     await new Promise(resolve => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -1928,4 +1954,116 @@ test("the week's last gift may run a little past its hours: no scraps of a week 
     const more = await post('/clan/hall/give', { room: 'library', resource: 'essence', qty: 1 }, p);
     assert.equal(more.status, 400);
     assert.match((await more.json()).error, /more on Monday/);
+});
+
+test('Delete my account: with the password, every row tied to it goes at once; its clan passes on and keeps what it was given', async () => {
+    const data = memory || require('../api/store.js');
+    toMonday();
+    const leaver = await register('leaver_owner');
+    const mate = await register('leaver_mate');
+    const { clanId } = await (await post('/clans', { name: 'Leavers Hall', tag: 'LVH' }, leaver)).json();
+    await post('/clans/join', { clanId }, mate);
+    toMonday();   // a new week: both were in the clan when it began
+    const hero = { ...heroSave({ tokens: 400, bestStage: 60 }), resources: { runite_bar: 50 } };
+    await post('/save', { state: hero }, leaver);
+    await post('/save', { state: hero }, mate);
+    await post('/leaderboard/consent', { optIn: true }, leaver);
+    await post('/save', { state: hero }, leaver);   // (the week's snapshot)
+    const { gift } = await (await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 5 }, leaver)).json();
+    await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 2 }, mate);
+    await get('/clan', leaver);
+    await peek.bossHpToOne();
+    assert.equal((await (await post('/clan/attack', {}, leaver)).json()).killed, true, 'its last hit felled the boss');
+    clock += 5 * DAY_MS;   // Saturday: the Hydra is awake
+    for (const t of [leaver, mate]) await post('/save', { state: hero }, t);
+    const fought = await (await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, leaver)).json();
+    assert.equal(fought.endless, true);
+    await post('/clan/attack', { endless: true, strikes: [], ms: 5000 }, mate);
+    await data.addReward((await data.findUserByName('leaver_owner')).id, 'gift', '{"gold":1}', clock, 'test:leaver');
+    await data.addReview({ userId: (await data.findUserByName('leaver_owner')).id, day: '2026-01-01', metric: 'bestStage', value: 9, from: 1, allowed: 1, share: 8, now: clock, check: 2 });
+    await post('/password/forgot', { email: emailOf('leaver_owner') });   // (a code and the mail counters under its id)
+    assert.equal((await post('/login', { username: 'LEAVER_OWNER', password: 'wrong password' })).status, 400);   // (a login counter under its name)
+    const { id } = await data.findUserByName('leaver_owner');
+    assert.ok(Object.keys(await peek.tied(id, 'leaver_owner')).length >= 11, 'rows to go');
+
+    const score = async t => (await (await get('/clans/ranking', t)).json()).divisions.flatMap(d => d.clans).find(c => c.you);
+    const before = { standing: await score(mate), clan: await (await get('/clan', mate)).json() };
+    assert.equal(before.standing.counted, 2);
+
+    assert.equal((await post('/account/delete', {}, leaver)).status, 400, 'no password');
+    const wrong = await post('/account/delete', { password: 'not the password' }, leaver);
+    assert.equal(wrong.status, 400);
+    assert.match((await wrong.json()).error, /password/);
+    assert.equal((await get('/load', leaver)).status, 200, 'still there');
+    assert.equal((await post('/account/delete', { password: 'correct horse' })).status, 401, 'nor without a session');
+
+    const done = await post('/account/delete', { password: 'correct horse' }, leaver);
+    assert.equal(done.status, 200);
+    assert.deepEqual(await done.json(), { deleted: true });
+    assert.deepEqual(await peek.tied(id, 'leaver_owner'), {}, 'nothing left under its id or name');
+    assert.equal((await get('/load', leaver)).status, 401, 'its sessions ended with it');
+    assert.equal((await post('/login', { username: 'leaver_owner', password: 'correct horse' })).status, 400);
+
+    // the clan: another's to lead, its boss, hall and week's score as they were, its board without the one gone
+    const after = await (await get('/clan', mate)).json();
+    assert.deepEqual([after.clan.isOwner, after.members.map(m => m.username)], [true, ['leaver_mate']]);
+    assert.deepEqual([after.boss.killed, after.boss.level, after.boss.lastHit], [before.clan.boss.killed, before.clan.boss.level, null]);
+    assert.deepEqual(after.hall.rooms, before.clan.hall.rooms, "the hall's work stays");
+    assert.ok(after.hall.feed.every(g => g.username === 'leaver_mate'), 'its gifts no longer name it');
+    assert.ok(after.board.every(r => r.username !== 'leaver_owner'));
+    assert.deepEqual(await peek.giftTotals(clanId), { forge: [gift.work * 10, 1] }, 'its gifts folded into the clan\'s totals');
+    const standing = await score(mate);
+    assert.deepEqual([standing.score, standing.counted, standing.kills], [before.standing.score, 2, before.standing.kills], "the week's score stands");
+    assert.ok(!(await (await get('/leaderboard?metric=bestStage', mate)).json()).entries.some(e => e.username === 'leaver_owner'), 'off the boards at once');
+
+    // the name and the address are free again: a new account, with nothing of the old one
+    const again = await register('leaver_owner');
+    const fresh = await (await get('/load', again)).json();
+    assert.equal(fresh.state, null);
+    assert.equal((await (await get('/clan', again)).json()).clan, null);
+    assert.equal((await post('/account/delete', { password: 'correct horse' }, again)).status, 200, 'an account with no save goes too');
+});
+
+test('the last member deleting an account closes the clan; a flagged one leaves no depth; an account with no clan just goes', async () => {
+    const data = memory || require('../api/store.js');
+    toMonday();
+    const alone = await register('closer_alone');
+    const cheat = await register('closer_flagged');
+    const friend = await register('closer_friend');
+    const { clanId } = await (await post('/clans', { name: 'Last Light', tag: 'LAST' }, alone)).json();
+    const { clanId: other } = await (await post('/clans', { name: 'Marked Men', tag: 'MRK' }, friend)).json();
+    await post('/clans/join', { clanId: other }, cheat);
+    toMonday();
+    clock += 5 * DAY_MS;
+    for (const t of [alone, friend, cheat]) await post('/save', { state: heroSave({ tokens: 400, bestStage: 60 }) }, t);
+    await peek.setFlags('closer_flagged', [{ at: clock, reason: 'flagged by the owner after review', by: 'owner' }]);
+    for (const t of [cheat, friend, alone]) assert.equal((await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, t)).status, 200);
+    const rowOf = async (t, name) => (await (await get('/clans/ranking', t)).json()).divisions.flatMap(d => d.clans).find(c => c.name === name);
+    const was = await rowOf(friend, 'Marked Men');
+    assert.equal(was.counted, 1, 'the flagged member was never counted');
+    assert.equal((await post('/account/delete', { password: 'correct horse' }, cheat)).status, 200);
+    const still = await rowOf(friend, 'Marked Men');
+    assert.deepEqual([still.score, still.counted], [was.score, 1], 'and leaves nothing behind');
+
+    assert.equal((await post('/account/delete', { password: 'correct horse' }, alone)).status, 200);
+    assert.equal(await data.getClan(clanId), null, 'closed with its last member');
+    assert.ok((await rowOf(friend, 'Last Light')) === undefined, 'a closed clan is not ranked, as when its last member leaves');
+    assert.equal((await post('/clans/leave', {}, friend)).status, 200);
+});
+
+test('an account cannot be deleted by guessing: the tries are counted as a login\'s', async () => {
+    const t = await register('delete_guess');
+    for (let i = 0; i < 10; i++) assert.equal((await post('/account/delete', { password: `wrong guess ${i}` }, t)).status, 400);
+    assert.equal((await post('/account/delete', { password: 'correct horse' }, t)).status, 429, 'even the right one has to wait');
+    assert.equal((await get('/load', t)).status, 200);
+    clock += 16 * 60 * 1000;
+    assert.equal((await post('/account/delete', { password: 'correct horse' }, t)).status, 200);
+});
+
+test('every table with a row for a player is emptied of it when the account goes', () => {
+    const source = require('node:fs').readFileSync(path.join(__dirname, '..', 'api', 'store.js'), 'utf8');
+    const statement = /async function deleteAccount[\s\S]*?\n}\n/.exec(source)[0];
+    const tables = [...source.matchAll(/CREATE TABLE IF NOT EXISTS (\w+) \(([\s\S]*?)\n\s*\)\s*;?\s*`/g)].filter(([, , columns]) => /\buser_id\b/.test(columns)).map(([, table]) => table);
+    assert.ok(tables.length >= 10, tables.join());
+    for (const table of tables) assert.match(statement, new RegExp(`DELETE FROM ${table} WHERE user_id`), `${table} is not emptied by deleteAccount`);
 });

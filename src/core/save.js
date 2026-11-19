@@ -225,6 +225,14 @@ export class CloudClient {
         return data;
     }
 
+    /** "Delete my account": the password asked again, then everything goes on the server; this device is signed out and forgets the account. */
+    async deleteAccount(password) {
+        const data = await this.request('/account/delete', { method: 'POST', body: { password } });
+        this.setToken(null);
+        try { storage()?.removeItem(CLOUD_BASE_KEY); } catch { /* storage unavailable */ }
+        return data;
+    }
+
     /**
      * Returns { state, lastSaved } (state may be null for a fresh account). Time away is measured on
      * the server's clock: the save's timestamp is moved so that now − savedAt equals the time the

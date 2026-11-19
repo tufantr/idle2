@@ -1577,6 +1577,9 @@ Keeping it running:
       mail, and a Report link on each clan's row that starts a mail naming the clan; the address is one setting
 - [x] **The team's tool for clans** (R14, P-113): `fantasyidle-team` on the server lists every clan, clears or rewrites its
       words, renames it (the stored week's rankings too) and puts either back, each with a logged reason and a mail to its owner
+- [x] **Delete my account** (R19, P-070): in Settings, with the password; every row tied to the account goes in one statement,
+      its clan passes on or closes and keeps what it was given (the hall, the boss, the week's Hydra depth, the gifts' totals);
+      the wiki's FAQ says how
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

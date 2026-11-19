@@ -17,6 +17,7 @@ Without a clan, the Clan tab lets you search the clans by name or tag and join o
 - Each clan's row has a **Report** link: it starts a mail to the team, for a clan whose name or words shouldn't be there.
 - You can leave whenever you like. If the clan's owner leaves, the member who has been in it longest and played this past week takes over (the longest-serving of all, if nobody has); when the last member leaves, the clan closes.
 - An owner who hasn't played for {{LEADER_AWAY_DAYS}} days hands the clan over the same way, the next time a member opens the Clan tab. If nobody has played this past week it waits for someone who does. An owner who comes back later is a member like any other.
+- A member who deletes their account leaves the same way. What they gave the clan stays with it: the hall's work, the boss's lost health and their deepest fight at the Endless Hydra that week.
 - The owner can remove a member. That member's damage stays on the week's board.
 - The owner can change the clan's description and "looking for" line at any time (**Edit words** on the Clan tab). Its name and tag stay as they were made.
 - The member list says when each of the others last played, in whole days ("Seen 3 days ago"): never the hour.

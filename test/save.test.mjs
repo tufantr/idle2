@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY, CLOUD_BASE_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -171,6 +171,34 @@ test('"Sign out everywhere" keeps this device signed in, on a fresh token, with 
         assert.equal(cloud.token, 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c');
         assert.equal(localStorage.getItem(TOKEN_KEY), cloud.token, 'kept for the next visit');
         assert.deepEqual([cloud.username, cloud.base], ['hero', 9], 'the same account, its cloud as this page saw it');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test('"Delete my account" signs this device out and forgets the account, once the server has done it; a wrong password changes nothing', async () => {
+    const realFetch = globalThis.fetch;
+    let wrong = true;
+    const calls = [];
+    globalThis.fetch = async (url, init) => {
+        calls.push({ url, body: JSON.parse(init.body) });
+        const refused = wrong && url.endsWith('/account/delete');
+        return new Response(JSON.stringify(refused ? { error: "That password isn't right." } : { deleted: true, success: true, timestamp: 9 }), { status: refused ? 400 : 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        await cloud.push({ version: 3 });
+        assert.ok(localStorage.getItem(CLOUD_BASE_KEY));
+        await assert.rejects(cloud.deleteAccount('nope'), /isn't right/);
+        assert.equal(cloud.loggedIn, true, 'still signed in');
+        assert.ok(localStorage.getItem(CLOUD_BASE_KEY));
+        wrong = false;
+        assert.deepEqual(await cloud.deleteAccount('right'), { deleted: true, success: true, timestamp: 9 });
+        assert.deepEqual(calls.at(-1), { url: '/api/account/delete', body: { password: 'right' } });
+        assert.equal(cloud.loggedIn, false);
+        assert.equal(localStorage.getItem(TOKEN_KEY), null);
+        assert.equal(localStorage.getItem(CLOUD_BASE_KEY), null);
     } finally {
         globalThis.fetch = realFetch;
     }

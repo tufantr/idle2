@@ -3,11 +3,20 @@
 // database. With API_TEST_DATABASE_URL set, test/api.test.cjs runs the real SQL against Postgres instead.
 
 function createMemoryStore() {
-    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map(), teamLog: [] };
+    const db = { users: [], clans: [], members: [], bosses: [], shares: [], attacks: [], rewards: [], snapshots: [], auth: new Map(), charges: new Map(), codes: [], endless: [], rankings: [], hall: [], gifts: [], reviews: [], sources: new Map(), teamLog: [], giftTotals: [], endlessKept: [] };
     let seq = { users: 0, clans: 0, attacks: 0, rewards: 0, codes: 0, gifts: 0, teamLog: 0 };
     const unique = (constraint = null) => { const err = new Error('duplicate key value violates unique constraint'); err.code = '23505'; err.constraint = constraint; return err; };
 
     const hallOf = clanId => Object.fromEntries(db.hall.filter(h => h.clanId === clanId).map(h => [h.room, h.given]));
+    /** Gifts leaving the table add to their clan's totals. */
+    const foldGifts = gifts => {
+        for (const g of gifts) {
+            let row = db.giftTotals.find(t => t.clanId === g.clanId && t.room === g.room);
+            if (!row) db.giftTotals.push(row = { clanId: g.clanId, room: g.room, work: 0, gifts: 0 });
+            row.work += g.work;
+            row.gifts += 1;
+        }
+    };
 
     const store = {
         db,
@@ -20,6 +29,27 @@ function createMemoryStore() {
             const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0 };
             db.users.push(row);
             return row.id;
+        },
+        async deleteAccount(userId, username, { keepDepths = false, fromWeek = '' } = {}) {
+            foldGifts(db.gifts.filter(g => g.userId === userId));
+            db.gifts = db.gifts.filter(g => g.userId !== userId);
+            const best = new Map();
+            for (const e of db.endless.filter(x => x.userId === userId && x.week >= fromWeek)) {
+                const key = `${e.week}:${e.clanId}`;
+                if (!best.has(key) || e.depth > best.get(key).depth) best.set(key, { week: e.week, clanId: e.clanId, depth: e.depth });
+            }
+            if (keepDepths) db.endlessKept.push(...best.values());
+            db.endless = db.endless.filter(e => e.userId !== userId);
+            for (const b of db.bosses) if (b.lastHitUser === userId) b.lastHitUser = null;
+            for (const table of ['attacks', 'shares', 'members', 'rewards', 'snapshots', 'codes', 'reviews']) db[table] = db[table].filter(r => r.userId !== userId);
+            db.charges.delete(userId);
+            const name = String(username).toLowerCase().slice(0, 64);
+            for (const key of [...db.auth.keys()]) {
+                if ([`mail:user:${userId}`, `taken:user:${userId}`, `delete:user:${userId}`, `login:name:${name}`].includes(key) || key.startsWith(`login:name:${name}:`)) db.auth.delete(key);
+            }
+            const had = db.users.some(u => u.id === userId);
+            db.users = db.users.filter(u => u.id !== userId);
+            return had;
         },
         async findUserByName(username) {
             const same = db.users.filter(x => x.username.toLowerCase() === username.toLowerCase())
@@ -142,6 +172,7 @@ function createMemoryStore() {
             if (c) c.ownerId = toId;
             return !!c;
         },
+        async clansOwnedBy(userId) { return db.clans.filter(c => c.ownerId === userId).map(c => c.id); },
         async deleteClan(clanId) {
             db.bosses = db.bosses.filter(b => b.clanId !== clanId);
             db.shares = db.shares.filter(s => s.clanId !== clanId);
@@ -319,7 +350,8 @@ function createMemoryStore() {
                 const key = `${e.clanId}:${e.userId}`;
                 if (!best.has(key) || e.depth > best.get(key).depth) best.set(key, { clanId: e.clanId, userId: e.userId, depth: e.depth });
             }
-            return [...best.values()].map(r => ({ ...r, flags: db.users.find(u => u.id === r.userId)?.flags || '[]' }));
+            return [...best.values()].filter(r => db.users.some(u => u.id === r.userId)).map(r => ({ ...r, flags: db.users.find(u => u.id === r.userId).flags || '[]' }))
+                .concat(db.endlessKept.filter(k => k.week === week).map(k => ({ clanId: k.clanId, userId: null, depth: k.depth, flags: '[]' })));
         },
         async weekBosses(week) {
             return db.bosses.filter(b => b.week === week).map(b => ({ ...b }));

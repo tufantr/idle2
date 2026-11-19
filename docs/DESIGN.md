@@ -1002,6 +1002,16 @@ wear; a place that waited opens on the return and is named there too.
   The boot's welcome-back waits for the sync, so it never acts on the other game. A hard reset while
   signed in resets the cloud save too. On a static host without the API, sign-in says cloud saves are
   unavailable instead of failing.
+- **Delete my account** (Settings, `POST /api/account/delete`; the research loop's P-070, the owner's decision 11, November
+  2026): with the password asked again, its tries counted as a login's. The account leaves its clan as anyone would (it passes
+  to the longest-serving member who plays, or closes with its last member), then one statement (`store.deleteAccount`) takes
+  every row tied to it: the account, clan membership and attacks, Hydra fights, boss shares, gifts, charges, rewards, weekly
+  snapshots, email codes, the growth check's list, and its login counters by id and name; a boss it last struck forgets it. A test
+  keeps the list whole: every table with a `user_id` must be in that statement. **A clan's totals stay:** the boss's health and
+  the hall's work were never the account's rows, its gifts fold into `clan_gift_totals` (a clan and room's work and count, no
+  names), and the depth it reached at the Hydra this week or last stays in the clan's score (`clan_endless_kept`, no names; not
+  a flagged account's, which never counted). Its name and email are free again. The device that asked forgets the account and
+  its local game; others find their token refused. Copies in the nightly dumps go in 14 days.
 - **Server secret:** `JWT_SECRET` must be set outside local development (`NODE_ENV=development`);
   tokens are HS256 only. The owner sets it and adds the database (README "The API"); neither is in the
   repository. `GET /api/health` says whether the database, the secret and the game's stat code are

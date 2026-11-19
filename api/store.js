@@ -267,6 +267,26 @@ async function ensureSchema() {
             new_words TEXT NOT NULL DEFAULT '{}'
         )
     `;
+    // What a clan keeps of rows that go (November 2026; the research loop's P-070, the owner's decision that a deleted account
+    // leaves its clan's totals): hall gifts folded into one total a clan and room (their work, and how many), and the depth a
+    // member reached at the Endless Hydra this week, so the week's score stands. Neither says whose it was.
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_gift_totals (
+            clan_id INTEGER NOT NULL,
+            room VARCHAR(16) NOT NULL,
+            work BIGINT NOT NULL DEFAULT 0,
+            gifts BIGINT NOT NULL DEFAULT 0,
+            PRIMARY KEY (clan_id, room)
+        )
+    `;
+    await sql`
+        CREATE TABLE IF NOT EXISTS clan_endless_kept (
+            week VARCHAR(10) NOT NULL,
+            clan_id INTEGER NOT NULL,
+            depth DOUBLE PRECISION NOT NULL
+        )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS clan_endless_kept_week ON clan_endless_kept (week)`;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -326,6 +346,47 @@ async function tokenAccount(userId) {
 async function bumpTokenVersion(userId) {
     const { rows } = await sql`UPDATE users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = ${userId} RETURNING username, token_version`;
     return rows[0] ? { username: rows[0].username, tokenVersion: int(rows[0].token_version) } : null;
+}
+
+/**
+ * An account, gone for good, in one statement: every row tied to it, or none (the research loop's P-070; decision 11 of the
+ * patch). What it gave its clan stays the clan's without its name: the hall's work (clan_hall) and the boss's health were never
+ * its rows, its gifts fold into the clan's totals, and with `keepDepths` (it isn't flagged) its deepest fight of each week from
+ * `fromWeek` on stays in the clan's score (clan_endless_kept). The caller has taken it out of its clan (closeAccount in
+ * api/index.js). Returns whether there was such an account.
+ */
+async function deleteAccount(userId, username, { keepDepths = false, fromWeek = '' } = {}) {
+    const name = String(username).toLowerCase().slice(0, 64);
+    const { rows } = await sql`
+        WITH gifts AS (
+            DELETE FROM clan_gifts WHERE user_id = ${userId}::int RETURNING clan_id, room, work
+        ), gift_totals AS (
+            INSERT INTO clan_gift_totals (clan_id, room, work, gifts)
+            SELECT clan_id, room, SUM(work)::bigint, COUNT(*)::bigint FROM gifts GROUP BY clan_id, room
+            ON CONFLICT (clan_id, room) DO UPDATE SET work = clan_gift_totals.work + EXCLUDED.work, gifts = clan_gift_totals.gifts + EXCLUDED.gifts
+        ), fights AS (
+            DELETE FROM clan_endless WHERE user_id = ${userId}::int RETURNING week, clan_id, depth
+        ), depths AS (
+            INSERT INTO clan_endless_kept (week, clan_id, depth)
+            SELECT week, clan_id, MAX(depth) FROM fights WHERE ${keepDepths}::boolean AND week >= ${fromWeek}::varchar GROUP BY week, clan_id
+        ), last_hits AS (
+            UPDATE clan_bosses SET last_hit_user = NULL WHERE last_hit_user = ${userId}::int
+        ), attacks AS (DELETE FROM clan_attacks WHERE user_id = ${userId}::int),
+        shares AS (DELETE FROM clan_boss_shares WHERE user_id = ${userId}::int),
+        members AS (DELETE FROM clan_members WHERE user_id = ${userId}::int),
+        charges AS (DELETE FROM clan_charges WHERE user_id = ${userId}::int),
+        paid AS (DELETE FROM rewards WHERE user_id = ${userId}::int),
+        snapshots AS (DELETE FROM weekly_snapshots WHERE user_id = ${userId}::int),
+        codes AS (DELETE FROM email_codes WHERE user_id = ${userId}::int),
+        reviews AS (DELETE FROM flag_reviews WHERE user_id = ${userId}::int),
+        counters AS (
+            DELETE FROM auth_attempts
+            WHERE key IN (${`mail:user:${userId}`}::varchar, ${`taken:user:${userId}`}::varchar, ${`delete:user:${userId}`}::varchar, ${`login:name:${name}`}::varchar)
+               OR key LIKE ${`login:name:${name.replace(/[\\%_]/g, '\\$&')}:%`}::varchar
+        )
+        DELETE FROM users WHERE id = ${userId}::int RETURNING id
+    `;
+    return rows.length > 0;
 }
 
 /** A new code for an account and a purpose, in place of any before it. */
@@ -508,6 +569,12 @@ async function setClanOwner(clanId, ownerId) {
 async function passClan(clanId, fromId, toId) {
     const { rows } = await sql`UPDATE clans SET owner_id = ${toId}::int WHERE id = ${clanId}::int AND owner_id = ${fromId}::int RETURNING id`;
     return rows.length > 0;
+}
+
+/** The clans an account owns (normally the one it is in). */
+async function clansOwnedBy(userId) {
+    const { rows } = await sql`SELECT id FROM clans WHERE owner_id = ${userId}::int`;
+    return rows.map(r => r.id);
 }
 
 async function deleteClan(clanId) {
@@ -795,13 +862,15 @@ async function endlessOf(userId, week) {
     return { used: int(rows[0] && rows[0].used), best: Number(rows[0] && rows[0].best) || 0 };
 }
 
-/** Each player's deepest attack of a week at the Endless Hydra, for each clan they made one for, with their flags. */
+/** Each player's deepest attack of a week at the Endless Hydra, for each clan they made one for, with their flags; and those a deleted account left its clan. */
 async function endlessWeek(week) {
     const { rows } = await sql`
         SELECT e.clan_id, e.user_id, MAX(e.depth) AS depth, u.flags
         FROM clan_endless e JOIN users u ON u.id = e.user_id
-        WHERE e.week = ${week}
+        WHERE e.week = ${week}::varchar
         GROUP BY e.clan_id, e.user_id, u.flags
+        UNION ALL
+        SELECT k.clan_id, NULL::int, k.depth, '[]'::text FROM clan_endless_kept k WHERE k.week = ${week}::varchar
     `;
     return rows.map(r => ({ clanId: r.clan_id, userId: r.user_id, depth: Number(r.depth) || 0, flags: r.flags || '[]' }));
 }
@@ -1064,11 +1133,11 @@ async function claimGifts(userId, now) {
 
 module.exports = {
     ensureSchema, ping,
-    createUser, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
+    createUser, deleteAccount, findUserByName, findUserByEmail, setEmailVerified, setPassword, putEmailCode, getEmailCode, bumpEmailCodeAttempts, expireEmailCode, deleteEmailCodes,
     userNameOf, tokenAccount, bumpTokenVersion, getSave, putSave, setOptIn, leaderboardRows,
     addReview, reviewsSince, countSignupSource, signupSources,
     getSnapshot, putSnapshotIfMissing,
-    listClans, createClan, getClan, setClanWords, setClanOwner, passClan, deleteClan, membershipOf, addMember, removeMember, clanMembers,
+    listClans, createClan, getClan, setClanWords, setClanOwner, passClan, clansOwnedBy, deleteClan, membershipOf, addMember, removeMember, clanMembers,
     getBoss, createBoss, bossShares, resizeBoss, rescaleBoss, damageBoss, markBossKilled, nextLevel, markKillPaid, unsettledBosses, claimSettlement,
     recordAttack, attackByFight, deleteAttack, attacksToday, levelFighters, weeklyDamage,
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,

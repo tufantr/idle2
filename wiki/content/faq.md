@@ -6,7 +6,7 @@ sectionPath: /guides
 icon: perk/scholar
 order: 90
 summary: Short answers to the questions players ask most: offline progress, saves, coal and gems, bosses, prestige, gear, pets, mastery, dungeons and more.
-keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, flagged, flag, keyboard, keys, shortcuts
+keywords: faq, questions, help, answers, offline, save, cloud, coal, gems, boss timer, prestige, auto prestige, pets, mastery, fragments, titan, gear, phone, install, sound, motion, flagged, flag, keyboard, keys, shortcuts, delete account, delete my account, remove account, contact, report
 aliases: Frequently asked questions, Questions, Help
 ---
 Short answers, each with a link to the page that tells the whole story. New to the game? Start with [[/guides/getting-started|Getting started]].
@@ -28,6 +28,14 @@ Yes: press **Play as guest** on the sign-in, or open the game from a link ending
 ### How do I sign out on a device I no longer use?
 
 In **Settings**, under Account, press **Sign out everywhere**: every other device signed in to your account is signed out, and this one stays signed in. Setting a new password (**Forgot your password?** on the sign-in) does the same, and a mail to your address says it was changed.
+
+### How do I delete my account?
+
+In **Settings**, under Account, press **Delete my account** and enter your password. Your account and your game leave the server for good: your username, email, password and save, your place in your clan and on the boards, and your clan fights and gifts. It can't be undone, and the name and the email can then be used for a new account. Copies in the server's nightly backups go when those backups do, about two weeks later.
+
+What you gave your [[/clans|clan]] stays with it: the hall's work, the boss's lost health, and your deepest fight at the Endless Hydra this week. If you lead the clan it passes to another member, and if you are its last member it closes.
+
+Forgot your password? Set a new one first, with **Forgot your password?** on the sign-in. Can't get in at all? Write to {{link(`mailto:${CONTACT_EMAIL}`, CONTACT_EMAIL)}} from the account's email address. A guest has no account: a guest's game is only in that browser, and clearing the site's data there removes it.
 
 ### How do I reach the team, or report a clan?
 

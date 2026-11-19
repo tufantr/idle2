@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 import { Game } from '../src/game.js';
 import { fmt, seenWords } from '../src/ui/format.js';
-import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan, renderClanWords } from '../src/ui/render.js';
+import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan, renderClanWords, renderDeleteAccount } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL, CONTACT_EMAIL, clanReportHref, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
 import { strikeWorth, clanAttackFromSave, clanGuardDown } from '../src/core/power.js';
@@ -269,6 +269,16 @@ test("one address reaches the team: in Settings, behind each clan's Report link,
     const inCode = dir => readdirSync(new URL(`../${dir}/`, import.meta.url), { recursive: true, withFileTypes: true }).filter(f => f.isFile() && /\.(m?js|cjs)$/.test(f.name) && !f.parentPath.includes('node_modules'))
         .filter(f => readFileSync(join(f.parentPath, f.name), 'utf8').includes(CONTACT_EMAIL)).map(f => f.name);
     assert.deepEqual([...inCode('src'), ...inCode('api')], ['social.js'], 'its one place');
+});
+
+test('Settings offers Delete my account to one signed in, and its dialog asks for the password (P-070)', () => {
+    const settings = cloud => renderSettings(new Game(null, T0), {}, cloud);
+    assert.match(settings({ loggedIn: true, username: 'hero' }), /onclick="FI\.openDeleteAccount\(\)">Delete my account</);
+    assert.doesNotMatch(settings(null), /openDeleteAccount/, 'a guest has no account');
+    const dialog = renderDeleteAccount();
+    assert.match(dialog, /type="password" id="delete-pass"/);
+    assert.match(dialog, /FI\.deleteAccount\(\)/);
+    assert.match(dialog, /for good/);
 });
 
 test("a clan's owner has a dialog for its words, filled with them; a member has none (P-113)", () => {

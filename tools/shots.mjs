@@ -18,7 +18,8 @@
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
 //                                                 # and 'bannerpick' its banner picker, 'clanwords'
-//                                                 # its owner's dialog for its words; 'account'
+//                                                 # its owner's dialog for its words; 'deleteaccount'
+//                                                 # Settings' dialog to delete the account; 'account'
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
 //                                                 # clans to find: the API is answered by the
@@ -164,6 +165,8 @@ const CLAN_SHOTS = {
         FI.refreshSocial();
         await new Promise(resolve => setTimeout(resolve, 900));
     },
+    // Settings' "Delete my account": its dialog
+    deleteaccount: async () => { FI.switchTab('settings'); FI.openDeleteAccount(); },
     // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
     clancapped: async () => {
         document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
@@ -361,7 +364,7 @@ for (const viewport of VIEWPORTS) {
             await page.waitForTimeout(900);
             if (CLAN_SHOTS[tab]) { await page.evaluate(CLAN_SHOTS[tab]); await page.waitForTimeout(700); }
             else await page.evaluate(() => { document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' }); if (innerWidth < 900) window.scrollBy(0, -(document.querySelector('#sidebar')?.offsetHeight || 0) - 8); });
-            if (!['clancloak', 'clanfight', 'account', 'clanlist'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (!['clancloak', 'clanfight', 'account', 'deleteaccount', 'clanlist'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
             if (tab === 'clanlist' && !(await page.$('#clan-search'))) problems.push(`no list of clans at ${viewport.width}px`);
             if (tab === 'account' && !(await page.$('.flag-line'))) problems.push(`no flagged line in Settings at ${viewport.width}px`);
             if (tab === 'clancapped' && !(await page.$('.celebration .cel-note'))) problems.push(`no card for a held-back attack at ${viewport.width}px`);
