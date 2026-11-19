@@ -25,6 +25,7 @@
 //                                                 # day away is replayed behind: RETURN_SHOTS below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
+//   node tools/shots.mjs <tabs> --reduced         # with reduced motion asked for (<name>-still-<width>.png)
 //
 // Writes shots/<name>-<width>.png (git-ignored) and exits 1 on overflow or errors.
 // Needs Playwright, once:  npm i --no-save playwright && npx playwright install chromium
@@ -254,16 +255,24 @@ async function shootReturn(viewport, which) {
         localStorage.setItem('fantasyIdle.save.v2', g.serialize(Date.now() - 26 * 3600000));
         localStorage.setItem('fantasyIdle.owner', 'shots');   // this page gives the save up: leaving, it doesn't save over it
     });
+    // (this hero's day is short work, so the replay is held back a little, a moment between its slices, for the picture)
+    await page.addInitScript(() => {
+        const post = MessagePort.prototype.postMessage;
+        window.__sliceWait = 100;
+        MessagePort.prototype.postMessage = function (...a) { setTimeout(() => post.apply(this, a), window.__sliceWait); };
+    });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await quiet(page);
     if (which.includes('catchup')) {
-        await page.waitForSelector('.cu-bar:not(.waiting)', { timeout: 20000 }).catch(() => {});
-        await page.waitForTimeout(500);
+        await page.waitForFunction(() => Number(document.querySelector('.cu-bar:not(.waiting)')?.getAttribute('aria-valuenow')) >= 25, null, { timeout: 30000, polling: 50 }).catch(() => {});
+        await page.evaluate(() => { window.__sliceWait = 1200; });   // (it stays about there for the picture)
+        await page.waitForTimeout(300);
         if (!(await page.$('.cu-bar'))) problems.push(`no catch-up bar at ${viewport.width}px`);
         await shoot(page, 'catchup', viewport.width);
     }
+    await page.evaluate(() => { window.__sliceWait = 0; });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     await page.waitForSelector('.welcome-back', { timeout: 60000 }).catch(() => {});
     if (!(await page.$('.welcome-back'))) problems.push(`no welcome-back after the catch-up at ${viewport.width}px`);
@@ -278,6 +287,7 @@ try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
 
 const args = process.argv.slice(2);
 const fresh = args.includes('--fresh');
+const reduced = args.includes('--reduced');   // as a player who asks for less motion sees it (pictures named <name>-still-<width>.png)
 const tabs = (args.find(a => !a.startsWith('--')) || DEFAULT_TABS.join(',')).split(',').filter(Boolean);
 
 // The game is ES modules, which need HTTP and the right content types: a small static server.
@@ -300,7 +310,7 @@ const problems = [];
 
 /** A page that records errors; requests the static server can't answer (the API) don't count. (The fonts are the game's own.) */
 async function open(viewport, url, { clan = false } = {}) {
-    const ctx = await browser.newContext({ viewport });
+    const ctx = await browser.newContext({ viewport, ...(reduced ? { reducedMotion: 'reduce' } : {}) });
     if (clan) {   // signed in, the API answered here (CLAN_SHOTS)
         await ctx.addInitScript(token => localStorage.setItem('fantasyIdle.jwt', token), FAKE_TOKEN);
         await ctx.route('**/api/**', clanApi());
@@ -321,7 +331,7 @@ const quiet = page => page.addStyleTag({ content: '#celebrate, #toast-area { dis
 
 async function shoot(page, name, width) {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    await page.screenshot({ path: join(OUT, `${name}-${width}.png`) });
+    await page.screenshot({ path: join(OUT, `${name}${reduced ? '-still' : ''}-${width}.png`) });
     console.log(`${String(width).padStart(4)}px  ${name.padEnd(14)} overflow ${overflow}`);
     if (overflow > 0) problems.push(`${name} at ${width}px scrolls sideways by ${overflow}px`);
 }
