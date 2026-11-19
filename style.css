@@ -2796,6 +2796,7 @@ body.battle-full #toast-area { top: 3.6rem; bottom: auto; } /* under the top bar
 .war-links .bridge { stroke: #b0935c; stroke-width: 3.5px; }
 .war-links .bridge.on { stroke: #ffc84a; stroke-width: 6px; filter: drop-shadow(0 0 3px rgba(255, 186, 66, 0.8)); }
 .talent-detail { display: flex; align-items: center; gap: 0.7rem; min-height: 66px; padding: 0.55rem 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 7, 4, 0.8); }
+.talent-detail > .spr { flex: none; }   /* a long rule never squeezes the talent's picture */
 .talent-detail p { margin: 0.15rem 0 0; }
 .talent-detail.empty { justify-content: center; }
 .talent-learn { margin-left: auto; flex-shrink: 0; }
