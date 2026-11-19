@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { FIXTURE_NOW, identitiesOf, writeFixtures } from './helpers/rehearse-fixtures.mjs';
 import { bothWays, databaseUrlFrom, figureOf, FIGURE_NAMES, formatChecks, loadServerRules, loadTree, lostPaths, parseExpected, readDatabaseAccounts, readFixtureAccounts, runChecks, suiteResult } from '../deploy/vps/rehearse.mjs';
 
-import { flagCheck, readFixtureAccounts } from '../deploy/vps/rehearse.mjs';
+import { flagCheck } from '../deploy/vps/rehearse.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
