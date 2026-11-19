@@ -235,7 +235,7 @@ const scene = createScene(document.getElementById('scene'), {
         const now = Date.now();
         if (holding() || now - (game.state.combat.lastClickAt || 0) < BALANCE.combat.strikeGapMs || droppingIn(game.state, now)) return false;
         advance(now);
-        return game.clickAttack();
+        return !holding() && game.clickAttack();   // (a gap found by this very strike: its replay comes first)
     },
     toggle: () => window.FI.toggleCombat(),
     stage: n => { game.setStage(n); render(); },
@@ -338,6 +338,11 @@ function catchUp(run, after, saved = null) {
     return new Promise(resolve => {
         if (!run) { settle(); resolve(null); return; }
         catching = { run, after, resolve, saved, at: performance.now() };
+        // From now on nothing behind the replay can be reached (an action on the game would finish it, all at once), the bar or
+        // no bar yet: the tap that found a gap may still be under way. A dialog that is open goes behind the bar at once.
+        if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();
+        holdPage(true);
+        if (ui.modalOpen) openCatchUp();
         pump();
     });
 }
@@ -415,7 +420,7 @@ function closeCatchUp(html) {
     if (!ui.modalOpen) {
         const next = ui.modalQueue.shift();
         if (next) showModal(next.html, next.key);
-        else if (box) { holdPage(false); rewards.resume(); returnFocus(); }
+        else { holdPage(false); rewards.resume(); returnFocus(); }
     } else if (box) {   // the dialog it stood over is on top again
         holdPage(true);
         focusDialog(document.querySelector('#modal-root > .modal-overlay:last-child'));
@@ -711,6 +716,7 @@ document.addEventListener('keydown', event => {
     if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     if (!ui.shortcuts) return;
     if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
+    if (holding()) return;   // (time away first: catchUp)
     const c = game.state.combat;
     if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
     else if (event.key === ' ' && ui.tab === fightTab(game, ui) && c.active && !target?.closest?.('button, a, [role="button"]')) {

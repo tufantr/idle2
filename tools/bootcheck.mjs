@@ -6,7 +6,7 @@
 //   node tools/bootcheck.mjs runs/hero-1300.json [--against=<an older game folder>] [--only=guest,slow,...] [--rate=4]
 //
 // The hero comes from tools/simulate.mjs --save-at: deep, with Auto prestige, so that his replay lasts. The flows: guest, fast,
-// slow, server, lateserver, reload, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
+// firsttap, slow, server, lateserver, reload, and with --against, same: the four ways back (a guest's boot, a gap in a running tab, signed
 // in with this copy kept or with the server's game) in both folders from one save, one clock and one seed, the games they
 // end in compared field by field. The dice are seeded as each replay begins, so a replay made first and thrown away
 // (the older boot's, signed in) changes nothing. Needs Playwright, as tools/shots.mjs does.
@@ -165,6 +165,26 @@ const FLOWS = {
         note('guest: Collect, and the game is there', await gameDrawn(page));
         note('guest: and it plays', await plays(page));
         noErrors('guest', errors);
+        await ctx.close();
+    },
+
+    /** A gap found by the first tap after it: the tap does not act on the game, and the replay stays in slices. */
+    async firsttap() {
+        const T = Date.now();
+        const { page, ctx, errors } = await open(mine, { save: shifted(raw, T), clock: T, rate: RATE });
+        await page.waitForFunction(() => window.FI?.game && document.querySelector('#nav')?.children.length > 0, null, { timeout: WAIT_MS, polling: 200 });
+        await page.waitForTimeout(500);
+        const box = await page.locator('.menu-btn:visible, #nav .nav-btn:visible').first().boundingBox();   // (in a fight filling the screen, its Menu)
+        await page.evaluate(() => window.__clock.add(24 * 3600000));
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        const held = await page.evaluate(() => ({ catching: !!FI.game().catchingUp, inert: document.getElementById('app').hasAttribute('inert'), report: !!document.querySelector('.welcome-back'), replays: (window.__replays || []).map(r => r.done) }));
+        note('the first tap after a gap: the replay stays in slices, the page held', held.catching && held.inert, JSON.stringify(held));
+        const folded = await page.evaluate(() => !!document.querySelector('body.battle-full'));
+        note('the first tap after a gap: it did not act on the game', folded);
+        const got = await reportUp(page);
+        const s = await seen(page);
+        note('the first tap after a gap: the report, once', got && s.reports === 1 && s.replays.length === 1, JSON.stringify({ reports: s.reports, replays: s.replays.length }));
+        noErrors('the first tap', errors);
         await ctx.close();
     },
 
