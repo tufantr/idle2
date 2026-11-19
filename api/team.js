@@ -9,6 +9,8 @@
 //   fantasyidle-team rename <clan> --reason "why" [--name "New Name"] [--tag NEW]     (neither: "Clan 12" [CC])
 //   fantasyidle-team restore <log number> --reason "why"     puts a clan back as that entry found it
 //   fantasyidle-team log [how many]                    what the team did, the newest first
+//   fantasyidle-team handovers [--apply]               the clans whose owner has been away long enough, and who takes each on
+//                                                      (the game does it when a member opens the clan; --apply does it now)
 //   fantasyidle-team rename-player <username> --name NewName --reason "why"     (they sign in with the new name)
 //   fantasyidle-team close-account <username> --reason "why"     deletes it as "Delete my account" does, for what breaks the rules badly
 //
@@ -24,7 +26,7 @@ const DAY_MS = 24 * 3600 * 1000;
 const dateOf = ms => (ms > 0 ? new Date(ms).toISOString().slice(0, 10) : 'never');
 const wordsOf = clan => ({ name: clan.name, tag: clan.tag, description: clan.description, lookingFor: clan.lookingFor });
 
-/** The words on a command line: positional ones, and each --option's value (--no-mail and --no-copy take none). */
+/** The words on a command line: positional ones, and each --option's value (--no-mail, --no-copy and --apply take none). */
 function parseArgs(argv) {
     const args = [];
     const options = {};
@@ -32,6 +34,7 @@ function parseArgs(argv) {
         const word = argv[i];
         if (word === '--no-mail') options.noMail = true;
         else if (word === '--no-copy') options.noCopy = true;
+        else if (word === '--apply') options.apply = true;
         else if (word.startsWith('--')) options[word.slice(2)] = argv[++i] ?? '';
         else args.push(word);
     }
@@ -87,7 +90,19 @@ async function team(argv, { store, send, now = Date.now(), print = console.log }
         for (const e of await store.teamLog(Math.min(1000, Number(target) || 50))) print(`#${e.id} ${new Date(e.at).toISOString().slice(0, 16)} ${e.action} ${e.kind} ${e.subject}: ${e.reason}\n    was ${e.oldWords}\n    now ${e.newWords}`);
         return 0;
     }
-    if (!['clear', 'rename', 'restore', 'rename-player', 'close-account'].includes(command) || !target) return fail(`Usage: list [search] | clear <clan> | rename <clan> | restore <log number> | log [how many] | rename-player <username> --name NewName | close-account <username>, each change with --reason "why"`);
+    if (command === 'handovers') {
+        for (const { id } of await store.teamClans('')) {
+            const clan = await store.getClan(id);
+            const members = await store.clanMembers(id);
+            const heir = clan && await clanRules.dueHeir(clan, members, now);
+            if (!heir) continue;
+            const was = members.find(m => m.userId === clan.ownerId);
+            if (options.apply) await store.passClan(id, clan.ownerId, heir.userId);
+            print(`#${id} ${clan.name}: ${was ? was.username : 'its owner, gone,'} ${options.apply ? 'handed it' : 'is due to hand it'} to ${heir.username}`);
+        }
+        return 0;
+    }
+    if (!['clear', 'rename', 'restore', 'rename-player', 'close-account'].includes(command) || !target) return fail(`Usage: list [search] | clear <clan> | rename <clan> | restore <log number> | log [how many] | handovers [--apply] | rename-player <username> --name NewName | close-account <username>, each change with --reason "why"`);
     if (!reason) return fail('Say why, with --reason "...": it goes in the log and to the clan\'s owner.');
 
     if (command === 'rename-player' || command === 'close-account') {

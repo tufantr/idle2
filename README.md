@@ -155,6 +155,8 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   same statement, with the words it found, and mails the clan's owner what was done, why and how to ask again (`--no-mail`
   where the law says not to; `--no-copy` keeps the old words out of the log, for what must not be kept). `rename-player
   <username> --name NewName` and `close-account <username>` (it deletes the account as "Delete my account" does) work the same way.
+  `handovers` says which clans are due to pass from an owner away 30 days, and to whom (`--apply` does it now; the game does it
+  when a member opens the clan).
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 

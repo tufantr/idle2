@@ -1228,6 +1228,28 @@ test("an owner away 30 days hands the clan to the longest-serving member who pla
     assert.equal(await ownerSeenBy(second), 'away_first');
 });
 
+test("the team's tool says which clans are due to pass on, and can do it", async () => {
+    const { team } = require('../api/team.js');
+    const data = memory || require('../api/store.js');
+    const lead = await register('due_lead');
+    const heir = await register('due_heir');
+    const { clanId } = await (await post('/clans', { name: 'Due To Pass', tag: 'DUE' }, lead)).json();
+    await post('/clans/join', { clanId }, heir);
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, heir);
+    await peek.joinedAt('due_lead', clock - 40 * 24 * 3600 * 1000);
+    await peek.lastSaved('due_lead', clock - 31 * 24 * 3600 * 1000);
+    const ownerNow = async () => (await data.getClan(clanId)).ownerId;
+    const lines = [];
+    const run = (...argv) => team(argv, { store: data, send: async () => {}, now: clock, print: l => lines.push(l) });
+    const before = await ownerNow();
+    assert.equal(await run('handovers'), 0);
+    assert.ok(lines.includes(`#${clanId} Due To Pass: due_lead is due to hand it to due_heir`), lines.join(' / '));
+    assert.equal(await ownerNow(), before, 'only said');
+    assert.equal(await run('handovers', '--apply'), 0);
+    assert.equal(await ownerNow(), (await data.findUserByName('due_heir')).id);
+    assert.ok(lines.includes(`#${clanId} Due To Pass: due_lead handed it to due_heir`));
+});
+
 test("an owner who leaves hands the clan to the longest-serving member who plays, or the longest-serving of all", async () => {
     const lead = await register('heir_lead');
     const old = await register('heir_old');

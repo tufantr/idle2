@@ -714,13 +714,17 @@ const heirOf = (members, now, leaving = null) => members.find(m => m.userId !== 
  * upload, or since they joined (one who has just started a clan hasn't uploaded yet). Returns the clan as it is now.
  */
 async function handOverIfAway(clan, members, now) {
-    const { LEADER_AWAY_DAYS } = await engine();
-    const owner = members.find(m => m.userId === clan.ownerId);
-    if (owner && now - Math.max(owner.lastSaved || 0, owner.joinedAt || 0) < LEADER_AWAY_DAYS * DAY) return clan;
-    const heir = heirOf(members, now, clan.ownerId);
+    const heir = await dueHeir(clan, members, now);
     if (!heir) return clan;
     await store.passClan(clan.id, clan.ownerId, heir.userId);
     return (await store.getClan(clan.id)) || clan;
+}
+/** Who an away owner's clan is due to pass to now, or null: its owner is here, or nobody plays. */
+async function dueHeir(clan, members, now) {
+    const { LEADER_AWAY_DAYS } = await engine();
+    const owner = members.find(m => m.userId === clan.ownerId);
+    if (owner && now - Math.max(owner.lastSaved || 0, owner.joinedAt || 0) < LEADER_AWAY_DAYS * DAY) return null;
+    return heirOf(members, now, clan.ownerId);
 }
 
 /** This week's boss of a clan: made the first time it is looked at, moved to its next level the day after a kill. */
@@ -1344,6 +1348,6 @@ module.exports = app;
 module.exports.plausibilityFlags = plausibilityFlags;
 module.exports.RANKED = RANKED;
 module.exports.isoWeek = isoWeek;
-module.exports.clanRules = { CLAN_NAME_RE, CLAN_TAG_RE, cleanText };   // what a clan's name, tag and words may be (api/team.js)
+module.exports.clanRules = { CLAN_NAME_RE, CLAN_TAG_RE, cleanText, dueHeir };   // what a clan's name, tag and words may be, and who is due to take it on (api/team.js)
 module.exports.accountRules = { USERNAME_RE, closeAccount };            // what a username may be, and an account closing (api/team.js)
 module.exports.cleanupRules = { FLAG_MEMORY_MS, CODE_GAP_MS: RESEND_GAP_MS, giftsTaken };   // what the night's cleanup goes by (api/cleanup.js)
