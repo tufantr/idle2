@@ -74,6 +74,8 @@ The Fantasy Idle developer team runs the game at fantasyidle.com and this wiki, 
 | Sign-in counters: tries counted by internet address (IP address), by account and by the username typed, each over 15 minutes to a day | To stop password guessing, and floods of accounts and mail | The night's cleanup deletes each one once it is a day old. Signing in with the right password clears one sooner | No one |
 | Our team's log: what we changed and why (a clan's words, name or tag, a username, an account closed), with the words before and after | To put things back after an appeal, and to show what we did | No end date yet. An entry about your username goes when you delete your account; the note that we closed an account stays | No one |
 
+**The night's cleanup.** Every night at 04:30 UTC a program on our server deletes what the game no longer needs: sign-in counters a day old, email codes past their time, sign-ups never confirmed after 30 days, flags past their 30 days (but your latest), the boards' weekly copies and clan fights older than this week and last, and old gifts to clans that have closed.
+
 The game doesn't ask your age, and our server doesn't record your country or where you are. If you came by a listing's link, we count one more account for that listing: a number, with no name on it.
 
 ### Kept outside the database
