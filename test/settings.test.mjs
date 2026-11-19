@@ -11,6 +11,7 @@ import { renderSettings } from '../src/ui/render.js';
 import { createSound } from '../src/ui/sound.js';
 import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard, TEXT_SIZES, textSizeOf } from '../src/data/settings.js';
 import { DISCLOSURES } from '../src/systems/disclosure.js';
+import { NON_COMBAT_SKILLS, WORKSHOP_SKILLS } from '../src/data/skills.js';
 import { fmt, letters, fixed, numbersIn, setNotation } from '../src/ui/format.js';
 import { saverOn, atRest, REST_AFTER_MS, REST_FRAME_MS } from '../src/ui/saver.js';
 import { renderAboutCard, WIKI_PAGES } from '../src/ui/features.js';
@@ -355,4 +356,18 @@ test("on a phone each painting's landmark stays in view: the block tools/paint.p
     assert.match(narrow, /\.battle\[data-scene="meadow"\] \.battle-sky \{ background-position-x: 88%; \}/, 'the windmill');
     assert.match(narrow, /\.battle\[data-scene="ruins"\] \.battle-sky \{ background-position-x: 82%; \}/, 'the temple');
     assert.ok(block.indexOf('.battle[data-scene="meadow"] .battle-sky { background-image') < block.indexOf('@media (max-width: 600px)'), 'after the paintings, so it wins');
+});
+
+test('every skill that finishes actions has a voice of its own, and an unknown one falls back on the plain sound', t => {
+    t.after(() => { delete globalThis.window; delete globalThis.document; });
+    const log = fakeBrowser({ phone: false });
+    const sfx = createSound(() => true);
+    sfx.unlock();
+    for (const skill of [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS, 'agility', 'fishing']) assert.ok(sfx.voices.includes(skill), `${skill} has a voice`);
+    assert.ok(sfx.names.includes('work') && sfx.names.includes('double'));
+    assert.equal(sfx.names.includes('action'), false, 'the one shared sound is gone');
+    const nodes = (name, voice) => { log.heard = 0; globalThis.performance.now = (t0 => () => t0 += 1000)(performance.now()); sfx.play(name, voice); return log.heard; };
+    for (const voice of sfx.voices) assert.ok(nodes('work', voice) > 0, voice);
+    assert.ok(nodes('double', 'mining') > nodes('work', 'mining'), 'a double adds its bright note');
+    assert.equal(nodes('work', 'nobody'), nodes('work', 'action'), 'an unknown voice is the plain one');
 });

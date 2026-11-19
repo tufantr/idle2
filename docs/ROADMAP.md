@@ -1583,6 +1583,8 @@ Keeping it running:
 - [x] **An accessibility note** (R23, P-089): a "?" on Settings' options lists the switches and keys, and the wiki has an Accessibility page
 - [x] **Landmarks in view on phones** (R23, P-083): fourteen fights' paintings, cut narrow on a phone, now keep their landmark in the
       frame (the meadow's windmill, the ruins' temple, the bone fields' skull): a focal point per painting in `tools/paint.py`
+- [x] **A work sound per skill** (R23, P-083): a clink for Mining, a chop for Woodcutting, a bubble for Alchemy and so on, in place of the
+      one shared sound, as loud as it was
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

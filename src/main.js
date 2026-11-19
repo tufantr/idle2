@@ -28,6 +28,7 @@ import { isUnlocked } from './data/unlocks.js';
 import { fmt, fixed, numbersIn, setNotation, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.js';
 import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
+import { resolveAction } from './systems/skilling.js';
 import { SKILLS } from './data/skills.js';
 import { CLAN_POLL_MS, clanBossFor, ENDLESS, boardOpensOn } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
@@ -810,7 +811,12 @@ function soundFor(ev, onCombat) {
         case 'kill': return [ev.enemy.boss ? 'victory' : ev.enemy.gilded ? 'gold' : 'kill'];
         case 'itemDropped': return [lootSound(ev.item)];
         case 'itemCrafted': return [['rare', 'epic', 'legendary'].includes(ev.item.rarity) ? ev.item.rarity : 'craft'];
-        case 'actionComplete': return ui.tab === ev.skill ? [ev.made?.gem ? 'gem' : ev.made?.item ? 'craft' : (ev.made?.qty || 1) > 1 ? 'double' : 'action'] : null;
+        case 'actionComplete': {   // heard on the skill's own tab, in its own voice (Hunting at a river spot: the water's)
+            if (ui.tab !== ev.skill) return null;
+            if (ev.made?.gem) return ['gem'];
+            if (ev.made?.item) return ['craft'];
+            return [(ev.made?.qty || 1) > 1 ? 'double' : 'work', ev.skill === 'hunting' && resolveAction(game.state)?.fish ? 'fishing' : ev.skill];
+        }
         case 'toolMade': return ['unlock'];
         case 'levelUp': return ['levelUp'];
         case 'unlock': case 'zoneReached': return ['unlock'];

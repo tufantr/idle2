@@ -2167,6 +2167,9 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
   edge (the meadow's windmill, the ruins' temple, the lair's dragon). `LANDMARK` in `tools/paint.py` gives each its place in % of the width,
   written into the generated paint block as `background-position-x` for narrow screens, which keeps that spot in the frame however the painting is
   cut. The skill stages and the title card show a painting's whole width on a phone, so they need none.
+- **A voice per skill.** A finished action on its own tab no longer makes the one shared sound: `work` plays the skill's voice (`VOICES` in
+  `src/ui/sound.js`: a clink, a chop, a bowstring, a plop at the river, a sizzle, a crackle, bubbles, metal on metal, a jeweller's tap, footfalls),
+  levelled within about 2 dB of the sound it replaces and made from the same tones and noise; `double` adds its bright note to the same voice.
 - **Screen readers** (`src/ui/announce.js`). The fight's numbers are never read out as they change: a hidden paragraph at the head of
   the battle scene, under the heading "The fight in words", holds the stage, both healths, the monster and what is going on, rewritten every
   second and a half at most, for when the player goes to it. What a sighted player is told in passing (toasts, cards, the fight's banners)
