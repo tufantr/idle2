@@ -11,6 +11,7 @@ import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard, TEX
 import { DISCLOSURES } from '../src/systems/disclosure.js';
 import { fmt, letters, fixed, numbersIn, setNotation } from '../src/ui/format.js';
 import { saverOn, atRest, REST_AFTER_MS, REST_FRAME_MS } from '../src/ui/saver.js';
+import { createAnnouncer, plainWords, fightSummary, SAY_GAP_MS, SAY_ROUTINE_MS, SAY_SAME_MS, SAY_QUEUE } from '../src/ui/announce.js';
 
 const T0 = 1_760_000_000_000;
 // A browser's sound and motor, as far as src/ui/sound.js touches them: what was heard (nodes made) and felt (patterns).
@@ -285,4 +286,52 @@ test('the text size: four sizes, today\'s the default, kept per device and not i
     assert.match(reading({ textSize: 150 }), /class="seg-btn on" onclick="FI\.setTextSize\('150'\)" aria-pressed="true">150%/);
     assert.doesNotMatch(reading({}), /Big numbers/, 'the numbers\' row waits for the first million');
     assert.doesNotMatch(JSON.stringify(game.state.settings), /text/i);
+});
+
+test('lines for a screen reader come one at a time: never a flood, the ones that matter first, no line twice', () => {
+    const heard = [];
+    const a = createAnnouncer(line => heard.push(line));
+    let at = 1000;
+    const say = (text, important = true) => a.say(text, { important, now: at });
+    say('Boss, stage 10: <b>Goblin King</b>');
+    assert.equal(a.pump(at), 'Boss, stage 10: Goblin King', 'the first at once, in plain words');
+    say('You fall back');
+    assert.equal(a.pump(at + SAY_GAP_MS - 1), null, 'not sooner than the gap');
+    assert.equal(a.pump(at + SAY_GAP_MS), 'You fall back');
+    at += SAY_GAP_MS + 1;
+    for (let i = 0; i < 40; i++) say(`A rare drop number ${i}`, false);
+    say('Combat level 40');
+    assert.equal(a.pump(at + SAY_GAP_MS), 'Combat level 40', 'what matters goes first');
+    assert.equal(a.pump(at + SAY_GAP_MS + 100), null, 'and a routine line waits longer');
+    let total = 0;
+    for (let t = at; t < at + 60000; t += 100) if (a.pump(t)) total++;
+    assert.ok(total <= SAY_QUEUE, `what waited is at most ${SAY_QUEUE} lines, not forty (${total})`);
+    at += 60000;
+    say('The same words');
+    assert.equal(a.pump(at), 'The same words');
+    at += SAY_ROUTINE_MS;
+    say('The same words');
+    assert.equal(a.pump(at), null, 'said a moment ago: not again');
+    at += SAY_SAME_MS;
+    say('The same words');
+    assert.equal(a.pump(at), 'The same words', 'later, again');
+    say('Old news'); a.clear();
+    assert.equal(a.pump(at + 60000), null, 'what waited while the page was hidden is dropped');
+    assert.equal(plainWords('<small>Boss &amp; friends</small><strong>The King&#39;s</strong> <span class="x">x</span>'), "Boss & friends The King's x");
+});
+
+test('the fight in words says where he is, both healths and what is going on', () => {
+    const game = new Game(null, T0);
+    const c = game.state.combat;
+    assert.match(fightSummary(game), /^Stage 1, [A-Z][^.]+\. You: \d[\d,]* of \d[\d,]* health\. .+ health\. Not fighting\.$/);
+    c.active = true;
+    assert.doesNotMatch(fightSummary(game), /Not fighting/);
+    c.stage = 5; c.maxStage = 9;
+    assert.match(fightSummary(game), /^Stage 5, .+, best 9\. /);
+    c.enemy = { ...c.enemy, name: 'Goblin King (Boss)', boss: true, hp: 1200, maxHp: 4000 }; c.bossTimeLeft = 41200;
+    assert.match(fightSummary(game), /Goblin King \(Boss\): 1,200 of 4,000 health\. 42 seconds on its clock\.$/);
+    c.regroupLeft = 30000;
+    assert.match(fightSummary(game), /Regrouping: the boss in 30 seconds\.$/);
+    c.active = false; c.recovering = true;
+    assert.match(fightSummary(game), /Resting at the campfire\.$/);
 });

@@ -112,7 +112,7 @@ export function renderCrateModal(result, banked, toward = 0) {
  * The celebration layer in `root`: one card at a time, a short queue, confetti. While `blocked()`
  * (a dialog is open) cards wait in the queue; `resume()` shows them once it closes.
  */
-export function createRewards(root, { blocked = () => false, go = () => {}, confetti: wantConfetti = () => true } = {}) {
+export function createRewards(root, { blocked = () => false, go = () => {}, confetti: wantConfetti = () => true, say = () => {} } = {}) {
     const queue = [];
     let showing = null;
     let timer = 0;
@@ -149,7 +149,7 @@ export function createRewards(root, { blocked = () => false, go = () => {}, conf
         const node = document.createElement('div');
         const tappable = !!(card.go || card.tiles || card.act);
         node.className = `celebration ${card.kind || ''}${card.art ? ' pictured' : ''}${tappable ? ' clickable' : ''}`;
-        node.setAttribute('role', 'status');
+        say([card.kicker, card.title, ...(card.lines || []), card.note].filter(Boolean).join('. '));   // (a screen reader hears it: main.js's announcer)
         // The words in one box: under the picture on a wide screen, beside it on a phone (a banner).
         node.innerHTML = `${card.art ? `<span class="cel-art" style="${card.art}" aria-hidden="true"></span>` : '<span class="cel-rays" aria-hidden="true"></span>'}
             ${card.icon ? `<span class="cel-icon" aria-hidden="true">${card.icon}</span>` : ''}

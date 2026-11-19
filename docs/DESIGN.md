@@ -2161,6 +2161,13 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
   the game's rem type grows and a size set in the browser still counts. The sidebar grows with it (`15.625rem`, 250 px at 100%). At
   1280 and 390 px, at every size, the main screens have no sideways scroll and lose no word they had (one gear name in the fight's
   dock is shortened at 150% on a wide screen).
+- **Screen readers** (`src/ui/announce.js`). The fight's numbers are never read out as they change: a hidden paragraph at the head of
+  the battle scene, under the heading "The fight in words", holds the stage, both healths, the monster and what is going on, rewritten every
+  second and a half at most, for when the player goes to it. What a sighted player is told in passing (toasts, cards, the fight's banners)
+  reaches one polite live region at the foot of the page: one line every 2.5 s at most, routine lines (a rare find, a note) only 8 s after the last
+  line, what matters (a boss, a fall, a level, a card) first, the same words not twice within 20 s, three lines waiting at most
+  and the oldest dropped. Errors stay an alert; a wall's repeats ("Fell again ×4") say nothing. Toasts, cards and the banner no longer
+  carry a live role of their own, which could not be rate-limited and were missed when a region came with its text.
 - **Effects one by one.** Under Reduce motion, which stills them all and hides the switches, a folded **Effects** holds one
   switch per effect once it has been met (`EFFECTS`, `fx_*` in `src/systems/disclosure.js`): floating numbers (the fight's and the
   work's; not the clan boss's "Strike now!", which tells when to strike), coins flying to the purse, the cards' confetti, a boss's shake.
@@ -2687,7 +2694,8 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       sprites.js (atlas cells for monsters, items, perks, tools, glyphs and the hero's layers, in the look picked) · sound.js (synthesized
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · update.js (when an open page looks for a
-                      newer version) · saver.js (the battery saver: a page left alone draws less) · format.js
+                      newer version) · saver.js (the battery saver: a page left alone draws less) · announce.js (the
+                      polite lines for screen readers, the fight in words) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
                       and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,
