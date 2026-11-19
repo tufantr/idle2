@@ -1081,7 +1081,9 @@ page in view as it began (the machine slept with the game in front) shows the we
   names), and the depth it reached at the Hydra this week or last stays in the clan's score (`clan_endless_kept`, no names; not
   a flagged account's, which never counted). Its name and email are free again. The device that asked forgets the account and
   its local game; others find their token refused. Backups lose it as they age out: the server's dumps in 14 days, the
-  encrypted copies on the owner's Drive in 30 days, the first of each month in a year.
+  encrypted copies on the owner's Drive in 30 days, the first of each month in a year. Two things keep it longer, and the delete
+  dialog, the FAQ and the privacy page say so: the library of project backups on the same Drive keeps its encrypted database copies
+  with no end date, and staging's copy of the database stands until its next refresh.
 - **The night's cleanup** (`api/cleanup.js`, `fantasyidle-cleanup.timer` at 04:30 UTC, an hour after the backup; the research
   loop's P-097, November 2026): rows the game no longer reads go, so what the server keeps about people has an end. `--dry-run`
   counts by the same queries and takes nothing; each step stands alone, and a failed one mails the owner. It takes only rows no
