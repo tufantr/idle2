@@ -543,6 +543,8 @@ test("a clan's owner changes its words, by the same rule as at its start; nobody
     assert.deepEqual(await seen(), ['New words', '', 'Quill Bearers', 'QUIL'], 'the name and tag stay');
     const { clans } = await (await get('/clans?search=quill', mate)).json();
     assert.equal(clans[0].description, 'New words', 'on the list of clans too');
+    await edit(owner, { lookingFor: 'Anyone' });
+    assert.deepEqual((await seen()).slice(0, 2), ['New words', 'Anyone'], 'a line not sent stays as it was');
     await post('/clans/leave', {}, owner);
     assert.equal((await edit(mate, { description: 'The heir writes' })).status, 200, 'and one who takes the clan over');
 });

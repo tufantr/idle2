@@ -1048,8 +1048,9 @@ app.post('/api/clan/words', authenticateToken, route('clan words', async (req, r
     const mine = await clanOf(req.user.id);
     if (!mine) return res.status(400).json({ error: 'You are not in a clan.' });
     if (mine.clan.ownerId !== req.user.id) return res.status(409).json({ error: "Only the clan owner can change the clan's words." });   // 409: see the kick
-    const description = cleanText((req.body || {}).description, 200);
-    const lookingFor = cleanText((req.body || {}).lookingFor, 100);
+    const body = req.body || {};   // (a line not sent stays as it is)
+    const description = body.description === undefined ? mine.clan.description : cleanText(body.description, 200);
+    const lookingFor = body.lookingFor === undefined ? mine.clan.lookingFor : cleanText(body.lookingFor, 100);
     const { clanWordsOk, CLAN_WORDS_REFUSED } = await engine();
     if (!clanWordsOk(description) || !clanWordsOk(lookingFor)) return res.status(400).json({ error: CLAN_WORDS_REFUSED });
     await store.setClanWords(mine.clan.id, description, lookingFor);
