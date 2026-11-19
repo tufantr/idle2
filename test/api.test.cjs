@@ -2280,6 +2280,7 @@ test('the cleanup takes what its rules say, to the edge, and says the same in a 
     assert.equal((await data.getEmailCode(coder, 'verify')).codeHash, 'h2', 'less than a minute past it');
     assert.equal((await data.getEmailCode(spent, 'reset')).codeHash, 'h3', 'used up, but its minute is not over');
     assert.equal(await data.userNameOf(stale), null, 'the sign-up never confirmed');
+    assert.equal(await data.deleteStaleSignup((await data.findUserByName('sweep_confirmed')).id, 'sweep_confirmed', clock), false, 'one confirmed by now is left alone, whatever the list said');
     assert.deepEqual(await peek.tied(stale, 'sweep_stale'), {}, 'and all it left');
     for (const name of ['sweep_waiting', 'sweep_played', 'sweep_confirmed', 'sweep_before_email', 'sweep_undated']) assert.ok(await data.findUserByName(name), `${name} stays`);
     assert.equal(await peek.createdAt('sweep_undated'), clock, 'one with no date counts from now');

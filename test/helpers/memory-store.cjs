@@ -469,6 +469,15 @@ function createMemoryStore() {
             return db.users.filter(u => u.email && !u.email_verified_at && u.created_at > 0 && u.created_at < before && u.game_state === null && !u.last_saved && !db.members.some(m => m.userId === u.id))
                 .map(u => ({ id: u.id, username: u.username }));
         },
+        async deleteStaleSignup(userId, username, before) {
+            const u = db.users.find(x => x.id === userId && x.email && !x.email_verified_at && x.created_at > 0 && x.created_at < before && x.game_state === null && !x.last_saved && !db.members.some(m => m.userId === x.id));
+            if (!u) return false;
+            db.users = db.users.filter(x => x !== u);
+            db.codes = db.codes.filter(c => c.userId !== userId);
+            const name = String(username).toLowerCase().slice(0, 64);
+            for (const key of [...db.auth.keys()]) if ([`mail:user:${userId}`, `taken:user:${userId}`, `login:name:${name}`].includes(key) || key.startsWith(`login:name:${name}:`)) db.auth.delete(key);
+            return true;
+        },
         async flaggedAccounts() {
             return db.users.filter(u => u.flags && u.flags !== '[]').map(u => ({ id: u.id, flags: u.flags }));
         },

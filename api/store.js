@@ -1116,6 +1116,33 @@ async function staleSignups(before) {
     return rows.map(r => ({ id: r.id, username: r.username }));
 }
 
+/**
+ * A sign-up never confirmed goes, its codes and counters with it (nothing else can be tied to one: it never had a token), and only
+ * if it still is one as this runs: one confirmed a moment ago stays. Returns whether it went.
+ */
+async function deleteStaleSignup(userId, username, before) {
+    const name = String(username).toLowerCase().slice(0, 64);
+    const { rows } = await sql`
+        WITH gone AS (
+            DELETE FROM users u
+            WHERE u.id = ${userId}::int AND u.email IS NOT NULL AND COALESCE(u.email_verified_at, 0) = 0
+              AND u.created_at > 0 AND u.created_at < ${before}::bigint
+              AND u.game_state IS NULL AND COALESCE(u.last_saved, 0) = 0
+              AND NOT EXISTS (SELECT 1 FROM clan_members m WHERE m.user_id = u.id)
+            RETURNING u.id
+        ), codes AS (
+            DELETE FROM email_codes WHERE user_id IN (SELECT id FROM gone)
+        ), counters AS (
+            DELETE FROM auth_attempts
+            WHERE EXISTS (SELECT 1 FROM gone)
+              AND (key IN (${`mail:user:${userId}`}::varchar, ${`taken:user:${userId}`}::varchar, ${`login:name:${name}`}::varchar)
+                   OR key LIKE ${`login:name:${name.replace(/[\\%_]/g, '\\$&')}:%`}::varchar)
+        )
+        SELECT COUNT(*) AS n FROM gone
+    `;
+    return int(rows[0].n) > 0;
+}
+
 /** Accounts with any flag stored: [{ id, flags }] (the JSON as it stands). */
 async function flaggedAccounts() {
     const { rows } = await sql`SELECT id, flags FROM users WHERE flags IS NOT NULL AND flags NOT IN ('', '[]')`;
@@ -1300,7 +1327,7 @@ module.exports = {
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
     hallRooms, addGift, giftTotals, giftsAfter, hallBuilders, recentGifts, setClanBanner,
     teamClans, teamClan, teamEditClan, teamRenamePlayer, teamLogAdd, teamLog, teamLogEntry,
-    sweepAttempts, sweepEmailCodes, dateUnconfirmed, staleSignups, flaggedAccounts, setFlagsIf, sweepSnapshots, sweepAttacks, sweepEndless, closedClanGivers, foldClosedGifts,
+    sweepAttempts, sweepEmailCodes, dateUnconfirmed, staleSignups, deleteStaleSignup, flaggedAccounts, setFlagsIf, sweepSnapshots, sweepAttacks, sweepEndless, closedClanGivers, foldClosedGifts,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts

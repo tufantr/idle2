@@ -62,8 +62,10 @@ async function runCleanup({ store, now = Date.now(), apply = true, log = console
         'unconfirmed sign-ups': async () => {
             if (apply) await store.dateUnconfirmed(now);
             const stale = await store.staleSignups(now - SIGNUP_WAITS);
-            if (apply) for (const account of stale) await store.deleteAccount(account.id, account.username);
-            return stale.length;
+            if (!apply) return stale.length;
+            let gone = 0;
+            for (const account of stale) if (await store.deleteStaleSignup(account.id, account.username, now - SIGNUP_WAITS)) gone++;
+            return gone;
         },
         'old flags': async () => {
             let accounts = 0;
