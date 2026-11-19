@@ -1574,7 +1574,8 @@ Keeping it running:
 - [x] **Blows heard** (R21, P-082): at every hit, as ever, or only at crits and kills; the player's own strikes always answer
 - [x] **A battery saver** (R21, P-037): after half a minute untouched the page draws ten frames a second, the tab once a second, and
       its endless glows and drifts stand still, while the fight goes on; on by default on phones, kept per device, never a pop-up. A
-      page out of sight is no longer drawn at all
+      page out of sight is no longer drawn at all. At rest the main thread's work falls from 15% to 6% of a core (18% to 7% on a phone's
+      screen, 54% to 18% on a CPU four times slower: DESIGN §3.36)
 - [x] **How big numbers are written** (R23, P-018): letters by default and for every old save, or mixed (letters up to No, then
       1.23e33), or scientific (1.23e6 from a million), for every figure on screen, once the player has a million of something
 - [x] **Text size** (R23, P-019): 100 to 150% in Settings, kept per device; the sidebar grows with it, and no screen scrolls sideways

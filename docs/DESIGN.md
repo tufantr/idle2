@@ -2154,6 +2154,18 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
   itself finishes, so blows, numbers and bars still show. The first sign of the player ends it. It is on by default where the
   main pointer is a finger, off elsewhere; the choice is kept per device (`fantasyIdle.saver`), never in the save, and nothing ever
   pops up about it. Out of sight the page isn't drawn at all, saver or not: it is drawn as it comes back.
+  Measured by research 040's method (Chromium, its late-game save, the fight on the whole screen, untouched; medians of six 10 s windows
+  over two rounds, the machine under a load of 19-103, so the counts are firmer than the shares of a core):
+
+  | Screen, CPU | Main thread busy: before / saver off / at rest | Frames a second | Layouts per 10 s | Style recalculations per 10 s |
+  | --- | --- | --- | --- | --- |
+  | 1280 px | 15.1% / 14.5% / 6.2% | 60 / 60 / 8.7 | 603 / 601 / 144 | 676 / 673 / 420 |
+  | 390 px, touch | 18.0% / 18.7% / 7.4% | 60 / 60 / 8.7 | 606 / 598 / 148 | 674 / 677 / 445 |
+  | 1280 px, CPU 4× slower | 39.4% / 45.2% / 16.4% | 59 / 60 / 8.7 | 594 / 598 / 146 | 667 / 675 / 431 |
+  | 390 px, CPU 4× slower | 53.6% / 47.7% / 17.8% | 59 / 60 / 8.8 | 597 / 600 / 146 | 666 / 674 / 458 |
+
+  With the saver off nothing changes. At rest the renderer's CPU falls from 24% to 10% of a core and the GPU process's from 27% to 13%
+  (1280 px). A real phone's battery is yet to be measured.
 - **Big numbers** (`settings.numberFormat`, in every save since the first but read by nothing until now: `short`, `mixed`, `scientific`).
   Every figure goes through `fmt` (`src/ui/format.js`), which holds the choice (`setNotation`, set by `render()`): letters as ever and the
   default, old saves included; mixed keeps them up to No and writes 1.23e33 from where they would turn to Dc; scientific writes 1.23e6 from a
