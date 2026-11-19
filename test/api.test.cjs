@@ -108,6 +108,12 @@ peek.hallWork = async (username, rooms) => {   // a clan's hall with each room a
     await pool.query(`DELETE FROM clan_hall WHERE clan_id = ${clan}`, [username]);
     for (const [room, secs] of Object.entries(rooms)) await pool.query(`INSERT INTO clan_hall (clan_id, room, given) VALUES (${clan}, $2, $3)`, [username, room, secs * 10]);
 };
+/** When an account was made (0: a date it never had), set as if then, or read. */
+peek.createdAt = async (username, at = undefined) => {
+    if (memory) { const u = memory.db.users.find(x => x.username === username); if (at !== undefined) u.created_at = at; return u.created_at; }
+    if (at !== undefined) await pool.query('UPDATE users SET created_at = $1 WHERE username = $2', [at, username]);
+    return Number((await pool.query('SELECT created_at FROM users WHERE username = $1', [username])).rows[0].created_at);
+};
 /** What a clan's gifts add up to where their rows have gone: { room: [work, gifts] }. */
 peek.giftTotals = async clanId => {
     const rows = memory ? memory.db.giftTotals.filter(t => t.clanId === clanId) : (await pool.query('SELECT room, work, gifts FROM clan_gift_totals WHERE clan_id = $1', [clanId])).rows;
@@ -2120,4 +2126,214 @@ test('every table with a row for a player is emptied of it when the account goes
     const tables = [...source.matchAll(/CREATE TABLE IF NOT EXISTS (\w+) \(([\s\S]*?)\n\s*\)\s*;?\s*`/g)].filter(([, , columns]) => /\buser_id\b/.test(columns)).map(([, table]) => table);
     assert.ok(tables.length >= 10, tables.join());
     for (const table of tables) assert.match(statement, new RegExp(`DELETE FROM ${table} WHERE user_id`), `${table} is not emptied by deleteAccount`);
+});
+
+// ---------- the night's cleanup (api/cleanup.js): last in this file, for it clears what the tests above leave behind ----------
+
+test("the cleanup's flags: those past their 30 days go, an account's last one stays, and what can't be read is left alone", () => {
+    const { prunedFlags } = require('../api/cleanup.js');
+    const now = Date.UTC(2026, 10, 2);
+    const ago = days => ({ at: now - days * DAY_MS, reason: `${days} days ago` });
+    const pruned = list => { const out = prunedFlags(JSON.stringify(list), now); return out === null ? null : JSON.parse(out); };
+    assert.equal(prunedFlags('[]', now), null);
+    assert.equal(prunedFlags('not json', now), null);
+    assert.equal(prunedFlags('{"at":1}', now), null);
+    assert.equal(pruned([ago(40)]), null, 'the only one is the last one');
+    assert.equal(pruned([ago(29), ago(2)]), null, 'all still act');
+    assert.deepEqual(pruned([ago(90), ago(40)]), [ago(40)]);
+    assert.deepEqual(pruned([ago(30), ago(29)]), [ago(29)], 'thirty days is past them, as for the flag itself');
+    assert.deepEqual(pruned([ago(90), ago(10), ago(2)]), [ago(10), ago(2)]);
+    assert.deepEqual(pruned([ago(2), ago(90)]), [ago(2)], 'the last by its time, wherever it stands');
+    assert.deepEqual(pruned([{ reason: 'no date' }, ago(40)]), [ago(40)]);
+});
+
+test('the cleanup takes what its rules say, to the edge, and says the same in a dry run', async () => {
+    const { runCleanup } = require('../api/cleanup.js');
+    const data = memory || require('../api/store.js');
+    for (let i = 0; i < 6; i++) toMonday();   // weeks no test has ranked yet
+    const week = back => app.isoWeek(clock - back * WEEK_MS);
+    const clean = async (apply = true) => { const r = await runCleanup({ store: data, now: clock, apply, log: m => assert.fail(m) }); assert.deepEqual(r.failed, []); return r.counts; };
+    const account = async name => { await register(name); return (await data.findUserByName(name)).id; };
+    const has = async key => (await data.authFailures(key, clock, 1000 * DAY_MS)) > 0;
+
+    // counters: a day after they began
+    await data.takeAttempt('register:sweep-old', clock - DAY_MS - 1000, DAY_MS);
+    await data.takeAttempt('register:sweep-young', clock - DAY_MS + 60000, DAY_MS);
+
+    // codes: a minute past their time, and a minute old (one used up by its tries has expired at 0: it still holds the next back)
+    const coder = await account('sweep_coder');
+    await data.putEmailCode(coder, 'reset', 'h1', clock - 61000, clock - 16 * 60000);
+    await data.putEmailCode(coder, 'verify', 'h2', clock - 30000, clock - 16 * 60000);
+    const spent = await account('sweep_spent');
+    await data.putEmailCode(spent, 'reset', 'h3', clock + 60000, clock - 20000);
+    await data.expireEmailCode((await data.getEmailCode(spent, 'reset')).id);
+
+    // sign-ups: 30 days unconfirmed, with nothing played and no clan
+    const signUp = async name => { assert.equal((await post('/register', { username: name, password: 'correct horse', email: emailOf(name) }, null, { 'X-Forwarded-For': `10.9.${++addresses % 250}.1` })).status, 200); return (await data.findUserByName(name)).id; };
+    const stale = await signUp('sweep_stale');
+    await peek.createdAt('sweep_stale', clock - 30 * DAY_MS - 1000);
+    await signUp('sweep_waiting');
+    await peek.createdAt('sweep_waiting', clock - 29 * DAY_MS);
+    await signUp('sweep_undated');
+    await peek.createdAt('sweep_undated', 0);
+    const played = await signUp('sweep_played');
+    await peek.createdAt('sweep_played', clock - 90 * DAY_MS);
+    await data.putSave(played, '{}', clock - 90 * DAY_MS, '[]', null);
+    await account('sweep_confirmed');
+    await peek.createdAt('sweep_confirmed', clock - 90 * DAY_MS);
+    await data.createUser('sweep_before_email', 'not-a-hash', null);
+    await peek.createdAt('sweep_before_email', clock - 90 * DAY_MS);
+
+    // flags
+    await account('sweep_flagged');
+    await peek.setFlags('sweep_flagged', [{ at: clock - 90 * DAY_MS, reason: 'old' }, { at: clock - 40 * DAY_MS, reason: 'last' }]);
+
+    // the boards' weekly copies
+    const player = await account('sweep_player');
+    for (const back of [0, 1, 2, 9]) await data.putSnapshotIfMissing(player, week(back), '{"bestStage":1}');
+
+    // clan attacks and Hydra fights: this week, last week, a week ranked, a week not ranked yet, one too old ever to be
+    const { clanId } = await (await post('/clans', { name: 'Sweep Clan', tag: 'SWP' }, await register('sweep_lead'))).json();
+    const dayOf = back => `sweep-${back}`;
+    const leaver = await account('sweep_leaver');
+    for (const back of [0, 1, 2, 3, 5]) {
+        await data.recordAttack({ clanId, userId: player, week: week(back), day: dayOf(back), damage: 1, dealt: 1, now: clock, level: 1 });
+        await data.recordEndless({ userId: player, week: week(back), clanId, damage: 1, depth: 2, now: clock, max: 9 });
+        await data.recordEndless({ userId: leaver, week: week(back), clanId, damage: 1, depth: 3, now: clock, max: 9 });
+    }
+    await data.deleteAccount(leaver, 'sweep_leaver', { keepDepths: true, fromWeek: '' });
+    for (const back of [1, 2]) await data.putRanking(week(back), [{ clanId, name: 'Sweep Clan', tag: 'SWP', division: 'bronze', rank: 1, kills: 1, score: 2, counted: 1 }]);
+    const keptDepths = async back => (await data.endlessWeek(week(back))).filter(r => r.userId === null && r.clanId === clanId).length;
+
+    // hall gifts: to a clan since closed, this player's save having taken two of them
+    const giver = await register('sweep_giver');
+    const giverId = (await data.findUserByName('sweep_giver')).id;
+    const { clanId: closed } = await (await post('/clans', { name: 'Sweep Closed', tag: 'SWC' }, giver)).json();
+    await post('/clans/leave', {}, giver);
+    const gift = (userId, seq, toClan, back) => data.addGift({ userId, seq, clanId: toClan, week: week(back), room: 'forge', resource: 'copper_bar', qty: 1, work: 100, now: clock, cap: 1e9 });
+    for (const seq of [1, 2, 3, 4]) await gift(giverId, seq, closed, 3);
+    await post('/save', { state: { ...heroSave(), clanHall: { lastGift: 2 } } }, giver);
+    // another's, all recent or to an open clan: every one stays, the week's allowance counts them
+    const other = await register('sweep_other');
+    const otherId = (await data.findUserByName('sweep_other')).id;
+    await post('/save', { state: { ...heroSave(), clanHall: { lastGift: 9 } } }, other);
+    await gift(otherId, 1, closed, 0);
+    await gift(otherId, 2, closed, 1);
+    await gift(otherId, 3, clanId, 4);
+    await gift(otherId, 4, clanId, 0);
+
+    // one whose save has taken all of them: their highest number stays, for the next gift to count on from
+    const done = await register('sweep_done');
+    const doneId = (await data.findUserByName('sweep_done')).id;
+    await post('/save', { state: { ...heroSave(), clanHall: { lastGift: 3 } } }, done);
+    for (const seq of [1, 2, 3]) await gift(doneId, seq, closed, 3);
+
+    // a dry run counts all that, and takes nothing
+    const said = await clean(false);
+    assert.ok(said['sign-in counters'] >= 1 && said['email codes'] >= 1 && said['unconfirmed sign-ups'] >= 1 && said['old flags'] >= 1 && said['weekly snapshots'] >= 2 && said['clan attacks'] >= 2 && said['Hydra fights'] >= 2, JSON.stringify(said));
+    assert.equal(said["closed clans' gifts"], 4);
+    assert.equal(await has('register:sweep-old'), true);
+    assert.equal(await data.userNameOf(stale), 'sweep_stale');
+    assert.deepEqual(await clean(), said, 'the run takes what the dry run said');
+
+    assert.deepEqual([await has('register:sweep-old'), await has('register:sweep-young')], [false, true], 'a counter over a day old');
+    assert.equal(await data.getEmailCode(coder, 'reset'), null, 'a code a minute past its time');
+    assert.equal((await data.getEmailCode(coder, 'verify')).codeHash, 'h2', 'less than a minute past it');
+    assert.equal((await data.getEmailCode(spent, 'reset')).codeHash, 'h3', 'used up, but its minute is not over');
+    assert.equal(await data.userNameOf(stale), null, 'the sign-up never confirmed');
+    assert.deepEqual(await peek.tied(stale, 'sweep_stale'), {}, 'and all it left');
+    for (const name of ['sweep_waiting', 'sweep_played', 'sweep_confirmed', 'sweep_before_email', 'sweep_undated']) assert.ok(await data.findUserByName(name), `${name} stays`);
+    assert.equal(await peek.createdAt('sweep_undated'), clock, 'one with no date counts from now');
+    assert.deepEqual((await peek.flags('sweep_flagged')).map(f => f.reason), ['last']);
+    assert.deepEqual([await data.getSnapshot(player, week(0)), await data.getSnapshot(player, week(1)), await data.getSnapshot(player, week(2)), await data.getSnapshot(player, week(9))].map(Boolean), [true, true, false, false], 'this week\'s and last week\'s');
+    const attacks = [];
+    const fights = [];
+    const kept = [];
+    for (const back of [0, 1, 2, 3, 5]) { attacks.push(await data.attacksToday(player, dayOf(back))); fights.push((await data.endlessOf(player, week(back))).used); kept.push(await keptDepths(back)); }
+    assert.deepEqual(attacks, [1, 1, 0, 1, 0], 'attacks: this week, last week, and one not ranked yet (but not for ever)');
+    assert.deepEqual(fights, [1, 1, 0, 1, 0]);
+    assert.deepEqual(kept, [1, 1, 0, 1, 0], 'the depths kept for a clan go with them');
+
+    assert.deepEqual((await data.giftsAfter(giverId, 0)).map(g => g.seq), [3, 4], 'kept: one its save has yet to take, and the highest number');
+    assert.deepEqual((await data.giftsAfter(doneId, 0)).map(g => g.seq), [3], 'the highest number');
+    assert.deepEqual([(await data.giftTotals(giverId, clanId, week(0))).last, (await data.giftTotals(doneId, clanId, week(0))).last, (await data.giftTotals(otherId, clanId, week(0))).week], [4, 3, 200]);
+    assert.deepEqual((await data.giftsAfter(otherId, 0)).map(g => g.seq), [1, 2, 3, 4]);
+    assert.deepEqual(await peek.giftTotals(closed), { forge: [400, 4] }, 'the clan\'s totals hold what went');
+    const again = await clean();
+    assert.equal(again["closed clans' gifts"], 0, 'and a second night finds nothing new');
+    assert.deepEqual(await peek.giftTotals(closed), { forge: [400, 4] });
+
+    // a week on the undated sign-up is still young; a month on, it goes
+    clock += 31 * DAY_MS;
+    await clean();
+    assert.equal(await data.findUserByName('sweep_undated'), null);
+});
+
+test('the cleanup changes no answer the game gives: boards, crowns, the running week and the hall read the same after it', async () => {
+    const { runCleanup } = require('../api/cleanup.js');
+    const data = memory || require('../api/store.js');
+    toMonday();
+    const a = await register('keeper_a');
+    const b = await register('keeper_b');
+    const c = await register('keeper_c');
+    const idOf = async name => (await data.findUserByName(name)).id;
+    const { clanId } = await (await post('/clans', { name: 'Keepers', tag: 'KEEP', description: 'We stay' }, a)).json();
+    await post('/clans/join', { clanId }, b);
+    await post('/clans', { name: 'Short Lived', tag: 'SHRT' }, c);
+    toMonday();
+    const ranked = app.isoWeek(clock);
+    const hero = { ...heroSave({ tokens: 400, bestStage: 60 }), resources: { runite_bar: 500 } };
+    for (const t of [a, b, c]) await post('/save', { state: hero }, t);
+    await post('/leaderboard/consent', { optIn: true }, a);
+    await post('/leaderboard/consent', { optIn: true }, b);
+    for (const t of [a, b]) await post('/save', { state: hero }, t);
+    await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 3 }, a);
+    await post('/clan/hall/give', { room: 'forge', resource: 'runite_bar', qty: 2 }, c);   // to a clan about to close:
+    await post('/clans/leave', {}, c);
+    await post('/clans/join', { clanId }, c);                                             // what it gave still counts this week
+    await get('/clan', a);
+    await peek.bossHpToOne();
+    assert.equal((await (await post('/clan/attack', { strikes: [], ms: 30000 }, b)).json()).killed, true);
+    clock += 5 * DAY_MS;
+    for (const t of [a, b]) assert.equal((await post('/clan/attack', { endless: true, strikes: [], ms: 30000 }, t)).status, 200);
+
+    const reads = ['/clan', '/clans?search=', '/clans/ranking', '/leaderboard?metric=bestStage', '/leaderboard?metric=bestStage&period=week', '/load', '/rewards'];
+    const timeless = value => JSON.parse(JSON.stringify(value, (key, v) => (/InMs$|^serverNow$/.test(key) ? undefined : v)));
+    const answers = async () => { const out = {}; for (const [i, t] of [a, b, c].entries()) for (const path of reads) out[`${i} ${path}`] = timeless(await (await get(path, t)).json()); return out; };
+    const clean = async () => { const { failed } = await runCleanup({ store: data, now: clock, log: m => assert.fail(m) }); assert.deepEqual(failed, []); };
+    const unchangedBy = async (what, job = clean) => {
+        await answers();                       // (what a first look makes: this week's boss, last week's ranking)
+        const before = await answers();
+        await job();
+        clock += 2 * 60 * 1000;                // past the minute the boards and the standings are remembered
+        const after = await answers();
+        for (const key of Object.keys(before)) assert.deepEqual(after[key], before[key], `${what}: ${key}`);
+    };
+
+    // Saturday, the Hydra awake: nothing of the running week is touched
+    await unchangedBy('the running week');
+
+    // Monday: the job runs before anyone has asked for last week's ranking, which is worked out from its rows at the first look
+    toMonday();
+    await clean();
+    assert.equal((await data.getRanking(ranked)).length, 0, 'not stored yet');
+    assert.equal((await data.endlessOf(await idOf('keeper_a'), ranked)).used, 1, 'so its fights are all there');
+    const last = (await (await get('/clans/ranking', a)).json()).last;
+    const mine = last.divisions.flatMap(d => d.clans).find(x => x.name === 'Keepers');
+    assert.deepEqual([mine.kills, mine.you, mine.rank], [1, true, 1]);
+    assert.ok(mine.score > 0, 'the fights counted');
+    const crowned = (await (await get('/clans?search=Keepers', a)).json()).clans[0];
+    assert.equal(crowned.crown.rank, 1, 'its crown');
+    await unchangedBy('the Monday after');
+
+    // the week after that: its rows go, its ranking stays, and everything shown stays as it was
+    toMonday();
+    await get('/clans/ranking', a);
+    const record = (await (await get('/clan', a)).json()).standing.record;
+    assert.ok(record > 0);
+    await unchangedBy('a fortnight on');
+    assert.equal((await data.endlessOf(await idOf('keeper_a'), ranked)).used, 0, "the ranked week's fights have gone");
+    assert.ok((await data.getRanking(ranked)).some(r => r.name === 'Keepers'), 'its ranking has not');
+    assert.equal((await (await get('/clan', a)).json()).standing.record, record, "the clan's best week stands");
+    assert.ok(((await (await get('/clan', a)).json()).hall.given.total) > 0, 'nor is anything of the hall gone');
 });

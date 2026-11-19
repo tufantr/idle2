@@ -1012,6 +1012,24 @@ wear; a place that waited opens on the return and is named there too.
   names), and the depth it reached at the Hydra this week or last stays in the clan's score (`clan_endless_kept`, no names; not
   a flagged account's, which never counted). Its name and email are free again. The device that asked forgets the account and
   its local game; others find their token refused. Copies in the nightly dumps go in 14 days.
+- **The night's cleanup** (`api/cleanup.js`, `fantasyidle-cleanup.timer` at 04:30 UTC, an hour after the backup; the research
+  loop's P-097, November 2026): rows the game no longer reads go, so what the server keeps about people has an end. `--dry-run`
+  counts by the same queries and takes nothing; each step stands alone, and a failed one mails the owner. It takes only rows no
+  answer reads, and `test/api.test.cjs` runs every read route before and after it, on a live week, the Monday after and a
+  fortnight on, and finds the same answers:
+
+  | What goes | When | What reads it, and why that is safe |
+  | --- | --- | --- |
+  | `auth_attempts` | a day after the count began | The limits; the longest window is a day, and a window that has passed counts from one anyway |
+  | `email_codes` | a minute past their time, and a minute old | The check says "run out" with or without the row. A code used up by its tries has `expires_at` 0, and still holds the next one back for its first minute |
+  | Sign-ups never confirmed (`users` with an address, not confirmed, nothing saved, in no clan) | 30 days after `created_at` | No token was ever given for one. Those made before `created_at` are dated at the first run and wait from then; accounts from before addresses have none and are never touched |
+  | `users.flags` past their 30 days | at once, but for the account's last flag | A flag past 30 days no longer acts (`standing`); the last stays to show what happened |
+  | `weekly_snapshots` | older than this week and last | The boards read this week's alone |
+  | `clan_attacks`, `clan_endless`, `clan_endless_kept` | older than this week and last, once a ranking of that week is stored, or four weeks on (it can't be stored after the week following) | The boards and the Hydra read the week running; last week's ranking is worked out from its rows at the first look after it ends, and kept. Last week's stay also so that a fight sent again after a lost answer is known for the same one |
+  | `clan_gifts` to closed clans, folded into `clan_gift_totals` | older than this week and last | The week's allowance counts this week's. Each player's highest number stays (the next gift counts on from it), and any their stored save has yet to take from its bank |
+
+  Nothing else is touched: `clan_bosses`, `clan_rankings` (crowns and each clan's best week), `clan_hall`, `rewards`, `flag_reviews`.
+  The server's journal, the API's log with it, is kept 30 days (a drop-in that `deploy/vps/provision.sh` writes).
 - **Server secret:** `JWT_SECRET` must be set outside local development (`NODE_ENV=development`);
   tokens are HS256 only. The owner sets it and adds the database (README "The API"); neither is in the
   repository. `GET /api/health` says whether the database, the secret and the game's stat code are
@@ -2694,7 +2712,7 @@ wiki/                 the player wiki, its own Vercel project (fantasy-idle-wiki
 api/                  Express API for Vercel on Neon Postgres (Frankfurt): index.js (routes: accounts, saves,
                       clans, rewards, leaderboards, /api/health) · store.js (every query) · database.js (the connection)
                       · mail.js (Resend) · review.js (the growth check's list, mailed to the owner each week)
-                      · team.js (the team's tool for clans, run on the server)
+                      · team.js (the team's tool for clans, run on the server) · cleanup.js (the night's cleanup of old rows)
 test/                 node:test suites (game, loot, endgame, skills, mastery, events, disclosure, card pictures, bestiary, saves, API; the API suite runs on an
                       in-memory store, or on a real Postgres with API_TEST_DATABASE_URL set)
 tools/                simulate.mjs (whole-game balance sim, play styles) · pacing.mjs (skill pacing table) ·

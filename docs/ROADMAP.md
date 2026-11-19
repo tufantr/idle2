@@ -1580,6 +1580,9 @@ Keeping it running:
 - [x] **Delete my account** (R19, P-070): in Settings, with the password; every row tied to the account goes in one statement,
       its clan passes on or closes and keeps what it was given (the hall, the boss, the week's Hydra depth, the gifts' totals);
       the wiki's FAQ says how
+- [x] **The night's cleanup** (R15, P-097): old sign-in counters and codes, sign-ups never confirmed, flags past their time, and
+      weekly copies, clan fights and closed clans' gifts no answer reads any more go each night after the backup; every read
+      route answers the same before and after it. The server's journal is kept 30 days
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

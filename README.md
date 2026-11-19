@@ -139,6 +139,13 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
   game's mails reach 80 of the plan's 100 (every mail is counted in its UTC day).
 
+- **The night's cleanup:** `fantasyidle-cleanup.timer` (04:30 UTC, an hour after the backup; a failure mails the owner) runs
+  `node api/cleanup.js` as the API's user: sign-in counters a day old, email codes a minute past their time, sign-ups never
+  confirmed after 30 days, flags past their 30 days (an account's last one stays), the boards' weekly copies older than this
+  week and last, clan attacks and Hydra fights older than that once their week's ranking is stored, and old gifts to closed
+  clans (folded into `clan_gift_totals`). DESIGN §3.17 says why each is safe. `node api/cleanup.js --dry-run` (with the API's
+  settings, on staging first) says how much it would take, and takes nothing. `journalctl -u fantasyidle-cleanup` shows each
+  night's counts. The journal itself, the API's log with it, is kept 30 days (`/etc/systemd/journald.conf.d/fantasyidle.conf`).
 - **The team's tool:** `fantasyidle-team` on the server, as root (`api/team.js` run by `deploy/vps/team.sh`, which
   `provision.sh` installs; no web route, so nothing about it can be reached from outside). `list [search]` shows every clan,
   the newest first, with its words and owner, and marks words that break the rule on links; `clear <clan> --reason "why"`
@@ -162,7 +169,7 @@ A release writes its commit into `version.json` beside the page and into `src/ve
 first now and then, and when it differs from its own, its top bar offers a reload (`src/ui/update.js`). Settings shows
 the version a player runs.
 
-Set up from nothing: `deploy/vps/provision.sh` on the server (packages, firewall, user, database, backups), then
+Set up from nothing: `deploy/vps/provision.sh` on the server (packages, firewall, user, database, backups, the night's cleanup, the team's tool), then
 `node deploy/vps/cloudflare.mjs` here (DNS records, the origin certificate, SSL "Full (strict)"), then the deploy.
 On the server, `journalctl -u fantasyidle-api` shows the API's log and `runuser -u fantasyidle -- psql` opens the
 database (a gift, below, is the same SQL there).

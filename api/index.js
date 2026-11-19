@@ -1346,3 +1346,4 @@ module.exports.RANKED = RANKED;
 module.exports.isoWeek = isoWeek;
 module.exports.clanRules = { CLAN_NAME_RE, CLAN_TAG_RE, cleanText };   // what a clan's name, tag and words may be (api/team.js)
 module.exports.accountRules = { USERNAME_RE, closeAccount };            // what a username may be, and an account closing (api/team.js)
+module.exports.cleanupRules = { FLAG_MEMORY_MS, CODE_GAP_MS: RESEND_GAP_MS, giftsTaken };   // what the night's cleanup goes by (api/cleanup.js)

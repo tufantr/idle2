@@ -23,10 +23,10 @@ function createMemoryStore() {
         async ensureSchema() {},
         async ping() {},
 
-        async createUser(username, hash, email = null) {
+        async createUser(username, hash, email = null, now = Date.now()) {
             if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) throw unique('users_username_lower');
             if (email && db.users.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) throw unique('users_email_lower');
-            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0 };
+            const row = { id: ++seq.users, username, password_hash: hash, email, email_verified_at: 0, game_state: null, last_saved: 0, flags: '[]', optIn: false, metrics: null, token_version: 0, created_at: now };
             db.users.push(row);
             return row.id;
         },
@@ -450,6 +450,59 @@ function createMemoryStore() {
         },
         async teamLog(limit) { return [...db.teamLog].sort((a, b) => b.id - a.id).slice(0, limit).map(e => ({ ...e })); },
         async teamLogEntry(id) { const e = db.teamLog.find(x => x.id === id); return e ? { ...e } : null; },
+
+        async sweepAttempts(before, apply) {
+            const doomed = [...db.auth].filter(([, r]) => r.since < before).map(([key]) => key);
+            if (apply) for (const key of doomed) db.auth.delete(key);
+            return doomed.length;
+        },
+        async sweepEmailCodes(before, apply) {
+            const doomed = c => c.expiresAt < before && c.createdAt < before;
+            const n = db.codes.filter(doomed).length;
+            if (apply) db.codes = db.codes.filter(c => !doomed(c));
+            return n;
+        },
+        async dateUnconfirmed(now) {
+            for (const u of db.users) if (u.email && !u.email_verified_at && !u.created_at) u.created_at = now;
+        },
+        async staleSignups(before) {
+            return db.users.filter(u => u.email && !u.email_verified_at && u.created_at > 0 && u.created_at < before && u.game_state === null && !u.last_saved && !db.members.some(m => m.userId === u.id))
+                .map(u => ({ id: u.id, username: u.username }));
+        },
+        async flaggedAccounts() {
+            return db.users.filter(u => u.flags && u.flags !== '[]').map(u => ({ id: u.id, flags: u.flags }));
+        },
+        async setFlagsIf(userId, was, flagsJson) {
+            const u = db.users.find(x => x.id === userId && x.flags === was);
+            if (u) u.flags = flagsJson;
+            return !!u;
+        },
+        async sweepSnapshots(week, apply) {
+            const n = db.snapshots.filter(r => r.week < week).length;
+            if (apply) db.snapshots = db.snapshots.filter(r => !(r.week < week));
+            return n;
+        },
+        async sweepAttacks(week, lapsed, apply) {
+            const doomed = r => r.week < week && (r.week < lapsed || db.rankings.some(x => x.week === r.week));
+            const n = db.attacks.filter(doomed).length;
+            if (apply) db.attacks = db.attacks.filter(r => !doomed(r));
+            return n;
+        },
+        async sweepEndless(week, lapsed, apply) {
+            const doomed = r => r.week < week && (r.week < lapsed || db.rankings.some(x => x.week === r.week));
+            const n = db.endless.filter(doomed).length;
+            if (apply) { db.endless = db.endless.filter(r => !doomed(r)); db.endlessKept = db.endlessKept.filter(r => !doomed(r)); }
+            return n;
+        },
+        async closedClanGivers(week) {
+            return [...new Set(db.gifts.filter(g => g.week < week && !db.clans.some(c => c.id === g.clanId)).map(g => g.userId))];
+        },
+        async foldClosedGifts(userId, taken, week, apply) {
+            const last = Math.max(0, ...db.gifts.filter(g => g.userId === userId).map(g => g.seq));
+            const doomed = db.gifts.filter(g => g.userId === userId && g.week < week && g.seq <= taken && g.seq < last && !db.clans.some(c => c.id === g.clanId));
+            if (apply) { foldGifts(doomed); db.gifts = db.gifts.filter(g => !doomed.includes(g)); }
+            return doomed.length;
+        },
 
         async addReward(userId, kind, payloadJson, now, dedupe = null) {
             if (dedupe && db.rewards.some(r => r.dedupe === dedupe)) return;

@@ -6,6 +6,7 @@
 #   bash deploy/vps/backup-alert.sh failed     # "the night's backup failed"
 #   bash deploy/vps/backup-alert.sh check      # mail only if Drive's newest copy is stale
 #   bash deploy/vps/backup-alert.sh test       # a test mail, to see that alerts arrive
+#   bash deploy/vps/backup-alert.sh cleanup    # "the night's cleanup failed" (fantasyidle-cleanup.service)
 set -euo pipefail
 MODE=${1:-failed}
 REMOTE=${FANTASYIDLE_BACKUP_REMOTE:-fi-gdrive:fantasyidle-backups}
@@ -19,6 +20,9 @@ print(max((d.datetime.fromisoformat(i["ModTime"].replace("Z", "+00:00")).timesta
     [ "$AGE_H" -gt 26 ] || exit 0
     SUBJECT="Fantasy Idle: no backup on Drive for ${AGE_H} hours"
     TEXT="The newest backup copy on Google Drive is ${AGE_H} hours old. The nightly job may have failed, or Google's permission may have lapsed. On the server: journalctl -u fantasyidle-backup -n 50"
+elif [ "$MODE" = cleanup ]; then
+    SUBJECT="Fantasy Idle: the night's cleanup failed"
+    TEXT="The nightly cleanup of old rows failed, so what it removes stays until it works again. On the server: journalctl -u fantasyidle-cleanup -n 50"
 elif [ "$MODE" = test ]; then
     SUBJECT="Fantasy Idle: backup alerts work"
     TEXT="This is a test. From now on the server mails this address if a night's backup fails, or if Google Drive holds no copy from the last 26 hours. The backups are encrypted to the key on your Mac (~/.config/fantasyidle/backup-key.txt): keep a copy of it in your password manager."

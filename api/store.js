@@ -287,6 +287,9 @@ async function ensureSchema() {
         )
     `;
     await sql`CREATE INDEX IF NOT EXISTS clan_endless_kept_week ON clan_endless_kept (week)`;
+    // When an account was made (November 2026, the research loop's P-097): what the cleanup job (api/cleanup.js) ages a sign-up
+    // never confirmed by. 0: made before this, or by an older server (the job dates an unconfirmed one when it first sees it).
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at BIGINT DEFAULT 0`;
 }
 
 /** The database answers (the health check asks it every time, not once per instance). */
@@ -298,14 +301,14 @@ async function ping() {
 
 /** Throws a unique violation (23505) for a name taken in any case. */
 /** A new account; `email` (lowercase) is checked for confirmation afterwards. A name or an address taken: a 23505, its `constraint` saying which. */
-async function createUser(username, hash, email = null) {
+async function createUser(username, hash, email = null, now = Date.now()) {
     const { rows: taken } = await sql`SELECT 1 FROM users WHERE lower(username) = lower(${username}) LIMIT 1`;
     if (taken.length) throw Object.assign(new Error('Username already exists'), { code: '23505', constraint: 'users_username_lower' });
     if (email) {
         const { rows: used } = await sql`SELECT 1 FROM users WHERE lower(email) = lower(${email}) LIMIT 1`;
         if (used.length) throw Object.assign(new Error('Email already used'), { code: '23505', constraint: 'users_email_lower' });
     }
-    const { rows } = await sql`INSERT INTO users (username, password_hash, email) VALUES (${username}, ${hash}, ${email}) RETURNING id`;
+    const { rows } = await sql`INSERT INTO users (username, password_hash, email, created_at) VALUES (${username}, ${hash}, ${email}, ${now}::bigint) RETURNING id`;
     return rows[0].id;
 }
 
@@ -1070,6 +1073,129 @@ async function teamLogEntry(id) {
     return rows[0] ? logRow(rows[0]) : null;
 }
 
+// ---------- the nightly cleanup (api/cleanup.js, which says why each of these takes only what nothing reads) ----------
+// A sweep returns how many rows its rule takes; with `apply` false it takes none, by the very same conditions (a dry run).
+
+/** Sign-in and mail counters last begun before `before` (their windows, a day at most, are over). */
+async function sweepAttempts(before, apply) {
+    const { rows } = await sql`
+        WITH gone AS (DELETE FROM auth_attempts WHERE ${apply}::boolean AND since < ${before}::bigint RETURNING 1)
+        SELECT COUNT(*) AS n FROM auth_attempts WHERE since < ${before}::bigint
+    `;
+    return int(rows[0].n);
+}
+
+/** Email codes past their time and made before `before` (a code used up by its tries still holds the next one back its minute). */
+async function sweepEmailCodes(before, apply) {
+    const { rows } = await sql`
+        WITH gone AS (DELETE FROM email_codes WHERE ${apply}::boolean AND expires_at < ${before}::bigint AND created_at < ${before}::bigint RETURNING 1)
+        SELECT COUNT(*) AS n FROM email_codes WHERE expires_at < ${before}::bigint AND created_at < ${before}::bigint
+    `;
+    return int(rows[0].n);
+}
+
+/** Sign-ups not confirmed that carry no date (made before accounts had one, or by an older server) are dated now. */
+async function dateUnconfirmed(now) {
+    await sql`UPDATE users SET created_at = ${now}::bigint WHERE email IS NOT NULL AND COALESCE(email_verified_at, 0) = 0 AND COALESCE(created_at, 0) = 0`;
+}
+
+/** Sign-ups made before `before` and never confirmed, that have played nothing and are in no clan: [{ id, username }]. */
+async function staleSignups(before) {
+    const { rows } = await sql`
+        SELECT u.id, u.username FROM users u
+        WHERE u.email IS NOT NULL AND COALESCE(u.email_verified_at, 0) = 0
+          AND u.created_at > 0 AND u.created_at < ${before}::bigint
+          AND u.game_state IS NULL AND COALESCE(u.last_saved, 0) = 0
+          AND NOT EXISTS (SELECT 1 FROM clan_members m WHERE m.user_id = u.id)
+    `;
+    return rows.map(r => ({ id: r.id, username: r.username }));
+}
+
+/** Accounts with any flag stored: [{ id, flags }] (the JSON as it stands). */
+async function flaggedAccounts() {
+    const { rows } = await sql`SELECT id, flags FROM users WHERE flags IS NOT NULL AND flags NOT IN ('', '[]')`;
+    return rows.map(r => ({ id: r.id, flags: r.flags }));
+}
+
+/** Store an account's flags, unless an upload has changed them since `was` was read. */
+async function setFlagsIf(userId, was, flagsJson) {
+    const { rows } = await sql`UPDATE users SET flags = ${flagsJson}::text WHERE id = ${userId}::int AND flags = ${was}::text RETURNING id`;
+    return rows.length > 0;
+}
+
+/** The boards' weekly copies of weeks before `week`. */
+async function sweepSnapshots(week, apply) {
+    const { rows } = await sql`
+        WITH gone AS (DELETE FROM weekly_snapshots WHERE ${apply}::boolean AND week < ${week}::varchar RETURNING 1)
+        SELECT COUNT(*) AS n FROM weekly_snapshots WHERE week < ${week}::varchar
+    `;
+    return int(rows[0].n);
+}
+
+/** Clan attacks of weeks before `week` whose ranking is stored, or from before `lapsed`, when it can no longer come to be. */
+async function sweepAttacks(week, lapsed, apply) {
+    const { rows } = await sql`
+        WITH doomed AS (
+            SELECT id FROM clan_attacks
+            WHERE week < ${week}::varchar AND (week < ${lapsed}::varchar OR week IN (SELECT r.week FROM clan_rankings r))
+        ), gone AS (
+            DELETE FROM clan_attacks WHERE ${apply}::boolean AND id IN (SELECT id FROM doomed) RETURNING 1
+        )
+        SELECT COUNT(*) AS n FROM doomed
+    `;
+    return int(rows[0].n);
+}
+
+/** The same for the Endless Hydra's fights, and the depths deleted accounts left their clans. */
+async function sweepEndless(week, lapsed, apply) {
+    const { rows } = await sql`
+        WITH doomed AS (
+            SELECT user_id, week, slot FROM clan_endless
+            WHERE week < ${week}::varchar AND (week < ${lapsed}::varchar OR week IN (SELECT r.week FROM clan_rankings r))
+        ), gone AS (
+            DELETE FROM clan_endless WHERE ${apply}::boolean AND (user_id, week, slot) IN (SELECT user_id, week, slot FROM doomed) RETURNING 1
+        ), kept AS (
+            DELETE FROM clan_endless_kept
+            WHERE ${apply}::boolean AND week < ${week}::varchar AND (week < ${lapsed}::varchar OR week IN (SELECT r.week FROM clan_rankings r))
+            RETURNING 1
+        )
+        SELECT COUNT(*) AS n FROM doomed
+    `;
+    return int(rows[0].n);
+}
+
+/** The players with gifts from before `week` to clans that have closed. */
+async function closedClanGivers(week) {
+    const { rows } = await sql`
+        SELECT DISTINCT g.user_id FROM clan_gifts g
+        WHERE g.week < ${week}::varchar AND NOT EXISTS (SELECT 1 FROM clans c WHERE c.id = g.clan_id)
+    `;
+    return rows.map(r => r.user_id);
+}
+
+/**
+ * A player's gifts from before `week` to closed clans fold into those clans' totals, but for the ones still needed: their highest
+ * number (the next gift counts on from it) and any their save has not taken from its bank yet (numbered past `taken`).
+ */
+async function foldClosedGifts(userId, taken, week, apply) {
+    const { rows } = await sql`
+        WITH doomed AS (
+            SELECT g.id FROM clan_gifts g
+            WHERE g.user_id = ${userId}::int AND g.week < ${week}::varchar AND g.seq <= ${taken}::int
+              AND g.seq < (SELECT MAX(x.seq) FROM clan_gifts x WHERE x.user_id = ${userId}::int)
+              AND NOT EXISTS (SELECT 1 FROM clans c WHERE c.id = g.clan_id)
+        ), gone AS (
+            DELETE FROM clan_gifts WHERE ${apply}::boolean AND id IN (SELECT id FROM doomed) RETURNING clan_id, room, work
+        ), totals AS (
+            INSERT INTO clan_gift_totals (clan_id, room, work, gifts)
+            SELECT clan_id, room, SUM(work)::bigint, COUNT(*)::bigint FROM gone GROUP BY clan_id, room
+            ON CONFLICT (clan_id, room) DO UPDATE SET work = clan_gift_totals.work + EXCLUDED.work, gifts = clan_gift_totals.gifts + EXCLUDED.gifts
+        )
+        SELECT COUNT(*) AS n FROM doomed
+    `;
+    return int(rows[0].n);
+}
+
 // ---------- rate limiting ----------
 
 /**
@@ -1169,6 +1295,7 @@ module.exports = {
     recordEndless, endlessByFight, endlessOf, endlessWeek, weekBosses, allClans, getRanking, putRanking, clanBestScore,
     hallRooms, addGift, giftTotals, giftsAfter, hallBuilders, recentGifts, setClanBanner,
     teamClans, teamClan, teamEditClan, teamRenamePlayer, teamLogAdd, teamLog, teamLogEntry,
+    sweepAttempts, sweepEmailCodes, dateUnconfirmed, staleSignups, flaggedAccounts, setFlagsIf, sweepSnapshots, sweepAttacks, sweepEndless, closedClanGivers, foldClosedGifts,
     chargesNow, spendCharge, refundCharge,
     takeAttempt, refundAttempt, authFailures, noteAuthFailure, clearAuthFailures,
     addReward, unclaimedRewards, claimRewards, unclaimedGiftCount, claimGifts
