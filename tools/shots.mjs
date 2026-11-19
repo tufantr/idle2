@@ -6,7 +6,8 @@
 //   node tools/shots.mjs                          # the default tabs
 //   node tools/shots.mjs combat,mining,inventory  # just these (any tab id: farming, events, settings...;
 //                                                 # 'battle' is the fight filling the screen; 'map' and
-//                                                 # 'prestige' are those dialogs over the game, 'power'
+//                                                 # 'prestige' are those dialogs over the game, 'signup' the
+//                                                 # account dialog's register form, 'power'
 //                                                 # the hero's Sources of power; 'anvil'
 //                                                 # is Smithing's anvil step; 'options' Settings' options;
 //                                                 # 'trials' is the prestige
@@ -104,6 +105,7 @@ const STEPS = {
 // Dialogs over the game, shot like tabs.
 const DIALOGS = {
     map: () => { FI.switchTab('combat'); FI.openMap(); },
+    signup: () => { FI.openAuth(); FI.authMode('register'); },   // the account dialog's register form, with the line on what the email is for
     // Sources of power (the hero's panel in Inventory), with a potion, a camp and a clan banner at work
     power: async () => {
         const { isoWeek } = await import('/src/data/social.js');
@@ -199,6 +201,7 @@ const CLAN_SHOTS = {
         FI.cloudSaveNow();
         await new Promise(resolve => setTimeout(resolve, 500));
         FI.switchTab('settings');
+        scrollTo(0, 0);   // (from wherever the clan's shots left the page)
     },
     // a player in no clan: the clans to find, each with its members and who of them played this past week
     clanlist: async () => {
