@@ -361,14 +361,17 @@ test("on a phone each painting's landmark stays in view: the block tools/paint.p
 });
 
 test('every skill that finishes actions has a voice of its own, and an unknown one falls back on the plain sound', t => {
-    t.after(() => { delete globalThis.window; delete globalThis.document; });
+    const realNow = performance.now;
+    t.after(() => { performance.now = realNow; delete globalThis.window; delete globalThis.document; });
     const log = fakeBrowser({ phone: false });
     const sfx = createSound(() => true);
     sfx.unlock();
     for (const skill of [...NON_COMBAT_SKILLS, ...WORKSHOP_SKILLS, 'agility', 'fishing']) assert.ok(sfx.voices.includes(skill), `${skill} has a voice`);
     assert.ok(sfx.names.includes('work') && sfx.names.includes('double'));
     assert.equal(sfx.names.includes('action'), false, 'the one shared sound is gone');
-    const nodes = (name, voice) => { log.heard = 0; globalThis.performance.now = (t0 => () => t0 += 1000)(performance.now()); sfx.play(name, voice); return log.heard; };
+    let clock = 0;
+    performance.now = () => (clock += 1000);   // (each sound in a moment of its own: five at once is the most that play)
+    const nodes = (name, voice) => { log.heard = 0; sfx.play(name, voice); return log.heard; };
     for (const voice of sfx.voices) assert.ok(nodes('work', voice) > 0, voice);
     assert.ok(nodes('double', 'mining') > nodes('work', 'mining'), 'a double adds its bright note');
     assert.equal(nodes('work', 'nobody'), nodes('work', 'action'), 'an unknown voice is the plain one');
