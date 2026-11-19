@@ -7,9 +7,9 @@ import { tickAction, startNodeAction, startSmelting, startCrafting, startAgility
 import { buyTool } from './systems/tools.js';
 import { tickCombat, enterCombat, leaveCombat, clickAttack, setAutoEat, setStage, travelTo, spawnEnemy } from './systems/combat.js';
 import { setPotion, setDungeonPotion, setWorkPotion, spendWorkPotion } from './systems/potions.js';
-import { equipItem, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade } from './systems/inventory.js';
+import { equipItem, equipAll, unequipItem, sellItem, sellAllItems, sellResource, buyGoldShopItem, salvageItem, salvageAll, salvageWeaker, toggleLock, setAutoSalvage, buyBagUpgrade, flushSalvageLine, lastUndo, undoLast } from './systems/inventory.js';
 import { upgradeJewel, rerollJewel } from './systems/bench.js';
-import { reinforceItem, rerollItem } from './systems/anvil.js';
+import { reinforceItem, rerollItem, practise } from './systems/anvil.js';
 import { doPrestige, prestigePreview, buyPerk, canPrestige, tickAutoPrestige, setAutoPrestige, autoPrestigeIn, autoPrestigeEarned, prestigeReady } from './systems/prestige.js';
 import { checkAchievements, checkUnlocks, checkDisclosures, openPlaceOnReturn, bumpStat } from './systems/progress.js';
 import { evaluateDisclosures } from './systems/disclosure.js';
@@ -160,6 +160,7 @@ export class Game {
                 tickAutoPrestige(this);
             }
         } while (dt > 0);
+        flushSalvageLine(this);   // the automatic salvage's line, once its minute is up (systems/inventory.js)
 
         if (this.dirty) this.recompute();
         checkAchievements(this);
@@ -249,6 +250,8 @@ export class Game {
     setFarmMode(on) { this.state.combat.farmMode = !!on; }
 
     equipItem(id, slot) { return this._act(() => equipItem(this, id, slot)); }
+    /** Equip all: the best waiting piece for every slot (systems/inventory.js); how many went on. */
+    equipAll() { return this._act(() => equipAll(this)); }
     unequipItem(slot) { return this._act(() => unequipItem(this, slot)); }
     sellItem(id) { return this._act(() => sellItem(this, id)); }
     sellAllItems(rarity) { return this._act(() => sellAllItems(this, rarity)); }
@@ -257,9 +260,15 @@ export class Game {
     salvageItem(id) { return this._act(() => salvageItem(this, id)); }
     salvageAll(rarity) { return this._act(() => salvageAll(this, rarity)); }
     salvageWeaker() { return this._act(() => salvageWeaker(this)); }
+    /** The last sale or salvage, while it can still be taken back (its toast's Undo), else null. */
+    lastUndo(id = null) { return lastUndo(this, id); }
+    /** Take back the last sale or salvage (`id`: only that one): systems/inventory.js undoLast. */
+    undoLast(id = null) { return this._act(() => undoLast(this, id)); }
     buyBagUpgrade(currency = 'gold') { return this._act(() => buyBagUpgrade(this, currency)); }
     reinforceItem(id) { return this._act(() => reinforceItem(this, id)); }
     rerollItem(id) { return this._act(() => rerollItem(this, id)); }
+    /** Practise at the anvil: a metal's bars for its mastery alone (systems/anvil.js). */
+    practise(bar) { return this._act(() => practise(this, bar)); }
     /** The jeweller's bench (systems/bench.js): a worn piece of jewellery upgraded one level, or its bonuses rerolled. */
     upgradeJewel(id) { return this._act(() => upgradeJewel(this, id)); }
     rerollJewel(id) { return this._act(() => rerollJewel(this, id)); }

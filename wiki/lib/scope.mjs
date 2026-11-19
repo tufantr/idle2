@@ -14,6 +14,7 @@
 //   PLACE_GAPS_MS, UNLOCKS, GEM_FIND_CHANCE, BAIT_EXTRA_CHANCE, HALL, HALL_ROOMS, HALL_STAGES, giftWorth(id), and every
 //   other constant those files export
 //   UPDATE_CHECK_MS, UPDATE_BACK_MS (how often an open game looks for a new version)    ui/update.js
+//   THREAT_SHARE (a blow under this share of the hero's health doesn't count for gear)  systems/worth.js
 //   fmt(n), pct(x, digits), time(ms), res(id, { qty }), icon(key, scale), link(href, text, iconKey),
 //   table(head, rows), callout(kind, html), path.item(id) and the other path helpers   wiki/lib/ui.mjs
 
@@ -52,13 +53,14 @@ import * as social from '../../src/data/social.js';
 import * as potions from '../../src/data/potions.js';
 import * as clanhall from '../../src/data/clanhall.js';
 import * as update from '../../src/ui/update.js';
+import * as worth from '../../src/systems/worth.js';
 import * as ui from './ui.mjs';
 
 // later modules win a clash of names, so the data files' own names come last
 export const scope = Object.freeze({
     ...ui, ...xp, ...formulas, ...modifiers, ...pace, ...resources, ...skills, ...workshop, ...items, ...zones, ...strata,
     ...dungeons, ...perks, ...pets, ...achievements, ...capes, ...ranks, ...trials, ...talents, ...charms, ...ascension, ...events,
-    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...minigame, ...skilling, ...social, ...potions, ...clanhall, ...update,
+    ...farming, ...agility, ...camp, ...looks, ...mastery, ...bestiary, ...unlocks, ...daily, ...minigame, ...skilling, ...social, ...potions, ...clanhall, ...update, ...worth,
     // two names clash (bestiary's and ascension's starsFor): both kept, by what they count
     bestiaryStarsFor: bestiary.starsFor, ascensionStarsFor: ascension.starsFor, starsFor: undefined
 });

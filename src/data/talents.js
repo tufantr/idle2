@@ -16,6 +16,8 @@
 // the value at ranks 1, 2, ... `text(rank)` says what a rank does, in the tree's detail line. The rules stay out of the clan
 // boss's fight, which the server reckons (core/power.js), as a Trial's do.
 
+import { BALANCE } from '../core/formulas.js';
+
 /**
  * The share of combat XP past level 99 that counts: the simulator's hero, fighting round the clock, reached level 130
  * nine days after the old cap at the full rate, against the two weeks the owner was shown (level 120 in five days, 130 in
@@ -44,6 +46,14 @@ const per = (ranks, step) => Array.from({ length: ranks }, (_, i) => +(step * (i
 const pct = v => `${Math.round(v * 100)}%`;
 const sec = ms => `${+(ms / 1000).toFixed(1)} s`;
 
+/** Berserker's second rule in words: the boss's clock, at BALANCE.combat.berserkerClock of its time (nothing when that is 0). */
+function berserkerClockWords() {
+    const share = BALANCE.combat.berserkerClock;
+    if (!(share > 0)) return '';
+    const words = share === 0.5 ? 'half' : share === 0.25 ? 'a quarter' : Math.abs(share - 1 / 3) < 1e-9 ? 'a third' : pct(share);
+    return `, or once a boss's clock is under ${words} (not the Titan's)`;
+}
+
 export const TALENTS = [
     // ---- Blade ----
     { id: 'sharpened_edge', tree: 'blade', row: 1, col: 1, max: 5, name: 'Sharpened Edge', icon: 'item/Weapon/3',
@@ -65,7 +75,7 @@ export const TALENTS = [
     { id: 'giant_slayer', tree: 'blade', row: 5, col: 2, max: 5, from: ['weak_spot', 'cleave'], name: 'Giant Slayer', icon: 'mon/Mountain Troll',
         fx: { giantSlayer: per(5, 0.02) }, text: r => `+${pct(0.02 * r)} damage to bosses` },
     { id: 'berserker', tree: 'blade', row: 5, col: 3, max: 2, from: ['flurry'], name: 'Berserker', icon: 'mon/Orc Warlord',
-        fx: { berserker: [0.1, 0.2] }, text: r => `+${pct(0.1 * r)} damage while under half his health` },
+        fx: { berserker: [0.1, 0.2] }, text: r => `+${pct(0.1 * r)} damage while under half his health${berserkerClockWords()}` },
     { id: 'savage_blows', tree: 'blade', row: 6, col: 2, max: 5, from: ['giant_slayer', 'berserker'], name: 'Savage Blows', icon: 'item/Weapon/7',
         mult: { atk: 1.01 }, text: r => `×${(1.01 ** r).toFixed(3)} attack` },
     { id: 'swift_kill', tree: 'blade', row: 6, col: 3, max: 2, from: ['berserker'], name: 'Swift Kill', icon: 'item/Boots/5',
@@ -113,7 +123,7 @@ export const TALENTS = [
     { id: 'essence_drinker', tree: 'hunt', row: 2, col: 3, max: 3, from: ['scavenger'], name: 'Essence Drinker', icon: 'res/essence',
         fx: { essence: [0.15, 0.3, 0.45] }, text: r => `+${pct(0.15 * r)} essence from kills` },
     { id: 'second_chance', tree: 'hunt', row: 3, col: 1, max: 2, needs: 'patient_hunter', name: 'Second Chance', icon: 'icon/away',
-        fx: { regroupCut: [30000, 60000] }, text: r => (r >= 2 ? 'a boss that held out is tried again at once' : `a boss that held out is tried again ${sec(30000 * r)} sooner`) },
+        fx: { regroupCut: [30000, 60000] }, text: r => `${r >= 2 ? 'a boss that held out is tried again at once' : `a boss that held out is tried again ${sec(30000 * r)} sooner`}, the farming it skips paid at the same gold an hour` },
     { id: 'gilded_eye', tree: 'hunt', row: 3, col: 3, max: 3, from: ['essence_drinker', 'treasure_sense'], name: 'Gilded Eye', icon: 'item/Ring/4',
         mods: { gildedChance: 0.2 }, text: r => `gilded monsters come ${pct(0.2 * r)} more often` },
     { id: 'long_draught', tree: 'hunt', row: 4, col: 1, max: 3, from: ['second_chance'], name: 'Long Draught', icon: 'res/combat_potion_4',

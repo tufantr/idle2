@@ -7,7 +7,7 @@ import { RESOURCES, orderedByTier, foodsByHealing, foodHeal, sellValue } from '.
 import { POTIONS, TIERS, potionsFor, potionsForSlot, potionEffectText } from '../data/potions.js';
 import { doseMs } from '../systems/potions.js';
 import { SMELTING_RECIPES, JEWEL_BARS, GEM_TIERS, TOOLS, TOOL_SPEED_PER_TIER, TOOL_DOUBLE_PER_TIER, PLAIN, METALS, forgeMult } from '../data/workshop.js';
-import { anvilCost, onAnvil, forgeLevel, forgeStepGain } from '../systems/anvil.js';
+import { anvilCost, onAnvil, forgeLevel, forgeStepGain, practiseCost } from '../systems/anvil.js';
 import { benchCost, onBench, benchLevel, benchSlotOf } from '../systems/bench.js';
 import { SMITHING_TYPES, CRAFTING_TYPES, SMITHING_BAR_COST, TYPE_NAMES, TYPE_ICONS, EQUIP_SLOTS, TYPE_SLOTS, RARITIES, TIER_WEAR_LEVEL, AUTO_SALVAGE_OPTIONS, GEAR_TIERS, CODEX_TYPES, CODEX_SIZE } from '../data/items.js';
 import { PERKS, GOLD_SHOP, perkLevelCost } from '../data/perks.js';
@@ -23,7 +23,8 @@ import { masteryProgress, masteryBonus, skillMastery } from '../systems/mastery.
 import { MASTERY_SKILLS, MASTERY_MAX_LEVEL, MASTERY_CHECKPOINTS, masteryShare, checkpointsAt, forgeKey } from '../data/mastery.js';
 import { CHALLENGE_MS, PERFECT_SHARE, hasOpportunity, animatedPosition, minigameConfig, bandAt } from '../systems/minigame.js';
 import { toolsOnOffer, toolPurchase, toolReady } from '../systems/tools.js';
-import { goldShopPrice, goldShopOpen, canWear, isUpgrade, itemScore, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, equipGain, gainStages, weakerInBag } from '../systems/inventory.js';
+import { goldShopPrice, goldShopOpen, canWear, isUpgrade, salvagePreview, bagSize, bagUpgradePrice, bagUpgradeEssence, findUpgrade, gearIsLocked, weakerInBag, bagByWorth, upgradesWaiting } from '../systems/inventory.js';
+import { judgeOf, wallJudge } from '../systems/worth.js';
 import { nextCampCost, campPrice } from '../systems/camp.js';
 import { achievementProgress } from '../systems/progress.js';
 import { DUNGEONS, dungeonById, DUNGEON_MILESTONES, FRAGMENTS_PER_UNIQUE, TITAN_TIME_MS, TITAN_UNLOCK_STAGE, TITAN_BONUS, DUNGEON_CHOICE_MS, titanBonusUnits, dungeonAt, dungeonTierInfo, dungeonBossTime, uniqueAt, parseUniqueKey, DUNGEON_TIER_CLEARS, DUNGEON_TIER_STAGES, SEAL_RECORDS } from '../data/dungeons.js';
@@ -159,7 +160,7 @@ function readyBadge(game, id) {
         const whole = DUNGEONS.find(d => state.dungeons[d.id]?.fragments >= FRAGMENTS_PER_UNIQUE && !ownsUnique(state, d.unique, tier));
         return whole ? pill('!', `${uniqueAt(whole.unique, tier)?.name || 'A unique'} is ready to assemble`, 'gold') : '';
     }
-    if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i)) ? pill('▲', 'Better gear is in the bag') : '';
+    if (id === 'inventory') return !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i, judgeOf(game))) ? pill('▲', 'Better gear is in the bag') : '';
     if (id === 'shop') return toolReady(state) ? pill('▲', 'A better tool is ready to buy') : '';
     return '';
 }
@@ -230,7 +231,7 @@ export function renderHotbar(game, ui) {
     const action = resolveAction(state);
     const fighting = state.combat.active;
     const banked = state.daily.banked;
-    const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i));
+    const upgrade = !gearIsLocked(state) && state.inventory.some(i => canWear(state, i) && isUpgrade(state, i, judgeOf(game)));
     const button = (icon, label, onclick, { active = false, live = false, badge = '', disabled = false } = {}) =>
         `<button class="hot-btn${active ? ' active' : ''}${live ? ' live' : ''}" onclick="${onclick}" ${disabled ? 'disabled' : ''}><span class="hot-icon" aria-hidden="true">${icon}</span><span class="hot-label">${label}</span>${badge ? `<b class="hot-badge"><span aria-hidden="true">${badge}</span><span class="sr-only">, ${badge === '▲' ? 'an upgrade is waiting' : `${badge} waiting`}</span></b>` : ''}</button>`;
     const work = action && SKILLS[action.skill]
@@ -245,6 +246,19 @@ export function renderHotbar(game, ui) {
 }
 
 // ---------- header ----------
+
+/**
+ * What Focus gives now, in words (core/modifiers.js): skill speed, and in the fight attack speed, or past attack speed's
+ * cap damage instead.
+ */
+export function focusTip(d) {
+    const shown = x => x >= 0.005;   // (never "+0%")
+    const parts = [`+${pct(BASE.focusSkillSpeed)} skill speed`];
+    if (shown(d.focusSpeed)) parts.push(`+${pct(d.focusSpeed)} attack speed`);
+    if (shown(d.focusDamage)) parts.push(`+${pct(d.focusDamage)} damage`);
+    const gives = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
+    return `You've left the game alone for a minute: ${gives}${shown(d.focusDamage) ? " (past attack speed's cap, Focus adds damage instead)" : ''}. Any click or key press ends it.`;
+}
 
 // The header is the purse and a few pills. A currency shows once the player holds some
 // (systems/disclosure.js); the status pill only says what is running somewhere else than the tab in
@@ -276,7 +290,7 @@ export function renderHeader(game, ui, cloud) {
         ? `<button class="event-pill" style="--accent:${ev.event.color}" onclick="FI.switchTab('events')" title="${esc(ev.event.name)}: ${esc(ev.event.desc)}" aria-label="${esc(ev.event.name)}, ${duration(ev.endsAt - game.now)} left">${eventIcon(ev.event)} <span class="pill-long">${esc(ev.event.name)} · </span>${duration(ev.endsAt - game.now)}<span class="pill-long"> left</span></button>`
         : '';
     const focusPill = game.derived.focused
-        ? `<span class="focus-pill" title="You've left the game alone for a minute: +${Math.round(BASE.focusSkillSpeed * 100)}% skill speed and +${Math.round(BASE.focusAttackSpeed * 100)}% attack speed. Any click or key press ends it.">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
+        ? `<span class="focus-pill" title="${esc(focusTip(game.derived))}">${glyph('spark')}<span class="pill-long"> Focused</span> +${Math.round(BASE.focusSkillSpeed * 100)}%</span>`
         : '';
     // What the hero is doing, when that is not what the tab in view already shows.
     const here = ui.tab === fightTab(game, ui) || STAGE_SKILLS.includes(ui.tab); // tabs with a scene or a stage of their own
@@ -437,15 +451,23 @@ function skillPotionChip(game, ui) {
     return `<span class="potion-chip-wrap">${chip}<span class="potion-tray" role="group" aria-label="Skill potion">${tiles}${empty}</span></span>`;
 }
 
+/** A camp level's worth in stages, short: "+1.4 stages", "+12 stages", "+0 stages" (P-091: said even when it is nothing). */
+function campStages(n) {
+    if (!Number.isFinite(n) || n < 0.05) return '+0 stages';
+    return `+${n >= 9.95 ? Math.round(n) : n.toFixed(1)} stages`;
+}
+
 /**
- * The camp's three upgrades as tokens: the picture with its level, what a level gives and its price,
- * all one button; Max beside it buys as many levels as the gold allows. The combat tab and the
- * fight's dock show the same tokens.
+ * The camp's three upgrades as tokens: the picture with its level, what a level gives, its next level's worth in
+ * stages at the wall that binds (systems/worth.js, on the camp this run has bought: the research loop's P-091, as most
+ * of a deep run's camp gold bought defence past its cap and health past any threat) and its price, all one button;
+ * Max beside it buys as many levels as the gold allows. The combat tab and the fight's dock show the same tokens.
  */
 function campTokens(game) {
     const state = game.state;
     // the No Camp Trial (data/trials.js): the camp is packed for the run, nothing on offer
     if (trialBite(state).noCamp) return `<p class="camp-packed">${sprite('campfire', { scale: 1 })}<span>Packed for the Trial</span></p>`;
+    const judge = wallJudge(state, game, { camp: 'run' });
     return campOnOffer(state, game.derived).map(u => {   // the Armour Rack once there is defence to raise
         const level = state.camp[u.id] || 0;
         const cost = nextCampCost(state, u.id);
@@ -453,10 +475,12 @@ function campTokens(game) {
         const canTwo = can && level + 1 < u.max && state.gold >= cost + campPrice(state, u, level + 1);
         const mult = Math.pow(1 + u.bonus, level);
         const total = mult >= 10 ? `×${fmt(mult)}` : `+${Math.round((mult - 1) * 100)}%`;
+        const worth = cost === null ? null : judge.stagesOf({ [u.stat]: u.bonus });
+        const stages = worth === null ? '' : campStages(worth);
         return `<div class="camp-token${can ? ' can' : ''}" data-camp="${u.id}">
-            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now ${total})` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}`}">
+            <button class="camp-buy" onclick="FI.buyCamp('${u.id}', 1)" ${can ? '' : 'disabled'} title="${esc(u.name)}: ${esc(u.short)} a level${level ? ` (now ${total})` : ''}${stages ? `; the next is worth ${stages} at your wall` : ''}" aria-label="${cost === null ? `${esc(u.name)} is at its highest level` : `Raise ${esc(u.name)} for ${fmt(cost)} gold: ${esc(u.short)}, ${stages} at your wall`}">
                 <span class="camp-medal">${sprite(u.art, { scale: 1, fallback: u.icon })}${level ? `<b class="camp-lv">${level}</b>` : ''}</span>
-                <span class="camp-token-text"><b>${esc(u.short)}</b><span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
+                <span class="camp-token-text"><b>${esc(u.short)}</b>${stages ? `<span class="camp-worth${worth < 0.05 ? ' nil' : ''}">${esc(stages)}</span>` : ''}<span class="camp-price">${cost === null ? 'Max' : `${sprite('gold', { scale: 0.5, cls: 'soft', fallback: '🪙' })} ${fmt(cost)}`}</span></span>
             </button>
             ${canTwo ? `<button class="mini-btn camp-max" onclick="FI.buyCamp('${u.id}', 'max')" title="Buy as many levels of the ${esc(u.name)} as your gold allows">Max</button>` : ''}
         </div>`;
@@ -685,12 +709,16 @@ function renderLoopActions(game) {
         const words = [sp > 0 ? `${sp} SP` : '', tp > 0 ? `${tp} talent point${tp === 1 ? '' : 's'}` : ''].filter(Boolean);
         parts.push(`<button class="shop-btn dock-perks${sp > 0 || tp > 0 ? ' ready' : ''}" onclick="FI.openPerks('${tp > 0 && !sp ? 'talents' : 'perks'}')" title="Spend skill points on perks that last forever${seen(state, 'talents') ? ', and talent points on the War Tree' : ''}"><b>Perks</b><span>${words.length ? `${words.join(' · ')} to spend` : 'no SP now'}</span></button>`);
     }
-    const upgrade = gearIsLocked(state) ? null : findUpgrade(state);
+    const judge = judgeOf(game);   // what a piece is worth at the wall that binds (systems/worth.js)
+    const upgrade = gearIsLocked(state) ? null : findUpgrade(state, judge);
     if (upgrade) {
-        const gain = equipGain(state, upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
+        const gain = judge.gain(upgrade.item, upgrade.slot);   // what it does to him, all bonuses counted
         const words = gainWords(gain);
-        const stages = stagesWords(gainStages(state, gain));   // and about how far it takes him
-        parts.push(`<button class="mini-btn dock-equip" data-item="${Number(upgrade.item.id)}" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}${stages ? ` <b class="dock-stages">${esc(stages)}</b>` : ''}</i>` : ''}</span></button>`);
+        const stages = stagesWords(upgrade.stages);   // and about how far it takes him
+        const equip = `<button class="mini-btn dock-equip" data-item="${Number(upgrade.item.id)}" onclick="FI.equip(${Number(upgrade.item.id)})" title="It beats what you are wearing${words ? `: ${esc(words)}` : ''}">${sprite(itemSpriteKey(upgrade.item), { scale: 1, fallback: esc(upgrade.item.icon) })}<span><b>▲ Equip</b><span>${esc(upgrade.item.name)}</span>${words ? `<i class="dock-gain">${gainMarkup(gain)}${stages ? ` <b class="dock-stages">${esc(stages)}</b>` : ''}</i>` : ''}</span></button>`;
+        // Equip all, beside it once two or more pieces wait (systems/inventory.js upgradesWaiting), as Auto sits by Prestige
+        const waiting = upgradesWaiting(state, judge).length;
+        parts.push(waiting < 2 ? equip : `<div class="dock-equip-row">${equip}<button class="mini-btn dock-equip-all" onclick="FI.equipAll()" title="Put on the best waiting piece for every slot: ${waiting} pieces"><b>▲ All</b><span>${waiting} pieces</span></button></div>`);
     }
     return parts.length ? `<div class="dock-group dock-loop ${painted('shrine', 'center 45%')}">${parts.join('')}</div>` : '';
 }
@@ -1083,6 +1111,8 @@ function renderAnvil(state, ui = {}) {
 /**
  * Each open metal's mastery (data/mastery.js forgeKey): the work at the anvil trains it, a second of practice a bar, and each
  * level takes bars off that metal's jobs (systems/anvil.js anvilCost). Smithing's other actions show theirs on their cards.
+ * Practise (systems/anvil.js practise, the research loop's P-058): with bars of a metal held, a tap works them for its
+ * mastery alone, to its next level, so a lower metal trains without a worn piece of it.
  */
 function anvilMastery(state) {
     if (!seen(state, 'mastery')) return '';
@@ -1091,7 +1121,10 @@ function anvilMastery(state) {
         const p = masteryProgress(state, 'smithing', forgeKey(m.bar));
         const off = masteryBonus(p.level, { produces: false, hasInputs: true }).preserve;
         const tip = tipAttrs(`${m.name} at the anvil: mastery ${p.level}`, `${off ? `Its jobs take ${pct(off, 1)} fewer ${m.name.toLowerCase()} bars` : 'No bonus yet: every level adds a little'}. Each bar worked is a second of practice.`);
-        return `<div class="anvil-metal" ${tip}>${resIcon(m.bar)}<span class="mastery-lvl${p.level >= MASTERY_MAX_LEVEL ? ' max' : ''}">${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div>${off ? `<span class="anvil-metal-off">−${pct(off, 1)} bars</span>` : ''}</div>`;
+        const drill = practiseCost(state, m.bar);
+        const practise = drill && drill.why !== 'max' && drill.why !== 'level'
+            ? `<button class="anvil-practise${drill.ok ? ' ready' : ''}" onclick="FI.practise('${m.bar}')" ${drill.ok ? '' : 'aria-disabled="true"'} title="${esc(drill.ok ? `Practise: ${fmt(drill.bars)} ${m.name.toLowerCase()} bar${drill.bars === 1 ? '' : 's'} for its mastery alone${drill.bars < drill.need ? '' : `, to ${p.level + 1}`} (no slot's levels)` : `Practise needs ${m.name.toLowerCase()} bars`)}" aria-label="Practise ${esc(m.name)}: ${fmt(drill.ok ? drill.bars : drill.need)} bars">${glyph('up')}<span>Practise</span><b>${fmt(drill.ok ? drill.bars : drill.need)}</b></button>` : '';
+        return `<div class="anvil-metal" id="metal-${m.bar}" ${tip}>${resIcon(m.bar)}<span class="mastery-lvl${p.level >= MASTERY_MAX_LEVEL ? ' max' : ''}">${p.level}</span><div class="mastery-bar"><div style="width:${(p.fraction * 100).toFixed(1)}%"></div></div>${off ? `<span class="anvil-metal-off">−${pct(off, 1)} bars</span>` : ''}${practise}</div>`;
     }).join('');
     return `<div class="anvil-metals" aria-label="Mastery of each metal at the anvil"><span class="loadout-label">Mastery</span>${metals}</div>`;
 }
@@ -1296,14 +1329,14 @@ function findItem(state, id) {
     return item ? { item, slot: null } : null;
 }
 
-function itemTile(state, item, { slot = null, selected = false } = {}) {
+function itemTile(state, item, { slot = null, selected = false, judge = null } = {}) {
     const id = Number(item.id);
     // a worn piece's plate is its slot's levels (the anvil's forge, the jeweller's bench); one in the bag has none of its own
     const up = !slot ? 0 : onAnvil(item) ? forgeLevel(state, slot) : benchLevel(state, slot);
     const rarity = RARITIES.find(r => r.id === item.rarity);
     const steps = Math.max(0, RARITIES.indexOf(rarity));   // its rarity told twice: a pip for each step above Common, beside the colour
     const wearable = canWear(state, item);
-    const better = !slot && wearable && isUpgrade(state, item);
+    const better = !slot && wearable && isUpgrade(state, item, judge || undefined);
     const label = `${item.name}${up ? ` +${up}` : ''}, ${rarity?.name || item.rarity}${better ? ', better than what you wear' : ''}${item.locked ? ', locked' : ''}`;
     return `<button class="tile r-${esc(item.rarity)}${selected ? ' selected' : ''}${wearable ? '' : ' unwearable'}" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}" onclick="FI.selectItem(${id})" onmouseenter="FI.previewItem(${id})" onmouseleave="FI.previewItem(null)" aria-label="${esc(label)}" aria-pressed="${selected}">${sprite(itemSpriteKey(item), { scale: 1.5, cls: 'tile-icon', fallback: esc(item.icon) })}${steps ? `<i class="tile-pips" style="--pips:${steps}" aria-hidden="true"></i>` : ''}${up ? `<b class="tile-up">+${up}</b>` : ''}${item.locked ? `<i class="tile-lock" aria-hidden="true">${glyph('lock', { scale: 0.5 })}</i>` : ''}${better ? '<i class="tile-better" aria-hidden="true">▲</i>' : ''}</button>`;
 }
@@ -1366,7 +1399,8 @@ export function renderItemDetail(game, id) {
     // every piece has its slot's levels (the anvil's forge, the jeweller's bench), worn or as it would be worn: in the
     // slot of the weakest of its kind worn, where an Equip puts it
     const forged = onAnvil(item);
-    const target = slot || [...(TYPE_SLOTS[item.type] || [])].sort((a, b) => itemScore(state.equipped[a]) - itemScore(state.equipped[b]))[0];
+    const judge = judgeOf(game);   // (what a piece is worth at the wall: systems/worth.js)
+    const target = slot || judge.place(item).slot;
     const up = forged ? forgeLevel(state, item.type) : benchLevel(state, target);
     const mult = forgeMult(up);
     const rarity = RARITIES.find(r => r.id === item.rarity);
@@ -1398,9 +1432,9 @@ export function renderItemDetail(game, id) {
         const deltas = delta(Math.round((item.atk || 0) * mult) - Math.round((worn?.atk || 0) * wornMult), ATK_ICON) + delta(Math.round((item.def || 0) * mult) - Math.round((worn?.def || 0) * wornMult), DEF_ICON);
         compare = `<div class="detail-compare">${worn ? `Against your ${esc(worn.name)}${up ? ` +${up}` : ''}` : 'That slot is empty'}${up ? `, both with the slot's +${up}` : ''}: ${deltas || '<span class="muted">same stats</span>'}</div>`;
         // and what it does to the hero, every bonus counted (a +900 sword is +40% attack, or +4%)
-        const worth = canWear(state, item) ? equipGain(state, item) : null;
+        const worth = canWear(state, item) ? judge.gain(item, target) : null;
         const gain = worth ? gainMarkup(worth) : '';
-        const stages = worth ? stagesWords(gainStages(state, worth)) : '';
+        const stages = worth ? stagesWords(judge.worth(item, target)) : '';
         if (gain) compare += `<div class="detail-gain">Worn: ${gain}${stages ? ` · <b class="${stages.startsWith('+') ? 'up' : 'down'}">${esc(stages)}</b>` : ''}</div>`;
     }
     return `<div class="detail" style="--r:${esc(item.color || rarity?.color || '#e2e8f0')}">
@@ -1431,14 +1465,15 @@ export function renderInventory(game, ui) {
     const d = game.derived;
     const selectedId = findItem(state, ui.invSelected) ? ui.invSelected : null;
     const shownId = findItem(state, ui.invPreview) ? ui.invPreview : selectedId;
-    const items = [...state.inventory].sort((a, b) => itemScore(b) - itemScore(a));
+    const judge = judgeOf(game);   // the bag in order of what each piece adds at the wall (systems/worth.js)
+    const items = bagByWorth(state, judge).map(e => e.item);
     const size = bagSize(state);
     const roomPrice = bagUpgradePrice(game);   // null once the bag is as big as it gets
     const roomEssence = bagUpgradeEssence(state);   // or for essence (data/items.js BAG_UPGRADE)
     const hasGear = items.length > 0 || EQUIP_SLOTS.some(slot => state.equipped[slot]);
     // A new bag shows a row or two of cells; the whole grid comes once the bag is in use.
     const cells = seen(state, 'bag_tools') ? size : Math.min(size, Math.max(8, Math.ceil((items.length + 1) / 8) * 8));
-    const bag = items.map(i => itemTile(state, i, { selected: i.id === selectedId })).join('')
+    const bag = items.map(i => itemTile(state, i, { selected: i.id === selectedId, judge })).join('')
         + Array.from({ length: Math.max(0, cells - items.length) }, () => '<div class="tile empty" aria-hidden="true"></div>').join('');
     const owned = Object.keys(RESOURCES).filter(id => state.resources[id] > 0);
     const categories = ['ore', 'bar', 'gem', 'log', 'raw', 'food', 'crop', 'herb', 'potion', 'material'].filter(c => owned.some(id => RESOURCES[id].category === c));
@@ -1448,7 +1483,7 @@ export function renderInventory(game, ui) {
     const picked = ui.resSelected && state.resources[ui.resSelected] > 0 ? ui.resSelected : null;
     const auto = state.settings.autoSalvage || 'off';
     const hasCommons = items.some(i => i.rarity === 'common' && !i.locked);
-    const hasWeaker = weakerInBag(state).length > 0;
+    const hasWeaker = weakerInBag(state, judge).length > 0;
     // (one copy of each dungeon unique stays in the bag for the Seal: systems/inventory.js keptForSeal)
     const keeps = !Object.keys(state.uniques || {}).length ? '' : `, and one of each dungeon unique stays${seen(state, 'dungeon_seal') ? ' for the Seal' : ''}`;
     const doll = seen(state, 'jewellery') ? DOLL.jewelled : DOLL.plain;
@@ -1492,7 +1527,9 @@ export function renderInventory(game, ui) {
                 <span>${resIcon('essence')} Auto-salvage drops up to</span>
                 <span class="rarity-pills" role="group" aria-label="Auto-salvage drops up to">${AUTO_SALVAGE_OPTIONS.map(o => {
                     const r = RARITIES.find(x => x.id === o);
-                    return `<button class="rarity-pill${o === auto ? ' on' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}"${o === 'weaker' ? ' title="Any drop weaker than what you wear, whatever its rarity"' : ''}>${o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : esc(r.name)}</button>`;
+                    // Weaker glows from the bag's first fill until it is picked once (systems/disclosure.js bag_full, weaker_tried)
+                    const glow = o === 'weaker' && o !== auto && seen(state, 'bag_full') && !state.seen?.weaker_tried;
+                    return `<button class="rarity-pill${o === auto ? ' on' : ''}${glow ? ' glow' : ''}" style="--r:${r ? r.color : '#94a3b8'}" onclick="FI.setAutoSalvage('${o}')" aria-pressed="${o === auto}"${o === 'weaker' ? ' title="Any drop weaker than what you wear, whatever its rarity; with it on, putting a piece on also salvages what it made weaker"' : ''}>${o === 'off' ? 'Off' : o === 'weaker' ? 'Weaker' : esc(r.name)}</button>`;
                 }).join('')}</span>
             </div>` : ''}
         </section>

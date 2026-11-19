@@ -1565,6 +1565,44 @@ Keeping it running:
       seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
       the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
       prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
+- [x] **The Equip card counts the wall that binds** (the research loop's P-075, 12 November 2026; DESIGN §3.31): "+N stages"
+      is what a piece is worth where the hero is stuck: its damage a second at the boss's clock, and its defence (below the
+      90% cap) and health only while a boss's blow still takes a tenth of his health. Deep, a mythic plate said +20 and gave
+      nothing; now it says what its bonuses do, and the same figure decides the ▲, the dock's Equip, Weaker, what the full
+      bag keeps and the bag's order, which is now best first
+- [x] **Equip all** (the research loop's P-076, 12 November 2026; DESIGN §3.5): once two or more pieces wait, an **All**
+      beside the fight's Equip puts on the best for every slot in one tap, with one rise over the hero for all of it
+- [x] **Weaker that stays** (the research loop's P-077, 12 November 2026; DESIGN §3.5): with Weaker on, putting a piece on
+      also salvages what it made weaker, the piece taken off too (never a locked, crafted or Seal piece); the Weaker pill
+      glows once the bag has been full, until it is tried; and automatic salvage writes a line a minute in the log, not one
+      a piece
+- [x] **Undo the last sale or salvage** (the research loop's P-078, 12 November 2026; DESIGN §3.5): the toast after Sell,
+      Salvage, the bag's batch buttons or an Equip's Weaker sweep has an Undo for a few seconds, which puts the pieces back
+      and takes back exactly the gold, essence and bars they gave
+- [x] **The camp says which levels still work** (the research loop's P-091, 12 November 2026; DESIGN §3.8): each camp token
+      says what its next level is worth in stages at the hero's wall, by the gear's measure on this run's camp: deep, the
+      Whetstone +1.4 and, once a run's camp is up, the Armour Rack and the Hearth +0
+- [x] **Lower metals that can be trained** (the research loop's P-058, the owner's decision, 12 November 2026; DESIGN
+      §3.20): the anvil's mastery strip has a Practise on each open metal held, which works its bars for that metal's
+      mastery alone, to its next level a tap, a second of practice a bar as the anvil's jobs pay, with no slot's levels;
+      a copper mastery no longer takes a worn copper piece and 36,207 rerolls
+- [x] **Second Chance keeps the regroup's farming** (the research loop's P-121, 12 November 2026; DESIGN §3.33): a boss that
+      held out is still tried again sooner (at once at rank 2), and the farming the cut regroup skips is paid at once, at
+      the same gold an hour, with its coins on the banner: at a boss's clock wall rank 2 earned 0.29 of the gold, now 1.01,
+      with the boss tried 2.26 times as often
+- [x] **Focus pays at the cap** (a player's point, 16 November 2026): Focus's +15% attack speed joined the other bonuses
+      under the cap of +100%, so a deep hero at the cap got nothing in a fight from leaving the game alone, and only
+      clicking paid. Focus's speed now comes last, and its part past the cap adds as much damage: ×1.15 for a hero
+      already at the cap, about four stages at a deep wall. The Focus pill's tip says which it gives; the server, which
+      counts no Focus, reads a hero as before
+- [x] **Armour still counts at the first walls** (a fix on the one measure for gear, November 2026; DESIGN §3.31): below
+      stage 150, where a new hero falls to blows of 3 to 8% of his health, defence and health count whatever a blow's
+      share, so a better plate keeps its ▲ and the guide's hand, and Weaker leaves it
+- [x] **Berserker counts at a boss's clock too** (a player's report, D5, 19 November 2026; DESIGN §3.33): its +10/+20%
+      damage counted only under half his health, which Gourmet's auto-eat stops from level 5 and a deep hero's health
+      never reaches; it now also counts once a boss's clock is under a quarter (ladder and dungeons, not the Titan's
+      minute or the clan's fight): 0 to 0.4 stages at the wall before, 1.5 to 1.7 now (half the clock would have been worth
+      all of Giant Slayer for two points)
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

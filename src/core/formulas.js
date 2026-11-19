@@ -77,7 +77,18 @@ export const BALANCE = {
         gildedChance: 1 / 150,
         gildedGoldMult: 5,
         gildedXpMult: 2,
-        gildedEssence: [3, 6]
+        gildedEssence: [3, 6],
+        // Where a sure piece goes (a Lord's due, the bosses' due: systems/inventory.js dueSlot). 0: the weapon or armour
+        // that lags furthest by score, as since October 2026. 1: the one where a piece of the place would add the most
+        // stages at the hero's wall (systems/worth.js): deep, the weapon, where the lagging armour's mythic was worth
+        // 0.4-3.7 stages and a mythic weapon 15-29 (research loop 047). A switch for the measurement (tools/simulate.mjs
+        // --set=BALANCE.rewards.dueByWorth:1), off until the owner decides: it moves balance.
+        dueByWorth: 0,
+        // What the bag calls an upgrade, keeps and lets go when full (systems/inventory.js): 1, what a piece adds at the
+        // hero's wall (systems/worth.js, the research loop's P-075); 0, by score, as before it. A switch for the measurement
+        // (tools/simulate.mjs --set=BALANCE.rewards.keepByWorth:0): no number in the fight moves, but a different piece
+        // kept is a different run.
+        keepByWorth: 1
     },
     prestige: {
         minStage: 10,
@@ -153,7 +164,18 @@ export const BALANCE = {
         // place lasts long enough to be met; a stage already cleared is one fight, as ever. The meadow
         // stays one monster a stage, so the first boss still comes within the first minute.
         firstPack: { from: 11, to: 50, size: 3 },
-        regroupMs: 60000        // after a boss escapes: farm the previous stage for a minute, then retry
+        regroupMs: 60000,       // after a boss escapes: farm the previous stage for a minute, then retry
+        // Second Chance cuts the regroup (data/talents.js), and the farming it cuts is paid at once (systems/combat.js
+        // regroupPayout; the research loop's P-121): this share of the cut time × the try's ÷ (the try + the regroup),
+        // which keeps the gold an hour at a boss's clock wall what it was with the whole regroup, the tries coming sooner.
+        // 1 for that; (try + regroup) ÷ try would pay the whole cut minute each time, three times the gold an hour.
+        secondChancePay: 1,
+        // Berserker (data/talents.js) counts under half his health, which a deep hero rarely sees and one whose Gourmet
+        // eats at 50% or more never does; so it also counts once a boss's clock has this share of its time left, or less
+        // (the ladder's and the dungeons' bosses; not the Titan's minute, a race scored by its damage, nor the clan's
+        // fight, where talents' rules don't count). 0: his health alone, as before. A quarter: at half the clock it was
+        // worth as much as all of Giant Slayer for two points (tools/talents.mjs --clock, DESIGN §3.33).
+        berserkerClock: 0.25
     },
     minigame: {
         opportunityEveryMs: [180000, 360000], // a chance appears every 3-6 minutes of active skilling

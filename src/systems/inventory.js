@@ -9,12 +9,13 @@ import {
 import { salvageBars, ANVIL_REFUND } from '../data/workshop.js';
 import { RESOURCES, sellValue } from '../data/resources.js';
 import { GOLD_SHOP } from '../data/perks.js';
-import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, enemyBaseStats } from '../core/formulas.js';
+import { itemSellValue, goldPerKillAtStage, rerollAffixes, abyssDropMult, BALANCE } from '../core/formulas.js';
 import { skillLevel, deriveStats } from '../core/modifiers.js';
 import { isUnlocked } from '../data/unlocks.js';
 import { rng } from '../core/rng.js';
 import { log, bumpStat } from './progress.js';
 import { dungeonTier, uniqueTierOf } from './dungeon.js';
+import { wallJudge, judgeOf } from './worth.js';
 
 const RARITY_ORDER = RARITIES.map(r => r.id);
 const rarityIndex = id => Math.max(0, RARITY_ORDER.indexOf(id));
@@ -67,81 +68,135 @@ export function laggingSlot(state, zone, skip = []) {
 }
 
 
+/**
+ * The slot a sure piece goes to ({ type, ratio }: a Lord's due, the bosses' due, systems/combat.js): the weapon or armour
+ * that lags furthest by score (laggingSlot), or, with BALANCE.rewards.dueByWorth, the one where a piece of the place's
+ * tier at its depth (of `rarity`, its bonuses taken as those worn there) would add the most stages at the hero's wall
+ * (systems/worth.js); an empty slot first, and the laggard again if no slot would gain. `ratio` stays the laggard's, for
+ * the pity count's gate.
+ */
+export function dueSlot(state, zone, skip = [], { rarity = 'rare', judge = null } = {}) {
+    const lag = laggingSlot(state, zone, skip);
+    if (!BALANCE.rewards.dueByWorth || !lag) return lag;
+    const j = judge || wallJudge(state);
+    const power = GEAR_TIERS[Math.max(1, Math.min(GEAR_TIERS.length, zone.gearTier)) - 1].power * abyssDropMult(zone.depth || 0);
+    const quality = (RARITIES.find(r => r.id === rarity) || RARITIES[2]).quality;
+    let best = null;
+    for (const type of SMITHING_TYPES) {
+        if (skip.includes(type)) continue;
+        const base = STAT_UNIT * power * quality;
+        const piece = { type, atk: Math.round(base * SLOT_STATS[type].atk), def: Math.round(base * SLOT_STATS[type].def), affixes: state.equipped[type]?.affixes || [] };
+        const stages = j.worth(piece, type);
+        if (!best || stages > best.stages) best = { type, stages };
+    }
+    return best && best.stages > UPGRADE_EPS ? { type: best.type, ratio: lag.ratio } : lag;
+}
+
 export function canWear(state, item) {
     return skillLevel(state, 'combat') >= (TIER_WEAR_LEVEL[item.tier] || 1);
 }
 
 /**
- * Rough power of an item for comparisons (affixes count; the anvil's and the bench's levels belong to the slots,
- * data/workshop.js, so any piece worn there has them).
+ * Rough power of an item (affixes count; the anvil's and the bench's levels belong to the slots, data/workshop.js, so
+ * any piece worn there has them). Pieces are judged by what they are worth at the wall (systems/worth.js); this breaks
+ * ties, and the bosses' due still counts by it (outscores).
  */
 export function itemScore(item) {
     if (!item) return -1;
     return (item.atk || 0) + (item.def || 0) + 5 * (item.affixes?.length || 0);
 }
 
-/** True if the item beats what is worn in the weakest slot it fits (empty slots count as beaten). */
-export function isUpgrade(state, item) {
+/**
+ * True if the item outscores what is worn in a slot it fits (empty slots count as beaten): the old test, by itemScore.
+ * The bosses' due reads it (systems/combat.js pityMark: an upgrade wipes its marks), so the drops come as they did.
+ */
+export function outscores(state, item) {
     const slots = TYPE_SLOTS[item.type] || [];
     return slots.some(slot => itemScore(item) > itemScore(state.equipped[slot]));
 }
 
-/** The weakest equipped slot an item could go into (empty slots first). */
-function weakestSlotFor(state, type) {
-    const slots = TYPE_SLOTS[type] || [];
-    return slots.reduce((worst, slot) => (itemScore(state.equipped[slot]) < itemScore(state.equipped[worst]) ? slot : worst), slots[0]);
+/** Less than this many stages better is the same (rounding in the sums). */
+const UPGRADE_EPS = 1e-9;
+
+/**
+ * True if wearing the item makes the hero stronger at his wall: an empty slot it fits, or more stages there than the piece
+ * worn (systems/worth.js). `judge` is the wall's (judgeOf for a Game); without one it is made for this state on first need.
+ */
+export function isUpgrade(state, item, judge = wallJudge(state)) {
+    return BALANCE.rewards.keepByWorth ? judge.place(item).stages > UPGRADE_EPS : outscores(state, item);
+}
+
+/** The slot an Equip puts an item in: its kind's one, or an empty one, else where it is worth the most (systems/worth.js). */
+function slotFor(state, item) {
+    const slots = TYPE_SLOTS[item.type] || [];
+    return slots.length < 2 ? slots[0] : wallJudge(state).place(item).slot;
 }
 
 /**
  * What wearing `item` does to the hero, all bonuses counted: his attack, defence and max health after, as
- * ratios to before (0.38 is +38%; Infinity where he had none), in the slot equipItem would choose (with its
- * forge levels). The fight's Equip, the bag and the equip itself say it, so a better piece is seen to make
- * him stronger (the owner, October 2026: a legendary should be felt).
+ * ratios to before (0.38 is +38%; Infinity where he had none), and his damage a second at a boss (`dps`, crits
+ * and swing time counted), in the slot equipItem would choose (with its forge levels). The fight's Equip, the
+ * bag and the equip itself say it, so a better piece is seen to make him stronger (the owner, October 2026: a
+ * legendary should be felt).
  */
-export function equipGain(state, item, slot = weakestSlotFor(state, item.type)) {
+export function equipGain(state, item, slot = slotFor(state, item)) {
     const before = deriveStats(state);
     const after = deriveStats({ ...state, equipped: { ...state.equipped, [slot]: item } });
     const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
-    return { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
+    const dps = s => s.atk * (1 + s.critChance * (s.critDmg - 1)) / s.attackInterval;
+    return { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp), dps: ratio(dps(after), dps(before)) };
 }
 
 /**
  * About how many stages a change in the hero's attack, defence and health (`gain`, as equipGain gives it) is worth
- * at his best stage: attack where a boss must fall in time (its health grows a stage's growth), defence and health
- * together where he must live through a blow (its attack grows likewise), whichever moves more (the exchange rate of
- * docs/research_notes/endless-late-game.md §1.1). Null when it can't be said (a slot that was empty).
+ * at his wall, the one measure of systems/worth.js: the damage a second where the boss must fall in time, defence
+ * (below its 90% cap) and health where his blow still threatens, whichever moves more. Null when it can't be said (a
+ * slot that was empty). `judge`: the wall's, if one is at hand.
  */
-export function gainStages(state, gain) {
+export function gainStages(state, gain, judge = wallJudge(state)) {
     if (!gain || ![gain.atk, gain.def, gain.hp].every(Number.isFinite)) return null;
-    const best = Math.max(1, state.combat?.bestStage || 1);
-    const here = enemyBaseStats(best);
-    const next = enemyBaseStats(best + 1);
-    const ln = v => Math.log(1 + Math.max(-0.99, v));
-    const boss = ln(gain.atk) / Math.log(next.hp / here.hp);
-    const blow = (ln(gain.def) + ln(gain.hp)) / (2 * Math.log(next.atk / here.atk));
-    return Math.abs(boss) >= Math.abs(blow) ? boss : blow;
+    return judge.stagesOf(gain);
 }
 
-/** The best wearable upgrade in the bag, if any: { item, slot, gain } (the fight's one-tap Equip). */
-export function findUpgrade(state) {
+/**
+ * The best wearable upgrade in the bag, if any: { item, slot, stages } (the fight's one-tap Equip), the one that takes
+ * the hero furthest at his wall (systems/worth.js; a piece for an empty slot first).
+ */
+export function findUpgrade(state, judge = wallJudge(state)) {
     let best = null;
     for (const item of state.inventory) {
         if (!canWear(state, item)) continue;
-        const slot = weakestSlotFor(state, item.type);
-        const gain = itemScore(item) - itemScore(state.equipped[slot]);
-        if (gain > 0 && (!best || gain > best.gain)) best = { item, slot, gain };
+        const { slot, stages } = judge.place(item);
+        if (!(stages > UPGRADE_EPS)) continue;
+        if (!best || stages > best.stages || (stages === best.stages && itemScore(item) > itemScore(best.item))) best = { item, slot, stages };
     }
     return best;
 }
 
+/**
+ * The bag's pieces by what they add where an Equip would put them, best first ({ item, stages }; an empty slot's at the
+ * top, ties by itemScore): the bag's order, and what the keep list and the full bag read.
+ */
+export function bagByWorth(state, judge = wallJudge(state), items = state.inventory) {
+    return items.map(item => ({ item, stages: judge.place(item).stages }))
+        .sort((a, b) => (b.stages - a.stages) || (itemScore(b.item) - itemScore(a.item)) || 0);
+}
+
 /** Bag items worth equipping: the best of their type in the bag (one per slot) that beat what is worn. */
-function neededInBag(state) {
+function neededInBag(state, judge = wallJudge(state)) {
     const needed = new Set();
     const byType = {};
-    for (const item of state.inventory) (byType[item.type] ||= []).push(item);
-    for (const [type, items] of Object.entries(byType)) {
-        const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
-        for (const item of best) if (isUpgrade(state, item)) needed.add(item);
+    if (!BALANCE.rewards.keepByWorth) {   // (the switch at 0: by score, as before the measure)
+        for (const item of state.inventory) (byType[item.type] ||= []).push(item);
+        for (const [type, items] of Object.entries(byType)) {
+            const best = items.sort((a, b) => itemScore(b) - itemScore(a)).slice(0, (TYPE_SLOTS[type] || []).length);
+            for (const item of best) if (outscores(state, item)) needed.add(item);
+        }
+        return needed;
+    }
+    for (const entry of bagByWorth(state, judge)) (byType[entry.item.type] ||= []).push(entry);
+    for (const [type, entries] of Object.entries(byType)) {
+        for (const { item, stages } of entries.slice(0, (TYPE_SLOTS[type] || []).length)) if (stages > UPGRADE_EPS) needed.add(item);
     }
     return needed;
 }
@@ -167,10 +222,10 @@ function keptForSeal(state, items = state.inventory) {
  * What the bag's Salvage weaker takes: every unlocked piece that wouldn't improve what is worn (crafted gear too, since
  * it was asked for), and a dungeon's spare uniques but the ones kept for the Seal.
  */
-export function weakerInBag(state) {
-    const needed = neededInBag(state);
+export function weakerInBag(state, judge = wallJudge(state)) {
+    const needed = neededInBag(state, judge);
     const seal = keptForSeal(state);
-    return state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i) && !isUpgrade(state, i));
+    return state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i) && !isUpgrade(state, i, judge));
 }
 
 /** The bag's room: BAG_SIZE, and BAG_UPGRADE.slots more for each upgrade bought. */
@@ -233,25 +288,32 @@ export function addItem(game, item) {
     const state = game.state;
     markCodex(state, item);   // found, even if it is salvaged as it lands
     const filter = state.settings.autoSalvage || 'off';
+    const judge = judgeOf(game);   // (what a piece is worth at the wall: systems/worth.js)
     // 'weaker': whatever its rarity, a drop that wouldn't improve what is worn, a dungeon's spare unique too, but never the
     // copy the bag keeps for the Seal, nor a first copy, which arrives locked
     const caught = !item.locked && (filter === 'weaker'
         ? !(item.uniqueId && keptForSeal(state, [...state.inventory, item]).has(item))
         : rarityIndex(item.rarity) <= rarityIndex(filter));
-    if (item.source !== 'crafted' && filter !== 'off' && caught && !isUpgrade(state, item)) {
+    if (item.source !== 'crafted' && filter !== 'off' && caught && !isUpgrade(state, item, judge)) {
         const gained = salvageObject(game, item, { auto: true });
         return { kept: false, salvaged: item, gained };
     }
     state.inventory.push(item);
     if (state.inventory.length <= bagSize(state)) return { kept: true, salvaged: null };
 
-    // Any unlocked item can go except the ones worth equipping and the spare uniques kept for the Seal. If nothing can
-    // (the bag is all locked items and upgrades), allow the overflow: an upgrade is never salvaged behind your back.
-    const needed = neededInBag(state);
+    // Any unlocked item can go except the ones worth equipping and the spare uniques kept for the Seal: the one worth
+    // least where it would be worn. If nothing can (the bag is all locked items and upgrades), allow the overflow: an
+    // upgrade is never salvaged behind your back.
+    const needed = neededInBag(state, judge);
     const seal = keptForSeal(state);
     const candidates = state.inventory.filter(i => !i.locked && !needed.has(i) && !seal.has(i));
     if (!candidates.length) return { kept: true, salvaged: null };
-    const worst = candidates.reduce((a, b) => (itemScore(b) < itemScore(a) ? b : a));
+    let low = null;   // (the first of the least worth: ties go by itemScore, then by the bag's order, as before)
+    for (const item of candidates) {
+        const stages = BALANCE.rewards.keepByWorth ? judge.place(item).stages : itemScore(item);   // (the switch at 0: the lowest score)
+        if (!low || stages < low.stages || (stages === low.stages && itemScore(item) < itemScore(low.item))) low = { item, stages };
+    }
+    const worst = low.item;
     state.inventory.splice(state.inventory.indexOf(worst), 1);
     const gained = salvageObject(game, worst, { auto: true });
     return { kept: worst !== item, salvaged: worst, gained };
@@ -298,12 +360,40 @@ function salvageObject(game, item, { auto = false, quiet = auto } = {}) {
     state.resources.essence += gained.essence;
     bumpStat(game, 'itemsSalvaged');
     if (auto) bumpStat(game, 'itemsAutoSalvaged');
-    if (!quiet || rarityIndex(item.rarity) >= 2) {
+    if (!quiet) {
         const text = gainedText(gained);
         log(game, `♻️ Salvaged ${item.name}${text ? ` for ${text}` : ''}.`, 'loot');
-    }
+    } else if (auto && rarityIndex(item.rarity) >= 2) tallyAutoSalvage(game, item, gained);   // (a line a minute: flushSalvageLine)
     game.markDirty();
     return gained;
+}
+
+/**
+ * Automatic salvage's line in the log, gathered (the research loop's P-077: a line for each rare or better piece the bag
+ * or Weaker salvaged came to about twenty an hour): the pieces of a minute go into one line, kept in `meta.salvageTally`
+ * until it is written, at the next such salvage or the tick after a minute (Game.tick).
+ */
+export const SALVAGE_LINE_MS = 60000;
+
+function tallyAutoSalvage(game, item, gained) {
+    const meta = game.state.meta;
+    flushSalvageLine(game);
+    const t = meta.salvageTally ||= { since: game.now, count: 0, essence: 0, materials: {}, rarities: {} };
+    t.count += 1;
+    t.essence += gained.essence || 0;
+    for (const [id, qty] of Object.entries(gained.materials || {})) t.materials[id] = (t.materials[id] || 0) + qty;
+    t.rarities[item.rarity] = (t.rarities[item.rarity] || 0) + 1;
+}
+
+/** Write the gathered line once its minute is up (`force`: now): "Salvaged 5 pieces as they came (2 epic, 3 rare) for …". */
+export function flushSalvageLine(game, force = false) {
+    const t = game.state.meta.salvageTally;
+    if (!t || (!force && game.now - t.since < SALVAGE_LINE_MS)) return false;
+    delete game.state.meta.salvageTally;
+    const kinds = [...RARITY_ORDER].reverse().filter(r => t.rarities[r] > 0).map(r => `${t.rarities[r]} ${RARITIES.find(x => x.id === r).name.toLowerCase()}`).join(', ');
+    const text = gainedText(t);
+    log(game, `♻️ Salvaged ${t.count} piece${t.count === 1 ? '' : 's'} as they came (${kinds})${text ? ` for ${text}` : ''}.`, 'loot');
+    return true;
 }
 
 export function salvageItem(game, id) {
@@ -312,7 +402,9 @@ export function salvageItem(game, id) {
     if (!found) return null;
     if (found.item.locked) { game.emit({ type: 'error', text: 'Unlock the item first.' }); return null; }
     state.inventory.splice(found.index, 1);
-    return salvageObject(game, found.item);
+    const gained = salvageObject(game, found.item);
+    noteUndo(game, 'salvage', [found.item], gained);
+    return gained;
 }
 
 /**
@@ -331,6 +423,7 @@ function salvageBatch(game, doomed, what = '') {
     }
     const text = gainedText(total);
     if (doomed.length) log(game, `♻️ Salvaged ${doomed.length} item${doomed.length === 1 ? '' : 's'}${what}${text ? ` for ${text}` : ''}.`, 'loot');
+    noteUndo(game, 'salvage', doomed, total);
     return { count: doomed.length, ...total };
 }
 
@@ -370,10 +463,40 @@ export function equipItem(game, id, requestedSlot = null) {
     const slots = TYPE_SLOTS[item.type] || [];
     let slot = requestedSlot;
     if (slot && !slots.includes(slot)) return false;
-    if (!slot) slot = slots.find(s => !state.equipped[s]) || slots.reduce((w, s) => (itemScore(state.equipped[s]) < itemScore(state.equipped[w]) ? s : w), slots[0]);
+    if (!slot) slot = judgeOf(game).place(item).slot;   // an empty slot, else where it is worth the most (systems/worth.js)
+    if (!slot) return false;
 
-    const previous = state.equipped[slot];
     const gain = equipGain(state, item, slot);   // (before the swap: what it does to him, for the screen)
+    const { forge, firstForge } = wear(game, item, index, slot);
+    const swept = sweepWeaker(game, [item.type]);
+    game.emit({ type: 'equip', item, slot, gain, forge, firstForge, ...(swept ? { swept } : {}) });
+    game.markDirty();
+    return true;
+}
+
+/**
+ * Weaker that stays (the research loop's P-077): with the Weaker auto-salvage on, an Equip also takes the bag's pieces of
+ * the kinds it put on that no longer improve what is worn, the one taken off among them, as Salvage weaker would; never
+ * a locked piece, the Seal's copy, nor one the hero made (as the auto-salvage never takes those). One line in the log;
+ * returns { count, essence, materials, items } or null.
+ */
+function sweepWeaker(game, types) {
+    const state = game.state;
+    if (state.settings.autoSalvage !== 'weaker') return null;
+    game.recompute();   // (judged on what is worn now)
+    const kinds = new Set(types);
+    const doomed = weakerInBag(state, judgeOf(game)).filter(i => kinds.has(i.type) && i.source !== 'crafted');
+    if (!doomed.length) return null;
+    return { ...salvageBatch(game, doomed, ' made weaker by what you put on'), items: doomed };
+}
+
+/**
+ * Put the bag's `item` (at `index`) on in `slot`, the piece there back into the bag: { previous, forge, firstForge }, the
+ * slot's levels it has now and whether it is the first piece ever to take a slot's levels.
+ */
+function wear(game, item, index, slot) {
+    const state = game.state;
+    const previous = state.equipped[slot];
     state.equipped[slot] = item;
     state.inventory.splice(index, 1);
     if (previous) state.inventory.push(previous);
@@ -387,11 +510,61 @@ export function equipItem(game, id, requestedSlot = null) {
         forge = levels.level || 0;
     }
     // the first time a piece takes a slot's levels, a card says how the forge works (main.js), once
-    const firstForge = forge > 0 && previous && !state.seen.forge_slots;
+    const firstForge = forge > 0 && !!previous && !state.seen.forge_slots;
     if (firstForge) state.seen.forge_slots = true;
-    game.emit({ type: 'equip', item, slot, gain, forge, firstForge });
+    return { previous, forge, firstForge };
+}
+
+/**
+ * The upgrades waiting in the bag, a slot each: what Equip all puts on, best first ([{ item, slot, stages }]). Each slot
+ * takes the bag's piece worth the most there (systems/worth.js), a piece one slot: two rings, the best two. `skip`: ids
+ * of pieces to leave out.
+ */
+export function upgradesWaiting(state, judge = wallJudge(state), skip = null) {
+    const offers = [];
+    for (const item of state.inventory) {
+        if (!canWear(state, item) || skip?.has(item.id)) continue;
+        for (const slot of TYPE_SLOTS[item.type] || []) {
+            const stages = judge.worth(item, slot);
+            if (stages > UPGRADE_EPS) offers.push({ item, slot, stages });
+        }
+    }
+    offers.sort((a, b) => (b.stages - a.stages) || (itemScore(b.item) - itemScore(a.item)) || 0);
+    const items = new Set();
+    const slots = new Set();
+    return offers.filter(o => !items.has(o.item) && !slots.has(o.slot) && items.add(o.item) && slots.add(o.slot));
+}
+
+/**
+ * Equip all (the research loop's P-076: about six kinds of upgrade wait at nearly every return): the best waiting piece
+ * for every slot, one at a time, each judged again on what is worn by then; a piece this takes off never goes back on in
+ * the same tap. One 'equip' event says what it all did to the hero, with the pieces (`items`). Returns how many went on.
+ */
+export function equipAll(game) {
+    const state = game.state;
+    if (gearLocked(game)) return 0;
+    const before = deriveStats(state);
+    const put = [];
+    const off = new Set();
+    let first = null;
+    for (let guard = 0; guard < EQUIP_SLOTS.length * 2; guard++) {
+        game.recompute();   // (the stats with what is on now: the next piece is judged on them)
+        const [next] = upgradesWaiting(state, judgeOf(game), off);
+        if (!next) break;
+        const done = wear(game, next.item, state.inventory.indexOf(next.item), next.slot);
+        if (done.previous) off.add(done.previous.id);
+        if (done.firstForge) first = { ...next, forge: done.forge };
+        put.push(next);
+    }
+    if (!put.length) return 0;
+    const after = deriveStats(state);
+    const ratio = (a, b) => (b > 0 ? a / b - 1 : a > 0 ? Infinity : 0);
+    const gain = { atk: ratio(after.atk, before.atk), def: ratio(after.def, before.def), hp: ratio(after.maxHp, before.maxHp) };
+    const lead = first || put[0];
+    const swept = sweepWeaker(game, put.map(p => p.item.type));
+    game.emit({ type: 'equip', item: lead.item, slot: lead.slot, gain, forge: first ? first.forge : 0, firstForge: !!first, count: put.length, items: put.map(p => p.item), ...(swept ? { swept } : {}) });
     game.markDirty();
-    return true;
+    return put.length;
 }
 
 export function unequipItem(game, slot) {
@@ -416,6 +589,7 @@ export function sellItem(game, id) {
     state.inventory.splice(found.index, 1);
     state.gold += value;
     bumpStat(game, 'goldEarned', value);
+    noteUndo(game, 'sale', [found.item], { gold: value });
     game.emit({ type: 'sold', item: found.item, gold: value });
     game.markDirty();
     return true;
@@ -427,14 +601,63 @@ export function sellAllItems(game, maxRarity = 'common') {
     const state = game.state;
     let gold = 0;
     let count = 0;
+    const sold = [];
     state.inventory = state.inventory.filter(item => {
-        if (!item.locked && rarityIndex(item.rarity) <= limit) { gold += itemSellValue(item); count++; return false; }
+        if (!item.locked && rarityIndex(item.rarity) <= limit) { gold += itemSellValue(item); count++; sold.push(item); return false; }
         return true;
     });
     state.gold += gold;
     bumpStat(game, 'goldEarned', gold);
     if (count) { log(game, `Sold ${count} item${count === 1 ? '' : 's'} for ${gold} gold.`, 'info'); game.markDirty(); }
+    noteUndo(game, 'sale', sold, { gold });
     return { count, gold };
+}
+
+// ---------- undo ----------
+
+/**
+ * How long the last sale or salvage can be taken back (the research loop's P-078: Melvor's Undo Sell mod has 29,579
+ * subscribers, and its sequel's players asked for a buy-back): a few seconds, on its toast. One at a time, the latest:
+ * a sale, a salvage, a batch button's, or what an Equip with Weaker on took with it.
+ */
+export const UNDO_MS = 8000;
+let undoSerial = 0;
+
+/** Keep what a sale or salvage took and exactly what it gave (a salvage rolls its bars), on the game, not in the save. */
+function noteUndo(game, kind, items, { gold = 0, essence = 0, materials = {} } = {}) {
+    if (!items.length) return;
+    game.undo = { id: ++undoSerial, kind, items: [...items], gold, essence, materials: { ...materials }, at: game.now };
+}
+
+/** The last sale or salvage while it can still be taken back ({ id, kind, items, gold, essence, materials, at }), else null. */
+export function lastUndo(game, id = null) {
+    const u = game.undo;
+    return u && (id === null || u.id === id) && game.now - u.at <= UNDO_MS ? u : null;
+}
+
+/**
+ * Take back the last sale or salvage (`id`: that one): the pieces back in the bag, and exactly the gold, essence and bars
+ * it gave out of the purse and the bank, its counts too. Refused once it is too late, another came after it, or what it
+ * gave is spent.
+ */
+export function undoLast(game, id = null) {
+    const state = game.state;
+    const u = lastUndo(game, id);
+    if (!u) { game.emit({ type: 'error', text: 'Too late to take that back.' }); return false; }
+    const short = state.gold < u.gold ? 'gold' : (state.resources.essence || 0) < u.essence ? 'essence'
+        : Object.entries(u.materials).find(([m, q]) => (state.resources[m] || 0) < q)?.[0];
+    if (short) { game.emit({ type: 'error', text: `The ${RESOURCES[short]?.name.toLowerCase() || short} it gave is spent already.` }); return false; }
+    state.gold -= u.gold;
+    state.resources.essence -= u.essence;
+    for (const [m, q] of Object.entries(u.materials)) state.resources[m] -= q;
+    if (u.kind === 'sale') state.stats.goldEarned = Math.max(0, (state.stats.goldEarned || 0) - u.gold);
+    else state.stats.itemsSalvaged = Math.max(0, (state.stats.itemsSalvaged || 0) - u.items.length);
+    state.inventory.push(...u.items);
+    game.undo = null;
+    log(game, `↩️ Taken back: ${u.items.length === 1 ? u.items[0].name : `${u.items.length} items`}, in the bag again.`, 'info');
+    game.emit({ type: 'undo', kind: u.kind, count: u.items.length, items: u.items });
+    game.markDirty();
+    return true;
 }
 
 // ---------- upgrade, reforge, lock ----------

@@ -228,3 +228,66 @@ test('two checkpoints passed at once are both announced', () => {
     addMasteryXp(game, 'woodcutting', actions[1].key, practiceFor(MASTERY_MAX_LEVEL));
     assert.deepEqual(game.drainEvents().filter(e => e.type === 'masteryCheckpoint').map(e => e.at), [0.10, 0.25]);
 });
+
+test('Practise works a metal\'s bars for its mastery alone, a second a bar as the anvil\'s jobs pay, to its next level a tap', async () => {
+    const { practise, practiseCost } = await import('../src/systems/anvil.js');
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.smithing.xp = xpForLevel(40);
+    s.resources.copper_bar = 5000;
+    s.resources.essence = 100;
+    const key = forgeKey('copper_bar');
+    const smithing = s.skills.smithing.xp;
+    const forge = JSON.stringify(s.forge);
+    let taps = 0;
+    while (masteryLevel(s, 'smithing', key) < 40) {
+        const before = { bars: s.resources.copper_bar, xp: s.mastery.smithing[key] || 0, level: masteryLevel(s, 'smithing', key) };
+        const cost = practiseCost(s, 'copper_bar');
+        assert.ok(cost.ok);
+        assert.equal(game.practise('copper_bar'), true);
+        taps++;
+        assert.equal(before.bars - s.resources.copper_bar, cost.bars);
+        assert.ok(Math.abs((s.mastery.smithing[key] - before.xp) - cost.bars) < 1e-9, 'a second of practice a bar');
+        assert.equal(masteryLevel(s, 'smithing', key), before.level + 1, 'a level a tap');
+    }
+    assert.equal(taps, 39);
+    assert.equal(s.skills.smithing.xp, smithing, 'no Smithing XP');
+    assert.equal(JSON.stringify(s.forge), forge, 'no slot\'s levels');
+    assert.equal(s.resources.essence, 100, 'no essence');
+    // no faster than working the metal on a slot today: its mastery's 99 takes as many bars as the jobs' (a reroll's bars too)
+    assert.equal(Math.round(practiceFor(MASTERY_MAX_LEVEL)), 181034);
+    s.equipped.Body = generateDrop(1, true, s.idCounter++, 0, [{ type: 'Body', weight: 1 }], { tier: 1, rarity: 'rare' });
+    const rerollXp = s.mastery.smithing[key];
+    const bars = s.resources.copper_bar;
+    assert.ok(game.rerollItem(s.equipped.Body.id));
+    assert.equal(s.mastery.smithing[key] - rerollXp, bars - s.resources.copper_bar, 'a reroll pays the same, a second a bar');
+    // a tap takes what is held when it is less than the next level asks; none held, none to take
+    s.resources.copper_bar = 3;
+    const short = practiseCost(s, 'copper_bar');
+    assert.ok(short.need > 3 && short.bars === 3);
+    assert.equal(game.practise('copper_bar'), true);
+    assert.equal(s.resources.copper_bar, 0);
+    assert.equal(practiseCost(s, 'copper_bar').why, 'short');
+    assert.equal(game.practise('copper_bar'), false);
+    // a metal Smithing hasn't reached; a metal mastered
+    s.resources.adamant_bar = 10;
+    assert.equal(practiseCost(s, 'adamant_bar').why, 'level');
+    s.mastery.smithing[forgeKey('iron_bar')] = practiceFor(99);
+    s.resources.iron_bar = 10;
+    assert.equal(practiseCost(s, 'iron_bar').why, 'max');
+    assert.equal(practise(game, 'gold_bar'), false, 'gold is a setting, not a metal the anvil works');
+});
+
+test('the anvil\'s mastery strip offers Practise for each open metal held, the bars a tap takes on it', () => {
+    const game = new Game(null, T0);
+    const s = game.state;
+    s.skills.smithing.xp = xpForLevel(40);
+    s.seen.anvil = s.seen.mastery = true;
+    s.equipped.Body = generateDrop(2, true, s.idCounter++, 0, [{ type: 'Body', weight: 1 }], { tier: 2 });
+    s.resources.copper_bar = 700;
+    const html = renderSmithing(game, { smithView: 'anvil' });
+    assert.match(html, /FI\.practise\('copper_bar'\)/);
+    assert.match(html, /class="anvil-practise ready"[^>]*aria-label="Practise Copper: 2 bars"/, 'level 1 to 2 asks two bars');
+    assert.match(html, /aria-label="Practise Iron: \d+ bars"/, 'one with none held says what the next level asks');
+    assert.ok(!html.includes("FI.practise('adamant_bar')"), 'not past the Smithing level');
+});

@@ -272,13 +272,32 @@ harvest. Their bars and logs are still why a gatherer visits the smithy and a sm
   items once made every new drop, however good, salvage on arrival). An auto-salvage filter (off /
   common / uncommon / rare / weaker) salvages low drops on arrival unless they are upgrades; Weaker
   takes any drop that wouldn't improve what is worn, whatever its rarity, and the bag's "Salvage weaker"
-  button does the same for what it holds (`weakerInBag`). A dungeon's spare unique goes too (a player's ask,
+  button does the same for what it holds (`weakerInBag`); "improve" is the wall's measure (§3.31, "+N stages"). A dungeon's spare unique goes too (a player's ask,
   29 October 2026: no unique went before, and a tier's 250 clears a dungeon left some five copies of each),
   but never a locked first copy, nor the one copy of each of the open tier's uniques the bag keeps for the
   Seal, which hands in a copy from the bag before a worn one (`keptForSeal`; the full bag's overflow keeps it
   too). A bulk salvage's line and toast name all that came back (`gainedText`): a crafted piece gives part of
   its bars and gems and no essence, and "+0 essence" read as nothing; an item's Salvage button carries the
   icons of what it gives. Locked items are never sold or salvaged. Nothing is ever silently deleted.
+- **Equip all** (the research loop's P-076, 12 November 2026: about six kinds of upgrade wait at nearly every return,
+  one tap apiece): once two or more slots have an upgrade waiting, an **All** beside the dock's Equip puts on the best
+  waiting piece for every slot (`upgradesWaiting`, `equipAll` in `src/systems/inventory.js`), two rings for the two ring
+  slots, each judged again on what is worn by then (§3.31's measure); a piece it takes off doesn't go back on in the
+  same tap. One rise over the hero says what it all did. Nothing goes on by itself: putting on a legendary stays a moment.
+- **Weaker that stays** (the research loop's P-077, 12 November 2026: unless swept by hand the bag was full from hour 10 to
+  39 on, and Weaker, judging a drop only as it lands, still left it full of yesterday's upgrades): with Weaker on, an
+  Equip (or Equip all) also salvages the bag's pieces of the kinds it put on that no longer improve what is worn, the one
+  taken off among them (`sweepWeaker`), never a locked piece, the Seal's copy or one the hero made, with one line and a
+  toast. The Weaker pill glows on the bag from the first time the bag is full until Weaker is picked once (disclosures
+  `bag_full`, `weaker_tried`). Automatic salvage's log gathers its rare or better pieces into a line a minute ("Salvaged
+  5 pieces as they came (2 epic, 3 rare) for …", `flushSalvageLine`, the minute kept in `meta.salvageTally`), where it
+  wrote about twenty lines an hour.
+- **Undo** (the research loop's P-078, 12 November 2026: Melvor's Undo Sell mod has 29,579 subscribers, and its sequel's
+  players asked for a buy-back; here Sell, Salvage and the batch buttons acted at once): the toast of a sale, a salvage,
+  a batch button or an Equip's Weaker sweep carries an **Undo** for eight seconds (`UNDO_MS`, `undoLast` in
+  `src/systems/inventory.js`). It puts the pieces back in the bag and takes back exactly what was given, a salvage's
+  rolled bars and gems included (kept on the game, not in the save), and the counts with it (gold earned, items
+  salvaged). One at a time, the latest; refused once it is too late, another came after it, or what it gave is spent.
 
 ### 3.6 Combat
 
@@ -485,7 +504,11 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   about best stage 85, so a new player's camp is as it was (§3.24); past that, a whole upgrade costs about 50 kills at the best stage,
   so each run buys its camp again as it nears its best (the owner's choice 3a). At 0.016 the camp took
   80% of gold but each late run took 0.7 h instead of 0.5 h. It turns each new run into a climb and
-  gives gold a job.
+  gives gold a job. Each token also says what its next level is worth in stages at the wall that binds ("+1.4 stages",
+  "+0 stages": the research loop's P-091, 12 November 2026), by §3.31's measure on the camp this run has bought: past
+  stage 1,000, 51–67% of camp gold bought Armour Rack and Hearth levels past the defence cap and past any threat. Deep,
+  a Whetstone level says +1.4 stages and the other two +0 once the run's camp is up; honesty on the button, not a
+  suggestion: no glow, nothing bought by itself.
 - **Supplies** (gold shop): coal, logs, herbs, rabbits, bait and the Essence Cache (10 essence for 30
   kills — the open-ended late-game sink) priced in kills at the furthest stage the run has reached (4–6
   kills a pack; a boss stage prices like its regular monsters), never under 1.25 × what they sell back for
@@ -865,6 +888,13 @@ are shown, the next as silhouettes; a kind not met yet is a black shape and "???
 - **Focus** (Clicker Heroes' idle ancients): after **60 seconds without a click or key press** the hero
   settles in — +15% skill speed and +15% attack speed until the next input. It also applies to offline
   progress, so leaving the game alone is never strictly worse than clicking.
+  Its attack speed comes after every other bonus, and the part of it past attack speed's cap of +100% becomes
+  damage, a point for a point (`BASE.focusCapDamage`; `derived.focusSpeed` and `derived.focusDamage`, which the
+  Focus pill's tip reads): at the cap it added nothing to a fight, every deep hero the simulator made sat past the
+  cap, and a deep hero gained from clicking alone (a player's point, November 2026). A hero already at the cap hits
+  ×1.15 while focused, about four stages at a deep wall (monster health grows 3.5% a stage from stage 700); below the
+  cap nothing changed. The server counts no Focus (`core/power.js` stableState), so the boards, the clan fight and
+  the growth check read a hero as before.
 
 ### 3.16 Offline progress
 
@@ -1274,6 +1304,15 @@ pool: every repeatable action has its own level from 1 to 99, earned by doing it
   (2,500: +5% double chance in every skill) and Grandmaster (a first 99: +5% XP).
 - **Kept through prestige**, replayed offline (the replay speeds up as levels come), and on each save
   load unknown actions are dropped and the mastery stats are rebuilt from the levels.
+- **Practise** (the research loop's P-058, the owner's decision, 12 November 2026): a slot works only the best metal it has
+  held, so a lower metal trained only by rerolling a worn piece of it (36,207 rerolls of a copper chest piece for 99). The
+  anvil's mastery strip now has a Practise on each open metal held (`practise`, `practiseCost` in `src/systems/anvil.js`):
+  a tap works that metal's bars for its mastery alone, to its next level (or as many as are held; 98 taps from 1 to 99).
+  It pays what the anvil's jobs pay and no faster: one mastery XP, a second of practice, a bar paid (181,034 bars for 99,
+  the same as today's rerolls or reinforcing), no mastery taking bars off it, and no Smithing XP, essence or slot's
+  levels; the levels cost what they did. Lower metals' mastery will come faster in play than it did, the bars being the
+  only gate where a worn piece, essence and a tap a reroll were: Smithing's checkpoints (smelting speed) and the mastery
+  medals with it.
 
 ### 3.21 Presentation: the battle scene
 
@@ -1964,9 +2003,31 @@ forge is shown agreed first (the owner asked how a player would know it):
 - **The frontier's piece** (`FRONTIER_DROP`, `frontierPiece` in `src/systems/combat.js`): once a run, from a best of 100,
   the first ladder boss beaten at 90% of the best stage or deeper leaves a sure piece from the best stage's depth at a
   boss's odds (Tap Titans 2 seeds frontier drops on every prestige run), so every run has a real chance at an upgrade.
-- **"+N stages"** (`gainStages` in `src/systems/inventory.js`): every item card and the fight's ▲ Equip say about how
-  far a piece takes the hero: its attack at the boss's wall (ln(1 + gain) over the stage's health growth), its defence
-  and health at the blow he must live through, whichever moves more (the exchange rate of the research, §1.1).
+- **"+N stages"** (`src/systems/worth.js`, the research loop's P-075, 12 November 2026): every item card and the fight's ▲
+  Equip say about how far a piece takes the hero at the wall that binds, and the same figure judges every piece: the ▲ on
+  a tile (`isUpgrade`), the dock's pick (`findUpgrade`), Weaker as a drop lands and the bag's Salvage weaker
+  (`weakerInBag`), the full bag's keep list and the piece it gives up, the bag's order (`bagByWorth`), and where an Equip
+  puts a ring or an earring. The hero stands at his wall: the first boss at or past his best stage, with the camp he had
+  when he last set a new best (`meta.wallCamp`, noted by `systems/combat.js`; a save from before has its run's when it
+  stands at its wall) or this run's if more, his combat potion running if he picked one and holds a bottle, and Focus
+  settled in. A change is worth, at the boss's clock, ln(damage a second after ÷ before) over ln(the boss's health growth
+  a stage), crits and swing time counted (Weak Spot's and Flurry's too); and at its blow, while the blow threatens (a
+  tenth of his health or more, `THREAT_SHARE`), how much harder the boss could hit for the same share of his health, over
+  ln(its attack growth a stage), defence counting only below the 90% cap; whichever moves more. Under a tenth only the
+  clock counts, from stage 150 (`BALANCE.enemy.stageBoss.to`, where the ladder's bosses have come down to their monsters'
+  blow): before it defence and health always count, since first walls fell heroes with blows of 3 to 8% of their health
+  (the climb wears them down), and armour there must keep its ▲, the guide's hand and its place past Weaker.
+  In Glass Hero defence and health count for nothing. It was the attack's ratio at the boss and
+  defence and health at the blow with no cap and no threat (the exchange rate of the research, §1.1): past about stage
+  700 a legendary plate said +19 stages at 1,000 and gave none, and the dock offered it before a sword. Now, on heroes
+  built from the game's own drops at 700, 1,300 and 2,000 (`test/worth.test.mjs`), a frontier shield, helm, plate or
+  greaves says −0.3 to +1 (what its bonuses do), as research loop 047 measured (−1.5 to +1.7), where the old card said
+  +8 to +22; the weapon, gloves and jewellery say within 0.2 of what they are worth. Where blows still threaten (a
+  hero at 300 takes about half his health a blow) the plate's defence counts as before. The bosses' due still wipes its
+  marks on an upgrade by score (`outscores`), so the sure pieces come as they did. It reads and changes nothing, and for
+  a game it works from the stats the game has (`judgeOf`), the bag's every piece in a few sums. What the bag calls an upgrade
+  and keeps follows it (`isUpgrade`, `neededInBag`, the full bag's pick); `BALANCE.rewards.keepByWorth` at 0 turns those back
+  to `itemScore` for a measurement: a different piece kept is a different run (a bot's 50 hours differ from the first full bag on).
 
 Numbers (median of 7 seeds, with Auto; part one alone → with this): the best stage at 100 h 420 → 470, 300 h 1,010 →
 1,130, 600 h 1,410 → 1,590, 1,000 h 1,660 → 1,850, 1,200 h 1,830 → 2,010 (stage 2,000 at hour 1,161). The forge reaches
@@ -1979,8 +2040,11 @@ The third part of the endless climb (§3.30, the research's §5.2 items 6–8): 
 bonuses whose worth doesn't fade as the hero grows.
 - **Lords** (`LORDS` in `src/data/zones.js`, `lordsDue` in `src/systems/combat.js`): from stage 200 the boss of every
   100th stage is its stratum's Lord, crowned on the stage path and named on its banner. Its first defeat ever leaves a
-  sure piece from its depth for the weapon or armour slot that lags furthest behind (`laggingSlot`; an earring was a
-  poor due in the first try): legendary, from stage 500 Mythic (Primal one time in 20
+  sure piece from its depth for the weapon or armour slot that lags furthest behind (`laggingSlot`, through `dueSlot`; an
+  earring was a poor due in the first try; with the switch `BALANCE.rewards.dueByWorth`, off until the owner decides on the
+  coordinator's measurement, the due and the bosses' due go instead where a piece of the place adds the most stages at the
+  wall by §3.31's measure: deep, the weapon, where the lagging armour's mythic was worth 0.4–3.7 stages and a mythic weapon
+  15–29, research loop 047): legendary, from stage 500 Mythic (Primal one time in 20
   from 1,000), with its card. After that it is a boss like the others (`combat.lordsBeaten`; a save from before counts
   those above its best as beaten, their due being for new ground).
 - **The strata come round** (`stratumAt`, `stratumById` in `src/data/strata.js`): past Pandemonium (stage 500) the
@@ -2022,7 +2086,13 @@ the forge is: a page running the older game drops a field it doesn't know).
   swing at a boss, Execute's bosses falling below 2/4/6% of their health, the capstone Deathblow's every tenth swing
   doubled), **Bulwark** (staying up: health, armour, Brace and Fortress against blows, Second Wind once a minute,
   Riposte and Vengeance on a dodge, the capstone Unbreakable: no blow takes more than a third of his health) and **Hunt**
-  (+1 s a rank on a boss's clock, gold, drops, essence, Second Chance's shorter regroup, Lord's Due's second piece,
+  (+1 s a rank on a boss's clock, gold, drops, essence, Second Chance's shorter regroup with the farming it skips paid at
+  once, at the same gold an hour (`regroupPayout`, `BALANCE.combat.secondChancePay`; the research loop's P-121, 12 November
+  2026: with the regroup's minute gone a hero at a boss's clock wall earned 0.29 of its gold, the gold that buys the camp,
+  and 5 of 8 heroes lost a gate. The cut time is paid as the farming at the stage below would pay it, at the game's own
+  payout and the hero's usual swing, times the try ÷ (the try + the regroup): an hour at a clock wall, rank 2 earns 1.01
+  of the gold without the talent and tries the boss 2.26 times as often, rank 1 0.98 and 1.40; paying the whole minute
+  each time would have made it 2.26 of the gold), Lord's Due's second piece,
   Veteran's Focus, Bounty, the capstone Relentless: each time a boss holds out its next try gives 2 s more, up to 10). A
   row opens with five more points in its tree (`ROW_POINTS`), so the capstone is the 31st. **Bridges** join each tree from
   the top down to its capstone (the owner, 2 November 2026: no talent alone in the middle; a dead end may stop short, as
@@ -2044,6 +2114,19 @@ the forge is: a page running the older game drops a field it doesn't know).
   Deathblow, added 20–30), about 10 in Hunt, 0–10 in Bulwark, whose worth is in heavier fights (Trials, dungeons, the
   Titan; a deep hero barely falls on the stages); a 51-point Blade-and-Hunt build adds about 20. The bot learns along
   `TALENT_ORDER` in `tools/simulate.mjs` (`--without=talents` turns it off).
+- **Berserker's clock** (a player's report, D5, 19 November 2026; `BALANCE.combat.berserkerClock`, 0.25): +10/+20% damage under
+  half his health was out of the game deep: Gourmet's auto-eat line rises 5 points a level, so from level 5 he eats at 50% or
+  more and never reaches it, and at stages past 1,300 a boss's blow takes about 3% of his health at most (research loop 015
+  measured it at 0 stages). It now also counts once a boss's clock has that share of its time left or less: the bosses of the ladder and
+  the dungeons (the clock's mark is exact in any step, `tickCombat`), never the Titan, whose minute is a race scored by its
+  damage (as Execute's rule and `bossCanFall` already treat it: there the clock would only be a surer score), nor the clan's
+  fight, where the talents' rules stay out; 0 is the old rule exactly. Sized on the boss bench beside `tools/talents.mjs`
+  (`--clock`, 015's method: each talent alone on each hero, the damage it adds in his wall boss's clock as stages, on 45 heroes
+  built at 800 to 2,400 and 21 the simulator saved at 700 to 1,300, seeds 1 to 3): the first idea, half the clock, gave 2.85 to
+  2.91 stages for two points, all of Giant Slayer's (2.77 for five) for two points, so it came down to a quarter: 1.45 stages
+  on the built heroes, 1.68 on the simulated, 0.7 to 0.85 a point against 0.3 to 0.6 for the Blade's others (Execute 1.80 for
+  three, Giant Slayer 2.77 for five, Opening Blow 1.4 to 1.6 and Flurry 0.9 to 1.4 for three, Deathblow 2.4 to 2.6 for its one).
+  The old rule alone is 0.0 on the built heroes and 0.4 on the simulated ones, where a shallower hero still drops under half.
 - **Pace** (`tools/batch.mjs --seeds=7 --hours=600 --auto`): the first point at hour 108–114, the old cap's seven at
   147–153, level 120 at 274–281 (five days after the cap), the first capstone (level 130) at 446–465 (thirteen days
   after it), 35 points at hour 600; the best stage at hour 600 is 2,380 (2,370–2,400) against 2,300 (2,280–2,310) without
@@ -2155,7 +2238,9 @@ Rules:
 3. **Caps:** crit chance 75%, dodge 60%, lifesteal 30%, attack speed +100% (attack interval ≥ 0.75 s),
    damage mitigation 90%, action interval ≥ 250 ms. Attack speed's bonuses together are kept before the cap
    (`derived.attackSpeedBonus`): from the cap on, the Inventory marks the hero's swing "cap", and a piece's speed
-   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip.
+   bonus that adds nothing (the hero at the cap without it) gets the same mark, the rule in its tip. Focus's speed is
+   left out of it: counted last, its part past the cap becomes damage (§3.15), so the marks say what more speed does,
+   focused or not.
 4. **Derived values are never saved** — they are recomputed from state, so a balance change applies
    to existing saves on the next load.
 
@@ -2373,6 +2458,7 @@ than before the Citadel (best stage 258 and 295, against 236 and 277), with the 
 | Walls earlier/later | `BALANCE.enemy.hpGrowth`, `atkGrowth`, boss multipliers, `bossTimeMs` | `src/core/formulas.js` |
 | Bigger gear jumps | `GEAR_TIERS` power | `src/data/items.js` |
 | More/fewer gear drops | `GEAR_DROP_CHANCE`, `DROP_*` weights and slot multipliers, `PITY_MARKS`; zone `gearTier` | `src/data/items.js`, `src/data/zones.js` |
+| Where the sure pieces go (a Lord's due, the bosses' due) | `BALANCE.rewards.dueByWorth`: 0 the slot that lags by score, 1 where a piece adds the most stages at the wall (§3.32) | `src/core/formulas.js` |
 | The anvil | `ANVIL_LEVEL_PER_UPGRADE`, `ANVIL_BAR_GROWTH`, `ANVIL_REFUND`, `anvilBarMult` | `src/data/workshop.js` |
 | Dungeon rewards | `CHEST_*`, `FRAGMENTS_PER_UNIQUE`, `DUNGEON_MILESTONES`, placement | `src/data/dungeons.js` |
 | The Titan | `TITAN_*` | `src/data/dungeons.js` |
@@ -2639,6 +2725,7 @@ src/data/             resources · skills · workshop · items · zones · camp 
                       · clanhall (the Clan Hall's rooms, stages, banner colours, what a gift is worth)
                       · sprites, cardart (generated: the atlas's cells, the cards that have a picture)
 src/systems/          skilling · combat · dungeon (runs, chests, uniques found, the Seal, Titan) · inventory (bag, salvage, reforge)
+                      · worth (what a piece or a camp level is worth in stages at the wall that binds: the one measure)
                       · anvil (reinforcing and rerolling worn gear with bars) · bench (the jeweller's bench: jewellery slots with gems)
                       · potions (doses on the clock) · farming · agility · prestige · camp · minigame · offline · daily
                       · events · mastery · social (clan rewards) · progress (XP, pets, log)
