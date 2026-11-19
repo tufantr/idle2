@@ -187,10 +187,10 @@ function clanApi() {
         given: { week: 4200, total: 26000 }, weekly: 10800, endsInMs: 3 * 864e5, cloak: false };
     let seq = 0;
     let shotMode = {};   // a shot's own answers (CLAN_SHOTS: `flagged` the account flagged), set by the shot and reset before each one
-    const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
+    const members = [['Tufan', true, 412, 1180, 26000, 4200, 0], ['Yarraksalih', false, 388, 1104, 31000, 10800, 0], ['Shadeofnight', false, 251, 870, 9800, 0, 3], ['Brightmoor', false, 96, 512, 0, 0, 34]];
     const answer = () => ({
         clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
-        members: members.map(([username, owner, bestStage, totalLevel, total, w]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, built: { total, week: w } })),
+        members: members.map(([username, owner, bestStage, totalLevel, total, w, seenDays]) => ({ username, owner, you: owner, bestStage, totalLevel, attackDamage: 1e6, seenDays, built: { total, week: w } })),
         hall: { ...hall, builders: { forge: [{ username: 'Yarraksalih', work: 18000 }, { username: 'Tufan', work: 12500 }], library: [{ username: 'Tufan', work: 41000 }] },
             feed: [{ username: 'Yarraksalih', room: 'forge', resource: 'runite_bar', qty: 240, at: Date.now() - 36e5 }, { username: 'Tufan', room: 'library', resource: 'essence', qty: 4200, at: Date.now() - 72e5 },
                 { username: 'Shadeofnight', room: 'kitchen', resource: 'cooked_shark', qty: 180, at: Date.now() - 864e5 }] },

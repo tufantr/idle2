@@ -1565,6 +1565,8 @@ Keeping it running:
       seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
       the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
       prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
+- [x] **When a clan's members last played** (R14, P-009): the member list says "Seen 3 days ago" under each of the others,
+      in whole days and no finer
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

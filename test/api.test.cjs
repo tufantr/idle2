@@ -475,6 +475,29 @@ test("the clan list says who plays: each clan's members who played this past wee
     assert.deepEqual((await (await get('/clans?search=pulse', few[1])).json()).clans.map(c => c.name), ['Pulse Giants', 'Pulse Few']);
 });
 
+test("a clan's members are shown when they last played, in whole days and no finer", async () => {
+    const lead = await register('seen_lead');
+    const mate = await register('seen_mate');
+    const fresh = await register('seen_fresh');
+    const { clanId } = await (await post('/clans', { name: 'Seen Lately', tag: 'SEEN' }, lead)).json();
+    await post('/clans/join', { clanId }, mate);
+    await post('/clans/join', { clanId }, fresh);
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, lead);
+    await post('/save', { state: heroSave({ bestStage: 30 }) }, mate);
+    const seen = async hoursAgo => {
+        await peek.lastSaved('seen_mate', clock - hoursAgo * 3600 * 1000);
+        const { members } = await (await get('/clan', lead)).json();
+        return members.find(m => m.username === 'seen_mate').seenDays;
+    };
+    assert.equal(await seen(0), 0, 'just now');
+    assert.equal(await seen(23), 0, 'under a day says no more than that');
+    assert.equal(await seen(24), 1);
+    assert.equal(await seen(24 * 9 + 5), 9);
+    const { members } = await (await get('/clan', mate)).json();
+    assert.equal(members.find(m => m.username === 'seen_fresh').seenDays, null, 'no upload yet');
+    assert.ok(!/"lastSaved"|"joinedAt"/.test(JSON.stringify(members)), 'no times, only the days');
+});
+
 test("the boss is the clan's, counted in its attacks: level 1 is CLAN_BOSS.first attacks of an average member, each seeing it in their own hits", async () => {
     const { CLAN_BOSS, clanPowerOf } = await import('../src/core/power.js');
     const solo = await register('lone_wolf');

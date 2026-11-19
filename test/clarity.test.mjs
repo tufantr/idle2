@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { Game } from '../src/game.js';
-import { fmt } from '../src/ui/format.js';
+import { fmt, seenWords } from '../src/ui/format.js';
 import { renderCombat, renderShop, renderInventory, renderIntroModal, renderSkill, renderSmithing, renderWelcomeBack, renderSettings, renderItemDetail, renderPrestigeModal, renderClan } from '../src/ui/render.js';
 import { renderAboutCard, WIKI_PAGES, FEATURES } from '../src/ui/features.js';
 import { DISCORD_INVITE, WIKI_URL, CLAN_BOSS, CLAN_FIGHT_MS, clanBossHealth, BOARD_WEEK_MIN, boardOpensOn } from '../src/data/social.js';
@@ -250,6 +250,14 @@ test('the crowns read 1st, 2nd and 3rd: gold, silver and bronze, the place in a 
     assert.match(list, literal('<span class="clan-crown rank-3" data-tip-title="3rd" data-tip="in the Bronze division last week"'), 'on the clan list');
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     for (const [rank, metal] of [[1, 'gold'], [2, 'silver'], [3, 'bronze']]) assert.match(css, new RegExp(`\\.clan-crown\\.rank-${rank} \\.spr \\{ filter: [^}]+\\}\\s+/\\* ${metal} \\*/`), metal);
+});
+
+test("the Clan tab says when each other member last played, in whole days (P-009)", () => {
+    assert.deepEqual([0, 1, 3, 30, 31].map(seenWords), ['Seen today', 'Seen 1 day ago', 'Seen 3 days ago', 'Seen 30 days ago', 'Seen over 30 days ago']);
+    const members = [{ username: 'Me', you: true, owner: true, seenDays: 0 }, { username: 'Ann', seenDays: 3 }, { username: 'New', seenDays: null }];
+    const html = renderClan(new Game(null, T0), { social: { loaded: true, clan: { id: 7, name: 'Wolves', tag: 'WLF' }, members } }, { loggedIn: true });
+    assert.equal((html.match(/member-seen/g) || []).length, 1, 'not for you, nor for one who has not played yet');
+    assert.match(html, /Ann[\s\S]*?<div class="muted small member-seen">Seen 3 days ago<\/div>/);
 });
 
 test('the boards open on This week, and on All time while the week\'s board holds fewer than five names (P-129)', () => {

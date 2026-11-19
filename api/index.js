@@ -647,6 +647,12 @@ function bestAttack(metrics, now) {
     return best;
 }
 
+/**
+ * Whole days since a member last played (uploaded), which their clan is shown (the research loop's P-009, November 2026): days
+ * and no finer, so clanmates can tell who still plays but not when anyone does. null: no upload yet.
+ */
+const seenDays = (lastSaved, now) => (lastSaved > 0 ? Math.max(0, Math.floor((now - lastSaved) / DAY)) : null);
+
 /** The week's board: each member's share of what the clan dealt (in its attacks), highest first. */
 function boardOf(rows) {
     const total = rows.reduce((sum, r) => sum + Math.max(0, r.damage), 0);
@@ -1031,7 +1037,7 @@ app.get('/api/clan', authenticateToken, route('clan', async (req, res) => {
         clan: { ...clan, isOwner: clan.ownerId === req.user.id, crown: crowns.get(clanId) || null },
         // a member's attack: their best of the past week (what an attack deals before its strikes and potion)
         members: members.map(m => ({ username: m.username, owner: m.userId === clan.ownerId, you: m.userId === req.user.id, bestStage: num(m.power?.bestStage), totalLevel: num(m.power?.totalLevel), attackDamage: bestAttack(m.power, now),
-            built: built.byMember.get(m.userId) || { week: 0, total: 0 } })),
+            seenDays: seenDays(m.lastSaved, now), built: built.byMember.get(m.userId) || { week: 0, total: 0 } })),
         // the hall: its rooms, stage and banner, each room's builders, and its latest gifts
         hall: { ...hall, builders: built.builders, feed },
         // health as damage in the player's figures (the screen's); the server keeps it in the clan's attacks

@@ -15,6 +15,7 @@ The Clan tab itself opens once you have [[Prestige|prestiged]] and reached stage
 Without a clan, the Clan tab lets you search the clans by name or tag and join one that has room, or start your own. Each clan's row says how many of its members played this past week, and the clans with the most of them come first. To start one, give it a name, a short tag, a description and a "looking for" line that says who you would like to join. A clan holds up to 20 members, and you can be in one clan at a time.
 - You can leave whenever you like. If the clan's owner leaves, the member who has been in it longest takes over; when the last member leaves, the clan closes.
 - The owner can remove a member. That member's damage stays on the week's board.
+- The member list says when each of the others last played, in whole days ("Seen 3 days ago"): never the hour.
 - The tab refreshes itself while it is open, and has a Refresh button.
 
 ## The weekly clan boss
