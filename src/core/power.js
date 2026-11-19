@@ -15,6 +15,7 @@ export { CLAN_ATTACK_SECONDS, CLAN_FIGHT_MS, CLAN_GUARD, CLAN_ATTACKS_PER_DAY, C
 export { LEADER_AWAY_DAYS } from '../data/social.js';
 export const trialWeekStart = now => weeklyTrialAt(now).start;
 export { supplyMult };   // the server sizes the clan boss by it (api/index.js shareOf)
+export { clanWordsOk, CLAN_WORDS_REFUSED } from '../data/social.js';   // what a clan's words may hold (api/index.js)
 export { HALL, HALL_ROOMS, HALL_STAGES, ROOM_SECONDS, WEEKLY_SECONDS, CLOAK_STAGE, BANNER_COLOURS, BANNER_EMBLEMS, roomLevel, hallLevels, hallStage, hallRoom, giftWorth, roomTakes } from '../data/clanhall.js';   // the Clan Hall's (api/index.js)
 
 /** Expected damage per second: attack × crit expectation ÷ interval. No dice. */

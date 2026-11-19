@@ -969,11 +969,15 @@ app.post('/api/clans', authenticateToken, route('create clan', async (req, res) 
     const tag = cleanText(body.tag, 5).toUpperCase();
     if (!CLAN_NAME_RE.test(name)) return res.status(400).json({ error: 'Clan names are 3-32 letters, numbers, spaces, \' _ or -.' });
     if (!CLAN_TAG_RE.test(tag)) return res.status(400).json({ error: 'Tags are 2-5 letters or numbers.' });
+    const description = cleanText(body.description, 200);
+    const lookingFor = cleanText(body.lookingFor, 100);
+    const { clanWordsOk, CLAN_WORDS_REFUSED } = await engine();
+    if (!clanWordsOk(description) || !clanWordsOk(lookingFor)) return res.status(400).json({ error: CLAN_WORDS_REFUSED });
     if (await clanOf(req.user.id)) return res.status(400).json({ error: 'Leave your clan first.' });
     const now = Date.now();
     let clanId;
     try {
-        clanId = await store.createClan({ name, tag, description: cleanText(body.description, 200), lookingFor: cleanText(body.lookingFor, 100), ownerId: req.user.id, now });
+        clanId = await store.createClan({ name, tag, description, lookingFor, ownerId: req.user.id, now });
     } catch (err) {
         if (err.code === '23505') return res.status(400).json({ error: 'That clan name is taken.' });
         throw err;

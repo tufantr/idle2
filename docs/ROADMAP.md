@@ -1569,6 +1569,8 @@ Keeping it running:
       in whole days and no finer
 - [x] **An owner away 30 days hands the clan over** (R14, P-009): to the longest-serving member who played this past week,
       when a member next opens the clan; an owner who leaves hands it to the same one. The clan's "?" and the wiki say so
+- [x] **No links or handles in clan words** (R14, P-125): a clan's description and "looking for" line refuse web addresses,
+      "@" handles, invite codes and contact details; clans keep the game's Discord
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

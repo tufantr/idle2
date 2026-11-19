@@ -480,6 +480,17 @@ test("the clan list says who plays: each clan's members who played this past wee
     assert.deepEqual((await (await get('/clans?search=pulse', few[1])).json()).clans.map(c => c.name), ['Pulse Giants', 'Pulse Few']);
 });
 
+test("a clan's words hold no links, handles or invite codes; the game's own Discord may be named", async () => {
+    const founder = await register('words_founder');
+    for (const words of [{ description: 'Join us at discord.gg/abc123' }, { lookingFor: 'add me: @someone' }, { description: 'see https://example.com' }]) {
+        const refused = await post('/clans', { name: 'Linked Up', tag: 'LNK', ...words }, founder);
+        assert.equal(refused.status, 400, JSON.stringify(words));
+        assert.match((await refused.json()).error, /links, handles or invite codes/);
+    }
+    assert.equal((await (await get('/clan', founder)).json()).clan, null, 'none was made');
+    assert.equal((await post('/clans', { name: 'Linked Up', tag: 'LNK', description: "We talk on the game's Discord", lookingFor: 'Stage 1.5k, active' }, founder)).status, 200);
+});
+
 test("a clan's members are shown when they last played, in whole days and no finer", async () => {
     const lead = await register('seen_lead');
     const mate = await register('seen_mate');

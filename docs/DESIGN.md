@@ -1098,6 +1098,9 @@ with the game's own stat code; the client never submits damage or scores.
   then the biggest (the research loop's P-035, November 2026: by members alone, a big clan gone quiet led the list).
   A clan's members are shown when each last played (`seenDays`, whole days since their last upload: P-009, the same month;
   no finer, so clanmates can tell who still plays but not when anyone does).
+  **A clan's words** (description, "looking for") hold no way to reach anyone elsewhere: `clanWordsOk` (`src/data/social.js`,
+  the owner's decision, P-125) refuses web addresses, "@" handles, invite codes and contact details, spelled out or spaced out
+  too; the game's own Discord may be named or linked. A sieve for the plain cases: the team reads every new clan.
 - **The weekly clan boss** (ISO weeks, UTC), **counted in the clan's attacks** (October 2026, the owner's clan
   banner; before, its health was 12 × the members' combined attack, so a clan of one kept pace with a full clan, and
   past stage ~330 the 4×10¹⁵ health and 10¹⁴-an-attack ceilings that kept it in BIGINT made every attack alike).
