@@ -7,7 +7,7 @@ import { Game } from '../src/game.js';
 import { createDefaultState, migrateState } from '../src/core/state.js';
 import { renderSettings } from '../src/ui/render.js';
 import { createSound } from '../src/ui/sound.js';
-import { vibrationOn, EFFECTS, effectOn, cleanOptions } from '../src/data/settings.js';
+import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard } from '../src/data/settings.js';
 import { DISCLOSURES } from '../src/systems/disclosure.js';
 
 const T0 = 1_760_000_000_000;
@@ -144,4 +144,34 @@ test('the effects are kept as the ones turned off, and only those the game knows
     saved.settings.effects = { shake: false, '<b>': false };
     assert.deepEqual(migrateState(JSON.parse(JSON.stringify(saved)), T0).settings.effects, { shake: false });
     for (const e of EFFECTS) assert.ok(DISCLOSURES.some(d => d.id === e.met), `${e.id} opens through the disclosures`);
+});
+
+test('blows are heard at every hit, as ever, or only for the big ones', () => {
+    const today = {};
+    assert.equal(blowSound(today, {}), 'hit');
+    assert.equal(blowSound(today, { crit: true }), 'crit');
+    assert.equal(hurtHeard(today), true, 'by default nothing changes');
+    const big = { blows: 'big' };
+    assert.equal(blowSound(big, {}), null, 'a plain blow is quiet');
+    for (const kind of ['crit', 'deathblow', 'opening', 'executed']) assert.equal(blowSound(big, { [kind]: true }), 'crit', kind);
+    assert.equal(hurtHeard(big), false, 'and so is the monster on him');
+    assert.deepEqual(cleanOptions({ blows: 'loud' }), {}, 'what the game does not know is not kept');
+    assert.deepEqual(cleanOptions({ blows: 'all' }), {}, 'today\'s way is no field at all');
+    assert.deepEqual(cleanOptions({ blows: 'big' }), { blows: 'big' });
+});
+
+test('the blows row opens with the first kill, marks its choice, and goes when nothing could be heard or felt', () => {
+    const game = new Game(null, T0);
+    const row = (ui = {}) => groupsOf(renderSettings(game, ui, null)).find(g => g.name === 'Sound').body;
+    assert.doesNotMatch(row(), /Blows heard/, 'not before a fight has been fought');
+    game.state.stats.kills = 1;
+    game.tick(T0 + 100);
+    assert.match(row(), /role="group" aria-label="Blows heard"/);
+    assert.match(row(), /class="seg-btn on" onclick="FI\.setOption\('blows', 'all'\)" aria-pressed="true">Every hit/);
+    game.setOption('blows', 'big');
+    assert.match(row(), /class="seg-btn on" onclick="FI\.setOption\('blows', 'big'\)" aria-pressed="true">Crits and kills/);
+    game.state.settings.sound = false;
+    assert.doesNotMatch(row(), /Blows heard/, 'muted, on a device with no motor');
+    game.setOption('vibration', true);
+    assert.match(row({ canVibrate: true }), /Blows heard/, 'the motor still answers to it');
 });

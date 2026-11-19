@@ -2376,6 +2376,9 @@ export function renderSettings(game, ui, cloud) {
 
 // Settings' options, in groups: a row for each thing the player has met, the rules behind the "?".
 const optSwitch = (label, onchange, on, attrs = '') => `<label class="toggle"${attrs}><input type="checkbox" onchange="${onchange}" ${on ? 'checked' : ''}> ${label}</label>`;
+/** A choice of a few, in words: a row of buttons, the one in force marked. `onpick` is the handler's start: FI.setOption('blows', */
+const optChoice = (label, options, current, onpick) => `<div class="opt-choice"><span class="opt-label">${label}</span><div class="seg opt-seg" role="group" aria-label="${label}">${options
+    .map(([id, text]) => `<button class="seg-btn${id === current ? ' on' : ''}" onclick="${onpick}'${id}')" aria-pressed="${id === current}">${text}</button>`).join('')}</div></div>`;
 const optGroup = (name, rows) => `<fieldset class="opt-group"><legend>${name}</legend>${rows.filter(Boolean).join('')}</fieldset>`;
 /** One switch per effect, folded under Reduce motion (which stills them all, so it hides them), each once it has been met. */
 function effectSwitches(state, ui) {
@@ -2393,6 +2396,8 @@ function optionGroups(game, ui) {
             optSwitch('Sound', "FI.setSetting('sound', this.checked)", soundOn),
             soundOn ? `<label class="volume-row">${ICON_SOUND_ON}<input type="range" min="0" max="1" step="0.05" value="${Number(s.volume ?? 1).toFixed(2)}" aria-label="Volume" oninput="FI.setVolume(this.value)" onchange="FI.setVolume(this.value, true)"></label>` : '',
             ui?.canVibrate ? optSwitch('Vibration', "FI.setOption('vibration', this.checked)", vibrationOn(s)) : '',
+            seen(state, 'fx_coins') && (soundOn || (ui?.canVibrate && vibrationOn(s)))
+                ? optChoice('Blows heard', [['all', 'Every hit'], ['big', 'Crits and kills']], s.blows === 'big' ? 'big' : 'all', "FI.setOption('blows', ") : '',
             seen(state, 'minigames') ? optSwitch('Chime when a mini-game chance appears', "FI.setSetting('minigameChime', this.checked)", s.minigameChime !== false) : ''
         ]),
         optGroup('Motion', [

@@ -13,6 +13,7 @@ export const EFFECTS = [
 /** What the game knows of these choices, kept; anything else in a loaded save dropped (core/state.js, game.js setOption). */
 export function cleanOptions(settings) {
     if (typeof settings.vibration !== 'boolean') delete settings.vibration;
+    if (settings.blows !== 'big') delete settings.blows;
     const fx = settings.effects;
     const off = fx && typeof fx === 'object' ? EFFECTS.filter(e => fx[e.id] === false) : [];
     if (off.length) settings.effects = Object.fromEntries(off.map(e => [e.id, false]));
@@ -25,3 +26,13 @@ export const effectOn = (settings, id) => settings?.effects?.[id] !== false;
 
 /** Vibration: its own switch once used; until then it goes with the sound, as when one switch held both. */
 export const vibrationOn = settings => (typeof settings?.vibration === 'boolean' ? settings.vibration : settings?.sound !== false);
+
+// Blows in the fight: every one heard (and felt), today's way, or only the big ones: settings.blows 'big'. A watched fight made
+// 83-92 sounds a minute, nearly all of them plain blows. The player's own strikes always answer, and a kill is always heard.
+/** The sound of one of the hero's own blows: a big one's, a plain one's, or none. */
+export function blowSound(settings, ev) {
+    if (ev.crit || ev.deathblow || ev.opening || ev.executed) return 'crit';
+    return settings?.blows === 'big' ? null : 'hit';
+}
+/** Is the monster's blow on him heard? */
+export const hurtHeard = settings => settings?.blows !== 'big';

@@ -17,7 +17,7 @@ import { createScene } from './ui/scene.js';
 import { createRewards, levelCelebration, unlockCelebration, renderCrateModal } from './ui/rewards.js';
 import { createActionFx } from './ui/actionfx.js';
 import { createSound } from './ui/sound.js';
-import { vibrationOn, effectOn } from './data/settings.js';
+import { vibrationOn, effectOn, blowSound, hurtHeard } from './data/settings.js';
 import { createStage } from './ui/stage.js';
 import { createGuide } from './ui/guide.js';
 import { ATLAS, sprite, heroSprite, heroLayers, resIcon, toolIcon, itemSpriteKey, monsterSpriteKey, glyph, tintDefs } from './ui/sprites.js';
@@ -753,10 +753,14 @@ function findWords(find) {
 
 function soundFor(ev, onCombat) {
     switch (ev.type) {
-        case 'hit': return ev.manual ? ['combo', Math.floor(game.state.combat.combo || 0)] : [ev.crit || ev.deathblow || ev.opening || ev.executed ? 'crit' : 'hit'];
+        case 'hit': {
+            if (ev.manual) return ['combo', Math.floor(game.state.combat.combo || 0)];
+            const blow = blowSound(game.state.settings, ev);   // (Settings can keep plain blows quiet)
+            return blow ? [blow] : null;
+        }
         case 'secondWind': return onCombat ? ['unlock'] : null;
         case 'talentPoint': return ['levelUp'];
-        case 'enemyHit': return onCombat ? ['hurt'] : null;
+        case 'enemyHit': return onCombat && hurtHeard(game.state.settings) ? ['hurt'] : null;
         case 'dodge': return onCombat ? ['dodge'] : null;
         case 'eat': return onCombat ? ['eat'] : null;
         case 'kill': return [ev.enemy.boss ? 'victory' : ev.enemy.gilded ? 'gold' : 'kill'];
