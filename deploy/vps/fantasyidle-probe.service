@@ -1,0 +1,11 @@
+# The hourly look at the live game through nginx, as a player comes in (deploy/vps/probe.sh): the page, the API and an upload
+# as big as a save; it mails the owner when one fails. Skipped by itself if the release in place is older than the probe.
+[Unit]
+Description=Fantasy Idle: look at the live game as a player comes in
+After=network-online.target nginx.service fantasyidle-api.service
+Wants=network-online.target
+ConditionPathExists=/srv/fantasyidle/current/deploy/vps/probe.sh
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /srv/fantasyidle/current/deploy/vps/probe.sh

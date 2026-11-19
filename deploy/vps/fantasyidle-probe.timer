@@ -1,0 +1,11 @@
+# Every hour: a broken upload (every player's cloud save) mails the owner within the hour, not at the next morning's check.
+[Unit]
+Description=Fantasy Idle: the hourly look at the live game
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=120
+Persistent=true
+
+[Install]
+WantedBy=timers.target

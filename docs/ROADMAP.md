@@ -1576,6 +1576,7 @@ Keeping it running:
 - [x] **Trial bests and the last runs on Records** (D4, a player's report): the Hall's Records shows each Trial tried with
       its best stage (saved all along, but no screen read it), and a list of the last 20 runs: when, the stage reached, the
       tokens, how long it took, and its Trial or Pact. A new optional save field (`prestige.runs`), empty in old saves
+- [x] **An hourly look at the live game** (19 November 2026): `deploy/vps/probe.sh` loads the page, asks the API and sends an upload as big as a save through nginx, reads nginx's log, and mails the owner when one fails, after a test of nginx's settings broke every cloud save for eight hours unnoticed
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

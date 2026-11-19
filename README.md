@@ -138,6 +138,12 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
   the domain is verified there (region Ireland; its DKIM, sending and DMARC records are in Cloudflare's DNS), and
   the key, made by the owner with sending access to fantasyidle.com only, is `RESEND_API_KEY` in the server's
   `/etc/fantasyidle/api.env`. Without it a sign-up is made but its code can't go (the dialog says so).
+- **The hourly look:** `deploy/vps/probe.sh` (`fantasyidle-probe.timer`, installed with each deploy, and once at the end
+  of every deploy) comes in through nginx as a player does: the page, the API, and an upload as big as a save, which must
+  be refused only for its missing account (401); and nginx's own log of the last hour. Anything wrong mails the owner, at
+  most once in six hours. On 19 November 2026 a test of nginx's settings (`nginx -t -c` with a file of its own, which has
+  no `user` line) gave nginx's folder for request bodies, `/var/lib/nginx/body`, to the user `nobody`: every cloud save
+  failed for eight hours while the page and the small answers stayed fine. Test a config with `nginx -t` on the real one.
 - **The owner's mail:** `OWNER_ALERT_EMAIL` in `/etc/fantasyidle/api.env` (absent: none of it is sent) gets the growth
   check's review list once a week, from `node api/review.js` run by a weekly timer (`deploy/vps/fantasyidle-review.timer`, Mondays, installed with each deploy) with the same settings: each account
   whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
