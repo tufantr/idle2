@@ -575,9 +575,9 @@ document.addEventListener('visibilitychange', () => {
     if (!holding()) game.setAttending(!document.hidden);   // (time away being replayed: at its end, catchUp)
     if (document.hidden) { hiddenAt = Date.now(); save(Date.now()); cloudSaveOnLeave(); return; }
     lastPresenceAt = Date.now();
-    // what this tab replayed while hidden, or a gap the browser left while it paused the hidden tab (gapReport)
+    // what this tab replayed while hidden, and a gap the browser left while it paused the hidden tab (gapReport)
     if (heldGap && !catching) showHeldGap();
-    else if (!holding() && game.gapAt(Date.now())) catchUpGap(Date.now(), true);
+    if (!holding() && game.gapAt(Date.now())) catchUpGap(Date.now(), true);
     if (giftsWaiting) claimGifts();   // noticed while the page was hidden
     updates.back(Date.now());   // a newer version of the game may have come out meanwhile
     // Back after a long while: another device may have played meanwhile. Look before uploading again.
