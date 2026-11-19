@@ -1578,9 +1578,9 @@ function perkPurse(state) {
  */
 /** A multiplier in few digits: ×1.32, ×12.4, ×457, ×1.20M. */
 const timesWord = x => `×${x >= 1000 ? fmt(x) : x >= 100 ? Math.round(x) : x.toFixed(x >= 10 ? 1 : 2)}`;
-/** A source's picture in the power panel. */
-function powerArt(state, id) {
-    const pic = key => sprite(key, { scale: 1 });
+/** A source's picture in the power panel: `scale` 1 on a full row, smaller on a small one's. */
+function powerArt(state, id, scale = 1) {
+    const pic = key => sprite(key, { scale, cls: scale < 1 ? 'soft' : '' });
     switch (id) {
         case 'gear': return pic(itemSpriteKey(state.equipped.Body || state.equipped.Weapon) || 'item/Body/1');
         case 'tokens': return '<i class="coin-dot tokens" aria-hidden="true"></i>';
@@ -1622,7 +1622,8 @@ export function renderPowerModal(game) {
     const percent = x => (x < 0.01 ? '&lt;1%' : `${Math.round(x * 100)}%`);
     const rows = shares.map(p => {
         const name = p.id === 'potion' ? p.note : p.name;
-        return `<li class="power-row" ${tipAttrs(name, powerTip(p, ledger))}><span class="power-art">${powerArt(state, p.id)}</span><span class="power-name">${esc(name)}</span><b class="power-share">${percent(p.share)}</b><span class="power-bar" aria-hidden="true"><i style="width:${(p.share * 100).toFixed(1)}%"></i></span></li>`;
+        const small = p.share < 0.01;   // (a long list of them stays short: two to a line, no bar to fill)
+        return `<li class="power-row${small ? ' small' : ''}" ${tipAttrs(name, powerTip(p, ledger))}><span class="power-art">${powerArt(state, p.id, small ? 0.75 : 1)}</span><span class="power-name">${esc(name)}</span><b class="power-share">${percent(p.share)}</b>${small ? '' : `<span class="power-bar" aria-hidden="true"><i style="width:${(p.share * 100).toFixed(1)}%"></i></span>`}</li>`;
     }).join('');
     return `<div class="modal-content narrow power-modal ${painted('armory', 'center 62%')}">
         <div class="modal-header">Sources of power ${aboutButton('power')}</div>

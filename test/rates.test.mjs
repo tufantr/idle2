@@ -154,6 +154,19 @@ test('no figure is made up: no work, other work, stalled work, no materials, Far
     assert.equal(materialsLast(s, game.derived, resolveAction(s)), null);
 });
 
+test('the readouts only read: reckoning and drawing them changes nothing in the game', () => {
+    const game = newGame();
+    const s = game.state;
+    s.resources.copper_ore = 50;
+    game.startSmelting('copper_bar');
+    game.tick(game.now + 1000);
+    const before = JSON.stringify(s);
+    skillPace(s, game.derived, 'smithing');
+    materialsLast(s, game.derived, resolveAction(s), s.action.progress);
+    renderSmithing(game, {});
+    assert.equal(JSON.stringify(s), before);
+});
+
 test('the course has a pace and no materials', () => {
     const game = newGame();
     const s = game.state;

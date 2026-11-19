@@ -1,6 +1,6 @@
 ---
 path: /skills
-keywords: skills, skill, levels, level 99, XP, experience, training, gathering, production, workshop, idle, offline training, pace, Melvor pace, speed
+keywords: skills, skill, levels, level 99, XP, XP an hour, XP per hour, time to level, materials, experience, training, gathering, production, workshop, idle, offline training, pace, Melvor pace, speed
 ---
 Besides fighting, your hero has {{SKILL_IDS.length - 1}} skills to train, each from level 1 to {{MAX_LEVEL}}. They feed each other and the fight: ore becomes bars, bars become tools and reinforce your gear, raw meat and fish become food, herbs become potions. Every level you gain is yours for good: no [[Prestige|prestige]] takes it away.
 

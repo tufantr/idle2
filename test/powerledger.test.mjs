@@ -140,7 +140,7 @@ test('the panel opens by a tap from the hero\'s numbers, once there has been a p
 });
 
 /** The shares the panel shows, in its order: { name: percent }. */
-const shown = html => [...html.matchAll(/<span class="power-name">([^<]+)<\/span><b class="power-share">([^<]+)<\/b>/g)].map(m => [m[1], m[2]]);
+const shown = html => [...html.matchAll(/<span class="power-name">([^<]+)<\/span><b class="power-share">([^<]+)<\/b>/g)].map(m => [m[1], m[2]]);   // (small rows too)
 const asShown = p => (p.share < 0.01 ? '&lt;1%' : `${Math.round(p.share * 100)}%`);
 
 /** What tools/ledger.mjs says of a saved hero, and what the game's panel shows of the same save. */

@@ -1,6 +1,6 @@
 ---
 path: /combat
-keywords: fight, fighting, battle, stage, stages, boss, boss timer, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
+keywords: fight, fighting, battle, stage, stages, boss, boss timer, sources of power, power, strength, regroup, death, fall, health, regeneration, attack, defence, damage, attack speed, critical hit, crit, dodge, lifesteal, strike, combo, focus, gold, xp, loot, drops, gilded, pity, bosses' due, stay on this stage, retreat, world map, travel, strikes, gilded monsters
 aliases: Fighting, Battle, Combo, Strikes, Gilded monsters, Boss timer, Bosses' due
 ---
 Your hero fights by himself. He and the monster in front of him attack on their own timers, and when the monster falls the next one steps up. You can simply watch, help with strikes, and spend what the fight brings. The same fight runs the stage ladder, [[Dungeons|dungeon runs]] and [[The Titan]], and it goes on while you are away ([[/offline|offline progress]]).
