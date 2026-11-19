@@ -11,6 +11,7 @@ import { vibrationOn, EFFECTS, effectOn, cleanOptions, blowSound, hurtHeard, TEX
 import { DISCLOSURES } from '../src/systems/disclosure.js';
 import { fmt, letters, fixed, numbersIn, setNotation } from '../src/ui/format.js';
 import { saverOn, atRest, REST_AFTER_MS, REST_FRAME_MS } from '../src/ui/saver.js';
+import { renderAboutCard, WIKI_PAGES } from '../src/ui/features.js';
 import { createAnnouncer, plainWords, fightSummary, SAY_GAP_MS, SAY_ROUTINE_MS, SAY_SAME_MS, SAY_QUEUE } from '../src/ui/announce.js';
 
 const T0 = 1_760_000_000_000;
@@ -334,4 +335,12 @@ test('the fight in words says where he is, both healths and what is going on', (
     assert.match(fightSummary(game), /Regrouping: the boss in 30 seconds\.$/);
     c.active = false; c.recovering = true;
     assert.match(fightSummary(game), /Resting at the campfire\.$/);
+});
+
+test('Settings has a "?": what the game offers for access, with its page on the wiki', () => {
+    const html = renderSettings(new Game(null, T0), {}, null);
+    assert.match(html, /<h2>Options <button class="about-btn" onclick="event\.stopPropagation\(\); FI\.about\('accessibility'\)" aria-label="About Accessibility"/);
+    const card = renderAboutCard('accessibility');
+    for (const words of ['Reduce motion', 'Effects', 'Battery saver', 'Vibration', 'Blows heard', 'Text size', 'Big numbers', 'Keyboard shortcuts', 'The fight in words', 'pips']) assert.ok(card.includes(words), words);
+    assert.equal(WIKI_PAGES.accessibility, '/accessibility');
 });

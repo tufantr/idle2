@@ -2364,7 +2364,7 @@ export function renderSettings(game, ui, cloud) {
         <div class="btn-row"><a class="btn-link prestige-btn" href="${esc(DISCORD_INVITE)}" target="_blank" rel="noopener">Join the Discord</a><a class="btn-link" href="${esc(WIKI_URL)}" target="_blank" rel="noopener">Read the wiki</a></div>
     </section>` : ''}
     <section class="glass-panel ${painted('study', 'center 70%')}">
-        <div class="panel-header"><h2>Options</h2></div>
+        <div class="panel-header"><h2>Options ${aboutButton('accessibility')}</h2></div>
         <label class="hero-name-field">Your hero's name <input id="hero-name" class="text-input" maxlength="${HERO_NAME_MAX}" placeholder="You" value="${esc(state.hero?.name || '')}" onchange="FI.setHeroName(this.value)" autocomplete="off" spellcheck="false"></label>
         <div class="look-picks" role="group" aria-label="Your hero's look">${lookPicks(state)}</div>
         ${capePicks(state)}

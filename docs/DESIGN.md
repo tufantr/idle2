@@ -2140,6 +2140,8 @@ reader says: a row shows only for what the player has met, and the rules go behi
 the game looks, sounds or reads never change how it plays. Those kept in the save are optional fields (`src/data/settings.js`,
 `cleanOptions` on every load): a save without them is today's game, and an older game passes over them.
 
+- **The note.** The "?" on Options opens the Accessibility card (`FEATURES.accessibility`): the switches and keys in one place, as players
+  don't go looking for options; `/accessibility` on the wiki says the same at length.
 - **Vibration apart from sound.** On a phone with a motor (not iPhones: Safari gives pages none) Vibration is a switch of its
   own. Until it is used it goes with the sound, as when one switch held both, so nobody who muted the game starts to buzz.
 - **Blows heard.** A watched fight made 83-92 sounds a minute, nearly all plain blows. "Crits and kills" (`settings.blows` `'big'`,
