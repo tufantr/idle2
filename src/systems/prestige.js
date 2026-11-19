@@ -6,6 +6,8 @@ import { spawnEnemy, leaveCombat, enterCombat } from './combat.js';
 import { resetCamp } from './camp.js';
 import { log, bumpStat } from './progress.js';
 import { fmt } from '../ui/format.js';   // (pure: the log's numbers as the game writes them, 1.23M rather than long digits)
+import { RUN_LOG_MAX } from '../core/state.js';
+import { trialIds } from '../data/trials.js';
 
 /** Milliseconds until this run may be prestiged (0 when it may). The first prestige, which teaches the loop, need not wait. */
 export function prestigeWaitMs(state, now) {
@@ -63,6 +65,9 @@ export function doPrestige(game, { auto = false, trial = null, ascend = false } 
     if (!canPrestige(state, game.now)) return false;
     const preview = prestigePreview(game);
     const reached = state.combat.maxStage;
+    // the run that ends, for the Hall's Records: when, how far, what it paid, how long it took, and under which Trials
+    const ran = trialIds(state);
+    state.prestige.runs = [...state.prestige.runs, { at: game.now, stage: reached, tokens: preview.tokens, ms: state.prestige.runStartedAt > 0 ? Math.max(0, game.now - state.prestige.runStartedAt) : 0, ...(ran.length ? { trials: ran } : {}) }].slice(-RUN_LOG_MAX);
     leaveCombat(game);
     state.prestige.tokens += preview.tokens;
     state.prestige.skillPoints += preview.skillPoints;

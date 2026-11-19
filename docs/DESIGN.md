@@ -525,6 +525,11 @@ the Abyss goes on with a depth counter and steeper growth, in named strata.
   with its own card (`skillRecord`), and the Hall's Records shows how far the next is (the owner, October
   2026: players fought and never trained, as no skill level reached the fight; it came with lifesteal's
   ceiling, so the simulator's skilling player keeps his pace and one who never trains falls behind).
+- **The last runs** (November 2026, a player's report; `prestige.runs`, `RUN_LOG_MAX` = 20, oldest first): `doPrestige` notes
+  each run that ends, `{ at, stage, tokens, ms, trials? }` (`ms` 0 when a save kept no start time, `trials` only for a Trial's
+  or a Pact's). `migrateState` keeps the entries with a time and a stage, in range, known Trials only; an old save has none,
+  and the game before it passes the list through unread. The Hall's Records shows it (`renderRunLog`, from the first one kept)
+  and, once a Trial has been tried, each one's best stage (`renderTrialBests`, from `trials.best`).
 - **Auto** (`autoPrestigeIn`, `tickAutoPrestige`): after 5 prestiges, or 48 hours after the first one
   (`prestige.firstAt`), whichever comes first, the dock's Prestige button gets an Auto switch beside it
   (`settings.autoPrestige`, off until turned on). It took 20 prestiges until the check-in research

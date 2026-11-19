@@ -57,7 +57,7 @@ import { trialBoard, trialsOpen, activeTrials, pactSize } from '../systems/trial
 import { ascensionOpen } from '../systems/ascension.js';
 import { starGain } from '../data/ascension.js';
 import { completion } from '../systems/completion.js';
-import { TRIAL_TIERS, trialBite } from '../data/trials.js';
+import { TRIALS, TRIAL_TIERS, trialBite, trialById } from '../data/trials.js';
 import { TREES, TALENTS, ROWS, talentById, treeById, rowOpensAt, respecPrice, talentBlock, talentParents, bridgeOpen } from '../data/talents.js';
 import { warLevel, talentPoints, talentPointsSpent, talentRank, learnBlock } from '../systems/talents.js';
 import { charmForSkill, CHARM_TOKEN_COST } from '../data/charms.js';
@@ -1859,7 +1859,45 @@ function renderRecords(game) {
             <span class="record-label">${esc(label)}</span>
         </div>`).join('')}</div>
     </section>
-    ${renderChronicle(state)}`;
+    ${renderTrialBests(state)}${renderRunLog(game)}${renderChronicle(state)}`;
+}
+
+/** Each Trial the hero has tried, with the best stage reached in it (nothing before the first). */
+function renderTrialBests(state) {
+    const tried = TRIALS.filter(t => state.trials.best[t.id] > 0);
+    if (!tried.length) return '';
+    return `<section class="glass-panel ${painted('citadel', 'center 40%')}">
+        <div class="panel-header"><h2>Trials ${aboutButton('trials')}</h2><span class="muted small">Best stage in each</span></div>
+        <div class="record-grid">${tried.map(t => `<div class="record" title="${esc(t.rule)}">
+            <span class="record-art">${sprite(t.icon, { scale: 1.5 })}</span>
+            <b class="record-value">${fmt(state.trials.best[t.id])}</b>
+            <span class="record-label">${esc(t.name)}</span>
+        </div>`).join('')}</div>
+    </section>`;
+}
+
+/** The last runs, newest first (systems/prestige.js doPrestige; nothing before the first prestige that kept one). */
+function renderRunLog(game) {
+    const runs = game.state.prestige.runs;
+    if (!runs.length) return '';
+    const now = new Date(game.now);
+    const small = { scale: 0.5, cls: 'soft res-spr' };
+    const rows = [...runs].reverse().map(r => {
+        const d = new Date(r.at);
+        const when = d.toDateString() === now.toDateString() ? TIME_OF_DAY.format(d) : (d.getFullYear() === now.getFullYear() ? DAY_MONTH : DAY_MONTH_YEAR).format(d);
+        const trials = (r.trials || []).map(trialById).filter(Boolean);
+        return `<li>
+            <time datetime="${d.toISOString()}" title="${esc(FULL_DATE.format(d))}">${esc(when)}</time>
+            <span class="run-stage">Stage <b>${fmt(r.stage)}</b></span>
+            <span class="run-tokens" title="Tokens earned"><i class="coin-dot tokens" aria-hidden="true"></i><b>+${fmt(r.tokens)}</b><span class="sr-only"> tokens</span></span>
+            <span class="run-took" title="How long the run took">${r.ms > 0 ? `${glyph('time')}<span class="sr-only">took </span>${duration(r.ms)}` : ''}</span>
+            ${trials.length ? `<span class="run-rule">${trials.map(t => sprite(t.icon, small)).join('')}<span>${trials.length > 1 ? 'Pact' : 'Trial'}: ${esc(trials.map(t => t.name).join(', '))}</span></span>` : ''}
+        </li>`;
+    }).join('');
+    return `<section class="glass-panel ${painted('wartable', 'center 40%')}">
+        <div class="panel-header"><h2>Last runs</h2></div>
+        <ol class="run-log">${rows}</ol>
+    </section>`;
 }
 
 /** What a chronicle entry (systems/chronicle.js) shows: [sprite key, line], or null for one no longer known. */
@@ -1885,6 +1923,8 @@ function chronicleLine(e) {
 /** The hero's story, newest first: a date, a picture and a line for each first. */
 // (made once: a formatter built for every line made the Records slow to draw with many firsts)
 const DAY_MONTH = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const TIME_OF_DAY = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const FULL_DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 const DAY_MONTH_YEAR = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 function renderChronicle(state) {
     const year = new Date().getFullYear();

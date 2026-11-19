@@ -2561,6 +2561,25 @@ body.reduced-motion .map-hero .hero-doll { animation: none; }
 .codex-cell .spr.silhouette { opacity: 0.55; filter: brightness(0) drop-shadow(0 0 1px rgba(214, 170, 92, 0.6)); }
 @media (max-width: 600px) { .codex-row { grid-template-columns: 3.6rem repeat(7, minmax(0, 1fr)); gap: 0.2rem; } .codex-type { font-size: 0.7rem; } .codex-cell { width: 100%; height: auto; aspect-ratio: 1; } .codex-cell .spr { --k: 0.75 !important; image-rendering: auto; } }
 
+/* the last runs: when, how far, what they paid, how long, under which Trials; on a phone the Trials take a line of their own */
+.run-log { list-style: none; margin: 0; padding: 0; max-height: 440px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; }
+.run-log li { display: grid; grid-template-columns: 4.6rem 6.5rem 6rem 5.5rem minmax(0, 1fr); align-items: center; gap: 0.15rem 0.7rem; padding: 0.35rem 0.5rem; border-radius: 8px; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.run-log li:nth-child(odd) { background: rgba(0, 0, 0, 0.22); }
+.run-log time { font-size: 0.78rem; color: var(--text-muted); text-align: right; white-space: nowrap; }
+.run-log b { color: var(--heading); }
+.run-tokens .coin-dot { width: 13px; height: 13px; }
+.run-stage { white-space: nowrap; color: var(--text-muted); }
+.run-tokens, .run-took, .run-rule { display: inline-flex; align-items: center; gap: 0.3rem; min-width: 0; white-space: nowrap; }
+.run-tokens b { color: #d8c4ff; }
+.run-took { color: var(--text-muted); }
+.run-rule { color: #fca5a5; font-size: 0.8rem; }
+.run-rule span { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) {
+    .run-log li { grid-template-columns: 3.9rem minmax(0, 1fr) 5.2rem 3.9rem; gap: 0.1rem 0.5rem; padding: 0.35rem 0.3rem; font-size: 0.8rem; }
+    .run-log time { font-size: 0.72rem; }
+    .run-rule { grid-column: 2 / -1; white-space: normal; }
+}
+
 /* the chronicle: the hero's firsts, newest first, as a timeline */
 .chronicle { list-style: none; margin: 0; padding: 0 0 0 0.2rem; max-height: 440px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(214, 170, 92, 0.35) transparent; }
 .chronicle li { position: relative; display: grid; grid-template-columns: 4.6rem 40px 1fr; align-items: center; gap: 0.6rem; padding: 0.3rem 0; }
