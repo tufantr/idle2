@@ -27,9 +27,13 @@
 //                                                 # Settings signed in and flagged, 'clancapped' a
 //                                                 # flagged account's attack card, 'clanlist' the
 //                                                 # clans to find: the API is answered by the
-//                                                 # tool, CLAN_API below)
+//                                                 # tool, CLAN_API below; 'catchup' is the bar a
+//                                                 # day away is replayed behind, and 'reentry' the
+//                                                 # welcome-back after it, with the world's strip:
+//                                                 # RETURN_SHOTS below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
+//   node tools/shots.mjs <tabs> --reduced         # with reduced motion asked for (<name>-still-<width>.png)
 //
 // Writes shots/<name>-<width>.png (git-ignored) and exits 1 on overflow or errors.
 // Needs Playwright, once:  npm i --no-save playwright && npx playwright install chromium
@@ -285,6 +289,51 @@ function clanApi() {
     };
 }
 
+// Back after a day (src/main.js catchUp): the late-game save, fighting in a clan during a weekend event, saved 26 hours ago and
+// loaded again under Chrome's 4× CPU throttle, so its replay lasts: 'catchup' is the bar mid-replay, 'reentry' the report after.
+const RETURN_SHOTS = { catchup: true, reentry: true };
+async function shootReturn(viewport, which) {
+    const page = await open(viewport, `${base}?dev=1&event=guild_fair`);
+    await lateGame(page);
+    await page.evaluate(async () => {
+        const { isoWeek } = await import('/src/data/social.js');
+        const g = FI.game();
+        g.setClanHall({ clan: 7, rooms: { forge: 30500 }, stage: 1, colour: 'forest', emblem: 'troll', cloak: false });
+        g.setClanBanner({ week: isoWeek(Date.now()), kills: 3 });
+        FI.closeModal(); FI.switchTab('combat'); if (!g.state.combat.active) FI.toggleCombat();
+        localStorage.setItem('fantasyIdle.save.v2', g.serialize(Date.now() - 26 * 3600000));
+        localStorage.setItem('fantasyIdle.owner', 'shots');   // this page gives the save up: leaving, it doesn't save over it
+    });
+    // (this hero's day is short work, so the replay is held back a little, a moment between its slices, for the picture)
+    await page.addInitScript(() => {
+        const post = MessagePort.prototype.postMessage;
+        window.__sliceWait = 100;
+        MessagePort.prototype.postMessage = function (...a) { setTimeout(() => post.apply(this, a), window.__sliceWait); };
+    });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await quiet(page);
+    if (which.includes('catchup')) {
+        await page.waitForFunction(() => Number(document.querySelector('.cu-bar:not(.waiting)')?.getAttribute('aria-valuenow')) >= 25, null, { timeout: 30000, polling: 50 }).catch(() => {});
+        await page.evaluate(() => { window.__sliceWait = 1200; });   // (it stays about there for the picture)
+        await page.waitForTimeout(300);
+        if (!(await page.$('.cu-bar'))) problems.push(`no catch-up bar at ${viewport.width}px`);
+        await shoot(page, 'catchup', viewport.width);
+    }
+    await page.evaluate(() => { window.__sliceWait = 0; });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    await page.waitForSelector('.welcome-back', { timeout: 60000 }).catch(() => {});
+    if (!(await page.$('.welcome-back'))) problems.push(`no welcome-back after the catch-up at ${viewport.width}px`);
+    await page.waitForTimeout(1800);   // the haul pops in
+    if (which.includes('reentry')) {
+        if (!(await page.$('.welcome-back .wb-world'))) problems.push(`no re-entry strip on the welcome-back at ${viewport.width}px`);
+        await page.evaluate(() => document.querySelector('.welcome-back .wb-world')?.scrollIntoView({ block: 'center' }));
+        await shoot(page, 'reentry', viewport.width);
+    }
+    await page.context().close();
+}
+
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
     console.error('Playwright is missing. Once: npm i --no-save playwright && npx playwright install chromium');
@@ -293,6 +342,7 @@ try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
 
 const args = process.argv.slice(2);
 const fresh = args.includes('--fresh');
+const reduced = args.includes('--reduced');   // as a player who asks for less motion sees it (pictures named <name>-still-<width>.png)
 const tabs = (args.find(a => !a.startsWith('--')) || DEFAULT_TABS.join(',')).split(',').filter(Boolean);
 
 // The game is ES modules, which need HTTP and the right content types: a small static server.
@@ -315,7 +365,7 @@ const problems = [];
 
 /** A page that records errors; requests the static server can't answer (the API) don't count. (The fonts are the game's own.) */
 async function open(viewport, url, { clan = false } = {}) {
-    const ctx = await browser.newContext({ viewport });
+    const ctx = await browser.newContext({ viewport, ...(reduced ? { reducedMotion: 'reduce' } : {}) });
     if (clan) {   // signed in, the API answered here (CLAN_SHOTS)
         await ctx.addInitScript(token => localStorage.setItem('fantasyIdle.jwt', token), FAKE_TOKEN);
         await ctx.route('**/api/**', clanApi());
@@ -336,7 +386,7 @@ const quiet = page => page.addStyleTag({ content: '#celebrate, #toast-area { dis
 
 async function shoot(page, name, width) {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    await page.screenshot({ path: join(OUT, `${name}-${width}.png`) });
+    await page.screenshot({ path: join(OUT, `${name}${reduced ? '-still' : ''}-${width}.png`) });
     console.log(`${String(width).padStart(4)}px  ${name.padEnd(14)} overflow ${overflow}`);
     if (overflow > 0) problems.push(`${name} at ${width}px scrolls sideways by ${overflow}px`);
 }
@@ -414,13 +464,15 @@ for (const viewport of VIEWPORTS) {
         }
         await page.context().close();
     }
-    if (!tabs.some(t => !(t in CLAN_SHOTS))) continue;
+    const returnTabs = tabs.filter(t => t in RETURN_SHOTS);
+    if (returnTabs.length) await shootReturn(viewport, returnTabs);
+    if (!tabs.some(t => !(t in CLAN_SHOTS) && !(t in RETURN_SHOTS))) continue;
     const page = await open(viewport, `${base}?dev=1`);
     await lateGame(page);
     await quiet(page);
     await page.waitForTimeout(1600); // everything this save has earned opens at once and glows: let that pass
     for (const tab of tabs) {
-        if (tab in CLAN_SHOTS) continue;
+        if (tab in CLAN_SHOTS || tab in RETURN_SHOTS) continue;
         if (DIALOGS[tab]) {
             await page.evaluate(DIALOGS[tab]);
             await page.waitForTimeout(700);

@@ -921,6 +921,35 @@ there for 1h 44m", with a bar of climbing against time at the wall) and a row of
 a prestige with its payout (when Auto is off), crates to open, the Titan awake, skill points, better gear to
 wear; a place that waited opens on the return and is named there too.
 
+**A replay a slice at a time, behind a bar** (November 2026, the research loop's R20). A day away deep in the climb with
+Auto prestige is seconds of work: the boot replayed it in one task with only the sidebar's title drawn, 6.8–7.4 s at
+Chrome's 4× CPU throttle for a stage-1,300 hero (`docs/research_notes/research-loop/047-measurements-left.md` §3). The
+replay is a generator now (`offlineReplay`, a slice each game minute), stepped by `Game.beginResume` and `beginGap`; the page
+replays about 40 ms at a time and lets the browser draw between (`catchUp` in `src/main.js`). From a quarter of a second a
+dialog shows a bar of the time replayed with the stage and the gold climbing beside it (at work, the skill's level and what
+it makes), and the welcome-back takes its place at the end. It ends exactly as the replay in one go: from its first slice
+the page behind is held (the tap that found a gap must not act on the game) and nothing plays, saves or draws the game, and
+anything that still acts on it (a tick, an action, a save) finishes the replay first. `test/catchup.test.mjs` compares the
+final saves, reports and events field by field; `tools/bootcheck.mjs --against=<an older folder>` compares the games in
+Chromium for a guest's boot, a gap in a running tab and both outcomes of a signed-in player's sync. A page reloaded in the
+middle finds its save untouched and replays the time again. A tab back from sleep takes the same path, and signed in the time
+away is replayed once, for the game the sync chooses (§3.17). `tools/bootbench.mjs` times the boot.
+
+**What the world did meanwhile** (P-127). The report covers the hero; after a day or more away a strip under its haul covers
+the world, a line each and only for what the player has met (`src/systems/reentry.js`, opened by the disclosure `reentry`: the
+clan, the weekend events or the Trials): the clan's week (levels of its boss felled and the banner they raise, as the server
+last said it this week), the weekend event running or the last one if it ran while away (with the Festival Tokens won
+meanwhile), and the week's Trial with its laurel. Each line is the latest of its kind, so a month away reads as short as a day.
+With none of them, and nothing ready on the report either, one line says nothing is waiting. The clan's and the event's lines
+go to their tabs.
+
+**A tab the player never left** (`docs/research_notes/research-loop/040-long-session-and-clocks.md` §1: Chrome paused a hidden
+tab for half an hour, and its late tick opened "Welcome back, away 33m" in a tab nobody had left). A gap that began while the
+page was hidden (a background tab the browser paused, a phone in another app or locked) opens no dialog unseen. Once the page is
+in view, a gap under an hour is one line in a toast ("37m in the background: 354 monsters, 2 prestiges"), and from an hour on
+it is the welcome-back, with the strip from a day as a closed tab's has (`gapTelling` in `src/systems/reentry.js`). A gap in a
+page in view as it began (the machine slept with the game in front) shows the welcome-back as before.
+
 ### 3.17 Saves, cloud and the API
 
 - **Local save** (`src/core/save.js`): `localStorage['fantasyIdle.save.v2']`, versioned
@@ -1029,7 +1058,12 @@ wear; a place that waited opens on the return and is named there too.
   upload. Each upload names the server's save the game last saw, and the server refuses one made over
   another device's newer save (409): the game then looks again and carries on from the server's save (a
   toast says so), unless it already holds all that save has.
-  The boot's welcome-back waits for the sync, so it never acts on the other game. A hard reset while
+  The boot replays the time away once, for the game played (§3.16): signed in it waits for the server's save, at most
+  four seconds, so a player whose server save wins no longer replays a day twice and its welcome-back never acts on the
+  other game. After the wait this copy is replayed while the answer is still on its way; the answer is weighed against this
+  game as it was saved (`syncFacts`), and if the server's wins the replay under way is dropped for it. Behind the sign-in the
+  time away waits for the player's choice, the game drawn as it was left. Nothing is saved, here or on the server, while time
+  away waits to be replayed or is being replayed: a page closed then replays it all the next time. A hard reset while
   signed in resets the cloud save too. On a static host without the API, sign-in says cloud saves are
   unavailable instead of failing.
 - **Delete my account** (Settings, `POST /api/account/delete`; the research loop's P-070, the owner's decision 11, November
@@ -2888,6 +2922,7 @@ src/systems/          skilling · combat · dungeon (runs, chests, uniques found
                       · walls (a fall or a boss's timeout that repeats at a wall goes quiet for ten minutes, §3.21)
                       · powerledger (each source's share of the hero's strength, for the panel and tools/ledger.mjs, §3.37)
                       · rates (XP an hour, the time to the next level, how long the materials last, §3.37)
+                      · reentry (the welcome-back's strip of the world, how a gap in play is told, §3.16)
 src/ui/               render.js (HTML per tab, the sidebar, the armory, the battle dock, the phone hotbar) · scene.js (the
                       battle scene above the Combat tab) · stage.js (the hero at work above each skill tab) ·
                       features.js (each place's painting, one line and rules: unlock cards, banners, About cards) ·
@@ -2896,7 +2931,8 @@ src/ui/               render.js (HTML per tab, the sidebar, the armory, the batt
                       sounds and haptics) · rewards.js (celebrations, the daily crate) · actionfx.js (what each
                       finished action makes, popping off its target) · update.js (when an open page looks for a
                       newer version) · saver.js (the battery saver: a page left alone draws less) · announce.js (the
-                      polite lines for screen readers, the fight in words) · format.js
+                      polite lines for screen readers, the fight in words) · reentry.js (the bar time away is replayed
+                      behind, the report's strip) · format.js
 assets/               sprites.png (the atlas, CC0 tiles from Dungeon Crawl Stone Soup) · backdrops/ (painted
                       parallax layers per place, WebP) · paint/ (hand-made paintings, when present) · fonts/ (Cinzel
                       and Outfit, woff2 under the SIL OFL, and fonts.css: the game and the wiki serve them themselves,
@@ -2921,7 +2957,11 @@ tools/                simulate.mjs (whole-game balance sim, play styles) · paci
                       icons.py (the app icons in assets/icons/, the hero on the meadow; manifest.json installs them) ·
                       serve.py (the local server: no stale modules after a change) ·
                       shots.mjs (screenshots at desktop and phone widths, fails on sideways scroll or errors) ·
-                      trials.mjs (how far a run gets under each Trial's rule, from heroes the simulator saved)
+                      trials.mjs (how far a run gets under each Trial's rule, from heroes the simulator saved) ·
+                      bootbench.mjs (a hero's boot after a day away in Chromium, plain and at Chrome's 4× CPU throttle) ·
+                      bootcheck.mjs (the ways back through the game in Chromium: the bar, a server fast, late or winning, a
+                      reload mid-replay, a hidden tab, the strip; with --against, the games they end in compared with an
+                      older folder's) · bootlib.mjs (what those two share)
 docs/                 DESIGN.md (this) · ROADMAP.md · art/gemini.md (prompts for the paintings) · reports/ ·
                       research_notes/
 ```

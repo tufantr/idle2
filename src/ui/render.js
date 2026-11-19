@@ -3077,7 +3077,7 @@ function welcomeBestFind(summary, i) {
  * each skill's XP with its bar (a level-up stands out), the materials as tiles popping in one by
  * one, gold, finds (pets, uniques, items, dungeon clears) and what was used up.
  */
-export function renderWelcomeBack(summary, game) {
+export function renderWelcomeBack(summary, game, { strip = null } = {}) {
     const state = game.state;
     // The time away, and past the cap the hours that counted (systems/offline.js: `elapsed` was all of it, `simulated` was
     // replayed): "30h away, 24h counted", so the hours the cap cut are said, not lost without a word.
@@ -3154,6 +3154,7 @@ export function renderWelcomeBack(summary, game) {
         ${gains.length ? `<div class="wb-tiles">${gains.map(([id, d]) => tile(id, `+${shortQty(d)}`)).join('')}</div>` : ''}
         ${finds ? `<div class="wb-finds">${finds}</div>` : ''}
         ${used.length ? `<div class="wb-used"><span class="muted small">Used</span>${used.map(([id, d]) => tile(id, `−${shortQty(-d)}`, ' spent')).join('')}</div>` : ''}
+        ${strip ? strip(ready.length) : ''}
         <div class="modal-footer"><button class="modal-btn btn-confirm" onclick="FI.collectOffline()">Collect</button></div>
     </div>`;
 }

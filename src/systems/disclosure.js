@@ -78,7 +78,10 @@ export const DISCLOSURES = [
     { id: 'fx_coins',     when: s => s.stats.kills > 0 },
     { id: 'fx_confetti',  when: s => Object.values(s.unlocks).some(Boolean) },
     { id: 'fx_shake',     when: s => s.combat.bestStage >= STAGES_PER_ZONE || s.stats.bossKills > 0 },
-    { id: 'big_numbers',  when: s => s.gold >= 1e6 || s.stats.goldEarned >= 1e6 }   // Settings' choice of how they are written, once there are any
+    { id: 'big_numbers',  when: s => s.gold >= 1e6 || s.stats.goldEarned >= 1e6 },   // Settings' choice of how they are written, once there are any
+    // the welcome-back report's strip of what the world did meanwhile (systems/reentry.js): once a part of it that moves
+    // while the player is away has opened (the clan, the weekend events, the Trials' weeks)
+    { id: 'reentry',      when: s => !!(s.unlocks.clan || s.unlocks.events || s.seen.trials) }
 ];
 
 /** Has this piece of the interface opened for the player? (Developer mode opens everything.) */
