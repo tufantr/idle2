@@ -382,7 +382,9 @@ function pump() {
     }
     catching = null;
     game.setAttending(!document.hidden);   // (as it is now: left alone while the replay ran)
-    closeCatchUp(c.after(c.run.summary));
+    let report = null;
+    try { report = c.after(c.run.summary); } catch (err) { console.error('The report of the time away failed', err); }   // (the game goes on without it)
+    closeCatchUp(report);
     for (const resolve of caughtUpWaits.splice(0)) resolve();
     settle();
     c.resolve(c.run.summary);
