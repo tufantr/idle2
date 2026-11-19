@@ -1260,4 +1260,6 @@ app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
 module.exports = app;
 module.exports.plausibilityFlags = plausibilityFlags;
 module.exports.RANKED = RANKED;
+module.exports.firstPeaks = firstPeaks;
+module.exports.flagStands = standing;
 module.exports.isoWeek = isoWeek;
