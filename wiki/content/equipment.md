@@ -26,7 +26,7 @@ Defence also gives health, one for every {{1 / BASE.hpPerDef}} defence, and each
 
 ## Rarity and bonuses
 
-A rarer piece carries more bonuses: none on a {{RARITIES[0].name.toLowerCase()}} piece, up to {{RARITIES.at(-1).affixes}} on a {{RARITIES.at(-1).name.toLowerCase()}} one. Each bonus is one of the kinds in the table below, rolled when the piece is made (a reroll rolls them again), and a little larger on higher tiers. The bonuses of everything your hero wears add up, and a few stop at a cap (see [[Combat]]).
+A rarer piece carries more bonuses: none on a {{RARITIES[0].name.toLowerCase()}} piece, up to {{RARITIES.at(-1).affixes}} on a {{RARITIES.at(-1).name.toLowerCase()}} one. In the bag and on your hero a piece's tile shows its rarity twice: by its colour, and by a pip for each of those bonuses up its left edge. Each bonus is one of the kinds in the table below, rolled when the piece is made (a reroll rolls them again), and a little larger on higher tiers. The bonuses of everything your hero wears add up, and a few stop at a cap (see [[Combat]]).
 
 ## Wear levels
 

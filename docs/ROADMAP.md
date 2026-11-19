@@ -1471,6 +1471,110 @@ Keeping it running:
       2.2 s and the game drawn at 4.1 s before; after, the bar at 1.9 s, no task over 0.1 s, the game drawn at 3.7 s. At 4×,
       one task of 7.8 s and the game drawn at 9.6 s before; after, the bar at 2.0 s, a frame at least every 0.28 s (the
       longest task, 0.26 s, is the first drawing of the game), the game drawn at 11.5 s: the slices cost about a tenth more
+- [x] **Tokens in the game's own numbers** (the research loop's small fixes, 12 November 2026): a deep run's tokens showed
+      as long digits on the Combat tab's prestige strip, the dock's Prestige, the Shop and the battle log; they read 1.6M
+      now, and the Shop's line says the highest stage this run, where it said "best stage"
+- [x] **No forging promised** (the same small fixes): the empty bag said a smith can forge gear, and the title card and the
+      wiki's front page said "forge your gear", though forging went in October. The bag says monsters drop it, bosses most
+      often, and both taglines "upgrade your gear"
+- [x] **A card says the XP it pays** (the same small fixes): under a skill potion, the gathering, smelting and jewellery
+      cards, the course and the skill stage's line showed the XP without the potion's; they show what an action pays
+- [x] **The hours the cap cut** (the research loop, P-093): back after 30 hours, the welcome-back report said "24h 0m" and
+      "capped", the six lost hours nowhere. It says "30h away, 24h counted", the cap in a tip a phone can open
+- [x] **A link to the wiki** (promised to a player on 1 November; P-074): Settings has "Read the wiki" beside the Discord,
+      and every "?" card with a page of its own on the wiki ends with a small "More on the wiki" that opens it
+- [x] **A mark at attack speed's cap** (promised on 1 November; P-074): speed stops at +100%, and every deep hero the
+      simulator made sat 7 to 48 points past it. The Inventory's swing time wears a small "cap" once there, its tip saying
+      more adds nothing, and a piece whose speed adds nothing gets the same mark beside its bonus
+- [x] **Faithless says its tokens come back** (P-007): its card said only "Your tokens give nothing", and a player read it as
+      losing them. It says they count again from the next prestige, which ends the Trial; the wiki says they are kept
+- [x] **The boss says what it takes** (P-006): the Clan's "?" gave level 1's attacks and the strike's ×2.5. It gives every
+      level's (20, 24, 29, 35, 41, 50 and 60 attacks of an average member) and what striking fast through every opening
+      makes an attack worth, ×1.33 at full attack speed, worked out from the server's own reckoning of the fight
+- [x] **Crowns that read 1st, 2nd and 3rd** (P-001; a player once read the ranking as "everybody 2nd"): the 1st's crown was
+      the atlas's red and amber, close to the 3rd's sepia. The 1st is gold, the 2nd silver, the 3rd bronze, and every crown
+      (the ranking's, last week's, the clan list's and the header's) says its place in a tip a phone opens with a tap
+- [x] **Completion that new content can't lower** (the owner's decisions, P-108 with P-117): each part divided by its own
+      content, so a new medal, pet, unique or festival took points from everyone. Each part's whole is fixed at today's
+      game, and new things fill it; the secret medals keep their power, count when held and are never needed; the Trials'
+      part counts each Trial's five tiers, where its ladder's rungs filled it for a deep hero with Trials never cleared
+- [x] **The boards open on This week** (P-129): they opened on all-time best stage, where the beta's players will stand when
+      a post brings strangers. They open on this week's board, which counts from each player's first upload of the week,
+      or on all time while it holds fewer than five names; a tap on the period still switches, and the choice holds
+- [x] **The hand points again at the first wall** (P-079): in a first run it pointed at Equip only while nothing was worn and
+      at the camp only before its first level, so a player who pressed only where it pointed fell at the stage-20 boss with
+      679 gold unspent and armour waiting. After a fall or a boss that held out it points at a waiting Equip, then at a camp
+      level while the gold lasts, before the boss's skull. Played by a scratch follower of the hand (an hour, three seeds):
+      the two who met that wall bought 18 camp levels, fell 21 and 12 times instead of 30 and 31, and stood at stage 30
+      instead of 28 and 27; `tools/opening.mjs`, whose players take every offer anyway, reads the same
+- [x] **The server's ceilings keep up** (the research loop's R1, the owner's pick, November 2026; DESIGN §3.17): a best stage
+      past 6,000 no longer flags an account, weeks before the deepest hero would have met it; the ceiling is the save's own
+      wall at 10,000, and total XP's counts the game's 11 skills
+- [x] **Flags that list before they act** (R1, November 2026; DESIGN §3.17): only numbers no save can reach flag an account
+      at once. A save that grows faster than the check allows, inside the ceilings, goes on a list for the owner instead
+      (mailed each week), and the owner flags by hand what deserves it. Flags carry the check's version: a fixed check's old
+      flags lapse by themselves
+- [x] **A flagged player is told** (R1, November 2026; DESIGN §3.17): Settings' account panel says "Flagged until …" while
+      it is, with a "?" for what a flag does, why, how long and how to answer (the Discord); a held-back clan attack's card
+      says "Flagged: at most 1% of the boss" with the same few words, and a tap opens Settings. The wiki's FAQ has it too
+- [x] **The API's guards** (R12, November 2026; DESIGN §3.17): browsers may call it from the game's own pages only, it no
+      longer names its framework, and the owner hears when a day's mails reach 80 of the plan's 100
+- [x] **Sign out everywhere** (R12, November 2026; DESIGN §3.17): Settings' account panel signs out every other device
+      (with a confirm), and a new password does the same; the account's address hears of a password change
+- [x] **Passwords too easy to guess are refused** (R12, November 2026; DESIGN §3.17): at sign-up and reset, the most common
+      ones, a character or short run repeated, a run of keys in a row and the username itself, with a plain reason
+- [x] **A sign-up doesn't tell whose address has an account** (R9, November 2026; DESIGN §3.17): it answers "check your
+      email" either way, and an address that has one gets a line saying someone tried, instead of a code
+- [x] **The clan list says who plays** (R14, November 2026; DESIGN §3.18): each clan's row says how many of its members
+      played this past week, and the clans with the most of them come first, so a newcomer finds one that plays
+- [x] **Where accounts come from** (R7, November 2026; DESIGN §3.17, README "Listings"): a listing's link can carry a
+      tag (`?src=reddit1`), kept by the game until an account is made and counted with it; no link to the account
+- [x] **The accessibility pass** (R10 of the research loop's ranking, November 2026; the faults measured in
+      `docs/research_notes/research-loop/021-accessibility.md`): on a phone the stage path's buttons are 24 px, a finger's
+      target, and Settings' checkboxes stand in rows 32 px tall. The path's numbers have their own type again (its `font`
+      rule held `inherit`, which a shorthand can't, so browsers dropped it: a button's number came out 15 px, the stage's
+      own 10 px); they are 11.5 px, 11 px on a phone. A dialog holds the keys: the page behind it is inert, Tab goes round
+      the dialog on top (one Tab from Prestige now reached the phone's hotbar behind it), each is named by its title, and
+      when it closes the focus goes back to the control a key opened it from. On a phone a control the keys reach scrolls
+      clear of the hotbar and the sticky bar of places (six bag tiles, three Shop buttons and three of Settings' controls
+      had sat wholly under them). A skill's name, level and XP stand on a smoked plate (over the farm's, the river's and
+      the course's pale skies they read at 1.4–2.6:1; 5:1 or more now), the level's colour lightened so Agility's red reads;
+      the food and potions the fight won't use keep their picture dimmed but their numbers above 4.5:1 (3.2–3.9:1 before).
+      A badge says in words what its glyph shows, to a screen reader (a tab read "Shop▲"; now "Shop, a better tool is ready
+      to buy", "Combat, level 62"), and so do the phone's coins and its Menu and crate buttons, whose words the screen hides.
+      Settings has a switch for the fight's two keys, M (the map) and Space (a strike), kept on that device: speech input
+      types them. The monster flashes at most three times a second (WCAG 2.3.1; striking four times a second made five, on
+      up to 90% of the area WCAG allows): a blow sooner than that knocks it back without the light, its number and sound as
+      ever. A tile tells its rarity twice: its colour, and a pip for each step above Common (Rare and Epic looked the same
+      to a deuteranope); a War Tree talent a point can go to wears a + beside its green frame. On a phone the tips open
+      (121 of 134 never showed): a tap names the purse's coins, the pills, the hero's and the monster's numbers (no strike)
+      and the hero's stats, and a long press shows a button's tip without pressing it
+- [x] **Words on a phone are 11 px at least** (R23 of the research loop's ranking, part of P-019): at 390 px the stage
+      numbers were 8.8 px, the dock's supply counts 9.9, the doll's slots 9, the monster's numbers 9.9, the hotbar's labels
+      10.6, and the War Tree's ranks, the Trials' badges, the perks' lines and a card's kicker under 11 too. Each is 11 px
+      or more now, every layout as it was (four-digit stages fit the path; "Earring" fits under its slot)
+- [x] **The fonts come from the game's own server** (R18 of the research loop's ranking, P-066): Cinzel and Outfit were
+      loaded from Google Fonts by the game, the wiki and the link preview's tool, a request that blocks the first paint,
+      is unreliable in mainland China and drew a court award in Munich. The four files (Google's own cuts, 87 KB) are in
+      `assets/fonts/` with their stylesheet, credited under the SIL Open Font License; no request leaves for Google, and
+      the same panel draws pixel for pixel as before
+- [x] **A wall that repeats goes quiet** (R21 of the research loop's ranking, P-081): at stage 300 a hero fell about twice
+      a minute, each time with the defeat jingle, a banner and a red edge, and a red toast on any other tab. The first
+      fall or boss timeout at a wall keeps them; for ten minutes after it the next ones there play one soft note and fold
+      into one counted toast ("Fell again ×4", "The boss held out again ×2"), the hero still falling. Tested in
+      `test/access.test.mjs`
+- [x] **A link that starts as a guest** (R7 of the research loop's ranking, P-065): `fantasyidle.com/?play`, for posts and
+      listings, makes a new player a guest at once, as a frame does: the title card's Begin goes straight into the fight,
+      the account one click away (the Guest pill), and the choice is remembered. The bare address keeps the sign-in
+      first; a signed-in player's link plays the account's game. The rule is `src/core/door.js`, tested
+- [x] **How it was made, at the foot of Settings** (R7 of the research loop's ranking, P-020; the words wait for the
+      owner's OK): the 161 paintings made with Google Gemini and how they were edited, the CC0 sprites drawn by Dungeon
+      Crawl Stone Soup's artists and the pictures the game's code draws, the sounds made in code, the code and the words
+      written with an AI (Claude), the type. The wiki's credits page says the same
+- [x] **A guest's game kept on phones** (R19 of the research loop's ranking, P-069): Safari clears a site's storage after
+      seven days without a visit unless it is on the Home Screen, and a guest's game is only in the browser. For a guest
+      the game now asks the browser, quietly, to keep its storage (once a load until it does; not in Firefox, which would
+      prompt), and on an iPhone or iPad not playing from the Home Screen the sign-in that offers a guest's game says so
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

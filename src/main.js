@@ -2,7 +2,7 @@
 
 import { Game } from './game.js';
 import {
-    loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, startsOver, progressed,
+    loadLocal, saveLocal, clearLocal, CloudClient, syncChoice, syncFacts, startsOver, progressed,
     writeBackup, rotateBackup, restoreBackup, BACKUP_INTERVAL_MS, localLoadProblem, LOCAL_KEY
 } from './core/save.js';
 import { renderNav, renderNavNext, renderHeader, renderTab, renderHotbar, patchLive, renderPrestigeModal, renderPerksModal, renderWelcomeBack, renderAuthModal, renderIntroModal, renderConfirmModal, renderItemDetail, renderRunChoiceModal, renderHallGive, renderBannerPicker, workTime, battleMode, tabIcon, pageTitle, medalArt, TABS, ANVIL_ROLL_GLOW_MS } from './ui/render.js';
@@ -29,11 +29,13 @@ import { fmt, escapeHtml, gainMarkup, stagesWords, duration } from './ui/format.
 import { withArticle } from './core/text.js';
 import { isUpgrade, canWear, equipGain, gainStages, findGear, gainedText } from './systems/inventory.js';
 import { SKILLS } from './data/skills.js';
-import { CLAN_POLL_MS, clanBossFor, ENDLESS } from './data/social.js';
+import { CLAN_POLL_MS, clanBossFor, ENDLESS, boardOpensOn } from './data/social.js';
 import { AGILITY_SLOTS } from './data/agility.js';
 import { dungeonById, dungeonAt, dungeonTierInfo, DUNGEON_TIER_STAGES, SEAL_RECORDS } from './data/dungeons.js';
 import { cratesTowardGreat } from './systems/daily.js';
 import { seen } from './systems/disclosure.js';
+import { noteWall } from './systems/walls.js';
+import { playLink, startsAsGuest } from './core/door.js';
 import { nextLook, lookForMedal } from './data/looks.js';
 import { capeFor, festivalCloak } from './data/capes.js';
 import { ZONES, STAGES_PER_ZONE } from './data/zones.js';
@@ -107,6 +109,10 @@ const ui = {
     // Clan tab data, fetched only while that tab is open (at most once a minute). Reset on login/logout.
     social: freshSocial()
 };
+// The fight's two keys (M, the map; Space, a strike) can be turned off in Settings (WCAG 2.1.4: speech input types
+// them): a switch for this device, kept in the browser, not the save.
+const SHORTCUTS_KEY = 'fantasyIdle.keys';
+ui.shortcuts = prefs.get(SHORTCUTS_KEY) !== '0';
 
 function loadFresh() {
     try {
@@ -122,7 +128,8 @@ function markFresh(id, on) {
 
 function freshSocial() {
     return {
-        clan: null, hall: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'all', optIn: false,
+        // the boards open on This week, or All time while it holds few names (data/social.js boardOpensOn): `periodSet` once decided
+        clan: null, hall: null, clans: [], search: '', rewards: [], leaderboard: null, metric: 'bestStage', period: 'week', periodSet: false, optIn: false,
         fetchedAt: 0, loading: false, loaded: false, error: '', seq: 0,
         form: { name: '', tag: '', description: '', lookingFor: '', search: '' } // typed values survive re-renders and errors
     };
@@ -130,6 +137,10 @@ function freshSocial() {
 
 const cloud = new CloudClient('/api');
 const params = new URLSearchParams(location.search);
+// The listing a player came by (its link's `?src=reddit1`, README "Listings"): kept on this device, the first one seen,
+// until an account is made, and sent with its sign-up, which counts it (a tag and a count, nothing of the account).
+const SOURCE_KEY = 'fantasyIdle.src';
+if (/^[a-z0-9-]{1,32}$/.test(params.get('src') || '') && !prefs.get(SOURCE_KEY)) prefs.set(SOURCE_KEY, params.get('src'));
 // A local development host (tools/serve.py, the screenshot and test tools): dev flags work there, and the
 // game plays as a guest. Anywhere else a sign-in stands in front of the game (the owner's call, October 2026:
 // the server's save is the game, as in any online game) until the player has an account or chooses to play
@@ -141,11 +152,33 @@ const GUEST_KEY = 'fantasyIdle.guest';
 // Inside another site's frame (galaxy.click shows its games in one, and its players shy away from sign-up forms),
 // a new player is a guest at once: Begin goes straight into the fight, the account one click away (the Guest pill).
 const EMBEDDED = (() => { try { return window.top !== window.self; } catch { return true; } })();
-let guest = EMBEDDED || prefs.get(GUEST_KEY) === '1';   // framed, or the sign-in's "Play as guest" chosen (until an account signs in)
+// So does one who comes by a guest's link (`?play`, for posts and listings: core/door.js); the bare address keeps the
+// sign-in first. The link's choice is remembered, as the sign-in's "Play as guest" is.
+const GUEST_LINK = !EMBEDDED && playLink(location.search) && !cloud.loggedIn;
+// framed, the link, or the sign-in's "Play as guest" chosen (until an account signs in)
+let guest = startsAsGuest({ search: location.search, embedded: EMBEDDED, chosen: prefs.get(GUEST_KEY) === '1', signedIn: cloud.loggedIn });
 const needsSignIn = () => SIGN_IN_REQUIRED && !cloud.loggedIn && !guest;
 function setGuest(on) {
     guest = on;
     if (on) prefs.set(GUEST_KEY, '1'); else prefs.remove(GUEST_KEY);
+}
+if (GUEST_LINK && SIGN_IN_REQUIRED) setGuest(true);
+// On an iPhone or iPad every browser is Safari's engine, which clears a site's storage after seven days without a visit
+// unless the site is on the Home Screen (WebKit, 2020): the sign-in that offers a guest's game says so there (P-069).
+const SAFARI_CLEARS = (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+    && !(navigator.standalone || window.matchMedia?.('(display-mode: standalone)').matches);
+/**
+ * A guest's game lives in this browser only, so the browser is asked, quietly, to keep it: once a load, and not again
+ * once it does (Chrome may grant it as the game is played more; Safari grants it to a Home Screen app). Not in Firefox,
+ * which would ask its player in a prompt; its storage is cleared only when the disk runs short.
+ */
+let askedToKeep = false;
+function keepGuestGame() {
+    if (askedToKeep || !guest || cloud.loggedIn || /Firefox\//.test(navigator.userAgent)) return;
+    const storage = navigator.storage;
+    if (!storage?.persist) return;
+    askedToKeep = true;
+    (storage.persisted ? storage.persisted() : Promise.resolve(false)).then(kept => kept || storage.persist()).catch(() => { /* not granted: the backups in Settings remain */ });
 }
 // Signed in, the server's save is the game (syncChoice in core/save.js): nothing goes up until a sync has
 // looked at it and chosen (an upload before that put a guest's or a stale game over the account's). A
@@ -283,7 +316,8 @@ function playPending(news = null) {
     if (!p) return caughtUp().then(() => null);
     pending = null;
     clearTimeout(slowTimer);
-    return catchUp(p.start(), summary => { news?.(); return p.after(summary); });
+    const saved = syncFacts(game.state);   // (the game as it stands now is what a server's answer is weighed against: syncFromCloud)
+    return catchUp(p.start(), summary => { news?.(); return p.after(summary); }, saved);
 }
 
 /**
@@ -302,12 +336,20 @@ function holdForServer(showIn = CATCH_UP_SHOW_MS) {
  * Replay `run` (a Game.beginResume or beginGap) a slice at a time, behind the bar once it has taken CATCH_UP_SHOW_MS; then
  * `after(summary)`, a report's HTML or null, takes the bar's place. Resolves with the summary.
  */
-function catchUp(run, after) {
+function catchUp(run, after, saved = null) {
     return new Promise(resolve => {
         if (!run) { settle(); resolve(null); return; }
-        catching = { run, after, resolve, at: performance.now() };
+        catching = { run, after, resolve, saved, at: performance.now() };
         pump();
     });
+}
+/** The replay under way given up, its game not to be played (the server's is): the bar stays for the replay that follows. */
+function dropCatchUp() {
+    const c = catching;
+    if (!c) return;
+    catching = null;
+    for (const resolve of caughtUpWaits.splice(0)) resolve();
+    c.resolve(null);
 }
 function pump() {
     const c = catching;
@@ -348,6 +390,7 @@ function pump() {
 function openCatchUp(view = {}) {
     if (catchUpBox) return;
     document.body.classList.toggle('reduced-motion', !!game.state.settings.reducedMotion);   // (before the first render)
+    if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();   // (the keys go back where they were: showModal)
     const box = Object.assign(document.createElement('div'), { className: 'modal-overlay active catch-up-overlay', tabIndex: -1, innerHTML: renderCatchUp(game.state, view) });
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-modal', 'true');
@@ -357,22 +400,28 @@ function openCatchUp(view = {}) {
     ui.modalOpen = 'catchup';
     ui.modalUnder = null;
     catchUpBox = box;
-    for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = true; }
+    holdPage(true);
     box.focus({ preventScroll: true });
     if (catching?.run.where) paintCatchUp(box, game.state, catching.run.where);
 }
-/** The bar's dialog away, `html` (a report) in its place, then a dialog that waited behind it. */
+/** The bar's dialog away, `html` (a report) in its place, then a dialog that waited behind it; with none, the page again. */
 function closeCatchUp(html) {
     const box = catchUpBox;
     catchUpBox = null;
     if (box) {
         box.remove();
-        for (const id of ['app', 'hotbar']) { const el = document.getElementById(id); if (el) el.inert = false; }
         if (ui.modalOpen === 'catchup') { ui.modalOpen = catchUpWas.open; ui.modalUnder = catchUpWas.under; }
         else if (ui.modalUnder === 'catchup') ui.modalUnder = catchUpWas.open || null;   // (a question stood over the bar)
     }
     if (html) openModal(html, 'offline');
-    if (!ui.modalOpen) { const next = ui.modalQueue.shift(); if (next) showModal(next.html, next.key); }
+    if (!ui.modalOpen) {
+        const next = ui.modalQueue.shift();
+        if (next) showModal(next.html, next.key);
+        else if (box) { holdPage(false); rewards.resume(); returnFocus(); }
+    } else if (box) {   // the dialog it stood over is on top again
+        holdPage(true);
+        focusDialog(document.querySelector('#modal-root > .modal-overlay:last-child'));
+    }
 }
 
 /** What the new version changed, for the welcome-back's strip (systems/reentry.js): nothing yet, until a changelog fills it. */
@@ -416,6 +465,9 @@ function showHeldGap() {
     toast(backgroundLine(s), 'info', pic(s.mode === 'combat' ? FEATURES.combat.icon : FEATURES[Object.keys(s.skills || {})[0]]?.icon || 'gold'));
 }
 
+// The control that had the focus when the first dialog opened ({ find, keys }: showModal), and gets it back.
+let dialogOpener = null;
+
 // ---------- boot ----------
 
 if (loaded) writeBackup(game.serialize(game.state.meta.savedAt), 'load', 'On load (before offline progress)');
@@ -430,6 +482,7 @@ if (cloud.loggedIn) { if (pending) holdForServer(); else syncFromCloud(); }
 // and straight into a fight. Signing in stays one click away (on the card, and in the header).
 else if (!prefs.get('fantasyIdle.introSeen') && !prefs.get('fantasyIdle.authSeen') && !game.state.stats.kills) { openModal(renderIntroModal(game.state), 'intro'); prefs.set('fantasyIdle.introSeen', '1'); }
 if (needsSignIn() && !ui.modalOpen) openSignIn();   // a returning player meets the sign-in (a new one, the title card first)
+keepGuestGame();   // a guest's game: the browser is asked to keep it
 
 let lastSave = Date.now();
 let lastBackup = Date.now();
@@ -555,8 +608,10 @@ document.addEventListener('click', event => {
 });
 
 // A touch screen has no hover: a tap on a picture that explains itself in its title shows that as a
-// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records).
-const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip]';
+// bubble over it (the prestige dialog's keeps, the codex, a dungeon's lineup, the bestiary, records; the purse's
+// coins, the header's pills, the hero's and the monster's numbers in the fight, the hero's stats by his doll). A
+// button presses on a tap, so its title waits for a long press (below).
+const TIP_TARGETS = '.codex-cell, .lineup-face, .beast, .pet-card, .pg-keep-item, .map-stars, .stage-path b, .fact, .record, .rank-badge, .medal, .crate-way, .look-pick.locked, .cape-pick.locked, [data-tip], .chip, .bonfire-pill, .focus-pill, .cloud-pill, .fighter-meta > [title], .doll-stats > [title]';
 let tipNode = null;
 let tipTimer = 0;
 /** The game's own tooltip over `el`: `title` in bold above `text`. It goes after a moment, or with the pointer when `stay`. */
@@ -583,14 +638,43 @@ function showTip(el, text, { title = '', stay = false } = {}) {
 // also start or stop the card's action; the bubble is placed before anything is drawn again. (Touch screens only: the
 // query is made once, not on every click.)
 const noHover = window.matchMedia?.('(hover: none)');
+// (So does a tap on the monster's numbers, under it: it names them, and doesn't strike.)
 document.addEventListener('click', event => {
     if (!noHover?.matches) return;
-    const el = event.target?.closest?.('[data-tip]');
+    const el = event.target?.closest?.('[data-tip], .foe .fighter-meta > [title]');
     if (!el || !el.parentElement?.closest('[role="button"]') || el.closest('button, a')) return;
     event.stopPropagation();
     event.preventDefault();
-    showTip(el, el.dataset.tip, { title: el.dataset.tipTitle || '' });
+    showTip(el, el.dataset.tip || el.getAttribute('title'), { title: el.dataset.tipTitle || '' });
 }, { capture: true });
+// A long press on a button (or on a badge inside one) shows its title as the bubble, and that press does nothing
+// else: held half a second, nothing is bought or opened when the finger lifts. Not on the monster (a hold strikes it
+// once, as ever) nor in a mini-game, where holding is the game.
+const HOLD_TIP_MS = 520;
+let held = null;   // { el, x, y, timer, shown, upAt }
+function letGoHold() { if (held) clearTimeout(held.timer); held = null; }
+document.addEventListener('pointerdown', event => {
+    letGoHold();
+    if (event.pointerType === 'mouse' || !noHover?.matches) return;
+    const el = event.target?.closest?.('[title]');
+    const control = el?.closest('button, a, label, [role="button"]');
+    if (!control || control.disabled || control.closest('.foe, .minigame-panel') || !el.getAttribute('title')) return;
+    const hold = { el, x: event.clientX, y: event.clientY, shown: false, upAt: 0 };
+    hold.timer = setTimeout(() => { if (held !== hold || !el.isConnected) return; hold.shown = true; showTip(el, el.getAttribute('title')); }, HOLD_TIP_MS);
+    held = hold;
+}, { capture: true, passive: true });
+document.addEventListener('pointermove', event => {
+    if (held && !held.shown && Math.hypot(event.clientX - held.x, event.clientY - held.y) > 10) letGoHold();   // a scroll, not a hold
+}, { capture: true, passive: true });
+document.addEventListener('pointerup', () => { if (!held) return; if (held.shown) held.upAt = Date.now(); else letGoHold(); }, { capture: true, passive: true });
+document.addEventListener('pointercancel', () => { if (held && !held.shown) letGoHold(); }, { capture: true, passive: true });
+document.addEventListener('click', event => {
+    if (!held?.shown) return;
+    const fresh = Date.now() - held.upAt < 800;   // (the click of that press; a browser that sends none leaves the next tap alone)
+    letGoHold();
+    if (fresh) { event.stopPropagation(); event.preventDefault(); }
+}, { capture: true });
+document.addEventListener('contextmenu', event => { if (held?.shown) event.preventDefault(); }, { capture: true });
 document.addEventListener('click', event => {
     if (!noHover?.matches) return;
     const el = event.target?.closest?.(TIP_TARGETS);
@@ -644,6 +728,7 @@ document.addEventListener('keydown', event => {
     noteInput(event);
     sound.unlock();
     pointer.keyAt = Date.now();
+    if (event.key === 'Tab' && ui.modalOpen) { keepTabInDialog(event); return; }
     // Keyboard access for the clickable cards (role="button"). A key held down presses once: held, it
     // would start and stop an action over and over, or buy again and again.
     const target = event.target;
@@ -656,8 +741,9 @@ document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && ui.modalOpen && !['elsewhere', 'signin', 'catchup'].includes(ui.modalOpen)) closeModal(); // another tab plays; the game waits for an account or a guest, or its time away
     else if (event.key === 'Escape' && !ui.modalOpen && battleMode(game, ui)) window.FI.battleFull(false); // Esc folds the full-screen fight
     // Two keys for the fight: M opens the map (and closes it again), Space strikes the monster (a press each:
-    // holding it does nothing more).
+    // holding it does nothing more). Settings can turn both off (ui.shortcuts).
     if (event.ctrlKey || event.metaKey || event.altKey || target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (!ui.shortcuts) return;
     if (ui.modalOpen) { if ((event.key === 'm' || event.key === 'M') && ui.modalOpen === 'map') { event.preventDefault(); closeModal(); } return; }
     const c = game.state.combat;
     if ((event.key === 'm' || event.key === 'M') && c.mode !== 'titan' && c.mode !== 'clan' && seen(game.state, 'world_map')) { event.preventDefault(); window.FI.openMap(); }
@@ -722,7 +808,8 @@ function bumpPurse() {
 }
 
 function render() {
-    if (catching || pending) return;   // (the game is drawn once its time away is replayed: catchUp)
+    // The game is drawn once its time away is replayed (catchUp); behind the sign-in, which may keep it waiting, as it was left.
+    if (catching || (pending && !needsSignIn())) return;
     ui.lastRender = Date.now();
     ui.renderedRevision = game.revision;
     if (!isUnlocked(game.state, ui.tab) && !['inventory', 'settings'].includes(ui.tab)) ui.tab = 'combat';
@@ -773,9 +860,13 @@ function refreshPerks() {
     const html = renderPerksModal(game, ui.perks);
     if (!overlay || overlay.__html === html) return;
     const scroll = overlay.querySelector('.modal-content')?.scrollTop || 0;
+    const focus = document.activeElement;
+    const findAgain = overlay.contains(focus) ? focusFinder(focus) : null;   // a key's place in the tree, kept
     setHtml(overlay, html);
+    nameDialog(overlay);   // (Perks, or the War Tree)
     const content = overlay.querySelector('.modal-content');
     if (content) content.scrollTop = scroll;
+    if (findAgain && document.activeElement !== focus) findAgain()?.focus({ preventScroll: true });
 }
 
 // A piece of the interface that has just opened (systems/disclosure.js) glows once where it appears.
@@ -925,6 +1016,9 @@ const REVEAL_TOASTS = {
 };
 // A toast's picture: a sprite, small (the text beside it is plain text).
 const pic = (key, fallback = '') => sprite(key, { scale: 0.625, cls: 'soft', fallback });
+// The walls the hero keeps meeting (systems/walls.js): a fall or a boss's timeout there is loud once, then quiet and
+// counted for ten minutes. The screen's own memory, not the save's.
+const walls = {};
 
 function handleEvents(events) {
     const frozen = endHeld();   // (an ended fight's last moment on screen: what happens meanwhile at the stages isn't drawn)
@@ -946,8 +1040,10 @@ function handleEvents(events) {
         sound.play('unlock');
     }
     for (const ev of events) {
-        if (!frozen) scene.event(ev, game);
-        const heard = ev.type === 'unlock' ? null : soundFor(ev, onCombat);
+        const wall = noteWall(walls, ev, game.now);   // (null but for a fall or a timeout at the stages)
+        const again = wall && !wall.loud;             // a repeat at the wall: a soft cue, no banner, one counted toast
+        if (!frozen) scene.event(ev, game, { quiet: again });
+        const heard = ev.type === 'unlock' ? null : again ? ['again'] : soundFor(ev, onCombat);
         if (heard && (onCombat || !['hit'].includes(ev.type))) sound.play(heard[0], heard[1]);
         switch (ev.type) {
             case 'reveal':
@@ -1033,8 +1129,14 @@ function handleEvents(events) {
                         kicker: jewel ? 'The bench' : 'The forge', title: `+${ev.forge} kept`, lines: [`${jewel ? 'Bench' : 'Forge'} levels belong to the slot.`, `Every ${kind} you wear there gets your +${ev.forge}.`], ms: 5200 });
                 }
                 break;
-            case 'death': if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death'); break;
-            case 'bossTimeout': if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death'); break;
+            case 'death':
+                if (again) countedToast('wall:death', `Fell again ×${wall.again}`);
+                else if (!onCombat) toast(ev.mode === 'dungeon' ? 'Defeated in the dungeon: the run is lost' : ev.mode === 'titan' ? 'The Titan won this time' : `Defeated at stage ${ev.stage}: retreating`, 'death');
+                break;
+            case 'bossTimeout':
+                if (again) countedToast('wall:boss', `The boss held out again ×${wall.again}`);
+                else if (!onCombat) toast(`The boss held out — regrouping for a minute`, 'death');
+                break;
             case 'prestige': {
                 const count = game.state.prestige.count;
                 const rank = rankFor(count);
@@ -1214,6 +1316,29 @@ function toast(text, kind = 'info', icon = '') {
     setTimeout(() => el.remove(), 3800);
 }
 
+/** One toast that counts a repeating thing (a wall's falls): its words change in place and its time starts again. */
+const countedToasts = new Map();   // key -> { el, fade, gone }
+function countedToast(key, text, kind = 'info') {
+    const area = document.getElementById('toast-area');
+    if (!area) return;
+    let t = countedToasts.get(key);
+    if (!t?.el.isConnected) {
+        t = { el: Object.assign(document.createElement('div'), { className: `toast ${kind}` }) };
+        t.el.setAttribute('role', 'status');
+        area.appendChild(t.el);
+        while (area.children.length > 5) area.removeChild(area.firstChild);
+        countedToasts.set(key, t);
+    } else if (!document.body.classList.contains('reduced-motion') && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        t.el.animate?.([{ transform: 'scale(1.05)' }, { transform: 'none' }], { duration: 220, easing: 'ease-out' });   // the count ticks up
+    }
+    t.el.textContent = text;
+    t.el.classList.remove('fade');
+    clearTimeout(t.fade);
+    clearTimeout(t.gone);
+    t.fade = setTimeout(() => t.el.classList.add('fade'), 3200);
+    t.gone = setTimeout(() => { t.el.remove(); if (countedToasts.get(key) === t) countedToasts.delete(key); }, 3800);
+}
+
 /** A batch salvage's toast: how many, and all that came back (a crafted piece gives bars and gems, not essence). */
 function salvagedToast(r, what = '') {
     const text = gainedText(r);
@@ -1232,11 +1357,66 @@ function openModal(html, key = 'modal') {
 }
 function showModal(html, key) {
     const root = document.getElementById('modal-root');
+    if (!ui.modalOpen && !dialogOpener) dialogOpener = noteOpener();
     root.innerHTML = `<div class="modal-overlay active" role="dialog" aria-modal="true">${html}</div>`;
     ui.modalOpen = key;
     ui.modalUnder = null;
+    nameDialog(root.lastElementChild);
+    holdPage(true);
     focusDialog(root);
     for (const box of root.querySelectorAll('.modal-overlay, .modal-content')) box.scrollTop = 0;
+}
+// While a dialog is open the page behind it can't be reached: Tab goes round the dialog on top (the War Tree's
+// Unlearn question over the tree, say), and once every dialog has closed the focus goes back where the keys
+// left it. After a click or a tap it is let go instead, as after any button (Space, the strike, pressed it again).
+function noteOpener() {
+    const el = document.activeElement;
+    return el?.closest('#modal-root') ? null : noteFocus(el);
+}
+/** A control to give the focus back to: found again if it was drawn anew meanwhile; `keys`: the keyboard had it. */
+function noteFocus(el) {
+    if (!el || el === document.body) return null;
+    return { find: focusFinder(el) || (() => el), keys: pointer.keyAt > pointer.downAt };
+}
+function returnFocus() {
+    const opener = dialogOpener;
+    dialogOpener = null;
+    if (!opener?.keys || pointer.downAt > pointer.keyAt) return;
+    const el = opener.find();
+    if (el?.isConnected && el.getClientRects().length) el.focus({ preventScroll: true });
+}
+/** The page behind the dialogs (and every dialog under the one on top) is inert: no focus, no screen reader. */
+function holdPage(on) {
+    for (const id of ['app', 'hotbar', 'celebrate']) document.getElementById(id)?.toggleAttribute('inert', on);
+    const boxes = [...document.querySelectorAll('#modal-root > .modal-overlay')];
+    boxes.forEach((box, i) => box.toggleAttribute('inert', on && i < boxes.length - 1));
+}
+/** A dialog is named by its title (its header's words, without the "?" beside them). */
+function nameDialog(box) {
+    const head = box?.querySelector('.modal-header, h1');
+    if (!head) return;
+    const words = head.cloneNode(true);
+    for (const b of words.querySelectorAll('button')) b.remove();
+    const name = words.textContent.replace(/\s+/g, ' ').trim();
+    if (name) box.setAttribute('aria-label', name);
+}
+/** The controls a key can reach in a dialog, in order. */
+function dialogStops(box) {
+    return [...box.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length && !el.closest('[hidden], [inert]'));
+}
+/** Tab and Shift+Tab within the dialog on top: from its last control to its first, and back. */
+function keepTabInDialog(event) {
+    const box = document.querySelector('#modal-root > .modal-overlay:last-child');
+    if (!box) return;
+    const stops = dialogStops(box);
+    if (!stops.length) { event.preventDefault(); return; }
+    const i = stops.indexOf(document.activeElement);
+    // (not on one of them: the dialog was drawn again under the focus, or the focus was let go after a click)
+    if (i < 0 || (!event.shiftKey && i === stops.length - 1) || (event.shiftKey && i === 0)) {
+        event.preventDefault();
+        stops[event.shiftKey ? stops.length - 1 : 0].focus();
+    }
 }
 // The focus goes where a key would act (the map opens on its Close button, not on its first pin) without
 // scrolling a tall dialog down to it, and on a touch screen not into a field: that would raise the keyboard.
@@ -1255,13 +1435,13 @@ function startAdventure() {
 /** The sign-in the game waits behind (SIGN_IN_REQUIRED) until there is an account or a guest: Escape leaves it up. */
 function openSignIn(register = false) {
     ui.auth = { mode: register ? 'register' : 'login' };
-    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register }), 'signin');
+    if (ui.modalOpen !== 'signin') openModal(renderAuthModal('', { required: true, register, keep: SAFARI_CLEARS }), 'signin');
 }
 /** The account dialog at a step (renderAuthModal's `mode`), in place of the one open. */
 function showAuth(message = '', ctx = {}) {
     ui.auth = { ...ctx };
     const key = ui.modalOpen === 'auth' ? 'auth' : 'signin';
-    showModal(renderAuthModal(message, { required: key === 'signin', ...ui.auth }), key);
+    showModal(renderAuthModal(message, { required: key === 'signin', keep: SAFARI_CLEARS, ...ui.auth }), key);
 }
 function authError(text) {
     const err = document.getElementById('auth-error');
@@ -1317,23 +1497,31 @@ function askConfirm(title, text, confirmLabel, onYes) {
     const over = Object.assign(document.createElement('div'), { className: 'modal-overlay active', innerHTML: html });
     over.setAttribute('role', 'dialog');
     over.setAttribute('aria-modal', 'true');
+    underFocus = noteFocus(document.activeElement);   // the control in the dialog under it: the focus goes back there
     document.getElementById('modal-root').appendChild(over);
     ui.modalUnder = ui.modalOpen;
     ui.modalOpen = 'confirm';
+    nameDialog(over);
+    holdPage(true);
     focusDialog(over);
 }
+let underFocus = null;
 function closeModal() {
     if (ui.modalUnder) {
         document.querySelector('#modal-root .modal-overlay:last-child')?.remove();
         ui.modalOpen = ui.modalUnder;
         ui.modalUnder = null;
+        holdPage(true);   // the dialog under it is on top again
+        const back = underFocus;
+        underFocus = null;
+        if (back?.keys && pointer.keyAt > pointer.downAt) back.find()?.focus({ preventScroll: true });
         return;
     }
     document.getElementById('modal-root').innerHTML = '';
     ui.modalOpen = false;
     const next = ui.modalQueue.shift();
     if (next) showModal(next.html, next.key);
-    else rewards.resume();
+    else { holdPage(false); rewards.resume(); returnFocus(); }
 }
 
 // ---------- persistence ----------
@@ -1418,6 +1606,9 @@ async function claimGifts() {
  */
 let sendingClan = false;
 let clanRetryAt = 0;
+// The card of a flagged account's clan attack says why and how to answer; its tap goes to Settings, whose line and "?" say
+// the rest (src/ui/features.js FEATURES.flagged).
+const FLAGGED_NOTE = "A save showed numbers the game's check doesn't allow. Think it's a mistake? Tell the team on the Discord.";
 async function sendClanResult(now = false) {
     const result = game.state.clanResult;
     if (!result || sendingClan || !cloud.loggedIn || !cloudReady || passive || (!now && Date.now() < clanRetryAt)) return;
@@ -1436,9 +1627,11 @@ async function sendClanResult(now = false) {
         const look = clanBossFor(answer.week || result.week);
         const lines = [answer.killed ? 'The boss is down! It comes back at midnight UTC, a level stronger' : '', answer.rank ? `#${answer.rank} of ${answer.of} in the clan this week` : '',
             answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-            answer.capped ? 'Capped: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+            answer.capped ? 'Flagged: at most 1% of the boss' : ''].filter(Boolean);
+        // a flagged account's attack held back: what a flag does, why, and how to answer, on the card (Settings has the rest)
         rewards.celebrate({ key: `clan:${result.at}`, kind: answer.killed ? 'legend' : 'unlock', art: paintStyle(look.zone), icon: sprite(`mon/${look.name}`, { scale: 2, fallback: '🐉' }),
-            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: 4200 });
+            kicker: `Clan boss · ${look.name}`, title: `${fmt(answer.damage)} damage`, lines: lines.map(escapeHtml), ms: answer.capped ? 9000 : 4200,
+            ...(answer.capped ? { note: FLAGGED_NOTE, go: 'settings' } : {}) });
         sound.play(answer.killed ? 'victory' : 'chest');
         render();
     } catch (err) {
@@ -1458,11 +1651,24 @@ function endlessAnswered(answer) {
     const lines = [answer.depth >= answer.best ? 'Your deepest this week' : `Your deepest this week: ${answer.best.toFixed(1)}`,
         answer.rank ? `Your clan: #${answer.rank} of ${answer.of} in ${answer.divisionName}, ${fmt(answer.score)} deep` : '',
         answer.strikes ? `${answer.strikes} strike${answer.strikes === 1 ? '' : 's'} through its guard` : '',
-        answer.counted === false ? 'Not counted: this account\'s save showed impossible numbers' : ''].filter(Boolean);
+        answer.counted === false ? 'Flagged: not counted in the ranking' : ''].filter(Boolean);
+    const flagged = answer.counted === false;
     rewards.celebrate({ key: `endless:${answer.week}:${answer.depth}:${answer.attacksLeft}`, kind: 'unlock', art: paintStyle(ENDLESS.zone), icon: sprite(`mon/${ENDLESS.look}`, { scale: 2, fallback: '🐉' }),
-        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: 4200 });
+        kicker: ENDLESS.name, title: `Depth ${answer.depth.toFixed(1)}`, lines: lines.map(escapeHtml), ms: flagged ? 9000 : 4200, ...(flagged ? { note: FLAGGED_NOTE, go: 'settings' } : {}) });
     sound.play('chest');
     render();
+}
+
+/**
+ * The boards' first look: This week, as asked, unless its board holds fewer than BOARD_WEEK_MIN names, then All time
+ * (data/social.js boardOpensOn). Decided once; after that, and after a tap on the period, the board is the one asked for.
+ */
+async function openingBoard(social, board) {
+    if (social.periodSet) return board;
+    social.periodSet = true;
+    if (social.period !== 'week' || social.metric === 'weeklyTrial' || boardOpensOn(board) === 'week') return board;
+    social.period = 'all';
+    return cloud.leaderboard(social.metric, 'all');
 }
 
 async function refreshSocial() {
@@ -1473,8 +1679,10 @@ async function refreshSocial() {
     social.loading = true;
     social.fetchedAt = Date.now();
     try {
-        const [mine, rewards, board, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
+        const [mine, rewards, asked, ranking] = await Promise.all([cloud.myClan(), cloud.rewards(), cloud.leaderboard(social.metric, social.period), cloud.clanRanking().catch(() => null)]);
         await settled();   // (its banner and hall go to the game the time away ends in)
+        if (!current()) return;
+        const board = await openingBoard(social, asked);
         if (!current()) return;
         social.clan = mine.clan;
         Object.assign(social, { members: mine.members || [], boss: mine.boss || null, bossAt: Date.now(), board: mine.board || [], attacksLeft: mine.attacksLeft || 0, attacksPerDay: mine.attacksPerDay || 3, attackBank: mine.attackBank || 6, maxMembers: mine.maxMembers || 20,
@@ -1571,16 +1779,19 @@ async function syncFromCloud() {
     try {
         const { state: remote, lastSaved, gifts, banner, hall, hallGifts } = await cloud.pull(Date.now());
         clearTimeout(slowTimer);
-        await caughtUp();   // (the server was slow and this game's time away is being replayed: the choice waits for its end)
         // the clan's banner this week, as the server says it, and its hall: for the game played, its time away replayed
         const news = () => { game.setClanBanner(banner); hallNews({ hall, hallGifts }); };
-        if (syncChoice(game.state, remote, lastSaved, known) === 'cloud') {
+        // The server was slow and this game's time away is being replayed: the answer is weighed against the game as it
+        // was saved, as it would have been in time, so that a game the server's replaces is not replayed to the end first.
+        if (syncChoice(catching?.saved || game.state, remote, lastSaved, known) === 'cloud') {
+            dropCatchUp();
             pending = null;   // this game's time away is never replayed: the server's game is played
             heldGap = null;
             cloudReady = true;
             await adoptState(remote, news);
             if (before) toast('Your game was played on another device: carrying on from there', 'info');
         } else {
+            await caughtUp();
             if (pending) await playPending(news); else news();
             cloudReady = true;
             await cloudSave(false, { sync: true });
@@ -1604,7 +1815,9 @@ async function syncFromCloud() {
 
 /** Play `stateObject` (the server's game, a backup): its time away replayed behind the bar, then `news`, then its report. */
 function adoptState(stateObject, news = null) {
-    if (ui.modalOpen === 'offline') closeModal();   // the report of the game it replaces would act on this one
+    // the report of the game it replaces would act on this one: shown, waiting, or under the bar
+    if (ui.modalOpen === 'offline') closeModal();
+    else if (catchUpBox && catchUpWas.open === 'offline') { catchUpBox.previousElementSibling?.remove(); catchUpWas = { open: false, under: null }; }
     ui.modalQueue = ui.modalQueue.filter(m => m.key !== 'offline');
     heldGap = null;
     game = withDevFlags(new Game(stateObject, Date.now()));
@@ -1698,7 +1911,7 @@ window.FI = {
         if (result?.rewards?.length) { save(Date.now()); cloudSave(false); }
     },
     boardMetric(metric) { ui.social.metric = metric; refreshSocial(); },
-    boardPeriod(period) { ui.social.period = period; refreshSocial(); },
+    boardPeriod(period) { ui.social.period = period; ui.social.periodSet = true; refreshSocial(); },
     setLeaderboardConsent(on) { socialAction(() => cloud.setLeaderboardConsent(on).then(r => { ui.social.optIn = r.optIn; return r; }), on ? 'You joined the leaderboards' : 'You left the leaderboards'); },
     startNode(skill, node) { game.startNodeAction(skill, node); render(); },
     stopAction() { game.stopAction(); render(); },
@@ -2004,6 +2217,8 @@ window.FI = {
     mapDungeon(id) { closeModal(); window.FI.enterDungeon(id); },
 
     setSetting(key, value) { game.state.settings[key] = value; game.markDirty(); render(); },
+    /** Settings' switch for the M and Space keys, on this device only. */
+    setShortcuts(on) { ui.shortcuts = !!on; if (on) prefs.remove(SHORTCUTS_KEY); else prefs.set(SHORTCUTS_KEY, '0'); render(); },
     setPlaytestLog(on) { game.setPlaytestLog(on); render(); },
     /** The playtest log as a file to keep or send (systems/playtest.js). */
     exportPlaytest() {
@@ -2060,11 +2275,12 @@ window.FI = {
 
     openAuth() {
         if (ui.modalOpen === 'intro') closeModal();
-        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal(), 'auth'); }
+        if (needsSignIn()) openSignIn(); else { ui.auth = { mode: 'login' }; openModal(renderAuthModal('', { keep: SAFARI_CLEARS }), 'auth'); }
     },
     /** The sign-in's other way in: no account, the game kept in this browser only (an account made later starts its own). */
     playAsGuest() {
         setGuest(true);
+        keepGuestGame();
         ui.auth = null;
         closeModal();
         sound.unlock();
@@ -2103,12 +2319,13 @@ window.FI = {
         if (kind === 'register' && !email) return authError('An email address is needed: the game sends a code there.');
         try {
             if (kind === 'login') { await cloud.login(user, pass); await signedIn(); return; }
-            const data = await cloud.register(user, pass, email);
+            const data = await cloud.register(user, pass, email, prefs.get(SOURCE_KEY));
+            prefs.remove(SOURCE_KEY);   // (counted with the account)
             if (cloud.loggedIn) { await signedIn(); return; }   // (a server from before codes)
             showAuth('', { mode: 'verify', username: data.username || user, email: data.email || email });
         } catch (e) {
             // made, or with the right password, but the address not confirmed yet: to the code
-            if (e.data?.pending) return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email });
+            if (e.data?.pending) { prefs.remove(SOURCE_KEY); return showAuth(e.message, { mode: 'verify', username: e.data.username || user, email: e.data.email || email }); }
             authError(SIGN_IN_REQUIRED && cloud.available === false ? "The game's server can't be reached. Try again in a moment." : e.message);
         }
     },
@@ -2155,6 +2372,14 @@ window.FI = {
             openSignIn();
         } else toast('Logged out — playing locally', 'info');
         render();
+    },
+    /** Settings' "Sign out everywhere": every other device signed in to this account is signed out; this one stays. */
+    signOutEverywhere() {
+        if (!cloud.loggedIn) return;
+        askConfirm('Sign out everywhere?', 'Every other device signed in to your account is signed out. This one stays signed in.', 'Sign out everywhere', async () => {
+            try { await cloud.signOutEverywhere(); toast('Signed out everywhere else', 'info'); } catch (err) { toast(err.message, 'error'); }
+            render();
+        });
     },
     cloudSaveNow() { cloudSave(true); },
     /** The header's new-version pill: the game saved, signed in on the server too, then the page loads the new version. */

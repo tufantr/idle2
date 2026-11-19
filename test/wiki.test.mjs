@@ -14,6 +14,7 @@ import { fmt as gameFmt } from '../src/ui/format.js';
 import { RESOURCES } from '../src/data/resources.js';
 import { BESTIARY } from '../src/data/bestiary.js';
 import { CROPS } from '../src/data/farming.js';
+import { WIKI_PAGES } from '../src/ui/features.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let out = null;
@@ -31,6 +32,15 @@ test('the wiki builds from the game data, every link lands and every number is a
     const monsters = BESTIARY.flatMap(g => g.monsters).length;
     assert.ok([...html.keys()].filter(p => p.startsWith('/monsters/')).length === monsters, 'a page for every monster');
     assert.match(html.get('/items/coal'), /Coal Seam/, 'the coal page names the vein it comes from');
+});
+
+test('every "?" card\'s "More on the wiki" lands on a page the wiki builds, at a heading it has', () => {
+    for (const [id, link] of Object.entries(WIKI_PAGES)) {
+        const [path, anchor] = link.split('#');
+        const page = site.html.get(path);
+        assert.ok(page, `${id}: ${path} is a page`);
+        if (anchor) assert.match(page, new RegExp(`id="${anchor}"`), `${id}: ${link} is a heading on it`);
+    }
 });
 
 test('every picture a page names is one of the game\'s: its links, and the banners, tiles and card thumbs in its styles', () => {

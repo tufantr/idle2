@@ -1,17 +1,16 @@
 # Fantasy Idle
 
-A browser idle RPG in the spirit of Melvor Idle: name your hero and pick a look, train twelve skills
+A browser idle RPG in the spirit of Melvor Idle: name your hero and pick a look, train eleven skills
 at Melvor's pace (level 99 is hundreds of hours, and earns the skill's cape) and master every action
-in them, forge your own gear, fight through ten zones and an endless Abyss, clear six dungeons, face
+in them, upgrade the gear the fight drops, fight through ten zones and an endless Abyss, clear eight dungeons, face
 the hourly Titan, build an agility course, fill a bestiary, and prestige for
 permanent power and a rank worn as the hero's cloak. Daily crates (every seventh a great one) and
 weekend events bring bonuses, Festival Tokens and an event shop. Painted places, pixel sprites,
 synthesized sound; it plays on a phone too. Optional accounts add cloud saves, clans with a weekly shared boss,
-and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express + Vercel
-Postgres API.
+and opt-in leaderboards. Plain JavaScript (ES modules, no build step), with an Express API on PostgreSQL.
 
-**Play:** [fantasy-idle.vercel.app](https://fantasy-idle.vercel.app) (cloud saves, clans and leaderboards wait
-for the database; see [Deploy](#deploy)).
+**Play:** [fantasyidle.com](https://fantasyidle.com), with the player wiki at [wiki.fantasyidle.com](https://wiki.fantasyidle.com)
+(the server: [below](#the-server-fantasyidlecom)).
 
 **Docs:** [Game design](docs/DESIGN.md) · [Roadmap](docs/ROADMAP.md) ·
 [Research report](docs/reports/Fantasy%20Idle%20game%20design%20research.md) · [Research notes](docs/research_notes/)
@@ -57,7 +56,7 @@ a `false` names the missing part (`game`: the function could not load the game's
 ```sql
 INSERT INTO rewards (user_id, kind, payload, created_at, dedupe)
 SELECT id, 'gift', '{"gold":12000000,"text":"A gift from tufan"}', (extract(epoch from now()) * 1000)::bigint, 'gift:' || id || ':first-gold'
-FROM users WHERE username = 'Yarraksalih'
+FROM users WHERE username = 'PlayerName'
 ON CONFLICT (dedupe) DO NOTHING;
 ```
 
@@ -67,15 +66,30 @@ accounts could differ only in case, and a match in any case would pay both.)
 The player's game claims it at its next cloud save or load (a reload at the latest), adds it and shows a
 card; each gift is paid once. Gift gold is that run's, like all gold.
 
+**Flags.** A save with numbers no save can reach flags its account at once (DESIGN §3.17): for 30 days its clan attacks
+count for at most 1% of the boss, its fights at the Endless Hydra stay out of the clan ranking, and it is left off the
+leaderboards. A number that grew faster than play allows, inside the ceilings, is only listed (`flag_reviews`, mailed each
+week: below). To flag an account by hand after a look (`"by": "owner"`: it stands its 30 days whatever the check's version):
+
+```sql
+UPDATE users SET flags = (COALESCE(NULLIF(flags, ''), '[]')::jsonb || jsonb_build_array(jsonb_build_object(
+    'at', (extract(epoch from now()) * 1000)::bigint, 'reason', 'flagged by the owner after review', 'by', 'owner')))::text
+WHERE username = 'PlayerName';
+```
+
+`UPDATE users SET flags = '[]' WHERE username = 'PlayerName';` clears an account's flags, and
+`SELECT username, flags FROM users WHERE flags <> '[]';` lists the accounts with any.
+
 The API imports the game's own stat code (`src/core/power.js`, ES modules — `src/package.json` marks
 them as such) so that clan damage and leaderboard numbers are computed on the server from the stored
 save. It needs Node 20.19+ or 22+.
 
 | Endpoint | What it does |
 |---|---|
-| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`) |
+| `POST /api/register`, `POST /api/login` | accounts (bcrypt, JWTs valid 30 days); a sign-up gives an email, and the account plays once the code mailed there is entered (until then a login answers 409, `pending`); an address that has an account gets the same answer, and its owner a line instead |
 | `POST /api/verify`, `POST /api/verify/resend` | the sign-up code (6 digits, 15 minutes, 5 tries), and another one (once a minute, 5 an hour) |
-| `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not) |
+| `POST /api/password/forgot`, `POST /api/password/reset` | a code to the account's email, then a new password (the same answer whether an account has the address or not); a new password ends every session before it, and the address hears of it |
+| `POST /api/account/signout-all` | "Sign out everywhere": every session of the account ends (its tokens' version goes up) but the asking device's, which gets a fresh token |
 | `POST /api/save`, `GET /api/load` | cloud save; load returns the server's clock for offline time; uploads are checked for plausibility and flagged, never rejected; both say the clan's banner |
 | `GET /api/clans`, `POST /api/clans`, `POST /api/clans/join`, `POST /api/clans/leave` | find, start, join and leave clans (up to 20 members) |
 | `GET /api/clan`, `POST /api/clan/attack`, `POST /api/clan/kick` | your clan, its weekly boss, board and banner, its place in the week's ranking and your fights at the Endless Hydra; an attack as it was fought (the strike times; the damage is computed on the server; 3 a day, banked up to 6; with `endless: true` one of the 2 a week at the Hydra, at the weekend); the owner removes a member |
@@ -99,20 +113,38 @@ started with a fresh database; the Vercel site below is the old one, kept as it 
 - **What runs:** nginx serves the game's files and the wiki, and passes `/api/` to the API (systemd
   `fantasyidle-api`, Node 22, `deploy/vps/server.cjs`), which uses a local PostgreSQL 16 (`fantasyidle`, by its
   socket). Its settings are in `/etc/fantasyidle/api.env`; the JWT secret was made there and never leaves it.
-- **Backups:** every night at 03:30 UTC (`fantasyidle-backup.timer`) into `/var/backups/fantasyidle`, 14 days kept.
-  Copies off the server are still to do.
+- **Backups:** every night at 03:30 UTC (`fantasyidle-backup.timer`) into `/var/backups/fantasyidle`, 14 days kept,
+  then encrypted and copied to the owner's Google Drive (`deploy/vps/backup.sh`, folder `fantasyidle-backups`: 30
+  nightly copies, the first of each month for a year). They are encrypted with age to the owner's key: its public half
+  is `/etc/fantasyidle/backup-recipient.txt`, and the private half, which alone can read them, is
+  `~/.config/fantasyidle/backup-key.txt` on the owner's Mac (a copy in their password manager). rclone reaches Drive
+  with scope `drive.file` (only the files it made; `/etc/fantasyidle/rclone.conf`, and the Mac's in
+  `~/.config/fantasyidle/rclone.conf`). A failed night, or no fresh copy on Drive by 07:00 UTC, mails the owner
+  (`deploy/vps/backup-alert.sh`, to `OWNER_ALERT_EMAIL` in `api.env`); a restore drill runs on the 1st of each month
+  (`deploy/vps/restore-drill.sh`). A copy from Drive is read with `age -d -i ~/.config/fantasyidle/backup-key.txt`.
+- **Staging:** a private copy of the game at `staging.fantasyidle.com` (its own API on port 3001, its own database
+  `fantasyidle_staging` restored from a dump, its own token secret, no mail), where each change is rehearsed before it
+  goes live: `deploy/vps/stage.sh` deploys a commit there, and on the server `deploy/vps/staging-setup.sh data`
+  refreshes its data and `staging-setup.sh link` prints the private link that lets a browser in.
 - **Cloudflare:** a token for fantasyidle.com only (DNS, SSL and Certificates, Zone Settings), made by the owner, in
   `~/.config/fantasyidle/cloudflare-token` on the owner's Mac; never print it or commit it.
 - **Mail:** sign-up codes and password resets go out through Resend (`api/mail.js`) from `noreply@fantasyidle.com`:
   the domain is verified there (region Ireland; its DKIM, sending and DMARC records are in Cloudflare's DNS), and
   the key, made by the owner with sending access to fantasyidle.com only, is `RESEND_API_KEY` in the server's
   `/etc/fantasyidle/api.env`. Without it a sign-up is made but its code can't go (the dialog says so).
+- **The owner's mail:** `OWNER_ALERT_EMAIL` in `/etc/fantasyidle/api.env` (absent: none of it is sent) gets the growth
+  check's review list once a week, from `node api/review.js` run by a weekly timer with the same settings: each account
+  whose numbers grew faster than the check allows, by its username, with the numbers. It also gets one line on a day the
+  game's mails reach 80 of the plan's 100 (every mail is counted in its UTC day).
 
 Deploy a commit (the game, its API and its wiki together; a release whose API doesn't answer is switched back):
 
 ```bash
 deploy/vps/deploy.sh
 ```
+
+The version before a big change is tagged (`pre-patch-8a53d4d`, 12 November 2026) and its release kept in
+`/srv/fantasyidle/saved/`: `deploy/vps/deploy.sh pre-patch-8a53d4d` puts it back in about a minute.
 
 A release writes its commit into `version.json` beside the page and into `src/version.js`: an open game asks for the
 first now and then, and when it differs from its own, its top bar offers a reload (`src/ui/update.js`). Settings shows
@@ -158,6 +190,10 @@ The game is listed on other sites that show it in a frame, so each always plays 
 a new player is a guest at once (`EMBEDDED` in `src/main.js`), and a game played there is saved apart from the
 site's own (browsers keep a framed page's storage per host site); an account plays the same game everywhere.
 
+A listing's link can carry a tag, `https://fantasyidle.com/?src=reddit1` (`a-z`, `0-9` and `-`, up to 32): the game keeps
+the first one it saw until an account is made, and the server counts each account made with it, nothing more
+(`SELECT tag, count FROM signup_sources ORDER BY count DESC;`).
+
 - **galaxy.click** (an incremental-games portal): its page links https://fantasyidle.com/ itself. Its form asks for
   a disclosure of generative AI in the developer's own words; tags, thumbnail and links are added after submitting.
 - **itch.io** (https://impotentrage.itch.io/fantasy-idle, the owner's account, public since 24 October 2026): an HTML
@@ -166,6 +202,10 @@ site's own (browsers keep a framed page's storage per host site); an account pla
   graphics, text and code.
 
 Both pages are the owner's: what they say and when they go public is theirs to approve.
+
+A post or a listing that links the game rather than framing it can use the guest's link, https://fantasyidle.com/?play
+(`src/core/door.js`): a new player starts as a guest at once, as in a frame, while the bare address keeps the sign-in
+first.
 
 ## Tests and balance tools
 

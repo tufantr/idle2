@@ -17,13 +17,17 @@
 //                                                 # 'banner' the fight under a clan banner of ×2;
 //                                                 # 'clanhall' the Clan tab signed in, its hall at the
 //                                                 # Longhouse, 'hallgive' a gift to its Forge picked
-//                                                 # and 'bannerpick' its banner picker: the API is
-//                                                 # answered by the tool, CLAN_API below; 'catchup'
-//                                                 # is the bar a day away is replayed behind, and
-//                                                 # 'reentry' the welcome-back after it, with the
-//                                                 # world's strip: RETURN_SHOTS below)
+//                                                 # and 'bannerpick' its banner picker; 'account'
+//                                                 # Settings signed in and flagged, 'clancapped' a
+//                                                 # flagged account's attack card, 'clanlist' the
+//                                                 # clans to find: the API is answered by the
+//                                                 # tool, CLAN_API below; 'catchup' is the bar a
+//                                                 # day away is replayed behind, and 'reentry' the
+//                                                 # welcome-back after it, with the world's strip:
+//                                                 # RETURN_SHOTS below)
 //   node tools/shots.mjs --fresh                  # a brand-new player's first minutes: the title card, the first
 //                                                 # fight, the first skill at work, the first place to open
+//   node tools/shots.mjs <tabs> --reduced         # with reduced motion asked for (<name>-still-<width>.png)
 //
 // Writes shots/<name>-<width>.png (git-ignored) and exits 1 on overflow or errors.
 // Needs Playwright, once:  npm i --no-save playwright && npx playwright install chromium
@@ -37,7 +41,7 @@ import { createRequire } from 'node:module';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'shots');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
-    '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+    '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const VIEWPORTS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
 // 'battle' is not a tab: it is the combat tab with the fight on, which fills the screen.
 const DEFAULT_TABS = ['combat', 'battle', 'mining', 'smithing', 'anvil', 'cooking', 'farming', 'inventory', 'shop', 'achievements', 'dungeons', 'map'];
@@ -149,6 +153,26 @@ const CLAN_SHOTS = {
         }
         FI.openHallGive('stores');
     },
+    // Settings signed in, the account flagged (the tool's server says until when): the account panel's line and its "?"
+    account: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ flagged: true }) });
+        FI.cloudSaveNow();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        FI.switchTab('settings');
+    },
+    // a player in no clan: the clans to find, each with its members and who of them played this past week
+    clanlist: async () => {
+        await fetch('/api/__shots', { method: 'POST', body: JSON.stringify({ noClan: true }) });
+        FI.refreshSocial();
+        await new Promise(resolve => setTimeout(resolve, 900));
+    },
+    // a flagged account's clan attack, answered held back: its card (shown, not hidden as in the other shots)
+    clancapped: async () => {
+        document.head.insertAdjacentHTML('beforeend', '<style>#celebrate { display: block !important; }</style>');
+        FI.game().state.clanResult = { strikes: [], ms: 30000, at: Date.now(), week: '2026-W44' };
+        // (it waits behind the cards the late-game save brought, a few seconds each)
+        for (let i = 0; i < 100 && !document.querySelector('.celebration .cel-note'); i++) await new Promise(resolve => setTimeout(resolve, 250));
+    },
     // the Forge given 100 runite bars (the tool's server takes them): the bank holds 100 fewer, the Forge's bar has grown
     hallgiven: async () => {
         const before = FI.game().state.resources.runite_bar;
@@ -166,6 +190,7 @@ function clanApi() {
     const hall = { clan: 7, rooms: { forge: 30500, stores: 12000, kitchen: 7400, apothecary: 2100, garden: 0, library: 41000 }, stage: 1, colour: 'forest', emblem: 'troll',
         given: { week: 4200, total: 26000 }, weekly: 10800, endsInMs: 3 * 864e5, cloak: false };
     let seq = 0;
+    let shotMode = {};   // a shot's own answers (CLAN_SHOTS: `flagged` the account flagged), set by the shot and reset before each one
     const members = [['Tufan', true, 412, 1180, 26000, 4200], ['Yarraksalih', false, 388, 1104, 31000, 10800], ['Shadeofnight', false, 251, 870, 9800, 0], ['Brightmoor', false, 96, 512, 0, 0]];
     const answer = () => ({
         clan: { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', isOwner: true, crown: null },
@@ -184,9 +209,21 @@ function clanApi() {
         const path = new URL(request.url()).pathname.replace(/^\/api/, '');
         const json = body => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
         const news = () => ({ banner: { week, kills: 1 }, hall: { ...hall }, hallGifts: [] });
-        if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, ...news() });
-        if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, gifts: 0, ...news() });
-        if (path === '/clan') return json(answer());
+        const flaggedUntil = shotMode.flagged ? Date.now() + 12 * 864e5 : 0;
+        if (path === '/__shots') { shotMode = JSON.parse(request.postData() || '{}'); return json({}); }
+        if (path === '/load') return json({ state: null, serverNow: Date.now(), gifts: 0, flaggedUntil, ...news() });
+        if (path === '/save') return json({ success: true, timestamp: Date.now(), flagged: false, flaggedUntil, gifts: 0, ...news() });
+        if (path === '/clan') return json(shotMode.noClan ? { clan: null } : answer());
+        if (path === '/clans') {   // (api/index.js's list: the clans that play first)
+            return json({ maxMembers: 20, clans: [
+                { id: 3, name: 'Night Watch', tag: 'NW', description: 'Daily players, EU evenings', lookingFor: 'anyone past stage 300', members: 12, active: 11, stage: 2, crown: { division: 'gold', rank: 1, week } },
+                { id: 7, name: 'Iron Wolves', tag: 'IWF', description: 'Casual, EU evenings', lookingFor: 'anyone past stage 50', members: 18, active: 6, stage: 1, crown: null },
+                { id: 9, name: 'Slow Burn', tag: 'SLO', description: 'Idle when we can', lookingFor: '', members: 4, active: 0, stage: 0, crown: null }] });
+        }
+        if (path === '/clan/attack') {   // a flagged account's attack, held back (api/index.js FLAGGED_ATTACK_SHARE)
+            return json({ damage: 9.6e6, capped: true, strikes: 0, hp: 4.0e8, maxHp: 9.6e8, level: 2, killed: false, attacksLeft: 1, kills: 1,
+                banner: { week, kills: 1 }, rank: 2, of: 4, week });
+        }
         if (path === '/rewards') return json({ rewards: [] });
         if (path === '/leaderboard') return json({ entries: [], optIn: false, label: 'Best stage', period: 'all' });
         if (path === '/clans/ranking') return json({ week, divisions: [], last: { week, divisions: [] } });
@@ -220,18 +257,27 @@ async function shootReturn(viewport, which) {
         localStorage.setItem('fantasyIdle.save.v2', g.serialize(Date.now() - 26 * 3600000));
         localStorage.setItem('fantasyIdle.owner', 'shots');   // this page gives the save up: leaving, it doesn't save over it
     });
+    // (this hero's day is short work, so the replay is held back a little, a moment between its slices, for the picture)
+    await page.addInitScript(() => {
+        const post = MessagePort.prototype.postMessage;
+        window.__sliceWait = 100;
+        MessagePort.prototype.postMessage = function (...a) { setTimeout(() => post.apply(this, a), window.__sliceWait); };
+    });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await quiet(page);
     if (which.includes('catchup')) {
-        await page.waitForSelector('.cu-bar:not(.waiting)', { timeout: 20000 }).catch(() => {});
-        await page.waitForTimeout(500);
+        await page.waitForFunction(() => Number(document.querySelector('.cu-bar:not(.waiting)')?.getAttribute('aria-valuenow')) >= 25, null, { timeout: 30000, polling: 50 }).catch(() => {});
+        await page.evaluate(() => { window.__sliceWait = 1200; });   // (it stays about there for the picture)
+        await page.waitForTimeout(300);
         if (!(await page.$('.cu-bar'))) problems.push(`no catch-up bar at ${viewport.width}px`);
         await shoot(page, 'catchup', viewport.width);
     }
+    await page.evaluate(() => { window.__sliceWait = 0; });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     await page.waitForSelector('.welcome-back', { timeout: 60000 }).catch(() => {});
+    if (!(await page.$('.welcome-back'))) problems.push(`no welcome-back after the catch-up at ${viewport.width}px`);
     await page.waitForTimeout(1800);   // the haul pops in
     if (which.includes('reentry')) {
         if (!(await page.$('.welcome-back .wb-world'))) problems.push(`no re-entry strip on the welcome-back at ${viewport.width}px`);
@@ -249,6 +295,7 @@ try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch {
 
 const args = process.argv.slice(2);
 const fresh = args.includes('--fresh');
+const reduced = args.includes('--reduced');   // as a player who asks for less motion sees it (pictures named <name>-still-<width>.png)
 const tabs = (args.find(a => !a.startsWith('--')) || DEFAULT_TABS.join(',')).split(',').filter(Boolean);
 
 // The game is ES modules, which need HTTP and the right content types: a small static server.
@@ -269,9 +316,9 @@ const browser = await chromium.launch();
 const errors = [];
 const problems = [];
 
-/** A page that records errors; requests the static server can't answer (the API, web fonts offline) don't count. */
+/** A page that records errors; requests the static server can't answer (the API) don't count. (The fonts are the game's own.) */
 async function open(viewport, url, { clan = false } = {}) {
-    const ctx = await browser.newContext({ viewport });
+    const ctx = await browser.newContext({ viewport, ...(reduced ? { reducedMotion: 'reduce' } : {}) });
     if (clan) {   // signed in, the API answered here (CLAN_SHOTS)
         await ctx.addInitScript(token => localStorage.setItem('fantasyIdle.jwt', token), FAKE_TOKEN);
         await ctx.route('**/api/**', clanApi());
@@ -280,7 +327,7 @@ async function open(viewport, url, { clan = false } = {}) {
     page.on('pageerror', e => errors.push(`${viewport.width}px: ${e.message}`));
     page.on('console', m => {
         const where = m.location()?.url || '';
-        if (m.type() === 'error' && !where.includes('/api/') && !where.includes('fonts.g')) errors.push(`${viewport.width}px: ${m.text()}`);
+        if (m.type() === 'error' && !where.includes('/api/')) errors.push(`${viewport.width}px: ${m.text()}`);
     });
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1200);
@@ -292,7 +339,7 @@ const quiet = page => page.addStyleTag({ content: '#celebrate, #toast-area { dis
 
 async function shoot(page, name, width) {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    await page.screenshot({ path: join(OUT, `${name}-${width}.png`) });
+    await page.screenshot({ path: join(OUT, `${name}${reduced ? '-still' : ''}-${width}.png`) });
     console.log(`${String(width).padStart(4)}px  ${name.padEnd(14)} overflow ${overflow}`);
     if (overflow > 0) problems.push(`${name} at ${width}px scrolls sideways by ${overflow}px`);
 }
@@ -357,11 +404,15 @@ for (const viewport of VIEWPORTS) {
         await quiet(page);
         await page.waitForTimeout(1600);
         for (const tab of clanTabs) {
-            await page.evaluate(() => { FI.closeModal(); FI.switchTab('clan'); });
+            await page.evaluate(() => fetch('/api/__shots', { method: 'POST', body: '{}' }));   // the tool's server as it answers every shot
+            await page.evaluate(() => { FI.closeModal(); FI.switchTab('clan'); FI.refreshSocial(); });   // (the clan back after a shot without one)
             await page.waitForTimeout(900);
             if (CLAN_SHOTS[tab]) { await page.evaluate(CLAN_SHOTS[tab]); await page.waitForTimeout(700); }
             else await page.evaluate(() => { document.querySelector('.hall-panel')?.scrollIntoView({ block: 'start' }); if (innerWidth < 900) window.scrollBy(0, -(document.querySelector('#sidebar')?.offsetHeight || 0) - 8); });
-            if (!['clancloak', 'clanfight'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (!['clancloak', 'clanfight', 'account', 'clanlist'].includes(tab) && !(await page.$('.hall-panel'))) problems.push(`no hall on the Clan tab at ${viewport.width}px`);
+            if (tab === 'clanlist' && !(await page.$('#clan-search'))) problems.push(`no list of clans at ${viewport.width}px`);
+            if (tab === 'account' && !(await page.$('.flag-line'))) problems.push(`no flagged line in Settings at ${viewport.width}px`);
+            if (tab === 'clancapped' && !(await page.$('.celebration .cel-note'))) problems.push(`no card for a held-back attack at ${viewport.width}px`);
             await shoot(page, tab, viewport.width);
         }
         await page.context().close();

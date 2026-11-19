@@ -47,7 +47,7 @@ Each of your hero's hits deals his attack, give or take a little, and a critical
 
 ## Attack speed
 
-Your hero attacks every {{fmt(BASE.baseAttackInterval / 1000)}} seconds. Attack speed bonuses divide that time: the Rogue perk, gear bonuses, unique items, the Waterfall obstacle of [[/skills/agility|Agility]] and Focus. The bonus stops at +{{pct(BASE.caps.attackSpeed, 0)}}, an attack every {{fmt(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed) / 1000)}} seconds.
+Your hero attacks every {{fmt(BASE.baseAttackInterval / 1000)}} seconds. Attack speed bonuses divide that time: the Rogue perk, gear bonuses, unique items, the Waterfall obstacle of [[/skills/agility|Agility]] and Focus. The bonus stops at +{{pct(BASE.caps.attackSpeed, 0)}}, an attack every {{fmt(BASE.baseAttackInterval / (1 + BASE.caps.attackSpeed) / 1000)}} seconds: past it more speed adds nothing. Once your hero is there, the Inventory marks the time between his attacks "cap", and a piece of gear whose speed adds nothing gets the same mark beside its bonus.
 
 After {{time(BASE.focusAfterMs)}} without a click or a key press your hero settles into [[/mini-games|Focus]]: +{{pct(BASE.focusAttackSpeed, 0)}} attack speed until your next input. A strike is input, so striking ends Focus.
 

@@ -35,6 +35,7 @@ Now and then a white glove appears, pressing on something. It points at the one 
 - the monster, until you have struck it a few times;
 - the **Equip** button, when your first piece of gear is waiting in the bag;
 - the cheapest camp upgrade, the first time you can afford one;
+- after a fall, or a boss that held out, in your first run: **Equip** again for a piece that beats what you wear, then the cheapest camp level for as long as your gold lasts;
 - the boss's skull on the stage path, after a boss has held out (tap it to fight the boss again at once);
 - the first vein on the Mining tab, before you have worked any skill;
 - and later, the Prestige button and your first perk.

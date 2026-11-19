@@ -11,7 +11,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
+const { loadLocal, saveLocal, clearLocal, rotateBackup, writeBackup, listBackups, readBackup, restoreBackup, CloudClient, syncChoice, syncFacts, aheadOf, startsOver, progressed, LOCAL_KEY, LEGACY_KEY, TOKEN_KEY } = await import('../src/core/save.js');
 const { Game } = await import('../src/game.js');
 const { createDefaultState } = await import('../src/core/state.js');
 
@@ -82,6 +82,31 @@ test("signed in, the server's save is the game: this device's is kept only when 
     assert.equal(aheadOf(server, here), false);
 });
 
+test('what the choice reads of a game can be kept aside: the same answer, whatever the game does next', () => {
+    const server = createDefaultState(1);
+    server.stats.kills = 50; server.meta.playtimeMs = 3_600_000; server.combat.bestStage = 20; server.skills.mining.xp = 400;
+    const here = structuredClone(server);
+    here.stats.kills = 60; here.meta.playtimeMs = 3_700_000;
+    const elsewhere = structuredClone(server);
+    elsewhere.stats.kills = 70; elsewhere.combat.bestStage = 25;
+    const other = createDefaultState(2);
+    other.stats.kills = 999;
+    const fresh = createDefaultState(1);
+    for (const live of [here, server, elsewhere, other, fresh]) {
+        for (const remote of [null, server, here, elsewhere, other]) {
+            for (const [lastSaved, known] of [[500, 500], [900, 500], [500, null]]) {
+                assert.equal(syncChoice(syncFacts(live), remote, lastSaved, known), syncChoice(live, remote, lastSaved, known));
+            }
+        }
+    }
+    // kept aside before a replay (main.js playPending): the game then climbing past the server's doesn't change the answer
+    const saved = syncFacts(here);
+    const replayed = structuredClone(here);
+    replayed.stats.kills = 5000; replayed.combat.bestStage = 90; replayed.skills.mining.xp = 90000;
+    assert.equal(syncChoice(replayed, elsewhere, 900, 500), 'local', "played on past the other device's save, it would pass for ahead");
+    assert.equal(syncChoice(saved, elsewhere, 900, 500), 'cloud', 'as it was saved, it is behind');
+});
+
 test("signing in never takes a guest's game: the account starts over, unless the game is its own", () => {
     const fresh = createDefaultState(1);
     fresh.meta.playtimeMs = 5 * 60000;   // a new hero waiting on the sign-in while the account is made: nothing done
@@ -122,6 +147,73 @@ test("the account's own game is the one this device last saw on its server, for 
         const first = createDefaultState(333);
         await cloud.push(first);
         assert.equal(cloud.ownsGame(first), true);
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test('the cloud keeps until when the account is flagged, as its last save or load said (Settings tells the player); another account starts with none', async () => {
+    const realFetch = globalThis.fetch;
+    let answer = { flaggedUntil: 5000 };
+    globalThis.fetch = async url => new Response(JSON.stringify(url.endsWith('/load') ? { state: null, serverNow: 5, ...answer } : { success: true, timestamp: 6, ...answer }),
+        { status: 200, headers: { 'content-type': 'application/json' } });
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        assert.equal(cloud.flaggedUntil, 0);
+        await cloud.pull(10);
+        assert.equal(cloud.flaggedUntil, 5000);
+        answer = { flaggedUntil: 0 };
+        await cloud.push({ version: 3 });
+        assert.equal(cloud.flaggedUntil, 0, 'lapsed: the next answer says so');
+        answer = { flaggedUntil: 7000 };
+        await cloud.push({ version: 3 });
+        answer = {};   // a server from before says nothing of it: an upload changes nothing
+        await cloud.push({ version: 3 });
+        assert.equal(cloud.flaggedUntil, 7000);
+        cloud.setToken('a.eyJ1c2VybmFtZSI6InNvbWVvbmUifQ.b');
+        assert.equal(cloud.flaggedUntil, 0, 'another account');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test('"Sign out everywhere" keeps this device signed in, on a fresh token, with what it has seen of its cloud', async () => {
+    const realFetch = globalThis.fetch;
+    const calls = [];
+    globalThis.fetch = async (url, init) => {
+        calls.push({ url, init });
+        const body = url.endsWith('/account/signout-all') ? { token: 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c', message: 'Signed out everywhere else' } : { success: true, timestamp: 9, flaggedUntil: 0 };
+        return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        cloud.setToken('a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b');
+        await cloud.push({ version: 3 });
+        await cloud.signOutEverywhere();
+        assert.equal(calls.at(-1).init.method, 'POST');
+        assert.equal(calls.at(-1).init.headers.Authorization, 'Bearer a.eyJ1c2VybmFtZSI6Imhlcm8ifQ.b', 'asked with the token it had');
+        assert.equal(cloud.token, 'a.eyJ1c2VybmFtZSI6Imhlcm8iLCJ2IjoxfQ.c');
+        assert.equal(localStorage.getItem(TOKEN_KEY), cloud.token, 'kept for the next visit');
+        assert.deepEqual([cloud.username, cloud.base], ['hero', 9], 'the same account, its cloud as this page saw it');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
+
+test("a sign-up sends the listing's tag it was given, and none without one", async () => {
+    const realFetch = globalThis.fetch;
+    const bodies = [];
+    globalThis.fetch = async (url, init) => {
+        bodies.push(JSON.parse(init.body));
+        return new Response(JSON.stringify({ pending: true, username: 'hero', email: 'he***@example.test' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+        const cloud = new CloudClient('/api');
+        await cloud.register('hero', 'correct horse', 'hero@example.test', 'reddit1');
+        await cloud.register('hero', 'correct horse', 'hero@example.test');
+        assert.equal(bodies[0].src, 'reddit1');
+        assert.equal('src' in bodies[1], false);
     } finally {
         globalThis.fetch = realFetch;
     }

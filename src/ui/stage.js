@@ -10,7 +10,7 @@ import { RESOURCES } from '../data/resources.js';
 import { TYPE_ICONS } from '../data/items.js';
 import { cropById } from '../data/farming.js';
 import { PETS, companionPet } from '../data/pets.js';
-import { resolveAction, intervalFor } from '../systems/skilling.js';
+import { resolveAction, intervalFor, actionXp } from '../systems/skilling.js';
 import { plotReady } from '../systems/farming.js';
 import { courseDef } from '../systems/agility.js';
 import { fmt, seconds, duration } from './format.js';
@@ -148,7 +148,7 @@ export function createStage(root, { sound = () => {}, pat = () => {} } = {}) {
                 const action = resolveAction(state);
                 const working = !!action && action.skill === skill;
                 view = { ...targetFor(working ? action : null, skill), working };
-                if (working) view.sub = `${seconds(intervalFor(action, game.derived))} ${skill === 'agility' ? 'a run' : 'per action'} · +${fmt(Math.round((action.xp || 0) * game.derived.xpMult))} XP${state.action?.stalled ? ' · waiting for materials' : ''}`;
+                if (working) view.sub = `${seconds(intervalFor(action, game.derived))} ${skill === 'agility' ? 'a run' : 'per action'} · +${fmt(Math.round(actionXp(action.xp || 0, game.derived)))} XP${state.action?.stalled ? ' · waiting for materials' : ''}`;
                 else if (skill === 'agility' && courseDef(state)) view.sub = 'Press Run below to go round your course';
             }
             farm = skill === 'farming' ? view : null;
