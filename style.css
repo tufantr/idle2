@@ -2095,6 +2095,22 @@ body.reduced-motion .pet-figure, body.reduced-motion .stage-pet { animation: non
 .battle[data-scene="rot"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/rot.webp); }
 .battle[data-scene="rift"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/rift.webp); }
 .battle[data-scene="pandemonium"] .battle-sky { background-image: linear-gradient(180deg, rgba(12, 8, 5, 0.55), rgba(12, 8, 5, 0) 34%), url(assets/paint/pandemonium.webp); }
+@media (max-width: 600px) {
+    .battle[data-scene="meadow"] .battle-sky { background-position-x: 88%; }
+    .battle[data-scene="caves"] .battle-sky { background-position-x: 78%; }
+    .battle[data-scene="ruins"] .battle-sky { background-position-x: 82%; }
+    .battle[data-scene="frost"] .battle-sky { background-position-x: 76%; }
+    .battle[data-scene="lair"] .battle-sky { background-position-x: 84%; }
+    .battle[data-scene="maw"] .battle-sky { background-position-x: 85%; }
+    .battle[data-scene="necropolis"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="hellforge"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="weeping"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="bone"] .battle-sky { background-position-x: 80%; }
+    .battle[data-scene="frozen"] .battle-sky { background-position-x: 82%; }
+    .battle[data-scene="starless"] .battle-sky { background-position-x: 18%; }
+    .battle[data-scene="glass"] .battle-sky { background-position-x: 78%; }
+    .battle[data-scene="rot"] .battle-sky { background-position-x: 70%; }
+}
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-sky { background-position: center 80%; transform-origin: 50% 80%; animation: paintDrift 50s ease-in-out infinite alternate; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-far { display: none; }
 .stage:is([data-skill="mining"], [data-skill="woodcutting"], [data-skill="fishing"], [data-skill="hunting"], [data-skill="cooking"], [data-skill="firemaking"], [data-skill="alchemy"], [data-skill="smithing"], [data-skill="crafting"], [data-skill="farming"], [data-skill="agility"]) .stage-ground { background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.3)); box-shadow: none; }

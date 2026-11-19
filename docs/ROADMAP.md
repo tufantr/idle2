@@ -1581,6 +1581,8 @@ Keeping it running:
 - [x] **The fight for screen readers** (R23, P-090): a hidden summary of the stage, both healths and the monster, and what is shown in
       passing (bosses, falls, levels, finds, cards) read out one polite line at a time, never in a flood. VoiceOver is the owner's check
 - [x] **An accessibility note** (R23, P-089): a "?" on Settings' options lists the switches and keys, and the wiki has an Accessibility page
+- [x] **Landmarks in view on phones** (R23, P-083): fourteen fights' paintings, cut narrow on a phone, now keep their landmark in the
+      frame (the meadow's windmill, the ruins' temple, the bone fields' skull): a focal point per painting in `tools/paint.py`
 - [ ] **A playtest with people** (the owner's): the playtest log (Settings) exported for `tools/playtest.mjs`
 
 A rule to settle (the owner's call):

@@ -2163,6 +2163,10 @@ the game looks, sounds or reads never change how it plays. Those kept in the sav
   the game's rem type grows and a size set in the browser still counts. The sidebar grows with it (`15.625rem`, 250 px at 100%). At
   1280 and 390 px, at every size, the main screens have no sideways scroll and lose no word they had (one gear name in the fight's
   dock is shortened at 150% on a wide screen).
+- **Landmarks on phones.** A phone's fight shows the middle 56-76% of a painting's width, and fourteen paintings keep their landmark near an
+  edge (the meadow's windmill, the ruins' temple, the lair's dragon). `LANDMARK` in `tools/paint.py` gives each its place in % of the width,
+  written into the generated paint block as `background-position-x` for narrow screens, which keeps that spot in the frame however the painting is
+  cut. The skill stages and the title card show a painting's whole width on a phone, so they need none.
 - **Screen readers** (`src/ui/announce.js`). The fight's numbers are never read out as they change: a hidden paragraph at the head of
   the battle scene, under the heading "The fight in words", holds the stage, both healths, the monster and what is going on, rewritten every
   second and a half at most, for when the player goes to it. What a sighted player is told in passing (toasts, cards, the fight's banners)

@@ -492,7 +492,9 @@ landmark, not on top of it.
 - To add to the set later, continue the same chat ("Sunlit Meadow Background Generation"), so the
   style holds.
 - When the set is done, run the import with `--sheet art/sheet.png`. Look at the sheet, then check
-  the battle scene and a few skill tabs in the game at desktop and phone widths.
+  the battle scene and a few skill tabs in the game at desktop and phone widths. A phone's fight shows
+  only the middle of a painting: if its landmark stands near an edge, give it a place in `LANDMARK`
+  (`tools/paint.py`) so it stays in view.
 - Add the credits line. Then create a branch `art-inbox` from where you are, commit
   `assets/paint/*.webp`, `style.css` and `assets/CREDITS.md` on it (never the PNGs in `art/`), and
   push it with `git push -u origin art-inbox`. Leave `claude/intelligent-einstein-y5i5iq` alone;

@@ -60,6 +60,11 @@ LIGHTNING = {'highland', 'titan', 'storm'}  # their sky keeps the lightning flic
 # fighters stand on is the bottom quarter of each picture, so the band leans low.
 FOCUS = {'skyreach': 72, 'frost': 76}
 DEFAULT_FOCUS = 80
+# On a phone the fight shows only the middle 56-76% of a painting's width, and the prompts put the landmarks at the edges: for
+# these, where the landmark stands (% of the width, CSS background-position x) on narrow screens, so the meadow's windmill or
+# the ruins' temple stays in view wherever the painting is cut. A place not listed keeps its centre, which already shows it.
+LANDMARK = {'meadow': 88, 'caves': 78, 'ruins': 82, 'frost': 76, 'lair': 84, 'maw': 85, 'necropolis': 80, 'hellforge': 80,
+            'weeping': 80, 'bone': 80, 'frozen': 82, 'starless': 18, 'glass': 78, 'rot': 70}
 MAX_W = 1920
 WIDTHS = {'map': 1400}  # shown in a dialog, never as wide as a backdrop
 # Paintings are brighter than the scripted layers: a shade along the top keeps the zone title and the
@@ -110,6 +115,11 @@ def css_block(painted):
             if p in LIGHTNING:
                 extra += ' animation: lightning 9s linear infinite, paintDrift 46s ease-in-out infinite alternate;'
             lines.append(f'.battle[data-scene="{p}"] .battle-sky {{ background-image: {TOP_SHADE}, url(assets/paint/{p}.webp);{extra} }}')
+        spots = [p for p in battle if p in LANDMARK]
+        if spots:
+            lines.append('@media (max-width: 600px) {')
+            lines += [f'    .battle[data-scene="{p}"] .battle-sky {{ background-position-x: {LANDMARK[p]}%; }}' for p in spots]
+            lines.append('}')
     if stages:
         anyof = ', '.join(f'[data-skill="{s}"]' for s in stages)
         lines += [

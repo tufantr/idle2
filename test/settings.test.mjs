@@ -3,6 +3,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { readFileSync } from 'node:fs';
+
 import { Game } from '../src/game.js';
 import { createDefaultState, migrateState } from '../src/core/state.js';
 import { renderSettings } from '../src/ui/render.js';
@@ -343,4 +345,14 @@ test('Settings has a "?": what the game offers for access, with its page on the 
     const card = renderAboutCard('accessibility');
     for (const words of ['Reduce motion', 'Effects', 'Battery saver', 'Vibration', 'Blows heard', 'Text size', 'Big numbers', 'Keyboard shortcuts', 'The fight in words', 'pips']) assert.ok(card.includes(words), words);
     assert.equal(WIKI_PAGES.accessibility, '/accessibility');
+});
+
+test("on a phone each painting's landmark stays in view: the block tools/paint.py writes", () => {
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    const block = css.slice(css.indexOf('/* paint:begin'), css.indexOf('/* paint:end */'));
+    const narrow = block.slice(block.indexOf('@media (max-width: 600px) {'));
+    assert.ok(narrow.length < block.length, 'a block for narrow screens');
+    assert.match(narrow, /\.battle\[data-scene="meadow"\] \.battle-sky \{ background-position-x: 88%; \}/, 'the windmill');
+    assert.match(narrow, /\.battle\[data-scene="ruins"\] \.battle-sky \{ background-position-x: 82%; \}/, 'the temple');
+    assert.ok(block.indexOf('.battle[data-scene="meadow"] .battle-sky { background-image') < block.indexOf('@media (max-width: 600px)'), 'after the paintings, so it wins');
 });
